@@ -1088,8 +1088,8 @@ vanishes.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPS.partial_density">
-<span class="sig-name descname"><span class="pre">partial_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace_sites</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.partial_density"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.partial_density" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="tensorkrowch.models.MPS.reduced_density">
+<span class="sig-name descname"><span class="pre">reduced_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace_sites</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.reduced_density"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.reduced_density" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns de partial density matrix, tracing out the sites specified
 by <code class="docutils literal notranslate"><span class="pre">trace_sites</span></code>: <span class="math notranslate nohighlight">\(\rho_A\)</span>.</p>
 <p>This method internally sets <code class="docutils literal notranslate"><span class="pre">out_features</span> <span class="pre">=</span> <span class="pre">trace_sites</span></code>, and calls
@@ -1097,7 +1097,7 @@ the <a class="reference internal" href="components.html#tensorkrowch.TensorNetwo
 <code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. Therefore, it may alter the behaviour
 of the MPS if it is not <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>
 afterwards. Also, if the MPS was contracted before with other arguments,
-it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">partial_density</span></code> to avoid
+it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">reduced_density</span></code> to avoid
 undesired behaviour.</p>
 <p>Since the density matrix is computed by contracting the MPS, it means
 one can take gradients of it with respect to the MPS tensors, if it
@@ -1125,7 +1125,7 @@ already performed.</p></li>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPS</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">phys_dim</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
 <span class="gp">... </span>                    <span class="n">bond_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">density</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">partial_density</span><span class="p">(</span><span class="n">trace_sites</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">density</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">reduced_density</span><span class="p">(</span><span class="n">trace_sites</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">density</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">torch.Size([3, 5, 3, 5])</span>
 </pre></div>

@@ -1915,7 +1915,7 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">other</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_tensor_info</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_tensor_info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="AbstractNode.tensor_address"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.tensor_address">[docs]</a>    <span class="k">def</span> <span class="nf">tensor_address</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns address of the node&#39;s tensor in the network&#39;s memory.&quot;&quot;&quot;</span>

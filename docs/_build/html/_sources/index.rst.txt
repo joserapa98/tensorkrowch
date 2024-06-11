@@ -150,8 +150,9 @@ Citing
 If you use TensorKrowch in your work, please cite `TensorKrowch's paper
 <https://www.arxiv.org/abs/2306.08595>`_:
 
-  J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, Quantum 8,
-  1364 (2024), arXiv:2306.08595.
+  J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, 
+  "TensorKrowch: Smooth integration of tensor networks in machine learning", 
+  Quantum **8**, 1364 (2024), arXiv:2306.08595.
 
 .. code-block:: html
 

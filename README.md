@@ -183,15 +183,16 @@ specific needs.
 
 ## License
 
-TensorKrowch is licensed under the MIT License. Please see the [LICENSE](https://github.com/joserapa98/tensorkrowch/blob/master/LICENSE.txt) file for more information.
+**TensorKrowch** is licensed under the MIT License. Please see the [LICENSE](https://github.com/joserapa98/tensorkrowch/blob/master/LICENSE.txt) file for more information.
 
 
 ## Citing
 
 If you use TensorKrowch in your work, please cite [TensorKrowch's paper](https://www.arxiv.org/abs/2306.08595):
 
-- J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, Quantum 8,
-1364 (2024), arXiv:2306.08595.
+- J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, 
+"TensorKrowch: Smooth integration of tensor networks in machine learning", 
+Quantum **8**, 1364 (2024), arXiv:2306.08595.
 
 ```
 @article{pareja2024tensorkrowch,

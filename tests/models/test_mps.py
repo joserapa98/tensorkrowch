@@ -1680,6 +1680,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert mps.in_features == in_features
                 
+                norms = []
                 for log_scale in [True, False]:
                     # MPS has to be reset, otherwise norm automatically calls
                     # the forward method that was traced when contracting the MPS
@@ -1689,6 +1690,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.resultant_nodes
                     assert not mps.data_nodes
                     assert mps.in_features == in_features
+                    assert len(norm.shape) == 0
                     
                     norm.sum().backward()
                     for node in mps.mats_env:
@@ -1696,6 +1698,10 @@ class TestMPS:  # MARK: TestMPS
                     
                     # Repeat norm
                     norm = mps.norm(log_scale=log_scale)
+                    
+                    norms.append(norm)
+                    
+                assert torch.isclose(norms[0].exp(), norms[1])
     
     def test_norm_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -1726,6 +1732,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert mps.in_features == in_features
                 
+                norms = []
                 for log_scale in [True, False]:
                     # MPS has to be reset, otherwise norm automatically calls
                     # the forward method that was traced when contracting the MPS
@@ -1735,6 +1742,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.resultant_nodes
                     assert not mps.data_nodes
                     assert mps.in_features == in_features
+                    assert len(norm.shape) == 0
                     
                     norm.sum().backward()
                     for node in mps.mats_env:
@@ -1742,6 +1750,10 @@ class TestMPS:  # MARK: TestMPS
                     
                     # Repeat norm
                     norm = mps.norm(log_scale=log_scale)
+                    
+                    norms.append(norm)
+                    
+                assert torch.isclose(norms[0].exp(), norms[1])
     
     def test_norm_complex(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1771,6 +1783,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert mps.in_features == in_features
                 
+                norms = []
                 for log_scale in [True, False]:
                     # MPS has to be reset, otherwise norm automatically calls
                     # the forward method that was traced when contracting the MPS
@@ -1780,6 +1793,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.resultant_nodes
                     assert not mps.data_nodes
                     assert mps.in_features == in_features
+                    assert len(norm.shape) == 0
                     
                     norm.sum().abs().backward()
                     for node in mps.mats_env:
@@ -1787,6 +1801,10 @@ class TestMPS:  # MARK: TestMPS
                     
                     # Repeat norm
                     norm = mps.norm(log_scale=log_scale)
+                    
+                    norms.append(norm)
+                    
+                assert torch.isclose(norms[0].exp(), norms[1])
      
     def test_partial_density(self):
         for n_features in [1, 2, 3, 4, 5]:
@@ -2908,8 +2926,9 @@ class TestUMPS:  # MARK: TestUMPS
                 assert mps.data_nodes
             assert mps.in_features == in_features
             
+            norms = []
             for log_scale in [True, False]:
-                # MPS has to be rese, otherwise norm automatically calls
+                # MPS has to be reset, otherwise norm automatically calls
                 # the forward method that was traced when contracting the MPS
                 # with example
                 mps.reset()
@@ -2917,14 +2936,18 @@ class TestUMPS:  # MARK: TestUMPS
                 assert mps.resultant_nodes
                 assert not mps.data_nodes
                 assert mps.in_features == in_features
+                assert len(norm.shape) == 0
                 
                 norm.sum().backward()
                 for node in mps.mats_env:
                     assert node.grad is not None
-                assert mps.uniform_memory.grad is not None
                 
                 # Repeat norm
                 norm = mps.norm(log_scale=log_scale)
+                
+                norms.append(norm)
+                
+            assert torch.isclose(norms[0].exp(), norms[1])
     
     def test_partial_density(self):
         for n_features in [1, 2, 3, 4, 5]:

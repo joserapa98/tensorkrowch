@@ -1480,20 +1480,32 @@ class MPS(TensorNetwork):  # MARK: MPS
         log_norm = 0
         result_node = mats_out_env[0]
         if log_scale:
-            log_norm += result_node.norm()
+            log_norm += result_node.norm().log()
             result_node = result_node.renormalize()
                 
         for node in mats_out_env[1:]:
             result_node @= node
             
             if log_scale:
-                log_norm += result_node.norm()
+                log_norm += result_node.norm().log()
+                result_node = result_node.renormalize()
+        
+        # Contract periodic edge
+        if result_node.is_connected_to(result_node):
+            result_node @= result_node
+            
+            if log_scale:
+                log_norm += result_node.norm().log()
                 result_node = result_node.renormalize()
         
         if log_scale:
             return log_norm / 2
         
         result = result_node.tensor.sqrt()
+        
+        if is_complex:
+            result = result.abs()  # result is already real
+        
         return result
 
     def partial_density(self,

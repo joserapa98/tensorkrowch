@@ -1588,7 +1588,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             self._tensor_info['node_ref'] = other
             self._tensor_info['index'] = None
         else:
-            self._tensor_info = other._tensor_info
+            self._tensor_info = other._tensor_info.copy()
 
     def tensor_address(self) -> Text:
         """Returns address of the node's tensor in the network's memory."""

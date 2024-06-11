@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.models.mps &#8212; TensorKrowch 1.1.3 documentation</title>
+    <title>tensorkrowch.models.mps &#8212; TensorKrowch 1.1.4 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -1807,23 +1807,35 @@ title="Source repository"
         <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_out_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
-            <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+            <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
                 
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_out_env</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
             
             <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
-                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+                <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
+        
+        <span class="c1"># Contract periodic edge</span>
+        <span class="k">if</span> <span class="n">result_node</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">result_node</span><span class="p">):</span>
+            <span class="n">result_node</span> <span class="o">@=</span> <span class="n">result_node</span>
+            
+            <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
+                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
                 <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
         
         <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">log_norm</span> <span class="o">/</span> <span class="mi">2</span>
         
         <span class="n">result</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>  <span class="c1"># result is already real</span>
+        
         <span class="k">return</span> <span class="n">result</span></div>
 
-<div class="viewcode-block" id="MPS.partial_density"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.partial_density">[docs]</a>    <span class="k">def</span> <span class="nf">partial_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="MPS.reduced_density"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.reduced_density">[docs]</a>    <span class="k">def</span> <span class="nf">reduced_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">trace_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
                         <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
@@ -1835,7 +1847,7 @@ title="Source repository"
 <span class="sd">        ``marginalize_output = True``. Therefore, it may alter the behaviour</span>
 <span class="sd">        of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`</span>
 <span class="sd">        afterwards. Also, if the MPS was contracted before with other arguments,</span>
-<span class="sd">        it should be ``reset`` before calling ``partial_density`` to avoid</span>
+<span class="sd">        it should be ``reset`` before calling ``reduced_density`` to avoid</span>
 <span class="sd">        undesired behaviour.</span>
 <span class="sd">        </span>
 <span class="sd">        Since the density matrix is computed by contracting the MPS, it means</span>
@@ -1866,7 +1878,7 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; mps = tk.models.MPS(n_features=4,</span>
 <span class="sd">        ...                     phys_dim=[2, 3, 4, 5],</span>
 <span class="sd">        ...                     bond_dim=5)</span>
-<span class="sd">        &gt;&gt;&gt; density = mps.partial_density(trace_sites=[0, 2])</span>
+<span class="sd">        &gt;&gt;&gt; density = mps.reduced_density(trace_sites=[0, 2])</span>
 <span class="sd">        &gt;&gt;&gt; density.shape</span>
 <span class="sd">        torch.Size([3, 5, 3, 5])</span>
 <span class="sd">        &quot;&quot;&quot;</span>

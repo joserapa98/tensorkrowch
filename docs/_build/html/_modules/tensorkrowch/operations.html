@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.operations &#8212; TensorKrowch 1.1.3 documentation</title>
+    <title>tensorkrowch.operations &#8212; TensorKrowch 1.1.4 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -1857,7 +1857,7 @@ title="Source repository"
                     <span class="n">_conj_next</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">conj</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="conj"><a class="viewcode-back" href="../../operations.html#tensorkrowch.conj">[docs]</a><span class="k">def</span> <span class="nf">conj</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a view of the node&#39;s tensor with a flipped conjugate bit. If the</span>
 <span class="sd">    node has a non-complex dtype, this function returns a new node with the</span>
@@ -1882,7 +1882,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; conjA.is_conj()</span>
 <span class="sd">    True</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">conj_op</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">conj_op</span><span class="p">(</span><span class="n">node</span><span class="p">)</span></div>
 
 
 <span class="n">conj_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">conj</span><span class="p">)</span>

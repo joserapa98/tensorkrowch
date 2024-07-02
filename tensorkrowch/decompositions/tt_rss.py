@@ -9,7 +9,7 @@ This script contains:
 """
 
 import warnings
-from typing import Optional, Callable, List
+from typing import Optional, Union, Callable, List, Sequence
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
@@ -22,34 +22,26 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
     """
     Extends ``samples`` tensor with the output of the ``function`` evaluated on
     those ``samples``. If ``samples`` is a tensor with shape ``batch_size x
-    n_features``, the extended samples will have shape ``batch_size x
-    (n_features + 1)``.
-    
-    NOTE: What if ``samples`` has shape ``batch_size x n_features x in_dim``?
+    n_features (x in_dim)``, the extended samples will have shape
+    ``batch_size x (n_features + 1) (x in_dim)``.
     
     If ``labels`` are not provided, they are obtained by passing the ``samples``
     through the ``function``. In this case, it is assumed that ``function``
-    returns a vector of probabilities (for each class). Thus, the vector of
-    ``labels`` is sampled according to the output distribution.
+    returns a vector of squared roots of probabilities (for each class). Thus,
+    the vector of ``labels`` is sampled according to the output distribution.
     
-    If ``labels`` are give, it is assumed to be a tensor with shape ``batch_size``.
-    
-    NOTE: What if ``samples`` has shape ``batch_size x n_features x in_dim``?
-    How do we concatenate the samples and the labels?
+    If ``labels`` are given, it is assumed to be a tensor with shape ``batch_size``.
     """
     if labels is None:
-        loader = DataLoader(
-            TensorDataset(samples),
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=0)
+        loader = DataLoader(TensorDataset(samples),
+                            batch_size=batch_size,
+                            shuffle=False,
+                            num_workers=0)
         
         with torch.no_grad():
             outputs = []
             for (batch,) in loader:
                 outputs.append(function(batch.to(device)).pow(2).cpu())
-            
-            # NOTE: for relu or other functions, sample the label uniformly
             
             outputs = torch.cat(outputs, dim=0).cpu()
             
@@ -59,33 +51,47 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
             probs = torch.rand(outputs.size(0), 1)
             ids = outputs.size(1) - torch.le(probs,
                                              labels_distr).sum(dim=1, keepdim=True)
+            outputs = outputs.gather(dim=1, index=ids).pow(0.5)
+            
+            # batch_size x n_features x in_dim
+            if len(samples.shape) == 3:
+                # In this case, labels are copied along dimension `in_dim`
+                ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
             
             extended_samples = torch.cat([samples[:, :out_position],
                                           ids,
                                           samples[:, out_position:]], dim=1)
-            return extended_samples, outputs.gather(dim=1, index=ids).pow(0.5)
+            return extended_samples, outputs
     else:
         ids = labels.view(-1, 1)
+        outputs = torch.ones_like(ids).float()
+        
+        # batch_size x n_features x in_dim
+        if len(samples.shape) == 3:
+            # In this case, labels are the same along dimension `in_dim`
+            ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
+        
         extended_samples = torch.cat([samples[:, :out_position],
                                       ids,
                                       samples[:, out_position:]], dim=1)
-        return extended_samples, torch.ones_like(ids).float()
+        return extended_samples, outputs
 
 
 def sketching(function, tensors_list, out_position, batch_size, device):
     """
-    Given 'tensors_list', where each tensor i has shape di x ni and
-    sum(n1, ..., nk) = n_features = input_size, creates a projection tensor
-    with shape d1 x ... x dk x n_features, and computes Phi_tilde_k of shape
-    d1 x ... x dk
+    Given ``tensors_list``, a list of ``m`` tensors, where each tensor ``i`` has
+    shape ``di x ni (x in_dim)`` and ``sum(n1, ..., nm) = n_features``, creates
+    a projection tensor with shape ``d1 x ... x dm x n_features (x in_dim)``,
+    which is passed to the ``function`` to compute ``Phi_tilde_k`` of shape
+    ``d1 x ... x dm``.
     """
     sizes = []
     for tensor in tensors_list:
         assert isinstance(tensor, torch.Tensor)
-        assert len(tensor.shape) == 2
+        assert len(tensor.shape) in [2, 3]
         sizes.append(tensor.size(1))
     
-    # Expand all tensors so that each one has shape d1 x ... x dk x ni
+    # Expand all tensors so that each one has shape d1 x ... x dm x ni
     aux_list = []
     for i in range(len(tensors_list)):
         view_shape = []
@@ -100,94 +106,121 @@ def sketching(function, tensors_list, out_position, batch_size, device):
         view_shape.append(tensors_list[i].size(1))
         expand_shape.append(-1)
         
+        if len(tensors_list[i].shape) == 3:
+            # If shape is di x ni x in_dim, add in_dim to all tensors
+            view_shape.append(tensors_list[i].size(2))
+            expand_shape.append(-1)
+        else:
+            # If shape is di x ni, add extra aux dimension of 1
+            view_shape.append(1)
+            expand_shape.append(-1)
+        
         aux_tensor = tensors_list[i].view(*view_shape).expand(*expand_shape)
         aux_list.append(aux_tensor)
     
     # Find labels in out_position
-    # TODO: I guess labels could be computed and passed from the begginings
-    # without haveing to recover them in each sketching. Also, labels are always
-    # the same, so yes
     if out_position >= 0: # If function is vector-valued
         cum_size = 0
         for i, size in enumerate(sizes):
             if (cum_size + size - 1) >= out_position:
                 if size == 1:
-                    labels = aux_list[i][..., 0]
+                    labels = aux_list[i][..., 0, 0]
                     aux_list = aux_list[:i] + aux_list[(i + 1):]
                 else:
-                    labels = aux_list[i][..., out_position - cum_size]
+                    labels = aux_list[i][..., out_position - cum_size, 0]
                     aux_list[i] = torch.cat(
-                        [aux_list[i][..., :(out_position - cum_size)],
-                        aux_list[i][..., (out_position - cum_size + 1):]], dim=-1)
+                        [aux_list[i][..., :(out_position - cum_size), :],
+                         aux_list[i][..., (out_position - cum_size + 1):, :]],
+                        dim=-2)
                 labels = labels.reshape(-1, 1).to(torch.int64).to(device)
                 break
             cum_size += size
     else:
-        labels = torch.zeros(*aux_list[0].shape[:-1], 1).to(torch.int64).to(device)
+        labels = torch.zeros(*aux_list[0].shape[:-2], 1).to(torch.int64).to(device)
         labels = labels.view(-1, 1)
     
-    projection = torch.cat(aux_list, dim=-1)
+    projection = torch.cat(aux_list, dim=-2)
     
-    projection_loader = DataLoader(
-        TensorDataset(projection.view(-1, projection.shape[-1]), labels),
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=0)
+    if projection.shape[-1] == 1:
+        projection_loader = DataLoader(
+            TensorDataset(projection.view(-1, projection.shape[-2]),
+                          labels),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=0)
+    else:
+        # di x ni x in_dim
+        projection_loader = DataLoader(
+            TensorDataset(projection.view(-1,
+                                          projection.shape[-2],
+                                          projection.shape[-1]),
+                          labels),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=0)
     
     Phi_tilde_k = []
     with torch.no_grad():
-        for idx, (batch, labs) in enumerate(projection_loader):
-            # print('batch:', idx)
+        for batch, labs in projection_loader:
             aux_result = function(batch.to(device))
             Phi_tilde_k.append(aux_result.gather(dim=1,
                                                  index=labs).flatten().cpu())
-    Phi_tilde_k = torch.cat(Phi_tilde_k, dim=0)
-            
-    # with torch.no_grad():
-    #     aux_result = function(projection.view(-1, projection.shape[-1]).to(device))
-    #     Phi_tilde_k = aux_result.gather(dim=1, index=labels).flatten().cpu()
-            
-    Phi_tilde_k = Phi_tilde_k.view(*projection.shape[:-1])
+    
+    Phi_tilde_k = torch.cat(Phi_tilde_k, dim=0)   
+    Phi_tilde_k = Phi_tilde_k.view(*projection.shape[:-2])
+    
     return Phi_tilde_k
 
 
-def trimming(mat, max_D, cum_percentage):
+def trimming(mat, rank, cum_percentage):
     """Given a matrix returns the U from the SVD and an appropiate rank"""
     u, s, _ = torch.linalg.svd(mat, full_matrices=False)
     
-    if max_D is None:
-        max_D = len(s)
+    if rank is None:
+        rank = len(s)
 
     percentages = s.cumsum(0) / (s.sum().expand(s.shape) + 1e-10)
     cum_percentage_tensor = torch.tensor(cum_percentage)
-    rank = 0
+    
+    aux_rank = 0
     for p in percentages:
         if p == 0:
-            if rank == 0:
-                rank = 1
+            if aux_rank == 0:
+                aux_rank = 1
             break
-        rank += 1
+        aux_rank += 1
+        
         # Cut when ``cum_percentage`` is exceeded
         if p >= cum_percentage_tensor:
             break
-        elif rank >= max_D:
+        elif aux_rank >= rank:
             break
         
-    return u, rank
+    return u, aux_rank
 
 
 def create_projector(S_k_1, S_k):
     """
-    Given the previous projector and the current one, it infers the s_k needed
-    to create S_k from S_k_1. All rows of S_k_1 and S_k must be unique!
+    Given the previous projector and the current one, it infers the ``s_k``
+    needed to create ``S_k`` from ``S_k_1``. All rows of ``S_k_1`` and ``S_k``
+    must be unique.
 
     Parameters
     ----------
     S_k_1 : torch.Tensor
-        Matrix of shape n x k. The n rows of S_k_1 are equal to the rows of
-        S_k[:, :-1], but maybe they are repeated in S_k.
+        Matrix of shape ``n x k (x in_dim)``. The ``n`` rows of ``S_k_1`` are
+        equal to the rows of ``S_k[:, :-1]``, but maybe they are repeated in
+        ``S_k``.
     S_k : torch.Tensor
-        Matrix of shape m x (k + 1), with m > n.
+        Matrix of shape ``m x (k + 1) (x in_dim)``, with m >= n.
+    
+    Returns
+    -------
+    s_k : torch.Tensor
+        Tensor of shape ``m x 2 (x in_dim)``. The 2 columns correspond,
+        respectively, to indices of rows of ``S_k_1`` (index 0) and the new
+        elements in the ``(k + 1)``-th column of ``S_k`` (index 1) associated
+        to the corresponding rows of ``S_k_1``.
     
     Example
     -------
@@ -223,14 +256,23 @@ def create_projector(S_k_1, S_k):
             [4, 0],
             [4, 1]])
     """
-    s_k = []
+    s_k_0 = []
+    s_k_1 = []
     for i in range(S_k_1.size(0)):
-        where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=1)
+        if len(S_k.shape) == 2:
+            # n x k
+            where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=1)
+        else:
+            # n x k x in_dim
+            where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=(1, 2))
+            
         new_col = S_k[where_equal, -1:]
-        first_col = torch.Tensor([[i]]).expand(new_col.size(0), 1).to(new_col.device)
-        s_k.append(torch.cat([first_col, new_col], dim=1))
+        first_col = torch.Tensor([i]).expand(new_col.size(0)).to(new_col.device)
         
-    s_k = torch.cat(s_k, dim=0)
+        s_k_0.append(first_col)
+        s_k_1.append(new_col)
+    
+    s_k = [torch.cat(s_k_0, dim=0), torch.cat(s_k_1, dim=0)]
     return s_k  
 
 
@@ -238,6 +280,7 @@ def tt_rss(function: Callable,
            embedding: Callable,
            sketch_samples: torch.Tensor,
            labels: Optional[torch.Tensor] = None,
+           in_domain: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]] = None,
            out_position: Optional[int] = None,
            rank: Optional[int] = None,
            cum_percentage: Optional[float] = None,
@@ -245,19 +288,14 @@ def tt_rss(function: Callable,
            device: Optional[torch.device] = None,
            verbose: bool = True) -> List[torch.Tensor]:
     r"""
-    NOTE: we are assuming the function to decompose is given as square roots of
-    probabilities. Outputs are sampled according to the distribution given
-    as the squares of the outputs. What happens when the outputs do not represent
-    probabilities? Do we sample outputs according to distribution? Or just uniformly?
-    
     Tensor Train - Recursive Sketching from Samples.
     
-    Decomposes a scalar function of :math:`N` input variables in a Matrix
-    Product State of :math:`N` cores, each corresponding to one input variable,
-    in the same order as they are provided to the function. To turn each input
-    variable into a vector that can be contracted with the corresponding MPS
-    core, an embedding function is required. The dimension of the embedding
-    will be used as the input dimension of the MPS.
+    Decomposes a scalar or vector-valued function of :math:`N` input variables
+    in a Matrix Product State of :math:`N` cores, each corresponding to one
+    input variable, in the same order as they are provided to the function. To
+    turn each input variable into a vector that can be contracted with the
+    corresponding MPS core, an embedding function is required. The dimension of
+    the embedding will be used as the input dimension of the MPS.
     
     If the function is vector-valued, it will be seen as a :math:`N + 1` scalar
     function, returning a MPS with :math:`N + 1` cores. The output variable will
@@ -266,10 +304,6 @@ def tt_rss(function: Callable,
     :math:`i \mapsto \langle i \rvert`. It can be specified the position in
     which the output core will be. By default, it will be in the middle of the
     MPS.
-    
-    When MPS cores are created, its rank has to be inferred. To control the
-    maximum bond dimension for each core, we can specify one or both arguments
-    ``max_bond_dim``, ``cum_percentage``.
     
     To specify the bond dimension of each MPS core, one can use the arguments
     ``rank`` and ``cum_percentage``. If more than one is specified, the
@@ -280,19 +314,38 @@ def tt_rss(function: Callable,
     function : Callable
         Function that is going to be decomposed. It needs to have a single
         input argument, the data, which is a tensor of shape
-        ``batch_size x n_features``. It must return a tensor of shape
-        ``batch_size x out_dim``. If the function is scalar, ``out_dim = 1``.
+        ``batch_size x n_features`` or ``batch_size x n_features x in_dim``. It
+        must return a tensor of shape ``batch_size x out_dim``. If the function
+        is scalar, ``out_dim = 1``.
     embedding : Callable
         Embedding function that maps the data tensor to a higher dimensional
         space. It needs to have a single argument. It is a function that
-        transforms the given data tensor and returns an embedded tensor of
-        shape ``batch_size x n_features x in_dim``.
+        transforms the given data tensor of shape ``batch_size x n_features`` or
+        ``batch_size x n_features x in_dim`` and returns an embedded tensor of
+        shape ``batch_size x n_features x embed_dim``.
     sketch_samples : torch.Tensor
         Samples that will be used as sketches to decompose the function. It has
         to be a tensor of shape ``batch_size x n_features`` or
         ``batch_size x n_features x in_dim``.
     labels : torch.Tensor, optional
-        Tensor of outputs of the ``function`` with shape ``batch_size``.
+        Tensor of output labels of the ``function`` with shape ``batch_size``.
+        If ``function`` is vector-valued, ``labels`` will be used to select
+        an element from each output vector. If ``labels`` are not given, these
+        will be obtained according to the distribution represented by the output
+        vectors (assuming these represent square roots of probabilities for each
+        class).
+    in_domain : torch.Tensor or list[torch.Tensor], optional
+        Domain of the input variables. It should be given as a finite set of
+        possible values that can take each variable. If all variables live in
+        the same domain, it should be given as a tensor with shape ``n_values``
+        or ``n_values x in_dim``, where the possible ``n_values`` should be at
+        least as large as the desired input dimension of the MPS cores, which
+        is the ``embed_dim`` of the ``embedding``. The more values are given,
+        the more accurate will be the tensorization but more costly will be to
+        do it. If ``in_domain`` is given as a list, it should have the same
+        number of elements as input variables, so that each variable can live
+        in a different domain. If ``in_domain`` is not given, it will be obtained
+        from the values each variable takes in the ``sketch_samples``.
     out_position : int, optional
         If the ``function`` is vector-valued, position of the output core in
         the resulting MPS.
@@ -308,9 +361,10 @@ def tt_rss(function: Callable,
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
         during the decomposition.
     device : torch.device, optional
-        Device to which ``sketch_samples`` will be send to compute sketches. It
+        Device to which ``sketch_samples`` will be sent to compute sketches. It
         should coincide with the device the ``function`` is in, in the case the
-        function is a call to a ``nn.Module``.
+        function is a call to a ``nn.Module`` or uses tensors that are in a 
+        specific device.
     verbose : bool
 
     Returns
@@ -346,9 +400,9 @@ def tt_rss(function: Callable,
         
     if len(aux_embed.shape) != 3:
         raise ValueError('`embedding` should return a tensor of shape '
-                         '(batch_size, n_features, in_dim)')
-    in_dim = aux_embed.size(2)
-    if in_dim == 0:
+                         '(batch_size, n_features, embed_dim)')
+    embed_dim = aux_embed.size(2)
+    if embed_dim == 0:
         raise ValueError('Embedding dimension cannot be 0')
         
     # Output dimension
@@ -366,6 +420,41 @@ def tt_rss(function: Callable,
     out_dim = aux_output.size(1)
     if out_dim == 0:
         raise ValueError('Output dimension (of `function`) cannot be 0')
+    
+    # Labels
+    if labels is not None:
+        if not isinstance(labels, torch.Tensor):
+            raise TypeError('`labels` should be torch.Tensor type')
+        if labels.shape != sketch_samples.shape[:1]:
+            raise ValueError('`labels` should be a tensor with shape (batch_size,)')
+    
+    # Input domain
+    if in_domain is not None:
+        if not isinstance(in_domain, torch.Tensor):
+            if not isinstance(in_domain, Sequence):
+                raise TypeError(
+                    '`in_domain` should be torch.Tensor or list[torch.Tensor] type')
+            else:
+                for t in in_domain:
+                    if not isinstance(t, torch.Tensor):
+                        raise TypeError(
+                            '`in_domain` should be torch.Tensor or list[torch.Tensor]'
+                            ' type')
+                
+                if len(in_domain) != n_features:
+                    raise ValueError(
+                        'If `in_domain` is given as a sequence of tensors, it should'
+                        ' have as many elements as input variables')
+        else:
+            if len(in_domain.shape) != (len(sketch_samples.shape) - 1):
+                raise ValueError(
+                    'If `in_domain` is given as a torch.Tensor, it should have '
+                    'shape (n_values,) or (n_values, in_dim), and it should '
+                    'only include in_dim if it also appears in the shape of '
+                    '`sketch_samples`')
+            if len(in_domain.shape) == 2:
+                if in_domain.shape[1] == 1:
+                    raise ValueError()
     
     # Output position
     if out_dim == 1:
@@ -391,7 +480,6 @@ def tt_rss(function: Callable,
             raise TypeError('`rank` should be int type')
         if rank < 1:
             raise ValueError('`rank` should be greater or equal than 1')
-    max_D = rank
     
     # Cum. percentage
     if cum_percentage is not None:
@@ -400,6 +488,10 @@ def tt_rss(function: Callable,
         if (cum_percentage <= 0) or (cum_percentage > 1):
             raise ValueError('`cum_percentage` should be in the range (0, 1]')
     
+    if (rank is None) and (cum_percentage is None):
+        raise ValueError(
+            'At least one of `rank` and `cum_percentage` should be given')
+    
     # Batch size
     if not isinstance(batch_size, int):
         raise TypeError('`batch_size` should be int type')
@@ -407,80 +499,99 @@ def tt_rss(function: Callable,
     # Extend sketch_samples tensor with outputs
     if out_dim > 1:
         n_features += 1
-        sketch_samples, labels = extend_with_output(function,
-                                                    sketch_samples,
-                                                    labels,
-                                                    out_position,
-                                                    batch_size,
-                                                    device)
+        sketch_samples, _ = extend_with_output(function=function,
+                                               samples=sketch_samples,
+                                               labels=labels,
+                                               out_position=out_position,
+                                               batch_size=batch_size,
+                                               device=device)
         
-    # TODO: we are assuming data is continuous
     def aux_embedding(data):
         """
-        For cases where ``n_features = 1``, it returns an embedded tensor with
-        shape ``batch_size x out_dim``.
+        For the cases where ``n_features = 1``, it returns an embedded tensor
+        with shape ``batch_size x embed_dim``.
         """
         return embedding(data).squeeze(1)
     
     def aux_basis(data):
         """
-        For cases where ``n_features = 1``, it returns an embedded tensor with
-        shape ``batch_size x out_dim``.
+        For the cases where ``n_features = 1``, it returns an embedded tensor
+        with shape ``batch_size x basis_dim``.
         """
+        # batch_size x n_features(=1) x in_dim
+        if len(data.shape) == 3:
+            # In this case, labels are the same along dimension `in_dim`
+            data = data[:, :, 0]
         return basis(data.int(), dim=out_dim).squeeze(1).float()
     
     cores = []
     D_k_1 = 1
     for k in range(n_features):
+        
         # Prepare x_k
         if k == out_position:
             x_k = torch.arange(out_dim).view(-1, 1).float()
             phys_dim = out_dim
+        
         else:
-            # NOTE: this might be useful for 0 < x < 1, but not in general
-            # NOTE: having x_k greater or equal than in_dim is ESSENTIAL
-            x_k = torch.arange(in_dim).view(-1, 1).float() / in_dim
+            if in_domain is not None:
+                if isinstance(in_domain, torch.Tensor):
+                    x_k = in_domain.unsqueeze(1)
+                else:
+                    x_k = in_domain[k if k < out_position else (k - 1)].unsqueeze(1)
             
-            # x_k = sketch_samples[:, k:(k + 1)].unique(dim=0)  # TODO: maybe sample from this to reduce amount
-            # if x_k.size(0) > in_dim:
-            #     perm = torch.randperm(x_k.size(0))
-            #     idx = perm[:in_dim]
-            #     x_k = x_k[idx]
-            # elif x_k.size(0) < in_dim:
-            #     perm = torch.randperm(x_k.size(0))
-            #     idx = perm[:(in_dim - x_k.size(0))]
-            #     x_k = torch.cat([x_k,
-            #                      x_k[idx] + torch.randn_like(x_k[idx])],
-            #                     dim=0)
+            else:
+                x_k = sketch_samples[:, k:(k + 1)].unique(dim=0)
+                
+                aux_mul = 2
+                if x_k.size(0) >= (aux_mul * embed_dim):
+                    perm = torch.randperm(x_k.size(0))
+                    idx = perm[:(aux_mul * embed_dim)]
+                    x_k = x_k[idx]
             
-            phys_dim = in_dim
+            phys_dim = embed_dim
         
         # Prepare T_k
         if k < (n_features - 1):
             T_k = sketch_samples[:, (k + 1):].unique(dim=0)
-            
+        
+        # Prepare D_k
         if verbose:
             print(f'\n\n=========\nSite: {k}\n=========')
-        D_k = min(D_k_1 * phys_dim, phys_dim ** (n_features - k - 1))
-            
-        if verbose:
-            print(f'* Max D_k: min({D_k}, {max_D})')
-            print(f'* T_k out dim: {T_k.size(0)}')
-        D_k = min(D_k, max_D)
         
+        D_k = min(D_k_1 * phys_dim, phys_dim ** (n_features - k - 1))
+        
+        if verbose:
+            if rank is None:
+                print(f'* Max D_k: {D_k}')
+            else:
+                print(f'* Max D_k: min({D_k}, {rank})')
+            print(f'* T_k out dim: {T_k.size(0)}')
+        
+        if rank is not None:
+            D_k = min(D_k, rank)
+        
+        # Tensorize
         if k == 0:
             # Sketching
-            Phi_tilde_k = sketching(function, [x_k, T_k], out_position, batch_size, device)
+            Phi_tilde_k = sketching(function=function,
+                                    tensors_list=[x_k, T_k],
+                                    out_position=out_position,
+                                    batch_size=batch_size,
+                                    device=device)
             
             # Random unitary for T_k
-            randu_t = random_unitary(Phi_tilde_k.size(1))#[:, :D_k]
+            randu_t = random_unitary(Phi_tilde_k.size(1))
             Phi_tilde_k = torch.mm(Phi_tilde_k, randu_t)
             
             if k != out_position:
-                Phi_tilde_k = torch.linalg.lstsq(aux_embedding(x_k), Phi_tilde_k).solution
+                Phi_tilde_k = torch.linalg.lstsq(aux_embedding(x_k),
+                                                 Phi_tilde_k).solution
             
             # Trimming
-            u, D_k = trimming(Phi_tilde_k, D_k, cum_percentage)
+            u, D_k = trimming(mat=Phi_tilde_k,
+                              rank=D_k,
+                              cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # phys_dim x D_k
             
             # Solving
@@ -510,31 +621,31 @@ def tt_rss(function: Callable,
             
         elif k < (n_features - 1):
             # Sketching
-            Phi_tilde_k = sketching(function, [S_k_1, x_k, T_k], out_position, batch_size, device)
+            Phi_tilde_k = sketching(function=function,
+                                    tensors_list=[S_k_1, x_k, T_k],
+                                    out_position=out_position,
+                                    batch_size=batch_size,
+                                    device=device)
             
             # Random unitary for T_k
             randu_t = random_unitary(Phi_tilde_k.size(2))\
-                .repeat(Phi_tilde_k.size(0), 1, 1)#[..., :D_k]
+                .repeat(Phi_tilde_k.size(0), 1, 1)
             Phi_tilde_k = torch.bmm(Phi_tilde_k, randu_t)
-            
-            # # Random unitary for S_k_1
-            # randu_s = random_unitary(Phi_tilde_k.size(0))\
-            #     .repeat(Phi_tilde_k.size(2), 1, 1)[:, :D_k_1]
-            # Phi_tilde_k = torch.bmm(randu_s, Phi_tilde_k.permute(2, 0, 1)).permute(1, 2, 0)
             
             if k != out_position:
                 aux_Phi_tilde_k = torch.linalg.lstsq(
                     aux_embedding(x_k),
                     Phi_tilde_k.permute(1, 0, 2).reshape(x_k.size(0), -1)).solution
                 
-                Phi_tilde_k = aux_Phi_tilde_k.reshape(phys_dim,
-                                                      Phi_tilde_k.size(0),
-                                                      Phi_tilde_k.size(2)).permute(1, 0, 2)
+                Phi_tilde_k = aux_Phi_tilde_k.reshape(
+                    phys_dim,
+                    Phi_tilde_k.size(0),
+                    Phi_tilde_k.size(2)).permute(1, 0, 2)
             
             # Trimming
-            u, D_k = trimming(Phi_tilde_k.reshape(-1, Phi_tilde_k.size(2)),
-                              D_k,
-                              cum_percentage)
+            u, D_k = trimming(mat=Phi_tilde_k.reshape(-1, Phi_tilde_k.size(2)),
+                              rank=D_k,
+                              cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # (D_k_1 * phys_dim) x D_k
             
             # Solving
@@ -548,20 +659,18 @@ def tt_rss(function: Callable,
             
             # Create A_k
             A_k = B_k.view(-1, phys_dim, D_k)
-            A_k = A_k[s_k[:, 0].long()]
+            A_k = A_k[s_k[0].long()]
             
             if k == out_position:
-                aux_s_k = aux_basis(s_k[:, 1:])
+                aux_s_k = aux_basis(s_k[1])
             else:
-                aux_s_k = aux_embedding(s_k[:, 1:])
+                aux_s_k = aux_embedding(s_k[1])
             A_k = torch.einsum('bpd,bp->bd', A_k, aux_s_k)
             
             # Set variables for next iteration
             D_k_1 = D_k
-            B_k_1 = B_k
             A_k_1 = A_k
             S_k_1 = S_k
-            s_k_1 = s_k
             
             if verbose:
                 print(f'\nCore {k}:\n-------')
@@ -571,15 +680,17 @@ def tt_rss(function: Callable,
             
         else:
             # Sketching
-            Phi_tilde_k = sketching(function, [S_k_1, x_k], out_position, batch_size, device)
-            
-            # # Random unitary for S_k_1
-            # randu_s = random_unitary(Phi_tilde_k.size(0))[:D_k_1, :]
-            # Phi_tilde_k = torch.mm(randu_s, Phi_tilde_k)
+            Phi_tilde_k = sketching(function=function,
+                                    tensors_list=[S_k_1, x_k],
+                                    out_position=out_position,
+                                    batch_size=batch_size,
+                                    device=device)
             
             if k != out_position:
-                Phi_tilde_k = torch.linalg.lstsq(aux_embedding(x_k), Phi_tilde_k.t()).solution.t()
-                
+                Phi_tilde_k = torch.linalg.lstsq(aux_embedding(x_k),
+                                                 Phi_tilde_k.t()).solution.t()
+            
+            # Trimming
             B_k = Phi_tilde_k
             
             # Solving

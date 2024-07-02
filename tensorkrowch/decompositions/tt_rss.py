@@ -364,7 +364,7 @@ def tt_rss(function: Callable,
         Device to which ``sketch_samples`` will be sent to compute sketches. It
         should coincide with the device the ``function`` is in, in the case the
         function is a call to a ``nn.Module`` or uses tensors that are in a 
-        specific device.
+        specific device. This also applies to the ``embedding`` function.
     verbose : bool
 
     Returns
@@ -557,7 +557,7 @@ def tt_rss(function: Callable,
         
         # Prepare D_k
         if verbose:
-            print(f'\n\n=========\nSite: {k}\n=========')
+            print(f'\n\n=========\nSite: {k + 1} / {n_features}\n=========')
         
         D_k = min(D_k_1 * phys_dim, phys_dim ** (n_features - k - 1))
         
@@ -585,8 +585,9 @@ def tt_rss(function: Callable,
             Phi_tilde_k = torch.mm(Phi_tilde_k, randu_t)
             
             if k != out_position:
-                Phi_tilde_k = torch.linalg.lstsq(aux_embedding(x_k),
-                                                 Phi_tilde_k).solution
+                Phi_tilde_k = torch.linalg.lstsq(
+                    aux_embedding(x_k.to(device)).cpu(),
+                    Phi_tilde_k).solution
             
             # Trimming
             u, D_k = trimming(mat=Phi_tilde_k,
@@ -605,7 +606,7 @@ def tt_rss(function: Callable,
             if k == out_position:
                 aux_s_k = aux_basis(s_k)
             else:
-                aux_s_k = aux_embedding(s_k)
+                aux_s_k = aux_embedding(s_k.to(device)).cpu()
             A_k = aux_s_k @ B_k
             
             # Set variables for next iteration
@@ -634,7 +635,7 @@ def tt_rss(function: Callable,
             
             if k != out_position:
                 aux_Phi_tilde_k = torch.linalg.lstsq(
-                    aux_embedding(x_k),
+                    aux_embedding(x_k.to(device)).cpu(),
                     Phi_tilde_k.permute(1, 0, 2).reshape(x_k.size(0), -1)).solution
                 
                 Phi_tilde_k = aux_Phi_tilde_k.reshape(
@@ -664,7 +665,7 @@ def tt_rss(function: Callable,
             if k == out_position:
                 aux_s_k = aux_basis(s_k[1])
             else:
-                aux_s_k = aux_embedding(s_k[1])
+                aux_s_k = aux_embedding(s_k[1].to(device)).cpu()
             A_k = torch.einsum('bpd,bp->bd', A_k, aux_s_k)
             
             # Set variables for next iteration
@@ -687,8 +688,9 @@ def tt_rss(function: Callable,
                                     device=device)
             
             if k != out_position:
-                Phi_tilde_k = torch.linalg.lstsq(aux_embedding(x_k),
-                                                 Phi_tilde_k.t()).solution.t()
+                Phi_tilde_k = torch.linalg.lstsq(
+                    aux_embedding(x_k.to(device)).cpu(),
+                    Phi_tilde_k.t()).solution.t()
             
             # Trimming
             B_k = Phi_tilde_k

@@ -543,7 +543,7 @@ def tt_rss(function: Callable,
             else:
                 x_k = sketch_samples[:, k:(k + 1)].unique(dim=0)
                 
-                aux_mul = 2
+                aux_mul = 4
                 if x_k.size(0) >= (aux_mul * embed_dim):
                     perm = torch.randperm(x_k.size(0))
                     idx = perm[:(aux_mul * embed_dim)]
@@ -557,7 +557,9 @@ def tt_rss(function: Callable,
         
         # Prepare D_k
         if verbose:
-            print(f'\n\n=========\nSite: {k + 1} / {n_features}\n=========')
+            site_count = f'|| Site: {k + 1} / {n_features} ||'
+            site_count = ['=' * len(site_count), site_count]
+            print('\n\n' + site_count[0] + '\n' + site_count[1] + '\n' + site_count[0])
         
         D_k = min(D_k_1 * phys_dim, phys_dim ** (n_features - k - 1))
         
@@ -615,7 +617,8 @@ def tt_rss(function: Callable,
             S_k_1 = S_k
             
             if verbose:
-                print(f'\nCore {k}:\n-------')
+                core_count = f'Core {k + 1}:'
+                print('\n' + core_count  + '\n' + ('-' * len(core_count)))
                 print(cores[-1])
                 print(f'* Final D_k: {D_k}')
                 print(f'* S_k out dim: {S_k.size(0)}')
@@ -674,7 +677,8 @@ def tt_rss(function: Callable,
             S_k_1 = S_k
             
             if verbose:
-                print(f'\nCore {k}:\n-------')
+                core_count = f'Core {k + 1}:'
+                print('\n' + core_count  + '\n' + ('-' * len(core_count)))
                 print(cores[-1])
                 print(f'* Final D_k: {D_k}')
                 print(f'* S_k out dim: {S_k.size(0)}')
@@ -700,7 +704,8 @@ def tt_rss(function: Callable,
             cores.append(G_k)
             
             if verbose:
-                print(f'\nCore {k}:\n-------')
+                core_count = f'Core {k + 1}:'
+                print('\n' + core_count  + '\n' + ('-' * len(core_count)))
                 print(cores[-1])
             
     return cores

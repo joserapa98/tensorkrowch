@@ -281,6 +281,7 @@ def tt_rss(function: Callable,
            sketch_samples: torch.Tensor,
            labels: Optional[torch.Tensor] = None,
            in_domain: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]] = None,
+           domain_multiplier: int = 1,
            out_position: Optional[int] = None,
            rank: Optional[int] = None,
            cum_percentage: Optional[float] = None,
@@ -346,6 +347,12 @@ def tt_rss(function: Callable,
         number of elements as input variables, so that each variable can live
         in a different domain. If ``in_domain`` is not given, it will be obtained
         from the values each variable takes in the ``sketch_samples``.
+    domain_multiplier : int
+        Upper bound for how many values are used for the input variable domain
+        if ``in_domain`` is not provided. If ``in_domain`` is not provided, the
+        domain of the input variables will be inferred from the unique values
+        each variable takes in the ``sketch_samples``. In this case, only
+        ``domain_multiplier * embed_dim`` values will be taken randomly.
     out_position : int, optional
         If the ``function`` is vector-valued, position of the output core in
         the resulting MPS.
@@ -543,10 +550,9 @@ def tt_rss(function: Callable,
             else:
                 x_k = sketch_samples[:, k:(k + 1)].unique(dim=0)
                 
-                aux_mul = 4
-                if x_k.size(0) >= (aux_mul * embed_dim):
+                if x_k.size(0) >= (domain_multiplier * embed_dim):
                     perm = torch.randperm(x_k.size(0))
-                    idx = perm[:(aux_mul * embed_dim)]
+                    idx = perm[:(domain_multiplier * embed_dim)]
                     x_k = x_k[idx]
             
             phys_dim = embed_dim

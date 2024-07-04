@@ -276,6 +276,7 @@ def create_projector(S_k_1, S_k):
     return s_k  
 
 
+@torch.no_grad()
 def tt_rss(function: Callable,
            embedding: Callable,
            sketch_samples: torch.Tensor,

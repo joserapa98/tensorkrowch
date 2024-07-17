@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.1.4 documentation</title>
+    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.1.5 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -777,6 +777,97 @@ title="Source repository"
     <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ids</span> <span class="o">==</span> <span class="n">data</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">ids</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">ids</span></div>
+
+
+<div class="viewcode-block" id="fourier"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.fourier">[docs]</a><span class="k">def</span> <span class="nf">fourier</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Embedds the data tensor using the Fourier basis functions of :math:`L^2[0,1]`.</span>
+<span class="sd">    That is, given the vector</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        x = \begin{bmatrix}</span>
+<span class="sd">                x_1\\</span>
+<span class="sd">                \vdots\\</span>
+<span class="sd">                x_N</span>
+<span class="sd">            \end{bmatrix}</span>
+<span class="sd">            </span>
+<span class="sd">    returns a matrix</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \hat{x} = \begin{bmatrix}</span>
+<span class="sd">                        1 &amp; \sqrt{2}\cos(2\pi x_1) &amp; \sqrt{2}\sin(2\pi x_1) &amp;</span>
+<span class="sd">                            \sqrt{2}\cos(4\pi x_1) &amp; \sqrt{2}\sin(4\pi x_1) &amp; \cdots\\</span>
+<span class="sd">                        \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots\\</span>
+<span class="sd">                        1 &amp; \sqrt{2}\cos(2\pi x_N) &amp; \sqrt{2}\sin(2\pi x_N) &amp;</span>
+<span class="sd">                            \sqrt{2}\cos(4\pi x_N) &amp; \sqrt{2}\sin(4\pi x_N) &amp; \cdots</span>
+<span class="sd">                  \end{bmatrix}</span>
+<span class="sd">        </span>
+<span class="sd">    where the number of columns is specified by ``dim``.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : torch.Tensor</span>
+<span class="sd">        Data tensor with shape </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">        </span>
+<span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
+<span class="sd">        components. The :math:`batch` sizes are optional.</span>
+<span class="sd">    dim : int</span>
+<span class="sd">        New feature dimension.</span>
+<span class="sd">    axis : int</span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39;. Should be between 0 and</span>
+<span class="sd">        the rank of ``data``. By default, it is -1, which returns a tensor with</span>
+<span class="sd">        shape  </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">            \times dim</span>
+<span class="sd">            </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    torch.Tensor</span>
+<span class="sd">            </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = torch.ones(5)</span>
+<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.fourier(a, dim=6)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    tensor([[ 1.0000,  0.5074,  1.3200, -1.0501,  0.9473, -1.2610],</span>
+<span class="sd">            [ 1.0000,  1.3922, -0.2486,  1.3268, -0.4895,  1.2201],</span>
+<span class="sd">            [ 1.0000,  0.1000, -1.4107, -1.4001, -0.1994, -0.2979],</span>
+<span class="sd">            [ 1.0000, -0.8827, -1.1049, -0.3123,  1.3793,  1.2726],</span>
+<span class="sd">            [ 1.0000, -0.4829, -1.3292, -1.0845,  0.9077,  1.2234]])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; b = torch.randn(100, 5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.fourier(b, dim=6)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
+<span class="sd">    torch.Size([100, 5, 6])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    
+    <span class="n">lst_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">cos</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">aux</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">sin</span><span class="p">()</span>
+        <span class="n">lst_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 </pre></div>
 
               </div>

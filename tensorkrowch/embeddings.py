@@ -450,3 +450,94 @@ def basis(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
     ids = torch.where(ids == data.unsqueeze(-1), 1, 0)
     ids = ids.movedim(-1, axis)
     return ids
+
+
+def fourier(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
+    r"""
+    Embedds the data tensor using the Fourier basis functions of :math:`L^2[0,1]`.
+    That is, given the vector
+    
+    .. math::
+
+        x = \begin{bmatrix}
+                x_1\\
+                \vdots\\
+                x_N
+            \end{bmatrix}
+            
+    returns a matrix
+    
+    .. math::
+
+        \hat{x} = \begin{bmatrix}
+                        1 & \sqrt{2}\cos(2\pi x_1) & \sqrt{2}\sin(2\pi x_1) &
+                            \sqrt{2}\cos(4\pi x_1) & \sqrt{2}\sin(4\pi x_1) & \cdots\\
+                        \vdots & \vdots & \vdots & \vdots & \vdots & \ddots\\
+                        1 & \sqrt{2}\cos(2\pi x_N) & \sqrt{2}\sin(2\pi x_N) &
+                            \sqrt{2}\cos(4\pi x_N) & \sqrt{2}\sin(4\pi x_N) & \cdots
+                  \end{bmatrix}
+        
+    where the number of columns is specified by ``dim``.
+    
+    
+    Parameters
+    ----------
+    data : torch.Tensor
+        Data tensor with shape 
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
+        
+        That is, ``data`` is a (batch) vector with :math:`n_{features}`
+        components. The :math:`batch` sizes are optional.
+    dim : int
+        New feature dimension.
+    axis : int
+        Axis where the ``data`` tensor is 'expanded'. Should be between 0 and
+        the rank of ``data``. By default, it is -1, which returns a tensor with
+        shape  
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
+            \times dim
+            
+    Returns
+    -------
+    torch.Tensor
+            
+    Examples
+    --------
+    >>> a = torch.ones(5)
+    >>> a
+    tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])
+    
+    >>> emb_a = tk.embeddings.fourier(a, dim=6)
+    >>> emb_a
+    tensor([[ 1.0000,  0.5074,  1.3200, -1.0501,  0.9473, -1.2610],
+            [ 1.0000,  1.3922, -0.2486,  1.3268, -0.4895,  1.2201],
+            [ 1.0000,  0.1000, -1.4107, -1.4001, -0.1994, -0.2979],
+            [ 1.0000, -0.8827, -1.1049, -0.3123,  1.3793,  1.2726],
+            [ 1.0000, -0.4829, -1.3292, -1.0845,  0.9077,  1.2234]])
+    
+    >>> b = torch.randn(100, 5)
+    >>> emb_b = tk.embeddings.fourier(b, dim=6)
+    >>> emb_b.shape
+    torch.Size([100, 5, 6])
+    """
+    if not isinstance(data, torch.Tensor):
+        raise TypeError('`data` should be torch.Tensor type')
+    
+    lst_tensors = []
+    for i in range(1, dim + 1):
+        k = i // 2
+        if i % 2 == 0:
+            aux = sqrt(2) * (2 * pi * k * data).cos()
+        else:
+            if i == 1:
+                aux = torch.ones_like(data)
+            else:
+                aux = sqrt(2) * (2 * pi * k * data).sin()
+        lst_tensors.append(aux)
+    return torch.stack(lst_tensors, dim=axis)

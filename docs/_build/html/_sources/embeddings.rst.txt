@@ -24,3 +24,7 @@ discretize
 basis
 ^^^^^
 .. autofunction:: basis
+
+fourier
+^^^^^^^
+.. autofunction:: fourier

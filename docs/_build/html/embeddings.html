@@ -398,6 +398,11 @@ title="Print to PDF"
    basis
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#fourier">
+   fourier
+  </a>
+ </li>
 </ul>
 
     </nav>
@@ -440,6 +445,11 @@ title="Print to PDF"
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#basis">
    basis
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#fourier">
+   fourier
   </a>
  </li>
 </ul>
@@ -817,6 +827,76 @@ can concatenate <a class="reference internal" href="#tensorkrowch.embeddings.dis
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">emb_a</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">int</span><span class="p">(),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">torch.Size([100, 10, 5])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="fourier">
+<h2>fourier<a class="headerlink" href="#fourier" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.embeddings.fourier">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.embeddings.</span></span><span class="sig-name descname"><span class="pre">fourier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#fourier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.embeddings.fourier" title="Permalink to this definition">#</a></dt>
+<dd><p>Embedds the data tensor using the Fourier basis functions of <span class="math notranslate nohighlight">\(L^2[0,1]\)</span>.
+That is, given the vector</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}x = \begin{bmatrix}
+        x_1\\
+        \vdots\\
+        x_N
+    \end{bmatrix}\end{split}\]</div>
+<p>returns a matrix</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\hat{x} = \begin{bmatrix}
+                1 &amp; \sqrt{2}\cos(2\pi x_1) &amp; \sqrt{2}\sin(2\pi x_1) &amp;
+                    \sqrt{2}\cos(4\pi x_1) &amp; \sqrt{2}\sin(4\pi x_1) &amp; \cdots\\
+                \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \vdots &amp; \ddots\\
+                1 &amp; \sqrt{2}\cos(2\pi x_N) &amp; \sqrt{2}\sin(2\pi x_N) &amp;
+                    \sqrt{2}\cos(4\pi x_N) &amp; \sqrt{2}\sin(4\pi x_N) &amp; \cdots
+          \end{bmatrix}\end{split}\]</div>
+<p>where the number of columns is specified by <code class="docutils literal notranslate"><span class="pre">dim</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
+<div class="math notranslate nohighlight">
+\[(batch_0 \times \cdots \times batch_n \times) n_{features}\]</div>
+<p>That is, <code class="docutils literal notranslate"><span class="pre">data</span></code> is a (batch) vector with <span class="math notranslate nohighlight">\(n_{features}\)</span>
+components. The <span class="math notranslate nohighlight">\(batch\)</span> sizes are optional.</p>
+</p></li>
+<li><p><strong>dim</strong> (<em>int</em>) – New feature dimension.</p></li>
+<li><p><strong>axis</strong> (<em>int</em>) – <p>Axis where the <code class="docutils literal notranslate"><span class="pre">data</span></code> tensor is ‘expanded’. Should be between 0 and
+the rank of <code class="docutils literal notranslate"><span class="pre">data</span></code>. By default, it is -1, which returns a tensor with
+shape</p>
+<div class="math notranslate nohighlight">
+\[(batch_0 \times \cdots \times batch_n \times) n_{features}
+\times dim\]</div>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">fourier</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span>
+<span class="go">tensor([[ 1.0000,  0.5074,  1.3200, -1.0501,  0.9473, -1.2610],</span>
+<span class="go">        [ 1.0000,  1.3922, -0.2486,  1.3268, -0.4895,  1.2201],</span>
+<span class="go">        [ 1.0000,  0.1000, -1.4107, -1.4001, -0.1994, -0.2979],</span>
+<span class="go">        [ 1.0000, -0.8827, -1.1049, -0.3123,  1.3793,  1.2726],</span>
+<span class="go">        [ 1.0000, -0.4829, -1.3292, -1.0845,  0.9077,  1.2234]])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">fourier</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 5, 6])</span>
 </pre></div>
 </div>
 </dd></dl>

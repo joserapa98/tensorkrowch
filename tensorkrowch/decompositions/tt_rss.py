@@ -281,7 +281,7 @@ def tt_rss(function: Callable,
            embedding: Callable,
            sketch_samples: torch.Tensor,
            labels: Optional[torch.Tensor] = None,
-           in_domain: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]] = None,
+           domain: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]] = None,
            domain_multiplier: int = 1,
            out_position: Optional[int] = None,
            rank: Optional[int] = None,
@@ -336,7 +336,7 @@ def tt_rss(function: Callable,
         will be obtained according to the distribution represented by the output
         vectors (assuming these represent square roots of probabilities for each
         class).
-    in_domain : torch.Tensor or list[torch.Tensor], optional
+    domain : torch.Tensor or list[torch.Tensor], optional
         Domain of the input variables. It should be given as a finite set of
         possible values that can take each variable. If all variables live in
         the same domain, it should be given as a tensor with shape ``n_values``
@@ -344,13 +344,13 @@ def tt_rss(function: Callable,
         least as large as the desired input dimension of the MPS cores, which
         is the ``embed_dim`` of the ``embedding``. The more values are given,
         the more accurate will be the tensorization but more costly will be to
-        do it. If ``in_domain`` is given as a list, it should have the same
+        do it. If ``domain`` is given as a list, it should have the same
         number of elements as input variables, so that each variable can live
-        in a different domain. If ``in_domain`` is not given, it will be obtained
+        in a different domain. If ``domain`` is not given, it will be obtained
         from the values each variable takes in the ``sketch_samples``.
     domain_multiplier : int
         Upper bound for how many values are used for the input variable domain
-        if ``in_domain`` is not provided. If ``in_domain`` is not provided, the
+        if ``domain`` is not provided. If ``domain`` is not provided, the
         domain of the input variables will be inferred from the unique values
         each variable takes in the ``sketch_samples``. In this case, only
         ``domain_multiplier * embed_dim`` values will be taken randomly.
@@ -437,31 +437,31 @@ def tt_rss(function: Callable,
             raise ValueError('`labels` should be a tensor with shape (batch_size,)')
     
     # Input domain
-    if in_domain is not None:
-        if not isinstance(in_domain, torch.Tensor):
-            if not isinstance(in_domain, Sequence):
+    if domain is not None:
+        if not isinstance(domain, torch.Tensor):
+            if not isinstance(domain, Sequence):
                 raise TypeError(
-                    '`in_domain` should be torch.Tensor or list[torch.Tensor] type')
+                    '`domain` should be torch.Tensor or list[torch.Tensor] type')
             else:
-                for t in in_domain:
+                for t in domain:
                     if not isinstance(t, torch.Tensor):
                         raise TypeError(
-                            '`in_domain` should be torch.Tensor or list[torch.Tensor]'
+                            '`domain` should be torch.Tensor or list[torch.Tensor]'
                             ' type')
                 
-                if len(in_domain) != n_features:
+                if len(domain) != n_features:
                     raise ValueError(
-                        'If `in_domain` is given as a sequence of tensors, it should'
+                        'If `domain` is given as a sequence of tensors, it should'
                         ' have as many elements as input variables')
         else:
-            if len(in_domain.shape) != (len(sketch_samples.shape) - 1):
+            if len(domain.shape) != (len(sketch_samples.shape) - 1):
                 raise ValueError(
-                    'If `in_domain` is given as a torch.Tensor, it should have '
+                    'If `domain` is given as a torch.Tensor, it should have '
                     'shape (n_values,) or (n_values, in_dim), and it should '
                     'only include in_dim if it also appears in the shape of '
                     '`sketch_samples`')
-            if len(in_domain.shape) == 2:
-                if in_domain.shape[1] == 1:
+            if len(domain.shape) == 2:
+                if domain.shape[1] == 1:
                     raise ValueError()
     
     # Output position
@@ -542,11 +542,11 @@ def tt_rss(function: Callable,
             phys_dim = out_dim
         
         else:
-            if in_domain is not None:
-                if isinstance(in_domain, torch.Tensor):
-                    x_k = in_domain.unsqueeze(1)
+            if domain is not None:
+                if isinstance(domain, torch.Tensor):
+                    x_k = domain.unsqueeze(1)
                 else:
-                    x_k = in_domain[k if k < out_position else (k - 1)].unsqueeze(1)
+                    x_k = domain[k if k < out_position else (k - 1)].unsqueeze(1)
             
             else:
                 x_k = sketch_samples[:, k:(k + 1)].unique(dim=0)

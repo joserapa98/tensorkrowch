@@ -777,5 +777,3 @@ def tt_rss(function: Callable,
         return cores, info
             
     return cores
-
-

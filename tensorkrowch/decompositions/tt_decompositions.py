@@ -777,3 +777,662 @@ def tt_rss(function: Callable,
         return cores, info
             
     return cores
+
+
+# MARK: TT-RCS
+@torch.no_grad()
+def tt_rcs(function: Callable,
+           embedding: Callable,
+           sketch_samples: torch.Tensor,
+           labels: Optional[torch.Tensor] = None,
+           domain: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]] = None,
+           domain_multiplier: int = 1,
+           out_position: Optional[int] = None,
+           init_cores: Optional[List[torch.Tensor]] = None,
+           init_method: Optional[Text] = None,
+           rank: Optional[int] = None,
+           cum_percentage: Optional[float] = None,
+           eps: float = 1e-6,
+           max_iter: int = 25,
+           batch_size: int = 64,
+           device: Optional[torch.device] = None,
+           verbose: bool = True,
+           return_info: bool = False) -> Union[List[torch.Tensor],
+                                               Tuple[List[torch.Tensor], dict]]:
+    r"""
+    Tensor Train - Renormalization Cross from Samples.
+    
+    Decomposes a scalar or vector-valued function of :math:`N` input variables
+    in a Matrix Product State of :math:`N` cores, each corresponding to one
+    input variable, in the same order as they are provided to the function. To
+    turn each input variable into a vector that can be contracted with the
+    corresponding MPS core, an embedding function is required. The dimension of
+    the embedding will be used as the input dimension of the MPS.
+    
+    If the function is vector-valued, it will be seen as a :math:`N + 1` scalar
+    function, returning a MPS with :math:`N + 1` cores. The output variable will
+    use the embedding :func:`~tensorkrowch.basis`, which maps integers
+    (corresponding to indices of the output vector) to basis vectors:
+    :math:`i \mapsto \langle i \rvert`. It can be specified the position in
+    which the output core will be. By default, it will be in the middle of the
+    MPS.
+    
+    To specify the bond dimension of each MPS core, one can use the arguments
+    ``rank`` and ``cum_percentage``. If more than one is specified, the
+    resulting rank will be the one that satisfies all conditions.
+    
+    Parameters
+    ----------
+    function : Callable
+        Function that is going to be decomposed. It needs to have a single
+        input argument, the data, which is a tensor of shape
+        ``batch_size x n_features`` or ``batch_size x n_features x in_dim``. It
+        must return a tensor of shape ``batch_size x out_dim``. If the function
+        is scalar, ``out_dim = 1``.
+    embedding : Callable
+        Embedding function that maps the data tensor to a higher dimensional
+        space. It needs to have a single argument. It is a function that
+        transforms the given data tensor of shape ``batch_size x n_features`` or
+        ``batch_size x n_features x in_dim`` and returns an embedded tensor of
+        shape ``batch_size x n_features x embed_dim``.
+    sketch_samples : torch.Tensor
+        Samples that will be used as sketches to decompose the function. It has
+        to be a tensor of shape ``batch_size x n_features`` or
+        ``batch_size x n_features x in_dim``.
+    labels : torch.Tensor, optional
+        Tensor of output labels of the ``function`` with shape ``batch_size``.
+        If ``function`` is vector-valued, ``labels`` will be used to select
+        an element from each output vector. If ``labels`` are not given, these
+        will be obtained according to the distribution represented by the output
+        vectors (assuming these represent square roots of probabilities for each
+        class).
+    domain : torch.Tensor or list[torch.Tensor], optional
+        Domain of the input variables. It should be given as a finite set of
+        possible values that can take each variable. If all variables live in
+        the same domain, it should be given as a tensor with shape ``n_values``
+        or ``n_values x in_dim``, where the possible ``n_values`` should be at
+        least as large as the desired input dimension of the MPS cores, which
+        is the ``embed_dim`` of the ``embedding``. The more values are given,
+        the more accurate will be the tensorization but more costly will be to
+        do it. If ``domain`` is given as a list, it should have the same
+        number of elements as input variables, so that each variable can live
+        in a different domain. If ``domain`` is not given, it will be obtained
+        from the values each variable takes in the ``sketch_samples``.
+    domain_multiplier : int
+        Upper bound for how many values are used for the input variable domain
+        if ``domain`` is not provided. If ``domain`` is not provided, the
+        domain of the input variables will be inferred from the unique values
+        each variable takes in the ``sketch_samples``. In this case, only
+        ``domain_multiplier * embed_dim`` values will be taken randomly.
+    out_position : int, optional
+        If the ``function`` is vector-valued, position of the output core in
+        the resulting MPS.
+    init_cores : list[torch.Tensor]
+        If ``init_method`` is not provided, a list of initial TT cores can be
+        given. For instance, these can be the cores that result from
+        :meth:`~tensorkrowch.decompositions.tt_rss.tt_rss`.
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
+        Initialization method of the TT cores. Check
+        :meth:`~tensorkrowch.models.MPS.initialize` for a more detailed
+        explanation of the different initialization methods.
+    rank : int, optional
+        Upper bound for the bond dimension of all cores.
+    cum_percentage : float, optional
+        When getting the proper bond dimension of each core via truncated SVD,
+        this is the proportion that should be satisfied between the sum of all
+        singular values kept and the total sum of all singular values. Therefore,
+        it specifies the rank of each core independently, allowing for
+        varying bond dimensions.
+    eps : float
+        Validation error that has to be met after each iteration to stop
+        iterating.
+    max_iter : int
+        Maximum number of iterations allowed.
+    batch_size : int
+        Batch size used to process ``sketch_samples`` with ``DataLoaders``
+        during the decomposition.
+    device : torch.device, optional
+        Device to which ``sketch_samples`` will be sent to compute sketches. It
+        should coincide with the device the ``function`` is in, in the case the
+        function is a call to a ``nn.Module`` or uses tensors that are in a 
+        specific device. This also applies to the ``embedding`` function.
+    verbose : bool
+        Default is ``True``.
+    return_info : bool
+        Boolean indicating if an additional dictionary with total time and
+        validation error should be returned.
+
+    Returns
+    -------
+    list[torch.Tensor]
+        List of tensor cores of the MPS.
+    dictionary
+        If ``return_info`` is ``True``.
+    """
+    if not isinstance(function, Callable):
+        raise TypeError('`function` should be callable')
+    
+    if not isinstance(embedding, Callable):
+        raise TypeError('`embedding` should be callable')
+    
+    # Number of input features
+    if not isinstance(sketch_samples, torch.Tensor):
+        raise TypeError('`sketch_samples` should be torch.Tensor type')
+    if len(sketch_samples.shape) not in [2, 3]:
+        # batch_size x n_features or batch_size x n_features x in_dim
+        raise ValueError(
+            '`sketch_samples` should be a tensor with shape (batch_size, '
+            'n_features) or (batch_size, n_features, in_dim)')
+    n_features = sketch_samples.size(1)
+    if n_features == 0:
+        raise ValueError('`sketch_samples` cannot be 0 dimensional')
+    
+    # Embedding dimension
+    try:
+        aux_embed = embedding(sketch_samples[:1, :1].to(device))
+    except:
+        raise ValueError(
+            '`embedding` should take as argument a single tensor with shape '
+            '(batch_size, n_features) or (batch_size, n_features, in_dim)')
+        
+    if len(aux_embed.shape) != 3:
+        raise ValueError('`embedding` should return a tensor of shape '
+                         '(batch_size, n_features, embed_dim)')
+    embed_dim = aux_embed.size(2)
+    if embed_dim == 0:
+        raise ValueError('Embedding dimension cannot be 0')
+        
+    # Output dimension
+    try:
+        aux_output = function(sketch_samples[:1].to(device))
+    except:
+        raise ValueError(
+            '`function` should take as argument a single tensor with shape '
+            '(batch_size, n_features) or (batch_size, n_features, in_dim)')
+        
+    if len(aux_output.shape) != 2:
+        raise ValueError(
+            '`function` should return a tensor of shape (batch_size, out_dim).'
+            ' If `function` is scalar, out_dim = 1')
+    out_dim = aux_output.size(1)
+    if out_dim == 0:
+        raise ValueError('Output dimension (of `function`) cannot be 0')
+    
+    # Labels
+    if labels is not None:
+        if not isinstance(labels, torch.Tensor):
+            raise TypeError('`labels` should be torch.Tensor type')
+        if labels.shape != sketch_samples.shape[:1]:
+            raise ValueError('`labels` should be a tensor with shape (batch_size,)')
+    
+    # Input domain
+    if domain is not None:
+        if not isinstance(domain, torch.Tensor):
+            if not isinstance(domain, Sequence):
+                raise TypeError(
+                    '`domain` should be torch.Tensor or list[torch.Tensor] type')
+            else:
+                for t in domain:
+                    if not isinstance(t, torch.Tensor):
+                        raise TypeError(
+                            '`domain` should be torch.Tensor or list[torch.Tensor]'
+                            ' type')
+                
+                if len(domain) != n_features:
+                    raise ValueError(
+                        'If `domain` is given as a sequence of tensors, it should'
+                        ' have as many elements as input variables')
+        else:
+            if len(domain.shape) != (len(sketch_samples.shape) - 1):
+                raise ValueError(
+                    'If `domain` is given as a torch.Tensor, it should have '
+                    'shape (n_values,) or (n_values, in_dim), and it should '
+                    'only include in_dim if it also appears in the shape of '
+                    '`sketch_samples`')
+            if len(domain.shape) == 2:
+                if domain.shape[1] == 1:
+                    raise ValueError()
+    
+    # Output position
+    if out_dim == 1:
+        if out_position is not None:
+            warnings.warn(
+                '`out_position` will be ignored, since `function` is scalar')
+        out_position = -1
+    else:
+        if out_position is None:
+            out_position = (n_features + 1) // 2
+        else:
+            if not isinstance(out_position, int):
+                raise TypeError('`out_position` should be int type')
+            if (out_position  < 0) or (out_position > n_features):
+                raise ValueError(
+                    '`out_position` should be between 0 and the number of '
+                    'features (equal to the second dimension of `sketch_samples`)'
+                    ', both included')
+    
+    # Init. cores
+    if init_cores is not None:
+        if not isinstance(init_cores, Sequence):
+            raise TypeError('`init_cores` should be list[torch.Tensor] type')
+        if len(init_cores) != (n_features + (out_dim > 1)):
+            raise ValueError(
+                'The number of elements in `init_cores` should equal to the '
+                'number of features that admits the functions, plus '
+                'an additional tensor if the function is vector-valued')
+        for i, t in enumerate(init_cores):
+            if (i == 0) or (i == (len(init_cores) - 1)):
+                if len(t.shape) != 2:
+                    raise ValueError(
+                        'The tensors in `init_cores` should be rank-3 tensors, '
+                        'except for the first and last elements, which should '
+                        'be rank-2')
+            else:
+                if len(t.shape) != 3:
+                    raise ValueError(
+                        'The tensors in `init_cores` should be rank-3 tensors, '
+                        'except for the first and last elements, which should '
+                        'be rank-2')
+    
+    # Init. method
+    if init_method is not None:
+        if init_cores is not None:
+            warnings.warn(
+                '`init_method` will be ignored, since `init_cores` is given')
+        else:
+        
+            if out_dim > 1:
+                mps = models.MPSLayer(n_features=n_features + 1,
+                                      in_dim=embed_dim,
+                                      out_dim=out_dim,
+                                      bond_dim=embed_dim,
+                                      out_position=out_position,
+                                      init_method='canonical')
+            else:
+                mps = models.MPS(n_features=n_features,
+                                 phys_dim=embed_dim,
+                                 bond_dim=embed_dim,
+                                 out_position=out_position,
+                                 init_method='canonical')
+            
+            init_cores = mps.tensors
+            del mps
+        
+    if (init_method is None) and (init_cores is None):
+        raise ValueError(
+            'At least one of `init_method` and `init_cores` should be given')
+    
+    # Rank
+    if rank is not None:
+        if not isinstance(rank, int):
+            raise TypeError('`rank` should be int type')
+        if rank < 1:
+            raise ValueError('`rank` should be greater or equal than 1')
+    
+    # Cum. percentage
+    if cum_percentage is not None:
+        if not isinstance(cum_percentage, float):
+            raise TypeError('`cum_percentage` should be float type')
+        if (cum_percentage <= 0) or (cum_percentage > 1):
+            raise ValueError('`cum_percentage` should be in the range (0, 1]')
+    
+    if (rank is None) and (cum_percentage is None):
+        raise ValueError(
+            'At least one of `rank` and `cum_percentage` should be given')
+    
+    # Eps
+    if not isinstance(eps, float):
+        raise TypeError('`eps` should be float type')
+    
+    # Max. iter.
+    if not isinstance(max_iter, int):
+        raise TypeError('`max_iter` should be int type')
+    
+    # Batch size
+    if not isinstance(batch_size, int):
+        raise TypeError('`batch_size` should be int type')
+    
+    # Extend sketch_samples tensor with outputs
+    if out_dim > 1:
+        n_features += 1
+        sketch_samples, _ = extend_with_output(function=function,
+                                               samples=sketch_samples,
+                                               labels=labels,
+                                               out_position=out_position,
+                                               batch_size=batch_size,
+                                               device=device)
+        
+    def aux_embedding(data):
+        """
+        For the cases where ``n_features = 1``, it returns an embedded tensor
+        with shape ``batch_size x embed_dim``.
+        """
+        return embedding(data).squeeze(1)
+    
+    def aux_basis(data):
+        """
+        For the cases where ``n_features = 1``, it returns an embedded tensor
+        with shape ``batch_size x basis_dim``.
+        """
+        # batch_size x n_features(=1) x in_dim
+        if len(data.shape) == 3:
+            # In this case, labels are the same along dimension `in_dim`
+            data = data[:, :, 0]
+        return basis(data.int(), dim=out_dim).squeeze(1).float()
+    
+    # Warmup
+    # ------
+    if verbose: print('\n============\n|| Warmup ||\n============')
+    start_time = time.time()
+    cores = init_cores[:]
+    
+    # Store S and s projectors
+    if verbose: print('* Creating S and s projectors')
+    S = [None] * n_features
+    s = [None] * n_features
+    for k in range(n_features - 2):
+        S[k] = sketch_samples[:, :(k + 1)].unique(dim=0)
+        if k == 0:
+            s[k] = S[k]
+        else:
+            s[k] = create_projector(S[k - 1], S[k])
+    
+    # NOTE: check
+    # for k in range(n_features - 2):
+    #     if k == 0:
+    #         assert torch.equal(S[k], s[k])
+    #     else:
+    #         assert torch.equal(torch.cat([S[k - 1][s[k][0]], s[k][1]], dim=1), S[k])
+    
+    # Store x projectors
+    if verbose: print('* Creating x projectors')
+    x = [None] * n_features
+    phys_dim = [None] * n_features
+    for k in range(n_features):
+        if k == out_position:
+            x[k] = torch.arange(out_dim).view(-1, 1).float()
+            phys_dim[k] = out_dim
+        else:
+            
+            if domain is not None:
+                if isinstance(domain, torch.Tensor):
+                    x[k] = domain.unsqueeze(1)
+                else:
+                    x[k] = domain[k if k < out_position else (k - 1)].unsqueeze(1)
+            
+            else:
+                x[k] = sketch_samples[:, k:(k + 1)].unique(dim=0)
+                
+                if x[k].size(0) >= (domain_multiplier * embed_dim):
+                    perm = torch.randperm(x[k].size(0))
+                    idx = perm[:(domain_multiplier * embed_dim)]
+                    x[k] = x[k][idx]
+            
+            phys_dim[k] = embed_dim
+    
+    # Store T and t projectors
+    if verbose: print('* Creating T and t projectors')
+    T = [None] * n_features
+    t = [None] * n_features
+    for k in range(n_features - 2, 0, -1):
+        T[k] = sketch_samples[:, (k + 1):].unique(dim=0)
+        if k == n_features - 2:
+            t[k] = T[k]
+        else:
+            t[k] = create_projector(T[k + 1].flip(dims=[1]),
+                                    T[k].flip(dims=[1]))
+            t[k][0], t[k][1] = t[k][1], t[k][0]
+    
+    # NOTE: check
+    # for k in range(n_features - 2, 0, -1):
+    #     if k == n_features - 2:
+    #         assert torch.equal(T[k], t[k])
+    #     else:
+    #         assert torch.equal(torch.cat([t[k][0], T[k + 1][t[k][1]]], dim=1), T[k])
+    
+    # Pre-compute projections of function
+    if verbose: print('* Projecting function with S and T projectors')
+    
+    # NOTE
+    if out_dim > 1:
+        mps = models.MPSLayer(tensors=[c.to(device) for c in init_cores])
+    else:
+        mps = models.MPS(tensors=[c.to(device) for c in init_cores])
+    
+    def aux_fn(data):
+        output = mps(embedding(data), inline_input=True, inline_mats=True)
+        return output.unsqueeze(1)
+    
+    aux_P = [None] * n_features
+    
+    P = [None] * n_features
+    for k in range(n_features - 1):
+        tensors = []
+        
+        # S projector
+        if k > 0:
+            tensors.append(S[k - 1])
+        
+        # x's projectors
+        tensors += [x[k], x[k + 1]]
+            
+        # T projector
+        if k < (n_features - 2):
+            tensors.append(T[k + 1])
+        
+        # Sketching
+        P[k] = sketching(function=function,
+                         tensors_list=tensors,
+                         out_position=out_position,
+                         batch_size=batch_size,
+                         device=device)
+        
+        # NOTE
+        aux_P[k] = sketching(function=aux_fn,
+                             tensors_list=tensors,
+                             out_position=out_position,
+                             batch_size=batch_size,
+                             device=device)
+    
+    
+    # Pre-compute T projections of TT
+    if verbose: print('* Projecting TT with T projectors')
+    tt_P = [None] * n_features
+    for k in range(n_features - 1, 1, -1):
+        
+        if k == (n_features - 1):
+            if k == out_position:
+                aux_t = aux_basis(t[k - 1])
+            else:
+                aux_t = aux_embedding(t[k - 1].to(device)).cpu()
+                
+            tt_P[k] = torch.einsum('li,bi->lb', cores[k], aux_t)
+        
+        else:
+            if k == out_position:
+                aux_t = aux_basis(t[k - 1][0])
+            else:
+                aux_t = aux_embedding(t[k - 1][0].to(device)).cpu()
+                
+            aux_tt_P = tt_P[k + 1][:, t[k - 1][1]]
+            tt_P[k] = torch.einsum('lir,rb,bi->lb', cores[k], aux_tt_P, aux_t)
+    
+    
+    # Sweeps
+    # ------
+    if verbose: print('\n============\n|| Sweeps ||\n============')
+    for i in range(max_iter):
+        direction = int((-1) ** i)  # 1 -> left to right, -1 -> right to left
+        start = ((n_features - 2) - direction * (n_features - 2)) // 2
+        end = ((n_features - 2) + direction * (n_features - 2)) // 2
+        
+        for k in range(start, end + direction, direction):
+            tensors = []
+            
+            # s projectors
+            if k > 0:
+                tensors.append(tt_P[k - 1])
+            
+            # x's projectors
+            for j in range(2):
+                if (k + j) == out_position:
+                    tensors.append(aux_basis(x[k + j]))
+                else:
+                    tensors.append(aux_embedding(x[k + j].to(device)).cpu())
+            
+            # t projectors
+            if k < (n_features - 2):
+                tensors.append(tt_P[k + 2].T)
+            
+            # NOTE
+            if k == 0:
+                aux_tt_P = torch.einsum('mi,nj,br,il,ljr->mnb',
+                                        tensors[0], tensors[1], tensors[2],
+                                        cores[k], cores[k + 1])
+            elif k < (n_features - 2):
+                aux_tt_P = torch.einsum('bl,mi,nj,ar,lih,hjr->bmna',
+                                        tensors[0], tensors[1],
+                                        tensors[2], tensors[3],
+                                        cores[k], cores[k + 1])
+            else:
+                aux_tt_P = torch.einsum('bl,mi,nj,lir,rj->bmn',
+                                        tensors[0], tensors[1], tensors[2],
+                                        cores[k], cores[k + 1])
+                
+            diff = (aux_P[k] - aux_tt_P).norm() / aux_P[k].norm()
+            diff2 = (P[k] - aux_P[k]).norm() / P[k].norm()
+            
+            # Turn all projectors into single matrix
+            Proj = tensors[0]
+            for ten in tensors[1:]:
+                Proj = torch.einsum('ab,cd->acbd',
+                                    Proj, ten).reshape(Proj.shape[0] * ten.shape[0],
+                                                       Proj.shape[1] * ten.shape[1])                                  
+            
+            Phi_k = torch.linalg.lstsq(Proj,
+                                       P[k].view(-1, 1)).solution.squeeze(-1)
+            
+            # Check distance to current cores
+            approx_Phi_k = cores[k].reshape(-1, cores[k].shape[-1]) @ \
+                cores[k + 1].reshape(cores[k + 1].shape[0], -1)
+            approx_Phi_k = approx_Phi_k.view(-1)
+            
+            approx_error = (Phi_k - approx_Phi_k).norm() / Phi_k.norm()
+            approx_error *= sqrt(n_features - 1)
+            
+            # Split Phi to set proper bond dimension
+            if k == 0:
+                Phi_k = Phi_k.view(tensors[0].size(1), -1)
+            elif k < (n_features - 2):
+                Phi_k = Phi_k.view(tensors[0].size(1) * tensors[1].size(1),
+                                   tensors[2].size(1) * tensors[3].size(1))
+            else:
+                Phi_k = Phi_k.view(-1, tensors[-1].size(1))
+            
+            core1, sv, core2, aux_rank = trimming(Phi_k, rank, cum_percentage)
+            
+            core1 = core1[:, :aux_rank]
+            sv = sv[:aux_rank]
+            core2 = core2[:aux_rank, :]
+            
+            if core1.is_complex():
+                sv = sv.to(core1.dtype)
+            
+            core2 = torch.diag_embed(sv) @ core2
+            
+            # if verbose:
+            #     print(f'* (iter {i} (dir={direction}), '
+            #           f'step {k + 1}/{n_features - 1}) => '
+            #           f'Approx. error: {approx_error:.2e}, '
+            #           f'D_k: {cores[k].shape[-1]} -> {aux_rank}')
+            
+            if k == 0:
+                core1 = core1.reshape(tensors[0].size(1),
+                                      aux_rank)
+                core2 = core2.reshape(aux_rank,
+                                      tensors[1].size(1),
+                                      tensors[2].size(1))
+            elif k < (n_features - 2):
+                core1 = core1.reshape(tensors[0].size(1),
+                                      tensors[1].size(1),
+                                      aux_rank)
+                core2 = core2.reshape(aux_rank,
+                                      tensors[2].size(1),
+                                      tensors[3].size(1))
+            else:
+                core1 = core1.reshape(tensors[0].size(1),
+                                      tensors[1].size(1),
+                                      aux_rank)
+                core2 = core2.reshape(aux_rank,
+                                      tensors[2].size(1))
+            
+            cores[k], cores[k + 1] = core1, core2
+            
+            # Build new tt_P
+            if direction > 0:
+                if k == 0:
+                    if k == out_position:
+                        aux_s = aux_basis(s[k])
+                    else:
+                        aux_s = aux_embedding(s[k].to(device)).cpu()
+                        
+                    tt_P[k] = torch.einsum('bi,ir->br', aux_s, cores[k])#.contiguous()
+                
+                elif k < (n_features - 2):
+                    if k == out_position:
+                        aux_s = aux_basis(s[k][1])
+                    else:
+                        aux_s = aux_embedding(s[k][1].to(device)).cpu()
+                        
+                    aux_tt_P = tt_P[k - 1][s[k][0]]
+                    tt_P[k] = torch.einsum('bl,bi,lir->br',
+                                           aux_tt_P, aux_s, cores[k])#.contiguous()
+            
+            else:
+                if (k + 1) == (n_features - 1):
+                    if (k + 1) == out_position:
+                        aux_t = aux_basis(t[k])
+                    else:
+                        aux_t = aux_embedding(t[k].to(device)).cpu()
+                        
+                    tt_P[k + 1] = torch.einsum('li,bi->lb', cores[k + 1], aux_t)#.contiguous()
+                
+                elif (k + 1) > 1:
+                    if (k + 1) == out_position:
+                        aux_t = aux_basis(t[k][0])
+                    else:
+                        aux_t = aux_embedding(t[k][0].to(device)).cpu()
+                        
+                    aux_tt_P = tt_P[k + 2][:, t[k][1]]
+                    tt_P[k + 1] = torch.einsum('lir,rb,bi->lb',
+                                               cores[k + 1], aux_tt_P, aux_t)#.contiguous()
+        
+        error = val_error(function=function,
+                          embedding=embedding,
+                          cores=cores,
+                          sketch_samples=sketch_samples,
+                          out_position=out_position,
+                          device=device)
+        
+        if verbose:
+            print(f'# (iter {i + 1}/{max_iter}, dir={direction:>2}) => '
+                  f'Error sketch samples: {error:.2e} ({eps=})')
+        
+        if error < eps:
+            break
+    
+    if return_info:
+        total_time = time.time() - start_time
+        error = val_error(function=function,
+                          embedding=embedding,
+                          cores=cores,
+                          sketch_samples=sketch_samples,
+                          out_position=out_position,
+                          device=device)
+    
+        info = {'total_time': total_time,
+                'eps': error}
+        
+        return cores, info
+            
+    return cores

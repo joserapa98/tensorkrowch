@@ -261,9 +261,7 @@ def create_projector(S_k_1, S_k):
             [0],
             [0]])]
     """
-    # s_k_0 = []
-    # s_k_1 = []
-    s_k_0 = torch.empty_like(S_k[:, -1])
+    s_k_0 = torch.empty_like(S_k[:, -1]).long()
     s_k_1 = torch.empty_like(S_k[:, -1:])
     for i in range(S_k_1.size(0)):
         if len(S_k.shape) == 2:
@@ -276,14 +274,10 @@ def create_projector(S_k_1, S_k):
         new_col = S_k[where_equal, -1:]
         first_col = torch.Tensor([i]).expand(new_col.size(0)).to(new_col.device)
         
-        s_k_0[where_equal] = first_col
+        s_k_0[where_equal] = first_col.long()
         s_k_1[where_equal] = new_col
         
-        # s_k_0.append(first_col)
-        # s_k_1.append(new_col)
-    
-    # s_k = [torch.cat(s_k_0, dim=0).long(), torch.cat(s_k_1, dim=0)]
-    s_k = [s_k_0.long(), s_k_1]
+    s_k = [s_k_0, s_k_1]
     return s_k  
 
 
@@ -772,7 +766,7 @@ def tt_rss(function: Callable,
                           device=device)
     
         info = {'total_time': total_time,
-                'eps': error}
+                'val_eps': error}
         
         return cores, info
             

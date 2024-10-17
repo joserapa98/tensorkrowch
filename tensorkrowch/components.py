@@ -2562,8 +2562,10 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
                          tensor: Optional[Union[Tensor, Parameter]]) -> None:
         """Saves new node's tensor in the network's memory, and registers parameter."""
         self._network._memory_nodes[self._tensor_info['address']] = tensor
-        self._network.register_parameter(
-            'param_' + self._tensor_info['address'], tensor)
+        
+        if isinstance(tensor, Parameter):
+            self._network.register_parameter(
+                'param_' + self._tensor_info['address'], tensor)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         """
@@ -4494,7 +4496,7 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
             if not hasattr(self, 'param_' + node._name,):
-                self.register_parameter( 'param_' + node._name,
+                self.register_parameter('param_' + node._name,
                                         self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that

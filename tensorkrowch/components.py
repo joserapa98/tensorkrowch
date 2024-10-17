@@ -2140,7 +2140,7 @@ class Node(AbstractNode):  # MARK: Node
         """
         Returns a ``torch.Tensor`` if input tensor is given as ``torch.nn.Parameter``.
         """
-        if tensor.requires_grad:
+        if isinstance(tensor, Parameter):
             return tensor.detach()
         return tensor
     
@@ -2554,7 +2554,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Parameter:
         """Returns a nn.Parameter if input tensor is just torch.Tensor."""
-        if tensor.requires_grad:
+        if isinstance(tensor, Parameter):
             return tensor
         return Parameter(tensor)
     
@@ -2562,10 +2562,8 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
                          tensor: Optional[Union[Tensor, Parameter]]) -> None:
         """Saves new node's tensor in the network's memory, and registers parameter."""
         self._network._memory_nodes[self._tensor_info['address']] = tensor
-        
-        if isinstance(tensor, Parameter):
-            self._network.register_parameter(
-                'param_' + self._tensor_info['address'], tensor)
+        self._network.register_parameter(
+            'param_' + self._tensor_info['address'], tensor)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         """

@@ -630,7 +630,7 @@ def tt_rss(function: Callable,
                                     device=device)
             
             # Random unitary for T_k
-            randu_t = random_unitary(Phi_tilde_k.size(1))
+            randu_t = random_unitary(Phi_tilde_k.size(1)).to(Phi_tilde_k.dtype)
             Phi_tilde_k = torch.mm(Phi_tilde_k, randu_t)
             
             if k != out_position:
@@ -680,7 +680,7 @@ def tt_rss(function: Callable,
             
             # Random unitary for T_k
             randu_t = random_unitary(Phi_tilde_k.size(2))\
-                .repeat(Phi_tilde_k.size(0), 1, 1)
+                .repeat(Phi_tilde_k.size(0), 1, 1).to(Phi_tilde_k.dtype)
             Phi_tilde_k = torch.bmm(Phi_tilde_k, randu_t)
             
             if k != out_position:

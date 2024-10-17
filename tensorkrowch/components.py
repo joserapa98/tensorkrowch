@@ -2140,7 +2140,7 @@ class Node(AbstractNode):  # MARK: Node
         """
         Returns a ``torch.Tensor`` if input tensor is given as ``torch.nn.Parameter``.
         """
-        if isinstance(tensor, Parameter):
+        if tensor.requires_grad:
             return tensor.detach()
         return tensor
     
@@ -2554,7 +2554,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Parameter:
         """Returns a nn.Parameter if input tensor is just torch.Tensor."""
-        if isinstance(tensor, Parameter):
+        if tensor.requires_grad:
             return tensor
         return Parameter(tensor)
     

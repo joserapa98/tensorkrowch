@@ -261,16 +261,18 @@ def create_projector(S_k_1, S_k):
             [0],
             [0]])]
     """
-    s_k_0 = torch.empty_like(S_k[:, -1]).long()
+    if len(S_k.shape) == 2:
+        # n x k
+        s_k_0 = torch.empty_like(S_k[:, -1]).long()
+        where_equal_dim = 1
+    else:
+        # n x k x in_dim
+        s_k_0 = torch.empty_like(S_k[:, -1, -1]).long()
+        where_equal_dim = (1, 2)
     s_k_1 = torch.empty_like(S_k[:, -1:])
+        
     for i in range(S_k_1.size(0)):
-        if len(S_k.shape) == 2:
-            # n x k
-            where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=1)
-        else:
-            # n x k x in_dim
-            where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=(1, 2))
-            
+        where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=where_equal_dim)
         new_col = S_k[where_equal, -1:]
         first_col = torch.Tensor([i]).expand(new_col.size(0)).to(new_col.device)
         

@@ -1897,12 +1897,11 @@ class MPS(TensorNetwork):  # MARK: MPS
         nodes[oc] = nodes[oc].parameterize()
         
         # Rescale
-        if log_norm != 0:
-            rescale = (log_norm / len(nodes)).exp()
-        
-        if renormalize and (log_norm != 0):
-            for node in nodes:
-                node.tensor = node.tensor * rescale
+        if renormalize:
+            if log_norm != 0:
+                rescale = (log_norm / len(nodes)).exp()
+                for node in nodes:
+                    node.tensor = node.tensor * rescale
         
         # Update variables
         self._mats_env = nodes

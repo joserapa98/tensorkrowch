@@ -304,6 +304,7 @@ def val_error(function, embedding, cores, sketch_samples, out_position, device):
     if exact_output.size(1) == 1:
         exact_output = exact_output.squeeze(1)
     
+    # TODO: add small epsilon in denominator to avoid dividing by 0
     error = (exact_output - approx_output).norm() / exact_output.norm()
     return error
 

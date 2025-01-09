@@ -164,7 +164,7 @@ If you use TensorKrowch in your work, please cite `TensorKrowch's paper
      pages={1364},
      year={2024},
      publisher={Verein zur F{\"o}rderung des Open Access Publizierens in den Quantenwissenschaften},
-     doi = {10.22331/q-2024-06-11-1364},
-     archivePrefix = {arXiv},
-     eprint = {2306.08595}
+     doi={10.22331/q-2024-06-11-1364},
+     archivePrefix={arXiv},
+     eprint={2306.08595}
    }

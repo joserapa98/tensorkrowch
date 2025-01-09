@@ -5,8 +5,8 @@ This script contains:
     * sketching
     * trimming
     * create_projector
+    * val_error
     * tt_rss
-    * tt_rcs
 """
 
 import time

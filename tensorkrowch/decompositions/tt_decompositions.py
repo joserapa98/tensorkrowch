@@ -326,7 +326,7 @@ def tt_rss(function: Callable,
            return_info: bool = False) -> Union[List[torch.Tensor],
                                                Tuple[List[torch.Tensor], dict]]:
     r"""
-    Tensor Train - Recursive Sketching from Samples.
+    Tensor Train via Recursive Sketching from Samples.
     
     Decomposes a scalar or vector-valued function of :math:`N` input variables
     in a Matrix Product State of :math:`N` cores, each corresponding to one

@@ -1,0 +1,1138 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tensorkrowch.decompositions.tt_decompositions &#8212; TensorKrowch 1.1.5 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css" />
+    <link rel="stylesheet" href="../../../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/clipboard.min.js"></script>
+    <script src="../../../_static/copybutton.js"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../../../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../../../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../../../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../decompositions.html">
+     Decompositions
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1></h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <h1>Source code for tensorkrowch.decompositions.tt_decompositions</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This script contains:</span>
+
+<span class="sd">    * extend_with_output</span>
+<span class="sd">    * sketching</span>
+<span class="sd">    * trimming</span>
+<span class="sd">    * create_projector</span>
+<span class="sd">    * val_error</span>
+<span class="sd">    * tt_rss</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Text</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">TensorDataset</span><span class="p">,</span> <span class="n">DataLoader</span>
+
+<span class="kn">from</span> <span class="nn">tensorkrowch.embeddings</span> <span class="kn">import</span> <span class="n">basis</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="n">random_unitary</span>
+<span class="kn">import</span> <span class="nn">tensorkrowch.models</span> <span class="k">as</span> <span class="nn">models</span>
+
+
+<span class="k">def</span> <span class="nf">extend_with_output</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">out_position</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extends ``samples`` tensor with the output of the ``function`` evaluated on</span>
+<span class="sd">    those ``samples``. If ``samples`` is a tensor with shape ``batch_size x</span>
+<span class="sd">    n_features (x in_dim)``, the extended samples will have shape</span>
+<span class="sd">    ``batch_size x (n_features + 1) (x in_dim)``.</span>
+<span class="sd">    </span>
+<span class="sd">    If ``labels`` are not provided, they are obtained by passing the ``samples``</span>
+<span class="sd">    through the ``function``. In this case, it is assumed that ``function``</span>
+<span class="sd">    returns a vector of squared roots of probabilities (for each class). Thus,</span>
+<span class="sd">    the vector of ``labels`` is sampled according to the output distribution.</span>
+<span class="sd">    </span>
+<span class="sd">    If ``labels`` are given, it is assumed to be a tensor with shape ``batch_size``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">TensorDataset</span><span class="p">(</span><span class="n">samples</span><span class="p">),</span>
+                            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                            <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">num_workers</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">batch</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+                <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">function</span><span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+            
+            <span class="n">outputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+            
+            <span class="n">labels_distr</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">labels_distr</span> <span class="o">=</span> <span class="n">labels_distr</span> <span class="o">/</span> <span class="n">labels_distr</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">:]</span>
+            
+            <span class="n">probs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">outputs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="n">probs</span><span class="p">,</span>
+                                             <span class="n">labels_distr</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+            
+            <span class="c1"># batch_size x n_features x in_dim</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="c1"># In this case, labels are copied along dimension `in_dim`</span>
+                <span class="n">ids</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">samples</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            
+            <span class="n">extended_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">samples</span><span class="p">[:,</span> <span class="p">:</span><span class="n">out_position</span><span class="p">],</span>
+                                          <span class="n">ids</span><span class="p">,</span>
+                                          <span class="n">samples</span><span class="p">[:,</span> <span class="n">out_position</span><span class="p">:]],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">extended_samples</span><span class="p">,</span> <span class="n">outputs</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        
+        <span class="c1"># batch_size x n_features x in_dim</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># In this case, labels are the same along dimension `in_dim`</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">samples</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        
+        <span class="n">extended_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">samples</span><span class="p">[:,</span> <span class="p">:</span><span class="n">out_position</span><span class="p">],</span>
+                                      <span class="n">ids</span><span class="p">,</span>
+                                      <span class="n">samples</span><span class="p">[:,</span> <span class="n">out_position</span><span class="p">:]],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">extended_samples</span><span class="p">,</span> <span class="n">outputs</span>
+
+
+<span class="k">def</span> <span class="nf">sketching</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">tensors_list</span><span class="p">,</span> <span class="n">out_position</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given ``tensors_list``, a list of ``m`` tensors, where each tensor ``i`` has</span>
+<span class="sd">    shape ``di x ni (x in_dim)`` and ``sum(n1, ..., nm) = n_features``, creates</span>
+<span class="sd">    a projection tensor with shape ``d1 x ... x dm x n_features (x in_dim)``,</span>
+<span class="sd">    which is passed to the ``function`` to compute ``Phi_tilde_k`` of shape</span>
+<span class="sd">    ``d1 x ... x dm``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sizes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tensors_list</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="n">sizes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+    
+    <span class="c1"># Expand all tensors so that each one has shape d1 x ... x dm x ni</span>
+    <span class="n">aux_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">)):</span>
+        <span class="n">view_shape</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">expand_shape</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">view_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+                <span class="n">expand_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">view_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">expand_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="n">view_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">expand_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># If shape is di x ni x in_dim, add in_dim to all tensors</span>
+            <span class="n">view_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensors_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">expand_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># If shape is di x ni, add extra aux dimension of 1</span>
+            <span class="n">view_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">expand_shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">tensors_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">view_shape</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">*</span><span class="n">expand_shape</span><span class="p">)</span>
+        <span class="n">aux_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_tensor</span><span class="p">)</span>
+    
+    <span class="c1"># Find labels in out_position</span>
+    <span class="k">if</span> <span class="n">out_position</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># If function is vector-valued</span>
+        <span class="n">cum_size</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sizes</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">cum_size</span> <span class="o">+</span> <span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">out_position</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">labels</span> <span class="o">=</span> <span class="n">aux_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                    <span class="n">aux_list</span> <span class="o">=</span> <span class="n">aux_list</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">aux_list</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">labels</span> <span class="o">=</span> <span class="n">aux_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="n">out_position</span> <span class="o">-</span> <span class="n">cum_size</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                    <span class="n">aux_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">aux_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:(</span><span class="n">out_position</span> <span class="o">-</span> <span class="n">cum_size</span><span class="p">),</span> <span class="p">:],</span>
+                         <span class="n">aux_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">(</span><span class="n">out_position</span> <span class="o">-</span> <span class="n">cum_size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):,</span> <span class="p">:]],</span>
+                        <span class="n">dim</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">cum_size</span> <span class="o">+=</span> <span class="n">size</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="n">aux_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">projection</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">aux_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">projection</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">projection_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+            <span class="n">TensorDataset</span><span class="p">(</span><span class="n">projection</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]),</span>
+                          <span class="n">labels</span><span class="p">),</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">num_workers</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># di x ni x in_dim</span>
+        <span class="n">projection_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+            <span class="n">TensorDataset</span><span class="p">(</span><span class="n">projection</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                          <span class="n">projection</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span>
+                                          <span class="n">projection</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+                          <span class="n">labels</span><span class="p">),</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">num_workers</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">batch</span><span class="p">,</span> <span class="n">labs</span> <span class="ow">in</span> <span class="n">projection_loader</span><span class="p">:</span>
+            <span class="n">aux_result</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+            <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_result</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                 <span class="n">index</span><span class="o">=</span><span class="n">labs</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+    
+    <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>   
+    <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">projection</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">Phi_tilde_k</span>
+
+
+<span class="k">def</span> <span class="nf">trimming</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Given a matrix returns the U from the SVD and an appropiate rank&quot;&quot;&quot;</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="n">percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+    <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">cum_percentage</span><span class="p">)</span>
+    
+    <span class="n">aux_rank</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">percentages</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">aux_rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">aux_rank</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">break</span>
+        <span class="n">aux_rank</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="c1"># Cut when ``cum_percentage`` is exceeded</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;=</span> <span class="n">cum_percentage_tensor</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">aux_rank</span> <span class="o">&gt;=</span> <span class="n">rank</span><span class="p">:</span>
+            <span class="k">break</span>
+        
+    <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span><span class="p">,</span> <span class="n">aux_rank</span>
+
+
+<span class="k">def</span> <span class="nf">create_projector</span><span class="p">(</span><span class="n">S_k_1</span><span class="p">,</span> <span class="n">S_k</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given the previous projector and the current one, it infers the ``s_k``</span>
+<span class="sd">    needed to create ``S_k`` from ``S_k_1``. All rows of ``S_k_1`` and ``S_k``</span>
+<span class="sd">    must be unique.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    S_k_1 : torch.Tensor</span>
+<span class="sd">        Matrix of shape ``n x k (x in_dim)``. The ``n`` rows of ``S_k_1`` are</span>
+<span class="sd">        equal to the rows of ``S_k[:, :-1]``, but maybe they are repeated in</span>
+<span class="sd">        ``S_k``.</span>
+<span class="sd">    S_k : torch.Tensor</span>
+<span class="sd">        Matrix of shape ``m x (k + 1) (x in_dim)``, with m &gt;= n.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    s_k : torch.Tensor</span>
+<span class="sd">        Tensor of shape ``m x 2 (x in_dim)``. The 2 columns correspond,</span>
+<span class="sd">        respectively, to indices of rows of ``S_k_1`` (index 0) and the new</span>
+<span class="sd">        elements in the ``(k + 1)``-th column of ``S_k`` (index 1) associated</span>
+<span class="sd">        to the corresponding rows of ``S_k_1``.</span>
+<span class="sd">    </span>
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; S_k = torch.randint(low=0, high=2, size=(10, 4)).unique(dim=0)</span>
+<span class="sd">    &gt;&gt;&gt; S_k</span>
+<span class="sd">    </span>
+<span class="sd">    tensor([[0, 0, 0, 1],</span>
+<span class="sd">            [0, 0, 1, 0],</span>
+<span class="sd">            [0, 1, 1, 1],</span>
+<span class="sd">            [1, 0, 0, 1],</span>
+<span class="sd">            [1, 0, 1, 0],</span>
+<span class="sd">            [1, 1, 0, 0],</span>
+<span class="sd">            [1, 1, 1, 0]])</span>
+<span class="sd">            </span>
+<span class="sd">    &gt;&gt;&gt; S_k_1 = S_k[:, :-1].unique(dim=0)</span>
+<span class="sd">    &gt;&gt;&gt; S_k_1</span>
+<span class="sd">    </span>
+<span class="sd">    tensor([[0, 0, 0],</span>
+<span class="sd">            [0, 0, 1],</span>
+<span class="sd">            [0, 1, 1],</span>
+<span class="sd">            [1, 0, 0],</span>
+<span class="sd">            [1, 0, 1],</span>
+<span class="sd">            [1, 1, 0],</span>
+<span class="sd">            [1, 1, 1]])</span>
+<span class="sd">            </span>
+<span class="sd">    &gt;&gt;&gt; create_projector(S_k_1, S_k)</span>
+<span class="sd">    </span>
+<span class="sd">    [tensor([0, 1, 2, 3, 4, 5, 6]),</span>
+<span class="sd">    tensor([[1],</span>
+<span class="sd">            [0],</span>
+<span class="sd">            [1],</span>
+<span class="sd">            [1],</span>
+<span class="sd">            [0],</span>
+<span class="sd">            [0],</span>
+<span class="sd">            [0]])]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">S_k</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># n x k</span>
+        <span class="n">s_k_0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">S_k</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>
+        <span class="n">where_equal_dim</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># n x k x in_dim</span>
+        <span class="n">s_k_0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">S_k</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>
+        <span class="n">where_equal_dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">s_k_1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">S_k</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">:])</span>
+        
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">S_k_1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)):</span>
+        <span class="n">where_equal</span> <span class="o">=</span> <span class="p">(</span><span class="n">S_k</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">S_k_1</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">where_equal_dim</span><span class="p">)</span>
+        <span class="n">new_col</span> <span class="o">=</span> <span class="n">S_k</span><span class="p">[</span><span class="n">where_equal</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">first_col</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">([</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">new_col</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">new_col</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="n">s_k_0</span><span class="p">[</span><span class="n">where_equal</span><span class="p">]</span> <span class="o">=</span> <span class="n">first_col</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>
+        <span class="n">s_k_1</span><span class="p">[</span><span class="n">where_equal</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_col</span>
+        
+    <span class="n">s_k</span> <span class="o">=</span> <span class="p">[</span><span class="n">s_k_0</span><span class="p">,</span> <span class="n">s_k_1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">s_k</span>  
+
+
+<span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">val_error</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">embedding</span><span class="p">,</span> <span class="n">cores</span><span class="p">,</span> <span class="n">sketch_samples</span><span class="p">,</span> <span class="n">out_position</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes relative error on ``sketch_samples``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">out_position</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">sketch_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">sketch_samples</span><span class="p">[:,</span> <span class="p">:</span><span class="n">out_position</span><span class="p">],</span>
+                                    <span class="n">sketch_samples</span><span class="p">[:,</span> <span class="p">(</span><span class="n">out_position</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]],</span>
+                                   <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">exact_output</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="n">sketch_samples</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="n">exact_output</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">mps</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mps</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">MPS</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cores</span><span class="p">])</span>
+    
+    <span class="n">embed_samples</span> <span class="o">=</span> <span class="n">embedding</span><span class="p">(</span><span class="n">sketch_samples</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>                       
+    <span class="n">approx_output</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">embed_samples</span><span class="p">,</span> <span class="n">inline_input</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inline_mats</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">exact_output</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">exact_output</span> <span class="o">=</span> <span class="n">exact_output</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># TODO: add small epsilon in denominator to avoid dividing by 0</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="p">(</span><span class="n">exact_output</span> <span class="o">-</span> <span class="n">approx_output</span><span class="p">)</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">exact_output</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">error</span>
+
+
+<span class="c1"># MARK: TT-RSS</span>
+<div class="viewcode-block" id="tt_rss"><a class="viewcode-back" href="../../../decompositions.html#tensorkrowch.decompositions.tt_rss">[docs]</a><span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">tt_rss</span><span class="p">(</span><span class="n">function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+           <span class="n">embedding</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+           <span class="n">sketch_samples</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+           <span class="n">labels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">domain_multiplier</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+           <span class="n">out_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+           <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+           <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+           <span class="n">return_info</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                                               <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="nb">dict</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tensor Train - Recursive Sketching from Samples.</span>
+<span class="sd">    </span>
+<span class="sd">    Decomposes a scalar or vector-valued function of :math:`N` input variables</span>
+<span class="sd">    in a Matrix Product State of :math:`N` cores, each corresponding to one</span>
+<span class="sd">    input variable, in the same order as they are provided to the function. To</span>
+<span class="sd">    turn each input variable into a vector that can be contracted with the</span>
+<span class="sd">    corresponding MPS core, an embedding function is required. The dimension of</span>
+<span class="sd">    the embedding will be used as the input dimension of the MPS.</span>
+<span class="sd">    </span>
+<span class="sd">    If the function is vector-valued, it will be seen as a :math:`N + 1` scalar</span>
+<span class="sd">    function, returning a MPS with :math:`N + 1` cores. The output variable will</span>
+<span class="sd">    use the embedding :func:`~tensorkrowch.basis`, which maps integers</span>
+<span class="sd">    (corresponding to indices of the output vector) to basis vectors:</span>
+<span class="sd">    :math:`i \mapsto \langle i \rvert`. It can be specified the position in</span>
+<span class="sd">    which the output core will be. By default, it will be in the middle of the</span>
+<span class="sd">    MPS.</span>
+<span class="sd">    </span>
+<span class="sd">    To specify the bond dimension of each MPS core, one can use the arguments</span>
+<span class="sd">    ``rank`` and ``cum_percentage``. If more than one is specified, the</span>
+<span class="sd">    resulting rank will be the one that satisfies all conditions.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    function : Callable</span>
+<span class="sd">        Function that is going to be decomposed. It needs to have a single</span>
+<span class="sd">        input argument, the data, which is a tensor of shape</span>
+<span class="sd">        ``batch_size x n_features`` or ``batch_size x n_features x in_dim``. It</span>
+<span class="sd">        must return a tensor of shape ``batch_size x out_dim``. If the function</span>
+<span class="sd">        is scalar, ``out_dim = 1``.</span>
+<span class="sd">    embedding : Callable</span>
+<span class="sd">        Embedding function that maps the data tensor to a higher dimensional</span>
+<span class="sd">        space. It needs to have a single argument. It is a function that</span>
+<span class="sd">        transforms the given data tensor of shape ``batch_size x n_features`` or</span>
+<span class="sd">        ``batch_size x n_features x in_dim`` and returns an embedded tensor of</span>
+<span class="sd">        shape ``batch_size x n_features x embed_dim``.</span>
+<span class="sd">    sketch_samples : torch.Tensor</span>
+<span class="sd">        Samples that will be used as sketches to decompose the function. It has</span>
+<span class="sd">        to be a tensor of shape ``batch_size x n_features`` or</span>
+<span class="sd">        ``batch_size x n_features x in_dim``.</span>
+<span class="sd">    labels : torch.Tensor, optional</span>
+<span class="sd">        Tensor of output labels of the ``function`` with shape ``batch_size``.</span>
+<span class="sd">        If ``function`` is vector-valued, ``labels`` will be used to select</span>
+<span class="sd">        an element from each output vector. If ``labels`` are not given, these</span>
+<span class="sd">        will be obtained according to the distribution represented by the output</span>
+<span class="sd">        vectors (assuming these represent square roots of probabilities for each</span>
+<span class="sd">        class).</span>
+<span class="sd">    domain : torch.Tensor or list[torch.Tensor], optional</span>
+<span class="sd">        Domain of the input variables. It should be given as a finite set of</span>
+<span class="sd">        possible values that can take each variable. If all variables live in</span>
+<span class="sd">        the same domain, it should be given as a tensor with shape ``n_values``</span>
+<span class="sd">        or ``n_values x in_dim``, where the possible ``n_values`` should be at</span>
+<span class="sd">        least as large as the desired input dimension of the MPS cores, which</span>
+<span class="sd">        is the ``embed_dim`` of the ``embedding``. The more values are given,</span>
+<span class="sd">        the more accurate will be the tensorization but more costly will be to</span>
+<span class="sd">        do it. If ``domain`` is given as a list, it should have the same</span>
+<span class="sd">        number of elements as input variables, so that each variable can live</span>
+<span class="sd">        in a different domain. If ``domain`` is not given, it will be obtained</span>
+<span class="sd">        from the values each variable takes in the ``sketch_samples``.</span>
+<span class="sd">    domain_multiplier : int</span>
+<span class="sd">        Upper bound for how many values are used for the input variable domain</span>
+<span class="sd">        if ``domain`` is not provided. If ``domain`` is not provided, the</span>
+<span class="sd">        domain of the input variables will be inferred from the unique values</span>
+<span class="sd">        each variable takes in the ``sketch_samples``. In this case, only</span>
+<span class="sd">        ``domain_multiplier * embed_dim`` values will be taken randomly.</span>
+<span class="sd">    out_position : int, optional</span>
+<span class="sd">        If the ``function`` is vector-valued, position of the output core in</span>
+<span class="sd">        the resulting MPS.</span>
+<span class="sd">    rank : int, optional</span>
+<span class="sd">        Upper bound for the bond dimension of all cores.</span>
+<span class="sd">    cum_percentage : float, optional</span>
+<span class="sd">        When getting the proper bond dimension of each core via truncated SVD,</span>
+<span class="sd">        this is the proportion that should be satisfied between the sum of all</span>
+<span class="sd">        singular values kept and the total sum of all singular values. Therefore,</span>
+<span class="sd">        it specifies the rank of each core independently, allowing for</span>
+<span class="sd">        varying bond dimensions.</span>
+<span class="sd">    batch_size : int</span>
+<span class="sd">        Batch size used to process ``sketch_samples`` with ``DataLoaders``</span>
+<span class="sd">        during the decomposition.</span>
+<span class="sd">    device : torch.device, optional</span>
+<span class="sd">        Device to which ``sketch_samples`` will be sent to compute sketches. It</span>
+<span class="sd">        should coincide with the device the ``function`` is in, in the case the</span>
+<span class="sd">        function is a call to a ``nn.Module`` or uses tensors that are in a </span>
+<span class="sd">        specific device. This also applies to the ``embedding`` function.</span>
+<span class="sd">    verbose : bool</span>
+<span class="sd">        Default is ``True``.</span>
+<span class="sd">    return_info : bool</span>
+<span class="sd">        Boolean indicating if an additional dictionary with total time and</span>
+<span class="sd">        validation error should be returned.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list[torch.Tensor]</span>
+<span class="sd">        List of tensor cores of the MPS.</span>
+<span class="sd">    dictionary</span>
+<span class="sd">        If ``return_info`` is ``True``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">Callable</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`function` should be callable&#39;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">Callable</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`embedding` should be callable&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Number of input features</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sketch_samples</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`sketch_samples` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sketch_samples</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+        <span class="c1"># batch_size x n_features or batch_size x n_features x in_dim</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`sketch_samples` should be a tensor with shape (batch_size, &#39;</span>
+            <span class="s1">&#39;n_features) or (batch_size, n_features, in_dim)&#39;</span><span class="p">)</span>
+    <span class="n">n_features</span> <span class="o">=</span> <span class="n">sketch_samples</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_features</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sketch_samples` cannot be 0 dimensional&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Embedding dimension</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">aux_embed</span> <span class="o">=</span> <span class="n">embedding</span><span class="p">(</span><span class="n">sketch_samples</span><span class="p">[:</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`embedding` should take as argument a single tensor with shape &#39;</span>
+            <span class="s1">&#39;(batch_size, n_features) or (batch_size, n_features, in_dim)&#39;</span><span class="p">)</span>
+        
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux_embed</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`embedding` should return a tensor of shape &#39;</span>
+                         <span class="s1">&#39;(batch_size, n_features, embed_dim)&#39;</span><span class="p">)</span>
+    <span class="n">embed_dim</span> <span class="o">=</span> <span class="n">aux_embed</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">embed_dim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Embedding dimension cannot be 0&#39;</span><span class="p">)</span>
+        
+    <span class="c1"># Output dimension</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">aux_output</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="n">sketch_samples</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`function` should take as argument a single tensor with shape &#39;</span>
+            <span class="s1">&#39;(batch_size, n_features) or (batch_size, n_features, in_dim)&#39;</span><span class="p">)</span>
+        
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux_output</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;`function` should return a tensor of shape (batch_size, out_dim).&#39;</span>
+            <span class="s1">&#39; If `function` is scalar, out_dim = 1&#39;</span><span class="p">)</span>
+    <span class="n">out_dim</span> <span class="o">=</span> <span class="n">aux_output</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">out_dim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Output dimension (of `function`) cannot be 0&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Labels</span>
+    <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`labels` should be torch.Tensor type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">sketch_samples</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`labels` should be a tensor with shape (batch_size,)&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Input domain</span>
+    <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;`domain` should be torch.Tensor or list[torch.Tensor] type&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">domain</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                            <span class="s1">&#39;`domain` should be torch.Tensor or list[torch.Tensor]&#39;</span>
+                            <span class="s1">&#39; type&#39;</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;If `domain` is given as a sequence of tensors, it should&#39;</span>
+                        <span class="s1">&#39; have as many elements as input variables&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sketch_samples</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;If `domain` is given as a torch.Tensor, it should have &#39;</span>
+                    <span class="s1">&#39;shape (n_values,) or (n_values, in_dim), and it should &#39;</span>
+                    <span class="s1">&#39;only include in_dim if it also appears in the shape of &#39;</span>
+                    <span class="s1">&#39;`sketch_samples`&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">domain</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+    
+    <span class="c1"># Output position</span>
+    <span class="k">if</span> <span class="n">out_dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">out_position</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;`out_position` will be ignored, since `function` is scalar&#39;</span><span class="p">)</span>
+        <span class="n">out_position</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">out_position</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out_position</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out_position</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`out_position` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">out_position</span>  <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">out_position</span> <span class="o">&gt;</span> <span class="n">n_features</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`out_position` should be between 0 and the number of &#39;</span>
+                    <span class="s1">&#39;features (equal to the second dimension of `sketch_samples`)&#39;</span>
+                    <span class="s1">&#39;, both included&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Rank</span>
+    <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`rank` should be int type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`rank` should be greater or equal than 1&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Cum. percentage</span>
+    <span class="k">if</span> <span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cum_percentage</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`cum_percentage` should be float type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`cum_percentage` should be in the range (0, 1]&#39;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s1">&#39;At least one of `rank` and `cum_percentage` should be given&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Batch size</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`batch_size` should be int type&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Extend sketch_samples tensor with outputs</span>
+    <span class="k">if</span> <span class="n">out_dim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">n_features</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sketch_samples</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">extend_with_output</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+                                               <span class="n">samples</span><span class="o">=</span><span class="n">sketch_samples</span><span class="p">,</span>
+                                               <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+                                               <span class="n">out_position</span><span class="o">=</span><span class="n">out_position</span><span class="p">,</span>
+                                               <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                                               <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">aux_embedding</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For the cases where ``n_features = 1``, it returns an embedded tensor</span>
+<span class="sd">        with shape ``batch_size x embed_dim``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">embedding</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">aux_basis</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For the cases where ``n_features = 1``, it returns an embedded tensor</span>
+<span class="sd">        with shape ``batch_size x basis_dim``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># batch_size x n_features(=1) x in_dim</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># In this case, labels are the same along dimension `in_dim`</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">basis</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">int</span><span class="p">(),</span> <span class="n">dim</span><span class="o">=</span><span class="n">out_dim</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+    
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">cores</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">D_k_1</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_features</span><span class="p">):</span>
+        
+        <span class="c1"># Prepare x_k</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="n">out_position</span><span class="p">:</span>
+            <span class="n">x_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">out_dim</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+            <span class="n">phys_dim</span> <span class="o">=</span> <span class="n">out_dim</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                    <span class="n">x_k</span> <span class="o">=</span> <span class="n">domain</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">x_k</span> <span class="o">=</span> <span class="n">domain</span><span class="p">[</span><span class="n">k</span> <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">out_position</span> <span class="k">else</span> <span class="p">(</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">x_k</span> <span class="o">=</span> <span class="n">sketch_samples</span><span class="p">[:,</span> <span class="n">k</span><span class="p">:(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">x_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">domain_multiplier</span> <span class="o">*</span> <span class="n">embed_dim</span><span class="p">):</span>
+                    <span class="n">perm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randperm</span><span class="p">(</span><span class="n">x_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="n">perm</span><span class="p">[:(</span><span class="n">domain_multiplier</span> <span class="o">*</span> <span class="n">embed_dim</span><span class="p">)]</span>
+                    <span class="n">x_k</span> <span class="o">=</span> <span class="n">x_k</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            
+            <span class="n">phys_dim</span> <span class="o">=</span> <span class="n">embed_dim</span>
+        
+        <span class="c1"># Prepare T_k</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">T_k</span> <span class="o">=</span> <span class="n">sketch_samples</span><span class="p">[:,</span> <span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="c1"># Prepare D_k</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">site_count</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;|| Site: </span><span class="si">{</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">n_features</span><span class="si">}</span><span class="s1"> ||&#39;</span>
+            <span class="n">site_count</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;=&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">site_count</span><span class="p">),</span> <span class="n">site_count</span><span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">site_count</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">site_count</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">site_count</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        
+        <span class="n">D_k</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">D_k_1</span> <span class="o">*</span> <span class="n">phys_dim</span><span class="p">,</span> <span class="n">phys_dim</span> <span class="o">**</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Max D_k: </span><span class="si">{</span><span class="n">D_k</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Max D_k: min(</span><span class="si">{</span><span class="n">D_k</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">rank</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* T_k out dim: </span><span class="si">{</span><span class="n">T_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">D_k</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">D_k</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span>
+        
+        <span class="c1"># Tensorize</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Sketching</span>
+            <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">sketching</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+                                    <span class="n">tensors_list</span><span class="o">=</span><span class="p">[</span><span class="n">x_k</span><span class="p">,</span> <span class="n">T_k</span><span class="p">],</span>
+                                    <span class="n">out_position</span><span class="o">=</span><span class="n">out_position</span><span class="p">,</span>
+                                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                                    <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+            
+            <span class="c1"># Random unitary for T_k</span>
+            <span class="n">randu_t</span> <span class="o">=</span> <span class="n">random_unitary</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="p">,</span> <span class="n">randu_t</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="n">out_position</span><span class="p">:</span>
+                <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span>
+                    <span class="n">aux_embedding</span><span class="p">(</span><span class="n">x_k</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                    <span class="n">Phi_tilde_k</span><span class="p">)</span><span class="o">.</span><span class="n">solution</span>
+            
+            <span class="c1"># Trimming</span>
+            <span class="n">u</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">D_k</span> <span class="o">=</span> <span class="n">trimming</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">Phi_tilde_k</span><span class="p">,</span>
+                                    <span class="n">rank</span><span class="o">=</span><span class="n">D_k</span><span class="p">,</span>
+                                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+            <span class="n">B_k</span> <span class="o">=</span> <span class="n">u</span><span class="p">[:,</span> <span class="p">:</span><span class="n">D_k</span><span class="p">]</span>  <span class="c1"># phys_dim x D_k</span>
+            
+            <span class="c1"># Solving</span>
+            <span class="n">cores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">B_k</span><span class="p">)</span>
+            
+            <span class="c1"># Create S_k</span>
+            <span class="n">S_k</span> <span class="o">=</span> <span class="n">sketch_samples</span><span class="p">[:,</span> <span class="p">:(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">s_k</span> <span class="o">=</span> <span class="n">S_k</span>
+            
+            <span class="c1"># Create A_k</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="n">out_position</span><span class="p">:</span>
+                <span class="n">aux_s_k</span> <span class="o">=</span> <span class="n">aux_basis</span><span class="p">(</span><span class="n">s_k</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">aux_s_k</span> <span class="o">=</span> <span class="n">aux_embedding</span><span class="p">(</span><span class="n">s_k</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+            <span class="n">A_k</span> <span class="o">=</span> <span class="n">aux_s_k</span> <span class="o">@</span> <span class="n">B_k</span>
+            
+            <span class="c1"># Set variables for next iteration</span>
+            <span class="n">D_k_1</span> <span class="o">=</span> <span class="n">D_k</span>
+            <span class="n">A_k_1</span> <span class="o">=</span> <span class="n">A_k</span>
+            <span class="n">S_k_1</span> <span class="o">=</span> <span class="n">S_k</span>
+            
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="n">core_count</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Core </span><span class="si">{</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">:&#39;</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">core_count</span>  <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">core_count</span><span class="p">)))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Final D_k: </span><span class="si">{</span><span class="n">D_k</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* S_k out dim: </span><span class="si">{</span><span class="n">S_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            
+        <span class="k">elif</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># Sketching</span>
+            <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">sketching</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+                                    <span class="n">tensors_list</span><span class="o">=</span><span class="p">[</span><span class="n">S_k_1</span><span class="p">,</span> <span class="n">x_k</span><span class="p">,</span> <span class="n">T_k</span><span class="p">],</span>
+                                    <span class="n">out_position</span><span class="o">=</span><span class="n">out_position</span><span class="p">,</span>
+                                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                                    <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+            
+            <span class="c1"># Random unitary for T_k</span>
+            <span class="n">randu_t</span> <span class="o">=</span> <span class="n">random_unitary</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>\
+                <span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bmm</span><span class="p">(</span><span class="n">Phi_tilde_k</span><span class="p">,</span> <span class="n">randu_t</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="n">out_position</span><span class="p">:</span>
+                <span class="n">aux_Phi_tilde_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span>
+                    <span class="n">aux_embedding</span><span class="p">(</span><span class="n">x_k</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                    <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">solution</span>
+                
+                <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">aux_Phi_tilde_k</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                    <span class="n">phys_dim</span><span class="p">,</span>
+                    <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                    <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            
+            <span class="c1"># Trimming</span>
+            <span class="n">u</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">D_k</span> <span class="o">=</span> <span class="n">trimming</span><span class="p">(</span><span class="n">mat</span><span class="o">=</span><span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                            <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span>
+                                    <span class="n">rank</span><span class="o">=</span><span class="n">D_k</span><span class="p">,</span>
+                                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+            <span class="n">B_k</span> <span class="o">=</span> <span class="n">u</span><span class="p">[:,</span> <span class="p">:</span><span class="n">D_k</span><span class="p">]</span>  <span class="c1"># (D_k_1 * phys_dim) x D_k</span>
+            
+            <span class="c1"># Solving</span>
+            <span class="n">G_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">A_k_1</span><span class="p">,</span> <span class="n">B_k</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">phys_dim</span> <span class="o">*</span> <span class="n">D_k</span><span class="p">))</span><span class="o">.</span><span class="n">solution</span>
+            <span class="n">G_k</span> <span class="o">=</span> <span class="n">G_k</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">phys_dim</span><span class="p">,</span> <span class="n">D_k</span><span class="p">)</span>
+            <span class="n">cores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">G_k</span><span class="p">)</span>
+            
+            <span class="c1"># Create S_k</span>
+            <span class="n">S_k</span> <span class="o">=</span> <span class="n">sketch_samples</span><span class="p">[:,</span> <span class="p">:(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">s_k</span> <span class="o">=</span> <span class="n">create_projector</span><span class="p">(</span><span class="n">S_k_1</span><span class="p">,</span> <span class="n">S_k</span><span class="p">)</span>
+            
+            <span class="c1"># Create A_k</span>
+            <span class="n">A_k</span> <span class="o">=</span> <span class="n">B_k</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">phys_dim</span><span class="p">,</span> <span class="n">D_k</span><span class="p">)</span>
+            <span class="n">A_k</span> <span class="o">=</span> <span class="n">A_k</span><span class="p">[</span><span class="n">s_k</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            
+            <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="n">out_position</span><span class="p">:</span>
+                <span class="n">aux_s_k</span> <span class="o">=</span> <span class="n">aux_basis</span><span class="p">(</span><span class="n">s_k</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">aux_s_k</span> <span class="o">=</span> <span class="n">aux_embedding</span><span class="p">(</span><span class="n">s_k</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+            <span class="n">A_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;bpd,bp-&gt;bd&#39;</span><span class="p">,</span> <span class="n">A_k</span><span class="p">,</span> <span class="n">aux_s_k</span><span class="p">)</span>
+            
+            <span class="c1"># Set variables for next iteration</span>
+            <span class="n">D_k_1</span> <span class="o">=</span> <span class="n">D_k</span>
+            <span class="n">A_k_1</span> <span class="o">=</span> <span class="n">A_k</span>
+            <span class="n">S_k_1</span> <span class="o">=</span> <span class="n">S_k</span>
+            
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="n">core_count</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Core </span><span class="si">{</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">:&#39;</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">core_count</span>  <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">core_count</span><span class="p">)))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Final D_k: </span><span class="si">{</span><span class="n">D_k</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* S_k out dim: </span><span class="si">{</span><span class="n">S_k</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Sketching</span>
+            <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">sketching</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+                                    <span class="n">tensors_list</span><span class="o">=</span><span class="p">[</span><span class="n">S_k_1</span><span class="p">,</span> <span class="n">x_k</span><span class="p">],</span>
+                                    <span class="n">out_position</span><span class="o">=</span><span class="n">out_position</span><span class="p">,</span>
+                                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                                    <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="n">out_position</span><span class="p">:</span>
+                <span class="n">Phi_tilde_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span>
+                    <span class="n">aux_embedding</span><span class="p">(</span><span class="n">x_k</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                    <span class="n">Phi_tilde_k</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">.</span><span class="n">solution</span><span class="o">.</span><span class="n">t</span><span class="p">()</span>
+            
+            <span class="c1"># Trimming</span>
+            <span class="n">B_k</span> <span class="o">=</span> <span class="n">Phi_tilde_k</span>
+            
+            <span class="c1"># Solving</span>
+            <span class="n">G_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">A_k_1</span><span class="p">,</span> <span class="n">B_k</span><span class="p">)</span><span class="o">.</span><span class="n">solution</span>
+            <span class="n">cores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">G_k</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="n">core_count</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Core </span><span class="si">{</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">:&#39;</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">core_count</span>  <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">core_count</span><span class="p">)))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">cores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    
+    <span class="k">if</span> <span class="n">return_info</span><span class="p">:</span>
+        <span class="n">total_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">val_error</span><span class="p">(</span><span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+                          <span class="n">embedding</span><span class="o">=</span><span class="n">embedding</span><span class="p">,</span>
+                          <span class="n">cores</span><span class="o">=</span><span class="n">cores</span><span class="p">,</span>
+                          <span class="n">sketch_samples</span><span class="o">=</span><span class="n">sketch_samples</span><span class="p">,</span>
+                          <span class="n">out_position</span><span class="o">=</span><span class="n">out_position</span><span class="p">,</span>
+                          <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    
+        <span class="n">info</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;total_time&#39;</span><span class="p">:</span> <span class="n">total_time</span><span class="p">,</span>
+                <span class="s1">&#39;val_eps&#39;</span><span class="p">:</span> <span class="n">error</span><span class="p">}</span>
+        
+        <span class="k">return</span> <span class="n">cores</span><span class="p">,</span> <span class="n">info</span>
+            
+    <span class="k">return</span> <span class="n">cores</span></div>
+</pre></div>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

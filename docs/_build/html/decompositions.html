@@ -382,6 +382,11 @@ title="Print to PDF"
    mat_to_mpo
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tt-rss">
+   tt_rss
+  </a>
+ </li>
 </ul>
 
     </nav>
@@ -409,6 +414,11 @@ title="Print to PDF"
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#mat-to-mpo">
    mat_to_mpo
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tt-rss">
+   tt_rss
   </a>
  </li>
 </ul>
@@ -524,6 +534,96 @@ the MPS.</p></li>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>List[torch.Tensor]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="tt-rss">
+<h2>tt_rss<a class="headerlink" href="#tt-rss" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.decompositions.tt_rss">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">tt_rss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sketch_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain_multiplier</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/tt_decompositions.html#tt_rss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.tt_rss" title="Permalink to this definition">#</a></dt>
+<dd><p>Tensor Train - Recursive Sketching from Samples.</p>
+<p>Decomposes a scalar or vector-valued function of <span class="math notranslate nohighlight">\(N\)</span> input variables
+in a Matrix Product State of <span class="math notranslate nohighlight">\(N\)</span> cores, each corresponding to one
+input variable, in the same order as they are provided to the function. To
+turn each input variable into a vector that can be contracted with the
+corresponding MPS core, an embedding function is required. The dimension of
+the embedding will be used as the input dimension of the MPS.</p>
+<p>If the function is vector-valued, it will be seen as a <span class="math notranslate nohighlight">\(N + 1\)</span> scalar
+function, returning a MPS with <span class="math notranslate nohighlight">\(N + 1\)</span> cores. The output variable will
+use the embedding <code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code>, which maps integers
+(corresponding to indices of the output vector) to basis vectors:
+<span class="math notranslate nohighlight">\(i \mapsto \langle i \rvert\)</span>. It can be specified the position in
+which the output core will be. By default, it will be in the middle of the
+MPS.</p>
+<p>To specify the bond dimension of each MPS core, one can use the arguments
+<code class="docutils literal notranslate"><span class="pre">rank</span></code> and <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code>. If more than one is specified, the
+resulting rank will be the one that satisfies all conditions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>function</strong> (<em>Callable</em>) – Function that is going to be decomposed. It needs to have a single
+input argument, the data, which is a tensor of shape
+<code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span></code> or <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">in_dim</span></code>. It
+must return a tensor of shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">out_dim</span></code>. If the function
+is scalar, <code class="docutils literal notranslate"><span class="pre">out_dim</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p></li>
+<li><p><strong>embedding</strong> (<em>Callable</em>) – Embedding function that maps the data tensor to a higher dimensional
+space. It needs to have a single argument. It is a function that
+transforms the given data tensor of shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span></code> or
+<code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">in_dim</span></code> and returns an embedded tensor of
+shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">embed_dim</span></code>.</p></li>
+<li><p><strong>sketch_samples</strong> (<em>torch.Tensor</em>) – Samples that will be used as sketches to decompose the function. It has
+to be a tensor of shape <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span></code> or
+<code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">x</span> <span class="pre">n_features</span> <span class="pre">x</span> <span class="pre">in_dim</span></code>.</p></li>
+<li><p><strong>labels</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor of output labels of the <code class="docutils literal notranslate"><span class="pre">function</span></code> with shape <code class="docutils literal notranslate"><span class="pre">batch_size</span></code>.
+If <code class="docutils literal notranslate"><span class="pre">function</span></code> is vector-valued, <code class="docutils literal notranslate"><span class="pre">labels</span></code> will be used to select
+an element from each output vector. If <code class="docutils literal notranslate"><span class="pre">labels</span></code> are not given, these
+will be obtained according to the distribution represented by the output
+vectors (assuming these represent square roots of probabilities for each
+class).</p></li>
+<li><p><strong>domain</strong> (<em>torch.Tensor</em><em> or </em><em>list</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Domain of the input variables. It should be given as a finite set of
+possible values that can take each variable. If all variables live in
+the same domain, it should be given as a tensor with shape <code class="docutils literal notranslate"><span class="pre">n_values</span></code>
+or <code class="docutils literal notranslate"><span class="pre">n_values</span> <span class="pre">x</span> <span class="pre">in_dim</span></code>, where the possible <code class="docutils literal notranslate"><span class="pre">n_values</span></code> should be at
+least as large as the desired input dimension of the MPS cores, which
+is the <code class="docutils literal notranslate"><span class="pre">embed_dim</span></code> of the <code class="docutils literal notranslate"><span class="pre">embedding</span></code>. The more values are given,
+the more accurate will be the tensorization but more costly will be to
+do it. If <code class="docutils literal notranslate"><span class="pre">domain</span></code> is given as a list, it should have the same
+number of elements as input variables, so that each variable can live
+in a different domain. If <code class="docutils literal notranslate"><span class="pre">domain</span></code> is not given, it will be obtained
+from the values each variable takes in the <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code>.</p></li>
+<li><p><strong>domain_multiplier</strong> (<em>int</em>) – Upper bound for how many values are used for the input variable domain
+if <code class="docutils literal notranslate"><span class="pre">domain</span></code> is not provided. If <code class="docutils literal notranslate"><span class="pre">domain</span></code> is not provided, the
+domain of the input variables will be inferred from the unique values
+each variable takes in the <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code>. In this case, only
+<code class="docutils literal notranslate"><span class="pre">domain_multiplier</span> <span class="pre">*</span> <span class="pre">embed_dim</span></code> values will be taken randomly.</p></li>
+<li><p><strong>out_position</strong> (<em>int</em><em>, </em><em>optional</em>) – If the <code class="docutils literal notranslate"><span class="pre">function</span></code> is vector-valued, position of the output core in
+the resulting MPS.</p></li>
+<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Upper bound for the bond dimension of all cores.</p></li>
+<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – When getting the proper bond dimension of each core via truncated SVD,
+this is the proportion that should be satisfied between the sum of all
+singular values kept and the total sum of all singular values. Therefore,
+it specifies the rank of each core independently, allowing for
+varying bond dimensions.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – Batch size used to process <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code> with <code class="docutils literal notranslate"><span class="pre">DataLoaders</span></code>
+during the decomposition.</p></li>
+<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device to which <code class="docutils literal notranslate"><span class="pre">sketch_samples</span></code> will be sent to compute sketches. It
+should coincide with the device the <code class="docutils literal notranslate"><span class="pre">function</span></code> is in, in the case the
+function is a call to a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> or uses tensors that are in a
+specific device. This also applies to the <code class="docutils literal notranslate"><span class="pre">embedding</span></code> function.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>return_info</strong> (<em>bool</em>) – Boolean indicating if an additional dictionary with total time and
+validation error should be returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>list[torch.Tensor]</em> – List of tensor cores of the MPS.</p></li>
+<li><p><em>dictionary</em> – If <code class="docutils literal notranslate"><span class="pre">return_info</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>

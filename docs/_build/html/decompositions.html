@@ -4,9 +4,9 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Decompositions &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>Decompositions &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -460,7 +460,7 @@ arguments <code class="docutils literal notranslate"><span class="pre">rank</spa
 one is specified, the resulting rank will be the one that satisfies all
 conditions.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>vec</strong> (<em>torch.Tensor</em>) – Input vector to decompose.</p></li>
 <li><p><strong>n_batches</strong> (<em>int</em>) – Number of batch dimensions of the input vector. Each resultant tensor
@@ -483,7 +483,7 @@ the normalization factor is evenly distributed among all nodes of
 the MPS.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>List[torch.Tensor]</p>
 </dd>
 </dl>
@@ -512,7 +512,7 @@ arguments <code class="docutils literal notranslate"><span class="pre">rank</spa
 one is specified, the resulting rank will be the one that satisfies all
 conditions.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mat</strong> (<em>torch.Tensor</em>) – Input matrix to decompose. It must have an even number of dimensions.</p></li>
 <li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of singular values to keep.</p></li>
@@ -532,7 +532,7 @@ the normalization factor is evenly distributed among all nodes of
 the MPS.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>List[torch.Tensor]</p>
 </dd>
 </dl>
@@ -562,7 +562,7 @@ MPS.</p>
 <code class="docutils literal notranslate"><span class="pre">rank</span></code> and <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code>. If more than one is specified, the
 resulting rank will be the one that satisfies all conditions.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>function</strong> (<em>Callable</em>) – Function that is going to be decomposed. It needs to have a single
 input argument, the data, which is a tensor of shape
@@ -618,7 +618,7 @@ specific device. This also applies to the <code class="docutils literal notransl
 validation error should be returned.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
 <li><p><em>list[torch.Tensor]</em> – List of tensor cores of the MPS.</p></li>
 <li><p><em>dictionary</em> – If <code class="docutils literal notranslate"><span class="pre">return_info</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>

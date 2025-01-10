@@ -208,3 +208,12 @@ Quantum **8**, 1364 (2024), arXiv:2306.08595.
   eprint={2306.08595}
 }
 ```
+
+
+## Acknowledgments
+
+This work has been financially supported by the Ministry for Digital
+Transformation and of Civil Service of the Spanish Government through the
+QUANTUM ENIA project call – Quantum Spain project, and by the European Union
+through the Recovery, Transformation and Resilience Plan – NextGenerationEU
+within the framework of the Digital Spain 2026 Agenda.

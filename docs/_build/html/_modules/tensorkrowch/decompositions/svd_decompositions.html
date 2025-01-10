@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.decompositions.svd_decompositions &#8212; TensorKrowch 1.1.4 documentation</title>
+    <title>tensorkrowch.decompositions.svd_decompositions &#8212; TensorKrowch 1.1.5 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -470,7 +470,8 @@ title="Source repository"
                 <span class="n">s</span> <span class="o">=</span> <span class="n">s</span> <span class="o">/</span> <span class="n">aux_norm</span>
                 <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
         
-        <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+        <span class="c1"># If u is not cloned, it leads to errors in backward computation</span>
+        <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">clone</span><span class="p">())</span>
         <span class="n">prev_bond</span> <span class="o">=</span> <span class="n">aux_rank</span>
         
         <span class="k">if</span> <span class="n">vh</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
@@ -609,7 +610,8 @@ title="Source repository"
                 <span class="n">s</span> <span class="o">=</span> <span class="n">s</span> <span class="o">/</span> <span class="n">aux_norm</span>
                 <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
         
-        <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+        <span class="c1"># If u is not cloned, it leads to errors in backward computation</span>
+        <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">clone</span><span class="p">())</span>
         <span class="n">prev_bond</span> <span class="o">=</span> <span class="n">aux_rank</span>
         
         <span class="k">if</span> <span class="n">vh</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>

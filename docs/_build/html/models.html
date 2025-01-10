@@ -4,9 +4,9 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Models &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>Models &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -698,7 +698,7 @@ corresponding batch dimensions.</p>
 can be passed as a single tensor. Otherwise, it would have to be passed as
 a list of tensors with different sizes.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. That is, number of nodes
 without taking into account <code class="docutils literal notranslate"><span class="pre">left_node</span></code> and <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p></li>
@@ -734,7 +734,7 @@ one of them.</p></li>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
 patches in convolutional layers).</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
 explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -909,7 +909,7 @@ the norm could vary). Th orthogonality center is at the rightmost
 node.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of tensors to set in each of the MPS nodes. If <code class="docutils literal notranslate"><span class="pre">boundary</span></code>
 is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>, all tensors should be rank-3, except the first and
@@ -938,7 +938,7 @@ edge of each input node.</p>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied MPS should be
 set as the tensors in the current MPS (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or cloned
 (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both MPS’s will be
@@ -946,7 +946,7 @@ the same, which might be useful if one needs more than one copy
 of an MPS, but wants to compute all the gradients with respect
 to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS">MPS</a></p>
 </dd>
 </dl>
@@ -958,7 +958,7 @@ to the same, unique, tensors.</p>
 <dd><p>Parameterizes all nodes of the MPS. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
 in the MPS, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
@@ -1025,7 +1025,7 @@ is contracted with input data with <code class="docutils literal notranslate"><s
 other (output) nodes are marginalized, the result will be a tensor
 with shape <code class="docutils literal notranslate"><span class="pre">(100,</span> <span class="pre">100)</span></code> rather than just <code class="docutils literal notranslate"><span class="pre">(100,)</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>inline_input</strong> (<em>bool</em>) – Boolean indicating whether input <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes should be contracted
 with the <code class="docutils literal notranslate"><span class="pre">MPS</span></code> input nodes inline (one contraction at a time) or
@@ -1060,7 +1060,7 @@ is performed by calling <code class="docutils literal notranslate"><span class="
 without passing extra data tensors.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -1079,7 +1079,7 @@ before calling <code class="docutils literal notranslate"><span class="pre">norm
 <p>Since the norm is computed by contracting the MPS, it means one can
 take gradients of it with respect to the MPS tensors, if it is needed.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>log_scale</strong> (<em>bool</em>) – Boolean indicating whether the resulting norm should be given in
 logarithmoc scale. Useful for cases where the norm explodes or
 vanishes.</p>
@@ -1105,7 +1105,7 @@ is needed.</p>
 <p>This method may also alter the attribute <a class="reference internal" href="#tensorkrowch.models.MPS.n_batches" title="tensorkrowch.models.MPS.n_batches"><code class="xref py py-attr docutils literal notranslate"><span class="pre">n_batches</span></code></a> of the
 <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>trace_sites</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Sequence of nodes’ indices in the MPS. These indices specify the
 nodes that should be traced to compute the density matrix. If
@@ -1158,7 +1158,7 @@ to 1.</p>
 \[\exp(\texttt{log_norm})^2 \cdot S(\rho_A) -
 \exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}\]</div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>middle_site</strong> (<em>int</em>) – Position that separates regios <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span>. It should
 be between 0 and <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">2</span></code>.</p></li>
@@ -1171,7 +1171,7 @@ the normalization factor is evenly distributed among all nodes of
 the MPS.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>float or tuple[float, float]</p>
 </dd>
 </dl>
@@ -1193,7 +1193,7 @@ the rank. That is, the current bond dimensions will be the upper bound
 for the possibly new bond dimensions given by the arguments
 <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and/or <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>oc</strong> (<em>int</em>) – Position of the orthogonality center. It should be between 0 and
 <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p></li>
@@ -1256,7 +1256,7 @@ for each node, and boundary conditions are always periodic (<code class="docutil
 <p>For a more detailed list of inherited properties and methods,
 check <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>.</p></li>
 <li><p><strong>phys_dim</strong> (<em>int</em><em>, </em><em>optional</em>) – Physical dimension.</p></li>
@@ -1327,7 +1327,7 @@ dimensions are bigger than the powers of the physical dimensions,
 the norm could vary).</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of a single tensor to set in each of the MPS nodes. The
 tensor should be rank-3, with its first and last dimensions being
@@ -1347,7 +1347,7 @@ equal.</p></li>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#UMPS.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPS.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.UMPS" title="tensorkrowch.models.UMPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the common tensor in the copied UMPS
 should be set as the tensor in the current UMPS (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or
 cloned (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, the tensor in both UMPS’s
@@ -1355,7 +1355,7 @@ will be the same, which might be useful if one needs more than one
 copy of a UMPS, but wants to compute all the gradients with respect
 to the same, unique, tensor.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.UMPS" title="tensorkrowch.models.UMPS">UMPS</a></p>
 </dd>
 </dl>
@@ -1367,7 +1367,7 @@ to the same, unique, tensor.</p>
 <dd><p>Parameterizes all nodes of the MPS. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
 in the MPS, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
@@ -1413,7 +1413,7 @@ again.</p>
 <p>For a more detailed list of inherited properties and methods,
 check <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. That is, number of nodes
 without taking into account <code class="docutils literal notranslate"><span class="pre">left_node</span></code> and <code class="docutils literal notranslate"><span class="pre">right_node</span></code>. This also
@@ -1448,7 +1448,7 @@ rank-3 (“pbc”).</p></li>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (e.g. one edge for data batched, other edge for
 image patches in convolutional layers).</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSLayer.initialize" title="tensorkrowch.models.MPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSLayer.initialize" title="tensorkrowch.models.MPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
 explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -1530,7 +1530,7 @@ dimensions are bigger than the powers of the physical dimensions,
 the norm could vary). Th orthogonality center is at the output node.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of tensors to set in each of the MPS nodes. If <code class="docutils literal notranslate"><span class="pre">boundary</span></code>
 is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>, all tensors should be rank-3, except the first and
@@ -1552,7 +1552,7 @@ rank-3.</p></li>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPSLayer.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSLayer.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.MPSLayer" title="tensorkrowch.models.MPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSLayer</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied MPSLayer should be
 set as the tensors in the current MPSLayer (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or cloned
 (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both MPSLayer’s will be
@@ -1560,7 +1560,7 @@ the same, which might be useful if one needs more than one copy
 of an MPSLayer, but wants to compute all the gradients with respect
 to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.MPSLayer" title="tensorkrowch.models.MPSLayer">MPSLayer</a></p>
 </dd>
 </dl>
@@ -1585,7 +1585,7 @@ and boundary conditions are always periodic (<code class="docutils literal notra
 <p>For a more detailed list of inherited properties and methods,
 check <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. This also includes the
 output node, so if one wants to instantiate a <code class="docutils literal notranslate"><span class="pre">UMPSLayer</span></code> for a
@@ -1610,7 +1610,7 @@ should be rank-3, with all their first and last dimensions being equal.</p></li>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
 patches in convolutional layers).</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.UMPSLayer.initialize" title="tensorkrowch.models.UMPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.UMPSLayer.initialize" title="tensorkrowch.models.UMPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
 explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -1683,7 +1683,7 @@ dimensions are bigger than the powers of the physical dimensions,
 the norm could vary).</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of a 2 tensors, the first one will be the uniform tensor
 that will be set in all input nodes, and the second one will be the
@@ -1704,7 +1704,7 @@ first and last dimensions being equal.</p></li>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#UMPSLayer.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPSLayer.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.UMPSLayer" title="tensorkrowch.models.UMPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPSLayer</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied UMPSLayer should be
 set as the tensors in the current UMPSLayer (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or cloned
 (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both UMPSLayer’s will be
@@ -1712,7 +1712,7 @@ the same, which might be useful if one needs more than one copy
 of an UMPSLayer, but wants to compute all the gradients with respect
 to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.UMPSLayer" title="tensorkrowch.models.UMPSLayer">UMPSLayer</a></p>
 </dd>
 </dl>
@@ -1724,7 +1724,7 @@ to the same, unique, tensors.</p>
 <dd><p>Parameterizes all nodes of the MPS. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
 in the MPS, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
@@ -1747,7 +1747,7 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 be a batch of images.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>in_channels</strong> (<em>int</em>) – Input channels. Same as <code class="docutils literal notranslate"><span class="pre">phys_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p></li>
 <li><p><strong>bond_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimension(s). If given as a sequence, its length should be equal
@@ -1777,7 +1777,7 @@ shapes <code class="docutils literal notranslate"><span class="pre">(in_channels
 respectively, the inferred boundary conditions will be “obc”. Also, if
 <code class="docutils literal notranslate"><span class="pre">tensors</span></code> contains a single element, it can be rank-1 (“obc”) or
 rank-3 (“pbc”).</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
 explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -1802,7 +1802,7 @@ explanation of the different initialization methods.</p></li>
 <dd><p>Overrides <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> to compute a
 convolution on the input image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -1857,7 +1857,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#ConvMPS.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.ConvMPS.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.ConvMPS" title="tensorkrowch.models.ConvMPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvMPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied ConvMPS should be
 set as the tensors in the current ConvMPS (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or cloned
 (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both ConvMPS’s will be
@@ -1865,7 +1865,7 @@ the same, which might be useful if one needs more than one copy
 of a ConvMPS, but wants to compute all the gradients with respect
 to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.ConvMPS" title="tensorkrowch.models.ConvMPS">ConvMPS</a></p>
 </dd>
 </dl>
@@ -1883,7 +1883,7 @@ to the same, unique, tensors.</p>
 be a batch of images.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>in_channels</strong> (<em>int</em>) – Input channels. Same as <code class="docutils literal notranslate"><span class="pre">phys_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.UMPS" title="tensorkrowch.models.UMPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPS</span></code></a>.</p></li>
 <li><p><strong>bond_dim</strong> (<em>int</em>) – Bond dimension.</p></li>
@@ -1903,7 +1903,7 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 </p></li>
 <li><p><strong>tensor</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – To initialize MPS nodes, a MPS tensor can be provided. The tensor
 should be rank-3, with its first and last dimensions being equal.</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.UMPS.initialize" title="tensorkrowch.models.UMPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.UMPS.initialize" title="tensorkrowch.models.UMPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
 explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -1931,7 +1931,7 @@ explanation of the different initialization methods.</p></li>
 <dd><p>Overrides <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> to compute a
 convolution on the input image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -1986,7 +1986,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#ConvUMPS.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.ConvUMPS.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.ConvUMPS" title="tensorkrowch.models.ConvUMPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvUMPS</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the common tensor in the copied ConvUMPS
 should be set as the tensor in the current ConvUMPS (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or
 cloned (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, the tensor in both ConvUMPS’s
@@ -1994,7 +1994,7 @@ will be the same, which might be useful if one needs more than one
 copy of a ConvUMPS, but wants to compute all the gradients with respect
 to the same, unique, tensor.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.ConvUMPS" title="tensorkrowch.models.ConvUMPS">ConvUMPS</a></p>
 </dd>
 </dl>
@@ -2012,7 +2012,7 @@ to the same, unique, tensor.</p>
 be a batch of images.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>in_channels</strong> (<em>int</em>) – Input channels. Same as <code class="docutils literal notranslate"><span class="pre">in_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.MPSLayer" title="tensorkrowch.models.MPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSLayer</span></code></a>.</p></li>
 <li><p><strong>out_channels</strong> (<em>int</em>) – Output channels. Same as <code class="docutils literal notranslate"><span class="pre">out_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.MPSLayer" title="tensorkrowch.models.MPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSLayer</span></code></a>.</p></li>
@@ -2047,7 +2047,7 @@ shapes <code class="docutils literal notranslate"><span class="pre">(in_channels
 respectively, the inferred boundary conditions will be “obc”. Also, if
 <code class="docutils literal notranslate"><span class="pre">tensors</span></code> contains a single element, it can be rank-1 (“obc”) or
 rank-3 (“pbc”).</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSLayer.initialize" title="tensorkrowch.models.MPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSLayer.initialize" title="tensorkrowch.models.MPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
 explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -2073,7 +2073,7 @@ explanation of the different initialization methods.</p></li>
 <dd><p>Overrides <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> to compute a
 convolution on the input image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -2134,7 +2134,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#ConvMPSLayer.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.ConvMPSLayer.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.ConvMPSLayer" title="tensorkrowch.models.ConvMPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvMPSLayer</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied ConvMPSLayer should
 be set as the tensors in the current ConvMPSLayer (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or
 cloned (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both ConvMPSLayer’s
@@ -2142,7 +2142,7 @@ will be the same, which might be useful if one needs more than one
 copy of an ConvMPSLayer, but wants to compute all the gradients with
 respect to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.ConvMPSLayer" title="tensorkrowch.models.ConvMPSLayer">ConvMPSLayer</a></p>
 </dd>
 </dl>
@@ -2160,7 +2160,7 @@ respect to the same, unique, tensors.</p>
 be a batch of images.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>in_channels</strong> (<em>int</em>) – Input channels. Same as <code class="docutils literal notranslate"><span class="pre">in_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.UMPSLayer" title="tensorkrowch.models.UMPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPSLayer</span></code></a>.</p></li>
 <li><p><strong>out_channels</strong> (<em>int</em>) – Output channels. Same as <code class="docutils literal notranslate"><span class="pre">out_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.UMPSLayer" title="tensorkrowch.models.UMPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPSLayer</span></code></a>.</p></li>
@@ -2186,7 +2186,7 @@ will be located at the middle of the MPS.</p></li>
 first one will be the uniform tensor, and the second one will be the
 output node’s tensor. Both tensors should be rank-3, with all their
 first and last dimensions being equal.</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.UMPSLayer.initialize" title="tensorkrowch.models.UMPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.UMPSLayer.initialize" title="tensorkrowch.models.UMPSLayer.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more
 detailed explanation of the different initialization methods.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>dtype</strong> (<em>torch.dtype</em><em>, </em><em>optional</em>) – Dtype of the tensor if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
@@ -2216,7 +2216,7 @@ detailed explanation of the different initialization methods.</p></li>
 <dd><p>Overrides <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> to compute a
 convolution on the input image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -2277,7 +2277,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#ConvUMPSLayer.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.ConvUMPSLayer.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.ConvUMPSLayer" title="tensorkrowch.models.ConvUMPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConvUMPSLayer</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied ConvUMPSLayer should
 be set as the tensors in the current ConvUMPSLayer (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or
 cloned (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both ConvUMPSLayer’s
@@ -2285,7 +2285,7 @@ will be the same, which might be useful if one needs more than one
 copy of an ConvUMPSLayer, but wants to compute all the gradients with
 respect to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.ConvUMPSLayer" title="tensorkrowch.models.ConvUMPSLayer">ConvUMPSLayer</a></p>
 </dd>
 </dl>
@@ -2323,7 +2323,7 @@ accomplished by calling the custom <a class="reference internal" href="#tensorkr
 list of tensors. This is in contrast to the usual way of setting nodes’
 tensors in <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a> and its derived classes via <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">MPS.initialize()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. That is, number of nodes
 without taking into account <code class="docutils literal notranslate"><span class="pre">left_node</span></code> and <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p></li>
@@ -2440,7 +2440,7 @@ initialized calling <a class="reference internal" href="components.html#tensorkr
 the given method, <code class="docutils literal notranslate"><span class="pre">device</span></code>, <code class="docutils literal notranslate"><span class="pre">dtype</span></code> and <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> to see how to
 initialize MPS nodes with data tensors.</p></li>
@@ -2460,7 +2460,7 @@ initialize MPS nodes with data tensors.</p></li>
 <p>The physical dimensions of the given data tensors should coincide with
 the physical dimensions of the MPS. The bond dimensions can be different.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em>) – A sequence of tensors, one for each of the MPS nodes. If <code class="docutils literal notranslate"><span class="pre">boundary</span></code>
 is <code class="docutils literal notranslate"><span class="pre">&quot;pbc&quot;</span></code>, all tensors should have the same rank, with shapes
 <code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>. If
@@ -2501,7 +2501,7 @@ as nodes were in the MPO.</p>
 passed as a single tensor. Otherwise, it would have to be passed as a list
 of tensors with different sizes.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. That is, number of nodes
 without taking into account <code class="docutils literal notranslate"><span class="pre">left_node</span></code> and <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p></li>
@@ -2635,7 +2635,7 @@ initialized calling <a class="reference internal" href="components.html#tensorkr
 the given method, <code class="docutils literal notranslate"><span class="pre">device</span></code>, <code class="docutils literal notranslate"><span class="pre">dtype</span></code> and <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of tensors to set in each of the MPO nodes. If <code class="docutils literal notranslate"><span class="pre">boundary</span></code>
 is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>, all tensors should be rank-4, except the first and
@@ -2664,7 +2664,7 @@ edge of each node.</p>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether tensors in the copied MPO should be
 set as the tensors in the current MPO (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or cloned
 (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, tensors in both MPO’s will be
@@ -2672,7 +2672,7 @@ the same, which might be useful if one needs more than one copy
 of an MPO, but wants to compute all the gradients with respect
 to the same, unique, tensors.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO">MPO</a></p>
 </dd>
 </dl>
@@ -2684,7 +2684,7 @@ to the same, unique, tensors.</p>
 <dd><p>Parameterizes all nodes of the MPO. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
 in the MPO, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
@@ -2738,7 +2738,7 @@ contraction is carried out by calling <code class="docutils literal notranslate"
 passing the input data again, as it is already stored in the MPSData
 nodes.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>inline_input</strong> (<em>bool</em>) – Boolean indicating whether input <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes should be contracted
 with the <code class="docutils literal notranslate"><span class="pre">MPO</span></code> nodes inline (one contraction at a time) or in a
@@ -2760,7 +2760,7 @@ passing the input data again, as it is already stored in the MPS
 cores.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -2783,7 +2783,7 @@ the rank. That is, the current bond dimensions will be the upper bound
 for the possibly new bond dimensions given by the arguments
 <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and/or <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>oc</strong> (<em>int</em>) – Position of the orthogonality center. It should be between 0 and
 <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p></li>
@@ -2841,7 +2841,7 @@ for each node, and boundary conditions are always periodic (<code class="docutil
 <p>For a more detailed list of inherited properties and methods,
 check <a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>.</p></li>
 <li><p><strong>in_dim</strong> (<em>int</em><em>, </em><em>optional</em>) – Input dimension.</p></li>
@@ -2890,7 +2890,7 @@ initialized calling <a class="reference internal" href="components.html#tensorkr
 the given method, <code class="docutils literal notranslate"><span class="pre">device</span></code>, <code class="docutils literal notranslate"><span class="pre">dtype</span></code> and <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of a single tensor to set in each of the MPO nodes. The
 tensor should be rank-4, with its first and third dimensions being
@@ -2910,7 +2910,7 @@ equal.</p></li>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#UMPO.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPO.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates a copy of the <a class="reference internal" href="#tensorkrowch.models.UMPO" title="tensorkrowch.models.UMPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPO</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the common tensor in the copied UMPO
 should be set as the tensor in the current UMPO (<code class="docutils literal notranslate"><span class="pre">True</span></code>), or
 cloned (<code class="docutils literal notranslate"><span class="pre">False</span></code>). In the former case, the tensor in both UMPO’s
@@ -2918,7 +2918,7 @@ will be the same, which might be useful if one needs more than one
 copy of a UMPO, but wants to compute all the gradients with respect
 to the same, unique, tensor.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.UMPO" title="tensorkrowch.models.UMPO">UMPO</a></p>
 </dd>
 </dl>
@@ -2930,7 +2930,7 @@ to the same, unique, tensor.</p>
 <dd><p>Parameterizes all nodes of the MPO. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
 in the MPO, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
@@ -2958,7 +2958,7 @@ output edge. Thus the contraction of the Tree returns a <cite>vector</cite> node
 <p>All nodes in the network are in <code class="docutils literal notranslate"><span class="pre">self.layers</span></code>, a list containing the lists
 of nodes in each layer (starting from the bottom).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sites_per_layer</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Number of sites in each layer of the tree. All nodes in the same layer
 have the same shape. Number of nodes in each layer times the number of
@@ -3028,11 +3028,11 @@ an input node.</p>
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/tree.html#Tree.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.Tree.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole Tree Tensor Network.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>inline</strong> (<em>bool</em>) – Boolean indicating whether consecutive layers should be contracted
 inline or in parallel (using a single stacked contraction).</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -3044,7 +3044,7 @@ inline or in parallel (using a single stacked contraction).</p>
 <dd><p>Turns Tree into canonical form via local SVD/QR decompositions, moving
 singular values matrices or non-isometries to the upper layers.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mode</strong> (<em>{&quot;svd&quot;</em><em>, </em><em>&quot;svdr&quot;</em><em>, </em><em>&quot;qr&quot;}</em>) – Indicates which decomposition should be used to split a node after
 contracting it. See more at <code class="xref py py-func docutils literal notranslate"><span class="pre">svd_()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">svdr_()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">qr_()</span></code>.
@@ -3086,7 +3086,7 @@ tensor.</p>
 <p>All nodes in the network are in <code class="docutils literal notranslate"><span class="pre">self.layers</span></code>, a list containing the lists
 of nodes in each layer (starting from the bottom).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sites_per_layer</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Number of sites in each layer of the tree. All nodes have the same
 shape. Number of nodes in each layer times the number of input edges
@@ -3154,11 +3154,11 @@ an input node.</p>
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/tree.html#UTree.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UTree.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole Tree Tensor Network.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>inline</strong> (<em>bool</em>) – Boolean indicating whether consecutive layers should be contracted
 inline or in parallel (using a single stacked contraction).</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -3176,7 +3176,7 @@ inline or in parallel (using a single stacked contraction).</p>
 convolutional version of <a class="reference internal" href="#tensorkrowch.models.Tree" title="tensorkrowch.models.Tree"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tree</span></code></a>.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sites_per_layer</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Number of sites in each layer of the tree. All nodes in the same layer
 have the same shape. Number of nodes in each layer times the number of
@@ -3249,7 +3249,7 @@ from <a class="reference internal" href="#tensorkrowch.models.Tree" title="tenso
 <dd><p>Overrides <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>’s forward to compute a convolution on the
 input image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -3275,7 +3275,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline</span><
 is the convolutional version of <a class="reference internal" href="#tensorkrowch.models.UTree" title="tensorkrowch.models.UTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">UTree</span></code></a>.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sites_per_layer</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Number of sites in each layer of the tree. All nodes have the same
 shape. Number of nodes in each layer times the number of input edges
@@ -3352,7 +3352,7 @@ from <a class="reference internal" href="#tensorkrowch.models.UTree" title="tens
 <dd><p>Overrides <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>’s forward to compute a convolution on the
 input image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -3394,7 +3394,7 @@ grid.</p></li>
 “right”, “up”, “down”). Is is a list of lists of nodes.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_rows</strong> (<em>int</em>) – Number of rows of the 2D grid.</p></li>
 <li><p><strong>n_cols</strong> (<em>int</em>) – Number of columns of the 2D grid.</p></li>
@@ -3477,7 +3477,7 @@ an input node.</p>
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'up'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/peps.html#PEPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.PEPS.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole PEPS.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>from_side</strong> (<em>{&quot;up&quot;</em><em>, </em><em>&quot;down&quot;</em><em>, </em><em>&quot;left&quot;</em><em>, </em><em>&quot;right&quot;}</em>) – Indicates from which side of the 2D grid the contraction algorithm
 should start.</p></li>
@@ -3489,7 +3489,7 @@ the bond dimension is reduced using singular value decomposition
 inline or in parallel (using a single stacked contraction).</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -3513,7 +3513,7 @@ conditions are always periodic.</p>
 “right”, “up”, “down”). Is is a list of lists of nodes.</p></li>
 </ul>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_rows</strong> (<em>int</em>) – Number of rows of the 2D grid.</p></li>
 <li><p><strong>n_cols</strong> (<em>int</em>) – Number of columns of the 2D grid</p></li>
@@ -3589,7 +3589,7 @@ an input node.</p>
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'up'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/peps.html#UPEPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UPEPS.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole PEPS.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>from_side</strong> (<em>{&quot;up&quot;</em><em>, </em><em>&quot;down&quot;</em><em>, </em><em>&quot;left&quot;</em><em>, </em><em>&quot;right&quot;}</em>) – Indicates from which side of the 2D grid the contraction algorithm
 should start.</p></li>
@@ -3601,7 +3601,7 @@ the bond dimension is reduced using singular value decomposition
 inline or in parallel (using a single stacked contraction).</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -3620,7 +3620,7 @@ and where the input data is a batch of images. It is the convolutional
 version of <a class="reference internal" href="#tensorkrowch.models.PEPS" title="tensorkrowch.models.PEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">PEPS</span></code></a>.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>in_channels</strong> (<em>int</em>) – Input channels. Same as <code class="docutils literal notranslate"><span class="pre">in_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.PEPS" title="tensorkrowch.models.PEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">PEPS</span></code></a>.</p></li>
 <li><p><strong>bond_dim</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimensions for horizontal and vertical edges (in that order). Thus
@@ -3692,7 +3692,7 @@ given by <span class="math notranslate nohighlight">\(kernel\_size_0\)</span> an
 <dd><p>Overrides <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>’s forward to compute a convolution on the input
 image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">
@@ -3719,7 +3719,7 @@ nodes, and where the input data is a batch of images. It is the convolutional
 version of <a class="reference internal" href="#tensorkrowch.models.UPEPS" title="tensorkrowch.models.UPEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">UPEPS</span></code></a>.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">torch.nn.Conv2d</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>in_channels</strong> (<em>int</em>) – Input channels. Same as <code class="docutils literal notranslate"><span class="pre">in_dim</span></code> in <a class="reference internal" href="#tensorkrowch.models.UPEPS" title="tensorkrowch.models.UPEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">UPEPS</span></code></a>.</p></li>
 <li><p><strong>bond_dim</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimensions for horizontal and vertical edges (in that order). Thus
@@ -3791,7 +3791,7 @@ given by <span class="math notranslate nohighlight">\(kernel\_size_0\)</span> an
 <dd><p>Overrides <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>’s forward to compute a convolution on the input
 image.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>image</strong> (<em>torch.Tensor</em>) – <p>Input batch of images with shape</p>
 <div class="math notranslate nohighlight">

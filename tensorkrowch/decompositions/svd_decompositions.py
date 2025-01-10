@@ -143,7 +143,8 @@ def vec_to_mps(vec: torch.Tensor,
                 s = s / aux_norm
                 log_norm += aux_norm.log()
         
-        tensors.append(u)
+        # If u is not cloned, it leads to errors in backward computation
+        tensors.append(u.clone())
         prev_bond = aux_rank
         
         if vh.is_complex():
@@ -282,7 +283,8 @@ def mat_to_mpo(mat: torch.Tensor,
                 s = s / aux_norm
                 log_norm += aux_norm.log()
         
-        tensors.append(u)
+        # If u is not cloned, it leads to errors in backward computation
+        tensors.append(u.clone())
         prev_bond = aux_rank
         
         if vh.is_complex():

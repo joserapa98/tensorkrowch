@@ -353,8 +353,7 @@ class TestMPS:  # MARK: TestMPS
                 assert node.is_complex()
             
             # Check it has norm == 2**n
-            assert mps.norm().isclose(
-                torch.tensor(2. ** n, dtype=torch.complex64).sqrt())
+            assert mps.norm().isclose(torch.tensor(2. ** n).sqrt())
             # Norm is close to 2**n if bond dimension is <= than
             # physical dimension, otherwise, it will not be exactly 2**n
     
@@ -3402,8 +3401,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                 assert node.is_complex()
             
             # Check it has norm == 10**n
-            assert mps.norm().isclose(torch.tensor(10. ** n,
-                                                   dtype=torch.complex64).sqrt())
+            assert mps.norm().isclose(torch.tensor(10. ** n).sqrt())
             # Norm is close to 10**n if bond dimension is <= than
             # physical dimension, otherwise, it will not be exactly 10**n
     

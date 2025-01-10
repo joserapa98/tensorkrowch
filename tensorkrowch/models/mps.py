@@ -106,7 +106,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
     device : torch.device, optional
@@ -1897,12 +1897,11 @@ class MPS(TensorNetwork):  # MARK: MPS
         nodes[oc] = nodes[oc].parameterize()
         
         # Rescale
-        if log_norm != 0:
-            rescale = (log_norm / len(nodes)).exp()
-        
-        if renormalize and (log_norm != 0):
-            for node in nodes:
-                node.tensor = node.tensor * rescale
+        if renormalize:
+            if log_norm != 0:
+                rescale = (log_norm / len(nodes)).exp()
+                for node in nodes:
+                    node.tensor = node.tensor * rescale
         
         # Update variables
         self._mats_env = nodes
@@ -2520,7 +2519,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (e.g. one edge for data batched, other edge for
         image patches in convolutional layers).
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
     device : torch.device, optional
@@ -3036,7 +3035,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
     device : torch.device, optional
@@ -3595,7 +3594,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
         respectively, the inferred boundary conditions will be "obc". Also, if
         ``tensors`` contains a single element, it can be rank-1 ("obc") or
         rank-3 ("pbc").
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~MPS.initialize` for a more detailed
         explanation of the different initialization methods.
     device : torch.device, optional
@@ -3763,7 +3762,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
     tensor: torch.Tensor, optional
         To initialize MPS nodes, a MPS tensor can be provided. The tensor
         should be rank-3, with its first and last dimensions being equal.
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~UMPS.initialize` for a more detailed
         explanation of the different initialization methods.
     device : torch.device, optional
@@ -3948,7 +3947,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
         respectively, the inferred boundary conditions will be "obc". Also, if
         ``tensors`` contains a single element, it can be rank-1 ("obc") or
         rank-3 ("pbc").
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~MPSLayer.initialize` for a more detailed
         explanation of the different initialization methods.
     device : torch.device, optional
@@ -4138,7 +4137,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
         first one will be the uniform tensor, and the second one will be the
         output node's tensor. Both tensors should be rank-3, with all their
         first and last dimensions being equal.
-    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+    init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~UMPSLayer.initialize` for a more
         detailed explanation of the different initialization methods.
     device : torch.device, optional

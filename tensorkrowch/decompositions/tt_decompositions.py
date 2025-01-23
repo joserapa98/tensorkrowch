@@ -203,18 +203,18 @@ def trimming(mat, rank, cum_percentage):
     return u, s, vh, aux_rank
 
 
-def create_projector(S_k_1, S_k):
+def create_projector(S_k_minus_1, S_k):
     """
     Given the previous projector and the current one, it infers the ``s_k``
-    needed to create ``S_k`` from ``S_k_1``. All rows of ``S_k_1`` and ``S_k``
-    must be unique.
+    needed to create ``S_k`` from ``S_k_minus_1``. All rows of ``S_k_minus_1``
+    and ``S_k`` must be unique.
 
     Parameters
     ----------
-    S_k_1 : torch.Tensor
-        Matrix of shape ``n x k (x in_dim)``. The ``n`` rows of ``S_k_1`` are
-        equal to the rows of ``S_k[:, :-1]``, but maybe they are repeated in
-        ``S_k``.
+    S_k_minus_1 : torch.Tensor
+        Matrix of shape ``n x k (x in_dim)``. The ``n`` rows of ``S_k_minus_1``
+        are equal to the rows of ``S_k[:, :-1]``, but maybe they are repeated
+        in ``S_k``.
     S_k : torch.Tensor
         Matrix of shape ``m x (k + 1) (x in_dim)``, with m >= n.
     
@@ -222,9 +222,9 @@ def create_projector(S_k_1, S_k):
     -------
     s_k : torch.Tensor
         Tensor of shape ``m x 2 (x in_dim)``. The 2 columns correspond,
-        respectively, to indices of rows of ``S_k_1`` (index 0) and the new
-        elements in the ``(k + 1)``-th column of ``S_k`` (index 1) associated
-        to the corresponding rows of ``S_k_1``.
+        respectively, to indices of rows of ``S_k_minus_1`` (index 0) and the
+        new elements in the ``(k + 1)``-th column of ``S_k`` (index 1) associated
+        to the corresponding rows of ``S_k_minus_1``.
     
     Example
     -------
@@ -239,8 +239,8 @@ def create_projector(S_k_1, S_k):
             [1, 1, 0, 0],
             [1, 1, 1, 0]])
             
-    >>> S_k_1 = S_k[:, :-1].unique(dim=0)
-    >>> S_k_1
+    >>> S_k_minus_1 = S_k[:, :-1].unique(dim=0)
+    >>> S_k_minus_1
     
     tensor([[0, 0, 0],
             [0, 0, 1],
@@ -250,7 +250,7 @@ def create_projector(S_k_1, S_k):
             [1, 1, 0],
             [1, 1, 1]])
             
-    >>> create_projector(S_k_1, S_k)
+    >>> create_projector(S_k_minus_1, S_k)
     
     [tensor([0, 1, 2, 3, 4, 5, 6]),
     tensor([[1],
@@ -271,8 +271,8 @@ def create_projector(S_k_1, S_k):
         where_equal_dim = (1, 2)
     s_k_1 = torch.empty_like(S_k[:, -1:])
         
-    for i in range(S_k_1.size(0)):
-        where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=where_equal_dim)
+    for i in range(S_k_minus_1.size(0)):
+        where_equal = (S_k[:, :-1] == S_k_minus_1[i]).all(dim=where_equal_dim)
         new_col = S_k[where_equal, -1:]
         first_col = torch.Tensor([i]).expand(new_col.size(0)).to(new_col.device)
         
@@ -576,7 +576,7 @@ def tt_rss(function: Callable,
     
     start_time = time.time()
     cores = []
-    D_k_1 = 1
+    D_k_minus_1 = 1
     for k in range(n_features):
         
         # Prepare x_k
@@ -601,9 +601,9 @@ def tt_rss(function: Callable,
             
             phys_dim = embed_dim
         
-        # Prepare T_k
+        # Prepare T_k_plus_1
         if k < (n_features - 1):
-            T_k = sketch_samples[:, (k + 1):].unique(dim=0)
+            T_k_plus_1 = sketch_samples[:, (k + 1):].unique(dim=0)
         
         # Prepare D_k
         if verbose:
@@ -611,14 +611,14 @@ def tt_rss(function: Callable,
             site_count = ['=' * len(site_count), site_count]
             print('\n\n' + site_count[0] + '\n' + site_count[1] + '\n' + site_count[0])
         
-        D_k = min(D_k_1 * phys_dim, phys_dim ** (n_features - k - 1))
+        D_k = min(D_k_minus_1 * phys_dim, phys_dim ** (n_features - k - 1))
         
         if verbose:
             if rank is None:
                 print(f'* Max D_k: {D_k}')
             else:
                 print(f'* Max D_k: min({D_k}, {rank})')
-            print(f'* T_k out dim: {T_k.size(0)}')
+            print(f'* T_k_plus_1 out dim: {T_k_plus_1.size(0)}')
         
         if rank is not None:
             D_k = min(D_k, rank)
@@ -627,12 +627,12 @@ def tt_rss(function: Callable,
         if k == 0:
             # Sketching
             Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[x_k, T_k],
+                                    tensors_list=[x_k, T_k_plus_1],
                                     out_position=out_position,
                                     batch_size=batch_size,
                                     device=device)
             
-            # Random unitary for T_k
+            # Random unitary for T_k_plus_1
             randu_t = random_unitary(Phi_tilde_k.size(1)).to(Phi_tilde_k.dtype)
             Phi_tilde_k = torch.mm(Phi_tilde_k, randu_t)
             
@@ -662,9 +662,9 @@ def tt_rss(function: Callable,
             A_k = aux_s_k @ B_k
             
             # Set variables for next iteration
-            D_k_1 = D_k
-            A_k_1 = A_k
-            S_k_1 = S_k
+            D_k_minus_1 = D_k
+            A_k_minus_1 = A_k
+            S_k_minus_1 = S_k
             
             if verbose:
                 core_count = f'Core {k + 1}:'
@@ -676,12 +676,12 @@ def tt_rss(function: Callable,
         elif k < (n_features - 1):
             # Sketching
             Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[S_k_1, x_k, T_k],
+                                    tensors_list=[S_k_minus_1, x_k, T_k_plus_1],
                                     out_position=out_position,
                                     batch_size=batch_size,
                                     device=device)
             
-            # Random unitary for T_k
+            # Random unitary for T_k_plus_1
             randu_t = random_unitary(Phi_tilde_k.size(2))\
                 .repeat(Phi_tilde_k.size(0), 1, 1).to(Phi_tilde_k.dtype)
             Phi_tilde_k = torch.bmm(Phi_tilde_k, randu_t)
@@ -701,16 +701,17 @@ def tt_rss(function: Callable,
                                                             Phi_tilde_k.size(2)),
                                     rank=D_k,
                                     cum_percentage=cum_percentage)
-            B_k = u[:, :D_k]  # (D_k_1 * phys_dim) x D_k
+            B_k = u[:, :D_k]  # (D_k_minus_1 * phys_dim) x D_k
             
             # Solving
-            G_k = torch.linalg.lstsq(A_k_1, B_k.reshape(-1, phys_dim * D_k)).solution
+            G_k = torch.linalg.lstsq(A_k_minus_1,
+                                     B_k.reshape(-1, phys_dim * D_k)).solution
             G_k = G_k.view(-1, phys_dim, D_k)
             cores.append(G_k)
             
             # Create S_k
             S_k = sketch_samples[:, :(k + 1)].unique(dim=0)
-            s_k = create_projector(S_k_1, S_k)
+            s_k = create_projector(S_k_minus_1, S_k)
             
             # Create A_k
             A_k = B_k.view(-1, phys_dim, D_k)
@@ -723,9 +724,9 @@ def tt_rss(function: Callable,
             A_k = torch.einsum('bpd,bp->bd', A_k, aux_s_k)
             
             # Set variables for next iteration
-            D_k_1 = D_k
-            A_k_1 = A_k
-            S_k_1 = S_k
+            D_k_minus_1 = D_k
+            A_k_minus_1 = A_k
+            S_k_minus_1 = S_k
             
             if verbose:
                 core_count = f'Core {k + 1}:'
@@ -737,7 +738,7 @@ def tt_rss(function: Callable,
         else:
             # Sketching
             Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[S_k_1, x_k],
+                                    tensors_list=[S_k_minus_1, x_k],
                                     out_position=out_position,
                                     batch_size=batch_size,
                                     device=device)
@@ -751,7 +752,7 @@ def tt_rss(function: Callable,
             B_k = Phi_tilde_k
             
             # Solving
-            G_k = torch.linalg.lstsq(A_k_1, B_k).solution
+            G_k = torch.linalg.lstsq(A_k_minus_1, B_k).solution
             cores.append(G_k)
             
             if verbose:

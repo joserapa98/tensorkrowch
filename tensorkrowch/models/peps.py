@@ -22,7 +22,7 @@ class PEPS(TensorNetwork):
     Class for Projected Entangled Pair States, where all nodes are input nodes,
     that is, they are all connected to ``data`` nodes that will store the input
     data tensor(s). When contracting the PEPS with new input data, the result
-    will be a just a number.
+    will be just a number.
     
     A ``PEPS`` is formed by the following nodes:
     

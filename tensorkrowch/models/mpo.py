@@ -747,7 +747,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         MPO nodes by hand before contraction, it can be done. However, one
         should first move the MPS nodes to the MPO network.
         
-        Also, when contracting the MPO with and ``MPSData``, if any of the
+        Also, when contracting the MPO with an ``MPSData``, if any of the
         contraction arguments, ``inline_input`` or ``inline_mats``, is set to
         ``False``, the MPO (already connected to the MPS) should be
         :meth:`~tensorkrowch.TensorNetwork.reset` before contraction if new

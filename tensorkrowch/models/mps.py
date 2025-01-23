@@ -1253,7 +1253,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     copied_nodes.append(copied_node)
                     
                     # Change batch names so that they not coincide with
-                    # original batches, which gives dupliicate output batches
+                    # original batches, which gives duplicate output batches
                     for ax in copied_node.axes:
                         if ax._batch:
                             ax.name = ax.name + '_copy'

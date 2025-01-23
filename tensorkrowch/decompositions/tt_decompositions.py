@@ -500,7 +500,7 @@ def tt_rss(function: Callable,
                 raise ValueError(
                     'If `domain` is given as a torch.Tensor, it should have '
                     'shape (n_values,) or (n_values, in_dim), and it should '
-                    'only include in_dim if it also appears in the shape of '
+                    'only include `in_dim` if it also appears in the shape of '
                     '`sketch_samples`')
             if len(domain.shape) == 2:
                 if domain.shape[1] == 1:

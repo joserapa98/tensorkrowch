@@ -626,15 +626,15 @@ def tt_rss(function: Callable,
         # Tensorize
         if k == 0:
             # Sketching
-            Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[x_k, T_k_plus_1],
-                                    out_position=out_position,
-                                    batch_size=batch_size,
-                                    device=device)
+            Phi_hat_k = sketching(function=function,
+                                  tensors_list=[x_k, T_k_plus_1],
+                                  out_position=out_position,
+                                  batch_size=batch_size,
+                                  device=device)
             
             # Random unitary for T_k_plus_1
-            randu_t = random_unitary(Phi_tilde_k.size(1)).to(Phi_tilde_k.dtype)
-            Phi_tilde_k = torch.mm(Phi_tilde_k, randu_t)
+            randu_t = random_unitary(Phi_hat_k.size(1)).to(Phi_hat_k.dtype)
+            Phi_tilde_k = torch.mm(Phi_hat_k, randu_t)
             
             if k != out_position:
                 Phi_tilde_k = torch.linalg.lstsq(
@@ -675,16 +675,16 @@ def tt_rss(function: Callable,
             
         elif k < (n_features - 1):
             # Sketching
-            Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[S_k_minus_1, x_k, T_k_plus_1],
-                                    out_position=out_position,
-                                    batch_size=batch_size,
-                                    device=device)
+            Phi_hat_k = sketching(function=function,
+                                  tensors_list=[S_k_minus_1, x_k, T_k_plus_1],
+                                  out_position=out_position,
+                                  batch_size=batch_size,
+                                  device=device)
             
             # Random unitary for T_k_plus_1
-            randu_t = random_unitary(Phi_tilde_k.size(2))\
-                .repeat(Phi_tilde_k.size(0), 1, 1).to(Phi_tilde_k.dtype)
-            Phi_tilde_k = torch.bmm(Phi_tilde_k, randu_t)
+            randu_t = random_unitary(Phi_hat_k.size(2))\
+                .repeat(Phi_hat_k.size(0), 1, 1).to(Phi_hat_k.dtype)
+            Phi_tilde_k = torch.bmm(Phi_hat_k, randu_t)
             
             if k != out_position:
                 aux_Phi_tilde_k = torch.linalg.lstsq(

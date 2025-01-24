@@ -22,6 +22,15 @@ from tensorkrowch.utils import random_unitary
 import tensorkrowch.models as models
 
 
+def create_projector_cols(Sc_kc_1, Sc_kc):
+    merged_inv = torch.stack([Sc_kc_1[1], Sc_kc[1]], dim=1)
+    merged_inv = merged_inv.unique(sorted=True, dim=0)
+
+    s_k_0 = merged_inv[:, 0]
+    s_k_1 = Sc_kc[0][:, :, -1:]
+    s_k = (s_k_0, s_k_1)
+    return s_k  
+
 
 def peps_rss(function: Callable,
              embedding: Callable,
@@ -54,7 +63,8 @@ def peps_rss(function: Callable,
     sketch_samples : torch.Tensor
         Samples that will be used as sketches to decompose the function. It has
         to be a tensor of shape ``batch_size x n_rows x n_cols`` or
-        ``batch_size x n_rows x n_cols x in_dim``.
+        ``batch_size x n_rows x n_cols x in_dim``. The ``batch_size`` should be
+        a multiple of ``rank``.
     domain : torch.Tensor or list[torch.Tensor], optional
         Domain of the input variables. It should be given as a finite set of
         possible values that can take each variable. If all variables live in
@@ -168,7 +178,7 @@ def peps_rss(function: Callable,
                 raise ValueError(
                     'If `domain` is given as a torch.Tensor, it should have '
                     'shape (n_values,) or (n_values, in_dim), and it should '
-                    'only include in_dim if it also appears in the shape of '
+                    'only include `in_dim` if it also appears in the shape of '
                     '`sketch_samples`')
             if len(domain.shape) == 2:
                 if domain.shape[1] == 1:
@@ -203,5 +213,38 @@ def peps_rss(function: Callable,
         """
         return embedding(data).squeeze(1)
     
+    # Create projectors by columns
+    # These are shared for all rows
+    Sc = []
+    sc = []
+    Tc = []
+    for kc in range(n_cols):
+        if kc == 0:
+            Sc_aux, Sc_inv = \
+                sketch_samples[:, :, :(kc + 1)].unique(sorted=True,
+                                                       return_inverse=True,
+                                                       dim=0)
+            Sc.append((Sc_aux, Sc_inv))
+            sc.append(Sc[-1][0])
+            Tc.append(None)
+        elif kc == (n_cols - 1):
+            Sc.append(None)
+            sc.append(None)
+            Tc.append(sketch_samples[:, :, kc:].unique(sorted=True, dim=0))
+        else:
+            Sc_aux, Sc_inv = \
+                sketch_samples[:, :, :(kc + 1)].unique(sorted=True,
+                                                       return_inverse=True,
+                                                       dim=0)
+            Sc.append((Sc_aux, Sc_inv))
+            sc.append(create_projector_cols(Sc[-2], Sc[-1]))
+            Tc.append(sketch_samples[:, :, kc:].unique(sorted=True,
+                                                        dim=0))
+    
+    for kr in range(n_rows):
+        
+        for kc in range(n_cols):
+            
+            
     
     pass

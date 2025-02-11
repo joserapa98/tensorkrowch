@@ -22,7 +22,7 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
 from tensorkrowch.embeddings import basis
-from tensorkrowch.utils import random_unitary
+from tensorkrowch.utils import random_unitary, inverse_permutation
 import tensorkrowch.models as models
 
 
@@ -64,79 +64,13 @@ def sketching(function, tensors_cols, tensors_rows, kc, kr, batch_size, device):
     aux_batch = int(batch_size ** (1/n_tensors))
     rows_pos = int(kc > 0)
     
-    final_shape = [t.size(0) for t in tensors_cols[:rows_pos]] + \
-        [t.size(0) for t in tensors_rows] + \
-        [t.size(0) for t in tensors_cols[rows_pos:]]
-    
-    # batches_cols = [
-    #     DataLoader(
-    #         TensorDataset(t),
-    #         batch_size=aux_batch,
-    #         shuffle=False,
-    #         num_workers=0
-    #         )
-    #     for t in tensors_cols
-    #     ]
-    
-    # batches_rows = [
-    #     DataLoader(
-    #         TensorDataset(t),
-    #         batch_size=aux_batch,
-    #         shuffle=False,
-    #         num_workers=0
-    #         )
-    #     for t in tensors_rows
-    #     ]
-    
-    # Phi_tilde_kr_kc = []
-    # for cols_comb in itertools.product(*batches_cols):
-    #     cols_comb = [t[0] for t in cols_comb]
-    #     # cols_comb -> [] each is batch x rows(all) x cols (x in_dim)
-    #     for rows_comb in itertools.product(*batches_rows):
-    #         # rows_comb -> [] each is batch x rows x cols(1) (x in_dim)
-    #         rows_comb = [t[0] for t in rows_comb]
-    #         aux_rows_comb = expand_tensors(rows_comb)
-    #         rows_tensor = torch.cat(aux_rows_comb, dim=len(rows_comb))
-            
-    #         aux_rows_tensor = rows_tensor.view(-1,
-    #                                            rows_tensor.size(-3),
-    #                                            rows_tensor.size(-2),
-    #                                            rows_tensor.size(-1))
-            
-    #         aux_cols_comb = cols_comb[:rows_pos] + \
-    #                         [aux_rows_tensor] + \
-    #                         cols_comb[rows_pos:]
-            
-    #         aux_cols_comb = expand_tensors(aux_cols_comb)
-    #         batch_tensor = torch.cat(aux_cols_comb, dim=len(aux_cols_comb) + 1)
-    #         # new_shape = list(batch_tensor.shape[:-3])
-            
-    #         if batch_tensor.shape[-1] == 1:
-    #             batch_tensor = batch_tensor.view(-1,
-    #                                              batch_tensor.size(-3),
-    #                                              batch_tensor.size(-2))
-    #         else:
-    #             batch_tensor = batch_tensor.view(-1,
-    #                                              batch_tensor.size(-3),
-    #                                              batch_tensor.size(-2),
-    #                                              batch_tensor.size(-1))
-            
-    #         aux_result = function(batch_tensor.to(device)).cpu()
-    #         Phi_tilde_kr_kc.append(aux_result)
-            
-    # Phi_tilde_kr_kc = torch.cat(Phi_tilde_kr_kc, dim=0)
-    
-    
     all_tensors = [t for t in tensors_cols[:rows_pos]] + \
         [t for t in tensors_rows] + \
         [t for t in tensors_cols[rows_pos:]]
     
-    all_tensors = [(t, torch.arange(t.size(0)).view(-1, 1, 1))
-                   for t in all_tensors]
-    
     all_batches = [
         DataLoader(
-            TensorDataset(*t),
+            TensorDataset(t),
             batch_size=aux_batch,
             shuffle=False,
             num_workers=0
@@ -145,237 +79,53 @@ def sketching(function, tensors_cols, tensors_rows, kc, kr, batch_size, device):
         ]
     
     Phi_tilde_kr_kc = []
-    Phi_labels = []
     for all_comb in itertools.product(*all_batches):
-        all_labels = [t[1] for t in all_comb]
-        # print(all_labels)
-        
         all_comb = [t[0] for t in all_comb]
         
         rows_comb = all_comb[rows_pos:(rows_pos + len(tensors_rows))]
-        rows_labels_comb = all_labels[rows_pos:(rows_pos + len(tensors_rows))]
-        
         aux_rows_comb = expand_tensors(rows_comb)
         rows_tensor = torch.cat(aux_rows_comb, dim=len(rows_comb))
         
-        aux_rows_labels_comb = expand_tensors(rows_labels_comb)
-        rows_labels_tensor = torch.cat(aux_rows_labels_comb,
-                                       dim=-2)
-        
         aux_rows_tensor = rows_tensor.view(-1,
-                                        rows_tensor.size(-3),
-                                        rows_tensor.size(-2),
-                                        rows_tensor.size(-1))
+                                           rows_tensor.size(-3),
+                                           rows_tensor.size(-2),
+                                           rows_tensor.size(-1))
         
         aux_cols_comb = all_comb[:rows_pos] + \
                         [aux_rows_tensor] + \
                         all_comb[(rows_pos + len(tensors_rows)):]
         
-        
-        aux_rows_labels_tensor = rows_labels_tensor.view(-1,
-                                        rows_labels_tensor.size(-3),
-                                        rows_labels_tensor.size(-2),
-                                        rows_labels_tensor.size(-1))
-        
-        aux_cols_labels_comb = all_labels[:rows_pos] + \
-                        [aux_rows_labels_tensor] + \
-                        all_labels[(rows_pos + len(tensors_rows)):]
-        
-        
         aux_cols_comb = expand_tensors(aux_cols_comb)
         batch_tensor = torch.cat(aux_cols_comb, dim=len(aux_cols_comb) + 1)
-        # new_shape = list(batch_tensor.shape[:-3])
-        
-        aux_cols_labels_comb = expand_tensors(aux_cols_labels_comb)
-        batch_labels_tensor = torch.cat(aux_cols_labels_comb,
-                                        dim=-2)
         
         if batch_tensor.shape[-1] == 1:
             batch_tensor = batch_tensor.view(-1,
-                                            batch_tensor.size(-3),
-                                            batch_tensor.size(-2))
+                                             batch_tensor.size(-3),
+                                             batch_tensor.size(-2))
         else:
             batch_tensor = batch_tensor.view(-1,
-                                            batch_tensor.size(-3),
-                                            batch_tensor.size(-2),
-                                            batch_tensor.size(-1))
+                                             batch_tensor.size(-3),
+                                             batch_tensor.size(-2),
+                                             batch_tensor.size(-1))
         
         aux_result = function(batch_tensor.to(device)).cpu()
         aux_result = aux_result.view(*[t.size(0) for t in all_comb])
         Phi_tilde_kr_kc.append(aux_result)
-        
-        batch_labels_tensor = batch_labels_tensor.view(
-            *[t.size(0) for t in all_comb], len(all_comb))
-        Phi_labels.append(batch_labels_tensor)
-        
-    
-    
-    aux2_Phi_tilde_kr_kc = torch.cat([t.view(-1) for t in Phi_tilde_kr_kc],
-                                     dim=0)
-    aux2_Phi_tilde_kr_kc = aux2_Phi_tilde_kr_kc.reshape(*final_shape)
-    
-    
-    
-    all_n_batches = [ceil(t[0].size(0) / aux_batch) for t in all_tensors]
     
     j = 0
+    all_n_batches = [ceil(t.size(0) / aux_batch) for t in all_tensors]
     while all_n_batches:
-        group_size = all_n_batches.pop(-1)
         j += 1
+        group_size = all_n_batches.pop(-1)
         
         aux_Phi = []
-        aux_Phi_labels = []
         for i in range(0, len(Phi_tilde_kr_kc), group_size):
             aux_Phi.append(
                 torch.cat(Phi_tilde_kr_kc[i:(i + group_size)],
                           dim=len(all_tensors) - j))
-            
-            aux_Phi_labels.append(
-                torch.cat(Phi_labels[i:(i + group_size)],
-                          dim=len(all_tensors) - j))
-            
-        Phi_tilde_kr_kc = aux_Phi
-        Phi_labels = aux_Phi_labels
-    Phi_tilde_kr_kc = Phi_tilde_kr_kc[0]
-    Phi_labels = Phi_labels[0]
-    
-    # assert torch.equal(aux2_Phi_tilde_kr_kc, Phi_tilde_kr_kc)
-    
-    
-    # Phi_tilde_kr_kc = torch.cat(Phi_tilde_kr_kc, dim=0)
-    
-    
-    
-    # batches_cols = [
-    #     DataLoader(
-    #         TensorDataset(t),
-    #         batch_size=batch_size,
-    #         shuffle=False,
-    #         num_workers=0
-    #         )
-    #     for t in tensors_cols
-    #     ]
-    
-    # batches_rows = [
-    #     DataLoader(
-    #         TensorDataset(t),
-    #         batch_size=batch_size,
-    #         shuffle=False,
-    #         num_workers=0
-    #         )
-    #     for t in tensors_rows
-    #     ]
-    
-    # aux_Phi_tilde_kr_kc = []
-    # for cols_comb in itertools.product(*batches_cols):
-    #     cols_comb = [t[0] for t in cols_comb]
-    #     # cols_comb -> [] each is batch x rows(all) x cols (x in_dim)
-    #     for rows_comb in itertools.product(*batches_rows):
-    #         # rows_comb -> [] each is batch x rows x cols(1) (x in_dim)
-    #         rows_comb = [t[0] for t in rows_comb]
-    #         aux_rows_comb = expand_tensors(rows_comb)
-    #         rows_tensor = torch.cat(aux_rows_comb, dim=len(rows_comb))
-            
-    #         aux_rows_tensor = rows_tensor.view(-1,
-    #                                            rows_tensor.size(-3),
-    #                                            rows_tensor.size(-2),
-    #                                            rows_tensor.size(-1))
-            
-    #         aux_cols_comb = cols_comb[:rows_pos] + \
-    #                         [aux_rows_tensor] + \
-    #                         cols_comb[rows_pos:]
-            
-    #         aux_cols_comb = expand_tensors(aux_cols_comb)
-    #         batch_tensor = torch.cat(aux_cols_comb, dim=len(aux_cols_comb) + 1)
-    #         # new_shape = list(batch_tensor.shape[:-3])
-            
-    #         if batch_tensor.shape[-1] == 1:
-    #             batch_tensor = batch_tensor.view(-1,
-    #                                              batch_tensor.size(-3),
-    #                                              batch_tensor.size(-2))
-    #         else:
-    #             batch_tensor = batch_tensor.view(-1,
-    #                                              batch_tensor.size(-3),
-    #                                              batch_tensor.size(-2),
-    #                                              batch_tensor.size(-1))
-            
-    #         aux_result = function(batch_tensor.to(device)).cpu()
-    #         aux_Phi_tilde_kr_kc.append(aux_result)
-    
-    
-    
-    all_labels = [t[1] for t in all_tensors]
-    all_comb = [t[0] for t in all_tensors]
         
-    # all_comb = all_tensors
-    rows_comb = all_comb[rows_pos:(rows_pos + len(tensors_rows))]
-    rows_labels_comb = all_labels[rows_pos:(rows_pos + len(tensors_rows))]
-    
-    aux_rows_comb = expand_tensors(rows_comb)
-    rows_tensor = torch.cat(aux_rows_comb, dim=len(rows_comb))
-    
-    aux_rows_labels_comb = expand_tensors(rows_labels_comb)
-    rows_labels_tensor = torch.cat(aux_rows_labels_comb, dim=-2)
-    
-    aux_rows_tensor = rows_tensor.view(-1,
-                                        rows_tensor.size(-3),
-                                        rows_tensor.size(-2),
-                                        rows_tensor.size(-1))
-    
-    aux_rows_labels_tensor = rows_labels_tensor.view(-1,
-                                        rows_labels_tensor.size(-3),
-                                        rows_labels_tensor.size(-2),
-                                        rows_labels_tensor.size(-1))
-    
-    aux_cols_comb = all_comb[:rows_pos] + \
-                    [aux_rows_tensor] + \
-                    all_comb[(rows_pos + len(tensors_rows)):]
-                    
-    aux_cols_labels_comb = all_labels[:rows_pos] + \
-                    [aux_rows_labels_tensor] + \
-                    all_labels[(rows_pos + len(tensors_rows)):]
-    
-    aux_cols_comb = expand_tensors(aux_cols_comb)
-    batch_tensor = torch.cat(aux_cols_comb, dim=len(aux_cols_comb) + 1)
-    # new_shape = list(batch_tensor.shape[:-3])
-    
-    aux_cols_labels_comb = expand_tensors(aux_cols_labels_comb)
-    batch_labels_tensor = torch.cat(aux_cols_labels_comb, dim=-2)
-    batch_labels_tensor = batch_labels_tensor.view(
-            *[t.size(0) for t in all_comb], len(all_comb))
-    
-    if batch_tensor.shape[-1] == 1:
-        batch_tensor = batch_tensor.view(-1,
-                                            batch_tensor.size(-3),
-                                            batch_tensor.size(-2))
-    else:
-        batch_tensor = batch_tensor.view(-1,
-                                            batch_tensor.size(-3),
-                                            batch_tensor.size(-2),
-                                            batch_tensor.size(-1))
-    
-    aux_Phi_tilde_kr_kc = function(batch_tensor.to(device)).cpu()
-    aux_Phi_tilde_kr_kc = aux_Phi_tilde_kr_kc.reshape(*final_shape)
-    
-    
-    assert torch.equal(batch_labels_tensor, Phi_labels)
-    
-    # aux_Phi_tilde_kr_kc = torch.cat(aux_Phi_tilde_kr_kc, dim=0)
-    
-    # assert torch.equal(aux_Phi_tilde_kr_kc, Phi_tilde_kr_kc)
-    
-    
-    
-    # new_shape = new_shape[:rows_pos] + \
-    #             list(rows_tensor.shape[:-3]) + \
-    #             new_shape[rows_pos:]
-    
-    # Phi_tilde_kr_kc = Phi_tilde_kr_kc.view(*final_shape)
-    # aux_Phi_tilde_kr_kc = aux_Phi_tilde_kr_kc.reshape(*final_shape)
-    
-    # assert torch.equal(aux_Phi_tilde_kr_kc, Phi_tilde_kr_kc)
-    
-    Phi_tilde_kr_kc = aux_Phi_tilde_kr_kc
+        Phi_tilde_kr_kc = aux_Phi
+    Phi_tilde_kr_kc = Phi_tilde_kr_kc[0]
     
     # Current shape: (left, up, input, down, right) -> 0, 1, 2, 3, 4
     # Permute to shape: (input, up, right, down, left) -> 2, 1, 4, 3, 0
@@ -447,9 +197,10 @@ def trimming(tensor, dim, rank, cum_percentage):
         elif aux_rank >= rank:
             break
     
-    u = u.view(*aux_tensor.shape[:(n_dims - 1)], -1)
+    # u = u.view(*aux_tensor.shape[:(n_dims - 1)], -1)
     # u = u[..., :aux_rank]
     u = u[..., :aux_rank] @ torch.diag_embed(s[:aux_rank])  # TODO: check if this causes problems
+    u = u.view(*aux_tensor.shape[:(n_dims - 1)], -1)
     u = u.permute(inv_perm_ids)
     
     vh = vh[..., :aux_rank, :]
@@ -458,6 +209,26 @@ def trimming(tensor, dim, rank, cum_percentage):
     error = s[aux_rank:].norm()
         
     return u, vh  #u, s, vh
+
+
+def trimming_aux(tensor, dim, projector):
+    """
+    Given a tensor, forms a matrix with edges split as (rest, dim), and
+    returns the U from the SVD and an appropiate rank.
+    """
+    n_dims = len(tensor.shape)
+    perm_ids = list(range(dim)) + list(range(dim + 1, n_dims)) + [dim]
+    inv_perm_ids = list(range(dim)) + [n_dims - 1] + list(range(dim, n_dims - 1))
+    
+    aux_tensor = tensor.permute(perm_ids)
+    mat = aux_tensor.reshape(-1, aux_tensor.size(-1))
+    
+    mat = mat @ projector
+    
+    mat = mat.view(*aux_tensor.shape[:(n_dims - 1)], -1)
+    mat = mat.permute(inv_perm_ids)
+    
+    return mat
 
 
 def solving(A, B):
@@ -493,6 +264,63 @@ def match_multiples(prev_size, rank, size):
 
 
 def solving_mpo(prev_mpo_core, mpo_core, rank, kr, kc, n_rows, n_cols):
+    # mpo_core shape: (input, up, right, down, left)
+    #              -> ((up, right, left), (input, down))
+    # prev_mpo_core shape: (up, right_prev, aux_up, left_prev)
+    #                   -> ((up, right_prev, left_prev), aux_up)
+    
+    # We find G with shape: (aux_up, (input, down))
+    # Return G to shape: (input, aux_up, right=1, down, left=1)
+    n_dims = len(mpo_core.shape)
+    perm_ids = list(range(1, n_dims)) + [0]
+    mpo_core = mpo_core.permute(perm_ids)
+    if kr < (n_rows - 1):
+        if kc > 0:
+            perm_ids = list(range(n_dims - 3)) + \
+                list(range(n_dims - 2, n_dims)) + \
+                [n_dims - 3]
+        else:
+            perm_ids = list(range(n_dims - 2)) + [n_dims - 1, n_dims - 2]
+        mpo_core = mpo_core.permute(perm_ids)
+    
+    prev_n_dims = len(prev_mpo_core.shape)
+    aux_up_pos = prev_n_dims - 1 - int(kc > 0)
+    prev_perm_ids = list(range(aux_up_pos)) + \
+        list(range(aux_up_pos + 1, prev_n_dims)) + [aux_up_pos] 
+    prev_mpo_core = prev_mpo_core.permute(prev_perm_ids)
+    
+    # Merge dimensions
+    split_pos = 1 + int(kc > 0) + int(kc < (n_cols - 1))
+    aux_shape = [reduce(mul, mpo_core.shape[:split_pos])] + \
+        [reduce(mul, mpo_core.shape[split_pos:])]
+    aux_mpo_core = mpo_core.reshape(aux_shape)
+    # ((up, right, left), (input, down))
+    
+    aux_shape = [reduce(mul, prev_mpo_core.shape[:-1])] + \
+        [prev_mpo_core.shape[-1]]
+    aux_prev_mpo_core = prev_mpo_core.reshape(aux_shape)
+    # ((up, right_prev, left_prev), aux_up)
+    
+    peps_core = torch.linalg.lstsq(aux_prev_mpo_core, aux_mpo_core).solution
+    # (aux_up, (input, down))
+    
+    print('PEPS core error:',
+          (aux_prev_mpo_core @ peps_core - aux_mpo_core).norm())
+    
+    peps_core = peps_core.reshape(peps_core.size(0), *mpo_core.shape[split_pos:])
+    
+    perm_ids = [1, 0] + list(range(2, len(peps_core.shape)))
+    peps_core = peps_core.permute(perm_ids)
+    
+    if kc < (n_cols - 1):
+        peps_core = peps_core.unsqueeze(2)
+    if kc > 0:
+        peps_core = peps_core.unsqueeze(-1)
+    
+    return peps_core
+
+
+def solving_mpo_aux(prev_mpo_core, mpo_core, rank, kr, kc, n_rows, n_cols):
     # mpo_core shape: (input, up, right, down, left)
     #              -> (up, (input, right, down, left))
     #              -> ((up, right_prev, left_prev), (input, right_rank, down, left_rank))
@@ -620,6 +448,7 @@ def peps_rss(function: Callable,
              domain: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]] = None,
              domain_multiplier: int = 1,
              rank: int = 10,
+             max_rank: int = 100,
              cum_percentage: Optional[float] = None,
              batch_size: int = 64,
              device: Optional[torch.device] = None,
@@ -770,6 +599,11 @@ def peps_rss(function: Callable,
     # Rank
     if not isinstance(rank, int):
         raise TypeError('`rank` should be int type')
+    
+    # Max rank
+    if not isinstance(max_rank, int):
+        raise TypeError('`max_rank` should be int type')
+    
     # TODO: we removed this, needed?
     # if rank < embed_dim:
     #     raise ValueError(
@@ -845,11 +679,13 @@ def peps_rss(function: Callable,
     start_time = time.time()
     einsum_ids = 'ABCDE'
     peps = []
+    right_projectors = []
     for kr in range(n_rows):
         peps_row = []
         # mpo_kr = []
         aux_mpo_kr_minus_1 = []
         # Sr_kr = []
+        aux_A_kr_minus_1 = []
         
         for kc in range(n_cols):
             
@@ -947,20 +783,20 @@ def peps_rss(function: Callable,
                 print(f'Done! ({aux_time:.2f}s)')
             
             
-            # Random projection for Tc
-            if kc < (n_cols - 1):
-                # Sample random unitary
-                randu_t = random_unitary(Phi_tilde_kr_kc.size(right_pos))
-                randu_t = randu_t.to(Phi_tilde_kr_kc.dtype)
+            # # Random projection for Tc
+            # if kc < (n_cols - 1):
+            #     # Sample random unitary
+            #     randu_t = random_unitary(Phi_tilde_kr_kc.size(right_pos))
+            #     randu_t = randu_t.to(Phi_tilde_kr_kc.dtype)
                 
-                # Prepare einsum string
-                randu_ids = 'r' + einsum_ids[right_pos]
-                aux_ein_ids = einsum_ids[:right_pos] + 'r' + \
-                    einsum_ids[(right_pos + 1):len(Phi_tilde_kr_kc.shape)]
-                einsum_str = aux_ein_ids + ',' + randu_ids + '->' + \
-                    einsum_ids[:len(Phi_tilde_kr_kc.shape)]
-                Phi_tilde_kr_kc = torch.einsum(einsum_str,
-                                               Phi_tilde_kr_kc, randu_t)
+            #     # Prepare einsum string
+            #     randu_ids = 'r' + einsum_ids[right_pos]
+            #     aux_ein_ids = einsum_ids[:right_pos] + 'r' + \
+            #         einsum_ids[(right_pos + 1):len(Phi_tilde_kr_kc.shape)]
+            #     einsum_str = aux_ein_ids + ',' + randu_ids + '->' + \
+            #         einsum_ids[:len(Phi_tilde_kr_kc.shape)]
+            #     Phi_tilde_kr_kc = torch.einsum(einsum_str,
+            #                                    Phi_tilde_kr_kc, randu_t)
             
             # Remove embedding from Phi
             aux_Phi_tilde_kr_kc = torch.linalg.lstsq(
@@ -985,18 +821,36 @@ def peps_rss(function: Callable,
             #     right_rank[down_pos] = rank
             # right_rank = reduce(mul, right_rank)
             
-            if kr == 0:
-                right_rank = sketch_size
-            else:
-                right_rank = mpo_kr_minus_1[kc].shape[right_pos - 1] * rank
+            # if kr == 0:
+            #     right_rank = sketch_size
+            # else:
+            #     right_rank = mpo_kr_minus_1[kc].shape[right_pos - 1] * rank
+            right_rank = sketch_size
             
             if kc < (n_cols - 1):
-                B_kr_kc, _ = trimming(tensor=Phi_tilde_kr_kc,
-                                      dim=right_pos,
-                                      rank=right_rank,
-                                      cum_percentage=cum_percentage)
+                if kr == 0:
+                    B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
+                                           dim=right_pos,
+                                           rank=right_rank,
+                                           cum_percentage=cum_percentage)
+                    right_projectors.append(vh)
+                else:
+                    B_kr_kc = trimming_aux(tensor=Phi_tilde_kr_kc,
+                                               dim=right_pos,
+                                               projector=right_projectors[kc].T)
+                    # TODO: projector should be dagger, conjugating also
             else:
                 B_kr_kc = Phi_tilde_kr_kc
+            
+            # if kc < (n_cols - 1):
+            #     B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
+            #                           dim=right_pos,
+            #                           rank=right_rank,
+            #                           cum_percentage=cum_percentage)
+            # else:
+            #     B_kr_kc = Phi_tilde_kr_kc
+            
+            # B_kr_kc = Phi_tilde_kr_kc
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1013,6 +867,7 @@ def peps_rss(function: Callable,
             else:
                 G_kr_kc = solving(A_kr_kc_minus_1, B_kr_kc)
             # mpo_kr.append(G_kr_kc)
+            # G_kr_kc = B_kr_kc  # TODO: remove this
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1059,13 +914,54 @@ def peps_rss(function: Callable,
                 if kc > 0:
                     aux = torch.cat([aux_batch_tensors[-1], aux], dim=2)
                 
-                aux, inv_ids = aux.unique(dim=0,
+                aux, aux_inv_ids = aux.unique(dim=0,
                                           sorted=True,
                                           return_inverse=True)
+                inv_ids = inverse_permutation(list(aux_inv_ids))
+                
+                assert torch.equal(aux, Sc[kc][0])
                 
                 for i in range(len(pos_ids)):
                     sc_kr_kc[0][i] = sc_kr_kc[0][i][inv_ids]
                 sc_kr_kc = (sc_kr_kc[0], sc_kr_kc[1][inv_ids])
+                
+                
+                
+                aux_batch_tensors = []  # up, down, left
+                for i in range(len(pos_ids)):
+                    aux_batch_tensors.append(
+                        batch_tensors[i][0].index_select(dim=0,
+                                                         index=sc_kr_kc[0][i]))
+                
+                aux_col = aux_batch_tensors[:(kr > 0)] + [sc_kr_kc[1]] + \
+                    aux_batch_tensors[(kr > 0):]
+                if kc > 0:
+                    aux_col = aux_col[:-1]
+                aux = torch.cat(aux_col, dim=1)
+                
+                if kc > 0:
+                    aux = torch.cat([aux_batch_tensors[-1], aux], dim=2)
+                
+                assert torch.equal(aux, Sc[kc][0])
+                
+                
+                
+                # if (kr > 0) and (kc == 0):
+                #     # Fix ordering
+                #     # TODO: this is auxiliary solution (?)
+                #     aux_Tr_kr_plus_1_kc = Tr_kr_plus_1_kc[0].index_select(
+                #         dim=0,
+                #         index=sc_kr_kc[0][1])
+                    
+                #     aux_col = [sc_kr_kc[1], aux_Tr_kr_plus_1_kc]
+                #     aux = torch.cat(aux_col, dim=1).unique_consecutive(dim=0)
+                    
+                #     aux_Tr_kr_kc = sketch_samples[:, kr:, kc:(kc + 1)].unique(
+                #         sorted=True,
+                #         dim=0)
+                    
+                #     assert torch.equal(aux_Tr_kr_kc, aux[:aux_Tr_kr_kc.size(0)])
+                
                 
                 
                 # # TODO: check
@@ -1117,6 +1013,8 @@ def peps_rss(function: Callable,
                 einsum_str += ',bi->br'
                 
                 A_kr_kc = torch.einsum(einsum_str, A_kr_kc, aux_sc)
+                
+                aux_A_kr_minus_1.append(A_kr_kc)
                 
                 # Set variables for next iteration
                 A_kr_kc_minus_1 = A_kr_kc
@@ -1209,19 +1107,19 @@ def peps_rss(function: Callable,
             n_dims_mpo_core = len(mpo_core.shape)
             # down_pos = n_dims_mpo_core - 1 - int(kc > 0)
             
-            # Random projection for Tr
-            if kr < (n_rows - 1):
-                # Sample random unitary
-                randu_t = random_unitary(mpo_core.size(down_pos))
-                randu_t = randu_t.to(mpo_core.dtype)
+            # # Random projection for Tr
+            # if kr < (n_rows - 1):
+            #     # Sample random unitary
+            #     randu_t = random_unitary(mpo_core.size(down_pos))
+            #     randu_t = randu_t.to(mpo_core.dtype)
                 
-                # Prepare einsum string
-                randu_ids = 'd' + einsum_ids[down_pos]
-                aux_ein_ids = einsum_ids[:down_pos] + 'd' + \
-                    einsum_ids[(down_pos + 1):n_dims_mpo_core]
-                einsum_str = aux_ein_ids + ',' + randu_ids + '->' + \
-                    einsum_ids[:n_dims_mpo_core]
-                mpo_core = torch.einsum(einsum_str, mpo_core, randu_t)
+            #     # Prepare einsum string
+            #     randu_ids = 'd' + einsum_ids[down_pos]
+            #     aux_ein_ids = einsum_ids[:down_pos] + 'd' + \
+            #         einsum_ids[(down_pos + 1):n_dims_mpo_core]
+            #     einsum_str = aux_ein_ids + ',' + randu_ids + '->' + \
+            #         einsum_ids[:n_dims_mpo_core]
+            #     mpo_core = torch.einsum(einsum_str, mpo_core, randu_t)
             
             
             # Trimming down
@@ -1231,7 +1129,7 @@ def peps_rss(function: Callable,
             if kr < (n_rows - 1):
                 mpo_core, _ = trimming(tensor=mpo_core,
                                        dim=down_pos,
-                                       rank=rank,
+                                       rank=sketch_size, #rank,
                                        cum_percentage=cum_percentage)
             
             if verbose:
@@ -1241,6 +1139,49 @@ def peps_rss(function: Callable,
             
             
             # Solving for MPOs
+            
+            # TODO: check we can go obtain mpo_kr_minus_1 from mpo
+            # if (kr > 0) and (kr < (n_rows - 1)) and (kc < (n_cols - 1)):
+            #     sr_kr_kc = create_projector([Tr_kr_plus_1_kc], aux_x_kr_kc)
+                
+                
+            #     # Fix ordering
+            #     # TODO: this is auxiliary solution (?)
+            #     aux_Tr_kr_plus_1_kc = Tr_kr_plus_1_kc[0].index_select(
+            #         dim=0,
+            #         index=sr_kr_kc[0][0])
+                
+            #     aux_col = [sr_kr_kc[1], aux_Tr_kr_plus_1_kc]
+            #     aux = torch.cat(aux_col, dim=1)
+                
+            #     aux, aux_inv_ids = aux.unique(dim=0,
+            #                               sorted=True,
+            #                               return_inverse=True)
+            #     inv_ids = inverse_permutation(list(aux_inv_ids))
+                
+            #     aux_Tr_kr_kc = sketch_samples[:, kr:, kc:(kc + 1)].unique(
+            #         sorted=True,
+            #         dim=0)
+                
+            #     assert torch.equal(aux_Tr_kr_kc, aux)
+                
+            #     sr_kr_kc = ([sr_kr_kc[0][0][inv_ids]], sr_kr_kc[1][inv_ids])
+                
+                
+            #     # TODO: This breaks if we trim down mpo_core, since indices of batch
+            #     # will not coincide with indices of projected tensor
+            #     aux_mpo_core = mpo_core.index_select(dim=3,
+            #                                          index=sr_kr_kc[0][0])
+                
+            #     aux_sr = aux_embedding(sr_kr_kc[1].to(device)).cpu()
+                
+            #     einsum_str = 'iurb' + (kc > 0) * 'l'
+            #     einsum_str += ',bi->' + 'urb' + (kc > 0) * 'l'
+            #     aux_mpo_core = torch.einsum(einsum_str, aux_mpo_core, aux_sr)
+                
+            #     # assert torch.allclose(mpo_kr_minus_1[kc], aux_mpo_core, rtol=1e-1)
+            
+            
             if verbose:
                 print('\t* Solving for peps_core...', end=' ')
             
@@ -1260,17 +1201,17 @@ def peps_rss(function: Callable,
             if verbose:
                 print('\t* Trimming right peps_core...', end=' ')
             
-            if kr > 0:
-                if kc > 0:
-                    aux_peps_core = peps_core.reshape(-1, peps_core.size(-1))
-                    aux_peps_core = aux_peps_core @ prev_vh_peps.T
-                    peps_core = aux_peps_core.view(*peps_core.shape[:-1],
-                                                prev_vh_peps.size(0))
-                if kc < (n_cols - 1):
-                    peps_core, prev_vh_peps = trimming(tensor=peps_core,
-                                                    dim=right_pos,
-                                                    rank=rank,
-                                                    cum_percentage=cum_percentage)
+            # if kr > 0:
+            #     if kc > 0:
+            #         aux_peps_core = peps_core.reshape(-1, peps_core.size(-1))
+            #         aux_peps_core = aux_peps_core @ prev_vh_peps.T
+            #         peps_core = aux_peps_core.view(*peps_core.shape[:-1],
+            #                                     prev_vh_peps.size(0))
+            #     if kc < (n_cols - 1):
+            #         peps_core, prev_vh_peps = trimming(tensor=peps_core,
+            #                                         dim=right_pos,
+            #                                         rank=sketch_size, #rank,
+            #                                         cum_percentage=cum_percentage)
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1278,7 +1219,7 @@ def peps_rss(function: Callable,
                 print(f'Done! ({aux_time:.2f}s)')
             
             if verbose:
-                print(f'\t*Core shape: {peps_core.shape}')
+                print(f'\t* Core shape: {peps_core.shape}')
             
             peps_row.append(peps_core)
             
@@ -1302,26 +1243,47 @@ def peps_rss(function: Callable,
                 else:
                     sr_kr_kc = create_projector([Sr_kr_minus_1_kc], aux_x_kr_kc)
                     
-                    # # Fix ordering
-                    # # TODO: this is auxiliary solution (?)
-                    # aux_Sr_kr_minus_1_kc = Sr_kr_minus_1_kc[0].index_select(
-                    #     dim=0,
-                    #     index=sr_kr_kc[0][0])
+                    # Fix ordering
+                    # TODO: this is auxiliary solution (?)
+                    aux_Sr_kr_minus_1_kc = Sr_kr_minus_1_kc[0].index_select(
+                        dim=0,
+                        index=sr_kr_kc[0][0])
                     
-                    # aux_col = [aux_Sr_kr_minus_1_kc, sr_kr_kc[1]]
-                    # aux = torch.cat(aux_col, dim=1)
+                    aux_col = [aux_Sr_kr_minus_1_kc, sr_kr_kc[1]]
+                    aux = torch.cat(aux_col, dim=1)
                     
-                    # aux_Sr_kr_kc = sketch_samples[:, :(kr + 1), kc:(kc + 1)].unique(
-                    #     sorted=True,
-                    #     dim=0)
+                    aux_Sr_kr_kc = sketch_samples[:, :(kr + 1), kc:(kc + 1)].unique(
+                        sorted=True,
+                        dim=0)
                     
-                    # assert torch.equal(aux_Sr_kr_kc, aux)
+                    assert torch.equal(aux_Sr_kr_kc, aux)
                     
                     # aux, inv_ids = aux.unique(dim=0,
                     #                           sorted=True,
                     #                           return_inverse=True)
                     
                     # sr_kr_kc = ([sr_kr_kc[0][0][inv_ids]], sr_kr_kc[1][inv_ids])
+                    
+                    
+                    
+                    # sr_kr_kc = create_projector([Tr_kr_plus_1_kc], aux_x_kr_kc)
+                    
+                    # # Fix ordering
+                    # # TODO: this is auxiliary solution (?)
+                    # aux_Tr_kr_plus_1_kc = Tr_kr_plus_1_kc[0].index_select(
+                    #     dim=0,
+                    #     index=sr_kr_kc[0][0])
+                    
+                    # aux_col = [sr_kr_kc[1], aux_Tr_kr_plus_1_kc]
+                    # aux = torch.cat(aux_col, dim=1)
+                    
+                    # aux_Tr_kr_kc = sketch_samples[:, kr:, kc:(kc + 1)].unique(
+                    #     sorted=True,
+                    #     dim=0)
+                    
+                    # assert torch.equal(aux_Tr_kr_kc, aux)
+                    
+                    
                     
                     mpo_core = mpo_core[:, sr_kr_kc[0][0]]
                     aux_sr_kr_kc = aux_embedding(sr_kr_kc[1].to(device)).cpu()
@@ -1336,16 +1298,16 @@ def peps_rss(function: Callable,
                     right_pos -= 1
                 
                 # Trimming right
-                if kc > 0:
-                    aux_mpo_core = mpo_core.reshape(-1, mpo_core.size(-1))
-                    aux_mpo_core = aux_mpo_core @ prev_vh_mpo.T
-                    mpo_core = aux_mpo_core.view(*mpo_core.shape[:-1],
-                                                 prev_vh_mpo.size(0))
-                if kc < (n_cols - 1):
-                    mpo_core, prev_vh_mpo = trimming(tensor=mpo_core,
-                                                     dim=right_pos,
-                                                     rank=int(right_rank/rank),
-                                                     cum_percentage=1.)
+                # if kc > 0:
+                #     aux_mpo_core = mpo_core.reshape(-1, mpo_core.size(-1))
+                #     aux_mpo_core = aux_mpo_core @ prev_vh_mpo.T
+                #     mpo_core = aux_mpo_core.view(*mpo_core.shape[:-1],
+                #                                  prev_vh_mpo.size(0))
+                # if kc < (n_cols - 1):
+                #     mpo_core, prev_vh_mpo = trimming(tensor=mpo_core,
+                #                                      dim=right_pos,
+                #                                      rank=int(right_rank/rank),
+                #                                      cum_percentage=1.)
                 
                 aux_mpo_kr_minus_1.append(mpo_core)
             
@@ -1360,6 +1322,8 @@ def peps_rss(function: Callable,
         # Set variables for next iteration
         if kr < (n_rows - 1):
             mpo_kr_minus_1 = aux_mpo_kr_minus_1
+        
+        A_kr_minus_1 = aux_A_kr_minus_1
     
     if verbose:
         torch.cuda.synchronize(device=device)

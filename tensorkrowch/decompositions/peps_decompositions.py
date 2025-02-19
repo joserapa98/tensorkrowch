@@ -265,6 +265,7 @@ def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
         #    (input, up, right, down, left)
         # -> (input, up, right, down, left, left_down)
         new_shape = new_shape[:-1] + [prod(right_ranks[:2]), right_ranks[2]]
+        # new_shape = new_shape[:-1] + [right_ranks[0], prod(right_ranks[1:])]
     
     if kc < (n_cols - 1):
         #    (input, up, right, down, left, left_down)
@@ -273,6 +274,9 @@ def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
         new_shape = new_shape[:-reverse_right_pos] + \
             [prod(right_ranks[:2]), right_ranks[2]] + \
             new_shape[(-reverse_right_pos + 1):]
+        # new_shape = new_shape[:-reverse_right_pos] + \
+        #     [right_ranks[0], prod(right_ranks[1:])] + \
+        #     new_shape[(-reverse_right_pos + 1):]
     
     mpo_core = mpo_core.reshape(*new_shape)
     
@@ -303,12 +307,53 @@ def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
     
     down_pos = len(mpo_core.shape) - (int(kc > 0) + 1)
     
+    # n_legs = 1 + int(kc > 0) + int(kc < (n_cols - 1))
+    # aux_rank = rank ** n_legs
+    
     mpo_core, vh = trimming(tensor=mpo_core,
                             dim=down_pos,
-                            rank=mpo_core.size(down_pos), #rank,
+                            rank=mpo_core.size(down_pos), #aux_rank, #rank,
                             cum_percentage=cum_percentage)
     
-    return mpo_core, vh
+    # # Split down as left_down, down, right_down
+    # n_dims = len(mpo_core.shape)
+    # reverse_down_pos = int(kc > 0) + 1
+    
+    # new_shape = list(mpo_core.shape)
+    # new_shape = new_shape[:(n_dims - reverse_down_pos)] + \
+    #             [rank] * n_legs + \
+    #             new_shape[(n_dims - reverse_down_pos + 1):]
+    
+    # #    (input, up, right, aux_down, left)
+    # # -> (input, up, right, (right_down, aux_down, left_down), left)
+    # mpo_core = mpo_core.reshape(*new_shape)
+    
+    # if kc > 0:
+    #     #    (input, up, right, right_down, aux_down, left_down, left)
+    #     # -> (input, up, right, right_down, aux_down, left, left_down)
+    #     n_dims = len(mpo_core.shape)
+    #     perm_ids = list(range(n_dims - 2)) + [n_dims - 1, n_dims - 2]
+    #     mpo_core = mpo_core.permute(*perm_ids)
+    
+    
+    # # Merge right and right_down, left and left_down
+    # new_shape = list(mpo_core.shape)
+    # if kc > 0:
+    #     #    (input, up, right, right_down, aux_down, left, left_down)
+    #     # -> (input, up, right, right_down, aux_down, aux_left)
+    #     new_shape = new_shape[:-2] + [prod(new_shape[-2:])]
+    
+    # if kc < (n_cols - 1):
+    #     #    (input, up, right, right_down, aux_down, aux_left)
+    #     # -> (input, up, aux_right, aux_down, aux_left)
+    #     reverse_right_pos = int(kc > 0) + 3
+    #     new_shape = new_shape[:-reverse_right_pos] + \
+    #         [prod(new_shape[-reverse_right_pos:(-reverse_right_pos + 2)])] + \
+    #         new_shape[(-reverse_right_pos + 2):]
+    
+    # mpo_core = mpo_core.reshape(*new_shape)
+    
+    return mpo_core
 
 
 def solving(A, B):
@@ -983,6 +1028,7 @@ def peps_rss(function: Callable,
                                            projector=right_projectors[kc].H)
                 
                 
+                
                 # if (kr == 0) or (kr == (n_rows - 1)):
                 #     right_rank = min(rank * half_max_rank, sketch_size)
                 #     B_kr_kc, vh = trimming(tensor=B_kr_kc,
@@ -1213,12 +1259,12 @@ def peps_rss(function: Callable,
                 print('* Trimming down mpo_core...', end=' ')
              
             if kr < (n_rows - 1):
-                mpo_core, _ = trimming_down(mpo_core=mpo_core,
-                                            kc=kc,
-                                            n_cols=n_cols,
-                                            right_ranks=right_ranks,
-                                            rank=rank,
-                                            cum_percentage=cum_percentage)
+                mpo_core = trimming_down(mpo_core=mpo_core,
+                                         kc=kc,
+                                         n_cols=n_cols,
+                                         right_ranks=right_ranks,
+                                         rank=rank,
+                                         cum_percentage=cum_percentage)
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1291,6 +1337,7 @@ def peps_rss(function: Callable,
                 print(f'Done! ({aux_time:.2f}s)')
             
             
+            # TODO: it works with this, but is it needed?
             # Trimming right peps core
             # if verbose:
             #     print('* Trimming right peps_core...', end=' ')

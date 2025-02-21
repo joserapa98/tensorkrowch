@@ -485,10 +485,11 @@ class MPO(TensorNetwork):  # MARK: MPO
                     if i == 0:
                         # Left node
                         aux_tensor[0] = node.tensor[0]
+                        node.tensor = aux_tensor
                     elif i == (self._n_features - 1):
                         # Right node
                         aux_tensor[..., 0, :] = node.tensor[..., 0, :]
-                    node.tensor = aux_tensor
+                        node.tensor = aux_tensor
         
         if self._boundary == 'obc':
             self._left_node.set_tensor(init_method='copy',

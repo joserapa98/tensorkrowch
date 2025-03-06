@@ -167,25 +167,28 @@ def sketching(function, tensors_cols, tensors_rows, kc, kr, batch_size, device):
     return Phi_tilde_kr_kc
 
 
-def trimming(tensor, dim, rank, cum_percentage):
+def trimming(tensor, kr, kc, n_rows, n_cols, rank, max_rank, cum_percentage):
     """
     Given a tensor, forms a matrix with edges split as (rest, dim), and
     returns the U from the SVD and an appropiate rank.
     """
-    n_dims = len(tensor.shape)
-    perm_ids = list(range(dim)) + list(range(dim + 1, n_dims)) + [dim]
-    inv_perm_ids = list(range(dim)) + [n_dims - 1] + list(range(dim, n_dims - 1))
+    aux_tensor = tensor
+    aux_shape = tensor.shape
+    select_ids = (kr > 0) + 1
     
-    aux_tensor = tensor.permute(*perm_ids)
-    mat = aux_tensor.reshape(-1, aux_tensor.size(-1))
+    mat = aux_tensor.reshape(prod(aux_shape[:select_ids]), -1)
     
     u, s, vh = torch.linalg.svd(mat, full_matrices=False)
-    
-    # if rank is None:
-    #     rank = len(s)
 
     percentages = s.cumsum(0) / (s.sum().expand(s.shape) + 1e-10)
     cum_percentage_tensor = torch.tensor(cum_percentage)
+    
+    if kr == 0:
+        aux_max_rank = rank**(len(aux_shape) - 1)
+    elif kr < (n_rows - 1):
+        aux_max_rank = max_rank**2 *  rank**(len(aux_shape) - 2)
+    else:
+        aux_max_rank = max_rank**2 *  rank**(len(aux_shape) - 3)
     
     aux_rank = 0
     for p in percentages:
@@ -198,21 +201,27 @@ def trimming(tensor, dim, rank, cum_percentage):
         # Cut when ``cum_percentage`` is exceeded
         if p >= cum_percentage_tensor:
             break
-        elif aux_rank >= rank:
+        elif aux_rank >= aux_max_rank:
             break
     
-    # u = u.view(*aux_tensor.shape[:(n_dims - 1)], -1)
-    # u = u[..., :aux_rank]
-    u = u[..., :aux_rank] @ torch.diag_embed(s[:aux_rank])  # TODO: check if this causes problems
-    u = u.view(*aux_tensor.shape[:(n_dims - 1)], -1)
-    u = u.permute(*inv_perm_ids)
-    
+    u = u[..., :aux_rank] @ torch.diag_embed(s[:aux_rank])
     vh = vh[..., :aux_rank, :]
+    
+    # NOTE: For now assume aux_rank == aux_max_rank
+    # TODO: adjust when we find smaller aux_rank
+    if kr == 0:
+        new_shape = [rank] * (len(aux_shape) - 1)
+    elif kr < (n_rows - 1):
+        new_shape = [max_rank] + [rank] * (len(aux_shape) - 2) + [max_rank]
+    else:
+        new_shape = [max_rank] + [rank] * (len(aux_shape) - 3) + [max_rank]
+    
+    u = u.reshape(*aux_shape[:select_ids], *new_shape)
     
     # TODO: deal with error
     error = s[aux_rank:].norm()
         
-    return u, vh  #u, s, vh
+    return u, vh
 
 
 def trimming_aux(tensor, dim, projector):
@@ -647,6 +656,7 @@ def peps_rss(function: Callable,
         singular values kept and the total sum of all singular values. Therefore,
         it specifies the rank of each core independently, allowing for
         varying bond dimensions.
+    # TODO: Add cutoff, and also in tt_rss
     batch_size : int
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
         during the decomposition.
@@ -749,10 +759,10 @@ def peps_rss(function: Callable,
         raise TypeError('`max_rank` should be int type')
     
     # TODO: warning only if max_rank is updated
-    half_max_rank = int(sqrt(max_rank / rank))
+    # half_max_rank = int(sqrt(max_rank / rank))
     # max_rank = half_max_rank**2 * rank
-    max_rank = min(half_max_rank**2 * rank, rank**n_rows)
-    warnings.warn(f'`max_rank` updated to {max_rank}')
+    max_rank = min(max_rank, rank**n_rows)
+    # warnings.warn(f'`max_rank` updated to {max_rank}')
     
     # TODO: we removed this, needed?
     # if rank < embed_dim:
@@ -760,7 +770,7 @@ def peps_rss(function: Callable,
     #         '`rank` should be greater or equal than the embedding dimension')
     
     # Sketch size multiple os rank
-    sketch_size = sketch_samples.size(0)
+    # sketch_size = sketch_samples.size(0)
     # if sketch_size < max_rank:
     #     raise ValueError(
     #         f'`sketch_size` (={sketch_size}) must be greater than '
@@ -842,16 +852,16 @@ def peps_rss(function: Callable,
         # Sr_kr = []
         # aux_A_kr_minus_1 = []
         
-        right_ranks = [min(rank ** kr, half_max_rank),
-                       rank,
-                       min(rank ** (n_rows - kr - 1), half_max_rank)]
+        # right_ranks = [min(rank ** kr, half_max_rank),
+        #                rank,
+        #                min(rank ** (n_rows - kr - 1), half_max_rank)]
         
-        if right_ranks[0] < half_max_rank:
-            right_ranks[2] = max_rank // prod(right_ranks[:2])
-        elif right_ranks[2] < half_max_rank:
-            right_ranks[0] = max_rank // prod(right_ranks[1:])
+        # if right_ranks[0] < half_max_rank:
+        #     right_ranks[2] = max_rank // prod(right_ranks[:2])
+        # elif right_ranks[2] < half_max_rank:
+        #     right_ranks[0] = max_rank // prod(right_ranks[1:])
         
-        assert prod(right_ranks) == max_rank
+        # assert prod(right_ranks) == max_rank
         
         for kc in range(n_cols):
             
@@ -995,58 +1005,70 @@ def peps_rss(function: Callable,
             #     right_rank = min(max_rank, sketch_size)
             # right_rank = sketch_size
             
-            if kc < (n_cols - 1):
-                # right_ranks = [min(rank ** kr, half_max_rank),
-                #                rank,
-                #                min(rank ** (n_rows - kr - 1), half_max_rank)]
-                
-                
-                # B_kr_kc, _ = trimming(tensor=Phi_tilde_kr_kc,
-                #                       dim=right_pos,
-                #                       rank=prod(right_ranks),
-                #                       cum_percentage=cum_percentage)
-                
-                # if B_kr_kc.size(right_pos) < max_rank:
-                #     raise ValueError(
-                #         '`max_rank` is not saturated, choose a smaller value')
-                
-                
-                if kr == 0:
-                    B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
-                                           dim=right_pos,
-                                           rank=prod(right_ranks),
-                                           cum_percentage=cum_percentage)
-                    right_projectors.append(vh)
-                    
-                    if B_kr_kc.size(right_pos) < max_rank:
-                        print(B_kr_kc.size(right_pos))
-                        raise ValueError(
-                            '`max_rank` is not saturated, choose a smaller value')
-                else:
-                    B_kr_kc = trimming_aux(tensor=Phi_tilde_kr_kc,
-                                           dim=right_pos,
-                                           projector=right_projectors[kc].H)
-                
-                
-                
-                # if (kr == 0) or (kr == (n_rows - 1)):
-                #     right_rank = min(rank * half_max_rank, sketch_size)
-                #     B_kr_kc, vh = trimming(tensor=B_kr_kc,
-                #                            dim=right_pos,
-                #                            rank=right_rank,
-                #                            cum_percentage=1.)
-            else:
-                B_kr_kc = Phi_tilde_kr_kc
-            
             # if kc < (n_cols - 1):
-            #     B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
-            #                           dim=right_pos,
-            #                           rank=right_rank,
-            #                           cum_percentage=cum_percentage)
+            #     # right_ranks = [min(rank ** kr, half_max_rank),
+            #     #                rank,
+            #     #                min(rank ** (n_rows - kr - 1), half_max_rank)]
+                
+                
+            #     # B_kr_kc, _ = trimming(tensor=Phi_tilde_kr_kc,
+            #     #                       dim=right_pos,
+            #     #                       rank=prod(right_ranks),
+            #     #                       cum_percentage=cum_percentage)
+                
+            #     # if B_kr_kc.size(right_pos) < max_rank:
+            #     #     raise ValueError(
+            #     #         '`max_rank` is not saturated, choose a smaller value')
+                
+                
+            #     if kr == 0:
+            #         B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
+            #                                dim=right_pos,
+            #                                rank=prod(right_ranks),
+            #                                cum_percentage=cum_percentage)
+            #         right_projectors.append(vh)
+                    
+            #         if B_kr_kc.size(right_pos) < max_rank:
+            #             print(B_kr_kc.size(right_pos))
+            #             raise ValueError(
+            #                 '`max_rank` is not saturated, choose a smaller value')
+            #     else:
+            #         B_kr_kc = trimming_aux(tensor=Phi_tilde_kr_kc,
+            #                                dim=right_pos,
+            #                                projector=right_projectors[kc].H)
+                
+                
+                
+            #     # if (kr == 0) or (kr == (n_rows - 1)):
+            #     #     right_rank = min(rank * half_max_rank, sketch_size)
+            #     #     B_kr_kc, vh = trimming(tensor=B_kr_kc,
+            #     #                            dim=right_pos,
+            #     #                            rank=right_rank,
+            #     #                            cum_percentage=1.)
             # else:
             #     B_kr_kc = Phi_tilde_kr_kc
             
-            # B_kr_kc = Phi_tilde_kr_kc
+            # # if kc < (n_cols - 1):
+            # #     B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
+            # #                           dim=right_pos,
+            # #                           rank=right_rank,
+            # #                           cum_percentage=cum_percentage)
+            # # else:
+            # #     B_kr_kc = Phi_tilde_kr_kc
+            
+            # # B_kr_kc = Phi_tilde_kr_kc
+            
+            
+            B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
+                                   kr=kr,
+                                   kc=kc,
+                                   n_rows=n_rows,
+                                   n_cols=n_cols,
+                                   rank=rank,
+                                   max_rank=max_rank,
+                                   cum_percentage=cum_percentage)
+            
+            
             
             if verbose:
                 torch.cuda.synchronize(device=device)

@@ -167,28 +167,22 @@ def sketching(function, tensors_cols, tensors_rows, kc, kr, batch_size, device):
     return Phi_tilde_kr_kc
 
 
-def trimming(tensor, kr, kc, n_rows, n_cols, rank, max_rank, cum_percentage):
+def trimming(tensor, dim, rank, cum_percentage):
     """
     Given a tensor, forms a matrix with edges split as (rest, dim), and
     returns the U from the SVD and an appropiate rank.
     """
-    aux_tensor = tensor
-    aux_shape = tensor.shape
-    select_ids = (kr > 0) + 1
+    n_dims = len(tensor.shape)
+    perm_ids = list(range(dim)) + list(range(dim + 1, n_dims)) + [dim]
+    inv_perm_ids = list(range(dim)) + [n_dims - 1] + list(range(dim, n_dims - 1))
     
-    mat = aux_tensor.reshape(prod(aux_shape[:select_ids]), -1)
+    aux_tensor = tensor.permute(*perm_ids)
+    mat = aux_tensor.reshape(-1, aux_tensor.size(-1))
     
     u, s, vh = torch.linalg.svd(mat, full_matrices=False)
 
     percentages = s.cumsum(0) / (s.sum().expand(s.shape) + 1e-10)
     cum_percentage_tensor = torch.tensor(cum_percentage)
-    
-    if kr == 0:
-        aux_max_rank = rank**(len(aux_shape) - 1)
-    elif kr < (n_rows - 1):
-        aux_max_rank = max_rank**2 *  rank**(len(aux_shape) - 2)
-    else:
-        aux_max_rank = max_rank**2 *  rank**(len(aux_shape) - 3)
     
     aux_rank = 0
     for p in percentages:
@@ -201,22 +195,14 @@ def trimming(tensor, kr, kc, n_rows, n_cols, rank, max_rank, cum_percentage):
         # Cut when ``cum_percentage`` is exceeded
         if p >= cum_percentage_tensor:
             break
-        elif aux_rank >= aux_max_rank:
+        elif aux_rank >= rank:
             break
     
     u = u[..., :aux_rank] @ torch.diag_embed(s[:aux_rank])
+    u = u.view(*aux_tensor.shape[:(n_dims - 1)], -1)
+    u = u.permute(*inv_perm_ids)
+    
     vh = vh[..., :aux_rank, :]
-    
-    # NOTE: For now assume aux_rank == aux_max_rank
-    # TODO: adjust when we find smaller aux_rank
-    if kr == 0:
-        new_shape = [rank] * (len(aux_shape) - 1)
-    elif kr < (n_rows - 1):
-        new_shape = [max_rank] + [rank] * (len(aux_shape) - 2) + [max_rank]
-    else:
-        new_shape = [max_rank] + [rank] * (len(aux_shape) - 3) + [max_rank]
-    
-    u = u.reshape(*aux_shape[:select_ids], *new_shape)
     
     # TODO: deal with error
     error = s[aux_rank:].norm()
@@ -226,8 +212,7 @@ def trimming(tensor, kr, kc, n_rows, n_cols, rank, max_rank, cum_percentage):
 
 def trimming_aux(tensor, dim, projector):
     """
-    Given a tensor, forms a matrix with edges split as (rest, dim), and
-    returns the U from the SVD and an appropiate rank.
+    Applies previously found projector.
     """
     n_dims = len(tensor.shape)
     perm_ids = list(range(dim)) + list(range(dim + 1, n_dims)) + [dim]
@@ -246,12 +231,6 @@ def trimming_aux(tensor, dim, projector):
 
 def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
     # mpo_core shape: (input, up, right, down, left)
-    
-    # TODO: pad with zeros the 3 left and right
-    # dimensions corresponding to right_ranks independently
-    # TODO: no fuck, I need to pad the merged dim to later
-    # then split that dimension in the three parts
-    # TODO: I need to control dimensions and try not to add 0's
     
     # Grow left and right dims up to prod(right_ranks)
     if kc > 0:
@@ -274,7 +253,6 @@ def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
         #    (input, up, right, down, left)
         # -> (input, up, right, down, left, left_down)
         new_shape = new_shape[:-1] + [prod(right_ranks[:2]), right_ranks[2]]
-        # new_shape = new_shape[:-1] + [right_ranks[0], prod(right_ranks[1:])]
     
     if kc < (n_cols - 1):
         #    (input, up, right, down, left, left_down)
@@ -283,9 +261,6 @@ def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
         new_shape = new_shape[:-reverse_right_pos] + \
             [prod(right_ranks[:2]), right_ranks[2]] + \
             new_shape[(-reverse_right_pos + 1):]
-        # new_shape = new_shape[:-reverse_right_pos] + \
-        #     [right_ranks[0], prod(right_ranks[1:])] + \
-        #     new_shape[(-reverse_right_pos + 1):]
     
     mpo_core = mpo_core.reshape(*new_shape)
     
@@ -316,53 +291,12 @@ def trimming_down(mpo_core, kc, n_cols, right_ranks, rank, cum_percentage):
     
     down_pos = len(mpo_core.shape) - (int(kc > 0) + 1)
     
-    # n_legs = 1 + int(kc > 0) + int(kc < (n_cols - 1))
-    # aux_rank = rank ** n_legs
-    
     mpo_core, vh = trimming(tensor=mpo_core,
                             dim=down_pos,
-                            rank=mpo_core.size(down_pos), #aux_rank, #rank,
+                            rank=prod(right_ranks),
                             cum_percentage=cum_percentage)
     
-    # # Split down as left_down, down, right_down
-    # n_dims = len(mpo_core.shape)
-    # reverse_down_pos = int(kc > 0) + 1
-    
-    # new_shape = list(mpo_core.shape)
-    # new_shape = new_shape[:(n_dims - reverse_down_pos)] + \
-    #             [rank] * n_legs + \
-    #             new_shape[(n_dims - reverse_down_pos + 1):]
-    
-    # #    (input, up, right, aux_down, left)
-    # # -> (input, up, right, (right_down, aux_down, left_down), left)
-    # mpo_core = mpo_core.reshape(*new_shape)
-    
-    # if kc > 0:
-    #     #    (input, up, right, right_down, aux_down, left_down, left)
-    #     # -> (input, up, right, right_down, aux_down, left, left_down)
-    #     n_dims = len(mpo_core.shape)
-    #     perm_ids = list(range(n_dims - 2)) + [n_dims - 1, n_dims - 2]
-    #     mpo_core = mpo_core.permute(*perm_ids)
-    
-    
-    # # Merge right and right_down, left and left_down
-    # new_shape = list(mpo_core.shape)
-    # if kc > 0:
-    #     #    (input, up, right, right_down, aux_down, left, left_down)
-    #     # -> (input, up, right, right_down, aux_down, aux_left)
-    #     new_shape = new_shape[:-2] + [prod(new_shape[-2:])]
-    
-    # if kc < (n_cols - 1):
-    #     #    (input, up, right, right_down, aux_down, aux_left)
-    #     # -> (input, up, aux_right, aux_down, aux_left)
-    #     reverse_right_pos = int(kc > 0) + 3
-    #     new_shape = new_shape[:-reverse_right_pos] + \
-    #         [prod(new_shape[-reverse_right_pos:(-reverse_right_pos + 2)])] + \
-    #         new_shape[(-reverse_right_pos + 2):]
-    
-    # mpo_core = mpo_core.reshape(*new_shape)
-    
-    return mpo_core
+    return mpo_core, vh
 
 
 def solving(A, B):
@@ -387,80 +321,10 @@ def solving(A, B):
     return G
 
 
-def match_multiples_unused(prev_size, rank, size):
-    new_prev_size, new_size = prev_size, size
-    while new_prev_size * rank != new_size:
-        if new_prev_size * rank < new_size:
-            raise ValueError('Problem with dimensions')
-            new_prev_size += 1
-        else:
-            new_size += 1
-    
-    return new_prev_size, new_size
-
-
 def match_multiples(size, prev_size):
     rank = ceil(size / prev_size)
     new_size = prev_size * rank
     return rank, new_size
-
-
-def solving_mpo_unused(prev_mpo_core, mpo_core, rank, kr, kc, n_rows, n_cols):
-    # mpo_core shape: (input, up, right, down, left)
-    #              -> ((up, right, left), (input, down))
-    # prev_mpo_core shape: (up, right_prev, aux_up, left_prev)
-    #                   -> ((up, right_prev, left_prev), aux_up)
-    
-    # We find G with shape: (aux_up, (input, down))
-    # Return G to shape: (input, aux_up, right=1, down, left=1)
-    n_dims = len(mpo_core.shape)
-    perm_ids = list(range(1, n_dims)) + [0]
-    mpo_core = mpo_core.permute(*perm_ids)
-    if kr < (n_rows - 1):
-        if kc > 0:
-            perm_ids = list(range(n_dims - 3)) + \
-                list(range(n_dims - 2, n_dims)) + \
-                [n_dims - 3]
-        else:
-            perm_ids = list(range(n_dims - 2)) + [n_dims - 1, n_dims - 2]
-        mpo_core = mpo_core.permute(*perm_ids)
-    
-    prev_n_dims = len(prev_mpo_core.shape)
-    aux_up_pos = prev_n_dims - 1 - int(kc > 0)
-    prev_perm_ids = list(range(aux_up_pos)) + \
-        list(range(aux_up_pos + 1, prev_n_dims)) + [aux_up_pos] 
-    prev_mpo_core = prev_mpo_core.permute(*prev_perm_ids)
-    
-    # Merge dimensions
-    split_pos = 1 + int(kc > 0) + int(kc < (n_cols - 1))
-    aux_shape = [prod(mpo_core.shape[:split_pos])] + \
-        [prod(mpo_core.shape[split_pos:])]
-    aux_mpo_core = mpo_core.reshape(*aux_shape)
-    # ((up, right, left), (input, down))
-    
-    aux_shape = [prod(prev_mpo_core.shape[:-1])] + \
-        [prev_mpo_core.shape[-1]]
-    aux_prev_mpo_core = prev_mpo_core.reshape(*aux_shape)
-    # ((up, right_prev, left_prev), aux_up)
-    
-    peps_core = torch.linalg.lstsq(aux_prev_mpo_core, aux_mpo_core).solution
-    # (aux_up, (input, down))
-    
-    print('PEPS core error:',
-          (aux_prev_mpo_core @ peps_core - aux_mpo_core).norm(),
-          end=' ')
-    
-    peps_core = peps_core.reshape(peps_core.size(0), *mpo_core.shape[split_pos:])
-    
-    perm_ids = [1, 0] + list(range(2, len(peps_core.shape)))
-    peps_core = peps_core.permute(*perm_ids)
-    
-    if kc < (n_cols - 1):
-        peps_core = peps_core.unsqueeze(2)
-    if kc > 0:
-        peps_core = peps_core.unsqueeze(-1)
-    
-    return peps_core
 
 
 def solving_mpo(prev_mpo_core, mpo_core, kr, kc, n_rows, n_cols):
@@ -476,6 +340,9 @@ def solving_mpo(prev_mpo_core, mpo_core, kr, kc, n_rows, n_cols):
     # prev_mpo_core shape: (aux_up, up, right_prev, left_prev)
     #                   -> ((up, right_prev, left_prev), aux_up)
     
+    # NOTE: IMPORTANT!
+    # TODO: right_prev and left_prev from prev_mpo_core should be trimmed
+    # to current right_ranks[0]
     
     n_dims = len(mpo_core.shape)
     perm_ids = [1, 0] + list(range(2, n_dims))
@@ -585,16 +452,6 @@ def create_projector(batch_tensors, input_tensor):
     return ordered_batch_tensors, ordered_input_tensor
 
 
-# def create_projector_cols(Sc_kc_minus_1, Sc_kc):
-#     merged_inv = torch.stack([Sc_kc_minus_1[1], Sc_kc[1]], dim=1)
-#     merged_inv = merged_inv.unique(sorted=True, dim=0)
-
-#     s_k_0 = merged_inv[:, 0]
-#     s_k_1 = Sc_kc[0][:, :, -1:]
-#     s_k = (s_k_0, s_k_1)
-#     return s_k
-
-
 def peps_rss(function: Callable,
              embedding: Callable,
              sketch_samples: torch.Tensor,
@@ -650,13 +507,16 @@ def peps_rss(function: Callable,
     rank : int
         Upper bound for the bond dimension of all cores. It has to be greater
         or equal than ``embed_dim``.
+    max_rank : int
+        Maximum rank allowed in projections and resulting bond dimensions. It
+        should be an off power of rank. Otherwise it will be changed to another
+        value of that form.
     cum_percentage : float, optional
         When getting the proper bond dimension of each core via truncated SVD,
         this is the proportion that should be satisfied between the sum of all
         singular values kept and the total sum of all singular values. Therefore,
         it specifies the rank of each core independently, allowing for
         varying bond dimensions.
-    # TODO: Add cutoff, and also in tt_rss
     batch_size : int
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
         during the decomposition.
@@ -758,38 +618,11 @@ def peps_rss(function: Callable,
     if not isinstance(max_rank, int):
         raise TypeError('`max_rank` should be int type')
     
-    # TODO: warning only if max_rank is updated
-    # half_max_rank = int(sqrt(max_rank / rank))
-    # max_rank = half_max_rank**2 * rank
-    max_rank = min(max_rank, rank**n_rows)
-    # warnings.warn(f'`max_rank` updated to {max_rank}')
-    
-    # TODO: we removed this, needed?
-    # if rank < embed_dim:
-    #     raise ValueError(
-    #         '`rank` should be greater or equal than the embedding dimension')
-    
-    # Sketch size multiple os rank
-    # sketch_size = sketch_samples.size(0)
-    # if sketch_size < max_rank:
-    #     raise ValueError(
-    #         f'`sketch_size` (={sketch_size}) must be greater than '
-    #         f'`max_rank` (={max_rank})')
-    
-    # sksize_rank_factor = sketch_size / rank
-    # if int(sksize_rank_factor) != sksize_rank_factor:
-    #     sketch_size = int(sksize_rank_factor) * sketch_size
-    #     sketch_samples = sketch_samples[:sketch_size]
-    #     warnings.warn(
-    #         '`sketch_size` is being modified to make it a multiple of `rank`')
-    # if int(sksize_rank_factor) != sksize_rank_factor:
-    #     raise ValueError(
-    #         'The size of the sketches (number of samples) should be a '
-    #         'multiple of the rank')
-    # TODO: MMMMM AAAAH nope, there's still a problem, since when doing unique
-    # we might change the sketch size
-    # TODO: Then maybe just remove the uniques? and keep sketch size at all points?
-    
+    half_max_rank = int(sqrt(max_rank / rank))
+    new_max_rank = min(half_max_rank**2 * rank, rank**n_rows)
+    if new_max_rank != max_rank:
+        max_rank = new_max_rank
+        warnings.warn(f'`max_rank` updated to {max_rank}')
     
     # Cum. percentage
     if cum_percentage is not None:
@@ -816,7 +649,6 @@ def peps_rss(function: Callable,
     # Create projectors by columns
     # These are shared for all rows
     Sc = []
-    # sc = []
     Tc = []
     for kc in range(n_cols):
         if kc == 0:
@@ -825,7 +657,6 @@ def peps_rss(function: Callable,
                                                        return_inverse=True,
                                                        dim=0)
             Sc.append((Sc_aux, Sc_inv))
-            # sc.append(Sc[-1][0])
             Tc.append(None)
         elif kc < (n_cols - 1):
             Sc_aux, Sc_inv = \
@@ -833,12 +664,10 @@ def peps_rss(function: Callable,
                                                        return_inverse=True,
                                                        dim=0)
             Sc.append((Sc_aux, Sc_inv))
-            # sc.append(create_projector_cols(Sc[-2], Sc[-1]))
             Tc.append(sketch_samples[:, :, kc:].unique(sorted=True,
                                                         dim=0))
         else:
             Sc.append(None)
-            # sc.append(None)
             Tc.append(sketch_samples[:, :, kc:].unique(sorted=True, dim=0))
     
     start_time = time.time()
@@ -847,21 +676,18 @@ def peps_rss(function: Callable,
     right_projectors = []
     for kr in range(n_rows):
         peps_row = []
-        # mpo_kr = []
         aux_mpo_kr_minus_1 = []
-        # Sr_kr = []
-        # aux_A_kr_minus_1 = []
         
-        # right_ranks = [min(rank ** kr, half_max_rank),
-        #                rank,
-        #                min(rank ** (n_rows - kr - 1), half_max_rank)]
+        right_ranks = [min(rank ** kr, half_max_rank),
+                       rank,
+                       min(rank ** (n_rows - kr - 1), half_max_rank)]
         
-        # if right_ranks[0] < half_max_rank:
-        #     right_ranks[2] = max_rank // prod(right_ranks[:2])
-        # elif right_ranks[2] < half_max_rank:
-        #     right_ranks[0] = max_rank // prod(right_ranks[1:])
+        if right_ranks[0] < half_max_rank:
+            right_ranks[2] = max_rank // prod(right_ranks[:2])
+        elif right_ranks[2] < half_max_rank:
+            right_ranks[0] = max_rank // prod(right_ranks[1:])
         
-        # assert prod(right_ranks) == max_rank
+        assert prod(right_ranks) == max_rank
         
         for kc in range(n_cols):
             
@@ -929,12 +755,7 @@ def peps_rss(function: Callable,
                 tensors_cols = [Sc[kc - 1][0]] + tensors_cols
             
             # Position right idx: (input, up, right, down, left)
-            # right_pos = int(kr > 0) + int(kc < (n_cols - 1))
             right_pos = int(kr > 0) + 1
-            
-            # Position down idx: (input, up, right, down, left)
-            # down_pos = n_dims_mpo_core - 1 - int(kc > 0)
-            # down_pos = int(kr > 0) + int(kc < (n_cols - 1)) + 1
             
             
             # Sketching
@@ -950,33 +771,13 @@ def peps_rss(function: Callable,
                 batch_size=batch_size,
                 device=device)
             
-            # aux_s = torch.linalg.svd(Phi_tilde_kr_kc.reshape(-1, 9),
-            #                          full_matrices=False)[1]
-            
             if verbose:
                 torch.cuda.synchronize(device=device)
                 aux_time = time.time() - start_time
                 print(f'Done! ({aux_time:.2f}s)')
             
             
-            # TODO: same projection for all rows in same column
-            # # Random projection for Tc
-            # if kc < (n_cols - 1):
-            #     # Sample random unitary
-            #     randu_t = random_unitary(Phi_tilde_kr_kc.size(right_pos))
-            #     randu_t = randu_t.to(Phi_tilde_kr_kc.dtype)
-                
-            #     # Prepare einsum string
-            #     randu_ids = 'r' + einsum_ids[right_pos]
-            #     aux_ein_ids = einsum_ids[:right_pos] + 'r' + \
-            #         einsum_ids[(right_pos + 1):len(Phi_tilde_kr_kc.shape)]
-            #     einsum_str = aux_ein_ids + ',' + randu_ids + '->' + \
-            #         einsum_ids[:len(Phi_tilde_kr_kc.shape)]
-            #     Phi_tilde_kr_kc = torch.einsum(einsum_str,
-            #                                    Phi_tilde_kr_kc, randu_t)
-            
             # Remove embedding from Phi
-            pass   # TODO: remove 
             aux_Phi_tilde_kr_kc = torch.linalg.lstsq(
                 aux_embedding(x_kr_kc.to(device)).cpu(),
                 Phi_tilde_kr_kc.reshape(x_kr_kc.size(0), -1)).solution
@@ -990,85 +791,24 @@ def peps_rss(function: Callable,
             if verbose:
                 print('* Trimming right Phi_tilde_kr_kc...', end=' ')
             
-            # right_rank = list(Phi_tilde_kr_kc.shape)
-            # if kc > 0:
-            #     right_rank[-1] = A_kr_kc_minus_1.shape[-1]
-            # if kc < (n_cols - 1):
-            #     right_rank[right_pos] = 1
-            # if kr < (n_rows - 1):
-            #     right_rank[down_pos] = rank
-            # right_rank = reduce(mul, right_rank)
-            
-            # if (kr == 0) or (kr == (n_rows - 1)):
-            #     right_rank = min(rank * half_max_rank, sketch_size)
-            # else:
-            #     right_rank = min(max_rank, sketch_size)
-            # right_rank = sketch_size
-            
-            # if kc < (n_cols - 1):
-            #     # right_ranks = [min(rank ** kr, half_max_rank),
-            #     #                rank,
-            #     #                min(rank ** (n_rows - kr - 1), half_max_rank)]
-                
-                
-            #     # B_kr_kc, _ = trimming(tensor=Phi_tilde_kr_kc,
-            #     #                       dim=right_pos,
-            #     #                       rank=prod(right_ranks),
-            #     #                       cum_percentage=cum_percentage)
-                
-            #     # if B_kr_kc.size(right_pos) < max_rank:
-            #     #     raise ValueError(
-            #     #         '`max_rank` is not saturated, choose a smaller value')
-                
-                
-            #     if kr == 0:
-            #         B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
-            #                                dim=right_pos,
-            #                                rank=prod(right_ranks),
-            #                                cum_percentage=cum_percentage)
-            #         right_projectors.append(vh)
+            if kc < (n_cols - 1):
+                if kr == 0:
+                    B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
+                                           dim=right_pos,
+                                           rank=prod(right_ranks),
+                                           cum_percentage=cum_percentage)
+                    right_projectors.append(vh)
                     
-            #         if B_kr_kc.size(right_pos) < max_rank:
-            #             print(B_kr_kc.size(right_pos))
-            #             raise ValueError(
-            #                 '`max_rank` is not saturated, choose a smaller value')
-            #     else:
-            #         B_kr_kc = trimming_aux(tensor=Phi_tilde_kr_kc,
-            #                                dim=right_pos,
-            #                                projector=right_projectors[kc].H)
-                
-                
-                
-            #     # if (kr == 0) or (kr == (n_rows - 1)):
-            #     #     right_rank = min(rank * half_max_rank, sketch_size)
-            #     #     B_kr_kc, vh = trimming(tensor=B_kr_kc,
-            #     #                            dim=right_pos,
-            #     #                            rank=right_rank,
-            #     #                            cum_percentage=1.)
-            # else:
-            #     B_kr_kc = Phi_tilde_kr_kc
-            
-            # # if kc < (n_cols - 1):
-            # #     B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
-            # #                           dim=right_pos,
-            # #                           rank=right_rank,
-            # #                           cum_percentage=cum_percentage)
-            # # else:
-            # #     B_kr_kc = Phi_tilde_kr_kc
-            
-            # # B_kr_kc = Phi_tilde_kr_kc
-            
-            
-            B_kr_kc, vh = trimming(tensor=Phi_tilde_kr_kc,
-                                   kr=kr,
-                                   kc=kc,
-                                   n_rows=n_rows,
-                                   n_cols=n_cols,
-                                   rank=rank,
-                                   max_rank=max_rank,
-                                   cum_percentage=cum_percentage)
-            
-            
+                    if B_kr_kc.size(right_pos) < max_rank:
+                        raise ValueError(
+                            f'`max_rank` is not saturated (found rank = '
+                            f'{B_kr_kc.size(right_pos)}), choose a smaller value')
+                else:
+                    B_kr_kc = trimming_aux(tensor=Phi_tilde_kr_kc,
+                                           dim=right_pos,
+                                           projector=right_projectors[kc].H)
+            else:
+                B_kr_kc = Phi_tilde_kr_kc
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1084,8 +824,6 @@ def peps_rss(function: Callable,
                 G_kr_kc = B_kr_kc
             else:
                 G_kr_kc = solving(A_kr_kc_minus_1, B_kr_kc)
-            # mpo_kr.append(G_kr_kc)
-            # G_kr_kc = B_kr_kc  # TODO: remove this
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1144,7 +882,6 @@ def peps_rss(function: Callable,
                 sc_kr_kc = (sc_kr_kc[0], sc_kr_kc[1][inv_ids])
                 
                 
-                
                 aux_batch_tensors = []  # up, down, left
                 for i in range(len(pos_ids)):
                     aux_batch_tensors.append(
@@ -1161,48 +898,6 @@ def peps_rss(function: Callable,
                     aux = torch.cat([aux_batch_tensors[-1], aux], dim=2)
                 
                 assert torch.equal(aux, Sc[kc][0])
-                
-                
-                
-                # if (kr > 0) and (kc == 0):
-                #     # Fix ordering
-                #     # TODO: this is auxiliary solution (?)
-                #     aux_Tr_kr_plus_1_kc = Tr_kr_plus_1_kc[0].index_select(
-                #         dim=0,
-                #         index=sc_kr_kc[0][1])
-                    
-                #     aux_col = [sc_kr_kc[1], aux_Tr_kr_plus_1_kc]
-                #     aux = torch.cat(aux_col, dim=1).unique_consecutive(dim=0)
-                    
-                #     aux_Tr_kr_kc = sketch_samples[:, kr:, kc:(kc + 1)].unique(
-                #         sorted=True,
-                #         dim=0)
-                    
-                #     assert torch.equal(aux_Tr_kr_kc, aux[:aux_Tr_kr_kc.size(0)])
-                
-                
-                
-                # # TODO: check
-                # aux_batch_tensors = []  # up, down, left
-                # for i in range(len(pos_ids)):
-                #     aux_batch_tensors.append(
-                #         batch_tensors[i][0].index_select(dim=0,
-                #                                          index=sc_kr_kc[0][i]))
-                
-                # aux_col = aux_batch_tensors[:(kr > 0)] + [sc_kr_kc[1]] + \
-                #     aux_batch_tensors[(kr > 0):]
-                # if kc > 0:
-                #     aux_col = aux_col[:-1]
-                # aux = torch.cat(aux_col, dim=1)
-                
-                # if kc > 0:
-                #     aux = torch.cat([aux_batch_tensors[-1], aux], dim=2)
-                
-                # aux, inv_ids = aux.unique(dim=0,
-                #                           sorted=True,
-                #                           return_inverse=True)
-                
-                # assert torch.equal(aux, Sc[kc][0])
                 
                 
                 A_kr_kc = B_kr_kc
@@ -1231,10 +926,6 @@ def peps_rss(function: Callable,
                 einsum_str += ',bi->br'
                 
                 A_kr_kc = torch.einsum(einsum_str, A_kr_kc, aux_sc)
-                
-                # aux_A_kr_minus_1.append(A_kr_kc)
-                
-                # Set variables for next iteration
                 A_kr_kc_minus_1 = A_kr_kc
             
             if verbose:
@@ -1242,38 +933,10 @@ def peps_rss(function: Callable,
                 aux_time = time.time() - start_time
                 print(f'Done! ({aux_time:.2f}s)')
             
-            # # Create Sr_kr
-            # if kr < (n_rows - 1):
-            #     Sr_kr_aux, Sr_kr_inv = \
-            #         sketch_samples[:, :(kr + 1), kc:(kc + 1)].unique(
-            #             sorted=True,
-            #             return_inverse=True,
-            #             dim=0
-            #         )
-            #     Sr_kr.append((Sr_kr_aux, Sr_kr_inv))
-            
             
             # Process current MPO
             mpo_core = G_kr_kc
             n_dims_mpo_core = len(mpo_core.shape)
-            # down_pos = n_dims_mpo_core - 1 - int(kc > 0)
-            
-            # TODO: Try, it should work, though the dimension we have
-            # to project is not down, but down combined with half_max_rank dims
-            # coming from left and right 
-            # # Random projection for Tr
-            # if kr < (n_rows - 1):
-            #     # Sample random unitary
-            #     randu_t = random_unitary(mpo_core.size(down_pos))
-            #     randu_t = randu_t.to(mpo_core.dtype)
-                
-            #     # Prepare einsum string
-            #     randu_ids = 'd' + einsum_ids[down_pos]
-            #     aux_ein_ids = einsum_ids[:down_pos] + 'd' + \
-            #         einsum_ids[(down_pos + 1):n_dims_mpo_core]
-            #     einsum_str = aux_ein_ids + ',' + randu_ids + '->' + \
-            #         einsum_ids[:n_dims_mpo_core]
-            #     mpo_core = torch.einsum(einsum_str, mpo_core, randu_t)
             
             
             # Trimming down
@@ -1281,12 +944,12 @@ def peps_rss(function: Callable,
                 print('* Trimming down mpo_core...', end=' ')
              
             if kr < (n_rows - 1):
-                mpo_core = trimming_down(mpo_core=mpo_core,
-                                         kc=kc,
-                                         n_cols=n_cols,
-                                         right_ranks=right_ranks,
-                                         rank=rank,
-                                         cum_percentage=cum_percentage)
+                mpo_core, _ = trimming_down(mpo_core=mpo_core,
+                                            kc=kc,
+                                            n_cols=n_cols,
+                                            right_ranks=right_ranks,
+                                            rank=rank,
+                                            cum_percentage=cum_percentage)
             
             if verbose:
                 torch.cuda.synchronize(device=device)
@@ -1294,50 +957,7 @@ def peps_rss(function: Callable,
                 print(f'Done! ({aux_time:.2f}s)')
             
             
-            # Solving for MPOs
-            
-            # TODO: check we can go obtain mpo_kr_minus_1 from mpo
-            # if (kr > 0) and (kr < (n_rows - 1)) and (kc < (n_cols - 1)):
-            #     sr_kr_kc = create_projector([Tr_kr_plus_1_kc], aux_x_kr_kc)
-                
-                
-            #     # Fix ordering
-            #     # TODO: this is auxiliary solution (?)
-            #     aux_Tr_kr_plus_1_kc = Tr_kr_plus_1_kc[0].index_select(
-            #         dim=0,
-            #         index=sr_kr_kc[0][0])
-                
-            #     aux_col = [sr_kr_kc[1], aux_Tr_kr_plus_1_kc]
-            #     aux = torch.cat(aux_col, dim=1)
-                
-            #     aux, aux_inv_ids = aux.unique(dim=0,
-            #                               sorted=True,
-            #                               return_inverse=True)
-            #     inv_ids = inverse_permutation(list(aux_inv_ids))
-                
-            #     aux_Tr_kr_kc = sketch_samples[:, kr:, kc:(kc + 1)].unique(
-            #         sorted=True,
-            #         dim=0)
-                
-            #     assert torch.equal(aux_Tr_kr_kc, aux)
-                
-            #     sr_kr_kc = ([sr_kr_kc[0][0][inv_ids]], sr_kr_kc[1][inv_ids])
-                
-                
-            #     # TODO: This breaks if we trim down mpo_core, since indices of batch
-            #     # will not coincide with indices of projected tensor
-            #     aux_mpo_core = mpo_core.index_select(dim=3,
-            #                                          index=sr_kr_kc[0][0])
-                
-            #     aux_sr = aux_embedding(sr_kr_kc[1].to(device)).cpu()
-                
-            #     einsum_str = 'iurb' + (kc > 0) * 'l'
-            #     einsum_str += ',bi->' + 'urb' + (kc > 0) * 'l'
-            #     aux_mpo_core = torch.einsum(einsum_str, aux_mpo_core, aux_sr)
-                
-            #     # assert torch.allclose(mpo_kr_minus_1[kc], aux_mpo_core, rtol=1e-1)
-            
-            
+            # Solving for PEPS core
             if verbose:
                 print('* Solving for peps_core...', end=' ')
             
@@ -1352,34 +972,10 @@ def peps_rss(function: Callable,
                                         n_rows=n_rows,
                                         n_cols=n_cols)
             
-            
             if verbose:
                 torch.cuda.synchronize(device=device)
                 aux_time = time.time() - start_time
                 print(f'Done! ({aux_time:.2f}s)')
-            
-            
-            # TODO: it works with this, but is it needed?
-            # Trimming right peps core
-            # if verbose:
-            #     print('* Trimming right peps_core...', end=' ')
-            
-            # if kr > 0:
-            #     if kc > 0:
-            #         aux_peps_core = peps_core.reshape(-1, peps_core.size(-1))
-            #         aux_peps_core = aux_peps_core @ prev_vh_peps.T
-            #         peps_core = aux_peps_core.view(*peps_core.shape[:-1],
-            #                                     prev_vh_peps.size(0))
-            #     if kc < (n_cols - 1):
-            #         peps_core, prev_vh_peps = trimming(tensor=peps_core,
-            #                                         dim=right_pos,
-            #                                         rank=sketch_size, #rank,
-            #                                         cum_percentage=cum_percentage)
-            
-            # if verbose:
-            #     torch.cuda.synchronize(device=device)
-            #     aux_time = time.time() - start_time
-            #     print(f'Done! ({aux_time:.2f}s)')
             
             if verbose:
                 print(f'* Core shape: {peps_core.shape}')
@@ -1421,32 +1017,6 @@ def peps_rss(function: Callable,
                     
                     assert torch.equal(aux_Sr_kr_kc, aux)
                     
-                    # aux, inv_ids = aux.unique(dim=0,
-                    #                           sorted=True,
-                    #                           return_inverse=True)
-                    
-                    # sr_kr_kc = ([sr_kr_kc[0][0][inv_ids]], sr_kr_kc[1][inv_ids])
-                    
-                    
-                    
-                    # sr_kr_kc = create_projector([Tr_kr_plus_1_kc], aux_x_kr_kc)
-                    
-                    # # Fix ordering
-                    # # TODO: this is auxiliary solution (?)
-                    # aux_Tr_kr_plus_1_kc = Tr_kr_plus_1_kc[0].index_select(
-                    #     dim=0,
-                    #     index=sr_kr_kc[0][0])
-                    
-                    # aux_col = [sr_kr_kc[1], aux_Tr_kr_plus_1_kc]
-                    # aux = torch.cat(aux_col, dim=1)
-                    
-                    # aux_Tr_kr_kc = sketch_samples[:, kr:, kc:(kc + 1)].unique(
-                    #     sorted=True,
-                    #     dim=0)
-                    
-                    # assert torch.equal(aux_Tr_kr_kc, aux)
-                    
-                    
                     
                     mpo_core = mpo_core[:, sr_kr_kc[0][0]]
                     aux_sr_kr_kc = aux_embedding(sr_kr_kc[1].to(device)).cpu()
@@ -1459,36 +1029,6 @@ def peps_rss(function: Callable,
                                             aux_sr_kr_kc)
                     
                     right_pos -= 1
-                
-                # TODO: Make projections coincide accross different rows
-                # Trimming right
-                # if kc > 0:
-                #     aux_mpo_core = mpo_core.reshape(-1, mpo_core.size(-1))
-                #     aux_mpo_core = aux_mpo_core @ prev_vh_mpo.T
-                #     mpo_core = aux_mpo_core.view(*mpo_core.shape[:-1],
-                #                                  prev_vh_mpo.size(0))
-                # if kc < (n_cols - 1):
-                #     # right_ranks = [min(rank ** (kr + 1), half_max_rank),
-                #     #                min(rank ** (n_rows - kr - 1), half_max_rank)]
-                    
-                #     # TODO we could just reuse from next kr, so maybe apply
-                #     # this projection to prev_mpo in next kr, not in previous one
-                #     next_right_ranks = [min(rank ** kr, half_max_rank),
-                #                         rank,
-                #                         min(rank ** (n_rows - kr - 1), half_max_rank)]
-                    
-                #     if right_ranks[0] < half_max_rank:
-                #         right_ranks[2] = max_rank // prod(right_ranks[:2])
-                #     elif right_ranks[2] < half_max_rank:
-                #         right_ranks[0] = max_rank // prod(right_ranks[1:])
-                    
-                #     assert prod(next_right_ranks) == max_rank
-                    
-                #     mpo_core, prev_vh_mpo = trimming(
-                #         tensor=mpo_core,
-                #         dim=right_pos,
-                #         rank=prod(next_right_ranks[:2]), #min(prod(right_ranks[:2]), half_max_rank),
-                #         cum_percentage=1.)
                 
                 aux_mpo_kr_minus_1.append(mpo_core)
             
@@ -1503,8 +1043,6 @@ def peps_rss(function: Callable,
         # Set variables for next iteration
         if kr < (n_rows - 1):
             mpo_kr_minus_1 = aux_mpo_kr_minus_1
-        
-        # A_kr_minus_1 = aux_A_kr_minus_1
     
     if verbose:
         torch.cuda.synchronize(device=device)

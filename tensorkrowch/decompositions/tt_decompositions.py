@@ -45,17 +45,17 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
         with torch.no_grad():
             outputs = []
             for (batch,) in loader:
-                outputs.append(function(batch.to(device)).pow(2).cpu())
+                outputs.append(function(batch.to(device)).cpu())
             
             outputs = torch.cat(outputs, dim=0).cpu()
             
-            labels_distr = outputs.cumsum(dim=1)
+            labels_distr = outputs.pow(2).cumsum(dim=1)
             labels_distr = labels_distr / labels_distr[:, -1:]
             
             probs = torch.rand(outputs.size(0), 1)
             ids = outputs.size(1) - torch.le(probs,
                                              labels_distr).sum(dim=1, keepdim=True)
-            outputs = outputs.gather(dim=1, index=ids).pow(0.5)
+            outputs = outputs.gather(dim=1, index=ids)
             
             # batch_size x n_features x in_dim
             if len(samples.shape) == 3:

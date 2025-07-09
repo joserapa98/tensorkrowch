@@ -481,7 +481,7 @@ def tt_rss(function: Callable,
         raise ValueError('Output dimension (of `function`) cannot be 0')
     
     # Function data type
-    if dtype is not None:
+    if dtype is None:
         dtype = aux_output.dtype
     
     # Labels

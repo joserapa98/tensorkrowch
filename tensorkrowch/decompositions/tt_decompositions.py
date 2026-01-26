@@ -449,6 +449,7 @@ def tt_rss(function: Callable,
     if n_features == 0:
         raise ValueError('`sketch_samples` cannot be 0 dimensional')
     
+    # TODO: adjust embedding and function to allow for different physical dimensions
     # Embedding dimension
     try:
         aux_embed = embedding(sketch_samples[:1, :1].to(device))

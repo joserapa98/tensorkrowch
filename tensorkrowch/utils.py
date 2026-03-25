@@ -329,7 +329,7 @@ def truncated_svd(tensor: Tensor,
                   cutoff: Optional[float] = None,
                   tol: Optional[float] = None,
                   rtol: Optional[float] = None,
-                  cum_percentage: Optional[float] = None,) -> Tuple[Tensor, Tensor, Tensor]:
+                  cum_percentage: Optional[float] = None) -> Tuple[Tensor, Tensor, Tensor]:
     r"""
     Computes a truncated SVD. If no truncation criterion is specified, it
     returns the full SVD. If more than one criterion is specified, the final
@@ -378,8 +378,6 @@ def truncated_svd(tensor: Tensor,
     >>> len(s)
     2
     """
-    # TODO: use this in all places that use truncated svd
-    # TODO: add tol and rtol argumtns (and docs) in all methods that used svd or split
     if rank is not None:
         if (not isinstance(rank, int)) or (rank < 1):
             raise ValueError('`rank` should be a positive integer')

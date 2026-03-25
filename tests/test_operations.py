@@ -27,6 +27,15 @@ import tensorkrowch as tk
 from typing import Sequence
 
 
+AUTO_BOOL_CASES = [True, False]
+STACK_AUTO_CASES = [
+    (True, False),
+    (False, False),
+    (True, True),
+    (False, True),
+]
+
+
 class TestPermute:
 
     def test_permute_node(self):
@@ -4714,6 +4723,109 @@ class TestContractBetween:
 
 class TestStackUnbind:
 
+    def _assert_stack_info(self, stack, expected_cls, address, node_ref):
+        # Every stack/unbind test checks the same metadata contract.
+        assert isinstance(stack, expected_cls)
+        assert stack.axes_names == ['stack', 'left', 'input', 'right']
+        assert stack._tensor_info['address'] == address
+        assert stack._tensor_info['node_ref'] == node_ref
+
+    def _assert_nodes_match(self, nodes, reference_nodes, address, node_ref,
+                            shapes=None):
+        for i, node in enumerate(nodes):
+            assert torch.equal(node.tensor, reference_nodes[i].tensor)
+            if shapes is not None:
+                assert node.shape == shapes[i]
+            assert node._tensor_info['address'] == address(node)
+            assert node._tensor_info['node_ref'] == node_ref
+
+    def _assert_original_nodes_after_stack(self, nodes, stack, auto_stack,
+                                           shapes=None):
+        # Original nodes either keep their own storage or become views of the
+        # stack depending on auto_stack.
+        for i, node in enumerate(nodes):
+            expected_address = None if auto_stack else node.name
+            expected_ref = stack if auto_stack else None
+            assert node._tensor_info['address'] == expected_address
+            assert node._tensor_info['node_ref'] == expected_ref
+
+            if shapes is not None:
+                assert node.shape == shapes[i]
+                for j in range(node.rank):
+                    assert shapes[i][j] <= stack.shape[j + 1]
+
+    def _run_stack_roundtrip(self, nodes, initial_stack_cls, auto_stack,
+                             auto_unbind, shapes=None):
+        # Roundtrip stack -> unbind -> stack, optionally checking ragged shapes.
+        def node_name(node):
+            return node.name
+
+        stack = tk.stack(nodes)
+        self._assert_stack_info(stack, initial_stack_cls, stack.name, None)
+        self._assert_original_nodes_after_stack(nodes, stack, auto_stack, shapes)
+
+        unbound = tk.unbind(stack)
+        unbound_address = (lambda _: None) if auto_unbind else node_name
+        unbound_ref = stack if auto_unbind else None
+        self._assert_nodes_match(unbound, nodes, unbound_address, unbound_ref, shapes)
+
+        restack = tk.stack(unbound)
+        restack_address = None if auto_unbind else restack.name
+        restack_ref = stack if auto_unbind else None
+        self._assert_stack_info(restack, tk.StackNode, restack_address, restack_ref)
+        self._assert_nodes_match(unbound, nodes, unbound_address, unbound_ref, shapes)
+
+        if shapes is not None:
+            reunbound = tk.unbind(restack)
+            self._assert_nodes_match(reunbound, nodes, unbound_address, unbound_ref,
+                                     shapes)
+
+    def _run_irregular_roundtrip(self, nodes, shapes, initial_stack_cls,
+                                 auto_stack):
+        # Irregular re-stacking exercises the index mode used when only a subset
+        # of unbound nodes is stacked back together.
+        stack = tk.stack(nodes)
+        self._assert_stack_info(stack, initial_stack_cls, stack.name, None)
+        if auto_stack:
+            for node in nodes:
+                assert node._tensor_info['address'] is None
+                assert node._tensor_info['node_ref'] == stack
+        else:
+            for node in nodes:
+                assert node._tensor_info['address'] == node.name
+                assert node._tensor_info['node_ref'] is None
+
+        unbound = tk.unbind(stack)
+        self._assert_nodes_match(unbound, nodes, lambda _: None, stack, shapes)
+
+        restack = tk.stack(unbound[::2])
+        self._assert_stack_info(restack, tk.StackNode, None, stack)
+        assert restack._tensor_info['index'][0] == slice(0, len(nodes) - 1, 2)
+
+        even_index = list(range(0, len(nodes), 2))
+        reunbound = tk.unbind(restack)
+        self._assert_nodes_match(
+            reunbound,
+            [nodes[i] for i in even_index],
+            lambda _: None,
+            stack,
+            [shapes[i] for i in even_index],
+        )
+
+        all_index = list(range(1, len(nodes), 2)) + even_index
+        restack_all = tk.stack(unbound[1::2] + reunbound)
+        self._assert_stack_info(restack_all, tk.StackNode, None, stack)
+        assert restack_all._tensor_info['index'] == [all_index]
+
+        reunbound_all = tk.unbind(restack_all)
+        self._assert_nodes_match(
+            reunbound_all,
+            [nodes[i] for i in all_index],
+            lambda _: None,
+            stack,
+            [shapes[i] for i in all_index],
+        )
+
     @pytest.fixture
     def setup(self):
         net = tk.TensorNetwork()
@@ -4731,257 +4843,16 @@ class TestStackUnbind:
 
         return net, nodes
 
-    def test_stack_all_leaf_all_non_param_auto_stack(self, setup):
+    @pytest.mark.parametrize('auto_stack,auto_unbind', STACK_AUTO_CASES)
+    def test_stack_all_leaf_all_non_param(self, setup, auto_stack, auto_unbind):
+        # Cover all memory-management combinations for regular non-param stacks.
         net, nodes = setup
 
-        net.auto_stack = True
-        net.auto_unbind = False
+        net.auto_stack = auto_stack
+        net.auto_unbind = auto_unbind
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_non_param(self, setup):
-        net, nodes = setup
-
-        net.auto_stack = False
-        net.auto_unbind = False
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_non_param_auto_stack_auto_unbind(self, setup):
-        net, nodes = setup
-
-        net.auto_stack = True
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_all_leaf_all_non_param_auto_unbind(self, setup):
-        net, nodes = setup
-
-        net.auto_stack = False
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
+        for _ in range(2):
+            self._run_stack_roundtrip(nodes, tk.StackNode, auto_stack, auto_unbind)
 
     @pytest.fixture
     def setup_param(self):
@@ -5000,257 +4871,19 @@ class TestStackUnbind:
 
         return net, nodes
 
-    def test_stack_all_leaf_all_param_auto_stack(self, setup_param):
+    @pytest.mark.parametrize('auto_stack,auto_unbind', STACK_AUTO_CASES)
+    def test_stack_all_leaf_all_param(self, setup_param, auto_stack,
+                                      auto_unbind):
+        # ParamNode stacks share the same invariants, but the initial stack type
+        # changes when auto-stacking is enabled.
         net, nodes = setup_param
 
-        net.auto_stack = True
-        net.auto_unbind = False
+        net.auto_stack = auto_stack
+        net.auto_unbind = auto_unbind
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_param(self, setup_param):
-        net, nodes = setup_param
-
-        net.auto_stack = False
-        net.auto_unbind = False
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_param_auto_stack_auto_unbind(self, setup_param):
-        net, nodes = setup_param
-
-        net.auto_stack = True
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_all_leaf_all_param_auto_unbind(self, setup_param):
-        net, nodes = setup_param
-
-        net.auto_stack = False
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
+        initial_cls = tk.ParamStackNode if auto_stack else tk.StackNode
+        for _ in range(2):
+            self._run_stack_roundtrip(nodes, initial_cls, auto_stack, auto_unbind)
 
     @pytest.fixture
     def setup_diff_shapes(self):
@@ -5280,566 +4913,32 @@ class TestStackUnbind:
 
         return net, nodes, shapes
 
-    def test_stack_diff_shapes_all_leaf_all_param_auto_stack(self, setup_diff_shapes):
+    @pytest.mark.parametrize('auto_stack,auto_unbind', STACK_AUTO_CASES)
+    def test_stack_diff_shapes_all_leaf_all_param(self, setup_diff_shapes,
+                                                  auto_stack, auto_unbind):
+        # Verify the same roundtrip when the stacked tensors need shape padding.
         net, nodes, shapes = setup_diff_shapes
 
-        net.auto_stack = True
-        net.auto_unbind = False
+        net.auto_stack = auto_stack
+        net.auto_unbind = auto_unbind
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
+        initial_cls = tk.ParamStackNode if auto_stack else tk.StackNode
+        for _ in range(2):
+            self._run_stack_roundtrip(nodes, initial_cls, auto_stack,
+                                      auto_unbind, shapes)
 
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_diff_shapes_all_leaf_all_param(self, setup_diff_shapes):
+    @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
+    def test_stack_irregular_all_leaf_all_param(self, setup_diff_shapes,
+                                                auto_stack):
+        # Index mode is only meaningful together with auto_unbind.
         net, nodes, shapes = setup_diff_shapes
 
-        net.auto_stack = False
-        net.auto_unbind = False
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_diff_shapes_all_leaf_all_param_auto_stack_auto_unbind(
-            self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = True
+        net.auto_stack = auto_stack
         net.auto_unbind = True
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_diff_shapes_all_leaf_all_param_auto_unbind(
-            self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = False
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_irregular_all_leaf_all_param_auto_stack_auto_unbind(
-            self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = True
-        net.auto_unbind = True
-        # It only has sense to study the index mode case
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-        # Here index is a list of slices, since the re-stack max shape is
-        # smaller than the shape of the original stack
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack all
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        # Re-unbind all
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_irregular_all_leaf_all_param_auto_unbind(self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = False
-        net.auto_unbind = True
-        # It only has sense to study the index mode case
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack all
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        # Re-unbind all
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
+        initial_cls = tk.ParamStackNode if auto_stack else tk.StackNode
+        for _ in range(2):
+            self._run_irregular_roundtrip(nodes, shapes, initial_cls, auto_stack)
 
     def test_error_stack_stacks(self):
         net = tk.TensorNetwork()
@@ -7106,9 +6205,6 @@ class TestTNModels:
                                         padding=padding,
                                         dilation=dilation)
 
-                # self.nodelayer = NodeLayer(in_channels=in_channels,
-                #                            out_channels=out_channels,
-                #                            kernel_size=kernel_size)
                 self.nodelayer = MPSLayer(in_channels=in_channels,
                                           out_channels=out_channels,
                                           kernel_size=kernel_size)
@@ -7117,8 +6213,8 @@ class TestTNModels:
                 example = torch.zeros(1, in_channels, *example_dims)
                 patches = self.unfold(example).transpose(1, 2)
                 patches = patches.view(
-                    *patches.shape[:-1], self.in_channels, -1)
-                patches = patches.permute(3, 0, 1, 2)
+                     *patches.shape[:-1], self.in_channels, -1)
+                patches = patches.transpose(2, 3)
 
                 self.nodelayer.trace(patches)
 

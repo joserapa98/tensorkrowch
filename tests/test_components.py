@@ -24,6 +24,8 @@ import torch
 import torch.nn as nn
 import tensorkrowch as tk
 
+INIT_METHOD_CASES = ["zeros", "ones", "copy", "rand", "randn"]
+
 
 class TestAxis:
 
@@ -567,7 +569,8 @@ class TestSetTensorNode:
         # tensor with different size but it is cropped
         # to match the size in the connected edges
         diff_tensor = torch.randn(5, 20, 5)
-        node1.tensor = diff_tensor
+        with pytest.warns(UserWarning):
+            node1.tensor = diff_tensor
         assert node1.shape == (2, 20, 2)
         assert node1['left'].size() == 2
         assert node1['batch'].size() == 20
@@ -594,59 +597,37 @@ class TestSetTensorNode:
         assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
 
-    def test_set_init_method(self, setup):
+    @staticmethod
+    def _assert_node_init_method(node1, node2, init_method, **kwargs):
+        node1.set_tensor(init_method=init_method, **kwargs)
+        assert node1.tensor is not None
+
+        node2.tensor = node1.tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+
+        node1.tensor[0, 0, 0] = 1000
+        assert node2.tensor[0, 0, 0] == 1000
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method(self, setup, init_method):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        self._assert_node_init_method(node1, node2, init_method)
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_cuda(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Changing node1's tensor changes node2's tensor
-            node1.tensor[0, 0, 0] = 1000
-            assert node2.tensor[0, 0, 0] == 1000
-    
-    def test_set_init_method_cuda(self, setup):
-        node1, node2, tensor = setup
-        assert node1.tensor is None
-        
-        # Send to cuda if possible
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self._assert_node_init_method(node1, node2, init_method, device=device)
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, device=device)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Changing node1's tensor changes node2's tensor
-            node1.tensor[0, 0, 0] = 1000
-            assert node2.tensor[0, 0, 0] == 1000
-    
-    def test_set_init_method_complex(self, setup):
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_complex(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
-
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, dtype=torch.complex64)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Changing node1's tensor changes node2's tensor
-            node1.tensor[0, 0, 0] = 1000
-            assert node2.tensor[0, 0, 0] == 1000
+        self._assert_node_init_method(node1, node2, init_method,
+                                      dtype=torch.complex64)
 
     def test_set_tensor_from(self, setup):
         node1, node2, tensor = setup
@@ -907,7 +888,8 @@ class TestSetTensorParamNode:
         # tensor with different size but it is cropped
         # to match the size in the connected edges
         diff_tensor = torch.randn(5, 20, 5)
-        node1.tensor = diff_tensor
+        with pytest.warns(UserWarning):
+            node1.tensor = diff_tensor
         assert node1.shape == (2, 20, 2)
         assert node1['left'].size() == 2
         assert node1['batch'].size() == 20
@@ -934,59 +916,38 @@ class TestSetTensorParamNode:
         assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
 
-    def test_set_init_method(self, setup):
+    @staticmethod
+    def _assert_paramnode_init_method(node1, node2, init_method, **kwargs):
+        node1.set_tensor(init_method=init_method, **kwargs)
+        assert node1.tensor is not None
+
+        node2.tensor = node1.tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+
+        with pytest.raises(RuntimeError):
+            node1.tensor[0, 0, 0] = 1000
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method(self, setup, init_method):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        self._assert_paramnode_init_method(node1, node2, init_method)
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_cuda(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Cannot change element of Parameter
-            with pytest.raises(RuntimeError):
-                node1.tensor[0, 0, 0] = 1000
-    
-    def test_set_init_method_cuda(self, setup):
-        node1, node2, tensor = setup
-        assert node1.tensor is None
-        
-        # Send to cuda if possible
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self._assert_paramnode_init_method(node1, node2, init_method,
+                                           device=device)
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, device=device)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Cannot change element of Parameter
-            with pytest.raises(RuntimeError):
-                node1.tensor[0, 0, 0] = 1000
-    
-    def test_set_init_method_complex(self, setup):
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_complex(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
-
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, dtype=torch.complex64)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Cannot change element of Parameter
-            with pytest.raises(RuntimeError):
-                node1.tensor[0, 0, 0] = 1000
+        self._assert_paramnode_init_method(node1, node2, init_method,
+                                           dtype=torch.complex64)
 
     def test_set_parametric(self, setup):
         node1, node2, tensor = setup
@@ -2768,7 +2729,8 @@ class TestTensorNetwork:
         # This causes no error, because the data tensor will be cropped to fit
         # the shape of the stack_data_memory node. It gives a warning
         data = torch.randn(10, 3, 5)
-        net.add_data(data)
+        with pytest.warns(UserWarning):
+            net.add_data(data)
 
         assert net.data_nodes['data_0'].shape == (10, 5)
         assert net.data_nodes['data_1'].shape == (10, 5)
@@ -2837,7 +2799,7 @@ class TestTensorNetwork:
 
         for i in range(3):
             net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
-
+        
         net.add_data(data)
         for i in range(4):
             assert torch.equal(net.data_nodes[f'data_{i}'].tensor, data[i])
@@ -2849,12 +2811,14 @@ class TestTensorNetwork:
         # greater than any of the "feature" dimensions used in data nodes,
         # since we are cropping
         data = torch.randn(4, 6, 100)
-        net.add_data(data)
+        with pytest.warns(UserWarning):
+            net.add_data(data)
 
         # If feature dimension is small, it would raise an error
         data = torch.randn(4, 4, 100)
         with pytest.raises(ValueError):
-            net.add_data(data)
+            with pytest.warns(UserWarning):
+                net.add_data(data)
 
         # Add data with no data nodes raises error
         net.unset_data_nodes()

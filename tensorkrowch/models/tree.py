@@ -268,9 +268,11 @@ class Tree(TensorNetwork):
                             layer2: List[ParamNode],
                             mode: Text = 'svd',
                             rank: Optional[int] = None,
-                            cum_percentage: Optional[float] = None,
-                            cutoff: Optional[float] = None) -> Tuple[List[ParamNode],
-                                                                     List[ParamNode]]:
+                            cutoff: Optional[float] = None,
+                            tol: Optional[float] = None,
+                            rtol: Optional[float] = None,
+                            cum_percentage: Optional[float] = None) -> Tuple[List[ParamNode],
+                                                                             List[ParamNode]]:
         """
         Turns each layer into canonical form, moving singular values matrices
         or non-isometries to the upper layer.
@@ -284,14 +286,18 @@ class Tree(TensorNetwork):
                     result1, node = layer1[i]['output'].svd_(
                         side='right',
                         rank=rank,
-                        cum_percentage=cum_percentage,
-                        cutoff=cutoff)
+                        cutoff=cutoff,
+                        tol=tol,
+                        rtol=rtol,
+                        cum_percentage=cum_percentage)
                 elif mode == 'svdr':
                     result1, node = layer1[i]['output'].svdr_(
                         side='right',
                         rank=rank,
-                        cum_percentage=cum_percentage,
-                        cutoff=cutoff)
+                        cutoff=cutoff,
+                        tol=tol,
+                        rtol=rtol,
+                        cum_percentage=cum_percentage)
                 elif mode == 'qr':
                     result1, node = layer1[i]['output'].qr_()
                 else:
@@ -307,8 +313,10 @@ class Tree(TensorNetwork):
     def canonicalize(self,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
-                     cum_percentage: Optional[float] = None,
-                     cutoff: Optional[float] = None) -> None:
+                     cutoff: Optional[float] = None,
+                     tol: Optional[float] = None,
+                     rtol: Optional[float] = None,
+                     cum_percentage: Optional[float] = None) -> None:
         r"""
         Turns Tree into canonical form via local SVD/QR decompositions, moving
         singular values matrices or non-isometries to the upper layers.
@@ -323,12 +331,24 @@ class Tree(TensorNetwork):
             used for nodes at the right.
         rank : int, optional
             Number of singular values to keep.
+        cutoff : float, optional
+            Minimum singular value to keep. It must be non-negative. Singular
+            values ``<= cutoff`` are removed.
+        tol : float, optional
+            Absolute tolerance over the tail sum of singular values. Starting
+            from the smallest singular value, values are discarded while the
+            accumulated sum is ``<= tol``. It must be non-negative.
+        rtol : float, optional
+            Relative tolerance over the tail sum of singular values. Starting
+            from the smallest singular value, values are discarded while the
+            tail sum divided by the total sum is ``<= rtol``. It must be in
+            ``[0, 1]``.
         cum_percentage : float, optional
-            Proportion that should be satisfied between the sum of all singular
-            values kept and the total sum of all singular values.
-            
+            Minimum fraction of singular-value mass to keep. Equivalent to setting
+            ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
             .. math::
-            
+
                 \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
                 cum\_percentage
         cutoff : float, optional
@@ -355,8 +375,10 @@ class Tree(TensorNetwork):
                     layer1, layer2,
                     mode=mode,
                     rank=rank,
-                    cum_percentage=cum_percentage,
-                    cutoff=cutoff)
+                    cutoff=cutoff,
+                    tol=tol,
+                    rtol=rtol,
+                    cum_percentage=cum_percentage)
                 self.layers[i] = layer1
                 self.layers[i + 1] = layer2
 

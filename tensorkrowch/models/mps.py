@@ -1367,7 +1367,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         all_edges = batch_edges + other_edges
         if all_edges != list(range(len(all_edges))):
-            result = op.permute(result, tuple(all_edges))
+            result = result.permute(tuple(all_edges))
         
         return result
     

@@ -6,15 +6,18 @@ This script contains:
 """
 
 from typing import (List, Optional)
-
 import torch
+
+from tensorkrowch.utils import truncated_svd
 
 
 def vec_to_mps(vec: torch.Tensor,
                n_batches: int = 0,
                rank: Optional[int] = None,
-               cum_percentage: Optional[float] = None,
                cutoff: Optional[float] = None,
+               tol: Optional[float] = None,
+               rtol: Optional[float] = None,
+               cum_percentage: Optional[float] = None,
                renormalize: bool = False) -> List[torch.Tensor]:
     r"""
     Splits a vector into a sequence of MPS tensors via consecutive SVD
@@ -44,9 +47,9 @@ def vec_to_mps(vec: torch.Tensor,
     with ``boundary = "obc"``.
     
     To specify the bond dimension of each cut done via SVD, one can use the
-    arguments ``rank``, ``cum_percentage`` and ``cutoff``. If more than
-    one is specified, the resulting rank will be the one that satisfies all
-    conditions.
+    truncation criterions. If more than one criterion is specified, the final
+    rank is the minimum one, i.e. the one imposed by the most restrictive
+    criterion.
 
     Parameters
     ----------
@@ -58,16 +61,25 @@ def vec_to_mps(vec: torch.Tensor,
         0 and the rank of ``vec``.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
     renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
             decompositions. If not, it may happen that the norm explodes as it
@@ -80,6 +92,13 @@ def vec_to_mps(vec: torch.Tensor,
     Returns
     -------
     List[torch.Tensor]
+
+    Examples
+    --------
+    >>> vec = torch.arange(16.).reshape(2, 2, 2, 2)
+    >>> tensors = tk.decompositions.vec_to_mps(vec, rank=2)
+    >>> [tuple(t.shape) for t in tensors]
+    [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
     """
     if not isinstance(vec, torch.Tensor):
         raise TypeError('`vec` should be torch.Tensor type')
@@ -99,43 +118,16 @@ def vec_to_mps(vec: torch.Tensor,
                           prev_bond * phys_dims[i],
                           phys_dims[(i + 1):].prod())
         
-        u, s, vh = torch.linalg.svd(vec, full_matrices=False)
+        u, s, vh = truncated_svd(tensor=vec,
+                                 rank=rank,
+                                 cutoff=cutoff,
+                                 tol=tol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
+        aux_rank = s.shape[-1]
         
-        lst_ranks = []
-        
-        if rank is None:
-            aux_rank = s.shape[-1]
-            lst_ranks.append(aux_rank)
-        else:
-            lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
-            
-        if cum_percentage is not None:
-            s_percentages = s.cumsum(-1) / \
-                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
-            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
-            cp_rank = torch.lt(
-                s_percentages,
-                cum_percentage_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, cp_rank.item() + 1))
-            
-        if cutoff is not None:
-            cutoff_tensor = cutoff * torch.ones_like(s)
-            co_rank = torch.ge(
-                s,
-                cutoff_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, co_rank.item()))
-        
-        # Select rank from specified restrictions
-        aux_rank = min(lst_ranks)
-        
-        u = u[..., :aux_rank]
         if i > 0:
             u = u.reshape(*batches_shape, prev_bond, phys_dims[i], aux_rank)
-            
-        s = s[..., :aux_rank]
-        vh = vh[..., :aux_rank, :]
         
         if renormalize:
             aux_norm = s.norm(dim=-1, keepdim=True)
@@ -153,7 +145,9 @@ def vec_to_mps(vec: torch.Tensor,
         
     tensors.append(vec)
     
-    if log_norm is not 0:
+    if renormalize:
+        if not isinstance(log_norm, torch.Tensor):
+            log_norm = torch.Tensor([log_norm]).float()
         rescale = (log_norm / len(tensors)).exp()
         for vec in tensors:
             vec *= rescale.view(*vec.shape[:n_batches],
@@ -164,8 +158,10 @@ def vec_to_mps(vec: torch.Tensor,
 
 def mat_to_mpo(mat: torch.Tensor,
                rank: Optional[int] = None,
-               cum_percentage: Optional[float] = None,
                cutoff: Optional[float] = None,
+               tol: Optional[float] = None,
+               rtol: Optional[float] = None,
+               cum_percentage: Optional[float] = None,
                renormalize: bool = False) -> List[torch.Tensor]:
     r"""
     Splits a matrix into a sequence of MPO tensors via consecutive SVD
@@ -186,9 +182,9 @@ def mat_to_mpo(mat: torch.Tensor,
     `reshape <https://pytorch.org/docs/stable/generated/torch.reshape.html>`_.
     
     To specify the bond dimension of each cut done via SVD, one can use the
-    arguments ``rank``, ``cum_percentage`` and ``cutoff``. If more than
-    one is specified, the resulting rank will be the one that satisfies all
-    conditions.
+    truncation criterions. If more than one criterion is specified, the final
+    rank is the minimum one, i.e. the one imposed by the most restrictive
+    criterion.
 
     Parameters
     ----------
@@ -196,16 +192,25 @@ def mat_to_mpo(mat: torch.Tensor,
         Input matrix to decompose. It must have an even number of dimensions.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
     renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
             decompositions. If not, it may happen that the norm explodes as it
@@ -218,6 +223,13 @@ def mat_to_mpo(mat: torch.Tensor,
     Returns
     -------
     List[torch.Tensor]
+
+    Examples
+    --------
+    >>> mat = torch.arange(64.).reshape(2, 2, 2, 2, 2, 2)
+    >>> tensors = tk.decompositions.mat_to_mpo(mat, rank=2)
+    >>> [tuple(t.shape) for t in tensors]
+    [(2, 2, 2), (2, 2, 2, 2), (2, 2, 2)]
     """
     if not isinstance(mat, torch.Tensor):
         raise TypeError('`mat` should be torch.Tensor type')
@@ -235,47 +247,20 @@ def mat_to_mpo(mat: torch.Tensor,
         mat = mat.reshape(prev_bond * in_out_dims[i] * in_out_dims[i + 1],
                           in_out_dims[(i + 2):].prod())
         
-        u, s, vh = torch.linalg.svd(mat, full_matrices=False)
+        u, s, vh = truncated_svd(tensor=mat,
+                                 rank=rank,
+                                 cutoff=cutoff,
+                                 tol=tol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
+        aux_rank = s.shape[-1]
         
-        lst_ranks = []
-        
-        if rank is None:
-            aux_rank = s.shape[-1]
-            lst_ranks.append(aux_rank)
-        else:
-            lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
-            
-        if cum_percentage is not None:
-            s_percentages = s.cumsum(-1) / \
-                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
-            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
-            cp_rank = torch.lt(
-                s_percentages,
-                cum_percentage_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, cp_rank.item() + 1))
-            
-        if cutoff is not None:
-            cutoff_tensor = cutoff * torch.ones_like(s)
-            co_rank = torch.ge(
-                s,
-                cutoff_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, co_rank.item()))
-        
-        # Select rank from specified restrictions
-        aux_rank = min(lst_ranks)
-        
-        u = u[..., :aux_rank]
         if i == 0:
             u = u.reshape(in_out_dims[i], in_out_dims[i + 1], aux_rank)
             u = u.permute(0, 2, 1) # input x right x output
         else:
             u = u.reshape(prev_bond, in_out_dims[i], in_out_dims[i + 1], aux_rank)
             u = u.permute(0, 1, 3, 2) # left x input x right x output
-            
-        s = s[..., :aux_rank]
-        vh = vh[..., :aux_rank, :]
         
         if renormalize:
             aux_norm = s.norm(dim=-1)

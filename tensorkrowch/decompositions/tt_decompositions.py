@@ -18,7 +18,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 
 from tensorkrowch.embeddings import basis
-from tensorkrowch.utils import random_unitary
+from tensorkrowch.utils import random_unitary, truncated_svd
 import tensorkrowch.models as models
 
 
@@ -176,29 +176,15 @@ def sketching(function, tensors_list, out_position, batch_size, device):
     return Phi_tilde_k
 
 
-def trimming(mat, rank, cum_percentage):
+def trimming(mat, rank, cutoff, tol, rtol, cum_percentage):
     """Given a matrix returns the U from the SVD and an appropiate rank"""
-    u, s, vh = torch.linalg.svd(mat, full_matrices=False)
-    
-    if rank is None:
-        rank = len(s)
-
-    percentages = s.cumsum(0) / (s.sum().expand(s.shape) + 1e-10)
-    cum_percentage_tensor = torch.tensor(cum_percentage)
-    
-    aux_rank = 0
-    for p in percentages:
-        if p == 0:
-            if aux_rank == 0:
-                aux_rank = 1
-            break
-        aux_rank += 1
-        
-        # Cut when ``cum_percentage`` is exceeded
-        if p >= cum_percentage_tensor:
-            break
-        elif aux_rank >= rank:
-            break
+    u, s, vh = truncated_svd(tensor=mat,
+                             rank=rank,
+                             cutoff=cutoff,
+                             tol=tol,
+                             rtol=rtol,
+                             cum_percentage=cum_percentage)
+    aux_rank = s.shape[-1]
         
     return u, s, vh, aux_rank
 
@@ -319,6 +305,9 @@ def tt_rss(function: Callable,
            domain_multiplier: int = 1,
            out_position: Optional[int] = None,
            rank: Optional[int] = None,
+           cutoff: Optional[float] = None,
+           tol: Optional[float] = None,
+           rtol: Optional[float] = None,
            cum_percentage: Optional[float] = None,
            batch_size: int = 64,
            device: Optional[torch.device] = None,
@@ -394,13 +383,31 @@ def tt_rss(function: Callable,
         If the ``function`` is vector-valued, position of the output core in
         the resulting MPS.
     rank : int, optional
-        Upper bound for the bond dimension of all cores.
+        Maximum bond dimension allowed for all cores.
+    cutoff : float, optional
+        Threshold used to determine the rank of each core independently. When
+        selecting the bond dimension of a core, singular values ``<= cutoff``
+        are discarded. It must be non-negative.
+    tol : float, optional
+        Absolute tolerance used to determine the rank of each core
+        independently. Starting from the smallest singular values, these are
+        discarded while their accumulated sum is ``<= tol``. It must be
+        non-negative.
+    rtol : float, optional
+        Relative tolerance used to determine the rank of each core
+        independently. Starting from the smallest singular values, these are
+        discarded while their accumulated sum divided by the total sum is
+        ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        When getting the proper bond dimension of each core via truncated SVD,
-        this is the proportion that should be satisfied between the sum of all
-        singular values kept and the total sum of all singular values. Therefore,
-        it specifies the rank of each core independently, allowing for
-        varying bond dimensions.
+        Minimum fraction to keep when determining the rank of each core from
+        its singular values. Equivalent to setting ``cum_percentage = 1 - rtol``.
+        Therefore, it allows different bond dimensions across cores. It must
+        be in ``(0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            cum\_percentage
     batch_size : int
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
         during the decomposition.
@@ -421,6 +428,22 @@ def tt_rss(function: Callable,
         List of tensor cores of the MPS.
     dictionary
         If ``return_info`` is ``True``.
+
+    Examples
+    --------
+    >>> def function(data):
+    ...     return data.prod(dim=1, keepdim=True)
+    >>> def embedding(data):
+    ...     return torch.stack([data, 1 - data], dim=-1)
+    >>> sketch_samples = torch.rand(32, 3)
+    >>> tensors = tk.decompositions.tt_rss(function=function,
+    ...                                    embedding=embedding,
+    ...                                    sketch_samples=sketch_samples,
+    ...                                    rank=2,
+    ...                                    rtol=1e-2,
+    ...                                    verbose=False)
+    >>> len(tensors)
+    3
     """
     if not isinstance(function, Callable):
         raise TypeError('`function` should be callable')
@@ -644,6 +667,9 @@ def tt_rss(function: Callable,
             # Trimming
             u, _, _, D_k = trimming(mat=Phi_tilde_k,
                                     rank=D_k,
+                                    cutoff=cutoff,
+                                    tol=tol,
+                                    rtol=rtol,
                                     cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # phys_dim x D_k
             
@@ -700,6 +726,9 @@ def tt_rss(function: Callable,
             u, _, _, D_k = trimming(mat=Phi_tilde_k.reshape(-1,
                                                             Phi_tilde_k.size(2)),
                                     rank=D_k,
+                                    cutoff=cutoff,
+                                    tol=tol,
+                                    rtol=rtol,
                                     cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # (D_k_1 * phys_dim) x D_k
             

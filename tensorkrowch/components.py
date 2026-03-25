@@ -978,7 +978,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = Size(aux_shape)
-                correct_format_tensor = self._set_tensor_format(tensor[index])
+                correct_format_tensor = self._set_tensor_format(tensor[tuple(index)])
                 self._direct_set_tensor(correct_format_tensor)
 
             elif size > self._shape[axis_num]:
@@ -1345,7 +1345,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                 else:
                     raise ValueError(f'Cannot crop tensor if its size at axis {i}'
                                      ' is smaller than node\'s size')
-            return tensor[index]
+            return tensor[tuple(index)]
 
         else:
             raise ValueError('`tensor` should have the same number of'

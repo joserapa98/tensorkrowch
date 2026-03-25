@@ -47,7 +47,7 @@ import opt_einsum
 
 from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
-                                list2slice, permute_list)
+                                list2slice, permute_list, truncated_svd)
 
 
 def copy_func(f):
@@ -1595,16 +1595,20 @@ def _check_first_split(node: AbstractNode,
                        mode: Text = 'svd',
                        side: Optional[Text] = 'left',
                        rank: Optional[int] = None,
-                       cum_percentage: Optional[float] = None,
-                       cutoff: Optional[float] = None) -> Optional[Successor]:
+                       cutoff: Optional[float] = None,
+                       tol: Optional[float] = None,
+                       rtol: Optional[float] = None,
+                       cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     args = (node,
             tuple(node1_axes),
             tuple(node2_axes),
             mode,
             side,
             rank,
-            cum_percentage,
-            cutoff)
+            cutoff,
+            tol,
+            rtol,
+            cum_percentage)
     successors = node._successors.get('split')
     if not successors:
         return None
@@ -1617,8 +1621,10 @@ def _split_first(node: AbstractNode,
                  mode: Text = 'svd',
                  side: Optional[Text] = 'left',
                  rank: Optional[int] = None,
-                 cum_percentage: Optional[float] = None,
-                 cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+                 cutoff: Optional[float] = None,
+                 tol: Optional[float] = None,
+                 rtol: Optional[float] = None,
+                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     if not isinstance(node1_axes, Sequence):
         raise TypeError('`node1_edges` should be list or tuple type')
     if not isinstance(node2_axes, Sequence):
@@ -1630,8 +1636,10 @@ def _split_first(node: AbstractNode,
             mode,
             side,
             rank,
-            cum_percentage,
-            cutoff)
+            cutoff,
+            tol,
+            rtol,
+            cum_percentage)
 
     node1_axes = [node.get_axis_num(axis) for axis in node1_axes]
     node2_axes = [node.get_axis_num(axis) for axis in node2_axes]
@@ -1682,40 +1690,13 @@ def _split_first(node: AbstractNode,
                        [node2_shape.prod().item()]))
 
     if (mode == 'svd') or (mode == 'svdr'):
-        u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
-        
-        lst_ranks = []
-        
-        if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
-        else:
-            lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
-            
-        if cum_percentage is not None:
-            s_percentages = s.cumsum(-1) / \
-                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
-            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
-            cp_rank = torch.lt(
-                s_percentages,
-                cum_percentage_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, cp_rank.item() + 1))
-            
-        if cutoff is not None:
-            cutoff_tensor = cutoff * torch.ones_like(s)
-            co_rank = torch.ge(
-                s,
-                cutoff_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, co_rank.item()))
-        
-        # Select rank from specified restrictions
-        rank = min(lst_ranks)
-        
-        u = u[..., :rank]
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
+        u, s, vh = truncated_svd(tensor=node_tensor,
+                                 rank=rank,
+                                 cutoff=cutoff,
+                                 tol=tol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
+        rank = s.shape[-1]
         
         if u.is_complex():
             s = s.to(u.dtype)
@@ -1858,8 +1839,10 @@ def _split_next(successor: Successor,
                 mode: Text = 'svd',
                 side: Optional[Text] = 'left',
                 rank: Optional[int] = None,
-                cum_percentage: Optional[float] = None,
-                cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+                cutoff: Optional[float] = None,
+                tol: Optional[float] = None,
+                rtol: Optional[float] = None,
+                cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     batch_axes = successor.hints['batch_axes']
     node1_axes = successor.hints['node1_axes']
     node2_axes = successor.hints['node2_axes']
@@ -1884,40 +1867,13 @@ def _split_next(successor: Successor,
                        [node2_shape.prod().item()]))
 
     if (mode == 'svd') or (mode == 'svdr'):
-        u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
-        
-        lst_ranks = []
-        
-        if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
-        else:
-            lst_ranks.append(min(max(1, rank), s.shape[-1]))
-            
-        if cum_percentage is not None:
-            s_percentages = s.cumsum(-1) / \
-                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
-            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
-            cp_rank = torch.lt(
-                s_percentages,
-                cum_percentage_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, cp_rank.item() + 1))
-            
-        if cutoff is not None:
-            cutoff_tensor = cutoff * torch.ones_like(s)
-            co_rank = torch.ge(
-                s,
-                cutoff_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, co_rank.item()))
-        
-        # Select rank from specified restrictions
-        rank = min(lst_ranks)
-        
-        u = u[..., :rank]
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
+        u, s, vh = truncated_svd(tensor=node_tensor,
+                                 rank=rank,
+                                 cutoff=cutoff,
+                                 tol=tol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
+        rank = s.shape[-1]
         
         if u.is_complex():
             s = s.to(u.dtype)
@@ -1983,8 +1939,10 @@ def split(node: AbstractNode,
           mode: Text = 'svd',
           side: Optional[Text] = 'left',
           rank: Optional[int] = None,
-          cum_percentage: Optional[float] = None,
-          cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+          cutoff: Optional[float] = None,
+          tol: Optional[float] = None,
+          rtol: Optional[float] = None,
+          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     Splits one node in two via the decomposition specified in ``mode``. To
     perform this operation the set of edges has to be split in two sets,
@@ -2035,9 +1993,9 @@ def split(node: AbstractNode,
       where R is a lower triangular matrix and Q is unitary.
 
     If ``mode`` is "svd" or "svdr", ``side`` must be provided. Besides, at least
-    one of ``rank``, ``cum_percentage`` and ``cutoff`` is required. If more than
-    one is specified, the resulting rank will be the one that satisfies all
-    conditions.
+    one truncation criterion is required. If more than one criterion is specified,
+    the final rank is the minimum one, i.e. the one imposed by the most restrictive
+    criterion.
     
     Since the node is `split` in two, a new edge appears connecting both
     nodes. The axis that corresponds to this edge has the name ``"split"``.
@@ -2067,16 +2025,25 @@ def split(node: AbstractNode,
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2100,7 +2067,7 @@ def split(node: AbstractNode,
     Edge( split_0[split] <-> split_1[split] )
     """
     return split_op(node, node1_axes, node2_axes,
-                    mode, side, rank, cum_percentage, cutoff)
+                    mode, side, rank, cutoff, tol, rtol, cum_percentage)
 
 
 split_node = copy_func(split)
@@ -2133,16 +2100,25 @@ split_node.__doc__ = \
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
         .. math::
-        
+
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2174,8 +2150,10 @@ def split_(node: AbstractNode,
            mode: Text = 'svd',
            side: Optional[Text] = 'left',
            rank: Optional[int] = None,
-           cum_percentage: Optional[float] = None,
-           cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+           cutoff: Optional[float] = None,
+           tol: Optional[float] = None,
+           rtol: Optional[float] = None,
+           cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     In-place version of :func:`split`.
 
@@ -2209,16 +2187,25 @@ def split_(node: AbstractNode,
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2250,7 +2237,7 @@ def split_(node: AbstractNode,
     >>> del node
     """
     node1, node2 = split(node, node1_axes, node2_axes,
-                         mode, side, rank, cum_percentage, cutoff)
+                         mode, side, rank, cutoff, tol, rtol, cum_percentage)
     node1.reattach_edges(override=True)
     node2.reattach_edges(override=True)
     node1._unrestricted_set_tensor(node1.tensor.detach())
@@ -2314,16 +2301,25 @@ split_node_.__doc__ = \
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
         .. math::
-        
+
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2360,8 +2356,10 @@ AbstractNode.split_ = split_node_
 def svd(edge: Edge,
         side: Text = 'left',
         rank: Optional[int] = None,
-        cum_percentage: Optional[float] = None,
-        cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+        cutoff: Optional[float] = None,
+        tol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svd"``. See :func:`split` for a more complete explanation.
@@ -2384,16 +2382,25 @@ def svd(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2456,8 +2463,10 @@ def svd(edge: Edge,
                                  mode='svd',
                                  side=side,
                                  rank=rank,
-                                 cum_percentage=cum_percentage,
-                                 cutoff=cutoff)
+                                 cutoff=cutoff,
+                                 tol=tol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
@@ -2508,16 +2517,25 @@ svd_edge.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2559,8 +2577,10 @@ Edge.svd = svd_edge
 def svd_(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None,
-         cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+         cutoff: Optional[float] = None,
+         tol: Optional[float] = None,
+         rtol: Optional[float] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     In-place version of :func:`svd`.
     
@@ -2588,16 +2608,25 @@ def svd_(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2656,8 +2685,10 @@ def svd_(edge: Edge,
                                   mode='svd',
                                   side=side,
                                   rank=rank,
-                                  cum_percentage=cum_percentage,
-                                  cutoff=cutoff)
+                                  cutoff=cutoff,
+                                  tol=tol,
+                                  rtol=rtol,
+                                  cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
@@ -2715,16 +2746,25 @@ svd_edge_.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
         .. math::
-        
+
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2761,8 +2801,10 @@ Edge.svd_ = svd_edge_
 def svdr(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None,
-         cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+         cutoff: Optional[float] = None,
+         tol: Optional[float] = None,
+         rtol: Optional[float] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svdr"``. See :func:`split` for a more complete explanation.
@@ -2785,16 +2827,25 @@ def svdr(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2857,8 +2908,10 @@ def svdr(edge: Edge,
                                  mode='svdr',
                                  side=side,
                                  rank=rank,
-                                 cum_percentage=cum_percentage,
-                                 cutoff=cutoff)
+                                 cutoff=cutoff,
+                                 tol=tol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
@@ -2909,16 +2962,25 @@ svdr_edge.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2960,8 +3022,10 @@ Edge.svdr = svdr_edge
 def svdr_(edge: Edge,
           side: Text = 'left',
           rank: Optional[int] = None,
-          cum_percentage: Optional[float] = None,
-          cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+          cutoff: Optional[float] = None,
+          tol: Optional[float] = None,
+          rtol: Optional[float] = None,
+          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     In-place version of :func:`svdr`.
     
@@ -2989,16 +3053,25 @@ def svdr_(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -3057,8 +3130,10 @@ def svdr_(edge: Edge,
                                   mode='svdr',
                                   side=side,
                                   rank=rank,
-                                  cum_percentage=cum_percentage,
-                                  cutoff=cutoff)
+                                  cutoff=cutoff,
+                                  tol=tol,
+                                  rtol=rtol,
+                                  cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
@@ -3116,16 +3191,25 @@ svdr_edge_.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    tol : float, optional
+        Absolute tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum is ``<= tol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum
+        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
+        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
         .. math::
-        
+
             \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------

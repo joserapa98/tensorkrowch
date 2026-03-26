@@ -8,6 +8,7 @@ This script contains tests for components:
     * TestSetTensorNode
     * TestSettensorParamNode
     * TestMoveToNetwork
+    * TestTensorTo
     * TestChangeType
     * TestMeasures
     * TestConnect
@@ -1266,6 +1267,83 @@ class TestMoveToNetwork:
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
         assert torch.equal(node1.tensor, node2.tensor)
+
+
+class TestTensorTo:
+
+    def test_node_to_device_and_type(self):
+        """
+        Test moving a single node's tensor to a different device and changing its dtype.
+        """
+        # Create a node with a random float tensor on CPU.
+        node = tk.randn(shape=(2, 3))
+        assert node.device.type == 'cpu'
+        assert node.dtype == torch.float32
+        
+        # If CUDA is available, move it to CUDA and verify.
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        node.to(device=device)
+        assert node.device.type == device.type
+        
+        # Change the tensor's dtype to complex and verify.
+        node.to(dtype=torch.complex64)
+        assert node.dtype == torch.complex64
+        assert node.device.type == device.type
+
+    def test_node_to_returns_self(self):
+        node = tk.randn(shape=(2, 3))
+
+        returned_node = node.to(dtype=torch.float64)
+
+        assert returned_node is node
+
+    def test_network_to_returns_self(self):
+        net = tk.TensorNetwork()
+        _ = tk.randn(shape=(2, 3), network=net)
+
+        returned_net = net.to(dtype=torch.float64)
+
+        assert returned_net is net
+
+    def test_shared_node_to(self):
+        """
+        Test that `to` method correctly propagates device/dtype changes
+        across multiple nodes sharing the same tensor.
+        """
+        # Create three nodes with the same shape in the same network.
+        net = tk.TensorNetwork()
+        node1 = tk.randn(shape=(2, 3), network=net)
+        node2 = tk.empty(shape=(2, 3), network=net)
+        node3 = tk.empty(shape=(2, 3), network=net)
+        
+        # Set node2 and node3 to reference the tensor of node1.
+        node2.set_tensor_from(node1)
+        node3.set_tensor_from(node1)
+        
+        # Assert initial dtypes are float32.
+        assert node1.dtype == torch.float32
+        assert node2.dtype == torch.float32
+        assert node3.dtype == torch.float32
+        
+        # Change the dtype of one of the referencing nodes (node2).
+        node2.to(dtype=torch.float64)
+        
+        # Verify that all three nodes now have the new dtype.
+        assert node1.dtype == torch.float64
+        assert node2.dtype == torch.float64
+        assert node3.dtype == torch.float64
+        
+        # Determine target device (CUDA if available, else CPU).
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        # Change the device of another referencing node (node3).
+        node3.to(device=device)
+        
+        # Verify that all three nodes now reside on the new device.
+        assert node1.device.type == device.type
+        assert node2.device.type == device.type
+        assert node3.device.type == device.type
 
 
 class TestChangeType:
@@ -2654,6 +2732,54 @@ class TestTensorNetwork:
         submodules = [None for _ in net.children()]
         assert len(submodules) == 0
         assert len(net._parameters) == 0
+
+    def test_to(self):
+        net = tk.TensorNetwork(name='net')
+        for _ in range(4):
+            _ = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        net.to(device=device, dtype=dtype)
+
+        for node in net.nodes.values():
+            assert node.device == device
+            assert node.dtype == dtype
+
+    def test_to_resultant_nodes(self):
+        net = tk.TensorNetwork(name='net')
+        for _ in range(4):
+            _ = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        node = net['node_0']
+        for i in range(1, 4):
+            node @= net[f'node_{i}']
+
+        assert net.resultant_nodes
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        net.to(device=device, dtype=dtype)
+
+        for node in net.nodes.values():
+            assert node.device == device
+            assert node.dtype == dtype
 
     def test_set_data_nodes_same_shape(self):
         net = tk.TensorNetwork(name='net')

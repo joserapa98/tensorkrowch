@@ -127,6 +127,12 @@ def _assert_deparameterized_nodes(nodes, tensor_address=None):
             assert node.tensor_address() == tensor_address
 
 
+def _assert_nodes_device_and_dtype(nodes, device, dtype):
+    for node in nodes:
+        assert node.device == device
+        assert node.dtype == dtype
+
+
 def _assert_mps_data_node_shapes(mps, n_batches, batch_size):
     if (mps.n_features == 1) and (mps.boundary == 'obc'):
         assert mps.mats_env[0].shape == tuple([batch_size] * n_batches + [1, 2, 1])
@@ -555,6 +561,56 @@ class TestMPS:  # MARK: TestMPS
             new_nodes += [non_param_mps.left_node, non_param_mps.right_node]
 
         _assert_deparameterized_nodes(new_nodes)
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_to(self, n_features, boundary):
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=5,
+                            bond_dim=2,
+                            boundary=boundary)
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        mps.to(device=device, dtype=dtype)
+
+        _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
+        if boundary == 'obc':
+            _assert_nodes_device_and_dtype([mps.left_node, mps.right_node],
+                                           device,
+                                           dtype)
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_to_contracted(self, n_features, boundary):
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=5,
+                            bond_dim=2,
+                            boundary=boundary)
+
+        example = torch.randn(1, n_features, 5)
+        data = torch.randn(2, n_features, 5)
+
+        mps.trace(example)
+        _ = mps(data)
+
+        assert mps.resultant_nodes
+        tensor_nodes = [node for node in mps.nodes.values()
+                        if node.tensor is not None]
+        assert any(node.is_resultant() for node in tensor_nodes)
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        mps.to(device=device, dtype=dtype)
+
+        _assert_nodes_device_and_dtype(tensor_nodes, device, dtype)
+        _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
+        if boundary == 'obc':
+            _assert_nodes_device_and_dtype([mps.left_node, mps.right_node],
+                                           device,
+                                           dtype)
     
     def test_update_bond_dim(self):
         mps = tk.models.MPS(n_features=100,
@@ -1476,6 +1532,48 @@ class TestUMPS:  # MARK: TestUMPS
 
         _assert_deparameterized_nodes(non_param_mps.mats_env,
                                       tensor_address='virtual_uniform')
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    def test_to(self, n_features):
+        mps = tk.models.UMPS(n_features=n_features,
+                             phys_dim=5,
+                             bond_dim=2)
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        mps.to(device=device, dtype=dtype)
+
+        _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
+        assert mps.uniform_memory.device == device
+        assert mps.uniform_memory.dtype == dtype
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    def test_to_contracted(self, n_features):
+        mps = tk.models.UMPS(n_features=n_features,
+                             phys_dim=5,
+                             bond_dim=2)
+
+        example = torch.randn(1, n_features, 5)
+        data = torch.randn(2, n_features, 5)
+
+        mps.trace(example)
+        _ = mps(data)
+
+        assert mps.resultant_nodes
+        tensor_nodes = [node for node in mps.nodes.values()
+                        if node.tensor is not None]
+        assert any(node.is_resultant() for node in tensor_nodes)
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        mps.to(device=device, dtype=dtype)
+
+        _assert_nodes_device_and_dtype(tensor_nodes, device, dtype)
+        _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
+        assert mps.uniform_memory.device == device
+        assert mps.uniform_memory.dtype == dtype
 
     @staticmethod
     def _sample_in_features(n_features):

@@ -1770,6 +1770,28 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                 for neighbour in self.neighbours():
                     neighbour.move_to_network(network=network, visited=visited)
 
+    def to(self, *args, **kwargs):
+        """
+        Equivalent to `torch.Tensor.to()
+        <https://docs.pytorch.org/docs/stable/generated/torch.Tensor.to.html>`_.
+        Unlike PyTorch, this method acts in-place and returns the same node.
+        If the node stores its own tensor, it transforms it. Otherwise, it
+        transforms the tensor in the node that stores it, thus transforming all
+        nodes that were accessing it.
+
+        Be careful: since this operation is in-place, all nodes that share the
+        same tensor will observe the change immediately.
+        """
+        # Get the actual node that holds the tensor data
+        node_ref = self.node_ref()
+        tensor = node_ref.tensor
+        if tensor is not None:
+            new_tensor = tensor.to(*args, **kwargs)
+            # Use _unrestricted_set_tensor to allow device/dtype change
+            # even for resultant nodes and handle ParamNode wrapping
+            node_ref._unrestricted_set_tensor(tensor=new_tensor)
+        return self
+
     @overload
     def __getitem__(self, key: slice) -> List['Edge']:
         pass
@@ -4612,6 +4634,29 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             node.parameterize(set_param)
 
         return net
+
+    def to(self, *args, **kwargs):
+        """
+        Applies :meth:`AbstractNode.to` to all tensor-owning nodes in the
+        network. This can be used to change the device or dtype of every tensor
+        in the network, including tensors from ``resultant`` and ``virtual``
+        nodes. If several nodes share the same tensor, that tensor is
+        transformed only once and all the referencing nodes are updated
+        accordingly.
+
+        Unlike PyTorch's `nn.Module.to()
+        <https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html>_`,
+        this method acts in-place over the tensors stored in the tensor network
+        internal memory and returns the same network. Be careful when several
+        nodes share tensors, since the change is applied immediately to all of
+        them.
+        """
+        for node in list(self.nodes.values()):
+            # Avoid nodes that don't store their tensors not to repeat
+            # transforming nodes that have several other nodes accessing its tensor
+            if node._tensor_info['address'] is not None:
+                node.to(*args, **kwargs)
+        return self
 
     def set_data_nodes(self,
                        input_edges: List[Edge],

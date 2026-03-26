@@ -145,9 +145,7 @@ def vec_to_mps(vec: torch.Tensor,
         
     tensors.append(vec)
     
-    if renormalize:
-        if not isinstance(log_norm, torch.Tensor):
-            log_norm = torch.Tensor([log_norm]).float()
+    if renormalize and isinstance(log_norm, torch.Tensor):
         rescale = (log_norm / len(tensors)).exp()
         for vec in tensors:
             vec *= rescale.view(*vec.shape[:n_batches],
@@ -279,7 +277,7 @@ def mat_to_mpo(mat: torch.Tensor,
     mat = mat.reshape(aux_rank, in_out_dims[-2], in_out_dims[-1])
     tensors.append(mat)
     
-    if renormalize:
+    if renormalize and (log_norm != 0):
         rescale = (log_norm / len(tensors)).exp()
         for mat in tensors:
             mat *= rescale

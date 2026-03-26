@@ -1727,10 +1727,8 @@ class MPS(TensorNetwork):  # MARK: MPS
         entropy = -(s.pow(2) * s.pow(2).log()).sum()
         
         # Rescale
-        if log_norm != 0:
-            rescale = (log_norm / len(nodes)).exp()
-        
         if renormalize and (log_norm != 0):
+            rescale = (log_norm / len(nodes)).exp()
             for node in nodes:
                 node.tensor = node.tensor * rescale
         
@@ -1916,11 +1914,10 @@ class MPS(TensorNetwork):  # MARK: MPS
         nodes[oc] = nodes[oc].parameterize()
         
         # Rescale
-        if renormalize:
-            if log_norm != 0:
-                rescale = (log_norm / len(nodes)).exp()
-                for node in nodes:
-                    node.tensor = node.tensor * rescale
+        if renormalize and (log_norm != 0):
+            rescale = (log_norm / len(nodes)).exp()
+            for node in nodes:
+                node.tensor = node.tensor * rescale
         
         # Update variables
         self._mats_env = nodes

@@ -127,6 +127,22 @@ def _assert_deparameterized_nodes(nodes, tensor_address=None):
             assert node.tensor_address() == tensor_address
 
 
+def _deparameterize_even_nodes(model):
+    expected_param_flags = []
+    for i, node in enumerate(model.mats_env):
+        set_param = (i % 2) == 1
+        model._mats_env[i] = node.parameterize(set_param=set_param)
+        expected_param_flags.append(set_param)
+    return expected_param_flags
+
+
+def _assert_parameterization_pattern(nodes, expected_param_flags):
+    assert len(nodes) == len(expected_param_flags)
+    for node, is_param in zip(nodes, expected_param_flags):
+        assert isinstance(node, tk.ParamNode) == is_param
+        assert isinstance(node.tensor, torch.nn.Parameter) == is_param
+
+
 def _assert_nodes_device_and_dtype(nodes, device, dtype):
     for node in nodes:
         assert node.device == device
@@ -171,7 +187,12 @@ class TestMPS:  # MARK: TestMPS
             assert len(mps.leaf_nodes) == n_features
         assert len(mps.data_nodes) == n_features
 
-    def _trace_mps_for_canonicalize(self, mps, n_features, runtime):
+    def _trace_mps_for_canonicalize(self,
+                                    mps,
+                                    n_features,
+                                    runtime,
+                                    inline_input=False,
+                                    inline_mats=False):
         # Canonicalize/entropy tests always start from a fully traced MPS.
         example_kwargs = self._get_runtime_kwargs(runtime, mps.mats_env[0].device)
 
@@ -180,7 +201,9 @@ class TestMPS:  # MARK: TestMPS
 
         mps.out_features = []
         example = torch.randn(1, n_features, 2, **example_kwargs)
-        mps.trace(example)
+        mps.trace(example,
+                  inline_input=inline_input,
+                  inline_mats=inline_mats)
         self._assert_mps_trace_state(mps, n_features)
 
     def _assert_canonicalized_bond_dim(self, mps, rank, mode):
@@ -1294,6 +1317,34 @@ class TestMPS:  # MARK: TestMPS
         assert torch.isclose(entropy, approx_entropy, rtol=1e-03, atol=1e-05)
 
         self._finalize_mps_canonicalize(mps, n_features)
+
+    @pytest.mark.parametrize('runtime', RUNTIME_CASES)
+    @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)
+    def test_entropy_preserves_mixed_parameterization(self,
+                                                      runtime,
+                                                      n_features,
+                                                      boundary,
+                                                      middle_site):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        runtime_kwargs = self._get_runtime_kwargs(runtime, device)
+
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=2,
+                            bond_dim=6,
+                            boundary=boundary,
+                            in_features=[],
+                            **runtime_kwargs)
+
+        expected_param_flags = _deparameterize_even_nodes(mps)
+        self._trace_mps_for_canonicalize(mps,
+                                         n_features,
+                                         runtime,
+                                         inline_input=True,
+                                         inline_mats=True)
+
+        mps.entropy(middle_site=middle_site, renormalize=False)
+
+        _assert_parameterization_pattern(mps.mats_env, expected_param_flags)
     
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize(
@@ -1330,6 +1381,49 @@ class TestMPS:  # MARK: TestMPS
 
         self._assert_canonicalized_bond_dim(mps, rank, mode)
         self._finalize_mps_canonicalize(mps, n_features)
+
+    @pytest.mark.parametrize(
+        'runtime,n_features,boundary,oc,mode,renormalize',
+        [
+            (runtime, n_features, boundary, oc, mode, renormalize)
+            for runtime in RUNTIME_CASES
+            for n_features, boundary, oc, mode, renormalize in CANONICALIZE_CASES
+        ],
+    )
+    def test_canonicalize_preserves_mixed_parameterization(self,
+                                                           runtime,
+                                                           n_features,
+                                                           boundary,
+                                                           oc,
+                                                           mode,
+                                                           renormalize):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        runtime_kwargs = self._get_runtime_kwargs(runtime, device)
+
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=2,
+                            bond_dim=6,
+                            boundary=boundary,
+                            in_features=[],
+                            **runtime_kwargs)
+
+        expected_param_flags = _deparameterize_even_nodes(mps)
+        self._trace_mps_for_canonicalize(mps,
+                                         n_features,
+                                         runtime,
+                                         inline_input=True,
+                                         inline_mats=True)
+
+        rank = torch.randint(3, 7, (1,)).item()
+        mps.canonicalize(oc=oc,
+                         mode=mode,
+                         rank=rank,
+                         cum_percentage=0.98,
+                         cutoff=1e-5,
+                         renormalize=renormalize)
+
+        _assert_parameterization_pattern(mps.mats_env, expected_param_flags)
+        self._assert_canonicalized_bond_dim(mps, rank, mode)
 
     @pytest.mark.parametrize(
         'n_features,boundary,oc,mode,renormalize',

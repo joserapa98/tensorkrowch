@@ -579,7 +579,7 @@ class MPO(TensorNetwork):  # MARK: MPO
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
             
         return net
     
@@ -942,6 +942,9 @@ class MPO(TensorNetwork):  # MARK: MPO
             nodes[-1].tensor[..., 1:, :] = torch.zeros_like(
                 nodes[-1].tensor[..., 1:, :])
         
+        # Keep track of which nodes are parameterized
+        set_params = [isinstance(node, ParamNode) for node in nodes]
+        
         # If mode is svd or svr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
@@ -976,8 +979,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result1 = result1.parameterize()
-            nodes[i] = result1
+            nodes[i] = result1.parameterize(set_param=set_params[i])
             nodes[i + 1] = result2
 
         for i in range(len(nodes) - 1, oc, -1):
@@ -1008,11 +1010,10 @@ class MPO(TensorNetwork):  # MARK: MPO
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result2 = result2.parameterize()
-            nodes[i] = result2
+            nodes[i] = result2.parameterize(set_param=set_params[i])
             nodes[i - 1] = result1
 
-        nodes[oc] = nodes[oc].parameterize()
+        nodes[oc] = nodes[oc].parameterize(set_param=set_params[oc])
         
         # Rescale
         if log_norm != 0:
@@ -1265,11 +1266,11 @@ class UMPO(MPO):  # MARK: UMPO
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest
         # of the nodes
-        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        net.uniform_memory = net.uniform_memory.parameterize(set_param=set_param)
         
         # Tensor addresses have to be reassigned to reference
         # the uniform memory

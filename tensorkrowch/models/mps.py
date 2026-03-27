@@ -875,7 +875,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
             
         return net
     
@@ -1686,6 +1686,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             nodes[-1].tensor[..., 1:] = torch.zeros_like(
                 nodes[-1].tensor[..., 1:])
         
+        # Keep track of which nodes are parameterized
+        set_params = [isinstance(node, ParamNode) for node in nodes]
+        
         for i in range(middle_site):
             result1, result2 = nodes[i]['right'].svd_(
                 side='right',
@@ -1696,9 +1699,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
-
-            result1 = result1.parameterize()
-            nodes[i] = result1
+            
+            nodes[i] = result1.parameterize(set_param=set_params[i])
             nodes[i + 1] = result2
 
         for i in range(len(nodes) - 1, middle_site, -1):
@@ -1712,11 +1714,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result2 = result2.parameterize()
-            nodes[i] = result2
+            nodes[i] = result2.parameterize(set_param=set_params[i])
             nodes[i - 1] = result1
         
-        nodes[middle_site] = nodes[middle_site].parameterize()
+        nodes[middle_site] = nodes[middle_site].parameterize(
+            set_param=set_params[middle_site])
         
         # Compute mutual information
         middle_tensor = nodes[middle_site].tensor.clone()
@@ -1859,6 +1861,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             nodes[-1].tensor[..., 1:] = torch.zeros_like(
                 nodes[-1].tensor[..., 1:])
         
+        # Keep track of which nodes are parameterized
+        set_params = [isinstance(node, ParamNode) for node in nodes]
+        
         # If mode is svd or svdr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
@@ -1893,8 +1898,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result1 = result1.parameterize()
-            nodes[i] = result1
+            nodes[i] = result1.parameterize(set_param=set_params[i])
             nodes[i + 1] = result2
 
         for i in range(len(nodes) - 1, oc, -1):
@@ -1925,11 +1929,10 @@ class MPS(TensorNetwork):  # MARK: MPS
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result2 = result2.parameterize()
-            nodes[i] = result2
+            nodes[i] = result2.parameterize(set_param=set_params[i])
             nodes[i - 1] = result1
 
-        nodes[oc] = nodes[oc].parameterize()
+        nodes[oc] = nodes[oc].parameterize(set_param=set_params[oc])
         
         # Rescale
         if renormalize and (log_norm != 0):
@@ -2449,11 +2452,11 @@ class UMPS(MPS):  # MARK: UMPS
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest
         # of the nodes
-        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        net.uniform_memory = net.uniform_memory.parameterize(set_param=set_param)
         
         # Tensor addresses have to be reassigned to reference
         # the uniform memory
@@ -3437,11 +3440,11 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest
         # of the nodes
-        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        net.uniform_memory = net.uniform_memory.parameterize(set_param=set_param)
         
         # Tensor addresses have to be reassigned to reference
         # the uniform memory

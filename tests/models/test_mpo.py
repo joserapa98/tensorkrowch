@@ -86,6 +86,22 @@ def _assert_deparameterized_nodes(nodes, tensor_address=None):
             assert node.tensor_address() == tensor_address
 
 
+def _deparameterize_even_nodes(model):
+    expected_param_flags = []
+    for i, node in enumerate(model.mats_env):
+        set_param = (i % 2) == 1
+        model._mats_env[i] = node.parameterize(set_param=set_param)
+        expected_param_flags.append(set_param)
+    return expected_param_flags
+
+
+def _assert_parameterization_pattern(nodes, expected_param_flags):
+    assert len(nodes) == len(expected_param_flags)
+    for node, is_param in zip(nodes, expected_param_flags):
+        assert isinstance(node, tk.ParamNode) == is_param
+        assert isinstance(node.tensor, torch.nn.Parameter) == is_param
+
+
 def _assert_nodes_device_and_dtype(nodes, device, dtype):
     for node in nodes:
         assert node.device == device
@@ -654,6 +670,36 @@ class TestMPO:  # MARK: TestMPO
                          cutoff=1e-5,
                          renormalize=renormalize)
 
+        self._assert_canonicalized_mpo_bond_dim(mpo, rank, mode)
+        self._assert_mpo_leaf_nodes(mpo, n_features)
+
+    @pytest.mark.parametrize(
+        'n_features,boundary,oc,mode,renormalize',
+        CANONICALIZE_CASES,
+    )
+    def test_canonicalize_preserves_mixed_parameterization(self,
+                                                           n_features,
+                                                           boundary,
+                                                           oc,
+                                                           mode,
+                                                           renormalize):
+        mpo = tk.models.MPO(n_features=n_features,
+                            in_dim=2,
+                            out_dim=2,
+                            bond_dim=10,
+                            boundary=boundary)
+
+        expected_param_flags = _deparameterize_even_nodes(mpo)
+
+        rank = torch.randint(3, 7, (1,)).item()
+        mpo.canonicalize(oc=oc,
+                         mode=mode,
+                         rank=rank,
+                         cum_percentage=0.98,
+                         cutoff=1e-5,
+                         renormalize=renormalize)
+
+        _assert_parameterization_pattern(mpo.mats_env, expected_param_flags)
         self._assert_canonicalized_mpo_bond_dim(mpo, rank, mode)
         self._assert_mpo_leaf_nodes(mpo, n_features)
 

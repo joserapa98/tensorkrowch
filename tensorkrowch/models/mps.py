@@ -1771,8 +1771,8 @@ class MPS(TensorNetwork):  # MARK: MPS
         the rank. That is, the current bond dimensions will be the upper bound
         for the possibly new bond dimensions given by the truncation criterions.
         
-        Notes
-        -----
+        Note
+        ----
         Canonicalization relies on repeated SVD/QR decompositions of
         intermediate tensors. If the MPS becomes numerically unstable, for
         instance because tensor norms explode during the sweep, those

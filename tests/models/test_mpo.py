@@ -86,6 +86,26 @@ def _assert_deparameterized_nodes(nodes, tensor_address=None):
             assert node.tensor_address() == tensor_address
 
 
+def _assert_nodes_device_and_dtype(nodes, device, dtype):
+    for node in nodes:
+        assert node.device == device
+        assert node.dtype == dtype
+
+
+def _assert_obc_boundary_nodes_are_non_parametric(model):
+    assert isinstance(model.left_node, tk.Node)
+    assert isinstance(model.right_node, tk.Node)
+    assert not isinstance(model.left_node, tk.ParamNode)
+    assert not isinstance(model.right_node, tk.ParamNode)
+
+
+def _assert_obc_boundary_runtime(model, device, dtype):
+    _assert_obc_boundary_nodes_are_non_parametric(model)
+    _assert_nodes_device_and_dtype([model.left_node, model.right_node],
+                                   device,
+                                   dtype)
+
+
 def _run_umpo_mps_data_case(n_features, mps_boundary, inline_input, inline_mats):
     phys_dim = torch.randint(low=2, high=6, size=(1,)).item()
     bond_dim = torch.randint(low=2, high=5, size=(n_features,)).tolist()
@@ -283,6 +303,7 @@ class TestMPO:  # MARK: TestMPO
         assert mpo.out_dim == [2] * n
         assert mpo.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
         if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mpo)
             _assert_boundary_vector(mpo.left_node)
             _assert_boundary_vector(mpo.right_node)
     
@@ -308,6 +329,7 @@ class TestMPO:  # MARK: TestMPO
         assert mpo.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
         _assert_nodes_runtime(mpo.mats_env, runtime, device)
         if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mpo)
             _assert_boundary_vector(mpo.left_node)
             _assert_boundary_vector(mpo.right_node)
     
@@ -423,6 +445,60 @@ class TestMPO:  # MARK: TestMPO
             new_nodes += [non_param_mpo.left_node, non_param_mpo.right_node]
 
         _assert_deparameterized_nodes(new_nodes)
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_boundary_dtype(self, n_features, share_tensors):
+        mpo = tk.models.MPO(n_features=n_features,
+                            in_dim=3,
+                            out_dim=2,
+                            bond_dim=4,
+                            boundary='obc',
+                            dtype=torch.complex64)
+
+        copied_mpo = mpo.copy(share_tensors=share_tensors)
+
+        assert copied_mpo.left_node.dtype == torch.complex64
+        assert copied_mpo.right_node.dtype == torch.complex64
+        assert copied_mpo.mats_env[0].dtype == torch.complex64
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    def test_deparameterize_preserves_boundary_runtime(self, n_features):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.complex64
+
+        mpo = tk.models.MPO(n_features=n_features,
+                            in_dim=3,
+                            out_dim=2,
+                            bond_dim=4,
+                            boundary='obc').to(device=device, dtype=dtype)
+
+        non_param_mpo = mpo.parameterize(set_param=False, override=False)
+
+        _assert_nodes_device_and_dtype(non_param_mpo.mats_env, device, dtype)
+        _assert_obc_boundary_runtime(non_param_mpo, device, dtype)
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_to(self, n_features, boundary):
+        mpo = tk.models.MPO(n_features=n_features,
+                            in_dim=2,
+                            out_dim=2,
+                            bond_dim=10,
+                            boundary=boundary)
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        returned_mpo = mpo.to(device=device, dtype=dtype)
+        assert returned_mpo is mpo
+
+        _assert_nodes_device_and_dtype(mpo.mats_env, device, dtype)
+        if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mpo)
+            _assert_nodes_device_and_dtype([mpo.left_node, mpo.right_node],
+                                           device,
+                                           dtype)
     
     def test_update_bond_dim(self):
         mpo = tk.models.MPO(n_features=100,

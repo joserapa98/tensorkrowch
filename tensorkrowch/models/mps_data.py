@@ -317,14 +317,14 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             if not aux_bond_dim:
                 aux_bond_dim = [1]
                 
-            self._left_node = ParamNode(shape=(aux_bond_dim[0],),
-                                        axes_names=('right',),
-                                        name='left_node',
-                                        network=self)
-            self._right_node = ParamNode(shape=(aux_bond_dim[-1],),
-                                         axes_names=('left',),
-                                         name='right_node',
-                                         network=self)
+            self._left_node = Node(shape=(aux_bond_dim[0],),
+                                   axes_names=('right',),
+                                   name='left_node',
+                                   network=self)
+            self._right_node = Node(shape=(aux_bond_dim[-1],),
+                                    axes_names=('left',),
+                                    name='right_node',
+                                    network=self)
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         

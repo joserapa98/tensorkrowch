@@ -41,7 +41,7 @@ class MPS(TensorNetwork):  # MARK: MPS
     
     * ``left_node``, ``right_node``: `Vector` nodes with axes ``("right",)``
       and ``("left",)``, respectively. These are used to close the boundary
-      in the case ``boudary`` is ``"obc"``. Otherwise, both are ``None``.
+      in the case ``boundary`` is ``"obc"``. Otherwise, both are ``None``.
     
     The base ``MPS`` class enables setting various nodes as either input or
     output nodes. This feature proves useful when computing marginal or
@@ -527,11 +527,11 @@ class MPS(TensorNetwork):  # MARK: MPS
         mps_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
             mps_tensors[0] = torch.einsum('l,lir->ir',
-                                          self.left_node.tensor,
+                                          self._left_node.tensor,
                                           mps_tensors[0])
             mps_tensors[-1] = torch.einsum('lir,r->li',
                                            mps_tensors[-1],
-                                           self.right_node.tensor)
+                                           self._right_node.tensor)
         return mps_tensors
     
     # -------
@@ -549,14 +549,14 @@ class MPS(TensorNetwork):  # MARK: MPS
             if not aux_bond_dim:
                 aux_bond_dim = [1]
                 
-            self._left_node = ParamNode(shape=(aux_bond_dim[0],),
-                                        axes_names=('right',),
-                                        name='left_node',
-                                        network=self)
-            self._right_node = ParamNode(shape=(aux_bond_dim[-1],),
-                                         axes_names=('left',),
-                                         name='right_node',
-                                         network=self)
+            self._left_node = Node(shape=(aux_bond_dim[0],),
+                                   axes_names=('right',),
+                                   name='left_node',
+                                   network=self)
+            self._right_node = Node(shape=(aux_bond_dim[-1],),
+                                    axes_names=('left',),
+                                    name='right_node',
+                                    network=self)
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         
@@ -837,9 +837,15 @@ class MPS(TensorNetwork):  # MARK: MPS
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor
+                new_mps._right_node.tensor = self.right_node.tensor
         else:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor.clone()
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor.clone()
+                new_mps.right_node.tensor = self.right_node.tensor.clone()
         return new_mps
     
     def parameterize(self,
@@ -870,10 +876,6 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         for i in range(self._n_features):
             net._mats_env[i] = net._mats_env[i].parameterize(set_param)
-        
-        if net._boundary == 'obc':
-            net._left_node = net._left_node.parameterize(set_param)
-            net._right_node = net._right_node.parameterize(set_param)
             
         return net
     
@@ -3001,9 +3003,15 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor
+                new_mps.right_node.tensor = self.right_node.tensor
         else:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor.clone()
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor.clone()
+                new_mps.right_node.tensor = self.right_node.tensor.clone()
         
         return new_mps
 
@@ -3740,9 +3748,15 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor
+                new_mps.right_node.tensor = self.right_node.tensor
         else:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor.clone()
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor.clone()
+                new_mps.right_node.tensor = self.right_node.tensor.clone()
         
         return new_mps
 
@@ -4106,9 +4120,15 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor
+                new_mps.right_node.tensor = self.right_node.tensor
         else:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor.clone()
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor.clone()
+                new_mps.right_node.tensor = self.right_node.tensor.clone()
         
         return new_mps
 

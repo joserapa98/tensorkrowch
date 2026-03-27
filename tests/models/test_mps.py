@@ -133,6 +133,20 @@ def _assert_nodes_device_and_dtype(nodes, device, dtype):
         assert node.dtype == dtype
 
 
+def _assert_obc_boundary_nodes_are_non_parametric(model):
+    assert isinstance(model.left_node, tk.Node)
+    assert isinstance(model.right_node, tk.Node)
+    assert not isinstance(model.left_node, tk.ParamNode)
+    assert not isinstance(model.right_node, tk.ParamNode)
+
+
+def _assert_obc_boundary_runtime(model, device, dtype):
+    _assert_obc_boundary_nodes_are_non_parametric(model)
+    _assert_nodes_device_and_dtype([model.left_node, model.right_node],
+                                   device,
+                                   dtype)
+
+
 def _assert_mps_data_node_shapes(mps, n_batches, batch_size):
     if (mps.n_features == 1) and (mps.boundary == 'obc'):
         assert mps.mats_env[0].shape == tuple([batch_size] * n_batches + [1, 2, 1])
@@ -377,6 +391,7 @@ class TestMPS:  # MARK: TestMPS
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * (n - 1 if boundary == 'obc' else n)
         if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mps)
             _assert_boundary_vector(mps.left_node)
             _assert_boundary_vector(mps.right_node)
     
@@ -400,6 +415,7 @@ class TestMPS:  # MARK: TestMPS
         assert mps.bond_dim == [5] * (n - 1 if boundary == 'obc' else n)
         _assert_nodes_runtime(mps.mats_env, runtime, device)
         if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mps)
             _assert_boundary_vector(mps.left_node)
             _assert_boundary_vector(mps.right_node)
     
@@ -563,6 +579,36 @@ class TestMPS:  # MARK: TestMPS
         _assert_deparameterized_nodes(new_nodes)
 
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_boundary_dtype(self, n_features, share_tensors):
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=3,
+                            bond_dim=4,
+                            boundary='obc',
+                            dtype=torch.complex64)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        assert copied_mps.left_node.dtype == torch.complex64
+        assert copied_mps.right_node.dtype == torch.complex64
+        assert copied_mps.mats_env[0].dtype == torch.complex64
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    def test_deparameterize_preserves_boundary_runtime(self, n_features):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.complex64
+
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=3,
+                            bond_dim=4,
+                            boundary='obc').to(device=device, dtype=dtype)
+
+        non_param_mps = mps.parameterize(set_param=False, override=False)
+
+        _assert_nodes_device_and_dtype(non_param_mps.mats_env, device, dtype)
+        _assert_obc_boundary_runtime(non_param_mps, device, dtype)
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_to(self, n_features, boundary):
         mps = tk.models.MPS(n_features=n_features,
@@ -573,10 +619,12 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         dtype = torch.float64
 
-        mps.to(device=device, dtype=dtype)
+        returned_mps = mps.to(device=device, dtype=dtype)
+        assert returned_mps is mps
 
         _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
         if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mps)
             _assert_nodes_device_and_dtype([mps.left_node, mps.right_node],
                                            device,
                                            dtype)
@@ -608,6 +656,7 @@ class TestMPS:  # MARK: TestMPS
         _assert_nodes_device_and_dtype(tensor_nodes, device, dtype)
         _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
         if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mps)
             _assert_nodes_device_and_dtype([mps.left_node, mps.right_node],
                                            device,
                                            dtype)
@@ -2057,6 +2106,38 @@ class TestMPSLayer:  # MARK: TestMPSLayer
 
         _assert_deparameterized_nodes(new_nodes)
 
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_boundary_dtype(self, n_features, share_tensors):
+        mps = tk.models.MPSLayer(n_features=n_features,
+                                 in_dim=[] if n_features == 1 else [3] * (n_features - 1),
+                                 out_dim=2,
+                                 bond_dim=4,
+                                 boundary='obc',
+                                 dtype=torch.complex64)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        assert copied_mps.left_node.dtype == torch.complex64
+        assert copied_mps.right_node.dtype == torch.complex64
+        assert copied_mps.mats_env[0].dtype == torch.complex64
+
+    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    def test_deparameterize_preserves_boundary_runtime(self, n_features):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.complex64
+
+        mps = tk.models.MPSLayer(n_features=n_features,
+                                 in_dim=[] if n_features == 1 else [3] * (n_features - 1),
+                                 out_dim=2,
+                                 bond_dim=4,
+                                 boundary='obc').to(device=device, dtype=dtype)
+
+        non_param_mps = mps.parameterize(set_param=False, override=False)
+
+        _assert_nodes_device_and_dtype(non_param_mps.mats_env, device, dtype)
+        _assert_obc_boundary_runtime(non_param_mps, device, dtype)
+
 
 class TestUMPSLayer:  # MARK: TestUMPSLayer
     
@@ -2466,6 +2547,24 @@ class TestConvModels:  # MARK: TestConvModels
         assert isinstance(copied_mps, tk.models.ConvMPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
 
+    @pytest.mark.parametrize('height,width', [(1, 1), (2, 2)])
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_conv_mps_preserves_boundary_dtype(self,
+                                                    height,
+                                                    width,
+                                                    share_tensors):
+        mps = tk.models.ConvMPS(in_channels=3,
+                                bond_dim=4,
+                                kernel_size=(height, width),
+                                boundary='obc',
+                                dtype=torch.complex64)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        assert copied_mps.left_node.dtype == torch.complex64
+        assert copied_mps.right_node.dtype == torch.complex64
+        assert copied_mps.mats_env[0].dtype == torch.complex64
+
     @pytest.mark.parametrize('height,width,share_tensors', COPY_CONV_UMPS_CASES)
     def test_copy_conv_umps(self, height, width, share_tensors):
         phys_dim = torch.randint(low=2, high=8, size=(1,)).item()
@@ -2496,6 +2595,25 @@ class TestConvModels:  # MARK: TestConvModels
         copied_mps = mps.copy(share_tensors=share_tensors)
         assert isinstance(copied_mps, tk.models.ConvMPSLayer)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+
+    @pytest.mark.parametrize('height,width', [(1, 1), (2, 2)])
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_conv_mps_layer_preserves_boundary_dtype(self,
+                                                          height,
+                                                          width,
+                                                          share_tensors):
+        mps = tk.models.ConvMPSLayer(in_channels=3,
+                                     out_channels=10,
+                                     bond_dim=4,
+                                     kernel_size=(height, width),
+                                     boundary='obc',
+                                     dtype=torch.complex64)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        assert copied_mps.left_node.dtype == torch.complex64
+        assert copied_mps.right_node.dtype == torch.complex64
+        assert copied_mps.mats_env[0].dtype == torch.complex64
 
     @pytest.mark.parametrize('height,width,share_tensors', COPY_CONV_UMPS_CASES)
     def test_copy_conv_umps_layer(self, height, width, share_tensors):

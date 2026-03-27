@@ -45,6 +45,15 @@ CONV_UTREE_CASES = [
     ('extreme_case_1_node', [1], [2, 2, 2, 2, 2], 2,
      (100, 2, 4, 4), 1, 4),
 ]
+
+
+def _assert_initialized_parameterization(nodes, parameterized, tensor_address=None):
+    expected_type = tk.ParamNode if parameterized else tk.Node
+    for node in nodes:
+        assert isinstance(node, expected_type)
+        assert isinstance(node.tensor, torch.nn.Parameter) == parameterized
+        if tensor_address is not None:
+            assert node.tensor_address() == tensor_address
 TREE_CANONICALIZE_CASES = [
     ('svd', {'rank': 2}),
     ('svd', {'cum_percentage': 0.95}),
@@ -108,6 +117,17 @@ class _TreeTestMixin:
 
 class TestTree(_TreeTestMixin):  # MARK: TestTree
 
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        tree = tk.models.Tree(sites_per_layer=[6, 2, 1],
+                              bond_dim=[[5, 5, 4], [4, 4, 4, 3], [3, 3, 2]],
+                              parameterized=parameterized)
+
+        nodes = []
+        for layer in tree.layers:
+            nodes.extend(layer)
+        _assert_initialized_parameterization(nodes, parameterized)
+
     @pytest.mark.parametrize(
         '_,sites_per_layer,bond_dim,example_shape,data_shape,expected_shape,'
         'expected_leaf_nodes,expected_data_nodes,stacked_nodes',
@@ -135,6 +155,20 @@ class TestTree(_TreeTestMixin):  # MARK: TestTree
 
 
 class TestUTree:  # MARK: TestUTree
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        tree = tk.models.UTree(sites_per_layer=[4, 2, 1],
+                               bond_dim=[4, 4, 4],
+                               parameterized=parameterized)
+
+        nodes = []
+        for layer in tree.layers:
+            nodes.extend(layer)
+        _assert_initialized_parameterization(nodes,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([tree.uniform_memory], parameterized)
 
     @staticmethod
     def _run_utree_case(tree, example, data, auto_stack, auto_unbind, inline,
@@ -176,6 +210,18 @@ class TestUTree:  # MARK: TestUTree
 
 class TestConvTree(_TreeTestMixin):  # MARK: TestConvTree
 
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        tree = tk.models.ConvTree(sites_per_layer=[2, 1],
+                                  bond_dim=[[2, 2, 3], [3, 3, 5]],
+                                  kernel_size=2,
+                                  parameterized=parameterized)
+
+        nodes = []
+        for layer in tree.layers:
+            nodes.extend(layer)
+        _assert_initialized_parameterization(nodes, parameterized)
+
     @pytest.mark.parametrize(
         '_,sites_per_layer,bond_dim,kernel_size,expected_shape,'
         'expected_leaf_nodes,expected_data_nodes,stacked_nodes',
@@ -204,6 +250,21 @@ class TestConvTree(_TreeTestMixin):  # MARK: TestConvTree
 
 
 class TestConvUTree:  # MARK: TestConvUTree
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        tree = tk.models.ConvUTree(sites_per_layer=[2, 1],
+                                   bond_dim=[2, 2, 2],
+                                   kernel_size=2,
+                                   parameterized=parameterized)
+
+        nodes = []
+        for layer in tree.layers:
+            nodes.extend(layer)
+        _assert_initialized_parameterization(nodes,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([tree.uniform_memory], parameterized)
 
     @staticmethod
     def _run_conv_utree_case(tree, example, data, auto_stack, auto_unbind,

@@ -43,6 +43,9 @@ class Tree(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+    parameterized : bool, optional
+        Boolean indicating whether Tree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     
     Examples
     --------
@@ -57,7 +60,8 @@ class Tree(TensorNetwork):
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[Sequence[int]],
-                 n_batches: int = 1) -> None:
+                 n_batches: int = 1,
+                 parameterized: bool = True) -> None:
 
         super().__init__(name='tree')
 
@@ -112,8 +116,11 @@ class Tree(TensorNetwork):
             raise TypeError('`n_batches should be int type')
         self._n_batches = n_batches
 
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
+
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize()
 
     @property
@@ -142,23 +149,24 @@ class Tree(TensorNetwork):
         """Returns number of batch edges of the ``data`` nodes."""
         return self._n_batches
 
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the Tree."""
         if self._leaf_nodes:
             raise ValueError('Cannot create Tree nodes if the Tree already has'
                              ' nodes')
 
         self.layers = []
+        node_cls = ParamNode if parameterized else Node
 
         for i, n_sites in enumerate(self.sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self.bond_dim[i],),
-                                 axes_names=(*(['input'] * (
-                                         len(self.bond_dim[i]) - 1)),
-                                             'output'),
-                                 name=f'tree_node_({i},{j})',
-                                 network=self)
+                node = node_cls(shape=(*self.bond_dim[i],),
+                                axes_names=(*(['input'] * (
+                                        len(self.bond_dim[i]) - 1)),
+                                            'output'),
+                                name=f'tree_node_({i},{j})',
+                                network=self)
                 layer_lst.append(node)
 
             if i > 0:
@@ -419,6 +427,9 @@ class UTree(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+    parameterized : bool, optional
+        Boolean indicating whether UTree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
         
     Examples
     --------
@@ -437,7 +448,8 @@ class UTree(TensorNetwork):
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[int],
-                 n_batches: int = 1) -> None:
+                 n_batches: int = 1,
+                 parameterized: bool = True) -> None:
 
         super().__init__(name='tree')
 
@@ -478,8 +490,11 @@ class UTree(TensorNetwork):
             raise TypeError('`n_batches should be int type')
         self._n_batches = n_batches
 
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
+
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize()
 
     @property
@@ -500,22 +515,23 @@ class UTree(TensorNetwork):
         """Returns number of batch edges of the ``data`` nodes."""
         return self._n_batches
 
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the Tree."""
         if self._leaf_nodes:
             raise ValueError('Cannot create Tree nodes if the Tree already has'
                              ' nodes')
 
         self.layers = []
+        node_cls = ParamNode if parameterized else Node
 
         for i, n_sites in enumerate(self._sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self.bond_dim,),
-                                 axes_names=(*(['input'] * (len(self.bond_dim) - 1)),
-                                             'output'),
-                                 name=f'tree_node_({i},{j})',
-                                 network=self)
+                node = node_cls(shape=(*self.bond_dim,),
+                                axes_names=(*(['input'] * (len(self.bond_dim) - 1)),
+                                            'output'),
+                                name=f'tree_node_({i},{j})',
+                                network=self)
                 layer_lst.append(node)
 
             if i > 0:
@@ -538,13 +554,13 @@ class UTree(TensorNetwork):
             self.layers.append(layer_lst)
 
         # Virtual node
-        uniform_memory = node = ParamNode(shape=(*self.bond_dim,),
-                                          axes_names=(*(['input'] * (
-                                                  len(self.bond_dim) - 1)),
-                                                      'output'),
-                                          name='virtual_uniform',
-                                          network=self,
-                                          virtual=True)
+        uniform_memory = node = node_cls(shape=(*self.bond_dim,),
+                                         axes_names=(*(['input'] * (
+                                                 len(self.bond_dim) - 1)),
+                                                     'output'),
+                                         name='virtual_uniform',
+                                         network=self,
+                                         virtual=True)
         self.uniform_memory = uniform_memory
 
     def initialize(self, std: float = 1e-9) -> None:
@@ -670,6 +686,9 @@ class ConvTree(Tree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    parameterized : bool, optional
+        Boolean indicating whether ConvTree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
         
     Examples
     --------
@@ -688,7 +707,8 @@ class ConvTree(Tree):
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
-                 dilation: int = 1):
+                 dilation: int = 1,
+                 parameterized: bool = True):
 
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -717,7 +737,8 @@ class ConvTree(Tree):
 
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
-                         n_batches=2)
+                         n_batches=2,
+                         parameterized=parameterized)
         self._in_channels = bond_dim[0][0]
 
         self.unfold = nn.Unfold(kernel_size=kernel_size,
@@ -851,6 +872,9 @@ class ConvUTree(UTree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    parameterized : bool, optional
+        Boolean indicating whether ConvUTree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
         
     Examples
     --------
@@ -873,7 +897,8 @@ class ConvUTree(UTree):
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
-                 dilation: int = 1):
+                 dilation: int = 1,
+                 parameterized: bool = True):
 
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -902,7 +927,8 @@ class ConvUTree(UTree):
 
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
-                         n_batches=2)
+                         n_batches=2,
+                         parameterized=parameterized)
         self._in_channels = bond_dim[0]
 
         self.unfold = nn.Unfold(kernel_size=kernel_size,

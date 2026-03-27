@@ -102,6 +102,15 @@ def _assert_parameterization_pattern(nodes, expected_param_flags):
         assert isinstance(node.tensor, torch.nn.Parameter) == is_param
 
 
+def _assert_initialized_parameterization(nodes, parameterized, tensor_address=None):
+    expected_type = tk.ParamNode if parameterized else tk.Node
+    for node in nodes:
+        assert isinstance(node, expected_type)
+        assert isinstance(node.tensor, torch.nn.Parameter) == parameterized
+        if tensor_address is not None:
+            assert node.tensor_address() == tensor_address
+
+
 def _assert_nodes_device_and_dtype(nodes, device, dtype):
     for node in nodes:
         assert node.device == device
@@ -322,6 +331,18 @@ class TestMPO:  # MARK: TestMPO
             _assert_obc_boundary_nodes_are_non_parametric(mpo)
             _assert_boundary_vector(mpo.left_node)
             _assert_boundary_vector(mpo.right_node)
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_initialize_parameterized(self, parameterized, boundary):
+        mpo = tk.models.MPO(n_features=4,
+                            in_dim=2,
+                            out_dim=2,
+                            bond_dim=10,
+                            boundary=boundary,
+                            parameterized=parameterized)
+
+        _assert_initialized_parameterization(mpo.mats_env, parameterized)
     
     @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
@@ -433,6 +454,31 @@ class TestMPO:  # MARK: TestMPO
 
         assert isinstance(copied_mpo, tk.models.MPO)
         _assert_copied_mpo(mpo, copied_mpo, share_tensors)
+
+    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_mixed_parameterization(self,
+                                                   n_features,
+                                                   boundary,
+                                                   share_tensors):
+        in_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
+        out_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
+        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+        bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+
+        mpo = tk.models.MPO(n_features=n_features,
+                            in_dim=in_dim,
+                            out_dim=out_dim,
+                            bond_dim=bond_dim,
+                            boundary=boundary)
+
+        expected_param_flags = _deparameterize_even_nodes(mpo)
+
+        copied_mpo = mpo.copy(share_tensors=share_tensors)
+
+        _assert_parameterization_pattern(copied_mpo.mats_env,
+                                         expected_param_flags)
     
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
@@ -810,6 +856,19 @@ class TestUMPO:  # MARK: TestUMPO
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
         assert mpo.bond_dim == [10] * n
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        mpo = tk.models.UMPO(n_features=4,
+                             in_dim=2,
+                             out_dim=2,
+                             bond_dim=10,
+                             parameterized=parameterized)
+
+        _assert_initialized_parameterization(mpo.mats_env,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([mpo.uniform_memory], parameterized)
     
     @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
@@ -879,6 +938,27 @@ class TestUMPO:  # MARK: TestUMPO
 
         assert isinstance(copied_mpo, tk.models.UMPO)
         _assert_copied_mpo(mpo, copied_mpo, share_tensors)
+
+    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_parameterization(self, n_features, share_tensors):
+        in_dim = torch.randint(low=2, high=12, size=(1,)).item()
+        out_dim = torch.randint(low=2, high=12, size=(1,)).item()
+        bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+
+        mpo = tk.models.UMPO(n_features=n_features,
+                             in_dim=in_dim,
+                             out_dim=out_dim,
+                             bond_dim=bond_dim)
+        mpo = mpo.parameterize(set_param=False, override=True)
+
+        copied_mpo = mpo.copy(share_tensors=share_tensors)
+
+        _assert_initialized_parameterization(copied_mpo.mats_env,
+                                             parameterized=False,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([copied_mpo.uniform_memory],
+                                             parameterized=False)
     
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('override', AUTO_BOOL_CASES)

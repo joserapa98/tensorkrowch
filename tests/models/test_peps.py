@@ -45,6 +45,15 @@ CONV_UPEPS_EXTREME_CASES = [
 ]
 
 
+def _assert_initialized_parameterization(nodes, parameterized, tensor_address=None):
+    expected_type = tk.ParamNode if parameterized else tk.Node
+    for node in nodes:
+        assert isinstance(node, expected_type)
+        assert isinstance(node.tensor, torch.nn.Parameter) == parameterized
+        if tensor_address is not None:
+            assert node.tensor_address() == tensor_address
+
+
 class _PEPSTestMixin:
 
     @staticmethod
@@ -69,6 +78,20 @@ class _PEPSTestMixin:
 
 
 class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        peps = tk.models.PEPS(n_rows=2,
+                              n_cols=3,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=['obc', 'obc'],
+                              parameterized=parameterized)
+
+        nodes = []
+        for lst in peps.grid_env:
+            nodes.extend(lst)
+        _assert_initialized_parameterization(nodes, parameterized)
 
     @pytest.mark.parametrize('boundary_0', BOUNDARY_CASES)
     @pytest.mark.parametrize('boundary_1', BOUNDARY_CASES)
@@ -136,6 +159,22 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
 
 class TestUPEPS:  # MARK: TestUPEPS
 
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        peps = tk.models.UPEPS(n_rows=2,
+                               n_cols=3,
+                               in_dim=5,
+                               bond_dim=[2, 3],
+                               parameterized=parameterized)
+
+        nodes = []
+        for lst in peps.grid_env:
+            nodes.extend(lst)
+        _assert_initialized_parameterization(nodes,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([peps.uniform_memory], parameterized)
+
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('side', SIDE_CASES)
@@ -189,6 +228,19 @@ class TestUPEPS:  # MARK: TestUPEPS
 
 
 class TestConvPEPS(_PEPSTestMixin):  # MARK: TestConvPEPS
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        peps = tk.models.ConvPEPS(in_channels=2,
+                                  bond_dim=[2, 3],
+                                  kernel_size=2,
+                                  boundary=['obc', 'obc'],
+                                  parameterized=parameterized)
+
+        nodes = []
+        for lst in peps.grid_env:
+            nodes.extend(lst)
+        _assert_initialized_parameterization(nodes, parameterized)
 
     @pytest.mark.parametrize('boundary_0', BOUNDARY_CASES)
     @pytest.mark.parametrize('boundary_1', BOUNDARY_CASES)
@@ -252,6 +304,21 @@ class TestConvPEPS(_PEPSTestMixin):  # MARK: TestConvPEPS
 
 
 class TestConvUPEPS:  # MARK: TestConvUPEPS
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        peps = tk.models.ConvUPEPS(in_channels=2,
+                                   bond_dim=[2, 3],
+                                   kernel_size=2,
+                                   parameterized=parameterized)
+
+        nodes = []
+        for lst in peps.grid_env:
+            nodes.extend(lst)
+        _assert_initialized_parameterization(nodes,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([peps.uniform_memory], parameterized)
 
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)

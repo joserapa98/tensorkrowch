@@ -143,6 +143,21 @@ def _assert_parameterization_pattern(nodes, expected_param_flags):
         assert isinstance(node.tensor, torch.nn.Parameter) == is_param
 
 
+def _assert_initialized_parameterization(nodes, parameterized, tensor_address=None):
+    expected_type = tk.ParamNode if parameterized else tk.Node
+    for node in nodes:
+        assert isinstance(node, expected_type)
+        assert isinstance(node.tensor, torch.nn.Parameter) == parameterized
+        if tensor_address is not None:
+            assert node.tensor_address() == tensor_address
+
+
+def _assert_same_node_type(node, copied_node):
+    assert isinstance(copied_node, tk.ParamNode) == isinstance(node, tk.ParamNode)
+    assert isinstance(copied_node.tensor, torch.nn.Parameter) == \
+        isinstance(node.tensor, torch.nn.Parameter)
+
+
 def _assert_nodes_device_and_dtype(nodes, device, dtype):
     for node in nodes:
         assert node.device == device
@@ -417,6 +432,17 @@ class TestMPS:  # MARK: TestMPS
             _assert_obc_boundary_nodes_are_non_parametric(mps)
             _assert_boundary_vector(mps.left_node)
             _assert_boundary_vector(mps.right_node)
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_initialize_parameterized(self, parameterized, boundary):
+        mps = tk.models.MPS(n_features=4,
+                            phys_dim=2,
+                            bond_dim=5,
+                            boundary=boundary,
+                            parameterized=parameterized)
+
+        _assert_initialized_parameterization(mps.mats_env, parameterized)
     
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
@@ -574,6 +600,29 @@ class TestMPS:  # MARK: TestMPS
 
         assert isinstance(copied_mps, tk.models.MPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+
+    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_mixed_parameterization(self,
+                                                   n_features,
+                                                   boundary,
+                                                   share_tensors):
+        phys_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
+        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+        bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+
+        mps = tk.models.MPS(n_features=n_features,
+                            phys_dim=phys_dim,
+                            bond_dim=bond_dim,
+                            boundary=boundary)
+
+        expected_param_flags = _deparameterize_even_nodes(mps)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_parameterization_pattern(copied_mps.mats_env,
+                                         expected_param_flags)
     
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
@@ -1583,6 +1632,18 @@ class TestUMPS:  # MARK: TestUMPS
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * n
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        mps = tk.models.UMPS(n_features=4,
+                             phys_dim=2,
+                             bond_dim=5,
+                             parameterized=parameterized)
+
+        _assert_initialized_parameterization(mps.mats_env,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([mps.uniform_memory], parameterized)
     
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
@@ -1677,6 +1738,25 @@ class TestUMPS:  # MARK: TestUMPS
 
         assert isinstance(copied_mps, tk.models.UMPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+
+    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_parameterization(self, n_features, share_tensors):
+        phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
+        bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+
+        mps = tk.models.UMPS(n_features=n_features,
+                             phys_dim=phys_dim,
+                             bond_dim=bond_dim)
+        mps = mps.parameterize(set_param=False, override=True)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_initialized_parameterization(copied_mps.mats_env,
+                                             parameterized=False,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([copied_mps.uniform_memory],
+                                             parameterized=False)
     
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('override', AUTO_BOOL_CASES)
@@ -2061,6 +2141,18 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         if boundary == 'obc':
             _assert_boundary_vector(mps.left_node)
             _assert_boundary_vector(mps.right_node)
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_initialize_parameterized(self, parameterized, boundary):
+        mps = tk.models.MPSLayer(boundary=boundary,
+                                 n_features=4,
+                                 in_dim=2,
+                                 out_dim=10,
+                                 bond_dim=5,
+                                 parameterized=parameterized)
+
+        _assert_initialized_parameterization(mps.mats_env, parameterized)
     
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
@@ -2193,6 +2285,31 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         assert isinstance(copied_mps, tk.models.MPSLayer)
         _assert_copied_mps(mps, copied_mps, share_tensors)
         assert mps.out_position == copied_mps.out_position
+
+    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_mixed_parameterization(self,
+                                                   n_features,
+                                                   boundary,
+                                                   share_tensors):
+        in_dim = torch.randint(low=2, high=12, size=(n_features - 1,)).tolist()
+        out_dim = torch.randint(low=2, high=12, size=(1,)).item()
+        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+        bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+
+        mps = tk.models.MPSLayer(n_features=n_features,
+                                 in_dim=in_dim,
+                                 out_dim=out_dim,
+                                 bond_dim=bond_dim,
+                                 boundary=boundary)
+
+        expected_param_flags = _deparameterize_even_nodes(mps)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_parameterization_pattern(copied_mps.mats_env,
+                                         expected_param_flags)
     
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
@@ -2283,6 +2400,21 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
         assert mps.out_dim == 5
         assert mps.bond_dim == [2] * n
         assert mps.out_node.tensor is not mps.uniform_memory.tensor
+
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        mps = tk.models.UMPSLayer(n_features=4,
+                                  in_dim=2,
+                                  out_dim=5,
+                                  bond_dim=2,
+                                  parameterized=parameterized)
+
+        _assert_initialized_parameterization(
+            [node for i, node in enumerate(mps.mats_env) if i != mps.out_position],
+            parameterized,
+            tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([mps.uniform_memory], parameterized)
+        _assert_initialized_parameterization([mps.out_node], parameterized)
     
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_unitaries(self, n):
@@ -2351,6 +2483,33 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
         assert isinstance(copied_mps, tk.models.UMPSLayer)
         _assert_copied_mps(mps, copied_mps, share_tensors)
         assert mps.out_position == copied_mps.out_position
+
+    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
+    def test_copy_preserves_parameterization(self, n_features, share_tensors):
+        in_dim = torch.randint(low=2, high=12, size=(1,)).item()
+        out_dim = torch.randint(low=2, high=12, size=(1,)).item()
+        bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+
+        mps = tk.models.UMPSLayer(n_features=n_features,
+                                  in_dim=in_dim,
+                                  out_dim=out_dim,
+                                  bond_dim=bond_dim)
+        mps.uniform_memory = mps.uniform_memory.parameterize(set_param=False)
+        mps._mats_env[mps.out_position] = \
+            mps._mats_env[mps.out_position].parameterize(set_param=True)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_initialized_parameterization(
+            [node for i, node in enumerate(copied_mps.mats_env)
+             if i != copied_mps.out_position],
+            parameterized=False,
+            tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([copied_mps.uniform_memory],
+                                             parameterized=False)
+        _assert_initialized_parameterization([copied_mps.out_node],
+                                             parameterized=True)
     
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('override', AUTO_BOOL_CASES)
@@ -2512,6 +2671,47 @@ class TestConvModels:  # MARK: TestConvModels
         base = n_features + 2 if boundary == 'obc' else n_features
         return base + output_edge
 
+    @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
+    def test_initialize_parameterized(self, parameterized):
+        conv_mps = tk.models.ConvMPS(in_channels=5,
+                                     bond_dim=2,
+                                     kernel_size=(2, 2),
+                                     boundary='obc',
+                                     parameterized=parameterized)
+        _assert_initialized_parameterization(conv_mps.mats_env, parameterized)
+
+        conv_umps = tk.models.ConvUMPS(in_channels=5,
+                                       bond_dim=2,
+                                       kernel_size=(2, 2),
+                                       parameterized=parameterized)
+        _assert_initialized_parameterization(conv_umps.mats_env,
+                                             parameterized,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([conv_umps.uniform_memory], parameterized)
+
+        conv_mps_layer = tk.models.ConvMPSLayer(in_channels=5,
+                                                out_channels=10,
+                                                bond_dim=2,
+                                                kernel_size=(2, 2),
+                                                boundary='obc',
+                                                parameterized=parameterized)
+        _assert_initialized_parameterization(conv_mps_layer.mats_env, parameterized)
+
+        conv_umps_layer = tk.models.ConvUMPSLayer(in_channels=5,
+                                                  out_channels=10,
+                                                  bond_dim=2,
+                                                  kernel_size=(2, 2),
+                                                  parameterized=parameterized)
+        _assert_initialized_parameterization(
+            [node for i, node in enumerate(conv_umps_layer.mats_env)
+             if i != conv_umps_layer.out_position],
+            parameterized,
+            tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([conv_umps_layer.uniform_memory],
+                                             parameterized)
+        _assert_initialized_parameterization([conv_umps_layer.out_node],
+                                             parameterized)
+
     @pytest.mark.parametrize('height', SMALL_SPATIAL_CASES)
     @pytest.mark.parametrize('width', SMALL_SPATIAL_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
@@ -2663,6 +2863,29 @@ class TestConvModels:  # MARK: TestConvModels
         assert isinstance(copied_mps, tk.models.ConvMPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
 
+    @pytest.mark.parametrize('height,width,boundary,share_tensors',
+                             COPY_CONV_MPS_CASES)
+    def test_copy_conv_mps_preserves_mixed_parameterization(self,
+                                                            height,
+                                                            width,
+                                                            boundary,
+                                                            share_tensors):
+        phys_dim = torch.randint(low=2, high=8, size=(height * width,)).tolist()
+        bond_dim = torch.randint(low=2, high=6, size=(height * width,)).tolist()
+        bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+
+        mps = tk.models.ConvMPS(in_channels=phys_dim,
+                                bond_dim=bond_dim,
+                                kernel_size=(height, width),
+                                boundary=boundary)
+
+        expected_param_flags = _deparameterize_even_nodes(mps)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_parameterization_pattern(copied_mps.mats_env,
+                                         expected_param_flags)
+
     @pytest.mark.parametrize('height,width', [(1, 1), (2, 2)])
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy_conv_mps_preserves_boundary_dtype(self,
@@ -2694,6 +2917,27 @@ class TestConvModels:  # MARK: TestConvModels
         assert isinstance(copied_mps, tk.models.ConvUMPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
 
+    @pytest.mark.parametrize('height,width,share_tensors', COPY_CONV_UMPS_CASES)
+    def test_copy_conv_umps_preserves_parameterization(self,
+                                                       height,
+                                                       width,
+                                                       share_tensors):
+        phys_dim = torch.randint(low=2, high=8, size=(1,)).item()
+        bond_dim = torch.randint(low=2, high=6, size=(1,)).item()
+
+        mps = tk.models.ConvUMPS(in_channels=phys_dim,
+                                 bond_dim=bond_dim,
+                                 kernel_size=(height, width))
+        mps = mps.parameterize(set_param=False, override=True)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_initialized_parameterization(copied_mps.mats_env,
+                                             parameterized=False,
+                                             tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([copied_mps.uniform_memory],
+                                             parameterized=False)
+
     @pytest.mark.parametrize('height,width,boundary,share_tensors',
                              COPY_CONV_MPS_CASES)
     def test_copy_conv_mps_layer(self, height, width, boundary, share_tensors):
@@ -2711,6 +2955,31 @@ class TestConvModels:  # MARK: TestConvModels
         copied_mps = mps.copy(share_tensors=share_tensors)
         assert isinstance(copied_mps, tk.models.ConvMPSLayer)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+
+    @pytest.mark.parametrize('height,width,boundary,share_tensors',
+                             COPY_CONV_MPS_CASES)
+    def test_copy_conv_mps_layer_preserves_mixed_parameterization(self,
+                                                                  height,
+                                                                  width,
+                                                                  boundary,
+                                                                  share_tensors):
+        phys_dim = torch.randint(low=2, high=8, size=(height * width,)).tolist()
+        bond_dim = torch.randint(low=2, high=6,
+                                 size=(height * width + 1,)).tolist()
+        bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+
+        mps = tk.models.ConvMPSLayer(in_channels=phys_dim,
+                                     out_channels=10,
+                                     bond_dim=bond_dim,
+                                     kernel_size=(height, width),
+                                     boundary=boundary)
+
+        expected_param_flags = _deparameterize_even_nodes(mps)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_parameterization_pattern(copied_mps.mats_env,
+                                         expected_param_flags)
 
     @pytest.mark.parametrize('height,width', [(1, 1), (2, 2)])
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
@@ -2744,6 +3013,34 @@ class TestConvModels:  # MARK: TestConvModels
         copied_mps = mps.copy(share_tensors=share_tensors)
         assert isinstance(copied_mps, tk.models.ConvUMPSLayer)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+
+    @pytest.mark.parametrize('height,width,share_tensors', COPY_CONV_UMPS_CASES)
+    def test_copy_conv_umps_layer_preserves_parameterization(self,
+                                                             height,
+                                                             width,
+                                                             share_tensors):
+        phys_dim = torch.randint(low=2, high=8, size=(1,)).item()
+        bond_dim = torch.randint(low=2, high=6, size=(1,)).item()
+
+        mps = tk.models.ConvUMPSLayer(in_channels=phys_dim,
+                                      out_channels=10,
+                                      bond_dim=bond_dim,
+                                      kernel_size=(height, width))
+        mps.uniform_memory = mps.uniform_memory.parameterize(set_param=False)
+        mps._mats_env[mps.out_position] = \
+            mps._mats_env[mps.out_position].parameterize(set_param=True)
+
+        copied_mps = mps.copy(share_tensors=share_tensors)
+
+        _assert_initialized_parameterization(
+            [node for i, node in enumerate(copied_mps.mats_env)
+             if i != copied_mps.out_position],
+            parameterized=False,
+            tensor_address='virtual_uniform')
+        _assert_initialized_parameterization([copied_mps.uniform_memory],
+                                             parameterized=False)
+        _assert_initialized_parameterization([copied_mps.out_node],
+                                             parameterized=True)
         
 
 

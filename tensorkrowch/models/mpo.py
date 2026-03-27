@@ -79,6 +79,9 @@ class MPO(TensorNetwork):  # MARK: MPO
     init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether MPO nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -122,6 +125,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -259,6 +263,9 @@ class MPO(TensorNetwork):  # MARK: MPO
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         self._n_batches = n_batches
+
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
         
         # Properties
         self._left_node = None
@@ -266,7 +273,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         self._mats_env = []
 
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize(tensors=tensors,
                         init_method=init_method,
                         device=device,
@@ -309,7 +316,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         if there are already data nodes in the network.
         """
         return self._n_batches
-    
+
     @n_batches.setter
     def n_batches(self, n_batches: int) -> None:
         if n_batches != self._n_batches:
@@ -335,7 +342,7 @@ class MPO(TensorNetwork):  # MARK: MPO
     def mats_env(self) -> List[AbstractNode]:
         """Returns the list of nodes in ``mats_env``."""
         return self._mats_env
-    
+
     @property
     def tensors(self) -> List[torch.Tensor]:
         """Returns the list of MPO tensors."""
@@ -352,7 +359,7 @@ class MPO(TensorNetwork):  # MARK: MPO
     # -------
     # Methods
     # -------
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPO."""
         if self._leaf_nodes:
             raise ValueError('Cannot create MPO nodes if the MPO already has '
@@ -375,14 +382,16 @@ class MPO(TensorNetwork):  # MARK: MPO
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         
+        node_cls = ParamNode if parameterized else Node
+        
         for i in range(self._n_features):
-            node = ParamNode(shape=(aux_bond_dim[i - 1],
-                                    self._in_dim[i],
-                                    aux_bond_dim[i],
-                                    self._out_dim[i]),
-                             axes_names=('left', 'input', 'right', 'output'),
-                             name=f'mats_env_node_({i})',
-                             network=self)
+            node = node_cls(shape=(aux_bond_dim[i - 1],
+                                   self._in_dim[i],
+                                   aux_bond_dim[i],
+                                   self._out_dim[i]),
+                            axes_names=('left', 'input', 'right', 'output'),
+                            name=f'mats_env_node_({i})',
+                            network=self)
             self._mats_env.append(node)
 
             if i != 0:
@@ -537,6 +546,11 @@ class MPO(TensorNetwork):  # MARK: MPO
                       device=None,
                       dtype=None)
         new_mpo.name = self.name + '_copy'
+        
+        for i in range(self._n_features):
+            new_mpo._mats_env[i] = new_mpo._mats_env[i].parameterize(
+                set_param=isinstance(self._mats_env[i], ParamNode))
+        
         if share_tensors:
             for new_node, node in zip(new_mpo._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
@@ -1065,6 +1079,9 @@ class UMPO(MPO):  # MARK: UMPO
     init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether UMPO nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -1096,6 +1113,7 @@ class UMPO(MPO):  # MARK: UMPO
                  tensor: Optional[torch.Tensor] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -1141,24 +1159,26 @@ class UMPO(MPO):  # MARK: UMPO
                          tensors=tensors,
                          n_batches=n_batches,
                          init_method=init_method,
+                         parameterized=parameterized,
                          device=device,
                          dtype=dtype,
                          **kwargs)
         self.name = 'umpo'
     
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPO."""
-        super()._make_nodes()
+        super()._make_nodes(parameterized)
         
         # Virtual node
-        uniform_memory = ParamNode(shape=(self._bond_dim[0],
-                                          self._in_dim[0],
-                                          self._bond_dim[0],
-                                          self._out_dim[0]),
-                                   axes_names=('left', 'input', 'right', 'output'),
-                                   name='virtual_uniform',
-                                   network=self,
-                                   virtual=True)
+        node_cls = ParamNode if parameterized else Node
+        uniform_memory = node_cls(shape=(self._bond_dim[0],
+                                         self._in_dim[0],
+                                         self._bond_dim[0],
+                                         self._out_dim[0]),
+                                  axes_names=('left', 'input', 'right', 'output'),
+                                  name='virtual_uniform',
+                                  network=self,
+                                  virtual=True)
         self.uniform_memory = uniform_memory
         
         for node in self._mats_env:
@@ -1230,6 +1250,7 @@ class UMPO(MPO):  # MARK: UMPO
                        tensor=None,
                        n_batches=self._n_batches,
                        init_method=None,
+                       parameterized=isinstance(self.uniform_memory, ParamNode),
                        device=None,
                        dtype=None)
         new_mpo.name = self.name + '_copy'

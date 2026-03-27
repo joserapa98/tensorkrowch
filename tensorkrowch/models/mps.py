@@ -109,6 +109,9 @@ class MPS(TensorNetwork):  # MARK: MPS
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether MPS nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -171,6 +174,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                  out_features: Optional[Sequence[int]] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -355,6 +359,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         self._n_batches = n_batches
+
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
         
         # Properties
         self._left_node = None
@@ -362,7 +369,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         self._mats_env = []
 
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize(tensors=tensors,
                         init_method=init_method,
                         device=device,
@@ -400,7 +407,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         if there are already data nodes in the network.
         """
         return self._n_batches
-    
+
     @n_batches.setter
     def n_batches(self, n_batches: int) -> None:
         if n_batches != self._n_batches:
@@ -533,11 +540,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                                            mps_tensors[-1],
                                            self._right_node.tensor)
         return mps_tensors
-    
+
     # -------
     # Methods
     # -------
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPS."""
         if self._leaf_nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has '
@@ -560,13 +567,15 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         
+        node_cls = ParamNode if parameterized else Node
+
         for i in range(self._n_features):
-            node = ParamNode(shape=(aux_bond_dim[i - 1],
-                                    self._phys_dim[i],
-                                    aux_bond_dim[i]),
-                             axes_names=('left', 'input', 'right'),
-                             name=f'mats_env_node_({i})',
-                             network=self)
+            node = node_cls(shape=(aux_bond_dim[i - 1],
+                                   self._phys_dim[i],
+                                   aux_bond_dim[i]),
+                            axes_names=('left', 'input', 'right'),
+                            name=f'mats_env_node_({i})',
+                            network=self)
             self._mats_env.append(node)
 
             if i != 0:
@@ -834,6 +843,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                       device=None,
                       dtype=None)
         new_mps.name = self.name + '_copy'
+        
+        for i in range(self._n_features):
+            new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
+                set_param=isinstance(self._mats_env[i], ParamNode))
+        
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
@@ -2181,6 +2195,9 @@ class UMPS(MPS):  # MARK: UMPS
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether UMPS nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -2212,6 +2229,7 @@ class UMPS(MPS):  # MARK: UMPS
                  out_features: Optional[Sequence[int]] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -2254,23 +2272,25 @@ class UMPS(MPS):  # MARK: UMPS
                          out_features=out_features,
                          n_batches=n_batches,
                          init_method=init_method,
+                         parameterized=parameterized,
                          device=device,
                          dtype=dtype,
                          **kwargs)
         self.name = 'umps'
 
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPS."""
-        super()._make_nodes()
+        super()._make_nodes(parameterized)
         
         # Virtual node
-        uniform_memory = ParamNode(shape=(self._bond_dim[0],
-                                          self._phys_dim[0],
-                                          self._bond_dim[0]),
-                                   axes_names=('left', 'input', 'right'),
-                                   name='virtual_uniform',
-                                   network=self,
-                                   virtual=True)
+        node_cls = ParamNode if parameterized else Node
+        uniform_memory = node_cls(shape=(self._bond_dim[0],
+                                         self._phys_dim[0],
+                                         self._bond_dim[0]),
+                                  axes_names=('left', 'input', 'right'),
+                                  name='virtual_uniform',
+                                  network=self,
+                                  virtual=True)
         self.uniform_memory = uniform_memory
         
         for node in self._mats_env:
@@ -2416,6 +2436,7 @@ class UMPS(MPS):  # MARK: UMPS
                        out_features=self._out_features,
                        n_batches=self._n_batches,
                        init_method=None,
+                       parameterized=isinstance(self.uniform_memory, ParamNode),
                        device=None,
                        dtype=None)
         new_mps.name = self.name + '_copy'
@@ -2561,6 +2582,9 @@ class MPSLayer(MPS):  # MARK: MPSLayer
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether MPSLayer nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -2605,6 +2629,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -2667,6 +2692,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                          out_features=[out_position],
                          n_batches=n_batches,
                          init_method=init_method,
+                         parameterized=parameterized,
                          device=device,
                          dtype=dtype,
                          **kwargs)
@@ -3019,6 +3045,11 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                            device=None,
                            dtype=None)
         new_mps.name = self.name + '_copy'
+
+        for i in range(self._n_features):
+            new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
+                set_param=isinstance(self._mats_env[i], ParamNode))
+
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
@@ -3083,6 +3114,9 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether UMPSLayer nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -3116,6 +3150,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -3192,6 +3227,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                          out_features=[out_position],
                          n_batches=n_batches,
                          init_method=init_method,
+                         parameterized=parameterized,
                          device=device,
                          dtype=dtype,
                          **kwargs)
@@ -3223,18 +3259,19 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         """Returns the output node."""
         return self._mats_env[self._out_position]
 
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPS."""
-        super()._make_nodes()
+        super()._make_nodes(parameterized)
         
         # Virtual node
-        uniform_memory = ParamNode(shape=(self._bond_dim[0],
-                                          self._phys_dim[0],
-                                          self._bond_dim[0]),
-                                   axes_names=('left', 'input', 'right'),
-                                   name='virtual_uniform',
-                                   network=self,
-                                   virtual=True)
+        node_cls = ParamNode if parameterized else Node
+        uniform_memory = node_cls(shape=(self._bond_dim[0],
+                                         self._phys_dim[0],
+                                         self._bond_dim[0]),
+                                  axes_names=('left', 'input', 'right'),
+                                  name='virtual_uniform',
+                                  network=self,
+                                  virtual=True)
         self.uniform_memory = uniform_memory
         
         in_nodes = self._mats_env[:self._out_position] + \
@@ -3402,9 +3439,15 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                             tensor=None,
                             n_batches=self._n_batches,
                             init_method=None,
+                            parameterized=isinstance(self.uniform_memory, ParamNode),
                             device=None,
                             dtype=None)
         new_mps.name = self.name + '_copy'
+        
+        new_mps._mats_env[self._out_position] = \
+            new_mps._mats_env[self._out_position].parameterize(
+                set_param=isinstance(self.out_node, ParamNode))
+        
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor
             new_mps.out_node.tensor = self.out_node.tensor
@@ -3644,6 +3687,9 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~MPS.initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether ConvMPS nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -3673,6 +3719,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                  boundary: Text = 'obc',
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs):
@@ -3691,6 +3738,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                      tensors=tensors,
                      n_batches=2,
                      init_method=init_method,
+                     parameterized=parameterized,
                      device=device,
                      dtype=dtype,
                      **kwargs)
@@ -3764,6 +3812,11 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                           device=None,
                           dtype=None)
         new_mps.name = self.name + '_copy'
+        
+        for i in range(self._n_features):
+            new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
+                set_param=isinstance(self._mats_env[i], ParamNode))
+        
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
@@ -3818,6 +3871,9 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~UMPS.initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether ConvUMPS nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -3850,6 +3906,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                  dilation: int = 1,
                  tensor: Optional[torch.Tensor] = None,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs):
@@ -3867,6 +3924,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                       tensor=tensor,
                       n_batches=2,
                       init_method=init_method,
+                      parameterized=parameterized,
                       device=device,
                       dtype=dtype,
                       **kwargs)
@@ -3936,6 +3994,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                            dilation=self.dilation,
                            tensor=None,
                            init_method=None,
+                           parameterized=isinstance(self.uniform_memory, ParamNode),
                            device=None,
                            dtype=None)
         new_mps.name = self.name + '_copy'
@@ -4003,6 +4062,9 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~MPSLayer.initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether ConvMPSLayer nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -4035,6 +4097,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                  boundary: Text = 'obc',
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs):
@@ -4056,6 +4119,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                           tensors=tensors,
                           n_batches=2,
                           init_method=init_method,
+                          parameterized=parameterized,
                           device=device,
                           dtype=dtype,
                           **kwargs)
@@ -4136,6 +4200,11 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                                device=None,
                                dtype=None)
         new_mps.name = self.name + '_copy'
+
+        for i in range(self._n_features):
+            new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
+                set_param=isinstance(self._mats_env[i], ParamNode))
+        
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
@@ -4199,6 +4268,9 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
     init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
         Initialization method. Check :meth:`~UMPSLayer.initialize` for a more
         detailed explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether ConvUMPSLayer nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -4234,6 +4306,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                  out_position: Optional[int] = None,
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs):
@@ -4254,6 +4327,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                            tensors=tensors,
                            n_batches=2,
                            init_method=init_method,
+                           parameterized=parameterized,
                            device=device,
                            dtype=dtype,
                            **kwargs)
@@ -4335,9 +4409,15 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                                 dilation=self.dilation,
                                 tensor=None,
                                 init_method=None,
+                                parameterized=isinstance(self.uniform_memory, ParamNode),
                                 device=None,
                                 dtype=None)
         new_mps.name = self.name + '_copy'
+        
+        new_mps._mats_env[self._out_position] = \
+            new_mps._mats_env[self._out_position].parameterize(
+                set_param=isinstance(self.out_node, ParamNode))
+        
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor
             new_mps.out_node.tensor = self.out_node.tensor

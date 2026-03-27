@@ -17,7 +17,7 @@ LEVEL_CASES = [1, 2, 3, 5]
 BASE_CASES = [2, 4, 5]
 
 
-class TestEmbeddings:
+class TestEmbeddings:  # MARK: TestEmbeddings
 
     @pytest.mark.parametrize('size', SIZE_CASES)
     @pytest.mark.parametrize('dim', DIM_CASES)

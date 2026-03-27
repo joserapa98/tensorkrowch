@@ -28,7 +28,7 @@ import tensorkrowch as tk
 INIT_METHOD_CASES = ["zeros", "ones", "copy", "rand", "randn"]
 
 
-class TestAxis:
+class TestAxis:  # MARK: TestAxis
 
     def test_same_name(self):
         node = tk.Node(shape=(3, 3),
@@ -110,7 +110,7 @@ class TestAxis:
         assert node.get_axis('new_batch').is_batch()
 
 
-class TestInitNode:
+class TestInitNode:  # MARK: TestInitNode
 
     def test_init_node_empty(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -263,7 +263,7 @@ class TestInitNode:
                            tensor=torch.randn(2, 5, 2))
 
 
-class TestInitParamNode:
+class TestInitParamNode:  # MARK: TestInitParamNode
 
     def test_init_paramnode_empty(self):
         node = tk.ParamNode(shape=(2, 5, 2),
@@ -358,7 +358,7 @@ class TestInitParamNode:
                                 tensor=torch.randn(2, 5, 2))
 
 
-class TestNodeName:
+class TestNodeName:  # MARK: TestNodeName
 
     @pytest.fixture
     def setup(self):
@@ -463,7 +463,7 @@ class TestNodeName:
         assert node3.name == 'node3'
 
 
-class TestSetTensorNode:
+class TestSetTensorNode:  # MARK: TestSetTensorNode
 
     @pytest.fixture
     def setup(self):
@@ -788,7 +788,7 @@ class TestSetTensorNode:
         assert not torch.equal(node1.tensor, node2.tensor)
 
 
-class TestSetTensorParamNode:
+class TestSetTensorParamNode:  # MARK: TestSetTensorParamNode
 
     @pytest.fixture
     def setup(self):
@@ -1137,7 +1137,7 @@ class TestSetTensorParamNode:
         assert node2.tensor_address() == None  #node1's address
 
 
-class TestMoveToNetwork:
+class TestMoveToNetwork:  # MARK: TestMoveToNetwork
 
     def test_change_network(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
@@ -1269,7 +1269,7 @@ class TestMoveToNetwork:
         assert torch.equal(node1.tensor, node2.tensor)
 
 
-class TestTensorTo:
+class TestTensorTo:  # MARK: TestTensorTo
 
     def test_node_to_device_and_type(self):
         """
@@ -1346,7 +1346,7 @@ class TestTensorTo:
         assert node3.device.type == device.type
 
 
-class TestChangeType:
+class TestChangeType:  # MARK: TestChangeType
     
     def test_change_type_node(self):
         net = tk.TensorNetwork()
@@ -1448,7 +1448,7 @@ class TestChangeType:
             node3.change_type(leaf=True)
 
 
-class TestMeasures:
+class TestMeasures:  # MARK: TestMeasures
 
     def test_sum(self):
         tensor = torch.randn(2, 3)
@@ -1506,7 +1506,7 @@ class TestMeasures:
         assert node.numel() == tensor.numel()
 
 
-class TestConnect:
+class TestConnect:  # MARK: TestConnect
 
     def test_connect_edges(self):
         node1 = tk.Node(shape=(2, 5, 2),
@@ -1925,7 +1925,7 @@ class TestConnect:
         assert node4['input'] == node3['input']
 
 
-class TestChangeSizeEdge:
+class TestChangeSizeEdge:  # MARK: TestChangeSizeEdge
 
     def test_change_size_dangling(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -2003,7 +2003,7 @@ class TestChangeSizeEdge:
         assert not torch.allclose(old_tensors[1], new_tensors[1])
 
 
-class TestParameterize:
+class TestParameterize:  # MARK: TestParameterize
 
     def test_parameterize_node(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
@@ -2106,7 +2106,7 @@ class TestParameterize:
         assert paramnode3[2] != node2[2]
 
 
-class TestCopy:
+class TestCopy:  # MARK: TestCopy
 
     def test_copy_edge(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
@@ -2253,7 +2253,7 @@ class TestCopy:
         assert copy.name == 'node_0_copy'
 
 
-class TestStack:
+class TestStack:  # MARK: TestStack
 
     def test_stack_nodes_in_stacknode(self):
         net = tk.TensorNetwork()
@@ -2526,7 +2526,7 @@ class TestStack:
             stack.get_axis('stack').name = 'other_name'
 
 
-class TestTensorNetwork:
+class TestTensorNetwork:  # MARK: TestTensorNetwork
 
     def test_add_remove(self):
         net = tk.TensorNetwork()

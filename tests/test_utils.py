@@ -10,7 +10,7 @@ import torch
 import tensorkrowch as tk
 
 
-class TestTruncatedSVD:
+class TestTruncatedSVD:  # MARK: TestTruncatedSVD
 
     @pytest.fixture
     def diag_tensor(self):

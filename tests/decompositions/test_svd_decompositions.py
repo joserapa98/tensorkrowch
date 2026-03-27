@@ -50,7 +50,7 @@ def _contract_mpo(mpo):
     return result.tensor
 
 
-class TestSVDDecompositions:
+class TestSVDDecompositions:  # MARK: TestSVDDecompositions
 
     @pytest.mark.parametrize('renormalize', [True, False],
                              ids=['renorm', 'no-renorm'])

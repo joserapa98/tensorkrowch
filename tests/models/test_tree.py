@@ -106,7 +106,7 @@ class _TreeTestMixin:
                 )
 
 
-class TestTree(_TreeTestMixin):
+class TestTree(_TreeTestMixin):  # MARK: TestTree
 
     @pytest.mark.parametrize(
         '_,sites_per_layer,bond_dim,example_shape,data_shape,expected_shape,'
@@ -134,7 +134,7 @@ class TestTree(_TreeTestMixin):
                             canonicalize=True)
 
 
-class TestUTree:
+class TestUTree:  # MARK: TestUTree
 
     @staticmethod
     def _run_utree_case(tree, example, data, auto_stack, auto_unbind, inline,
@@ -174,7 +174,7 @@ class TestUTree:
                              expected_data_nodes)
 
 
-class TestConvTree(_TreeTestMixin):
+class TestConvTree(_TreeTestMixin):  # MARK: TestConvTree
 
     @pytest.mark.parametrize(
         '_,sites_per_layer,bond_dim,kernel_size,expected_shape,'
@@ -203,7 +203,7 @@ class TestConvTree(_TreeTestMixin):
                             canonicalize=True)
 
 
-class TestConvUTree:
+class TestConvUTree:  # MARK: TestConvUTree
 
     @staticmethod
     def _run_conv_utree_case(tree, example, data, auto_stack, auto_unbind,

@@ -68,7 +68,7 @@ class _PEPSTestMixin:
         return expected_virtual_nodes
 
 
-class TestPEPS(_PEPSTestMixin):
+class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
 
     @pytest.mark.parametrize('boundary_0', BOUNDARY_CASES)
     @pytest.mark.parametrize('boundary_1', BOUNDARY_CASES)
@@ -134,7 +134,7 @@ class TestPEPS(_PEPSTestMixin):
         )
 
 
-class TestUPEPS:
+class TestUPEPS:  # MARK: TestUPEPS
 
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
@@ -188,7 +188,7 @@ class TestUPEPS:
         assert len(peps.virtual_nodes) == 2
 
 
-class TestConvPEPS(_PEPSTestMixin):
+class TestConvPEPS(_PEPSTestMixin):  # MARK: TestConvPEPS
 
     @pytest.mark.parametrize('boundary_0', BOUNDARY_CASES)
     @pytest.mark.parametrize('boundary_1', BOUNDARY_CASES)
@@ -251,7 +251,7 @@ class TestConvPEPS(_PEPSTestMixin):
         )
 
 
-class TestConvUPEPS:
+class TestConvUPEPS:  # MARK: TestConvUPEPS
 
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)

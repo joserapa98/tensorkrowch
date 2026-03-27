@@ -28,6 +28,7 @@ from typing import Sequence
 
 
 AUTO_BOOL_CASES = [True, False]
+# Centralize the stack/unbind runtime combinations reused across the suite.
 STACK_AUTO_CASES = [
     (True, False),
     (False, False),
@@ -36,7 +37,7 @@ STACK_AUTO_CASES = [
 ]
 
 
-class TestPermute:
+class TestPermute:  # MARK: TestPermute
 
     def test_permute_node(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -168,7 +169,7 @@ class TestPermute:
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
 
-class TestTensorOps:
+class TestTensorOps:  # MARK: TestTensorOps
 
     @pytest.fixture
     def setup(self):
@@ -981,7 +982,7 @@ def _split_cutoff_low_rank_tensor():
     return tensor.expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
 
 
-class TestSplitSVD:
+class TestSplitSVD:  # MARK: TestSplitSVD
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -1450,7 +1451,7 @@ class TestSplitSVD:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSplitSVDR:
+class TestSplitSVDR:  # MARK: TestSplitSVDR
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -1989,7 +1990,7 @@ class TestSplitSVDR:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSplitQR:
+class TestSplitQR:  # MARK: TestSplitQR
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -2296,7 +2297,7 @@ class TestSplitQR:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSplitRQ:
+class TestSplitRQ:  # MARK: TestSplitRQ
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -2603,7 +2604,7 @@ class TestSplitRQ:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSVD:
+class TestSVD:  # MARK: TestSVD
 
     @pytest.fixture
     def setup(self):
@@ -2952,7 +2953,7 @@ class TestSVD:
             new_node1, new_node2 = node1['right'].svd(rank=2)
 
 
-class TestSVDR:
+class TestSVDR:  # MARK: TestSVDR
 
     @pytest.fixture
     def setup(self):
@@ -3302,7 +3303,7 @@ class TestSVDR:
             new_node1, new_node2 = node1['right'].svdr(rank=2)
 
 
-class TestQR:
+class TestQR:  # MARK: TestQR
 
     @pytest.fixture
     def setup(self):
@@ -3578,7 +3579,7 @@ class TestQR:
             new_node1, new_node2 = node1['right'].qr()
 
 
-class TestRQ:
+class TestRQ:  # MARK: TestRQ
 
     @pytest.fixture
     def setup(self):
@@ -3854,7 +3855,7 @@ class TestRQ:
             new_node1, new_node2 = node1['right'].rq()
 
 
-class TestContractEdge:
+class TestContractEdge:  # MARK: TestContractEdge
     
     def test_contract_edge(self):
         net = tk.TensorNetwork()
@@ -4060,7 +4061,7 @@ class TestContractEdge:
         assert node1.successors == dict()
 
 
-class TestContractBetween:
+class TestContractBetween:  # MARK: TestContractBetween
 
     def test_contract_nodes(self):
         net = tk.TensorNetwork()
@@ -4721,7 +4722,7 @@ class TestContractBetween:
             node2 = node1.contract_between_(node1)
 
 
-class TestStackUnbind:
+class TestStackUnbind:  # MARK: TestStackUnbind
 
     def _assert_stack_info(self, stack, expected_cls, address, node_ref):
         # Every stack/unbind test checks the same metadata contract.
@@ -5374,7 +5375,7 @@ class TestStackUnbind:
             assert aux_node.shape == (25, 35, 2)
 
 
-class TestEinsum:
+class TestEinsum:  # MARK: TestEinsum
 
     @pytest.fixture
     def setup(self):
@@ -5617,7 +5618,7 @@ class TestEinsum:
         assert torch.allclose(node1.tensor, node2.tensor, atol=1e-7, rtol=1e-3)
 
 
-class TestTNModels:
+class TestTNModels:  # MARK: TestTNModels
 
     @pytest.fixture
     def setup_mps(self):

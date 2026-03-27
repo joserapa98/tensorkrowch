@@ -1771,6 +1771,22 @@ class MPS(TensorNetwork):  # MARK: MPS
         the rank. That is, the current bond dimensions will be the upper bound
         for the possibly new bond dimensions given by the truncation criterions.
         
+        Notes
+        -----
+        Canonicalization relies on repeated SVD/QR decompositions of
+        intermediate tensors. If the MPS becomes numerically unstable, for
+        instance because tensor norms explode during the sweep, those
+        intermediate tensors may contain non-finite values such as ``NaN`` or
+        ``Inf``. In that case, the underlying SVD routine may raise
+        :class:`torch.linalg.LinAlgError`.
+
+        In practice, using ``renormalize=True`` is often enough to mitigate
+        these instabilities. When working close to numerical limits, it is also
+        advisable to save the current tensors before calling
+        :meth:`canonicalize`. If a decomposition fails, a robust recovery
+        strategy is to instantiate a new MPS from the original tensors rather
+        than continuing from the partially updated state.
+        
         Parameters
         ----------
         oc : int

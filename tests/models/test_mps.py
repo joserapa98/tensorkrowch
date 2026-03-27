@@ -1355,6 +1355,28 @@ class TestMPS:  # MARK: TestMPS
 
         assert all(mps.bond_dim[i] <= bond_dim[i] for i in range(len(bond_dim)))
         self._finalize_mps_canonicalize(mps, n_features)
+
+    def test_canonicalize_linalg_error_breaks_tensors_access(self):
+        # Non-finite values make ``torch.linalg.svd`` fail, which currently
+        # leaves OBC boundary tensors unusable for ``mps.tensors`` afterwards.
+        mps = tk.models.MPS(n_features=3,
+                            phys_dim=2,
+                            bond_dim=4,
+                            boundary='obc',
+                            in_features=[])
+        self._trace_mps_for_canonicalize(mps, 3, 'default')
+
+        with torch.no_grad():
+            mps.mats_env[1].tensor[0, 0, 0] = float('nan')
+
+        with pytest.raises(torch.linalg.LinAlgError):
+            mps.canonicalize(mode='svd')
+        
+        # This currently breaks because canonicalize contracts and splits nodes
+        # in-place. If the SVD fails after an in-place contraction, the original
+        # tensors are no longer fully recoverable from the current state.
+        with pytest.raises(TypeError):
+            _ = mps.tensors
     
     @pytest.mark.parametrize('runtime', UNIVOCAL_RUNTIME_CASES)
     @pytest.mark.parametrize('n_features', UNIVOCAL_N_FEATURES_CASES)

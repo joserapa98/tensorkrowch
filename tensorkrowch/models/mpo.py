@@ -744,7 +744,30 @@ class MPO(TensorNetwork):  # MARK: MPO
         return self._contract_envs_inline(mats_env=aux_nodes,
                                           renormalize=renormalize,
                                           mps=mps)
-    
+
+    def _zipup_contraction(self,
+                           nodes_envs: List[List[AbstractNode]],
+                           renormalize: bool = False) -> Node:
+        """Contracts MPS-MPO via the zip-up method."""
+        for i, node_tuple in enumerate(zip(*nodes_envs)):
+            if i == 0:
+                result_node = node_tuple[0]
+                for node in node_tuple[1:]:
+                    result_node @= node
+            else:
+                for node in node_tuple:
+                    result_node @= node
+                    
+            if renormalize:
+                right_axes = []
+                for ax_name in result_node.axes_names:
+                    if 'right' in ax_name:
+                        right_axes.append(ax_name)
+                if right_axes:
+                    result_node = result_node.renormalize(axis=right_axes)
+        
+        return result_node
+
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
@@ -816,26 +839,42 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError(
                     '`mps` should have as many features as the MPO')
             
-            # Move MPSData ndoes to self
+            # Move MPSData nodes to self
             mps._mats_env[0].move_to_network(self)
             
             # Connect mps nodes to mpo nodes
             for mps_node, mpo_node in zip(mps._mats_env, self._mats_env):
                 mps_node['feature'] ^ mpo_node['input']
-                
-        mats_env = self._input_contraction(
-            nodes_env=self._mats_env,
-            input_nodes=[node.neighbours('input') for node in self._mats_env],
-            inline_input=inline_input)
+            
+            mpo_nodes = self._mats_env[:]
+            if self._boundary == 'obc':
+                mpo_nodes[0] = self._left_node @ mpo_nodes[0]
+                mpo_nodes[-1] = mpo_nodes[-1] @ self._right_node
+            
+            mps_nodes = mps._mats_env[:]
+            if mps._boundary == 'obc':
+                mps_nodes[0] = mps._left_node @ mps_nodes[0]
+                mps_nodes[-1] = mps_nodes[-1] @ mps._right_node
+            
+            # Contract nodes (MPS-MPO) via zip-up
+            nodes_envs = [mps_nodes, mpo_nodes]
+            result = self._zipup_contraction(nodes_envs=nodes_envs,
+                                             renormalize=renormalize)
         
-        if inline_mats:
-            result = self._contract_envs_inline(mats_env=mats_env,
-                                                renormalize=renormalize,
-                                                mps=mps)
         else:
-            result = self._pairwise_contraction(mats_env=mats_env,
-                                                renormalize=renormalize,
-                                                mps=mps)
+            mats_env = self._input_contraction(
+                nodes_env=self._mats_env,
+                input_nodes=[node.neighbours('input') for node in self._mats_env],
+                inline_input=inline_input)
+            
+            if inline_mats:
+                result = self._contract_envs_inline(mats_env=mats_env,
+                                                    renormalize=renormalize,
+                                                    mps=mps)
+            else:
+                result = self._pairwise_contraction(mats_env=mats_env,
+                                                    renormalize=renormalize,
+                                                    mps=mps)
             
         # Contract periodic edge
         if result.is_connected_to(result):

@@ -1055,6 +1055,29 @@ class MPS(TensorNetwork):  # MARK: MPS
         return self._contract_envs_inline(mats_env=aux_nodes,
                                           renormalize=renormalize)
 
+    def _zipup_contraction(self,
+                           nodes_envs: List[List[AbstractNode]],
+                           renormalize: bool = False) -> Node:
+        """Contracts two MPS or MPS-MPO-MPS via the zip-up method."""
+        for i, node_tuple in enumerate(zip(*nodes_envs)):
+            if i == 0:
+                result_node = node_tuple[0]
+                for node in node_tuple[1:]:
+                    result_node @= node
+            else:
+                for node in node_tuple:
+                    result_node @= node
+                    
+            if renormalize:
+                right_axes = []
+                for ax_name in result_node.axes_names:
+                    if 'right' in ax_name:
+                        right_axes.append(ax_name)
+                if right_axes:
+                    result_node = result_node.renormalize(axis=right_axes)
+        
+        return result_node
+
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
@@ -1211,7 +1234,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         #     mats_in_env = self.in_env
         
         in_results = []
-        for region in in_regions:      
+        for region in in_regions:
             if inline_mats:
                 result = self._contract_envs_inline(
                     mats_env=mats_in_env[:len(region)],
@@ -1282,6 +1305,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                     elif i > 0:
                         copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
                 
+                nodes_envs = [nodes_out_env]
+                
                 # Contract with embedding matrices
                 if embedding_matrices is not None:
                     mats_nodes = []
@@ -1304,11 +1329,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     for mat_node, copied_node in zip(mats_nodes, copied_nodes):
                         copied_node['input'] ^ mat_node['input']
                     
-                    # Contract output nodes with matrices
-                    nodes_out_env = self._input_contraction(
-                        nodes_env=nodes_out_env,
-                        input_nodes=mats_nodes,
-                        inline_input=True)
+                    nodes_envs.append(mats_nodes)
                 
                 # Contract with mpo
                 elif mpo is not None:
@@ -1330,17 +1351,15 @@ class MPS(TensorNetwork):  # MARK: MPS
                     # Connect MPO to copies
                     for copied_node, mpo_node in zip(copied_nodes, mpo._mats_env):
                         copied_node['input'] ^ mpo_node['input']
-
-                    # Contract MPO with MPS
-                    nodes_out_env = self._input_contraction(
-                        nodes_env=nodes_out_env,
-                        input_nodes=mpo._mats_env,
-                        inline_input=True)
+                    
+                    mpo_nodes = mpo._mats_env[:]
                     
                     # Contract MPO left and right nodes
                     if mpo._boundary == 'obc':
-                        nodes_out_env[0] = mpo._left_node @ nodes_out_env[0]
-                        nodes_out_env[-1] = nodes_out_env[-1] @ mpo._right_node
+                        mpo_nodes[0] = mpo._left_node @ mpo_nodes[0]
+                        mpo_nodes[-1] = mpo_nodes[-1] @ mpo._right_node
+                    
+                    nodes_envs.append(mpo_nodes)
                 
                 else:
                     # Reattach input edges of resultant output nodes and connect
@@ -1358,15 +1377,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                     for i, node in enumerate(copied_nodes):
                         copied_nodes[i] = node.conj()
                 
-                # Contract output nodes with copies
-                mats_out_env = self._input_contraction(
-                    nodes_env=nodes_out_env,
-                    input_nodes=copied_nodes,
-                    inline_input=True)
+                nodes_envs.append(copied_nodes)
                 
-                # Contract resultant matrices
-                result = self._inline_contraction(mats_env=mats_out_env,
-                                                  renormalize=renormalize)
+                # Contract nodes (MPS-MPS, MPS-mats-MPS, or MPS-MPO-MPS) via zip-up
+                result = self._zipup_contraction(nodes_envs=nodes_envs,
+                                                 renormalize=renormalize)
             
         # Contract periodic edge
         if result.is_connected_to(result):
@@ -1485,22 +1500,16 @@ class MPS(TensorNetwork):  # MARK: MPS
         if is_complex:
             for i, node in enumerate(copied_nodes):
                 copied_nodes[i] = node.conj()
-            
-        # Contract output nodes with copies
-        mats_out_env = self._input_contraction(
-            nodes_env=all_nodes,
-            input_nodes=copied_nodes,
-            inline_input=True)
         
-        # Contract resultant matrices
+        # Contract nodes with copies via zip-up
         log_norm = 0
-        result_node = mats_out_env[0]
-        if log_scale:
-            log_norm += result_node.norm().log()
-            result_node = result_node.renormalize()
-                
-        for node in mats_out_env[1:]:
-            result_node @= node
+        nodes_envs = [all_nodes, copied_nodes]
+        for i, (node, copied_node) in enumerate(zip(*nodes_envs)):
+            if i == 0:
+                result_node = node @ copied_node
+            else:
+                result_node @= node
+                result_node @= copied_node
             
             if log_scale:
                 log_norm += result_node.norm().log()

@@ -24,6 +24,7 @@ This script contains:
 """
 
 import copy
+import inspect
 import warnings
 from abc import abstractmethod, ABC
 from typing import (overload,
@@ -4084,6 +4085,7 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
 
         # Lis of operations used to contract the TN
         self._seq_ops = []
+        self._contract_args = None
 
     # ----------
     # Properties
@@ -4933,6 +4935,7 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         """
         self._traced = False
         self._seq_ops = []
+        self._contract_args = None
         self._inverse_memory = dict()
 
         if self._resultant_nodes or self._virtual_nodes:
@@ -5030,6 +5033,13 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         self(example, *args, **kwargs)
         self._traced = True
 
+    def _normalize_contract_args(self,
+                                 *args: Any,
+                                 **kwargs: Any) -> Dict[Text, Any]:
+        bound = inspect.signature(self.contract).bind(*args, **kwargs)
+        bound.apply_defaults()
+        return dict(bound.arguments)
+
     def contract(self) -> Node:
         """
         Contracts the whole tensor network returning a single :class:`Node`.
@@ -5101,10 +5111,20 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             self.add_data(data=data)
 
         if not self._resultant_nodes:
+            self._contract_args = self._normalize_contract_args(*args, **kwargs)
             output = self.contract(*args, **kwargs)
             return output.tensor
 
         else:
+            contract_args = self._normalize_contract_args(*args, **kwargs)
+            if contract_args != self._contract_args:
+                warnings.warn(
+                    'Arguments of contract have changed. The tensor network '
+                    'has been reset, but not traced again. Consider calling '
+                    'trace if you want to keep the optimized contraction path')
+                self.reset()
+                return self.forward(data, *args, **kwargs)
+
             output = list(map(lambda op: self.operations[op[0]](*op[1]),
                               self._seq_ops))[-1]
 

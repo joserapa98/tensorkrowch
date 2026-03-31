@@ -3318,7 +3318,42 @@ class TestTensorNetwork:  # MARK: TestTensorNetwork
         assert len(net.edges) == 6
 
     def test_trace(self):
-        pass
+        class SimpleTraceTN(tk.TensorNetwork):
+
+            def __init__(self):
+                super().__init__(name='simple_trace_tn')
+
+                node = tk.ParamNode(shape=(2,),
+                                    axes_names=('input',),
+                                    name='node',
+                                    network=self)
+                node.tensor = torch.tensor([2., 0.])
+                self.node = node
+
+            def set_data_nodes(self) -> None:
+                super().set_data_nodes([self.node['input']], num_batch_edges=1)
+
+            def contract(self, renormalize: bool) -> tk.Node:
+                data_node = self.node.neighbours('input')
+                result = self.node @ data_node
+
+                if renormalize:
+                    result = result.renormalize()
+
+                return result
+
+        net = SimpleTraceTN()
+        data = torch.tensor([[[1., 0.]]])
+
+        net.trace(data, True)
+        result = net(data, True)
+        assert result.norm().isclose(torch.tensor(1.))
+        
+        with pytest.warns(UserWarning,
+                          match='Arguments of contract have changed'):
+            result = net(data, False)
+
+        assert not result.norm().isclose(torch.tensor(1.))
 
     def test_auto_stack(self):
         net = tk.TensorNetwork(name='net')

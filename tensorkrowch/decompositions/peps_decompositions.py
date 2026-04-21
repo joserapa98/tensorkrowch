@@ -509,7 +509,7 @@ def peps_rss(function: Callable,
         or equal than ``embed_dim``.
     max_rank : int
         Maximum rank allowed in projections and resulting bond dimensions. It
-        should be an off power of rank. Otherwise it will be changed to another
+        should be an odd power of rank. Otherwise it will be changed to another
         value of that form.
     cum_percentage : float, optional
         When getting the proper bond dimension of each core via truncated SVD,

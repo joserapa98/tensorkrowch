@@ -15,8 +15,17 @@ import tensorkrowch as tk
 AUTO_BOOL_CASES = [True, False]
 SIDE_CASES = ['up', 'down', 'left', 'right']
 BOUNDARY_CASES = ['obc', 'pbc']
+BOUNDARY_PAIR_CASES = [
+    ['obc', 'obc'],
+    ['obc', 'pbc'],
+    ['pbc', 'obc'],
+    ['pbc', 'pbc'],
+]
 PEPS_EXTREME_CASES = [
     ((2, 2), ['obc', 'obc'], 1),
+    ((2, 3), ['obc', 'obc'], {'stacked': 3, 'default': 1}),
+    ((3, 2), ['obc', 'obc'], {'stacked': 3, 'default': 1}),
+    ((3, 3), ['obc', 'obc'], {'stacked': 6, 'default': 1}),
     ((1, 3), ['pbc', 'obc'], {'stacked': 4, 'default': 1}),
     ((1, 2), ['pbc', 'obc'], {'stacked': 3, 'default': 1}),
     ((3, 1), ['obc', 'pbc'], {'stacked': 4, 'default': 1}),
@@ -25,12 +34,18 @@ PEPS_EXTREME_CASES = [
 ]
 UPEPS_EXTREME_CASES = [
     ((2, 2), (100,)),
+    ((2, 3), (100,)),
+    ((3, 2), (100,)),
+    ((3, 3), (100,)),
     ((1, 2), (100,)),
     ((2, 1), (100,)),
     ((1, 1), (100,)),
 ]
 CONV_PEPS_EXTREME_CASES = [
     ((2, 2), ['obc', 'obc'], (100, 4, 4), 1),
+    ((2, 3), ['obc', 'obc'], (100, 4, 3), {'stacked': 3, 'default': 1}),
+    ((3, 2), ['obc', 'obc'], (100, 3, 4), {'stacked': 3, 'default': 1}),
+    ((3, 3), ['obc', 'obc'], (100, 3, 3), {'stacked': 6, 'default': 1}),
     ((1, 3), ['pbc', 'obc'], (100, 5, 3), {'stacked': 4, 'default': 1}),
     ((1, 2), ['pbc', 'obc'], (100, 5, 4), {'stacked': 3, 'default': 1}),
     ((3, 1), ['obc', 'pbc'], (100, 3, 5), {'stacked': 4, 'default': 1}),
@@ -39,6 +54,9 @@ CONV_PEPS_EXTREME_CASES = [
 ]
 CONV_UPEPS_EXTREME_CASES = [
     ((2, 2), (100, 4, 4)),
+    ((2, 3), (100, 4, 3)),
+    ((3, 2), (100, 3, 4)),
+    ((3, 3), (100, 3, 3)),
     ((1, 2), (100, 5, 4)),
     ((2, 1), (100, 4, 5)),
     ((1, 1), (100, 5, 5)),
@@ -121,6 +139,35 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
         assert len(peps.data_nodes) == 12
         assert len(peps.virtual_nodes) == self._expected_virtual_nodes(
             boundary_0, boundary_1, auto_stack
+        )
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('side', SIDE_CASES)
+    @pytest.mark.parametrize('inline', AUTO_BOOL_CASES)
+    def test_3x3_all_boundaries(self, boundary, auto_stack, auto_unbind,
+                                side, inline):
+        example = torch.randn(1, 9, 5)
+        data = torch.randn(100, 9, 5)
+
+        peps = tk.models.PEPS(n_rows=3,
+                              n_cols=3,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
+        peps.auto_stack = auto_stack
+        peps.auto_unbind = auto_unbind
+
+        peps.trace(example, from_side=side, inline=inline)
+        result = peps(data, from_side=side, inline=inline)
+
+        assert result.shape == (100,)
+        assert len(peps.edges) == 0
+        assert len(peps.leaf_nodes) == 9
+        assert len(peps.data_nodes) == 9
+        assert len(peps.virtual_nodes) == self._expected_virtual_nodes(
+            boundary[0], boundary[1], auto_stack
         )
 
     @pytest.mark.parametrize('kernel_size,boundary,expected_virtual_nodes',
@@ -269,6 +316,34 @@ class TestConvPEPS(_PEPSTestMixin):  # MARK: TestConvPEPS
         assert len(peps.data_nodes) == 9
         assert len(peps.virtual_nodes) == self._expected_virtual_nodes(
             boundary_0, boundary_1, auto_stack
+        )
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('side', SIDE_CASES)
+    @pytest.mark.parametrize('inline', AUTO_BOOL_CASES)
+    def test_3x3_all_boundaries(self, boundary, auto_stack, auto_unbind,
+                                side, inline):
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
+
+        peps = tk.models.ConvPEPS(in_channels=2,
+                                  bond_dim=[2, 3],
+                                  kernel_size=3,
+                                  boundary=boundary)
+        peps.auto_stack = auto_stack
+        peps.auto_unbind = auto_unbind
+
+        peps.trace(example, from_side=side, inline=inline, max_bond=8)
+        result = peps(data, from_side=side, inline=inline, max_bond=8)
+
+        assert result.shape == (100, 3, 3)
+        assert len(peps.edges) == 0
+        assert len(peps.leaf_nodes) == 9
+        assert len(peps.data_nodes) == 9
+        assert len(peps.virtual_nodes) == self._expected_virtual_nodes(
+            boundary[0], boundary[1], auto_stack
         )
 
     @pytest.mark.parametrize('kernel_size,boundary,expected_shape,expected_virtual_nodes',

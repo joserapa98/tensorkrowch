@@ -2151,7 +2151,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         self.initialize(tensors=new_tensors)
         self.update_bond_dim()
 
-        for node, data_node in zip(self._mats_env, self._data_nodes.values()):
+        for node, data_node in zip(self.in_env, self._data_nodes.values()):
             node['input'] ^ data_node['feature']
 
         self.auto_stack = prev_auto_stack

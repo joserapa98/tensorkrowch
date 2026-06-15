@@ -2371,6 +2371,22 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         _assert_nodes_device_and_dtype(non_param_mps.mats_env, device, dtype)
         _assert_obc_boundary_runtime(non_param_mps, device, dtype)
 
+    def test_canonicalize_univocal_after_trace(self):
+        mps = tk.models.MPSLayer(n_features=4,
+                                 in_dim=2,
+                                 out_dim=3,
+                                 bond_dim=5,
+                                 boundary='obc')
+        example = torch.randn(1, 3, 2)
+
+        mps.trace(example)
+        mps.canonicalize_univocal()
+
+        assert len(mps.data_nodes) == 3
+        for node in mps.in_env:
+            assert not node['input'].is_dangling()
+        assert mps.out_node['input'].is_dangling()
+
 
 class TestUMPSLayer:  # MARK: TestUMPSLayer
     

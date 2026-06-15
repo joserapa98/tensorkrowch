@@ -1640,6 +1640,26 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         return result
     
+    def sample(self,
+                 inline_input: bool = False,
+                 inline_mats: bool = False,
+                 renormalize: bool = False,
+                 marginalize_output: bool = False,
+                 embedding_matrices: Optional[
+                                        Union[torch.Tensor,
+                                              Sequence[torch.Tensor]]] = None,
+                 mpo: Optional[MPO] = None
+                 ) -> Node:
+        """
+        n_samples: int > 0
+        domain: tensor batch x phys_dim, or list[tensor batch x phys_dim[i]]
+        embedding
+        embedding_matrices: can be passed, or otherwise they will be
+                            approximated numerically using the embedding and domain
+        canonical: bool, to indicate whether the MPS is in canonical form with oc at leftmost site
+        """
+        pass
+    
     @torch.no_grad()
     def entropy(self,
                 middle_site: int,

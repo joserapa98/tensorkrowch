@@ -40,6 +40,29 @@ STACK_AUTO_CASES = [
 
 class TestPermute:  # MARK: TestPermute
 
+    def test_permute_top_level(self):
+        tensor = torch.arange(20, dtype=torch.float32).reshape(2, 5, 2)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       tensor=tensor)
+
+        permuted_node = tk.permute(node, (0, 2, 1))
+
+        assert permuted_node.shape == (2, 2, 5)
+        assert torch.equal(permuted_node.tensor, tensor.permute(0, 2, 1))
+
+    def test_permute_top_level_in_place(self):
+        tensor = torch.arange(20, dtype=torch.float32).reshape(2, 5, 2)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       tensor=tensor)
+
+        permuted_node = tk.permute_(node, (0, 2, 1))
+
+        assert permuted_node.shape == (2, 2, 5)
+        assert torch.equal(permuted_node.tensor, tensor.permute(0, 2, 1))
+        assert node.network is None
+
     def test_permute_node(self):
         node = tk.Node(shape=(2, 5, 2),
                        axes_names=('left', 'input', 'right'),
@@ -183,6 +206,82 @@ class TestTensorOps:  # MARK: TestTensorOps
                         name='node2',
                         init_method='randn')
         return node1, node2
+
+    def test_top_level_tensor_ops(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(6, 12, dtype=torch.float32).reshape(2, 3)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        assert torch.equal(tk.mul(node1, node2).tensor, tensor1 * tensor2)
+        assert torch.equal(tk.div(node1, node2).tensor, tensor1 / tensor2)
+        assert torch.equal(tk.add(node1, node2).tensor, tensor1 + tensor2)
+        assert torch.equal(tk.sub(node1, node2).tensor, tensor1 - tensor2)
+
+    def test_top_level_tprod(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(20, dtype=torch.float32).reshape(4, 5)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('up', 'down'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        result = tk.tprod(node1, node2)
+
+        assert result.shape == (2, 3, 4, 5)
+        assert torch.equal(result.tensor,
+                           torch.outer(tensor1.flatten(),
+                                       tensor2.flatten()).reshape(2, 3, 4, 5))
+
+    def test_node_method_tensor_ops(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(6, 12, dtype=torch.float32).reshape(2, 3)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        assert torch.equal(node1.mul(node2).tensor, tensor1 * tensor2)
+        assert torch.equal(node1.div(node2).tensor, tensor1 / tensor2)
+        assert torch.equal(node1.add(node2).tensor, tensor1 + tensor2)
+        assert torch.equal(node1.sub(node2).tensor, tensor1 - tensor2)
+
+    def test_node_method_tprod(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(20, dtype=torch.float32).reshape(4, 5)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('up', 'down'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        result = node1.tprod(node2)
+
+        assert result.shape == (2, 3, 4, 5)
+        assert torch.equal(result.tensor,
+                           torch.outer(tensor1.flatten(),
+                                       tensor2.flatten()).reshape(2, 3, 4, 5))
 
     def test_tprod(self, setup):
         node1, node2 = setup

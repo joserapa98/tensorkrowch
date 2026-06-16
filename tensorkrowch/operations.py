@@ -454,6 +454,10 @@ def tprod(node1: AbstractNode, node2: AbstractNode) -> Node:
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((4, 5), network=net)
+    >>> result = tk.tprod(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3, 4, 5])
+
     >>> result = nodeA % nodeB
     >>> result.shape
     torch.Size([2, 3, 4, 5])
@@ -488,9 +492,14 @@ tprod_node.__doc__ = \
     >>> result = nodeA.tprod(nodeB)
     >>> result.shape
     torch.Size([2, 3, 4, 5])
+
+    >>> result = nodeA % nodeB
+    >>> result.shape
+    torch.Size([2, 3, 4, 5])
     """
 
 AbstractNode.__mod__ = tprod_node
+AbstractNode.tprod = tprod_node
 
 
 ###################################   MUL    ##################################
@@ -635,6 +644,10 @@ def mul(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.mul(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA * nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -642,6 +655,10 @@ def mul(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.mul(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA * tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -684,15 +701,24 @@ mul_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA * nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.mul(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA * tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__mul__ = mul_node
+AbstractNode.mul = mul_node
 
 
 ###################################   DIV    ##################################
@@ -837,6 +863,10 @@ def div(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.div(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA / nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -844,6 +874,10 @@ def div(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.div(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA / tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -886,15 +920,24 @@ div_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA / nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.div(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA / tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__truediv__ = div_node
+AbstractNode.div = div_node
 
 
 ###################################   ADD    ##################################
@@ -1039,6 +1082,10 @@ def add(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.add(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA + nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -1046,6 +1093,10 @@ def add(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.add(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA + tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -1088,15 +1139,24 @@ add_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA + nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.add(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA + tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__add__ = add_node
+AbstractNode.add = add_node
 
 
 ###################################   SUB    ##################################
@@ -1241,6 +1301,10 @@ def sub(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.sub(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA - nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -1248,6 +1312,10 @@ def sub(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.sub(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA - tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -1290,15 +1358,24 @@ sub_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA - nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.sub(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA - tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__sub__ = sub_node
+AbstractNode.sub = sub_node
 
 
 ###############################   renormalize    ##############################
@@ -4503,6 +4580,10 @@ contract_between_node.__doc__ = \
     ...                  name='nodeB')
     ...
     >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> result = nodeA.contract_between(nodeB)
+    >>> result.shape
+    torch.Size([100, 10, 7])
+
     >>> result = nodeA @ nodeB
     >>> result.shape
     torch.Size([100, 10, 7])

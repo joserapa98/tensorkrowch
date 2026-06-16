@@ -13,6 +13,7 @@ This script contains tests for operations:
     * TestRQ
     * TestContractEdge
     * TestContractBetween
+    * TestMergeSplitEdge
     * TestStackUnbind
     * TestEinsum
     * TestTNModels
@@ -4720,6 +4721,414 @@ class TestContractBetween:  # MARK: TestContractBetween
         # disconnected and are not in the same network
         with pytest.raises(ValueError):
             node2 = node1.contract_between_(node1)
+
+
+class TestMergeSplitEdge:  # MARK: TestMergeSplitEdge
+
+    def test_merge_dangling_edges_and_split_from_node(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        result = node.merge_edges([node['left'], node['right']])
+
+        assert result.shape == (8, 3)
+        assert result.axes_names == ['merged', 'input']
+        assert torch.equal(result.tensor,
+                           tensor.permute(0, 2, 1).reshape(8, 3))
+        assert result['merged'].is_dangling()
+        assert result['input'] == node['input']
+        assert result.is_resultant()
+        assert len(net.resultant_nodes) == 1
+
+        args = (tuple([node['left'], node['right']]),)
+        assert node.successors['merge_edges'][args].child == result
+
+        repeated = node.merge_edges([node['left'], node['right']])
+        assert repeated == result
+
+        split = result.split_edge(result['merged'], (2, 4))
+
+        assert split.shape == (2, 4, 3)
+        assert split.axes_names == ['split_0', 'split_1', 'input']
+        assert torch.equal(split.tensor, result.tensor.reshape(2, 4, 3))
+        assert split['split_0'].is_dangling()
+        assert split['split_1'].is_dangling()
+        assert split['input'] == node['input']
+        assert len(net.resultant_nodes) == 2
+
+        args = (result['merged'], tuple([2, 4]))
+        assert result.successors['split_edge'][args].child == split
+
+        repeated = result.split_edge(result['merged'], (2, 4))
+        assert repeated == split
+
+    def test_merge_connected_edges_with_reversed_orientation(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        tensor2 = torch.arange(40, dtype=torch.float32).reshape(5, 4, 2)
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('other', 'right', 'left'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge_left = node1['left'] ^ node2['left']
+        edge_right = node2['right'] ^ node1['right']
+
+        new_node1, new_node2 = node1.merge_edges([edge_left, edge_right])
+
+        assert new_node1.shape == (8, 3)
+        assert new_node1.axes_names == ['merged', 'input']
+        assert torch.equal(new_node1.tensor,
+                           tensor1.permute(0, 2, 1).reshape(8, 3))
+
+        assert new_node2.shape == (5, 8)
+        assert new_node2.axes_names == ['other', 'merged']
+        assert torch.equal(new_node2.tensor,
+                           tensor2.permute(0, 2, 1).reshape(5, 8))
+
+        assert new_node1['merged'] == new_node2['merged']
+        assert new_node1['input'] == node1['input']
+        assert new_node2['other'] == node2['other']
+        assert len(net.resultant_nodes) == 2
+
+        args = (tuple([edge_left, edge_right]),)
+        assert node1.successors['merge_edges'][args].child == [
+            new_node1, new_node2]
+        assert node2.successors == dict()
+
+        repeated_node1, repeated_node2 = tk.merge_edges([edge_left,
+                                                         edge_right])
+        assert repeated_node1 == new_node1
+        assert repeated_node2 == new_node2
+
+    def test_split_connected_edge_from_edge(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(36, dtype=torch.float32).reshape(2, 6, 3)
+        tensor2 = torch.arange(30, dtype=torch.float32).reshape(6, 5)
+        node1 = tk.Node(axes_names=('left', 'bond', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('bond', 'output'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge = node1['bond'] ^ node2['bond']
+        new_node1, new_node2 = edge.split_edge((2, 3))
+
+        assert new_node1.shape == (2, 2, 3, 3)
+        assert new_node1.axes_names == ['left', 'split_0',
+                                        'split_1', 'right']
+        assert torch.equal(new_node1.tensor, tensor1.reshape(2, 2, 3, 3))
+
+        assert new_node2.shape == (2, 3, 5)
+        assert new_node2.axes_names == ['split_0', 'split_1', 'output']
+        assert torch.equal(new_node2.tensor, tensor2.reshape(2, 3, 5))
+
+        assert new_node1['split_0'] == new_node2['split_0']
+        assert new_node1['split_1'] == new_node2['split_1']
+        assert new_node1['left'] == node1['left']
+        assert new_node1['right'] == node1['right']
+        assert new_node2['output'] == node2['output']
+
+        args = (edge, tuple([2, 3]))
+        assert node1.successors['split_edge'][args].child == [
+            new_node1, new_node2]
+        assert node2.successors == dict()
+
+        repeated_node1, repeated_node2 = edge.split_edge((2, 3))
+        assert repeated_node1 == new_node1
+        assert repeated_node2 == new_node2
+
+    def test_merge_and_split_loop_edges(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(36, dtype=torch.float32).reshape(2, 3, 2, 3)
+        node = tk.Node(axes_names=('left', 'up', 'right', 'down'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        edge1 = node['left'] ^ node['right']
+        edge2 = node['up'] ^ node['down']
+
+        new_node1, new_node2 = node.merge_edges([edge1, edge2])
+
+        assert new_node1 == new_node2
+        assert new_node1.shape == (6, 6)
+        assert new_node1.axes_names == ['merged_0', 'merged_1']
+        assert torch.equal(new_node1.tensor, tensor.reshape(6, 6))
+        assert new_node1[0] == new_node1[1]
+        assert new_node1[0].node1 == new_node1
+        assert new_node1[0].node2 == new_node1
+        assert len(net.resultant_nodes) == 1
+
+        args = (tuple([edge1, edge2]),)
+        assert node.successors['merge_edges'][args].child == new_node1
+
+        repeated_node1, repeated_node2 = tk.merge_edges([edge1, edge2])
+        assert repeated_node1 == new_node1
+        assert repeated_node2 == new_node1
+
+        split_node1, split_node2 = new_node1.split_edge(new_node1[0], (2, 3))
+
+        assert split_node1 == split_node2
+        assert split_node1.shape == (2, 3, 2, 3)
+        assert split_node1.axes_names == ['split_0', 'split_1',
+                                          'split_2', 'split_3']
+        assert torch.equal(split_node1.tensor,
+                           new_node1.tensor.reshape(2, 3, 2, 3))
+        assert split_node1[0] == split_node1[2]
+        assert split_node1[1] == split_node1[3]
+        assert len(net.resultant_nodes) == 2
+
+        args = (new_node1[0], tuple([2, 3]))
+        assert new_node1.successors['split_edge'][args].child == split_node1
+
+        repeated_split1, repeated_split2 = tk.split_edge(new_node1[0], (2, 3))
+        assert repeated_split1 == split_node1
+        assert repeated_split2 == split_node1
+
+    def test_merge_split_edge_errors(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 4),
+                        axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        node3 = tk.Node(shape=(5,),
+                        axes_names=('other',),
+                        name='node3',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node2['left']
+
+        with pytest.raises(ValueError):
+            tk.merge_edges([node1['left'], edge])
+
+        with pytest.raises(ValueError):
+            tk.split_edge(edge, (2, 2))
+
+        with pytest.raises(ValueError):
+            node1.merge_edges([node3['other']])
+
+        with pytest.raises(ValueError):
+            node1.split_edge(node3['other'], (5,))
+
+    def test_merge_edges_trace_replay(self):
+        class Net(tk.TensorNetwork):
+
+            def __init__(self):
+                super().__init__()
+                self.node1 = tk.Node(shape=(2, 3, 7),
+                                     axes_names=('left', 'right', 'input'),
+                                     name='node1',
+                                     network=self,
+                                     init_method='randn')
+                self.node2 = tk.Node(shape=(2, 3, 5),
+                                     axes_names=('left', 'right', 'output'),
+                                     name='node2',
+                                     network=self,
+                                     init_method='randn')
+                self.edge1 = self.node1['left'] ^ self.node2['left']
+                self.edge2 = self.node1['right'] ^ self.node2['right']
+
+            def contract(self):
+                node1, node2 = self.node1.merge_edges([self.edge1,
+                                                        self.edge2])
+                return node1 @ node2
+
+        net = Net()
+
+        result1 = net()
+        result2 = net()
+
+        assert result1.shape == (7, 5)
+        assert torch.equal(result1, result2)
+        assert len(net.resultant_nodes) == 3
+
+        net.trace()
+        result3 = net()
+
+        assert result3.shape == (7, 5)
+        assert net._traced
+
+    def test_merge_dangling_edges_in_place(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        result = node.merge_edges_([node['left'], node['right']])
+
+        assert result.shape == (8, 3)
+        assert result.axes_names == ['merged', 'input']
+        assert result.name == 'node'
+        assert torch.equal(result.tensor,
+                           tensor.permute(0, 2, 1).reshape(8, 3))
+        assert result.network == net
+        assert node.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+        assert node.successors == dict()
+
+    def test_split_dangling_edge_in_place_from_node(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(8, 3)
+        node = tk.Node(axes_names=('merged', 'input'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        result = node.split_edge_(node['merged'], (2, 4))
+
+        assert result.shape == (2, 4, 3)
+        assert result.axes_names == ['split_0', 'split_1', 'input']
+        assert result.name == 'node'
+        assert torch.equal(result.tensor, tensor.reshape(2, 4, 3))
+        assert result.network == net
+        assert node.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+        assert node.successors == dict()
+
+    def test_top_level_in_place_forms(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        merged = tk.merge_edges_([node['left'], node['right']])
+
+        assert merged.shape == (8, 3)
+        assert node.network is None
+
+        split = tk.split_edge_(merged['merged'], (2, 4))
+
+        assert split.shape == (2, 4, 3)
+        assert split.name == 'node'
+        assert merged.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+    def test_merge_connected_edges_in_place(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        tensor2 = torch.arange(40, dtype=torch.float32).reshape(5, 4, 2)
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('other', 'right', 'left'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge_left = node1['left'] ^ node2['left']
+        edge_right = node2['right'] ^ node1['right']
+
+        new_node1, new_node2 = node1.merge_edges_([edge_left, edge_right])
+
+        assert new_node1.shape == (8, 3)
+        assert new_node2.shape == (5, 8)
+        assert new_node1.name == 'node1'
+        assert new_node2.name == 'node2'
+        assert new_node1['merged'] == new_node2['merged']
+        assert torch.equal(new_node1.tensor,
+                           tensor1.permute(0, 2, 1).reshape(8, 3))
+        assert torch.equal(new_node2.tensor,
+                           tensor2.permute(0, 2, 1).reshape(5, 8))
+        assert node1.network is None
+        assert node2.network is None
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+    def test_split_connected_edge_in_place_from_edge(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(36, dtype=torch.float32).reshape(2, 6, 3)
+        tensor2 = torch.arange(30, dtype=torch.float32).reshape(6, 5)
+        node1 = tk.Node(axes_names=('left', 'bond', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('bond', 'output'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge = node1['bond'] ^ node2['bond']
+        new_node1, new_node2 = edge.split_edge_((2, 3))
+
+        assert new_node1.shape == (2, 2, 3, 3)
+        assert new_node2.shape == (2, 3, 5)
+        assert new_node1.name == 'node1'
+        assert new_node2.name == 'node2'
+        assert new_node1['split_0'] == new_node2['split_0']
+        assert new_node1['split_1'] == new_node2['split_1']
+        assert torch.equal(new_node1.tensor, tensor1.reshape(2, 2, 3, 3))
+        assert torch.equal(new_node2.tensor, tensor2.reshape(2, 3, 5))
+        assert node1.network is None
+        assert node2.network is None
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+    def test_merge_and_split_loop_edges_in_place(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(36, dtype=torch.float32).reshape(2, 3, 2, 3)
+        node = tk.Node(axes_names=('left', 'up', 'right', 'down'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        edge1 = node['left'] ^ node['right']
+        edge2 = node['up'] ^ node['down']
+
+        new_node1, new_node2 = node.merge_edges_([edge1, edge2])
+
+        assert new_node1 == new_node2
+        assert new_node1.shape == (6, 6)
+        assert new_node1.name == 'node'
+        assert new_node1[0] == new_node1[1]
+        assert node.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        merged_tensor = new_node1.tensor
+        split_node1, split_node2 = new_node1.split_edge_(new_node1[0],
+                                                         (2, 3))
+
+        assert split_node1 == split_node2
+        assert split_node1.shape == (2, 3, 2, 3)
+        assert split_node1.name == 'node'
+        assert split_node1[0] == split_node1[2]
+        assert split_node1[1] == split_node1[3]
+        assert torch.equal(split_node1.tensor,
+                           merged_tensor.reshape(2, 3, 2, 3))
+        assert new_node1.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
 
 
 class TestStackUnbind:  # MARK: TestStackUnbind

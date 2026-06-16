@@ -37,6 +37,8 @@ from tensorkrowch.operations import (permute, permute_, tprod, mul, div, add,
                                      sub, renormalize, conj)
 from tensorkrowch.operations import (split, split_, contract_edges,
                                      contract_between, contract_between_,
+                                     merge_edges, merge_edges_,
+                                     split_edge, split_edge_,
                                      stack, unbind, einsum, stacked_einsum)
 
 # Models

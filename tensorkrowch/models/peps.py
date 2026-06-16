@@ -9,6 +9,8 @@ This script contains:
 from typing import (List, Sequence,
                     Text, Tuple, Union)
 
+import warnings
+
 import torch
 import torch.nn as nn
 
@@ -292,6 +294,97 @@ class PEPS(TensorNetwork):
         for node in self.leaf_nodes.values():
             node.tensor = torch.randn(node.shape) * std
 
+    def copy(self, share_tensors: bool = False) -> 'PEPS':
+        """
+        Creates a copy of the :class:`PEPS`.
+
+        Parameters
+        ----------
+        share_tensor : bool, optional
+            Boolean indicating whether tensors in the copied PEPS should be
+            set as the tensors in the current PEPS (``True``), or cloned
+            (``False``). In the former case, tensors in both PEPS's will be
+            the same, which might be useful if one needs more than one copy
+            of an PEPS, but wants to compute all the gradients with respect
+            to the same, unique, tensors.
+
+        Returns
+        -------
+        PEPS
+        """
+        new_peps = PEPS(n_rows=self._n_rows,
+                        n_cols=self._n_cols,
+                        phys_dim=self._phys_dim,
+                        bond_dim=self._bond_dim,
+                        boundary=self._boundary,
+                        n_batches=self._n_batches)
+        new_peps.name = self.name + '_copy'
+
+        for i in range(self._n_rows):
+            for j in range(self._n_cols):
+                new_peps._grid_env[i][j] = new_peps._grid_env[i][j].parameterize(
+                    set_param=isinstance(self._grid_env[i][j], ParamNode))
+
+        if share_tensors:
+            for new_row, row in zip(new_peps._grid_env, self._grid_env):
+                for new_node, node in zip(new_row, row):
+                    new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._up_border, self._up_border):
+                new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._down_border, self._down_border):
+                new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._left_border, self._left_border):
+                new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._right_border, self._right_border):
+                new_node.tensor = node.tensor
+        else:
+            for new_row, row in zip(new_peps._grid_env, self._grid_env):
+                for new_node, node in zip(new_row, row):
+                    new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._up_border, self._up_border):
+                new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._down_border, self._down_border):
+                new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._left_border, self._left_border):
+                new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._right_border, self._right_border):
+                new_node.tensor = node.tensor.clone()
+
+        return new_peps
+
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all grid nodes of the PEPS. If there are ``resultant``
+        nodes in the PEPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+
+        for i in range(net._n_rows):
+            for j in range(net._n_cols):
+                net._grid_env[i][j] = net._grid_env[i][j].parameterize(
+                    set_param=set_param)
+
+        return net
+
     def set_data_nodes(self) -> None:
         """
         Creates data nodes and connects each of them to the physical edge of
@@ -571,6 +664,80 @@ class UPEPS(PEPS):
         tensor = torch.randn(self.uniform_memory.shape) * std
         self.uniform_memory.tensor = tensor
 
+    def copy(self, share_tensors: bool = False) -> 'UPEPS':
+        """
+        Creates a copy of the :class:`UPEPS`.
+
+        Parameters
+        ----------
+        share_tensor : bool, optional
+            Boolean indicating whether the common tensor in the copied UPEPS
+            should be set as the tensor in the current UPEPS (``True``), or
+            cloned (``False``). In the former case, the tensor in both UPEPS's
+            will be the same, which might be useful if one needs more than one
+            copy of a UPEPS, but wants to compute all the gradients with respect
+            to the same, unique, tensor.
+
+        Returns
+        -------
+        UPEPS
+        """
+        new_peps = UPEPS(n_rows=self._n_rows,
+                         n_cols=self._n_cols,
+                         phys_dim=self._phys_dim,
+                         bond_dim=self._bond_dim,
+                         n_batches=self._n_batches,
+                         parameterized=isinstance(self.uniform_memory,
+                                                  ParamNode))
+        new_peps.name = self.name + '_copy'
+
+        if share_tensors:
+            new_peps.uniform_memory.tensor = self.uniform_memory.tensor
+        else:
+            new_peps.uniform_memory.tensor = self.uniform_memory.tensor.clone()
+
+        return new_peps
+
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all nodes of the UPEPS. If there are ``resultant`` nodes
+        in the UPEPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+
+        for i in range(net._n_rows):
+            for j in range(net._n_cols):
+                net._grid_env[i][j] = net._grid_env[i][j].parameterize(
+                    set_param=set_param)
+
+        net.uniform_memory = net.uniform_memory.parameterize(
+            set_param=set_param)
+
+        for row in net._grid_env:
+            for node in row:
+                node.set_tensor_from(net.uniform_memory)
+
+        return net
+
 class ConvPEPS(PEPS):
     """
     Class for Projected Entangled Pair States, where all nodes are input nodes,
@@ -709,6 +876,65 @@ class ConvPEPS(PEPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
+
+    def copy(self, share_tensors: bool = False) -> 'ConvPEPS':
+        """
+        Creates a copy of the :class:`ConvPEPS`.
+
+        Parameters
+        ----------
+        share_tensor : bool, optional
+            Boolean indicating whether tensors in the copied ConvPEPS should be
+            set as the tensors in the current ConvPEPS (``True``), or cloned
+            (``False``). In the former case, tensors in both ConvPEPS's will be
+            the same, which might be useful if one needs more than one copy
+            of a ConvPEPS, but wants to compute all the gradients with respect
+            to the same, unique, tensors.
+
+        Returns
+        -------
+        ConvPEPS
+        """
+        new_peps = ConvPEPS(in_channels=self._in_channels,
+                            bond_dim=self._bond_dim,
+                            kernel_size=self._kernel_size,
+                            stride=self._stride,
+                            padding=self._padding,
+                            dilation=self._dilation,
+                            boundary=self._boundary)
+        new_peps.name = self.name + '_copy'
+
+        for i in range(self._n_rows):
+            for j in range(self._n_cols):
+                new_peps._grid_env[i][j] = new_peps._grid_env[i][j].parameterize(
+                    set_param=isinstance(self._grid_env[i][j], ParamNode))
+
+        if share_tensors:
+            for new_row, row in zip(new_peps._grid_env, self._grid_env):
+                for new_node, node in zip(new_row, row):
+                    new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._up_border, self._up_border):
+                new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._down_border, self._down_border):
+                new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._left_border, self._left_border):
+                new_node.tensor = node.tensor
+            for new_node, node in zip(new_peps._right_border, self._right_border):
+                new_node.tensor = node.tensor
+        else:
+            for new_row, row in zip(new_peps._grid_env, self._grid_env):
+                for new_node, node in zip(new_row, row):
+                    new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._up_border, self._up_border):
+                new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._down_border, self._down_border):
+                new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._left_border, self._left_border):
+                new_node.tensor = node.tensor.clone()
+            for new_node, node in zip(new_peps._right_border, self._right_border):
+                new_node.tensor = node.tensor.clone()
+
+        return new_peps
 
     def forward(self, image, *args, **kwargs):
         r"""
@@ -892,6 +1118,41 @@ class ConvUPEPS(UPEPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
+
+    def copy(self, share_tensors: bool = False) -> 'ConvUPEPS':
+        """
+        Creates a copy of the :class:`ConvUPEPS`.
+
+        Parameters
+        ----------
+        share_tensor : bool, optional
+            Boolean indicating whether the common tensor in the copied ConvUPEPS
+            should be set as the tensor in the current ConvUPEPS (``True``), or
+            cloned (``False``). In the former case, tensors in both ConvUPEPS's will be
+            the same, which might be useful if one needs more than one copy
+            of a ConvUPEPS, but wants to compute all the gradients with respect
+            to the same, unique, tensors.
+
+        Returns
+        -------
+        ConvUPEPS
+        """
+        new_peps = ConvUPEPS(in_channels=self._in_channels,
+                             bond_dim=self._bond_dim,
+                             kernel_size=self._kernel_size,
+                             stride=self._stride,
+                             padding=self._padding,
+                             dilation=self._dilation,
+                             parameterized=isinstance(self.uniform_memory,
+                                                      ParamNode))
+        new_peps.name = self.name + '_copy'
+
+        if share_tensors:
+            new_peps.uniform_memory.tensor = self.uniform_memory.tensor
+        else:
+            new_peps.uniform_memory.tensor = self.uniform_memory.tensor.clone()
+
+        return new_peps
 
     def forward(self, image, *args, **kwargs):
         r"""

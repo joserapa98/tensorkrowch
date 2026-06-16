@@ -973,13 +973,14 @@ def _split_rank_low_rank_tensor():
 
 def _split_cutoff_high_rank_tensor():
     tensor = torch.zeros(10, 15)
-    tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+    tensor[:10, :10] = torch.diag(
+        torch.tensor([1., .9, .8, .7, .6, .5, .4, .3, .2, .1]))
     return tensor.expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
 
 
 def _split_cutoff_low_rank_tensor():
     tensor = torch.zeros(10, 15)
-    tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
+    tensor[:5, :5] = torch.diag(torch.tensor([1., .8, .6, .4, .2]))
     return tensor.expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
 
 
@@ -1162,7 +1163,8 @@ class TestSplitSVD:  # MARK: TestSplitSVD
         result = node1 @ node2
 
         tensor = torch.zeros(10, 15)
-        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor[:10, :10] = torch.diag(
+            torch.tensor([1., .9, .8, .7, .6, .5, .4, .3, .2, .1]))
         tensor = tensor.expand(
             10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(tensor)
@@ -1690,7 +1692,8 @@ class TestSplitSVDR:  # MARK: TestSplitSVDR
         result = node1 @ node2
 
         tensor = torch.zeros(10, 15)
-        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor[:10, :10] = torch.diag(
+            torch.tensor([1., .9, .8, .7, .6, .5, .4, .3, .2, .1]))
         tensor = tensor.expand(
             10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(tensor)

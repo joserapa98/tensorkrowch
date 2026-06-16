@@ -19,7 +19,7 @@ N_FEATURES_CASES = [1, 2, 3, 4, 10]
 DIFF_N_FEATURES_CASES = [1, 2, 3, 4, 6]
 BOUNDARY_CASES = ['obc', 'pbc']
 RUNTIME_CASES = ['default', 'cuda', 'complex']
-DEVICE_RUNTIME_CASES = ['default', 'cuda']
+DEVICE_RUNTIME_CASES = ['default', 'cuda', 'mps']
 SMALL_N_FEATURES_CASES = [1, 2, 4]
 SMALL_SPATIAL_CASES = [1, 2, 4]
 INIT_N_CASES = [1, 2, 5]
@@ -81,8 +81,21 @@ COPY_CONV_UMPS_CASES = [
 ]
 
 
-def _runtime_kwargs(runtime, device):
+def _runtime_device(runtime):
     if runtime == 'cuda':
+        if not torch.cuda.is_available():
+            pytest.skip('CUDA is not available')
+        return torch.device('cuda')
+    if runtime == 'mps':
+        if not getattr(torch.backends, 'mps', None) or \
+                not torch.backends.mps.is_available():
+            pytest.skip('MPS is not available')
+        return torch.device('mps')
+    return torch.device('cpu')
+
+
+def _runtime_kwargs(runtime, device):
+    if runtime in ['cuda', 'mps']:
         return {'device': device}
     if runtime == 'complex':
         return {'dtype': torch.complex64}
@@ -91,8 +104,10 @@ def _runtime_kwargs(runtime, device):
 
 def _assert_nodes_runtime(nodes, runtime, device):
     for node in nodes:
-        if runtime == 'cuda':
-            assert node.device == device
+        if runtime in ['cuda', 'mps']:
+            assert node.device.type == device.type
+            if device.index is not None:
+                assert node.device.index == device.index
         elif runtime == 'complex':
             assert node.dtype == torch.complex64
             assert node.is_complex()
@@ -312,7 +327,7 @@ class TestMPS:  # MARK: TestMPS
 
     def _run_univocal_case(self, n_features, runtime, phys_dim, bond_dim,
                            atol):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
         mps = tk.models.MPS(n_features=n_features,
                             phys_dim=phys_dim,
@@ -368,7 +383,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_with_tensors_runtime(self, runtime, n, boundary):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         tensor_kwargs = _runtime_kwargs(runtime, device)
         tensors = [torch.randn(10, 2, 10, **tensor_kwargs) for _ in range(n)]
         if boundary == 'obc':
@@ -450,7 +465,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('init_method', MPS_INIT_METHODS)
     def test_initialize_init_method_runtime(self, runtime, n, boundary,
                                             init_method):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPS(boundary=boundary,
                             n_features=n,
@@ -467,6 +482,23 @@ class TestMPS:  # MARK: TestMPS
             _assert_obc_boundary_nodes_are_non_parametric(mps)
             _assert_boundary_vector(mps.left_node)
             _assert_boundary_vector(mps.right_node)
+    
+    @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_initialize_device_runtime(self, runtime, boundary):
+        device = _runtime_device(runtime)
+        model_kwargs = _runtime_kwargs(runtime, device)
+        mps = tk.models.MPS(boundary=boundary,
+                            n_features=3,
+                            phys_dim=2,
+                            bond_dim=5,
+                            **model_kwargs)
+
+        _assert_nodes_runtime(mps.mats_env, runtime, device)
+        if boundary == 'obc':
+            _assert_nodes_runtime([mps.left_node, mps.right_node],
+                                  runtime,
+                                  device)
     
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
@@ -488,7 +520,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_canonical_runtime(self, runtime, n, boundary):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPS(boundary=boundary,
                             n_features=n,
@@ -667,7 +699,7 @@ class TestMPS:  # MARK: TestMPS
 
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     def test_deparameterize_preserves_boundary_runtime(self, n_features):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.complex64
 
         mps = tk.models.MPS(n_features=n_features,
@@ -688,7 +720,7 @@ class TestMPS:  # MARK: TestMPS
                             bond_dim=2,
                             boundary=boundary)
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.float64
 
         returned_mps = mps.to(device=device, dtype=dtype)
@@ -720,7 +752,7 @@ class TestMPS:  # MARK: TestMPS
                         if node.tensor is not None]
         assert any(node.is_resultant() for node in tensor_nodes)
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.float64
 
         mps.to(device=device, dtype=dtype)
@@ -757,7 +789,7 @@ class TestMPS:  # MARK: TestMPS
         is_complex = runtime == 'complex'
 
         if runtime == 'cuda':
-            device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             tensor_kwargs['device'] = device
             model_kwargs['device'] = device
         elif is_complex:
@@ -1289,7 +1321,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n_features,boundary', NORM_CASES)
     def test_norm(self, runtime, n_features, boundary):
         # Check both raw norm and log-norm paths on the same partially traced MPS.
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
         in_features = self._sample_unique_features(n_features)
 
@@ -1311,7 +1343,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n_features,boundary', REDUCED_DENSITY_CASES)
     def test_reduced_density(self, runtime, n_features, boundary):
         # Exercise reduced-density on eager/CUDA/complex tensors with random traced sites.
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
         phys_dim = torch.randint(low=2, high=6, size=(n_features,)).tolist()
         bond_dim = torch.randint(low=2, high=4, size=(n_features,)).tolist()
@@ -1340,7 +1372,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)
     def test_entropy(self, runtime, n_features, boundary, middle_site):
         # Compare the renormalized entropy output with the non-renormalized one.
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
         bond_dim = torch.randint(low=2, high=6, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
@@ -1374,7 +1406,7 @@ class TestMPS:  # MARK: TestMPS
                                                       n_features,
                                                       boundary,
                                                       middle_site):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
 
         mps = tk.models.MPS(n_features=n_features,
@@ -1404,7 +1436,7 @@ class TestMPS:  # MARK: TestMPS
                           mode, renormalize):
         # Cover all canonicalization modes and ensure the post-state can still
         # be evaluated after unsetting traced data.
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = {}
         if runtime == 'cuda':
             runtime_kwargs['device'] = device
@@ -1446,7 +1478,7 @@ class TestMPS:  # MARK: TestMPS
                                                            oc,
                                                            mode,
                                                            renormalize):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
 
         mps = tk.models.MPS(n_features=n_features,
@@ -1592,7 +1624,7 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_tensors_runtime(self, runtime, n):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = _runtime_device(runtime)
         tensor_kwargs = _runtime_kwargs(runtime, device)
         tensor = torch.randn(10, 2, 10, **tensor_kwargs)
         mps = tk.models.UMPS(n_features=n, tensor=tensor)
@@ -1649,7 +1681,7 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('init_method', MPS_INIT_METHODS)
     def test_initialize_init_method_runtime(self, runtime, n, init_method):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.UMPS(n_features=n,
                              phys_dim=2,
@@ -1676,7 +1708,7 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_unitaries_runtime(self, runtime, n):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = _runtime_device(runtime)
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.UMPS(n_features=n,
                              phys_dim=2,
@@ -1784,7 +1816,7 @@ class TestUMPS:  # MARK: TestUMPS
                              phys_dim=5,
                              bond_dim=2)
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.float64
 
         mps.to(device=device, dtype=dtype)
@@ -1810,7 +1842,7 @@ class TestUMPS:  # MARK: TestUMPS
                         if node.tensor is not None]
         assert any(node.is_resultant() for node in tensor_nodes)
 
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.float64
 
         mps.to(device=device, dtype=dtype)
@@ -2027,7 +2059,7 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n_features', N_FEATURES_CASES)
     def test_norm(self, runtime, n_features):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._runtime_kwargs(runtime, device)
         in_features = sorted(set(torch.randint(low=0,
                                                high=n_features,
@@ -2049,7 +2081,7 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n_features', REDUCED_DENSITY_N_FEATURES_CASES)
     def test_reduced_density(self, runtime, n_features):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._runtime_kwargs(runtime, device)
         phys_dim = torch.randint(low=2, high=6, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=4, size=(1,)).item()
@@ -2160,7 +2192,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     @pytest.mark.parametrize('init_method', MPS_INIT_METHODS)
     def test_initialize_init_method_runtime(self, runtime, n, boundary,
                                             init_method):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPSLayer(boundary=boundary,
                                  n_features=n,
@@ -2199,7 +2231,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_canonical_runtime(self, runtime, n, boundary):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPSLayer(boundary=boundary,
                                  n_features=n,
@@ -2357,7 +2389,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
 
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     def test_deparameterize_preserves_boundary_runtime(self, n_features):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.complex64
 
         mps = tk.models.MPSLayer(n_features=n_features,
@@ -2588,7 +2620,7 @@ class TestMPSData:   # MARK: TestMPSData
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_with_tensors_runtime(self, runtime, n, boundary):
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        device = _runtime_device(runtime)
         tensor_kwargs = _runtime_kwargs(runtime, device)
         tensors = [torch.randn(20, 10, 2, 10, **tensor_kwargs) for _ in range(n)]
         if boundary == 'obc':

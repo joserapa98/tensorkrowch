@@ -231,63 +231,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                                 ' type')
         
         else:
-            if not isinstance(tensors, Sequence):
-                raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
-                                'list[torch.Tensor] type')
-            else:
-                self._n_features = len(tensors)
-                self._phys_dim = []
-                self._bond_dim = []
-                for i, t in enumerate(tensors):
-                    if not isinstance(t, torch.Tensor):
-                        raise TypeError('`tensors` should be a tuple[torch.Tensor]'
-                                        ' or list[torch.Tensor] type')
-                    
-                    if i == 0:
-                        if len(t.shape) not in [1, 2, 3]:
-                            raise ValueError(
-                                'The first and last elements in `tensors` '
-                                'should be both rank-2 or rank-3 tensors. If'
-                                ' the first element is also the last one,'
-                                ' it should be a rank-1 tensor')
-                        if len(t.shape) == 1:
-                            self._boundary = 'obc'
-                            self._phys_dim.append(t.shape[0])
-                        elif len(t.shape) == 2:
-                            self._boundary = 'obc'
-                            self._phys_dim.append(t.shape[0])
-                            self._bond_dim.append(t.shape[1])
-                        else:
-                            self._boundary = 'pbc'
-                            self._phys_dim.append(t.shape[1])
-                            self._bond_dim.append(t.shape[2])
-                    elif i == (self._n_features - 1):
-                        if len(t.shape) != len(tensors[0].shape):
-                            raise ValueError(
-                                'The first and last elements in `tensors` '
-                                'should have the same rank. Both should be '
-                                'rank-2 or rank-3 tensors. If the first '
-                                'element is also the last one, it should '
-                                'be a rank-1 tensor')
-                        if len(t.shape) == 2:
-                            self._phys_dim.append(t.shape[1])
-                        else:
-                            if t.shape[-1] != tensors[0].shape[0]:
-                                raise ValueError(
-                                    'If the first and last elements in `tensors`'
-                                    ' are rank-3 tensors, the first dimension '
-                                    'of the first element should coincide with'
-                                    ' the last dimension of the last element')
-                            self._phys_dim.append(t.shape[1])
-                            self._bond_dim.append(t.shape[2])
-                    else:
-                        if len(t.shape) != 3:
-                            raise ValueError(
-                                'The elements of `tensors` should be rank-3 '
-                                'tensors, except the first and lest elements'
-                                ' if boundary is "obc"')
-                        self._phys_dim.append(t.shape[1])
-                        self._bond_dim.append(t.shape[2])
+            self._n_features, self._phys_dim, self._bond_dim, self._boundary = \
+                self._infer_shape_from_tensors(tensors)
         
         # in_features and out_features
         if in_features is None:
@@ -544,6 +489,73 @@ class MPS(TensorNetwork):  # MARK: MPS
     # -------
     # Methods
     # -------
+    @staticmethod
+    def _infer_shape_from_tensors(
+            tensors: Sequence[torch.Tensor]
+            ) -> Tuple[int, List[int], List[int], Text]:
+        """Infers MPS metadata from a sequence of tensors."""
+        if not isinstance(tensors, Sequence):
+            raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
+                            'list[torch.Tensor] type')
+
+        n_features = len(tensors)
+        phys_dim = []
+        bond_dim = []
+        boundary = None
+
+        for i, t in enumerate(tensors):
+            if not isinstance(t, torch.Tensor):
+                raise TypeError('`tensors` should be a tuple[torch.Tensor]'
+                                ' or list[torch.Tensor] type')
+
+            if i == 0:
+                if len(t.shape) not in [1, 2, 3]:
+                    raise ValueError(
+                        'The first and last elements in `tensors` '
+                        'should be both rank-2 or rank-3 tensors. If'
+                        ' the first element is also the last one,'
+                        ' it should be a rank-1 tensor')
+                if len(t.shape) == 1:
+                    boundary = 'obc'
+                    phys_dim.append(t.shape[0])
+                elif len(t.shape) == 2:
+                    boundary = 'obc'
+                    phys_dim.append(t.shape[0])
+                    bond_dim.append(t.shape[1])
+                else:
+                    boundary = 'pbc'
+                    phys_dim.append(t.shape[1])
+                    bond_dim.append(t.shape[2])
+            elif i == (n_features - 1):
+                if len(t.shape) != len(tensors[0].shape):
+                    raise ValueError(
+                        'The first and last elements in `tensors` '
+                        'should have the same rank. Both should be '
+                        'rank-2 or rank-3 tensors. If the first '
+                        'element is also the last one, it should '
+                        'be a rank-1 tensor')
+                if len(t.shape) == 2:
+                    phys_dim.append(t.shape[1])
+                else:
+                    if t.shape[-1] != tensors[0].shape[0]:
+                        raise ValueError(
+                            'If the first and last elements in `tensors`'
+                            ' are rank-3 tensors, the first dimension '
+                            'of the first element should coincide with'
+                            ' the last dimension of the last element')
+                    phys_dim.append(t.shape[1])
+                    bond_dim.append(t.shape[2])
+            else:
+                if len(t.shape) != 3:
+                    raise ValueError(
+                        'The elements of `tensors` should be rank-3 '
+                        'tensors, except the first and lest elements'
+                        ' if boundary is "obc"')
+                phys_dim.append(t.shape[1])
+                bond_dim.append(t.shape[2])
+
+        return n_features, phys_dim, bond_dim, boundary
+    
     def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPS."""
         if self._leaf_nodes:
@@ -2271,16 +2283,7 @@ class UMPS(MPS):  # MARK: UMPS
         elif n_features < 1:
             raise ValueError('`n_features` should be at least 1')
         
-        if tensor is None:
-            # phys_dim
-            if not isinstance(phys_dim, int):
-                raise TypeError('`phys_dim` should be int type')
-
-            # bond_dim
-            if not isinstance(bond_dim, int):
-                raise TypeError('`bond_dim` should be int type')
-            
-        else:
+        if tensor is not None:
             if not isinstance(tensor, torch.Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
             if len(tensor.shape) != 3:

@@ -6,6 +6,7 @@ This script contains:
     * ConvUPEPS
 """
 
+from abc import ABC, abstractmethod
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
 
@@ -1152,7 +1153,100 @@ class UPEPS(PEPS):  # MARK: UPEPS
 
         return net
 
-class ConvPEPS(PEPS):  # MARK: ConvPEPS
+###############################################################################
+class AbstractConvClass(ABC):  # MARK: AbstractConvClass
+
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    def _set_attributes(self,
+                        in_channels: int,
+                        kernel_size: Union[int, Sequence[int]],
+                        stride: int,
+                        padding: int,
+                        dilation: int) -> nn.Module:
+        """Sets convolution attributes and creates the unfold module."""
+        if isinstance(kernel_size, int):
+            kernel_size = (kernel_size, kernel_size)
+        elif not isinstance(kernel_size, Sequence):
+            raise TypeError('`kernel_size` must be int, list[int] or tuple[int]')
+
+        if isinstance(stride, int):
+            stride = (stride, stride)
+        elif not isinstance(stride, Sequence):
+            raise TypeError('`stride` must be int, list[int] or tuple[int]')
+
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        elif not isinstance(padding, Sequence):
+            raise TypeError('`padding` must be int, list[int] or tuple[int]')
+
+        if isinstance(dilation, int):
+            dilation = (dilation, dilation)
+        elif not isinstance(dilation, Sequence):
+            raise TypeError('`dilation` must be int, list[int] or tuple[int]')
+
+        self._in_channels = in_channels
+        self._kernel_size = kernel_size
+        self._stride = stride
+        self._padding = padding
+        self._dilation = dilation
+
+        unfold = nn.Unfold(kernel_size=kernel_size,
+                           stride=stride,
+                           padding=padding,
+                           dilation=dilation)
+        return unfold
+
+    def forward(self, image, *args, **kwargs):
+        r"""
+        Overrides ``torch.nn.Module``'s forward to compute a convolution on the
+        input image.
+
+        Parameters
+        ----------
+        image : torch.Tensor
+            Input batch of images with shape
+
+            .. math::
+
+                batch\_size \times in\_channels \times height \times width
+        args :
+            Arguments that might be used in :meth:`~PEPS.contract`.
+        kwargs :
+            Keyword arguments that might be used in :meth:`~PEPS.contract`,
+            like ``from_size``, ``max_bond`` or ``inline_input``.
+        """
+        # Input image shape: batch_size x in_channels x height x width
+
+        patches = self.unfold(image).transpose(1, 2)
+        # batch_size x nb_windows x (in_channels * nb_pixels)
+
+        patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
+        # batch_size x nb_windows x in_channels x nb_pixels
+
+        patches = patches.transpose(2, 3)
+        # batch_size x nb_windows x nb_pixels x in_channels
+
+        result = super().forward(patches, *args, **kwargs)
+        # batch_size x nb_windows
+
+        h_in = image.shape[2]
+        w_in = image.shape[3]
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
+        result = result.view(*result.shape[:-1], h_out, w_out)
+        # batch_size x height_out x width_out
+
+        return result
+
+
+class ConvPEPS(AbstractConvClass, PEPS):  # MARK: ConvPEPS
     """
     Class for Projected Entangled Pair States, where all nodes are input nodes,
     and where the input data is a batch of images. It is the convolutional
@@ -1243,49 +1337,27 @@ class ConvPEPS(PEPS):  # MARK: ConvPEPS
                 bond_dim = inferred_bond_dim
             boundary = inferred_boundary
 
-        if isinstance(kernel_size, int):
-            kernel_size = (kernel_size, kernel_size)
-        elif not isinstance(kernel_size, Sequence):
-            raise TypeError('`kernel_size` must be int or Sequence')
+        unfold = self._set_attributes(in_channels=in_channels,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=padding,
+                                      dilation=dilation)
 
-        if isinstance(stride, int):
-            stride = (stride, stride)
-        elif not isinstance(stride, Sequence):
-            raise TypeError('`stride` must be int or Sequence')
+        PEPS.__init__(self,
+                      n_rows=self._kernel_size[0],
+                      n_cols=self._kernel_size[1],
+                      phys_dim=in_channels,
+                      bond_dim=bond_dim,
+                      boundary=boundary,
+                      tensors=tensors,
+                      n_batches=2,
+                      init_method=init_method,
+                      parameterized=parameterized,
+                      device=device,
+                      dtype=dtype,
+                      **kwargs)
 
-        if isinstance(padding, int):
-            padding = (padding, padding)
-        elif not isinstance(padding, Sequence):
-            raise TypeError('`padding` must be int or Sequence')
-
-        if isinstance(dilation, int):
-            dilation = (dilation, dilation)
-        elif not isinstance(dilation, Sequence):
-            raise TypeError('`dilation` must be int or Sequence')
-
-        self._in_channels = in_channels
-        self._kernel_size = kernel_size
-        self._stride = stride
-        self._padding = padding
-        self._dilation = dilation
-
-        super().__init__(n_rows=kernel_size[0],
-                         n_cols=kernel_size[1],
-                         phys_dim=in_channels,
-                         bond_dim=bond_dim,
-                         boundary=boundary,
-                         tensors=tensors,
-                         n_batches=2,
-                         init_method=init_method,
-                         parameterized=parameterized,
-                         device=device,
-                         dtype=dtype,
-                         **kwargs)
-
-        self.unfold = nn.Unfold(kernel_size=kernel_size,
-                                stride=stride,
-                                padding=padding,
-                                dilation=dilation)
+        self.unfold = unfold
 
     @property
     def in_channels(self) -> int:
@@ -1387,54 +1459,7 @@ class ConvPEPS(PEPS):  # MARK: ConvPEPS
 
         return new_peps
 
-    def forward(self, image, *args, **kwargs):
-        r"""
-        Overrides ``torch.nn.Module``'s forward to compute a convolution on the input
-        image.
-        
-        Parameters
-        ----------
-        image : torch.Tensor
-            Input batch of images with shape
-            
-            .. math::
-            
-                batch\_size \times in\_channels \times height \times width
-        args :
-            Arguments that might be used in :meth:`~PEPS.contract`.
-        kwargs :
-            Keyword arguments that might be used in :meth:`~PEPS.contract`,
-            like ``from_size``, ``max_bond`` or ``inline_input``.
-        """
-        # Input image shape: batch_size x in_channels x height x width
-
-        patches = self.unfold(image).transpose(1, 2)
-        # batch_size x nb_windows x (in_channels * nb_pixels)
-
-        patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
-        # batch_size x nb_windows x in_channels x nb_pixels
-
-        patches = patches.transpose(2, 3)
-        # batch_size x nb_windows x nb_pixels x in_channels
-
-        result = super().forward(patches, *args, **kwargs)
-        # batch_size x nb_windows
-
-        h_in = image.shape[2]
-        w_in = image.shape[3]
-
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
-                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
-                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-
-        result = result.view(*result.shape[:-1], h_out, w_out)
-        # batch_size x height_out x width_out
-
-        return result
-
-
-class ConvUPEPS(UPEPS):  # MARK: ConvUPEPS
+class ConvUPEPS(AbstractConvClass, UPEPS):  # MARK: ConvUPEPS
     """
     Class for Uniform Projected Entangled Pair States, where all nodes are input
     nodes, and where the input data is a batch of images. It is the convolutional
@@ -1511,48 +1536,26 @@ class ConvUPEPS(UPEPS):  # MARK: ConvUPEPS
                  dtype: Optional[torch.dtype] = None,
                  **kwargs: float) -> None:
 
-        if isinstance(kernel_size, int):
-            kernel_size = (kernel_size, kernel_size)
-        elif not isinstance(kernel_size, Sequence):
-            raise TypeError('`kernel_size` must be int or Sequence')
+        unfold = self._set_attributes(in_channels=in_channels,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=padding,
+                                      dilation=dilation)
 
-        if isinstance(stride, int):
-            stride = (stride, stride)
-        elif not isinstance(stride, Sequence):
-            raise TypeError('`stride` must be int or Sequence')
+        UPEPS.__init__(self,
+                       n_rows=self._kernel_size[0],
+                       n_cols=self._kernel_size[1],
+                       phys_dim=in_channels,
+                       bond_dim=bond_dim,
+                       tensor=tensor,
+                       n_batches=2,
+                       init_method=init_method,
+                       parameterized=parameterized,
+                       device=device,
+                       dtype=dtype,
+                       **kwargs)
 
-        if isinstance(padding, int):
-            padding = (padding, padding)
-        elif not isinstance(padding, Sequence):
-            raise TypeError('`padding` must be int or Sequence')
-
-        if isinstance(dilation, int):
-            dilation = (dilation, dilation)
-        elif not isinstance(dilation, Sequence):
-            raise TypeError('`dilation` must be int or Sequence')
-
-        self._in_channels = in_channels
-        self._kernel_size = kernel_size
-        self._stride = stride
-        self._padding = padding
-        self._dilation = dilation
-
-        super().__init__(n_rows=kernel_size[0],
-                         n_cols=kernel_size[1],
-                         phys_dim=in_channels,
-                         bond_dim=bond_dim,
-                         tensor=tensor,
-                         n_batches=2,
-                         init_method=init_method,
-                         parameterized=parameterized,
-                         device=device,
-                         dtype=dtype,
-                         **kwargs)
-
-        self.unfold = nn.Unfold(kernel_size=kernel_size,
-                                stride=stride,
-                                padding=padding,
-                                dilation=dilation)
+        self.unfold = unfold
 
     @property
     def in_channels(self) -> int:
@@ -1629,49 +1632,3 @@ class ConvUPEPS(UPEPS):  # MARK: ConvUPEPS
             new_peps.uniform_memory.tensor = self.uniform_memory.tensor.clone()
 
         return new_peps
-
-    def forward(self, image, *args, **kwargs):
-        r"""
-        Overrides ``torch.nn.Module``'s forward to compute a convolution on the input
-        image.
-        
-        Parameters
-        ----------
-        image : torch.Tensor
-            Input batch of images with shape
-            
-            .. math::
-            
-                batch\_size \times in\_channels \times height \times width
-        args :
-            Arguments that might be used in :meth:`~PEPS.contract`.
-        kwargs :
-            Keyword arguments that might be used in :meth:`~PEPS.contract`,
-            like ``from_size``, ``max_bond`` or ``inline_input``.
-        """
-        # Input image shape: batch_size x in_channels x height x width
-
-        patches = self.unfold(image).transpose(1, 2)
-        # batch_size x nb_windows x (in_channels * nb_pixels)
-
-        patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
-        # batch_size x nb_windows x in_channels x nb_pixels
-
-        patches = patches.transpose(2, 3)
-        # batch_size x nb_windows x nb_pixels x in_channels
-
-        result = super().forward(patches, *args, **kwargs)
-        # batch_size x nb_windows
-
-        h_in = image.shape[2]
-        w_in = image.shape[3]
-
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
-                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
-                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-
-        result = result.view(*result.shape[:-1], h_out, w_out)
-        # batch_size x height_out x width_out
-
-        return result

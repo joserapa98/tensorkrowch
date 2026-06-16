@@ -21,45 +21,45 @@ BOUNDARY_PAIR_CASES = [
     ['pbc', 'obc'],
     ['pbc', 'pbc'],
 ]
+GRID_SIZE_CASES = [(n_rows, n_cols)
+                   for n_rows in range(1, 4)
+                   for n_cols in range(1, 4)]
+DEVICE_CASES = ['cpu', 'cuda', 'mps']
+DTYPE_CASES = [torch.float32, torch.complex64]
+
+
+def _expected_bond_dim(grid_size, boundary, bond_dim=(2, 3)):
+    n_rows, n_cols = grid_size
+    expected = list(bond_dim)
+    if (boundary[1] == 'obc') and (n_cols == 1):
+        expected[0] = 1
+    if (boundary[0] == 'obc') and (n_rows == 1):
+        expected[1] = 1
+    return expected
+
+
+GRID_BOUNDARY_CASES = [
+    (grid_size, boundary)
+    for grid_size in GRID_SIZE_CASES
+    for boundary in BOUNDARY_PAIR_CASES
+]
+VALID_GRID_BOUNDARY_CASES = GRID_BOUNDARY_CASES
 PEPS_EXTREME_CASES = [
-    ((2, 2), ['obc', 'obc'], {'stacked': 2, 'default': 1}),
-    ((2, 3), ['obc', 'obc'], {'stacked': 2, 'default': 1}),
-    ((3, 2), ['obc', 'obc'], {'stacked': 2, 'default': 1}),
-    ((3, 3), ['obc', 'obc'], {'stacked': 2, 'default': 1}),
-    ((1, 3), ['pbc', 'obc'], {'stacked': 2, 'default': 1}),
-    ((1, 2), ['pbc', 'obc'], {'stacked': 2, 'default': 1}),
-    ((3, 1), ['obc', 'pbc'], {'stacked': 2, 'default': 1}),
-    ((2, 1), ['obc', 'pbc'], {'stacked': 2, 'default': 1}),
-    ((1, 1), ['pbc', 'pbc'], {'stacked': 2, 'default': 1}),
+    (grid_size, boundary, {'stacked': 2, 'default': 1})
+    for grid_size, boundary in VALID_GRID_BOUNDARY_CASES
 ]
-UPEPS_EXTREME_CASES = [
-    ((2, 2), (100,)),
-    ((2, 3), (100,)),
-    ((3, 2), (100,)),
-    ((3, 3), (100,)),
-    ((1, 2), (100,)),
-    ((2, 1), (100,)),
-    ((1, 1), (100,)),
-]
+UPEPS_EXTREME_CASES = [(grid_size, (100,))
+                       for grid_size in GRID_SIZE_CASES]
 CONV_PEPS_EXTREME_CASES = [
-    ((2, 2), ['obc', 'obc'], (100, 4, 4), {'stacked': 2, 'default': 1}),
-    ((2, 3), ['obc', 'obc'], (100, 4, 3), {'stacked': 2, 'default': 1}),
-    ((3, 2), ['obc', 'obc'], (100, 3, 4), {'stacked': 2, 'default': 1}),
-    ((3, 3), ['obc', 'obc'], (100, 3, 3), {'stacked': 2, 'default': 1}),
-    ((1, 3), ['pbc', 'obc'], (100, 5, 3), {'stacked': 2, 'default': 1}),
-    ((1, 2), ['pbc', 'obc'], (100, 5, 4), {'stacked': 2, 'default': 1}),
-    ((3, 1), ['obc', 'pbc'], (100, 3, 5), {'stacked': 2, 'default': 1}),
-    ((2, 1), ['obc', 'pbc'], (100, 4, 5), {'stacked': 2, 'default': 1}),
-    ((1, 1), ['pbc', 'pbc'], (100, 5, 5), {'stacked': 2, 'default': 1}),
+    (grid_size,
+     boundary,
+     (100, 6 - grid_size[0], 6 - grid_size[1]),
+     {'stacked': 2, 'default': 1})
+    for grid_size, boundary in VALID_GRID_BOUNDARY_CASES
 ]
 CONV_UPEPS_EXTREME_CASES = [
-    ((2, 2), (100, 4, 4)),
-    ((2, 3), (100, 4, 3)),
-    ((3, 2), (100, 3, 4)),
-    ((3, 3), (100, 3, 3)),
-    ((1, 2), (100, 5, 4)),
-    ((2, 1), (100, 4, 5)),
-    ((1, 1), (100, 5, 5)),
+    (grid_size, (100, 6 - grid_size[0], 6 - grid_size[1]))
+    for grid_size in GRID_SIZE_CASES
 ]
 
 
@@ -70,6 +70,74 @@ def _assert_initialized_parameterization(nodes, parameterized, tensor_address=No
         assert isinstance(node.tensor, torch.nn.Parameter) == parameterized
         if tensor_address is not None:
             assert node.tensor_address() == tensor_address
+
+
+def _device(device_name):
+    if device_name == 'cuda':
+        if not torch.cuda.is_available():
+            pytest.skip('CUDA is not available')
+        return torch.device('cuda')
+    if device_name == 'mps':
+        if not getattr(torch.backends, 'mps', None) or \
+                not torch.backends.mps.is_available():
+            pytest.skip('MPS is not available')
+        return torch.device('mps')
+    return torch.device('cpu')
+
+
+def _runtime_kwargs(device_name, dtype):
+    return {'device': _device(device_name), 'dtype': dtype}
+
+
+def _assert_nodes_runtime(nodes, device, dtype):
+    for node in nodes:
+        assert node.device.type == device.type
+        if device.index is not None:
+            assert node.device.index == device.index
+        assert node.dtype == dtype
+        if dtype.is_complex:
+            assert node.is_complex()
+
+
+def _expected_tensor_shape(n_rows,
+                           n_cols,
+                           boundary,
+                           i,
+                           j,
+                           phys_dim,
+                           bond_dim):
+    shape = [phys_dim]
+    if (boundary[1] == 'pbc') or (j > 0):
+        shape.append(bond_dim[0])
+    if (boundary[0] == 'pbc') or (i > 0):
+        shape.append(bond_dim[1])
+    if (boundary[1] == 'pbc') or (j < n_cols - 1):
+        shape.append(bond_dim[0])
+    if (boundary[0] == 'pbc') or (i < n_rows - 1):
+        shape.append(bond_dim[1])
+    return tuple(shape)
+
+
+def _make_peps_tensors(n_rows=2,
+                       n_cols=3,
+                       phys_dim=5,
+                       bond_dim=(2, 3),
+                       boundary=None,
+                       **kwargs):
+    if boundary is None:
+        boundary = ['obc', 'obc']
+    return [[
+        torch.randn(*_expected_tensor_shape(
+            n_rows=n_rows,
+            n_cols=n_cols,
+            boundary=boundary,
+            i=i,
+            j=j,
+            phys_dim=phys_dim,
+            bond_dim=bond_dim),
+            **kwargs)
+        for j in range(n_cols)]
+        for i in range(n_rows)]
 
 
 def _grid_nodes(peps):
@@ -180,6 +248,149 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
         for lst in peps.grid_env:
             nodes.extend(lst)
         _assert_initialized_parameterization(nodes, parameterized)
+
+    @pytest.mark.parametrize('grid_size,boundary', VALID_GRID_BOUNDARY_CASES)
+    def test_initialize_with_tensors(self, grid_size, boundary):
+        n_rows, n_cols = grid_size
+        tensors = _make_peps_tensors(n_rows=n_rows,
+                                     n_cols=n_cols,
+                                     boundary=boundary)
+
+        peps = tk.models.PEPS(tensors=tensors,
+                              boundary=boundary)
+
+        assert peps.n_rows == n_rows
+        assert peps.n_cols == n_cols
+        assert peps.boundary == boundary
+        assert peps.phys_dim == 5
+        assert peps.bond_dim == _expected_bond_dim(grid_size, boundary)
+        for tensor_row, peps_tensor_row in zip(tensors, peps.tensors):
+            for tensor, peps_tensor in zip(tensor_row, peps_tensor_row):
+                assert torch.equal(tensor, peps_tensor)
+
+    @pytest.mark.parametrize('device_name', DEVICE_CASES)
+    @pytest.mark.parametrize('dtype', DTYPE_CASES)
+    @pytest.mark.parametrize('grid_size,boundary', VALID_GRID_BOUNDARY_CASES)
+    def test_initialize_with_tensors_runtime(self, device_name, dtype,
+                                             grid_size, boundary):
+        n_rows, n_cols = grid_size
+        tensor_kwargs = _runtime_kwargs(device_name, dtype)
+        tensors = _make_peps_tensors(n_rows=n_rows,
+                                     n_cols=n_cols,
+                                     boundary=boundary,
+                                     **tensor_kwargs)
+
+        peps = tk.models.PEPS(tensors=tensors,
+                              boundary=boundary)
+
+        _assert_nodes_runtime(_grid_nodes(peps),
+                              tensor_kwargs['device'],
+                              dtype)
+        _assert_nodes_runtime(_border_nodes(peps),
+                              tensor_kwargs['device'],
+                              dtype)
+    
+    def test_initialize_with_tensors_ignores_runtime_kwargs(self):
+        tensors = _make_peps_tensors(boundary=['pbc', 'pbc'])
+
+        peps = tk.models.PEPS(tensors=tensors,
+                              parameterized=False,
+                              dtype=torch.complex64)
+
+        for tensor_row, node_row in zip(tensors, peps.grid_env):
+            for tensor, node in zip(tensor_row, node_row):
+                assert node.tensor is tensor
+                assert node.dtype == tensor.dtype
+
+    def test_initialize_with_tensors_ignore_rest(self):
+        tensors = _make_peps_tensors(boundary=['pbc', 'pbc'])
+
+        peps = tk.models.PEPS(n_rows=8,
+                              n_cols=9,
+                              phys_dim=10,
+                              bond_dim=[11, 12],
+                              boundary=['obc', 'obc'],
+                              tensors=tensors)
+
+        assert peps.n_rows == 2
+        assert peps.n_cols == 3
+        assert peps.boundary == ['pbc', 'pbc']
+        assert peps.phys_dim == 5
+        assert peps.bond_dim == [2, 3]
+
+    def test_initialize_with_tensors_errors(self):
+        tensors = _make_peps_tensors()
+        tensors[0] = tensors[0][:-1]
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+
+        tensors = _make_peps_tensors()
+        tensors[0][0] = 1
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+
+        tensors = _make_peps_tensors()
+        tensors[0][0] = torch.randn(6, 2, 3)
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+
+        tensors = _make_peps_tensors()
+        tensors[0][1] = torch.randn(5, 4, 2, 3)
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+
+        tensors = _make_peps_tensors()
+        tensors[1][0] = torch.randn(5, 3, 4, 2)
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+        
+        tensors = _make_peps_tensors(boundary=['pbc', 'pbc'])
+        tensors[0][1] = torch.randn(5, 4, 3, 4, 3)
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+        
+        tensors = _make_peps_tensors(boundary=['pbc', 'pbc'])
+        tensors[1][0] = torch.randn(5, 2, 4, 2, 4)
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+        
+        # Locally compatible horizontal bonds, but not a single global bond dim.
+        tensors = [
+            [torch.randn(5, 2, 3, 4, 3),
+             torch.randn(5, 4, 3, 2, 3)],
+            [torch.randn(5, 2, 3, 4, 3),
+             torch.randn(5, 4, 3, 2, 3)]
+        ]
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+        
+        # Locally compatible vertical bonds, but not a single global bond dim.
+        tensors = [
+            [torch.randn(5, 2, 3, 2, 4),
+             torch.randn(5, 2, 3, 2, 4)],
+            [torch.randn(5, 2, 4, 2, 3),
+             torch.randn(5, 2, 4, 2, 3)]
+        ]
+        with pytest.raises(ValueError):
+            tk.models.PEPS(tensors=tensors)
+
+    @pytest.mark.parametrize('device_name', DEVICE_CASES)
+    @pytest.mark.parametrize('dtype', DTYPE_CASES)
+    def test_initialize_runtime(self, device_name, dtype):
+        model_kwargs = _runtime_kwargs(device_name, dtype)
+
+        peps = tk.models.PEPS(n_rows=2,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3],
+                              **model_kwargs)
+
+        _assert_nodes_runtime(_grid_nodes(peps),
+                              model_kwargs['device'],
+                              dtype)
+        _assert_nodes_runtime(_border_nodes(peps),
+                              model_kwargs['device'],
+                              dtype)
 
     @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
@@ -348,6 +559,53 @@ class TestUPEPS(_PEPSTestMixin):  # MARK: TestUPEPS
                                              tensor_address='virtual_uniform')
         _assert_initialized_parameterization([peps.uniform_memory], parameterized)
 
+    @pytest.mark.parametrize('device_name', DEVICE_CASES)
+    @pytest.mark.parametrize('dtype', DTYPE_CASES)
+    def test_initialize_with_tensor_runtime(self, device_name, dtype):
+        tensor_kwargs = _runtime_kwargs(device_name, dtype)
+        tensor = torch.randn(5, 2, 3, 2, 3, **tensor_kwargs)
+
+        peps = tk.models.UPEPS(n_rows=2,
+                               n_cols=3,
+                               phys_dim=5,
+                               bond_dim=[2, 3],
+                               tensor=tensor)
+
+        assert torch.equal(peps.uniform_memory.tensor, tensor)
+        _assert_nodes_runtime(_grid_nodes(peps),
+                              tensor_kwargs['device'],
+                              dtype)
+        _assert_nodes_runtime([peps.uniform_memory],
+                              tensor_kwargs['device'],
+                              dtype)
+    
+    def test_initialize_with_tensor_infers_shape(self):
+        tensor = torch.randn(5, 2, 3, 2, 3)
+
+        peps = tk.models.UPEPS(n_rows=2,
+                               n_cols=3,
+                               tensor=tensor,
+                               parameterized=False)
+
+        assert peps.phys_dim == 5
+        assert peps.bond_dim == [2, 3]
+        assert peps.uniform_memory.tensor is tensor
+    
+    def test_initialize_with_tensors_uses_first_tensor(self):
+        first_tensor = torch.randn(5, 2, 3, 2, 3)
+        other_tensor = torch.randn(5, 2, 3, 2, 3)
+        peps = tk.models.UPEPS(n_rows=2,
+                               n_cols=2,
+                               phys_dim=5,
+                               bond_dim=[2, 3],
+                               init_method=None,
+                               parameterized=False)
+
+        peps.initialize(tensors=[[first_tensor, other_tensor],
+                                 [other_tensor, other_tensor]])
+
+        assert peps.uniform_memory.tensor is first_tensor
+
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy(self, share_tensors):
         peps = tk.models.UPEPS(n_rows=2,
@@ -466,6 +724,22 @@ class TestConvPEPS(_PEPSTestMixin):  # MARK: TestConvPEPS
         for lst in peps.grid_env:
             nodes.extend(lst)
         _assert_initialized_parameterization(nodes, parameterized)
+
+    @pytest.mark.parametrize('grid_size,boundary', VALID_GRID_BOUNDARY_CASES)
+    def test_initialize_with_tensors(self, grid_size, boundary):
+        n_rows, n_cols = grid_size
+        tensors = _make_peps_tensors(n_rows=n_rows,
+                                     n_cols=n_cols,
+                                     phys_dim=2,
+                                     boundary=boundary)
+
+        peps = tk.models.ConvPEPS(tensors=tensors,
+                                  boundary=boundary)
+
+        assert peps.in_channels == 2
+        assert peps.kernel_size == grid_size
+        assert peps.boundary == boundary
+        assert peps.bond_dim == _expected_bond_dim(grid_size, boundary)
 
     @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
@@ -637,6 +911,25 @@ class TestConvUPEPS(_PEPSTestMixin):  # MARK: TestConvUPEPS
                                              parameterized,
                                              tensor_address='virtual_uniform')
         _assert_initialized_parameterization([peps.uniform_memory], parameterized)
+
+    @pytest.mark.parametrize('device_name', DEVICE_CASES)
+    @pytest.mark.parametrize('dtype', DTYPE_CASES)
+    def test_initialize_with_tensor_runtime(self, device_name, dtype):
+        tensor_kwargs = _runtime_kwargs(device_name, dtype)
+        tensor = torch.randn(2, 2, 3, 2, 3, **tensor_kwargs)
+
+        peps = tk.models.ConvUPEPS(in_channels=2,
+                                   bond_dim=[2, 3],
+                                   kernel_size=(2, 3),
+                                   tensor=tensor)
+
+        assert torch.equal(peps.uniform_memory.tensor, tensor)
+        _assert_nodes_runtime(_grid_nodes(peps),
+                              tensor_kwargs['device'],
+                              dtype)
+        _assert_nodes_runtime([peps.uniform_memory],
+                              tensor_kwargs['device'],
+                              dtype)
 
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy(self, share_tensors):

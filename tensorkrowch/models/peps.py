@@ -6,7 +6,7 @@ This script contains:
     * ConvUPEPS
 """
 
-from typing import (List, Sequence,
+from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
 
 import warnings
@@ -19,7 +19,7 @@ from tensorkrowch.components import Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 
 
-class PEPS(TensorNetwork):
+class PEPS(TensorNetwork):  # MARK: PEPS
     """
     Class for Projected Entangled Pair States, where all nodes are input nodes,
     that is, they are all connected to ``data`` nodes that will store the input
@@ -50,14 +50,32 @@ class PEPS(TensorNetwork):
         List of strings indicating whether periodic or open boundary conditions
         should be used in the horizontal (up and down) and vertical (left and
         right) boundaries.
+    tensors : list[list[torch.Tensor]] or tuple[tuple[torch.Tensor]], optional
+        Instead of providing ``n_rows``, ``n_cols``, ``phys_dim``, ``bond_dim``
+        and ``boundary``, a list of lists of PEPS tensors can be provided. In
+        such case, all mentioned attributes will be inferred from the given
+        tensors. Tensors should follow axis order ``("input", "left", "up",
+        "right", "down")``. If a boundary is open, tensors at that side should
+        omit the corresponding axis. Hence, open-boundary corner tensors are
+        rank-3, open-boundary side tensors are rank-4, and inner or periodic
+        tensors are rank-5.
     n_batches : int
         Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+    init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+        Initialization method.
     parameterized : bool, optional
         Boolean indicating whether PEPS nodes should be created as
         :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
+    device : torch.device, optional
+        Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
+    kwargs : float
+        Keyword arguments for the different initialization methods. See
+        :meth:`~tensorkrowch.AbstractNode.make_tensor`.
     
     Examples
     --------
@@ -69,77 +87,86 @@ class PEPS(TensorNetwork):
     >>> result = peps(data)
     >>> result.shape
     torch.Size([20])
+
+    ``PEPS`` can also be initialized from a list of lists of tensors:
+
+    >>> tensors = [[torch.randn(3, 5, 5, 5, 5) for _ in range(3)]
+    ...            for _ in range(2)]
+    >>> peps = tk.models.PEPS(tensors=tensors)
     """
 
     def __init__(self,
-                 n_rows: int,
-                 n_cols: int,
-                 phys_dim: int,
-                 bond_dim: Sequence[int],
+                 n_rows: Optional[int] = None,
+                 n_cols: Optional[int] = None,
+                 phys_dim: Optional[int] = None,
+                 bond_dim: Optional[Sequence[int]] = None,
                  boundary: Sequence[Text] = ['obc', 'obc'],
+                 tensors: Optional[Sequence[Sequence[torch.Tensor]]] = None,
                  n_batches: int = 1,
-                 parameterized: bool = True) -> None:
+                 init_method: Optional[Text] = 'randn',
+                 parameterized: bool = True,
+                 device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 **kwargs: float) -> None:
 
         super().__init__(name='peps')
 
-        # n_rows
-        if not isinstance(n_rows, int):
-            raise TypeError('`n_rows` should be int type')
-        elif n_rows < 1:
-            raise ValueError('`n_rows` should be at least 1')
+        if tensors is None:
+            # n_rows
+            if not isinstance(n_rows, int):
+                raise TypeError('`n_rows` should be int type')
+            elif n_rows < 1:
+                raise ValueError('`n_rows` should be at least 1')
 
-        # n_cols
-        if not isinstance(n_cols, int):
-            raise TypeError('`n_cols` should be int type')
-        elif n_cols < 1:
-            raise ValueError('`n_cols` should be at least 1')
+            # n_cols
+            if not isinstance(n_cols, int):
+                raise TypeError('`n_cols` should be int type')
+            elif n_cols < 1:
+                raise ValueError('`n_cols` should be at least 1')
 
-        # boundary
-        if not isinstance(boundary, Sequence):
-            raise TypeError('`boundary` should be a sequence of two elements')
-        elif len(boundary) != 2:
-            raise ValueError('`boundary` should be a sequence of two elements')
+            # boundary
+            if not isinstance(boundary, Sequence):
+                raise TypeError('`boundary` should be a sequence of two elements')
+            elif len(boundary) != 2:
+                raise ValueError('`boundary` should be a sequence of two elements')
 
-        if boundary[0] == 'obc':
-            if n_rows < 2:
-                raise ValueError('If `boundary` of rows is "obc", at least '
-                                 'there has to be 2 rows')
-        elif boundary[0] == 'pbc':
-            if n_rows < 1:
-                raise ValueError('If `boundary` of rows is "pbc", at least '
-                                 'there has to be one row')
+            if boundary[0] not in ['obc', 'pbc']:
+                raise ValueError('`boundary` elements should be one of "obc" or '
+                                 '"pbc"')
+
+            if boundary[1] not in ['obc', 'pbc']:
+                raise ValueError('`boundary` elements should be one of "obc" or '
+                                 '"pbc"')
+
+            self._n_rows = n_rows
+            self._n_cols = n_cols
+            self._boundary = boundary
+
+            # phys_dim
+            if not isinstance(phys_dim, int):
+                raise TypeError('`phys_dim` should be int type')
+            self._phys_dim = phys_dim
+
+            # bond_dim
+            if isinstance(bond_dim, (list, tuple)):
+                if len(bond_dim) != 2:
+                    raise ValueError('`bond_dim` should be a pair of ints')
+                self._bond_dim = list(bond_dim)
+                if (boundary[1] == 'obc') and (n_cols == 1):
+                    self._bond_dim[0] = 1
+                if (boundary[0] == 'obc') and (n_rows == 1):
+                    self._bond_dim[1] = 1
+            else:
+                raise TypeError('`bond_dim` should be a pair of ints')
+
         else:
-            raise ValueError('`boundary` elements should be one of "obc" or '
-                             '"pbc"')
-
-        if boundary[1] == 'obc':
-            if n_cols < 2:
-                raise ValueError('If `boundary` of columns is "obc", at least '
-                                 'there has to be 2 columns')
-        elif boundary[1] == 'pbc':
-            if n_cols < 1:
-                raise ValueError('If `boundary` of columns is "pbc", at least '
-                                 'there has to be one column')
-        else:
-            raise ValueError('`boundary` elements should be one of "obc" or '
-                             '"pbc"')
-
-        self._n_rows = n_rows
-        self._n_cols = n_cols
-        self._boundary = boundary
-
-        # phys_dim
-        if not isinstance(phys_dim, int):
-            raise TypeError('`phys_dim` should be int type')
-        self._phys_dim = phys_dim
-
-        # bond_dim
-        if isinstance(bond_dim, (list, tuple)):
-            if len(bond_dim) != 2:
-                raise ValueError('`bond_dim` should be a pair of ints')
-            self._bond_dim = list(bond_dim)
-        else:
-            raise TypeError('`bond_dim` should be a pair of ints')
+            n_rows, n_cols, phys_dim, bond_dim, boundary = \
+                self._infer_shape_from_tensors(tensors, boundary=boundary)
+            self._n_rows = n_rows
+            self._n_cols = n_cols
+            self._boundary = boundary
+            self._phys_dim = phys_dim
+            self._bond_dim = bond_dim
 
         # n_batches
         if not isinstance(n_batches, int):
@@ -158,8 +185,15 @@ class PEPS(TensorNetwork):
 
         # Create Tensor Network
         self._make_nodes(parameterized)
-        self.initialize()
+        self.initialize(tensors=tensors,
+                        init_method=init_method,
+                        device=device,
+                        dtype=dtype,
+                        **kwargs)
 
+    # ----------
+    # Properties
+    # ----------
     @property
     def n_rows(self) -> int:
         """Returns number of rows of the 2D grid."""
@@ -218,6 +252,138 @@ class PEPS(TensorNetwork):
         """Returns the grid environment of PEPS nodes."""
         return self._grid_env
 
+    @property
+    def tensors(self) -> List[List[torch.Tensor]]:
+        """Returns the list of lists of PEPS tensors."""
+        tensors = []
+        for i, row in enumerate(self._grid_env):
+            tensor_row = []
+            for j, node in enumerate(row):
+                tensor_row.append(self._reduced_tensor(node.tensor, i, j))
+            tensors.append(tensor_row)
+        return tensors
+    
+    # -------
+    # Methods
+    # -------
+    def _candidate_from_tensors(self,
+                                tensors: Sequence[Sequence[torch.Tensor]],
+                                boundary: Sequence[Text]):
+        """Checks whether tensors match a candidate boundary convention."""
+        n_rows = len(tensors)
+        n_cols = len(tensors[0])
+        phys_dim = None
+        horizontal_bond_dim = None
+        vertical_bond_dim = None
+
+        for i, row in enumerate(tensors):
+            for j, tensor in enumerate(row):
+                if not isinstance(tensor, torch.Tensor):
+                    return None
+
+                shape = list(tensor.shape)
+                if len(shape) < 1:
+                    return None
+
+                if phys_dim is None:
+                    phys_dim = shape[0]
+                elif shape[0] != phys_dim:
+                    return None
+
+                axis = 1
+                if (boundary[1] == 'pbc') or (j > 0):
+                    if axis >= len(shape):
+                        return None
+                    if horizontal_bond_dim is None:
+                        horizontal_bond_dim = shape[axis]
+                    elif shape[axis] != horizontal_bond_dim:
+                        return None
+                    axis += 1
+
+                if (boundary[0] == 'pbc') or (i > 0):
+                    if axis >= len(shape):
+                        return None
+                    if vertical_bond_dim is None:
+                        vertical_bond_dim = shape[axis]
+                    elif shape[axis] != vertical_bond_dim:
+                        return None
+                    axis += 1
+
+                if (boundary[1] == 'pbc') or (j < n_cols - 1):
+                    if axis >= len(shape):
+                        return None
+                    if horizontal_bond_dim is None:
+                        horizontal_bond_dim = shape[axis]
+                    elif shape[axis] != horizontal_bond_dim:
+                        return None
+                    axis += 1
+
+                if (boundary[0] == 'pbc') or (i < n_rows - 1):
+                    if axis >= len(shape):
+                        return None
+                    if vertical_bond_dim is None:
+                        vertical_bond_dim = shape[axis]
+                    elif shape[axis] != vertical_bond_dim:
+                        return None
+                    axis += 1
+
+                if axis != len(shape):
+                    return None
+
+        if horizontal_bond_dim is None:
+            horizontal_bond_dim = 1
+        if vertical_bond_dim is None:
+            vertical_bond_dim = 1
+
+        return phys_dim, [horizontal_bond_dim, vertical_bond_dim]
+
+    def _infer_shape_from_tensors(self,
+                                  tensors: Sequence[Sequence[torch.Tensor]],
+                                  boundary: Optional[Sequence[Text]] = None):
+        """Infers PEPS metadata from a rectangular grid of tensors."""
+        if not isinstance(tensors, Sequence):
+            raise TypeError('`tensors` should be a sequence of sequences of '
+                            'torch.Tensor')
+        if len(tensors) == 0:
+            raise ValueError('`tensors` should contain at least one row')
+        if not isinstance(tensors[0], Sequence) or len(tensors[0]) == 0:
+            raise ValueError('`tensors` rows should be non-empty sequences')
+
+        n_rows = len(tensors)
+        n_cols = len(tensors[0])
+        for row in tensors:
+            if not isinstance(row, Sequence):
+                raise TypeError('`tensors` should be a sequence of sequences '
+                                'of torch.Tensor')
+            if len(row) != n_cols:
+                raise ValueError('All rows in `tensors` should have the same '
+                                 'number of elements')
+
+        boundary_candidates = []
+        for candidate_boundary in (['obc', 'obc'], ['obc', 'pbc'],
+                                   ['pbc', 'obc'], ['pbc', 'pbc']):
+            candidate = self._candidate_from_tensors(tensors,
+                                                     candidate_boundary)
+            if candidate is not None:
+                phys_dim, bond_dim = candidate
+                boundary_candidates.append((phys_dim, bond_dim,
+                                            candidate_boundary))
+
+        if not boundary_candidates:
+            raise ValueError('Could not infer a valid PEPS layout from '
+                             '`tensors`')
+        if len(boundary_candidates) > 1:
+            if boundary is not None:
+                for candidate in boundary_candidates:
+                    if list(boundary) == candidate[2]:
+                        return (n_rows, n_cols, candidate[0], candidate[1],
+                                candidate[2])
+            raise ValueError('Ambiguous PEPS boundary conditions inferred from '
+                             '`tensors`')
+
+        phys_dim, bond_dim, boundary = boundary_candidates[0]
+        return n_rows, n_cols, phys_dim, bond_dim, boundary
+    
     def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the PEPS."""
         if self.leaf_nodes:
@@ -238,9 +404,11 @@ class PEPS(TensorNetwork):
         for i in range(self._n_rows):
             self._grid_env.append([])
             for j in range(self._n_cols):
-                node = node_cls(shape=(phys_dim, bond_dim[0], bond_dim[1],
+                node = node_cls(shape=(phys_dim,
+                                       bond_dim[0], bond_dim[1],
                                        bond_dim[0], bond_dim[1]),
-                                axes_names=('input', 'left', 'up',
+                                axes_names=('input',
+                                            'left', 'up',
                                             'right', 'down'),
                                 name=f'grid_env_node_({i},{j})',
                                 network=self)
@@ -288,11 +456,172 @@ class PEPS(TensorNetwork):
                             network=self)
                 self._right_border.append(node)
                 self._grid_env[i][-1]['right'] ^ node['left']
+    
+    def _expected_tensor_shape(self,
+                               n_rows: int,
+                               n_cols: int,
+                               boundary: Sequence[Text],
+                               i: int,
+                               j: int,
+                               phys_dim: int,
+                               bond_dim: Sequence[int]) -> Tuple[int, ...]:
+        """Computes the reduced tensor shape expected at a grid position."""
+        shape = [phys_dim]
+        if (boundary[1] == 'pbc') or (j > 0):
+            shape.append(bond_dim[0])
+        if (boundary[0] == 'pbc') or (i > 0):
+            shape.append(bond_dim[1])
+        if (boundary[1] == 'pbc') or (j < n_cols - 1):
+            shape.append(bond_dim[0])
+        if (boundary[0] == 'pbc') or (i < n_rows - 1):
+            shape.append(bond_dim[1])
+        return tuple(shape)
+    
+    def _embed_obc_tensor(self,
+                          tensor: torch.Tensor,
+                          i: int,
+                          j: int,
+                          device: Optional[torch.device] = None,
+                          dtype: Optional[torch.dtype] = None) -> torch.Tensor:
+        """Embeds a reduced OBC tensor into the full internal grid-node shape."""
+        is_left_border = (self._boundary[1] == 'obc') and (j == 0)
+        is_up_border = (self._boundary[0] == 'obc') and (i == 0)
+        is_right_border = (self._boundary[1] == 'obc') and \
+            (j == self._n_cols - 1)
+        is_down_border = (self._boundary[0] == 'obc') and \
+            (i == self._n_rows - 1)
+        
+        if not (is_left_border or is_up_border or
+                is_right_border or is_down_border):
+            return tensor
+        
+        if device is None:
+            device = tensor.device
+        if dtype is None:
+            dtype = tensor.dtype
+        
+        aux_tensor = torch.zeros(*self._grid_env[i][j].shape,
+                                 device=device,
+                                 dtype=dtype)
+        
+        selection = [slice(None)]
+        if is_left_border:
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        if is_up_border:
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        if is_right_border:
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        if is_down_border:
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        
+        aux_tensor[tuple(selection)] = tensor
+        return aux_tensor
 
-    def initialize(self, std: float = 1e-9) -> None:
-        """Initializes all the nodes."""
-        for node in self.leaf_nodes.values():
-            node.tensor = torch.randn(node.shape) * std
+    def _reduced_tensor(self,
+                        tensor: torch.Tensor,
+                        i: int,
+                        j: int) -> torch.Tensor:
+        """Extracts the public reduced tensor from the full internal tensor."""
+        selection = [slice(None)]
+        if (self._boundary[1] == 'obc') and (j == 0):
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        if (self._boundary[0] == 'obc') and (i == 0):
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        if (self._boundary[1] == 'obc') and (j == self._n_cols - 1):
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        if (self._boundary[0] == 'obc') and (i == self._n_rows - 1):
+            selection.append(0)
+        else:
+            selection.append(slice(None))
+        
+        return tensor[tuple(selection)]
+    
+    def initialize(self,
+                   tensors: Optional[Sequence[Sequence[torch.Tensor]]] = None,
+                   init_method: Optional[Text] = 'randn',
+                   device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
+                   **kwargs: float) -> None:
+        """
+        Initializes all the nodes.
+
+        Parameters
+        ----------
+        tensors : list[list[torch.Tensor]] or tuple[tuple[torch.Tensor]], optional
+            Sequence of sequences of tensors to set in each of the PEPS nodes.
+            Tensor axes follow the order ``("input", "left", "up", "right",
+            "down")``. Axes corresponding to open-boundary sides should be
+            omitted.
+        init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+            Initialization method.
+        device : torch.device, optional
+            Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
+        kwargs : float
+            Keyword arguments for the different initialization methods. See
+            :meth:`~tensorkrowch.AbstractNode.make_tensor`.
+        """
+        if tensors is not None:
+            if len(tensors) != self._n_rows:
+                raise ValueError('`tensors` should have `n_rows` rows')
+            
+            device = tensors[0][0].device
+            dtype = tensors[0][0].dtype
+            for i, row in enumerate(tensors):
+                if len(row) != self._n_cols:
+                    raise ValueError('Each row in `tensors` should have '
+                                     '`n_cols` elements')
+                for j, tensor in enumerate(row):
+                    expected_shape = self._expected_tensor_shape(
+                        n_rows=self._n_rows,
+                        n_cols=self._n_cols,
+                        boundary=self._boundary,
+                        i=i,
+                        j=j,
+                        phys_dim=self._phys_dim,
+                        bond_dim=self._bond_dim)
+                    if tuple(tensor.shape) != expected_shape:
+                        raise ValueError('`tensors` elements have incorrect '
+                                         'shapes for the PEPS layout')
+                    self._grid_env[i][j].tensor = self._embed_obc_tensor(
+                        tensor=tensor,
+                        i=i,
+                        j=j,
+                        device=device,
+                        dtype=dtype)
+        elif init_method is not None:
+            for i, row in enumerate(self._grid_env):
+                for j, node in enumerate(row):
+                    node.set_tensor(init_method=init_method,
+                                    device=device,
+                                    dtype=dtype,
+                                    **kwargs)
+                    if 'obc' in self._boundary:
+                        node.tensor = self._embed_obc_tensor(
+                            tensor=self._reduced_tensor(node.tensor, i, j),
+                            i=i,
+                            j=j,
+                            device=device,
+                            dtype=dtype)
+
+        for node in self._up_border + self._down_border + \
+                self._left_border + self._right_border:
+            node.set_tensor(init_method='copy', device=device, dtype=dtype)
 
     def copy(self, share_tensors: bool = False) -> 'PEPS':
         """
@@ -317,7 +646,11 @@ class PEPS(TensorNetwork):
                         phys_dim=self._phys_dim,
                         bond_dim=self._bond_dim,
                         boundary=self._boundary,
-                        n_batches=self._n_batches)
+                        tensors=None,
+                        n_batches=self._n_batches,
+                        init_method=None,
+                        device=None,
+                        dtype=None)
         new_peps.name = self.name + '_copy'
 
         for i in range(self._n_rows):
@@ -573,7 +906,7 @@ class PEPS(TensorNetwork):
         return result
 
 
-class UPEPS(PEPS):
+class UPEPS(PEPS):  # MARK: UPEPS
     """
     Class for Uniform (translationally invariant) Projected Entangled Pair
     States, where all nodes are input nodes. It is the uniform version of
@@ -591,19 +924,33 @@ class UPEPS(PEPS):
         Number of rows of the 2D grid.
     n_cols : int
         Number of columns of the 2D grid
-    phys_dim : int
-        Physical dimension.
-    bond_dim : list[int] or tuple[int]
+    phys_dim : int, optional
+        Physical dimension. If ``tensor`` is provided, it is inferred from it.
+    bond_dim : list[int] or tuple[int], optional
         Bond dimensions for horizontal and vertical edges (in that order). Thus
-        it should also contain 2 elements
+        it should also contain 2 elements. If ``tensor`` is provided, it is
+        inferred from it.
+    tensor : torch.Tensor, optional
+        Tensor to set in the UPEPS ``uniform_memory`` node. It should be rank-5
+        with shape ``(phys_dim, bond_dim[0], bond_dim[1], bond_dim[0],
+        bond_dim[1])``.
     n_batches : int
         Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
         be ``nu_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+    init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+        Initialization method.
     parameterized : bool, optional
         Boolean indicating whether UPEPS nodes should be created as
         :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
+    device : torch.device, optional
+        Device where to initialize the tensor if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
+    kwargs : float
+        Keyword arguments for the different initialization methods. See
+        :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         
     Examples
     --------
@@ -623,17 +970,45 @@ class UPEPS(PEPS):
     def __init__(self,
                  n_rows: int,
                  n_cols: int,
-                 phys_dim: int,
-                 bond_dim: Sequence[int],
+                 phys_dim: Optional[int] = None,
+                 bond_dim: Optional[Sequence[int]] = None,
+                 tensor: Optional[torch.Tensor] = None,
                  n_batches: int = 1,
-                 parameterized: bool = True) -> None:
+                 init_method: Optional[Text] = 'randn',
+                 parameterized: bool = True,
+                 device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 **kwargs: float) -> None:
+        tensors = None
+
+        if tensor is not None:
+            if not isinstance(tensor, torch.Tensor):
+                raise TypeError('`tensor` should be torch.Tensor type')
+            if len(tensor.shape) != 5:
+                raise ValueError('`tensor` should be a rank-5 tensor')
+            if tensor.shape[1] != tensor.shape[3]:
+                raise ValueError('`tensor` left and right dimensions should '
+                                 'be equal so that the PEPS can have '
+                                 'periodic boundary conditions')
+            if tensor.shape[2] != tensor.shape[4]:
+                raise ValueError('`tensor` up and down dimensions should '
+                                 'be equal so that the PEPS can have '
+                                 'periodic boundary conditions')
+            tensors = [[tensor for _ in range(n_cols)]
+                       for _ in range(n_rows)]
+
         super().__init__(n_rows=n_rows,
                          n_cols=n_cols,
                          phys_dim=phys_dim,
                          bond_dim=bond_dim,
                          boundary=['pbc', 'pbc'],
+                         tensors=tensors,
                          n_batches=n_batches,
-                         parameterized=parameterized)
+                         init_method=init_method,
+                         parameterized=parameterized,
+                         device=device,
+                         dtype=dtype,
+                         **kwargs)
         self.name = 'upeps'
 
     def _make_nodes(self, parameterized: bool = True) -> None:
@@ -658,11 +1033,46 @@ class UPEPS(PEPS):
             for node in lst:
                 node.set_tensor_from(uniform_memory)
 
-    def initialize(self, std: float = 1e-9) -> None:
-        """Initializes all the nodes."""
-        # Virtual node
-        tensor = torch.randn(self.uniform_memory.shape) * std
-        self.uniform_memory.tensor = tensor
+    def initialize(self,
+                   tensors: Optional[Sequence[Sequence[torch.Tensor]]] = None,
+                   init_method: Optional[Text] = 'randn',
+                   device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
+                   **kwargs: float) -> None:
+        """
+        Initializes the ``uniform_memory`` node.
+
+        Parameters
+        ----------
+        tensors : list[list[torch.Tensor]] or tuple[tuple[torch.Tensor]], optional
+            Sequence containing the shared tensor used to initialize the UPEPS.
+            If more tensors are provided, only the first one is used.
+        init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+            Initialization method.
+        device : torch.device, optional
+            Device where to initialize the tensor if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
+        kwargs : float
+            Keyword arguments for the different initialization methods. See
+            :meth:`~tensorkrowch.AbstractNode.make_tensor`.
+        """
+        if tensors is not None:
+            if len(tensors) == 0:
+                raise ValueError('`tensors` should contain at least one row')
+            if not isinstance(tensors[0], Sequence) or len(tensors[0]) == 0:
+                raise ValueError('`tensors` rows should be non-empty sequences')
+            tensor = tensors[0][0]
+            if not isinstance(tensor, torch.Tensor):
+                raise TypeError('`tensors` should contain torch.Tensor objects')
+            if tuple(tensor.shape) != tuple(self.uniform_memory.shape):
+                raise ValueError('`tensor` has incorrect shape for UPEPS')
+            self.uniform_memory.tensor = tensor
+        elif init_method is not None:
+            self.uniform_memory.set_tensor(init_method=init_method,
+                                           device=device,
+                                           dtype=dtype,
+                                           **kwargs)
 
     def copy(self, share_tensors: bool = False) -> 'UPEPS':
         """
@@ -686,9 +1096,13 @@ class UPEPS(PEPS):
                          n_cols=self._n_cols,
                          phys_dim=self._phys_dim,
                          bond_dim=self._bond_dim,
+                         tensor=None,
                          n_batches=self._n_batches,
+                         init_method=None,
                          parameterized=isinstance(self.uniform_memory,
-                                                  ParamNode))
+                                                  ParamNode),
+                         device=None,
+                         dtype=None)
         new_peps.name = self.name + '_copy'
 
         if share_tensors:
@@ -738,7 +1152,7 @@ class UPEPS(PEPS):
 
         return net
 
-class ConvPEPS(PEPS):
+class ConvPEPS(PEPS):  # MARK: ConvPEPS
     """
     Class for Projected Entangled Pair States, where all nodes are input nodes,
     and where the input data is a batch of images. It is the convolutional
@@ -776,9 +1190,21 @@ class ConvPEPS(PEPS):
         List of strings indicating whether periodic or open boundary conditions
         should be used in the horizontal (up and down) and vertical (left and
         right) boundaries.
+    tensors : list[list[torch.Tensor]] or tuple[tuple[torch.Tensor]], optional
+        Sequence of PEPS tensors from which ``kernel_size``, ``in_channels``,
+        ``bond_dim`` and ``boundary`` can be inferred.
+    init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+        Initialization method.
     parameterized : bool, optional
         Boolean indicating whether ConvPEPS nodes should be created as
         :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
+    device : torch.device, optional
+        Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
+    kwargs : float
+        Keyword arguments for the different initialization methods. See
+        :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         
     Examples
     --------
@@ -792,14 +1218,30 @@ class ConvPEPS(PEPS):
     """
 
     def __init__(self,
-                 in_channels: int,
-                 bond_dim: Sequence[int],
-                 kernel_size: Union[int, Sequence],
+                 in_channels: Optional[int] = None,
+                 bond_dim: Optional[Sequence[int]] = None,
+                 kernel_size: Optional[Union[int, Sequence]] = None,
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1,
                  boundary: Sequence[Text] = ['obc', 'obc'],
-                 parameterized: bool = True) -> None:
+                 tensors: Optional[Sequence[Sequence[torch.Tensor]]] = None,
+                 init_method: Optional[Text] = 'randn',
+                 parameterized: bool = True,
+                 device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 **kwargs: float) -> None:
+
+        if tensors is not None:
+            n_rows, n_cols, phys_dim, inferred_bond_dim, inferred_boundary = \
+                self._infer_shape_from_tensors(tensors, boundary=boundary)
+            if kernel_size is None:
+                kernel_size = (n_rows, n_cols)
+            if in_channels is None:
+                in_channels = phys_dim
+            if bond_dim is None:
+                bond_dim = inferred_bond_dim
+            boundary = inferred_boundary
 
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -832,8 +1274,13 @@ class ConvPEPS(PEPS):
                          phys_dim=in_channels,
                          bond_dim=bond_dim,
                          boundary=boundary,
+                         tensors=tensors,
                          n_batches=2,
-                         parameterized=parameterized)
+                         init_method=init_method,
+                         parameterized=parameterized,
+                         device=device,
+                         dtype=dtype,
+                         **kwargs)
 
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -901,7 +1348,11 @@ class ConvPEPS(PEPS):
                             stride=self._stride,
                             padding=self._padding,
                             dilation=self._dilation,
-                            boundary=self._boundary)
+                            boundary=self._boundary,
+                            tensors=None,
+                            init_method=None,
+                            device=None,
+                            dtype=None)
         new_peps.name = self.name + '_copy'
 
         for i in range(self._n_rows):
@@ -983,7 +1434,7 @@ class ConvPEPS(PEPS):
         return result
 
 
-class ConvUPEPS(UPEPS):
+class ConvUPEPS(UPEPS):  # MARK: ConvUPEPS
     """
     Class for Uniform Projected Entangled Pair States, where all nodes are input
     nodes, and where the input data is a batch of images. It is the convolutional
@@ -1017,9 +1468,20 @@ class ConvUPEPS(UPEPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    tensor : torch.Tensor, optional
+        Tensor to set in the ConvUPEPS ``uniform_memory`` node.
+    init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+        Initialization method.
     parameterized : bool, optional
         Boolean indicating whether ConvUPEPS nodes should be created as
         :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
+    device : torch.device, optional
+        Device where to initialize the tensor if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
+    kwargs : float
+        Keyword arguments for the different initialization methods. See
+        :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         
     Examples
     --------
@@ -1042,7 +1504,12 @@ class ConvUPEPS(UPEPS):
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1,
-                 parameterized: bool = True) -> None:
+                 tensor: Optional[torch.Tensor] = None,
+                 init_method: Optional[Text] = 'randn',
+                 parameterized: bool = True,
+                 device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 **kwargs: float) -> None:
 
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1074,8 +1541,13 @@ class ConvUPEPS(UPEPS):
                          n_cols=kernel_size[1],
                          phys_dim=in_channels,
                          bond_dim=bond_dim,
+                         tensor=tensor,
                          n_batches=2,
-                         parameterized=parameterized)
+                         init_method=init_method,
+                         parameterized=parameterized,
+                         device=device,
+                         dtype=dtype,
+                         **kwargs)
 
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -1143,8 +1615,12 @@ class ConvUPEPS(UPEPS):
                              stride=self._stride,
                              padding=self._padding,
                              dilation=self._dilation,
+                             tensor=None,
+                             init_method=None,
                              parameterized=isinstance(self.uniform_memory,
-                                                      ParamNode))
+                                                      ParamNode),
+                             device=None,
+                             dtype=None)
         new_peps.name = self.name + '_copy'
 
         if share_tensors:

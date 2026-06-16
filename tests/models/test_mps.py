@@ -1621,6 +1621,37 @@ class TestUMPS:  # MARK: TestUMPS
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * n
     
+    @pytest.mark.parametrize('n', [2, 5])
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_initialize_boundary(self, n, boundary):
+        mps = tk.models.UMPS(n_features=n,
+                             phys_dim=2,
+                             bond_dim=5,
+                             boundary=boundary)
+
+        assert mps.n_features == n
+        assert mps.boundary == boundary
+        assert mps.phys_dim == [2] * n
+        assert mps.bond_dim == [5] * (n - 1 if boundary == 'obc' else n)
+        if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mps)
+            _assert_boundary_vector(mps.left_node)
+            _assert_boundary_vector(mps.right_node)
+    
+    @pytest.mark.parametrize('n', [2, 5])
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_initialize_boundary_with_tensor(self, n, boundary):
+        tensor = torch.randn(10, 2, 10)
+        mps = tk.models.UMPS(n_features=n,
+                             boundary=boundary,
+                             tensor=tensor,
+                             parameterized=False)
+
+        assert mps.boundary == boundary
+        assert mps.phys_dim == [2] * n
+        assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
+        assert mps.uniform_memory.tensor is tensor
+    
     @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_tensors_runtime(self, runtime, n):
@@ -1770,6 +1801,18 @@ class TestUMPS:  # MARK: TestUMPS
 
         assert isinstance(copied_mps, tk.models.UMPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_copy_preserves_boundary(self, boundary):
+        mps = tk.models.UMPS(n_features=3,
+                             phys_dim=5,
+                             bond_dim=2,
+                             boundary=boundary)
+
+        copied_mps = mps.copy()
+
+        assert copied_mps.boundary == boundary
+        assert copied_mps.bond_dim == [2] * (2 if boundary == 'obc' else 3)
 
     @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
@@ -2825,6 +2868,18 @@ class TestConvModels:  # MARK: TestConvModels
         for node in mps.mats_env:
             assert node.grad is not None
         assert mps.uniform_memory.grad is not None
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_conv_umps_boundary(self, boundary):
+        mps = tk.models.ConvUMPS(in_channels=5,
+                                 bond_dim=2,
+                                 kernel_size=(2, 2),
+                                 boundary=boundary)
+
+        assert mps.boundary == boundary
+        assert mps.bond_dim == [2] * (3 if boundary == 'obc' else 4)
+        if boundary == 'obc':
+            _assert_obc_boundary_nodes_are_non_parametric(mps)
 
     @pytest.mark.parametrize('height', SMALL_SPATIAL_CASES)
     @pytest.mark.parametrize('width', SMALL_SPATIAL_CASES)
@@ -2964,6 +3019,18 @@ class TestConvModels:  # MARK: TestConvModels
         copied_mps = mps.copy(share_tensors=share_tensors)
         assert isinstance(copied_mps, tk.models.ConvUMPS)
         _assert_copied_mps(mps, copied_mps, share_tensors)
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_copy_conv_umps_preserves_boundary(self, boundary):
+        mps = tk.models.ConvUMPS(in_channels=5,
+                                 bond_dim=2,
+                                 kernel_size=(2, 2),
+                                 boundary=boundary)
+
+        copied_mps = mps.copy()
+
+        assert copied_mps.boundary == boundary
+        assert copied_mps.bond_dim == [2] * (3 if boundary == 'obc' else 4)
 
     @pytest.mark.parametrize('height,width,share_tensors', COPY_CONV_UMPS_CASES)
     def test_copy_conv_umps_preserves_parameterization(self,

@@ -591,6 +591,34 @@ class TestUPEPS(_PEPSTestMixin):  # MARK: TestUPEPS
         assert peps.bond_dim == [2, 3]
         assert peps.uniform_memory.tensor is tensor
     
+    @pytest.mark.parametrize('grid_size,boundary', VALID_GRID_BOUNDARY_CASES)
+    def test_initialize_boundary(self, grid_size, boundary):
+        n_rows, n_cols = grid_size
+        peps = tk.models.UPEPS(n_rows=n_rows,
+                               n_cols=n_cols,
+                               phys_dim=5,
+                               bond_dim=[2, 3],
+                               boundary=boundary)
+
+        assert peps.n_rows == n_rows
+        assert peps.n_cols == n_cols
+        assert peps.boundary == boundary
+        assert peps.bond_dim == _expected_bond_dim(grid_size, boundary)
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    def test_initialize_boundary_with_tensor(self, boundary):
+        tensor = torch.randn(5, 2, 3, 2, 3)
+        peps = tk.models.UPEPS(n_rows=2,
+                               n_cols=3,
+                               boundary=boundary,
+                               tensor=tensor,
+                               parameterized=False)
+
+        assert peps.boundary == boundary
+        assert peps.phys_dim == 5
+        assert peps.bond_dim == [2, 3]
+        assert peps.uniform_memory.tensor is tensor
+    
     def test_initialize_with_tensors_uses_first_tensor(self):
         first_tensor = torch.randn(5, 2, 3, 2, 3)
         other_tensor = torch.randn(5, 2, 3, 2, 3)
@@ -621,6 +649,19 @@ class TestUPEPS(_PEPSTestMixin):  # MARK: TestUPEPS
             assert peps.uniform_memory.tensor is copied_peps.uniform_memory.tensor
         else:
             assert peps.uniform_memory.tensor is not copied_peps.uniform_memory.tensor
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    def test_copy_preserves_boundary(self, boundary):
+        peps = tk.models.UPEPS(n_rows=2,
+                               n_cols=3,
+                               phys_dim=5,
+                               bond_dim=[2, 3],
+                               boundary=boundary)
+
+        copied_peps = peps.copy()
+
+        assert copied_peps.boundary == boundary
+        assert copied_peps.bond_dim == [2, 3]
 
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy_preserves_parameterization(self, share_tensors):
@@ -930,6 +971,29 @@ class TestConvUPEPS(_PEPSTestMixin):  # MARK: TestConvUPEPS
         _assert_nodes_runtime([peps.uniform_memory],
                               tensor_kwargs['device'],
                               dtype)
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    def test_initialize_boundary(self, boundary):
+        peps = tk.models.ConvUPEPS(in_channels=2,
+                                   bond_dim=[2, 3],
+                                   kernel_size=(2, 3),
+                                   boundary=boundary)
+
+        assert peps.boundary == boundary
+        assert peps.bond_dim == [2, 3]
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    def test_initialize_boundary_with_tensor(self, boundary):
+        tensor = torch.randn(2, 2, 3, 2, 3)
+        peps = tk.models.ConvUPEPS(in_channels=2,
+                                   bond_dim=[2, 3],
+                                   kernel_size=(2, 3),
+                                   boundary=boundary,
+                                   tensor=tensor,
+                                   parameterized=False)
+
+        assert peps.boundary == boundary
+        assert peps.uniform_memory.tensor is tensor
 
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy(self, share_tensors):
@@ -950,6 +1014,18 @@ class TestConvUPEPS(_PEPSTestMixin):  # MARK: TestConvUPEPS
             assert peps.uniform_memory.tensor is copied_peps.uniform_memory.tensor
         else:
             assert peps.uniform_memory.tensor is not copied_peps.uniform_memory.tensor
+    
+    @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
+    def test_copy_preserves_boundary(self, boundary):
+        peps = tk.models.ConvUPEPS(in_channels=2,
+                                   bond_dim=[2, 3],
+                                   kernel_size=(2, 3),
+                                   boundary=boundary)
+
+        copied_peps = peps.copy()
+
+        assert copied_peps.boundary == boundary
+        assert copied_peps.bond_dim == [2, 3]
 
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy_preserves_parameterization(self, share_tensors):

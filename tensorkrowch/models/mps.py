@@ -2209,6 +2209,9 @@ class UMPS(MPS):  # MARK: UMPS
         Physical dimension.
     bond_dim : int, optional
         Bond dimension.
+    boundary : {"obc", "pbc"}
+        String indicating whether periodic or open boundary conditions should
+        be used.
     tensor: torch.Tensor, optional
         Instead of providing ``phys_dim`` and ``bond_dim``, a single tensor
         can be provided. ``n_features`` is still needed to specify how many
@@ -2265,6 +2268,7 @@ class UMPS(MPS):  # MARK: UMPS
                  n_features: int,
                  phys_dim: Optional[int] = None,
                  bond_dim: Optional[int] = None,
+                 boundary: Text = 'pbc',
                  tensor: Optional[torch.Tensor] = None,
                  in_features: Optional[Sequence[int]] = None,
                  out_features: Optional[Sequence[int]] = None,
@@ -2290,15 +2294,18 @@ class UMPS(MPS):  # MARK: UMPS
                 raise ValueError('`tensor` should be a rank-3 tensor')
             if tensor.shape[0] != tensor.shape[2]:
                 raise ValueError('`tensor` first and last dimensions should'
-                                 ' be equal so that the MPS can have '
-                                 'periodic boundary conditions')
-            
-            tensors = [tensor] * n_features
+                                 ' be equal')
+            if phys_dim is None:
+                phys_dim = tensor.shape[1]
+            if bond_dim is None:
+                bond_dim = tensor.shape[0]
+            if boundary == 'pbc':
+                tensors = [tensor] * n_features
         
         super().__init__(n_features=n_features,
                          phys_dim=phys_dim,
                          bond_dim=bond_dim,
-                         boundary='pbc',
+                         boundary=boundary,
                          tensors=tensors,
                          in_features=in_features,
                          out_features=out_features,
@@ -2309,6 +2316,9 @@ class UMPS(MPS):  # MARK: UMPS
                          dtype=dtype,
                          **kwargs)
         self.name = 'umps'
+        if (tensor is not None) and (boundary == 'obc'):
+            self.initialize(tensors=[tensor],
+                            init_method=None)
 
     def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPS."""
@@ -2316,9 +2326,10 @@ class UMPS(MPS):  # MARK: UMPS
         
         # Virtual node
         node_cls = ParamNode if parameterized else Node
-        uniform_memory = node_cls(shape=(self._bond_dim[0],
+        bond_dim = self._bond_dim[0] if self._bond_dim else 1
+        uniform_memory = node_cls(shape=(bond_dim,
                                          self._phys_dim[0],
-                                         self._bond_dim[0]),
+                                         bond_dim),
                                   axes_names=('left', 'input', 'right'),
                                   name='virtual_uniform',
                                   network=self,
@@ -2423,6 +2434,8 @@ class UMPS(MPS):  # MARK: UMPS
         
         if tensors is not None:
             node.tensor = tensors[0]
+            device = tensors[0].device
+            dtype = tensors[0].dtype
         
         elif init_method is not None:
             add_eye = False
@@ -2441,6 +2454,14 @@ class UMPS(MPS):  # MARK: UMPS
                                                  device=device,
                                                  dtype=dtype)
                 node.tensor = aux_tensor
+        
+        if self._boundary == 'obc':
+            self._left_node.set_tensor(init_method='copy',
+                                       device=device,
+                                       dtype=dtype)
+            self._right_node.set_tensor(init_method='copy',
+                                        device=device,
+                                        dtype=dtype)
     
     def copy(self, share_tensors: bool = False) -> 'UMPS':
         """
@@ -2462,7 +2483,8 @@ class UMPS(MPS):  # MARK: UMPS
         """
         new_mps = UMPS(n_features=self._n_features,
                        phys_dim=self._phys_dim[0],
-                       bond_dim=self._bond_dim[0],
+                       bond_dim=self._bond_dim[0] if self._bond_dim else 1,
+                       boundary=self._boundary,
                        tensor=None,
                        in_features=self._in_features,
                        out_features=self._out_features,
@@ -2474,8 +2496,14 @@ class UMPS(MPS):  # MARK: UMPS
         new_mps.name = self.name + '_copy'
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor
+                new_mps.right_node.tensor = self.right_node.tensor
         else:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor.clone()
+            if self._boundary == 'obc':
+                new_mps._left_node.tensor = self._left_node.tensor.clone()
+                new_mps.right_node.tensor = self.right_node.tensor.clone()
         return new_mps
     
     def parameterize(self,
@@ -3936,6 +3964,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1,
+                 boundary: Text = 'pbc',
                  tensor: Optional[torch.Tensor] = None,
                  init_method: Text = 'randn',
                  parameterized: bool = True,
@@ -3953,6 +3982,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                       n_features=self._kernel_size[0] * self._kernel_size[1],
                       phys_dim=in_channels,
                       bond_dim=bond_dim,
+                      boundary=boundary,
                       tensor=tensor,
                       n_batches=2,
                       init_method=init_method,
@@ -4019,11 +4049,12 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
         ConvUMPS
         """
         new_mps = ConvUMPS(in_channels=self._in_channels,
-                           bond_dim=self._bond_dim[0],
+                           bond_dim=self._bond_dim[0] if self._bond_dim else 1,
                            kernel_size=self._kernel_size,
                            stride=self._stride,
                            padding=self._padding,
                            dilation=self.dilation,
+                           boundary=self._boundary,
                            tensor=None,
                            init_method=None,
                            parameterized=isinstance(self.uniform_memory, ParamNode),

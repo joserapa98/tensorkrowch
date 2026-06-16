@@ -931,6 +931,10 @@ class UPEPS(PEPS):  # MARK: UPEPS
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements. If ``tensor`` is provided, it is
         inferred from it.
+    boundary : list[{"obc", "pbc"}]
+        List of strings indicating whether periodic or open boundary conditions
+        should be used in the horizontal (up and down) and vertical (left and
+        right) boundaries.
     tensor : torch.Tensor, optional
         Tensor to set in the UPEPS ``uniform_memory`` node. It should be rank-5
         with shape ``(phys_dim, bond_dim[0], bond_dim[1], bond_dim[0],
@@ -973,6 +977,7 @@ class UPEPS(PEPS):  # MARK: UPEPS
                  n_cols: int,
                  phys_dim: Optional[int] = None,
                  bond_dim: Optional[Sequence[int]] = None,
+                 boundary: Sequence[Text] = ['pbc', 'pbc'],
                  tensor: Optional[torch.Tensor] = None,
                  n_batches: int = 1,
                  init_method: Optional[Text] = 'randn',
@@ -993,24 +998,31 @@ class UPEPS(PEPS):  # MARK: UPEPS
                                  'periodic boundary conditions')
             if tensor.shape[2] != tensor.shape[4]:
                 raise ValueError('`tensor` up and down dimensions should '
-                                 'be equal so that the PEPS can have '
-                                 'periodic boundary conditions')
-            tensors = [[tensor for _ in range(n_cols)]
-                       for _ in range(n_rows)]
+                                 'be equal')
+            if phys_dim is None:
+                phys_dim = tensor.shape[0]
+            if bond_dim is None:
+                bond_dim = [tensor.shape[1], tensor.shape[2]]
+            if list(boundary) == ['pbc', 'pbc']:
+                tensors = [[tensor for _ in range(n_cols)]
+                           for _ in range(n_rows)]
 
         super().__init__(n_rows=n_rows,
                          n_cols=n_cols,
                          phys_dim=phys_dim,
                          bond_dim=bond_dim,
-                         boundary=['pbc', 'pbc'],
+                         boundary=boundary,
                          tensors=tensors,
                          n_batches=n_batches,
-                         init_method=init_method,
+                         init_method=None if tensor is not None else init_method,
                          parameterized=parameterized,
                          device=device,
                          dtype=dtype,
                          **kwargs)
         self.name = 'upeps'
+        if (tensor is not None) and (list(boundary) != ['pbc', 'pbc']):
+            self.initialize(tensors=[[tensor]],
+                            init_method=None)
 
     def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the PEPS."""
@@ -1097,6 +1109,7 @@ class UPEPS(PEPS):  # MARK: UPEPS
                          n_cols=self._n_cols,
                          phys_dim=self._phys_dim,
                          bond_dim=self._bond_dim,
+                         boundary=self._boundary,
                          tensor=None,
                          n_batches=self._n_batches,
                          init_method=None,
@@ -1493,6 +1506,10 @@ class ConvUPEPS(AbstractConvClass, UPEPS):  # MARK: ConvUPEPS
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    boundary : list[{"obc", "pbc"}]
+        List of strings indicating whether periodic or open boundary conditions
+        should be used in the horizontal (up and down) and vertical (left and
+        right) boundaries.
     tensor : torch.Tensor, optional
         Tensor to set in the ConvUPEPS ``uniform_memory`` node.
     init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
@@ -1529,6 +1546,7 @@ class ConvUPEPS(AbstractConvClass, UPEPS):  # MARK: ConvUPEPS
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1,
+                 boundary: Sequence[Text] = ['pbc', 'pbc'],
                  tensor: Optional[torch.Tensor] = None,
                  init_method: Optional[Text] = 'randn',
                  parameterized: bool = True,
@@ -1547,6 +1565,7 @@ class ConvUPEPS(AbstractConvClass, UPEPS):  # MARK: ConvUPEPS
                        n_cols=self._kernel_size[1],
                        phys_dim=in_channels,
                        bond_dim=bond_dim,
+                       boundary=boundary,
                        tensor=tensor,
                        n_batches=2,
                        init_method=init_method,
@@ -1618,6 +1637,7 @@ class ConvUPEPS(AbstractConvClass, UPEPS):  # MARK: ConvUPEPS
                              stride=self._stride,
                              padding=self._padding,
                              dilation=self._dilation,
+                             boundary=self._boundary,
                              tensor=None,
                              init_method=None,
                              parameterized=isinstance(self.uniform_memory,

@@ -1652,22 +1652,33 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         return result
     
-    def sample(self,
-                 inline_input: bool = False,
-                 inline_mats: bool = False,
-                 renormalize: bool = False,
-                 marginalize_output: bool = False,
-                 embedding_matrices: Optional[
-                                        Union[torch.Tensor,
-                                              Sequence[torch.Tensor]]] = None,
-                 mpo: Optional[MPO] = None
-                 ) -> Node:
+    def sample(self) -> Node:
         """
-        n_samples: int > 0
+        Samplea datos desde un MPS Born Machine. Se puede samplear de todos los sitios,
+        condicionar en un output, por si se quiere condicionar en una clase de salida
+        por ejemplo, y samplear solo los sitios de input, o se puede re-samplear
+        cada feature condicionando en un input ya dado (con la opcion de condicionar tambien
+        en los output features o no). En todo caso, cuando el output no se condiciona,
+        se tiene que marginalizar.
+        
+        n_samples: int > 0, number of samples to draw
         domain: tensor batch x phys_dim, or list[tensor batch x phys_dim[i]]
-        embedding
+        embedding: function of the type of functions in embeddings.py (or list
+                   of functions each for each input site)
         embedding_matrices: can be passed, or otherwise they will be
-                            approximated numerically using the embedding and domain
+                            approximated numerically using the embedding and domain.
+                            It can be a matrix (torch.Tensor) or list of matrices,
+                            as in `contract`
+        out_condition: puede pasarse en el mismo formato que se pasa data para
+            colocarlo en los data nodes, pero en este caso los datanodes iran
+            contraidos a los out features, no los in features. Asi que data puede ser un unico
+            tensor de forma batch x n_features x phys_dim, o una lista de tensores batch x phys_dim,
+            donde cada phys_dim debe encajar con la respectiva dimension de output.
+            Para el caso especial de tener una unica out feature (como los MPSLayer),
+            se puede pasar solo un tensor batch x out_dim. batch debe coincidir con n_samples,
+            o en caso no de no pasar n_samples, se puede tomar de aqui, o si
+            se pasan ambas se puede sustituir n_samples por batch, y lanzar un warning
+        in_condition: 
         canonical: bool, to indicate whether the MPS is in canonical form with oc at leftmost site
         """
         pass

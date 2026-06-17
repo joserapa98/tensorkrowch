@@ -392,6 +392,90 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
                               model_kwargs['device'],
                               dtype)
 
+    def test_grid_data_nodes(self):
+        peps = tk.models.PEPS(n_rows=2,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3])
+
+        assert peps.grid_data_nodes == []
+
+        peps.set_data_nodes()
+        flat_data_nodes = list(peps.data_nodes.values())
+
+        assert len(peps.grid_data_nodes) == 2
+        assert all(len(row) == 3 for row in peps.grid_data_nodes)
+        for i in range(2):
+            for j in range(3):
+                assert peps.grid_data_nodes[i][j] is \
+                    flat_data_nodes[i * 3 + j]
+
+        peps.unset_data_nodes()
+
+        assert peps.grid_data_nodes == []
+
+    def test_add_data_accepts_grid_tensor(self):
+        peps = tk.models.PEPS(n_rows=2,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3])
+        data = torch.randn(7, 2, 3, 5)
+        flat_data = data.flatten(start_dim=-3, end_dim=-2)
+
+        peps.set_data_nodes()
+        peps.add_data(data)
+
+        assert torch.equal(peps['stack_data_memory'].tensor,
+                           flat_data.movedim(-2, 0))
+
+    def test_add_data_accepts_grid_list(self):
+        peps = tk.models.PEPS(n_rows=2,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3])
+        data = [[torch.randn(7, 5) for _ in range(3)]
+                for _ in range(2)]
+
+        peps.set_data_nodes()
+        peps.add_data(data)
+
+        expected = torch.stack([tensor
+                                for row in data
+                                for tensor in row],
+                               dim=0)
+        assert torch.equal(peps['stack_data_memory'].tensor, expected)
+
+    def test_grid_and_flat_data_contract_equally(self):
+        grid_data = torch.randn(10, 3, 3, 5)
+        flat_data = grid_data.flatten(start_dim=-3, end_dim=-2)
+
+        peps = tk.models.PEPS(n_rows=3,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=['obc', 'obc'])
+        flat_peps = peps.copy(share_tensors=True)
+
+        grid_result = peps(grid_data)
+        flat_result = flat_peps(flat_data)
+
+        assert torch.allclose(grid_result, flat_result)
+
+    def test_trace_accepts_grid_data(self):
+        example = torch.randn(1, 3, 3, 5)
+        data = torch.randn(10, 3, 3, 5)
+
+        peps = tk.models.PEPS(n_rows=3,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=['obc', 'obc'])
+
+        peps.trace(example)
+        result = peps(data)
+
+        assert result.shape == (10,)
+
     @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy(self, boundary, share_tensors):

@@ -35,6 +35,11 @@ class PEPS(TensorNetwork):  # MARK: PEPS
     * ``left_border``, ``right_border``, ``up_border``, ``down_border``:
       Border nodes with a single virtual edge, connected to the corresponding
       side of the grid when open boundary conditions are used.
+    
+    Input data can be provided either in grid format, with shape
+    ``batch_size x n_rows x n_cols x phys_dim``, or in flat format, with shape
+    ``batch_size x (n_rows * n_cols) x phys_dim``. Internally, grid data is
+    flattened in row-major order.
 
     Parameters
     ----------
@@ -84,8 +89,15 @@ class PEPS(TensorNetwork):  # MARK: PEPS
     ...                       n_cols=2,
     ...                       phys_dim=3,
     ...                       bond_dim=[5, 5])
-    >>> data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size
-    >>> result = peps(data)
+    >>> grid_data = torch.ones(20, 2, 2, 3)
+    >>> # batch_size x n_rows x n_cols x feature_size
+    >>> result = peps(grid_data)
+    >>> result.shape
+    torch.Size([20])
+    
+    >>> flat_data = torch.ones(20, 4, 3)
+    >>> # batch_size x n_features x feature_size
+    >>> result = peps(flat_data)
     >>> result.shape
     torch.Size([20])
 
@@ -252,6 +264,18 @@ class PEPS(TensorNetwork):  # MARK: PEPS
     def grid_env(self) -> List[List[Node]]:
         """Returns the grid environment of PEPS nodes."""
         return self._grid_env
+
+    @property
+    def grid_data_nodes(self) -> List[List[Node]]:
+        """Returns the PEPS data nodes arranged as a 2D grid."""
+        if not self._data_nodes:
+            return []
+
+        data_nodes = list(self._data_nodes.values())
+        return [
+            data_nodes[i * self._n_cols:(i + 1) * self._n_cols]
+            for i in range(self._n_rows)
+        ]
 
     @property
     def tensors(self) -> List[List[torch.Tensor]]:
@@ -730,6 +754,92 @@ class PEPS(TensorNetwork):  # MARK: PEPS
 
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self._n_batches)
+
+    def add_data(self,
+                 data: Union[torch.Tensor,
+                             Sequence[torch.Tensor],
+                             Sequence[Sequence[torch.Tensor]]]) -> None:
+        r"""
+        Adds data tensor(s) to PEPS ``data`` nodes.
+
+        If all data nodes have the same shape, thus having its tensor stored in
+        ``"stack_data_memory"``, the whole data tensor will be stored by this
+        node. The ``data`` nodes will just store a reference to a slice of that
+        tensor. Otherwise, each tensor in the list ``data`` will be stored by
+        each ``data`` node in the network, in row-major order.
+
+        ``data`` can be provided either in flat format, with shape
+        ``batch_size_0 x ... x batch_size_n x (n_rows * n_cols) x phys_dim``,
+        or in grid format, with shape
+        ``batch_size_0 x ... x batch_size_n x n_rows x n_cols x phys_dim``.
+        A list of lists of tensors with shape ``n_rows x n_cols`` is also
+        accepted and flattened in row-major order.
+
+        Parameters
+        ----------
+        data : torch.Tensor or list[torch.Tensor] or list[list[torch.Tensor]]
+            If ``data`` is a tensor, it can have shape
+
+            .. math::
+
+                batch\_size_{0} \times ... \times batch\_size_{n} \times
+                n\_rows \times n\_cols \times phys\_dim
+
+            or shape
+
+            .. math::
+
+                batch\_size_{0} \times ... \times batch\_size_{n} \times
+                (n\_rows \cdot n\_cols) \times phys\_dim
+
+            If ``data`` is a list of lists, it should be a grid with
+            ``n_rows`` rows and ``n_cols`` columns. Each tensor should have
+            shape ``batch_size_0 x ... x batch_size_n x phys_dim``.
+
+        Examples
+        --------
+        >>> peps = tk.models.PEPS(n_rows=2,
+        ...                       n_cols=3,
+        ...                       phys_dim=5,
+        ...                       bond_dim=[2, 3])
+        >>> peps.set_data_nodes()
+        >>> grid_data = torch.randn(100, 2, 3, 5)
+        >>> peps.add_data(grid_data)
+
+        The same data can be provided in flat format:
+
+        >>> flat_data = grid_data.flatten(start_dim=-3, end_dim=-2)
+        >>> peps.add_data(flat_data)
+        """
+        if isinstance(data, torch.Tensor):
+            flat_rank = self._n_batches + 2
+            grid_rank = self._n_batches + 3
+            if data.dim() == grid_rank:
+                if (data.shape[-3] != self._n_rows) or \
+                        (data.shape[-2] != self._n_cols):
+                    raise ValueError(
+                        'Grid data should have shape '
+                        'batch_size_0 x ... x batch_size_n x '
+                        'n_rows x n_cols x phys_dim')
+                data = data.flatten(start_dim=-3, end_dim=-2)
+            elif data.dim() != flat_rank:
+                raise ValueError(
+                    'PEPS data should have shape '
+                    'batch_size_0 x ... x batch_size_n x '
+                    '(n_rows * n_cols) x phys_dim, or '
+                    'batch_size_0 x ... x batch_size_n x '
+                    'n_rows x n_cols x phys_dim')
+        elif data and isinstance(data[0], Sequence):
+            if len(data) != self._n_rows:
+                raise ValueError('Grid data should have `n_rows` rows')
+            data = [tensor
+                    for row in data
+                    for tensor in row]
+            if len(data) != self._n_rows * self._n_cols:
+                raise ValueError(
+                    'Each row in grid data should have `n_cols` tensors')
+
+        super().add_data(data=data)
 
     def _input_contraction(self,
                            inline_input: bool = False) -> List[List[Node]]:

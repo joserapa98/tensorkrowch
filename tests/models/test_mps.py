@@ -1739,6 +1739,8 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('runtime', DEVICE_RUNTIME_CASES)
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_unitaries_runtime(self, runtime, n):
+        if runtime == 'mps':
+            pytest.skip('torch.linalg.qr is not implemented for MPS')
         device = _runtime_device(runtime)
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.UMPS(n_features=n,

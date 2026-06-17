@@ -476,6 +476,65 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
             boundary_0, boundary_1, auto_stack, inline_input=inline_input
         )
 
+    def test_contract_uses_exact_merge_when_max_bond_is_not_saturated(
+            self, monkeypatch):
+        data = torch.randn(10, 9, 5)
+        exact_calls = 0
+        original_exact = tk.models.PEPS._exact_line_contraction
+
+        def exact_spy(self, *args, **kwargs):
+            nonlocal exact_calls
+            exact_calls += 1
+            return original_exact(self, *args, **kwargs)
+
+        def split_error(*args, **kwargs):
+            raise AssertionError('SVD split should not be used')
+
+        monkeypatch.setattr(tk.models.PEPS,
+                            '_exact_line_contraction',
+                            exact_spy)
+        monkeypatch.setattr(tk.AbstractNode, 'split', split_error)
+
+        peps = tk.models.PEPS(n_rows=3,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=['obc', 'obc'])
+
+        result = peps(data, from_side='up', max_bond=32)
+
+        assert result.shape == (10,)
+        assert exact_calls > 0
+
+    def test_contract_uses_svd_when_max_bond_is_saturated(self, monkeypatch):
+        data = torch.randn(10, 9, 5)
+        split_calls = 0
+        original_split = tk.AbstractNode.split
+
+        def exact_error(*args, **kwargs):
+            raise AssertionError('Exact merge path should not be used')
+
+        def split_spy(self, *args, **kwargs):
+            nonlocal split_calls
+            split_calls += 1
+            return original_split(self, *args, **kwargs)
+
+        monkeypatch.setattr(tk.models.PEPS,
+                            '_exact_line_contraction',
+                            exact_error)
+        monkeypatch.setattr(tk.AbstractNode, 'split', split_spy)
+
+        peps = tk.models.PEPS(n_rows=3,
+                              n_cols=3,
+                              phys_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=['obc', 'obc'])
+
+        result = peps(data, from_side='left', max_bond=8)
+
+        assert result.shape == (10,)
+        assert split_calls > 0
+
     @pytest.mark.parametrize('boundary', BOUNDARY_PAIR_CASES)
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)

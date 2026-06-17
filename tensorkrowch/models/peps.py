@@ -775,6 +775,83 @@ class PEPS(TensorNetwork):  # MARK: PEPS
 
         return full_grid
 
+    def _can_exactly_contract_lines(self,
+                                    line1: List[Node],
+                                    line2: List[Node],
+                                    pbc: bool,
+                                    max_bond: Optional[int]) -> bool:
+        """Checks if all merged boundary bonds fit without truncation."""
+        if max_bond is None:
+            return True
+
+        pairs = [(i, i + 1) for i in range(len(line1) - 1)]
+        if pbc and (len(line1) > 2):
+            pairs.append((len(line1) - 1, 0))
+
+        for i, j in pairs:
+            shared_edges = op.get_shared_edges(line1[i], line1[j]) + \
+                op.get_shared_edges(line2[i], line2[j])
+            size = 1
+            for edge in shared_edges:
+                size *= edge.size()
+            if size > max_bond:
+                return False
+
+        return True
+
+    def _exact_line_contraction(self,
+                                line1: List[Node],
+                                line2: List[Node],
+                                pbc: bool,
+                                in_axis: Text,
+                                out_axis: Text) -> List[Node]:
+        """Contracts two lines exactly and merges duplicated boundary links."""
+        result_line = [node1 @ node2 for node1, node2 in zip(line1, line2)]
+
+        pairs = [(i, i + 1) for i in range(len(result_line) - 1)]
+        if pbc and (len(result_line) > 2):
+            pairs.append((len(result_line) - 1, 0))
+
+        for i, j in pairs:
+            shared_edges = op.get_shared_edges(result_line[i], result_line[j])
+            if len(shared_edges) <= 1:
+                continue
+
+            axes_i = [result_line[i].in_which_axis(edge)
+                      for edge in shared_edges]
+            axes_j = [result_line[j].in_which_axis(edge)
+                      for edge in shared_edges]
+
+            result_line[i].reattach_edges(axes=axes_i)
+            shared_edges = []
+            for axis_i, axis_j in zip(axes_i, axes_j):
+                edge = result_line[i].get_edge(axis_i)
+                node1_side = edge.node1 is result_line[i]
+                other_side = int(node1_side)
+                edge._nodes[other_side] = result_line[j]
+                edge._axes[other_side] = result_line[j].get_axis(axis_j)
+                result_line[j]._add_edge(edge=edge,
+                                         axis=axis_j,
+                                         node1=not node1_side)
+                shared_edges.append(edge)
+
+            first_edge = shared_edges[0]
+            merged_node1, merged_node2 = op.merge_edges(shared_edges)
+            if first_edge.node1 is result_line[i]:
+                result_line[i], result_line[j] = merged_node1, merged_node2
+            else:
+                result_line[i], result_line[j] = merged_node2, merged_node1
+
+            merged_edge = op.get_shared_edges(result_line[i], result_line[j])[0]
+            if merged_edge.node1 is result_line[i]:
+                merged_edge.axis1.name = out_axis
+                merged_edge.axis2.name = in_axis
+            else:
+                merged_edge.axis1.name = in_axis
+                merged_edge.axis2.name = out_axis
+
+        return result_line
+
     def _zipup_contraction(self,
                            line1: List[Node],
                            line2: List[Node],
@@ -789,6 +866,16 @@ class PEPS(TensorNetwork):  # MARK: PEPS
             in_axis = 'up'
             out_axis = 'down'
             pbc = self._boundary[0] == 'pbc'
+
+        if self._can_exactly_contract_lines(line1=line1,
+                                            line2=line2,
+                                            pbc=pbc,
+                                            max_bond=max_bond):
+            return self._exact_line_contraction(line1=line1,
+                                                line2=line2,
+                                                pbc=pbc,
+                                                in_axis=in_axis,
+                                                out_axis=out_axis)
 
         result_line = []
         carry = None

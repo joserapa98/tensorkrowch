@@ -13,7 +13,7 @@ This script contains:
 
 import warnings
 from abc import abstractmethod, ABC
-from typing import (List, Optional, Sequence,
+from typing import (Callable, List, Optional, Sequence,
                     Text, Tuple, Union)
 
 from math import sqrt
@@ -1652,36 +1652,762 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         return result
     
-    def sample(self) -> Node:
+    @staticmethod
+    def _site_arg_to_dict(arg,
+                          name: Text,
+                          sites: Sequence[int],
+                          n_features: int) -> dict:
+        """Maps a site-wise argument to the corresponding MPS positions."""
+        if arg is None:
+            return {}
+
+        is_sequence = isinstance(arg, Sequence) and \
+            not isinstance(arg, torch.Tensor) and \
+            not callable(arg)
+
+        if not is_sequence:
+            return {site: arg for site in sites}
+
+        if len(arg) == n_features:
+            return {site: arg[site] for site in sites}
+        if len(arg) == len(sites):
+            return {site: arg[i] for i, site in enumerate(sites)}
+
+        raise ValueError(
+            f'`{name}` should have either one element, `n_features` elements, '
+            'or as many elements as input nodes are sampled')
+
+    @staticmethod
+    def _normalize_env(env: torch.Tensor) -> torch.Tensor:
+        """Normalizes batched environments without changing zero rows."""
+        flat_env = env.reshape(env.shape[0], -1)
+        norm = flat_env.norm(dim=1)
+        view_shape = (env.shape[0],) + (1,) * (env.dim() - 1)
+        norm = norm.reshape(view_shape)
+        return torch.where(norm > 0, env / norm, env)
+
+    @staticmethod
+    def _transfer_from_matrix(tensor: torch.Tensor,
+                              matrix: Optional[torch.Tensor] = None
+                              ) -> torch.Tensor:
+        """Builds the double-layer transfer matrix for one MPS tensor."""
+        left_dim = tensor.shape[0]
+        right_dim = tensor.shape[2]
+
+        if matrix is None:
+            transfer = torch.einsum('lsr,msu->lmru',
+                                    tensor,
+                                    tensor.conj())
+        else:
+            matrix = matrix.to(device=tensor.device)
+            transfer = torch.einsum('lsr,mtu,st->lmru',
+                                    tensor,
+                                    tensor.conj(),
+                                    matrix)
+
+        return transfer.reshape(left_dim * left_dim,
+                                right_dim * right_dim)
+
+    @staticmethod
+    def _transfer_from_embedding(tensor: torch.Tensor,
+                                 embedding: torch.Tensor) -> torch.Tensor:
+        """Builds candidate double-layer transfers for all domain points."""
+        left_dim = tensor.shape[0]
+        right_dim = tensor.shape[2]
+
+        mats = torch.einsum('lsr,ds->dlr', tensor, embedding)
+        transfer = torch.einsum('dlr,dmu->dlmru', mats, mats.conj())
+        return transfer.reshape(embedding.shape[0],
+                                left_dim * left_dim,
+                                right_dim * right_dim)
+
+    @staticmethod
+    def _transfer_from_condition(tensor: torch.Tensor,
+                                 condition: torch.Tensor) -> torch.Tensor:
+        """Builds batched double-layer transfers from embedded condition data."""
+        batch_size = condition.shape[0]
+        left_dim = tensor.shape[0]
+        right_dim = tensor.shape[2]
+
+        mats = torch.einsum('lsr,bs->blr', tensor, condition)
+        transfer = torch.einsum('blr,bmu->blmru', mats, mats.conj())
+        return transfer.reshape(batch_size,
+                                left_dim * left_dim,
+                                right_dim * right_dim)
+
+    @staticmethod
+    def _trapezoidal_weights(domain: torch.Tensor) -> torch.Tensor:
+        """Returns simple quadrature weights for one-dimensional domains."""
+        if (domain.dim() != 1) or (domain.numel() <= 1) or \
+                (not torch.is_floating_point(domain)):
+            return torch.ones(domain.shape[0],
+                              device=domain.device,
+                              dtype=torch.get_default_dtype())
+
+        weights = torch.empty_like(domain)
+        weights[0] = (domain[1] - domain[0]) / 2
+        weights[-1] = (domain[-1] - domain[-2]) / 2
+        if domain.numel() > 2:
+            weights[1:-1] = (domain[2:] - domain[:-2]) / 2
+        return weights
+
+    @staticmethod
+    def _probabilities_from_amplitudes(probs: torch.Tensor) -> torch.Tensor:
+        """Cleans and row-normalizes Born probabilities."""
+        if torch.is_complex(probs):
+            scale = probs.abs().max().detach()
+            imag = probs.imag.abs().max().detach()
+            if scale > 0:
+                if imag > (1e-5 * scale):
+                    warnings.warn(
+                        'Probabilities have a non-negligible imaginary part. '
+                        'Only their real part will be used')
+            probs = probs.real
+
+        if not torch.is_floating_point(probs):
+            probs = probs.float()
+
+        if not torch.isfinite(probs).all():
+            raise ValueError('Probabilities contain non-finite values')
+
+        finfo = torch.finfo(probs.dtype)
+        scale = probs.abs().max().detach().clamp_min(1)
+        tol = 1000 * finfo.eps * scale
+        if (probs < -tol).any():
+            raise ValueError(
+                'Some probabilities are negative beyond numerical tolerance')
+
+        probs = probs.clamp_min(0)
+        norm = probs.sum(dim=1, keepdim=True)
+        if (norm <= 0).any() or (not torch.isfinite(norm).all()):
+            raise ValueError(
+                'Cannot sample from a zero or non-finite probability row')
+
+        return probs / norm
+
+    def _sample_apply_embedding(self,
+                                domain: torch.Tensor,
+                                embedding: Optional[Callable],
+                                phys_dim: int,
+                                reference: torch.Tensor) -> torch.Tensor:
+        """Embeds one sampling domain using a site embedding."""
+        if embedding is None:
+            if torch.is_floating_point(domain):
+                rounded = domain.round()
+                if not torch.equal(domain, rounded):
+                    raise ValueError(
+                        'Default basis embedding requires integer domain values')
+                domain = rounded.long()
+            embedded = basis(domain.long(), dim=phys_dim)
+        else:
+            try:
+                embedded = embedding(domain, dim=phys_dim)
+            except TypeError:
+                embedded = embedding(domain)
+
+        if not isinstance(embedded, torch.Tensor):
+            raise TypeError('`embedding` should return torch.Tensor')
+
+        embedded = embedded.to(device=reference.device)
+        if embedded.dim() >= 3 and embedded.shape[-2] == 1:
+            embedded = embedded.squeeze(-2)
+
+        if (embedded.dim() != 2) or (embedded.shape[-1] != phys_dim):
+            raise ValueError(
+                'Embedded domains should have shape (domain_size, phys_dim)')
+
+        if not torch.is_floating_point(embedded) and \
+                not torch.is_complex(embedded):
+            embedded = embedded.to(dtype=reference.dtype)
+
+        return embedded
+
+    def _prepare_sample_domains(self,
+                                domain,
+                                embedding,
+                                embedding_matrices,
+                                build_matrices: bool
+                                ) -> Tuple[dict, dict, dict]:
+        """Prepares domains, embedded domains and physical metrics."""
+        domain_arg = self._site_arg_to_dict(domain,
+                                            'domain',
+                                            self._in_features,
+                                            self._n_features)
+        embedding_arg = self._site_arg_to_dict(embedding,
+                                               'embedding',
+                                               self._in_features,
+                                               self._n_features)
+        matrices_arg = self._site_arg_to_dict(embedding_matrices,
+                                              'embedding_matrices',
+                                              self._in_features,
+                                              self._n_features)
+
+        domains = {}
+        embeddings = {}
+        matrices = {}
+        reference = self._mats_env[0].tensor
+
+        for site in self._in_features:
+            phys_dim = self._phys_dim[site]
+            aux_domain = domain_arg.get(site)
+            if aux_domain is None:
+                aux_domain = torch.arange(phys_dim, device=reference.device)
+            elif not isinstance(aux_domain, torch.Tensor):
+                raise TypeError('`domain` should be torch.Tensor type')
+            else:
+                aux_domain = aux_domain.to(device=reference.device)
+
+            if aux_domain.dim() != 1:
+                raise ValueError(
+                    'Each element of `domain` should be a rank-1 tensor')
+            if aux_domain.numel() < 1:
+                raise ValueError('`domain` tensors cannot be empty')
+
+            aux_embedding = self._sample_apply_embedding(
+                domain=aux_domain,
+                embedding=embedding_arg.get(site),
+                phys_dim=phys_dim,
+                reference=reference)
+
+            aux_matrix = matrices_arg.get(site)
+            if aux_matrix is not None:
+                if not isinstance(aux_matrix, torch.Tensor):
+                    raise TypeError(
+                        '`embedding_matrices` should be torch.Tensor type')
+                if aux_matrix.shape != (phys_dim, phys_dim):
+                    raise ValueError(
+                        '`embedding_matrices` should have shape '
+                        '(phys_dim, phys_dim)')
+                aux_matrix = aux_matrix.to(device=reference.device)
+            elif build_matrices:
+                weights = self._trapezoidal_weights(aux_domain)\
+                    .to(device=reference.device)
+                aux_matrix = torch.einsum('ds,dt,d->st',
+                                          aux_embedding,
+                                          aux_embedding.conj(),
+                                          weights)
+            else:
+                aux_matrix = torch.eye(phys_dim,
+                                       device=reference.device,
+                                       dtype=reference.dtype)
+
+            domains[site] = aux_domain
+            embeddings[site] = aux_embedding
+            matrices[site] = aux_matrix
+
+        return domains, embeddings, matrices
+
+    def _prepare_in_condition(self,
+                              in_condition,
+                              n_samples: Optional[int]
+                              ) -> Tuple[dict, int]:
+        """Normalizes embedded input conditions to site-indexed tensors."""
+        if n_samples is not None:
+            if not isinstance(n_samples, int):
+                raise TypeError('`n_samples` should be int type')
+            if n_samples <= 0:
+                raise ValueError('`n_samples` should be greater than 0')
+
+        if in_condition is None:
+            return {}, 1 if n_samples is None else n_samples
+
+        if not self._in_features:
+            raise ValueError(
+                '`in_condition` cannot be used if there are no input nodes')
+
+        reference = self._mats_env[0].tensor
+        conditions = {}
+
+        if isinstance(in_condition, torch.Tensor):
+            condition = in_condition.to(device=reference.device)
+
+            if len(self._in_features) == 1:
+                site = self._in_features[0]
+                if condition.dim() == 1:
+                    condition = condition.unsqueeze(0)
+                elif condition.dim() == 3 and condition.shape[1] == 1:
+                    condition = condition[:, 0]
+                elif condition.dim() != 2:
+                    raise ValueError(
+                        '`in_condition` should have shape '
+                        '(batch_size, phys_dim) for one input node')
+                conditions[site] = condition
+            else:
+                if condition.dim() == 2:
+                    condition = condition.unsqueeze(0)
+                if condition.dim() != 3:
+                    raise ValueError(
+                        '`in_condition` should have shape '
+                        '(batch_size, n_features, phys_dim)')
+
+                if condition.shape[1] == len(self._in_features):
+                    for i, site in enumerate(self._in_features):
+                        conditions[site] = condition[:, i]
+                elif condition.shape[1] == self._n_features:
+                    for site in self._in_features:
+                        conditions[site] = condition[:, site]
+                else:
+                    raise ValueError(
+                        'The second dimension of `in_condition` should be '
+                        '`n_features` or the number of input nodes')
+
+        elif isinstance(in_condition, Sequence):
+            if len(in_condition) == self._n_features:
+                condition_seq = [in_condition[site]
+                                 for site in self._in_features]
+            elif len(in_condition) == len(self._in_features):
+                condition_seq = list(in_condition)
+            else:
+                raise ValueError(
+                    '`in_condition` should have `n_features` elements or as '
+                    'many elements as input nodes')
+
+            for site, condition in zip(self._in_features, condition_seq):
+                if not isinstance(condition, torch.Tensor):
+                    raise TypeError(
+                        'Elements of `in_condition` should be torch.Tensor type')
+                condition = condition.to(device=reference.device)
+                if condition.dim() == 1:
+                    condition = condition.unsqueeze(0)
+                if condition.dim() != 2:
+                    raise ValueError(
+                        'Elements of `in_condition` should have shape '
+                        '(batch_size, phys_dim)')
+                conditions[site] = condition
+        else:
+            raise TypeError(
+                '`in_condition` should be torch.Tensor, tuple[torch.Tensor] '
+                'or list[torch.Tensor] type')
+
+        batch_size = None
+        for site, condition in conditions.items():
+            if condition.shape[-1] != self._phys_dim[site]:
+                raise ValueError(
+                    'The last dimension of each `in_condition` tensor should '
+                    'match the physical dimension of its input node')
+
+            if not torch.is_floating_point(condition) and \
+                    not torch.is_complex(condition):
+                condition = condition.to(dtype=reference.dtype)
+                conditions[site] = condition
+
+            aux_batch = condition.shape[0]
+            if batch_size is None:
+                batch_size = aux_batch
+            elif aux_batch not in [1, batch_size]:
+                raise ValueError(
+                    'All `in_condition` tensors should have the same batch '
+                    'size or batch size 1')
+            else:
+                batch_size = max(batch_size, aux_batch)
+
+        if batch_size is None:
+            batch_size = 1
+
+        if n_samples is None:
+            n_samples = batch_size
+        elif batch_size not in [1, n_samples]:
+            raise ValueError(
+                '`n_samples` should match the batch size of `in_condition`')
+
+        for site, condition in conditions.items():
+            if condition.shape[0] == 1 and n_samples > 1:
+                conditions[site] = condition.expand(n_samples, -1)
+
+        return conditions, n_samples
+
+    def _sample_initial_left_env(self, n_samples: int) -> torch.Tensor:
+        """Creates the initial left double-layer environment."""
+        reference = self._mats_env[0].tensor
+
+        if self._boundary == 'obc':
+            left = self._left_node.tensor.to(device=reference.device)
+            left = torch.einsum('l,m->lm', left, left.conj()).reshape(1, -1)
+            return left.expand(n_samples, -1)
+
+        dim = self._mats_env[0].shape[0]
+        eye = torch.eye(dim * dim,
+                        device=reference.device,
+                        dtype=reference.dtype)
+        return eye.unsqueeze(0).expand(n_samples, -1, -1)
+
+    def _sample_initial_right_env(self, n_samples: int) -> torch.Tensor:
+        """Creates the empty right double-layer environment."""
+        reference = self._mats_env[0].tensor
+
+        if self._boundary == 'obc':
+            right = self._right_node.tensor.to(device=reference.device)
+            right = torch.einsum('r,u->ru', right, right.conj()).reshape(1, -1)
+            return right.expand(n_samples, -1)
+
+        dim = self._mats_env[0].shape[0]
+        eye = torch.eye(dim * dim,
+                        device=reference.device,
+                        dtype=reference.dtype)
+        return eye.unsqueeze(0).expand(n_samples, -1, -1)
+
+    def _build_sample_right_envs(self,
+                                 marginal_transfers: dict,
+                                 condition_transfers: dict,
+                                 n_samples: int,
+                                 canonical: bool,
+                                 renormalize: bool) -> List[torch.Tensor]:
+        """Builds right environments for all sites."""
+        if canonical:
+            right_envs = []
+            for i, node in enumerate(self._mats_env):
+                if i == (self._n_features - 1):
+                    right_envs.append(
+                        self._sample_initial_right_env(n_samples))
+                else:
+                    right_dim = node.shape[2]
+                    eye = torch.eye(right_dim,
+                                    device=node.device,
+                                    dtype=node.dtype).reshape(1, -1)
+                    right_envs.append(eye.expand(n_samples, -1))
+            return right_envs
+
+        right_envs = [None] * self._n_features
+        env = self._sample_initial_right_env(n_samples)
+        right_envs[-1] = env
+
+        for site in range(self._n_features - 1, 0, -1):
+            transfer = condition_transfers.get(site,
+                                               marginal_transfers[site])
+            if self._boundary == 'obc':
+                if transfer.dim() == 2:
+                    env = torch.einsum('lr,br->bl', transfer, env)
+                else:
+                    env = torch.einsum('blr,br->bl', transfer, env)
+            else:
+                if transfer.dim() == 2:
+                    env = torch.einsum('lr,brc->blc', transfer, env)
+                else:
+                    env = torch.einsum('blr,brc->blc', transfer, env)
+
+            if renormalize:
+                env = self._normalize_env(env)
+            right_envs[site - 1] = env
+
+        return right_envs
+
+    @torch.no_grad()
+    def condition(self,
+                  data: Union[torch.Tensor, Sequence[torch.Tensor]]
+                  ) -> 'MPS':
         """
-        Samplea datos desde un MPS Born Machine. Se puede samplear de todos los sitios,
-        condicionar en un output, por si se quiere condicionar en una clase de salida
-        por ejemplo, y samplear solo los sitios de input, o se puede re-samplear
-        cada feature condicionando en un input ya dado (con la opcion de condicionar tambien
-        en los output features o no). En todo caso, cuando el output no se condiciona,
-        se tiene que marginalizar.
-        
-        n_samples: int > 0, number of samples to draw
-        domain: tensor batch x phys_dim, or list[tensor batch x phys_dim[i]]
-        embedding: function of the type of functions in embeddings.py (or list
-                   of functions each for each input site)
-        embedding_matrices: can be passed, or otherwise they will be
-                            approximated numerically using the embedding and domain.
-                            It can be a matrix (torch.Tensor) or list of matrices,
-                            as in `contract`
-        out_condition: puede pasarse en el mismo formato que se pasa data para
-            colocarlo en los data nodes, pero en este caso los datanodes iran
-            contraidos a los out features, no los in features. Asi que data puede ser un unico
-            tensor de forma batch x n_features x phys_dim, o una lista de tensores batch x phys_dim,
-            donde cada phys_dim debe encajar con la respectiva dimension de output.
-            Para el caso especial de tener una unica out feature (como los MPSLayer),
-            se puede pasar solo un tensor batch x out_dim. batch debe coincidir con n_samples,
-            o en caso no de no pasar n_samples, se puede tomar de aqui, o si
-            se pasan ambas se puede sustituir n_samples por batch, y lanzar un warning
-        in_condition: 
-        canonical: bool, to indicate whether the MPS is in canonical form with oc at leftmost site
+        Conditions output nodes on embedded data and returns a new MPS.
+
+        This method contracts each output node with one embedded data vector and
+        absorbs the resulting matrices into the neighbouring input tensors. It
+        is intended for open-boundary MPS with non-batched output conditions.
+
+        Parameters
+        ----------
+        data : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor]
+            Embedded data for the output nodes. It can be provided with the same
+            layout used by :meth:`add_data`, restricted to ``out_features``. A
+            missing batch dimension or a batch dimension of size 1 is accepted.
+
+        Returns
+        -------
+        MPS
+
+        Examples
+        --------
+        >>> mps = tk.models.MPSLayer(n_features=4,
+        ...                          in_dim=2,
+        ...                          out_dim=3,
+        ...                          bond_dim=5)
+        >>> label = torch.tensor([1])
+        >>> conditioned = mps.condition(tk.embeddings.basis(label, dim=3))
+        >>> conditioned.n_features
+        3
         """
-        pass
+        if self._boundary != 'obc':
+            raise ValueError('`condition` currently supports only "obc" MPS')
+        if not self._out_features:
+            raise ValueError('Cannot condition an MPS with no output nodes')
+        if not self._in_features:
+            raise ValueError('Conditioning all nodes would not return an MPS')
+
+        prev_in_features = self._in_features
+        self._in_features = self._out_features[:]
+        try:
+            conditions, _ = self._prepare_in_condition(data, n_samples=1)
+        finally:
+            self._in_features = prev_in_features
+
+        for site in conditions:
+            if conditions[site].shape[0] != 1:
+                raise ValueError('`data` should have batch size 1')
+            conditions[site] = conditions[site][0]
+
+        matrices = {}
+        for site in self._out_features:
+            tensor = self._mats_env[site].tensor
+            matrices[site] = torch.einsum('lsr,s->lr',
+                                          tensor,
+                                          conditions[site])
+
+        tensors = []
+        left_vec = self._left_node.tensor
+        carry = left_vec
+        previous_retained = False
+
+        for site in range(self._n_features):
+            if site in self._out_features:
+                if carry.dim() == 1:
+                    carry = torch.einsum('l,lr->r', carry, matrices[site])
+                else:
+                    carry = torch.einsum('ab,bc->ac', carry, matrices[site])
+                continue
+
+            tensor = self._mats_env[site].tensor
+            if previous_retained:
+                if carry.dim() == 2:
+                    tensor = torch.einsum('ab,bsc->asc', carry, tensor)
+            else:
+                tensor = torch.einsum('l,lsr->sr', carry, tensor)
+
+            tensors.append(tensor)
+            previous_retained = True
+            carry = torch.eye(tensor.shape[-1],
+                              device=tensor.device,
+                              dtype=tensor.dtype)
+
+        right_vec = self._right_node.tensor
+        if carry.dim() == 1:
+            final_vec = torch.einsum('l,l->', carry, right_vec)
+            tensors[-1] = tensors[-1] * final_vec
+        else:
+            final_vec = torch.einsum('ab,b->a', carry, right_vec)
+            if tensors[-1].dim() == 2:
+                tensors[-1] = torch.einsum('sr,r->s', tensors[-1], final_vec)
+            else:
+                tensors[-1] = torch.einsum('lsr,r->ls', tensors[-1], final_vec)
+
+        return MPS(tensors=tensors, parameterized=False)
+
+    @torch.no_grad()
+    def sample(self,
+               n_samples: Optional[int] = None,
+               domain: Optional[Union[torch.Tensor,
+                                      Sequence[torch.Tensor]]] = None,
+               embedding: Optional[Union[Callable,
+                                         Sequence[Callable]]] = None,
+               embedding_matrices: Optional[Union[torch.Tensor,
+                                                  Sequence[torch.Tensor]]] = None,
+               build_matrices: bool = False,
+               in_condition: Optional[Union[torch.Tensor,
+                                            Sequence[torch.Tensor]]] = None,
+               canonical: bool = False,
+               renormalize: bool = False,
+               return_indices: bool = False,
+               generator: Optional[torch.Generator] = None
+               ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        """
+        Samples input configurations from the Born distribution of the MPS.
+
+        The probability of a configuration is proportional to the squared
+        modulus of the MPS amplitude. Output nodes are always marginalized.
+        If ``in_condition`` is provided, its embedded values are used as a
+        right-context condition while the input sites are resampled from left
+        to right.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            Number of samples to draw. If ``None`` and ``in_condition`` has a
+            batch dimension, that batch size is used. Otherwise the default is
+            1.
+        domain : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor], optional
+            Values from which each input node is sampled. A single tensor is
+            shared by all input nodes. A sequence can have one tensor per input
+            node, or one tensor per MPS node. If ``None``, each input node uses
+            ``torch.arange(phys_dim)``.
+        embedding : callable, list[callable] or tuple[callable], optional
+            Embedding applied to the domains before contraction. The callable
+            should return tensors with shape ``(domain_size, phys_dim)``. If it
+            accepts a ``dim`` keyword, the physical dimension is passed. If
+            ``None``, domains are embedded with :func:`~tensorkrowch.embeddings.basis`.
+        embedding_matrices : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor], optional
+            Physical metric matrices used to marginalize input nodes. If not
+            provided, identity matrices are used unless ``build_matrices`` is
+            ``True``.
+        build_matrices : bool
+            Boolean indicating whether metric matrices should be approximated
+            numerically from ``domain`` and ``embedding``.
+        in_condition : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor], optional
+            Embedded input data used as right-context condition. It follows the
+            same shape conventions as data passed to :meth:`forward`.
+        canonical : bool
+            If ``True``, the MPS is assumed to be in right-canonical form with
+            the orthogonality center at the leftmost site, and right
+            environments are replaced by identities. This option is only
+            available for open-boundary MPS without ``in_condition`` or explicit
+            metric matrices.
+        renormalize : bool
+            Boolean indicating whether intermediate environments should be
+            normalized during the sweep.
+        return_indices : bool
+            If ``True``, returns both sampled domain values and sampled domain
+            indices.
+        generator : torch.Generator, optional
+            Random generator passed to :func:`torch.multinomial`.
+
+        Returns
+        -------
+        torch.Tensor or tuple[torch.Tensor, torch.Tensor]
+            If ``return_indices`` is ``False``, returns a tensor with shape
+            ``(n_samples, len(in_features))`` containing sampled domain values.
+            Otherwise returns ``(samples, indices)``.
+
+        Examples
+        --------
+        >>> mps = tk.models.MPS(n_features=4,
+        ...                     phys_dim=2,
+        ...                     bond_dim=5)
+        >>> samples = mps.sample(n_samples=10)
+        >>> samples.shape
+        torch.Size([10, 4])
+
+        >>> domain = torch.linspace(0, 1, 32)
+        >>> samples = mps.sample(n_samples=5,
+        ...                      domain=domain,
+        ...                      embedding=tk.embeddings.unit)
+        >>> samples.shape
+        torch.Size([5, 4])
+        """
+        if not isinstance(build_matrices, bool):
+            raise TypeError('`build_matrices` should be bool type')
+        if not isinstance(canonical, bool):
+            raise TypeError('`canonical` should be bool type')
+        if not isinstance(renormalize, bool):
+            raise TypeError('`renormalize` should be bool type')
+        if not isinstance(return_indices, bool):
+            raise TypeError('`return_indices` should be bool type')
+        if generator is not None and not isinstance(generator, torch.Generator):
+            raise TypeError('`generator` should be torch.Generator type')
+
+        if canonical:
+            if self._boundary != 'obc':
+                raise ValueError('`canonical` can only be used with "obc" MPS')
+            if in_condition is not None:
+                raise ValueError(
+                    '`canonical` cannot be used together with `in_condition`')
+            if embedding_matrices is not None or build_matrices:
+                raise ValueError(
+                    '`canonical` assumes identity physical metrics')
+
+        in_condition, n_samples = self._prepare_in_condition(
+            in_condition=in_condition,
+            n_samples=n_samples)
+
+        if not self._in_features:
+            empty = torch.empty(n_samples, 0,
+                                device=self._mats_env[0].device,
+                                dtype=torch.long)
+            if return_indices:
+                return empty, empty.clone()
+            return empty
+
+        domains, embeddings, matrices = self._prepare_sample_domains(
+            domain=domain,
+            embedding=embedding,
+            embedding_matrices=embedding_matrices,
+            build_matrices=build_matrices)
+
+        marginal_transfers = {}
+        candidate_transfers = {}
+        condition_transfers = {}
+
+        for site, node in enumerate(self._mats_env):
+            if site in self._in_features:
+                matrix = matrices[site]
+            else:
+                matrix = None
+
+            marginal_transfers[site] = self._transfer_from_matrix(
+                node.tensor,
+                matrix)
+
+            if site in self._in_features:
+                candidate_transfers[site] = self._transfer_from_embedding(
+                    node.tensor,
+                    embeddings[site])
+
+                if site in in_condition:
+                    condition_transfers[site] = self._transfer_from_condition(
+                        node.tensor,
+                        in_condition[site])
+
+        right_envs = self._build_sample_right_envs(
+            marginal_transfers=marginal_transfers,
+            condition_transfers=condition_transfers,
+            n_samples=n_samples,
+            canonical=canonical,
+            renormalize=renormalize)
+
+        left_env = self._sample_initial_left_env(n_samples)
+        samples = []
+        sample_indices = []
+
+        for site in range(self._n_features):
+            if site in self._in_features:
+                candidates = candidate_transfers[site]
+                right_env = right_envs[site]
+
+                if self._boundary == 'obc':
+                    probs = torch.einsum('bl,dlr,br->bd',
+                                         left_env,
+                                         candidates,
+                                         right_env)
+                else:
+                    probs = torch.einsum('bal,dlr,bra->bd',
+                                         left_env,
+                                         candidates,
+                                         right_env)
+
+                probs = self._probabilities_from_amplitudes(probs)
+                ids = torch.multinomial(probs,
+                                        num_samples=1,
+                                        replacement=True,
+                                        generator=generator).squeeze(1)
+                selected = candidates[ids]
+
+                sample_indices.append(ids)
+                samples.append(domains[site][ids])
+
+                if self._boundary == 'obc':
+                    left_env = torch.einsum('bl,blr->br',
+                                            left_env,
+                                            selected)
+                else:
+                    left_env = torch.einsum('bal,blr->bar',
+                                            left_env,
+                                            selected)
+
+            else:
+                transfer = marginal_transfers[site]
+                if self._boundary == 'obc':
+                    left_env = torch.einsum('bl,lr->br',
+                                            left_env,
+                                            transfer)
+                else:
+                    left_env = torch.einsum('bal,lr->bar',
+                                            left_env,
+                                            transfer)
+
+            if renormalize:
+                left_env = self._normalize_env(left_env)
+
+        samples = torch.stack(samples, dim=1)
+        sample_indices = torch.stack(sample_indices, dim=1)
+
+        if return_indices:
+            return samples, sample_indices
+        return samples
     
     @torch.no_grad()
     def entropy(self,

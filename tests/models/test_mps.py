@@ -9,6 +9,8 @@ Tests for mps:
     * TestConvModels
 """
 
+import itertools
+
 import pytest
 
 import torch
@@ -287,6 +289,79 @@ class TestMPS:  # MARK: TestMPS
         assert set(mps.out_features) == set(trace_sites)
         assert density.shape == tuple([phys_dim[i] for i in mps.in_features] * 2)
         return density
+
+    def _basis_data_for_configs(self, mps, configs, phys_dims):
+        data = [
+            tk.embeddings.basis(configs[:, i], dim=dim)
+            .to(mps.mats_env[0].dtype)
+            .to(mps.mats_env[0].device)
+            for i, dim in enumerate(phys_dims)
+        ]
+
+        if len(set(phys_dims)) == 1:
+            return torch.stack(data, dim=1)
+        return data
+
+    def _exact_input_distribution(self, mps):
+        phys_dims = [mps.phys_dim[i] for i in mps.in_features]
+        configs = torch.tensor(
+            list(itertools.product(*[range(dim) for dim in phys_dims])),
+            device=mps.mats_env[0].device,
+            dtype=torch.long)
+
+        data = self._basis_data_for_configs(mps, configs, phys_dims)
+        result = mps(data, marginalize_output=bool(mps.out_features))
+
+        if mps.out_features:
+            probs = torch.diagonal(result).real
+        else:
+            probs = result.abs().pow(2)
+        probs = probs / probs.sum()
+
+        mps.reset()
+        if mps.data_nodes:
+            mps.unset_data_nodes()
+
+        return configs, probs
+
+    def _conditional_probs_from_exact(self,
+                                      configs,
+                                      probs,
+                                      step,
+                                      prefix,
+                                      phys_dim,
+                                      condition=None):
+        mask = torch.ones(configs.shape[0],
+                          device=configs.device,
+                          dtype=torch.bool)
+        for i, value in enumerate(prefix):
+            mask &= configs[:, i] == value
+
+        if condition is not None:
+            for i in range(step + 1, configs.shape[1]):
+                mask &= configs[:, i] == condition[i]
+
+        expected = []
+        for value in range(phys_dim):
+            value_mask = mask & (configs[:, step] == value)
+            expected.append(probs[value_mask].sum())
+        expected = torch.stack(expected)
+        return expected / expected.sum()
+
+    def _capture_multinomial_probs(self, monkeypatch):
+        captured = []
+
+        def fake_multinomial(input,
+                             num_samples,
+                             replacement=False,
+                             *,
+                             generator=None,
+                             out=None):
+            captured.append(input.detach().clone())
+            return input.argmax(dim=1, keepdim=True)
+
+        monkeypatch.setattr(torch, 'multinomial', fake_multinomial)
+        return captured
 
     def _sample_unique_features(self, n_features):
         in_features = torch.randint(low=0,
@@ -1367,6 +1442,194 @@ class TestMPS:  # MARK: TestMPS
             assert node.grad is not None
 
         density = mps.reduced_density(trace_sites)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('dtype', [None, torch.complex64])
+    def test_sample_matches_exact_local_probabilities(self,
+                                                      monkeypatch,
+                                                      boundary,
+                                                      dtype):
+        kwargs = {}
+        if dtype is not None:
+            kwargs['dtype'] = dtype
+
+        mps = tk.models.MPS(n_features=3,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary=boundary,
+                            **kwargs)
+
+        configs, probs = self._exact_input_distribution(mps)
+        captured = self._capture_multinomial_probs(monkeypatch)
+        _, indices = mps.sample(n_samples=1, return_indices=True)
+
+        prefix = []
+        for step, local_probs in enumerate(captured):
+            expected = self._conditional_probs_from_exact(
+                configs=configs,
+                probs=probs,
+                step=step,
+                prefix=prefix,
+                phys_dim=2)
+            assert torch.allclose(local_probs[0].cpu(),
+                                  expected.cpu(),
+                                  atol=1e-5,
+                                  rtol=1e-5)
+            prefix.append(indices[0, step].item())
+
+    def test_sample_marginalizes_output_nodes_exactly(self, monkeypatch):
+        mps = tk.models.MPS(n_features=3,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary='obc',
+                            out_features=[1])
+
+        configs, probs = self._exact_input_distribution(mps)
+        captured = self._capture_multinomial_probs(monkeypatch)
+        _, indices = mps.sample(n_samples=1, return_indices=True)
+
+        prefix = []
+        for step, local_probs in enumerate(captured):
+            expected = self._conditional_probs_from_exact(
+                configs=configs,
+                probs=probs,
+                step=step,
+                prefix=prefix,
+                phys_dim=2)
+            assert torch.allclose(local_probs[0].cpu(),
+                                  expected.cpu(),
+                                  atol=1e-5,
+                                  rtol=1e-5)
+            prefix.append(indices[0, step].item())
+
+    def test_sample_with_in_condition_matches_exact_conditionals(self,
+                                                                monkeypatch):
+        mps = tk.models.MPS(n_features=3,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary='obc')
+
+        condition_ids = torch.tensor([[1, 0, 1]])
+        condition = tk.embeddings.basis(condition_ids, dim=2)\
+            .to(mps.mats_env[0].dtype)
+
+        configs, probs = self._exact_input_distribution(mps)
+        captured = self._capture_multinomial_probs(monkeypatch)
+        _, indices = mps.sample(in_condition=condition,
+                                return_indices=True)
+
+        prefix = []
+        condition_row = condition_ids[0]
+        for step, local_probs in enumerate(captured):
+            expected = self._conditional_probs_from_exact(
+                configs=configs,
+                probs=probs,
+                step=step,
+                prefix=prefix,
+                phys_dim=2,
+                condition=condition_row)
+            assert torch.allclose(local_probs[0].cpu(),
+                                  expected.cpu(),
+                                  atol=1e-5,
+                                  rtol=1e-5)
+            prefix.append(indices[0, step].item())
+
+    def test_sample_build_matrices_matches_basis_metric(self, monkeypatch):
+        mps = tk.models.MPS(n_features=3,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary='obc')
+        domain = torch.arange(2)
+
+        captured = self._capture_multinomial_probs(monkeypatch)
+        mps.sample(n_samples=1,
+                   domain=domain,
+                   embedding=tk.embeddings.basis,
+                   build_matrices=False)
+        identity_probs = [probs.clone() for probs in captured]
+
+        captured.clear()
+        mps.sample(n_samples=1,
+                   domain=domain,
+                   embedding=tk.embeddings.basis,
+                   build_matrices=True)
+        built_probs = [probs.clone() for probs in captured]
+
+        assert len(identity_probs) == len(built_probs)
+        for probs_id, probs_built in zip(identity_probs, built_probs):
+            assert torch.allclose(probs_id, probs_built)
+
+    def test_sample_with_continuous_embedding(self):
+        mps = tk.models.MPS(n_features=2,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary='obc')
+        domain = torch.linspace(0, 1, 16)
+
+        samples = mps.sample(n_samples=8,
+                             domain=domain,
+                             embedding=tk.embeddings.unit,
+                             build_matrices=True)
+
+        assert samples.shape == (8, 2)
+        assert torch.isin(samples, domain).all()
+
+    def test_sample_reset_keeps_mps_usable(self):
+        mps = tk.models.MPS(n_features=3,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary='obc')
+
+        _ = mps.sample(n_samples=4)
+        mps.reset()
+
+        data = tk.embeddings.basis(torch.randint(0, 2, (5, 3)), dim=2)\
+            .to(mps.mats_env[0].dtype)
+        result = mps(data)
+        assert result.shape == (5,)
+
+    @pytest.mark.parametrize('out_position', [0, 1, 3])
+    def test_condition_matches_mpslayer_fixed_output(self, out_position):
+        label = 1
+        layer = tk.models.MPSLayer(n_features=4,
+                                   in_dim=2,
+                                   out_dim=3,
+                                   bond_dim=2,
+                                   out_position=out_position,
+                                   boundary='obc')
+        label_data = tk.embeddings.basis(torch.tensor([label]), dim=3)\
+            .to(layer.mats_env[0].dtype)
+
+        conditioned = layer.condition(label_data)
+        configs = torch.tensor(list(itertools.product(range(2), repeat=3)))
+        data = tk.embeddings.basis(configs, dim=2).to(layer.mats_env[0].dtype)
+
+        layer_output = layer(data)[:, label]
+        conditioned_output = conditioned(data)
+
+        assert torch.allclose(conditioned_output, layer_output)
+
+    def test_condition_multiple_output_nodes(self):
+        mps = tk.models.MPS(n_features=5,
+                            phys_dim=2,
+                            bond_dim=2,
+                            boundary='obc',
+                            out_features=[1, 3])
+        out_values = [1, 0]
+        out_data = [
+            tk.embeddings.basis(torch.tensor(value), dim=2)
+            .to(mps.mats_env[0].dtype)
+            for value in out_values
+        ]
+
+        conditioned = mps.condition(out_data)
+        configs = torch.tensor(list(itertools.product(range(2), repeat=3)))
+        data = tk.embeddings.basis(configs, dim=2).to(mps.mats_env[0].dtype)
+
+        original_output = mps(data)[:, out_values[0], out_values[1]]
+        conditioned_output = conditioned(data)
+
+        assert torch.allclose(conditioned_output, original_output)
 
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)

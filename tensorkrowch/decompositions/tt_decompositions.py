@@ -45,17 +45,17 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
         with torch.no_grad():
             outputs = []
             for (batch,) in loader:
-                outputs.append(function(batch.to(device)).pow(2).cpu())
+                outputs.append(function(batch.to(device)).cpu())
             
             outputs = torch.cat(outputs, dim=0).cpu()
             
-            labels_distr = outputs.cumsum(dim=1)
+            labels_distr = outputs.pow(2).cumsum(dim=1)
             labels_distr = labels_distr / labels_distr[:, -1:]
             
             probs = torch.rand(outputs.size(0), 1)
             ids = outputs.size(1) - torch.le(probs,
                                              labels_distr).sum(dim=1, keepdim=True)
-            outputs = outputs.gather(dim=1, index=ids).pow(0.5)
+            outputs = outputs.gather(dim=1, index=ids)
             
             # batch_size x n_features x in_dim
             if len(samples.shape) == 3:
@@ -63,7 +63,7 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
                 ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
             
             extended_samples = torch.cat([samples[:, :out_position],
-                                          ids,
+                                          ids.to(samples.dtype),
                                           samples[:, out_position:]], dim=1)
             return extended_samples, outputs
     else:
@@ -76,12 +76,12 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
             ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
         
         extended_samples = torch.cat([samples[:, :out_position],
-                                      ids,
+                                      ids.to(samples.dtype),
                                       samples[:, out_position:]], dim=1)
         return extended_samples, outputs
 
 
-def sketching(function, tensors_list, out_position, batch_size, device):
+def sketching(function, tensors_list, out_position, batch_size, device, dtype):
     """
     Given ``tensors_list``, a list of ``m`` tensors, where each tensor ``i`` has
     shape ``di x ni (x in_dim)`` and ``sum(n1, ..., nm) = n_features``, creates
@@ -170,7 +170,7 @@ def sketching(function, tensors_list, out_position, batch_size, device):
             Phi_tilde_k.append(aux_result.gather(dim=1,
                                                  index=labs).flatten().cpu())
     
-    Phi_tilde_k = torch.cat(Phi_tilde_k, dim=0)   
+    Phi_tilde_k = torch.cat(Phi_tilde_k, dim=0).to(dtype) 
     Phi_tilde_k = Phi_tilde_k.view(*projection.shape[:-2])
     
     return Phi_tilde_k
@@ -189,18 +189,18 @@ def trimming(mat, rank, cutoff, tol, rtol, cum_percentage):
     return u, s, vh, aux_rank
 
 
-def create_projector(S_k_1, S_k):
+def create_projector(S_k_minus_1, S_k):
     """
     Given the previous projector and the current one, it infers the ``s_k``
-    needed to create ``S_k`` from ``S_k_1``. All rows of ``S_k_1`` and ``S_k``
-    must be unique.
+    needed to create ``S_k`` from ``S_k_minus_1``. All rows of ``S_k_minus_1``
+    and ``S_k`` must be unique.
 
     Parameters
     ----------
-    S_k_1 : torch.Tensor
-        Matrix of shape ``n x k (x in_dim)``. The ``n`` rows of ``S_k_1`` are
-        equal to the rows of ``S_k[:, :-1]``, but maybe they are repeated in
-        ``S_k``.
+    S_k_minus_1 : torch.Tensor
+        Matrix of shape ``n x k (x in_dim)``. The ``n`` rows of ``S_k_minus_1``
+        are equal to the rows of ``S_k[:, :-1]``, but maybe they are repeated
+        in ``S_k``.
     S_k : torch.Tensor
         Matrix of shape ``m x (k + 1) (x in_dim)``, with m >= n.
     
@@ -208,9 +208,9 @@ def create_projector(S_k_1, S_k):
     -------
     s_k : torch.Tensor
         Tensor of shape ``m x 2 (x in_dim)``. The 2 columns correspond,
-        respectively, to indices of rows of ``S_k_1`` (index 0) and the new
-        elements in the ``(k + 1)``-th column of ``S_k`` (index 1) associated
-        to the corresponding rows of ``S_k_1``.
+        respectively, to indices of rows of ``S_k_minus_1`` (index 0) and the
+        new elements in the ``(k + 1)``-th column of ``S_k`` (index 1) associated
+        to the corresponding rows of ``S_k_minus_1``.
     
     Example
     -------
@@ -225,8 +225,8 @@ def create_projector(S_k_1, S_k):
             [1, 1, 0, 0],
             [1, 1, 1, 0]])
             
-    >>> S_k_1 = S_k[:, :-1].unique(dim=0)
-    >>> S_k_1
+    >>> S_k_minus_1 = S_k[:, :-1].unique(dim=0)
+    >>> S_k_minus_1
     
     tensor([[0, 0, 0],
             [0, 0, 1],
@@ -236,7 +236,7 @@ def create_projector(S_k_1, S_k):
             [1, 1, 0],
             [1, 1, 1]])
             
-    >>> create_projector(S_k_1, S_k)
+    >>> create_projector(S_k_minus_1, S_k)
     
     [tensor([0, 1, 2, 3, 4, 5, 6]),
     tensor([[1],
@@ -257,8 +257,8 @@ def create_projector(S_k_1, S_k):
         where_equal_dim = (1, 2)
     s_k_1 = torch.empty_like(S_k[:, -1:])
         
-    for i in range(S_k_1.size(0)):
-        where_equal = (S_k[:, :-1] == S_k_1[i]).all(dim=where_equal_dim)
+    for i in range(S_k_minus_1.size(0)):
+        where_equal = (S_k[:, :-1] == S_k_minus_1[i]).all(dim=where_equal_dim)
         new_col = S_k[where_equal, -1:]
         first_col = torch.Tensor([i]).expand(new_col.size(0)).to(new_col.device)
         
@@ -270,21 +270,22 @@ def create_projector(S_k_1, S_k):
 
 
 @torch.no_grad()
-def val_error(function, embedding, cores, sketch_samples, out_position, device):
+def val_error(function, embedding, cores, sketch_samples, out_position,
+              device, dtype):
     """Computes relative error on ``sketch_samples``."""
     if out_position > -1:
         sketch_samples = torch.cat([sketch_samples[:, :out_position],
                                     sketch_samples[:, (out_position + 1):]],
                                    dim=1)
     
-    exact_output = function(sketch_samples.to(device))
+    exact_output = function(sketch_samples.to(device)).to(dtype)
     
     if exact_output.size(1) > 1:
         mps = models.MPSLayer(tensors=[c.to(device) for c in cores])
     else:
         mps = models.MPS(tensors=[c.to(device) for c in cores])
     
-    embed_samples = embedding(sketch_samples.to(device))                       
+    embed_samples = embedding(sketch_samples.to(device)).to(dtype)
     approx_output = mps(embed_samples, inline_input=True, inline_mats=True)
     
     if exact_output.size(1) == 1:
@@ -311,6 +312,7 @@ def tt_rss(function: Callable,
            cum_percentage: Optional[float] = None,
            batch_size: int = 64,
            device: Optional[torch.device] = None,
+           dtype: Optional[torch.dtype] = None,
            verbose: bool = True,
            return_info: bool = False) -> Union[List[torch.Tensor],
                                                Tuple[List[torch.Tensor], dict]]:
@@ -416,6 +418,13 @@ def tt_rss(function: Callable,
         should coincide with the device the ``function`` is in, in the case the
         function is a call to a ``nn.Module`` or uses tensors that are in a 
         specific device. This also applies to the ``embedding`` function.
+    dtype : torch.dtype, optional
+        Data type assigned to the sketched tensors, i.e., the output of
+        evaluating the ``function`` on ``sketch_samples``. As a result, this
+        will also be the ``dtype`` of the resulting cores. The precision used
+        to solve the equations during tensorization will be determined by this
+        type. If not specified, the ``dtype`` will default to the output type
+        of the ``function``.
     verbose : bool
         Default is ``True``.
     return_info : bool
@@ -463,6 +472,7 @@ def tt_rss(function: Callable,
     if n_features == 0:
         raise ValueError('`sketch_samples` cannot be 0 dimensional')
     
+    # TODO: adjust embedding and function to allow for different physical dimensions
     # Embedding dimension
     try:
         aux_embed = embedding(sketch_samples[:1, :1].to(device))
@@ -494,6 +504,10 @@ def tt_rss(function: Callable,
     if out_dim == 0:
         raise ValueError('Output dimension (of `function`) cannot be 0')
     
+    # Function data type
+    if dtype is None:
+        dtype = aux_output.dtype
+    
     # Labels
     if labels is not None:
         if not isinstance(labels, torch.Tensor):
@@ -523,7 +537,7 @@ def tt_rss(function: Callable,
                 raise ValueError(
                     'If `domain` is given as a torch.Tensor, it should have '
                     'shape (n_values,) or (n_values, in_dim), and it should '
-                    'only include in_dim if it also appears in the shape of '
+                    'only include `in_dim` if it also appears in the shape of '
                     '`sketch_samples`')
             if len(domain.shape) == 2:
                 if domain.shape[1] == 1:
@@ -584,7 +598,8 @@ def tt_rss(function: Callable,
         For the cases where ``n_features = 1``, it returns an embedded tensor
         with shape ``batch_size x embed_dim``.
         """
-        return embedding(data).squeeze(1)
+        embed_data = embedding(data.to(device)).squeeze(1).cpu().to(dtype)
+        return embed_data
     
     def aux_basis(data):
         """
@@ -595,11 +610,11 @@ def tt_rss(function: Callable,
         if len(data.shape) == 3:
             # In this case, labels are the same along dimension `in_dim`
             data = data[:, :, 0]
-        return basis(data.int(), dim=out_dim).squeeze(1).float()
+        return basis(data.int(), dim=out_dim).squeeze(1).to(dtype)
     
     start_time = time.time()
     cores = []
-    D_k_1 = 1
+    D_k_minus_1 = 1
     for k in range(n_features):
         
         # Prepare x_k
@@ -624,9 +639,9 @@ def tt_rss(function: Callable,
             
             phys_dim = embed_dim
         
-        # Prepare T_k
+        # Prepare T_k_plus_1
         if k < (n_features - 1):
-            T_k = sketch_samples[:, (k + 1):].unique(dim=0)
+            T_k_plus_1 = sketch_samples[:, (k + 1):].unique(dim=0)
         
         # Prepare D_k
         if verbose:
@@ -634,14 +649,14 @@ def tt_rss(function: Callable,
             site_count = ['=' * len(site_count), site_count]
             print('\n\n' + site_count[0] + '\n' + site_count[1] + '\n' + site_count[0])
         
-        D_k = min(D_k_1 * phys_dim, phys_dim ** (n_features - k - 1))
+        D_k = min(D_k_minus_1 * phys_dim, phys_dim ** (n_features - k - 1))
         
         if verbose:
             if rank is None:
                 print(f'* Max D_k: {D_k}')
             else:
                 print(f'* Max D_k: min({D_k}, {rank})')
-            print(f'* T_k out dim: {T_k.size(0)}')
+            print(f'* T_k_plus_1 out dim: {T_k_plus_1.size(0)}')
         
         if rank is not None:
             D_k = min(D_k, rank)
@@ -649,19 +664,20 @@ def tt_rss(function: Callable,
         # Tensorize
         if k == 0:
             # Sketching
-            Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[x_k, T_k],
-                                    out_position=out_position,
-                                    batch_size=batch_size,
-                                    device=device)
+            Phi_hat_k = sketching(function=function,
+                                  tensors_list=[x_k, T_k_plus_1],
+                                  out_position=out_position,
+                                  batch_size=batch_size,
+                                  device=device,
+                                  dtype=dtype)
             
-            # Random unitary for T_k
-            randu_t = random_unitary(Phi_tilde_k.size(1)).to(Phi_tilde_k.dtype)
-            Phi_tilde_k = torch.mm(Phi_tilde_k, randu_t)
+            # Random unitary for T_k_plus_1
+            randu_t = random_unitary(n=Phi_hat_k.size(1), dtype=dtype)
+            Phi_tilde_k = torch.mm(Phi_hat_k, randu_t)
             
             if k != out_position:
                 Phi_tilde_k = torch.linalg.lstsq(
-                    aux_embedding(x_k.to(device)).cpu(),
+                    aux_embedding(x_k),
                     Phi_tilde_k).solution
             
             # Trimming
@@ -684,13 +700,13 @@ def tt_rss(function: Callable,
             if k == out_position:
                 aux_s_k = aux_basis(s_k)
             else:
-                aux_s_k = aux_embedding(s_k.to(device)).cpu()
+                aux_s_k = aux_embedding(s_k)
             A_k = aux_s_k @ B_k
             
             # Set variables for next iteration
-            D_k_1 = D_k
-            A_k_1 = A_k
-            S_k_1 = S_k
+            D_k_minus_1 = D_k
+            A_k_minus_1 = A_k
+            S_k_minus_1 = S_k
             
             if verbose:
                 core_count = f'Core {k + 1}:'
@@ -701,20 +717,21 @@ def tt_rss(function: Callable,
             
         elif k < (n_features - 1):
             # Sketching
-            Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[S_k_1, x_k, T_k],
-                                    out_position=out_position,
-                                    batch_size=batch_size,
-                                    device=device)
+            Phi_hat_k = sketching(function=function,
+                                  tensors_list=[S_k_minus_1, x_k, T_k_plus_1],
+                                  out_position=out_position,
+                                  batch_size=batch_size,
+                                  device=device,
+                                  dtype=dtype)
             
-            # Random unitary for T_k
-            randu_t = random_unitary(Phi_tilde_k.size(2))\
-                .repeat(Phi_tilde_k.size(0), 1, 1).to(Phi_tilde_k.dtype)
-            Phi_tilde_k = torch.bmm(Phi_tilde_k, randu_t)
+            # Random unitary for T_k_plus_1
+            randu_t = random_unitary(n=Phi_hat_k.size(2), dtype=dtype)\
+                .repeat(Phi_hat_k.size(0), 1, 1)
+            Phi_tilde_k = torch.bmm(Phi_hat_k, randu_t)
             
             if k != out_position:
                 aux_Phi_tilde_k = torch.linalg.lstsq(
-                    aux_embedding(x_k.to(device)).cpu(),
+                    aux_embedding(x_k),
                     Phi_tilde_k.permute(1, 0, 2).reshape(x_k.size(0), -1)).solution
                 
                 Phi_tilde_k = aux_Phi_tilde_k.reshape(
@@ -730,16 +747,17 @@ def tt_rss(function: Callable,
                                     tol=tol,
                                     rtol=rtol,
                                     cum_percentage=cum_percentage)
-            B_k = u[:, :D_k]  # (D_k_1 * phys_dim) x D_k
+            B_k = u[:, :D_k]  # (D_k_minus_1 * phys_dim) x D_k
             
             # Solving
-            G_k = torch.linalg.lstsq(A_k_1, B_k.reshape(-1, phys_dim * D_k)).solution
+            G_k = torch.linalg.lstsq(A_k_minus_1,
+                                     B_k.reshape(-1, phys_dim * D_k)).solution
             G_k = G_k.view(-1, phys_dim, D_k)
             cores.append(G_k)
             
             # Create S_k
             S_k = sketch_samples[:, :(k + 1)].unique(dim=0)
-            s_k = create_projector(S_k_1, S_k)
+            s_k = create_projector(S_k_minus_1, S_k)
             
             # Create A_k
             A_k = B_k.view(-1, phys_dim, D_k)
@@ -748,13 +766,13 @@ def tt_rss(function: Callable,
             if k == out_position:
                 aux_s_k = aux_basis(s_k[1])
             else:
-                aux_s_k = aux_embedding(s_k[1].to(device)).cpu()
+                aux_s_k = aux_embedding(s_k[1])
             A_k = torch.einsum('bpd,bp->bd', A_k, aux_s_k)
             
             # Set variables for next iteration
-            D_k_1 = D_k
-            A_k_1 = A_k
-            S_k_1 = S_k
+            D_k_minus_1 = D_k
+            A_k_minus_1 = A_k
+            S_k_minus_1 = S_k
             
             if verbose:
                 core_count = f'Core {k + 1}:'
@@ -766,21 +784,22 @@ def tt_rss(function: Callable,
         else:
             # Sketching
             Phi_tilde_k = sketching(function=function,
-                                    tensors_list=[S_k_1, x_k],
+                                    tensors_list=[S_k_minus_1, x_k],
                                     out_position=out_position,
                                     batch_size=batch_size,
-                                    device=device)
+                                    device=device,
+                                    dtype=dtype)
             
             if k != out_position:
                 Phi_tilde_k = torch.linalg.lstsq(
-                    aux_embedding(x_k.to(device)).cpu(),
+                    aux_embedding(x_k),
                     Phi_tilde_k.t()).solution.t()
             
             # Trimming
             B_k = Phi_tilde_k
             
             # Solving
-            G_k = torch.linalg.lstsq(A_k_1, B_k).solution
+            G_k = torch.linalg.lstsq(A_k_minus_1, B_k).solution
             cores.append(G_k)
             
             if verbose:
@@ -795,7 +814,8 @@ def tt_rss(function: Callable,
                           cores=cores,
                           sketch_samples=sketch_samples,
                           out_position=out_position,
-                          device=device)
+                          device=device,
+                          dtype=dtype)
     
         info = {'total_time': total_time,
                 'val_eps': error}

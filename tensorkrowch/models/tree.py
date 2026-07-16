@@ -328,6 +328,10 @@ class Tree(TensorNetwork):
         r"""
         Turns Tree into canonical form via local SVD/QR decompositions, moving
         singular values matrices or non-isometries to the upper layers.
+
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`
+        when there is more than one layer, as canonicalization may change the
+        form of the tensors.
         
         Parameters
         ----------

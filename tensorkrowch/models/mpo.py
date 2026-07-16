@@ -921,6 +921,9 @@ class MPO(TensorNetwork):  # MARK: MPO
         If rank is not specified, the current bond dimensions will be used as
         the rank. That is, the current bond dimensions will be the upper bound
         for the possibly new bond dimensions given by the truncation
+
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,
+        as canonicalization may change the form of the tensors.
         
         Parameters
         ----------

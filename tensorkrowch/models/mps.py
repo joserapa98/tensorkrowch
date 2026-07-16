@@ -2823,6 +2823,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         the rank. That is, the current bond dimensions will be the upper bound
         for the possibly new bond dimensions given by the truncation criterions.
         
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,
+        as canonicalization may change the form of the tensors.
+        
         Note
         ----
         Canonicalization relies on repeated SVD/QR decompositions of
@@ -3135,6 +3138,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         """
         Turns MPS into the univocal canonical form defined `here
         <https://arxiv.org/abs/2202.12319>`_.
+
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,
+        as canonicalization may change the form of the tensors.
         """
         if self._boundary != 'obc':
             raise ValueError('`canonicalize_univocal` can only be used if '

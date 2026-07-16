@@ -208,17 +208,17 @@ class MPO(TensorNetwork):  # MARK: MPO
                                         ' or list[torch.Tensor] type')
                     
                     if i == 0:
-                        if len(t.shape) not in [2, 3, 4]:
+                        if t.ndim not in [2, 3, 4]:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
                                 'should be both rank-3 or rank-4 tensors. If'
                                 ' the first element is also the last one,'
                                 ' it should be a rank-2 tensor')
-                        if len(t.shape) == 2:
+                        if t.ndim == 2:
                             self._boundary = 'obc'
                             self._in_dim.append(t.shape[0])
                             self._out_dim.append(t.shape[1])
-                        elif len(t.shape) == 3:
+                        elif t.ndim == 3:
                             self._boundary = 'obc'
                             self._in_dim.append(t.shape[0])
                             self._bond_dim.append(t.shape[1])
@@ -229,14 +229,14 @@ class MPO(TensorNetwork):  # MARK: MPO
                             self._bond_dim.append(t.shape[2])
                             self._out_dim.append(t.shape[3])
                     elif i == (self._n_features - 1):
-                        if len(t.shape) != len(tensors[0].shape):
+                        if t.ndim != tensors[0].ndim:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
                                 'should have the same rank. Both should be '
                                 'rank-3 or rank-4 tensors. If the first '
                                 'element is also the last one, it should '
                                 'be a rank-2 tensor')
-                        if len(t.shape) == 3:
+                        if t.ndim == 3:
                             self._in_dim.append(t.shape[1])
                             self._out_dim.append(t.shape[2])
                         else:
@@ -250,7 +250,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                             self._bond_dim.append(t.shape[2])
                             self._out_dim.append(t.shape[3])
                     else:
-                        if len(t.shape) != 4:
+                        if t.ndim != 4:
                             raise ValueError(
                                 'The elements of `tensors` should be rank-4 '
                                 'tensors, except the first and lest elements'
@@ -1181,7 +1181,7 @@ class UMPO(MPO):  # MARK: UMPO
         else:
             if not isinstance(tensor, torch.Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
-            if len(tensor.shape) != 4:
+            if tensor.ndim != 4:
                 raise ValueError('`tensor` should be a rank-4 tensor')
             if tensor.shape[0] != tensor.shape[2]:
                 raise ValueError('`tensor` first and last dimensions should'

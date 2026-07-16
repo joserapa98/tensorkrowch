@@ -814,7 +814,7 @@ class PEPS(TensorNetwork):  # MARK: PEPS
         if isinstance(data, torch.Tensor):
             flat_rank = self._n_batches + 2
             grid_rank = self._n_batches + 3
-            if data.dim() == grid_rank:
+            if data.ndim == grid_rank:
                 if (data.shape[-3] != self._n_rows) or \
                         (data.shape[-2] != self._n_cols):
                     raise ValueError(
@@ -822,7 +822,7 @@ class PEPS(TensorNetwork):  # MARK: PEPS
                         'batch_size_0 x ... x batch_size_n x '
                         'n_rows x n_cols x phys_dim')
                 data = data.flatten(start_dim=-3, end_dim=-2)
-            elif data.dim() != flat_rank:
+            elif data.ndim != flat_rank:
                 raise ValueError(
                     'PEPS data should have shape '
                     'batch_size_0 x ... x batch_size_n x '
@@ -1187,7 +1187,7 @@ class UPEPS(PEPS):  # MARK: UPEPS
         if tensor is not None:
             if not isinstance(tensor, torch.Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
-            if len(tensor.shape) != 5:
+            if tensor.ndim != 5:
                 raise ValueError('`tensor` should be a rank-5 tensor')
             if tensor.shape[1] != tensor.shape[3]:
                 raise ValueError('`tensor` left and right dimensions should '

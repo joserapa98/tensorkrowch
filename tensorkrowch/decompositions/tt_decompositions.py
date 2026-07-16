@@ -58,7 +58,7 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
             outputs = outputs.gather(dim=1, index=ids)
             
             # batch_size x n_features x in_dim
-            if len(samples.shape) == 3:
+            if samples.ndim == 3:
                 # In this case, labels are copied along dimension `in_dim`
                 ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
             
@@ -71,7 +71,7 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
         outputs = torch.ones_like(ids).float()
         
         # batch_size x n_features x in_dim
-        if len(samples.shape) == 3:
+        if samples.ndim == 3:
             # In this case, labels are the same along dimension `in_dim`
             ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
         
@@ -92,7 +92,7 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
     sizes = []
     for tensor in tensors_list:
         assert isinstance(tensor, torch.Tensor)
-        assert len(tensor.shape) in [2, 3]
+        assert tensor.ndim in [2, 3]
         sizes.append(tensor.size(1))
     
     # Expand all tensors so that each one has shape d1 x ... x dm x ni
@@ -110,7 +110,7 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
         view_shape.append(tensors_list[i].size(1))
         expand_shape.append(-1)
         
-        if len(tensors_list[i].shape) == 3:
+        if tensors_list[i].ndim == 3:
             # If shape is di x ni x in_dim, add in_dim to all tensors
             view_shape.append(tensors_list[i].size(2))
             expand_shape.append(-1)
@@ -247,7 +247,7 @@ def create_projector(S_k_minus_1, S_k):
             [0],
             [0]])]
     """
-    if len(S_k.shape) == 2:
+    if S_k.ndim == 2:
         # n x k
         s_k_0 = torch.empty_like(S_k[:, -1]).long()
         where_equal_dim = 1
@@ -463,7 +463,7 @@ def tt_rss(function: Callable,
     # Number of input features
     if not isinstance(sketch_samples, torch.Tensor):
         raise TypeError('`sketch_samples` should be torch.Tensor type')
-    if len(sketch_samples.shape) not in [2, 3]:
+    if sketch_samples.ndim not in [2, 3]:
         # batch_size x n_features or batch_size x n_features x in_dim
         raise ValueError(
             '`sketch_samples` should be a tensor with shape (batch_size, '
@@ -481,7 +481,7 @@ def tt_rss(function: Callable,
             '`embedding` should take as argument a single tensor with shape '
             '(batch_size, n_features) or (batch_size, n_features, in_dim)')
         
-    if len(aux_embed.shape) != 3:
+    if aux_embed.ndim != 3:
         raise ValueError('`embedding` should return a tensor of shape '
                          '(batch_size, n_features, embed_dim)')
     embed_dim = aux_embed.size(2)
@@ -496,7 +496,7 @@ def tt_rss(function: Callable,
             '`function` should take as argument a single tensor with shape '
             '(batch_size, n_features) or (batch_size, n_features, in_dim)')
         
-    if len(aux_output.shape) != 2:
+    if aux_output.ndim != 2:
         raise ValueError(
             '`function` should return a tensor of shape (batch_size, out_dim).'
             ' If `function` is scalar, out_dim = 1')
@@ -533,13 +533,13 @@ def tt_rss(function: Callable,
                         'If `domain` is given as a sequence of tensors, it should'
                         ' have as many elements as input variables')
         else:
-            if len(domain.shape) != (len(sketch_samples.shape) - 1):
+            if domain.ndim != (sketch_samples.ndim - 1):
                 raise ValueError(
                     'If `domain` is given as a torch.Tensor, it should have '
                     'shape (n_values,) or (n_values, in_dim), and it should '
                     'only include `in_dim` if it also appears in the shape of '
                     '`sketch_samples`')
-            if len(domain.shape) == 2:
+            if domain.ndim == 2:
                 if domain.shape[1] == 1:
                     raise ValueError()
     
@@ -607,7 +607,7 @@ def tt_rss(function: Callable,
         with shape ``batch_size x basis_dim``.
         """
         # batch_size x n_features(=1) x in_dim
-        if len(data.shape) == 3:
+        if data.ndim == 3:
             # In this case, labels are the same along dimension `in_dim`
             data = data[:, :, 0]
         return basis(data.int(), dim=out_dim).squeeze(1).to(dtype)

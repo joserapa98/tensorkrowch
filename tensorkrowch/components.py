@@ -623,9 +623,24 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         return self._shape
 
     @property
-    def rank(self) -> int:
-        """Length of node's :attr:`shape`, that is, number of edges of the node."""
+    def ndim(self) -> int:
+        """Number of dimensions of the node."""
         return len(self._shape)
+
+    @property
+    def order(self) -> int:
+        """Order of the node, that is, its number of dimensions."""
+        return self.ndim
+
+    @property
+    def rank(self) -> int:
+        """Alias for :attr:`ndim` to be deprecated in future versions."""
+        warnings.warn(
+            '`rank` will be deprecated in future versions; '
+            'use `ndim` or `order` instead',
+            FutureWarning,
+            stacklevel=2)
+        return self.ndim
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
@@ -1008,7 +1023,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         """Returns axis' ``num`` given the :class:`Axis` or its ``name``."""
         if isinstance(axis, int):
             if axis < 0:
-                axis = axis % self.rank  # When indexing with -1, -2, ...
+                axis = axis % self.ndim  # When indexing with -1, -2, ...
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num
@@ -1309,7 +1324,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         that the sizes in all axes must match except for the batch axes, where
         sizes can be different.
         """
-        if len(tensor.shape) == self.rank:
+        if tensor.ndim == self.ndim:
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
                 if not edge.is_batch() and (dim != edge.size()):
@@ -1334,7 +1349,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         -------
         torch.Tensor
         """
-        if len(tensor.shape) == self.rank:
+        if tensor.ndim == self.ndim:
             index = []
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
@@ -2749,7 +2764,7 @@ class StackNode(Node):  # MARK: StackNode
     * Provide a sequence of nodes: if ``nodes`` are provided, their tensors will
       be stacked and stored in the ``StackNode``. It is necessary that all nodes
       are of the same class (:class:`Node` or :class:`ParamNode`), have the same
-      rank (although dimension of each leg can be different for different nodes;
+      order (although dimension of each leg can be different for different nodes;
       in which case smaller tensors are extended with 0's to match the dimensions
       of the largest tensor in the stack), same axes names (to ensure only the
       "same kind" of nodes are stacked), belong to the same network and have edges
@@ -2777,7 +2792,7 @@ class StackNode(Node):  # MARK: StackNode
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode], optional
         Sequence of nodes that are to be stacked. They should all be of the same
-        class (:class:`Node` or :class:`ParamNode`), have the same rank, same
+        class (:class:`Node` or :class:`ParamNode`), have the same order, same
         axes names and belong to the same network. They do not need to have equal
         shapes.
     axes_names : list[str], tuple[str], optional
@@ -2863,7 +2878,7 @@ class StackNode(Node):  # MARK: StackNode
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
                                     'must be either all Node or all ParamNode type')
-                if nodes[i].rank != nodes[i + 1].rank:
+                if nodes[i].ndim != nodes[i + 1].ndim:
                     raise ValueError(
                         'Cannot stack nodes with different number of edges')
 
@@ -3015,7 +3030,7 @@ class ParamStackNode(ParamNode):  # MARK: ParamStackNode
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode]
         Sequence of nodes that are to be stacked. They should all be of the same
-        class (:class:`Node` or :class:`ParamNode`), have the same rank, same
+        class (:class:`Node` or :class:`ParamNode`), have the same order, same
         axes names and belong to the same network. They do not need to have equal
         shapes.
     name : str, optional
@@ -3087,7 +3102,7 @@ class ParamStackNode(ParamNode):  # MARK: ParamStackNode
             if not isinstance(nodes[i], type(nodes[i + 1])):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
                                 'must be either all Node or all ParamNode type')
-            if nodes[i].rank != nodes[i + 1].rank:
+            if nodes[i].ndim != nodes[i + 1].ndim:
                 raise ValueError(
                     'Cannot stack nodes with different number of edges')
 

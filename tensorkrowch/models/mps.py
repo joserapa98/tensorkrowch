@@ -509,16 +509,16 @@ class MPS(TensorNetwork):  # MARK: MPS
                                 ' or list[torch.Tensor] type')
 
             if i == 0:
-                if len(t.shape) not in [1, 2, 3]:
+                if t.ndim not in [1, 2, 3]:
                     raise ValueError(
                         'The first and last elements in `tensors` '
                         'should be both rank-2 or rank-3 tensors. If'
                         ' the first element is also the last one,'
                         ' it should be a rank-1 tensor')
-                if len(t.shape) == 1:
+                if t.ndim == 1:
                     boundary = 'obc'
                     phys_dim.append(t.shape[0])
-                elif len(t.shape) == 2:
+                elif t.ndim == 2:
                     boundary = 'obc'
                     phys_dim.append(t.shape[0])
                     bond_dim.append(t.shape[1])
@@ -527,14 +527,14 @@ class MPS(TensorNetwork):  # MARK: MPS
                     phys_dim.append(t.shape[1])
                     bond_dim.append(t.shape[2])
             elif i == (n_features - 1):
-                if len(t.shape) != len(tensors[0].shape):
+                if t.ndim != tensors[0].ndim:
                     raise ValueError(
                         'The first and last elements in `tensors` '
                         'should have the same rank. Both should be '
                         'rank-2 or rank-3 tensors. If the first '
                         'element is also the last one, it should '
                         'be a rank-1 tensor')
-                if len(t.shape) == 2:
+                if t.ndim == 2:
                     phys_dim.append(t.shape[1])
                 else:
                     if t.shape[-1] != tensors[0].shape[0]:
@@ -546,7 +546,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     phys_dim.append(t.shape[1])
                     bond_dim.append(t.shape[2])
             else:
-                if len(t.shape) != 3:
+                if t.ndim != 3:
                     raise ValueError(
                         'The elements of `tensors` should be rank-3 '
                         'tensors, except the first and lest elements'
@@ -3027,7 +3027,7 @@ class UMPS(MPS):  # MARK: UMPS
         if tensor is not None:
             if not isinstance(tensor, torch.Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
-            if len(tensor.shape) != 3:
+            if tensor.ndim != 3:
                 raise ValueError('`tensor` should be a rank-3 tensor')
             if tensor.shape[0] != tensor.shape[2]:
                 raise ValueError('`tensor` first and last dimensions should'
@@ -3998,7 +3998,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                 if not isinstance(t, torch.Tensor):
                     raise TypeError(
                         'Elements of `tensors` should be torch.Tensor type')
-                if len(t.shape) != 3:
+                if t.ndim != 3:
                     raise ValueError(
                         'Elements of `tensors` should be a rank-3 tensor')
                 if t.shape[0] != t.shape[2]:
@@ -4424,7 +4424,7 @@ class AbstractConvClass(ABC):  # MARK: AbstractConvClass
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows (x out_channels ...)
         
-        if len(result.shape) == 3:
+        if result.ndim == 3:
             result = result.movedim(1, -1)
             # batch_size (x out_channels ...) x nb_windows
 

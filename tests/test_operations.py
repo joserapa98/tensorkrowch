@@ -5263,7 +5263,7 @@ class TestStackUnbind:  # MARK: TestStackUnbind
 
             if shapes is not None:
                 assert node.shape == shapes[i]
-                for j in range(node.rank):
+                for j in range(node.ndim):
                     assert shapes[i][j] <= stack.shape[j + 1]
 
     def _run_stack_roundtrip(self, nodes, initial_stack_cls, auto_stack,

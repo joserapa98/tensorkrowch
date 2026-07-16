@@ -1733,9 +1733,9 @@ def _split_first(node: AbstractNode,
         j = 0
         k = all_axes[0]
     else:
-        k = node.rank
+        k = node.ndim
 
-    for i in range(node.rank):
+    for i in range(node.ndim):
         if i < k:
             if not node._edges[i].is_batch():
                 raise ValueError(f'Edge {node._edges[i]} is not a batch '
@@ -1745,7 +1745,7 @@ def _split_first(node: AbstractNode,
                 batch_axes.append(i)
         else:
             if (j + 1) == len(all_axes):
-                k = node.rank
+                k = node.ndim
             else:
                 j += 1
                 k = all_axes[j]
@@ -1755,7 +1755,7 @@ def _split_first(node: AbstractNode,
     node2_shape = torch.tensor(node.shape)[node2_axes]
 
     permutation_dims = batch_axes + node1_axes + node2_axes
-    if permutation_dims == list(range(node.rank)):
+    if permutation_dims == list(range(node.ndim)):
         permutation_dims = []
 
     if permutation_dims:
@@ -2551,23 +2551,23 @@ def svd(edge: Edge,
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -2773,23 +2773,23 @@ def svd_(edge: Edge,
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -2996,23 +2996,23 @@ def svdr(edge: Edge,
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -3218,23 +3218,23 @@ def svdr_(edge: Edge,
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -3402,23 +3402,23 @@ def qr(edge: Edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -3555,23 +3555,23 @@ def qr_(edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -3709,23 +3709,23 @@ def rq(edge: Edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -3862,23 +3862,23 @@ def rq_(edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -4008,7 +4008,7 @@ def _contract_edges_first(edges: Optional[List[Edge]],
     # Trace
     if node1 == node2:
         result = node1.tensor
-        axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
+        axes_nums = dict(zip(range(node1.ndim), range(node1.ndim)))
 
         for edge in edges:
             axes = node1.in_which_axis(edge)
@@ -4183,7 +4183,7 @@ def _contract_edges_next(successor: Successor,
         edges = successor.hints
         result = node1._direct_get_tensor(successor.node_ref[0],
                                           successor.index[0])
-        axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
+        axes_nums = dict(zip(range(node1.ndim), range(node1.ndim)))
 
         for edge in edges:
             axes = node1.in_which_axis(edge)
@@ -4820,7 +4820,7 @@ def _merge_edges_first(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
         entries = []
         shape = list(node1.shape)
 
-        for i in range(node1.rank):
+        for i in range(node1.ndim):
             if i in group_positions:
                 axes = group_axes[group_positions[i]]
                 permutation_dims += axes
@@ -4838,7 +4838,7 @@ def _merge_edges_first(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
                 new_axes_names.append(node1.axes_names[i])
                 entries.append(('axis', i))
 
-        if permutation_dims == list(range(node1.rank)):
+        if permutation_dims == list(range(node1.ndim)):
             permutation_dims = []
 
         # Move the axes to merge together, then flatten each selected group.
@@ -4902,12 +4902,12 @@ def _merge_edges_first(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
     # Keep the merged axis where the first selected edge was in node1.
     node1_pos = node1_axes[0]
     node1_selected = set(node1_axes)
-    node1_before = [i for i in range(node1.rank)
+    node1_before = [i for i in range(node1.ndim)
                     if (i not in node1_selected) and (i < node1_pos)]
-    node1_after = [i for i in range(node1.rank)
+    node1_after = [i for i in range(node1.ndim)
                    if (i not in node1_selected) and (i > node1_pos)]
     node1_permutation = node1_before + node1_axes + node1_after
-    if node1_permutation == list(range(node1.rank)):
+    if node1_permutation == list(range(node1.ndim)):
         node1_permutation = []
 
     shape1 = list(node1.shape)
@@ -4967,12 +4967,12 @@ def _merge_edges_first(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
     # Repeat the same reshape on the other side of connected edges.
     node2_pos = node2_axes[0]
     node2_selected = set(node2_axes)
-    node2_before = [i for i in range(node2.rank)
+    node2_before = [i for i in range(node2.ndim)
                     if (i not in node2_selected) and (i < node2_pos)]
-    node2_after = [i for i in range(node2.rank)
+    node2_after = [i for i in range(node2.ndim)
                    if (i not in node2_selected) and (i > node2_pos)]
     node2_permutation = node2_before + node2_axes + node2_after
-    if node2_permutation == list(range(node2.rank)):
+    if node2_permutation == list(range(node2.ndim)):
         node2_permutation = []
 
     shape2 = list(node2.shape)

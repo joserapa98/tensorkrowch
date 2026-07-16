@@ -103,7 +103,7 @@ def vec_to_mps(vec: torch.Tensor,
     if not isinstance(vec, torch.Tensor):
         raise TypeError('`vec` should be torch.Tensor type')
     
-    if n_batches > len(vec.shape):
+    if n_batches > vec.ndim:
         raise ValueError(
             '`n_batches` should be between 0 and the rank of `vec`')
     
@@ -149,7 +149,7 @@ def vec_to_mps(vec: torch.Tensor,
         rescale = (log_norm / len(tensors)).exp()
         for vec in tensors:
             vec *= rescale.view(*vec.shape[:n_batches],
-                                *([1] * len(vec.shape[n_batches:])))
+                                *([1] * (vec.ndim - n_batches)))
     
     return tensors
 
@@ -231,7 +231,7 @@ def mat_to_mpo(mat: torch.Tensor,
     """
     if not isinstance(mat, torch.Tensor):
         raise TypeError('`mat` should be torch.Tensor type')
-    if not len(mat.shape) % 2 == 0:
+    if not mat.ndim % 2 == 0:
         raise ValueError('`mat` have an even number of dimensions')
     
     in_out_dims = torch.tensor(mat.shape)

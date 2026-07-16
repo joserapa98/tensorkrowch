@@ -193,7 +193,7 @@ class Tree(TensorNetwork):
         for layer in self.layers:
             for node in layer:
                 tensor = torch.randn(node.shape) * std
-                tensor[(0,) * node.rank] = 1.
+                tensor[(0,) * node.ndim] = 1.
                 node.tensor = tensor
 
     def set_data_nodes(self) -> None:
@@ -218,7 +218,7 @@ class Tree(TensorNetwork):
             result_lst = []
             i = 0
             for node in layer2:
-                for _ in range(node.rank - 1):
+                for _ in range(node.ndim - 1):
                     node = layer1[i] @ node
                     i += 1
                 result_lst.append(node)
@@ -226,7 +226,7 @@ class Tree(TensorNetwork):
             return result_lst
 
         else:
-            n_input = layer2[0].rank - 1
+            n_input = layer2[0].ndim - 1
             stack2 = op.stack(layer2)
 
             layer1_stacks = []
@@ -289,7 +289,7 @@ class Tree(TensorNetwork):
         new_layer2 = []
         i = 0
         for node in layer2:
-            for _ in range(node.rank - 1):
+            for _ in range(node.ndim - 1):
                 if mode == 'svd':
                     result1, node = layer1[i]['output'].svd_(
                         side='right',
@@ -567,7 +567,7 @@ class UTree(TensorNetwork):
         """Initializes all the nodes."""
         # Virtual node
         tensor = torch.randn(self.uniform_memory._shape) * std
-        tensor[(0,) * len(tensor.shape)] = 1.
+        tensor[(0,) * tensor.ndim] = 1.
         self.uniform_memory.tensor = tensor
 
         for layer in self.layers:
@@ -595,7 +595,7 @@ class UTree(TensorNetwork):
             result_lst = []
             i = 0
             for node in layer2:
-                for _ in range(node.rank - 1):
+                for _ in range(node.ndim - 1):
                     node = layer1[i] @ node
                     i += 1
                 result_lst.append(node)
@@ -603,7 +603,7 @@ class UTree(TensorNetwork):
             return result_lst
 
         else:
-            n_input = layer2[0].rank - 1
+            n_input = layer2[0].ndim - 1
             stack2 = op.stack(layer2)
 
             layer1_stacks = []

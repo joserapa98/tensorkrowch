@@ -391,7 +391,7 @@ class TestMPS:  # MARK: TestMPS
         assert mps.resultant_nodes
         assert not mps.data_nodes
         assert mps.in_features == in_features
-        assert len(norm.shape) == 0
+        assert norm.ndim == 0
 
         self._backward_maybe_complex(norm, runtime)
         for node in mps.mats_env:
@@ -2208,7 +2208,7 @@ class TestUMPS:  # MARK: TestUMPS
         assert mps.resultant_nodes
         assert not mps.data_nodes
         assert mps.in_features == in_features
-        assert len(norm.shape) == 0
+        assert norm.ndim == 0
 
         self._backward_maybe_complex(norm, runtime)
         for node in mps.mats_env:

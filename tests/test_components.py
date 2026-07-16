@@ -120,7 +120,10 @@ class TestInitNode:  # MARK: TestInitNode
         assert node.name == 'my_node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
+        assert node.order == 3
+        with pytest.warns(FutureWarning, match='`rank` will be deprecated'):
+            assert node.rank == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -143,7 +146,7 @@ class TestInitNode:  # MARK: TestInitNode
         assert not node.is_data()
         assert node.successors == dict()
 
-    def test_init_node_rank_0(self):
+    def test_init_node_ndim_0(self):
         node = tk.Node(shape=tuple(),
                        axes_names=tuple(),
                        name='my_node',
@@ -153,7 +156,7 @@ class TestInitNode:  # MARK: TestInitNode
         assert node.shape == tuple()
         assert node.tensor.shape == tuple()
         assert node.axes_names == []
-        assert node.rank == 0
+        assert node.ndim == 0
         assert node.numel() == 1
 
     def test_init_node_data(self):
@@ -165,7 +168,7 @@ class TestInitNode:  # MARK: TestInitNode
         assert node.name == 'node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -197,7 +200,7 @@ class TestInitNode:  # MARK: TestInitNode
         assert node.name == 'node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -227,7 +230,7 @@ class TestInitNode:  # MARK: TestInitNode
         assert node.name == 'node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['axis_0', 'axis_1', 'axis_2']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is torch.float32
 
         assert torch.equal(node.tensor, tensor)
@@ -273,7 +276,7 @@ class TestInitParamNode:  # MARK: TestInitParamNode
         assert node.name == 'my_node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -306,7 +309,7 @@ class TestInitParamNode:  # MARK: TestInitParamNode
         assert node.shape == tuple()
         assert node.tensor.shape == tuple()
         assert node.axes_names == []
-        assert node.rank == 0
+        assert node.ndim == 0
         assert node.numel() == 1
 
     def test_init_paramnode_virtual(self):
@@ -324,7 +327,7 @@ class TestInitParamNode:  # MARK: TestInitParamNode
         assert node.name == 'paramnode'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['axis_0', 'axis_1', 'axis_2']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is torch.float32
 
         assert torch.equal(node.tensor, nn.Parameter(tensor))
@@ -2142,7 +2145,7 @@ class TestCopy:  # MARK: TestCopy
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2170,7 +2173,7 @@ class TestCopy:  # MARK: TestCopy
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2198,7 +2201,7 @@ class TestCopy:  # MARK: TestCopy
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2226,7 +2229,7 @@ class TestCopy:  # MARK: TestCopy
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy

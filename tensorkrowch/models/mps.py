@@ -1652,6 +1652,140 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         return result
     
+    @torch.no_grad()
+    def entropy(self,
+                middle_site: int,
+                renormalize: bool = False) -> Union[float, Tuple[float]]:
+        r"""
+        Computes the von Neumann entropy of the reduced density matrix
+        :math:`\rho_A` (entanglement entropy) between subsystems :math:`A` and
+        :math:`B`, where :math:`A` goes from site 0 to ``middle_site``, and
+        :math:`B` goes from ``middle_site + 1`` to ``n_features - 1``.
+        
+        To compute the entanglement entropy, the MPS is put into canonical form
+        with orthogonality center at ``middle_site``. Bond dimensions are not
+        changed if possible. Only when the bond dimension is bigger than the
+        physical dimension multiplied by the other bond dimension of the node,
+        it will be cropped to that size.
+        
+        If the MPS is not normalized, it may happen that the computation of the
+        entanglement entropy fails due to errors in the Singular Value
+        Decompositions. To avoid this, it is recommended to set
+        ``renormalize = True``. In this case, the norm of each node after the
+        SVD is extracted in logarithmic form, and accumulated. As a result,
+        the function will return the tuple ``(entropy, log_norm)``, which is a
+        scaled entanglement entropy. This is, indeed, the entanglement entropy
+        of a distribution, since the schmidt values are normalized to sum up
+        to 1.
+        
+        The actual entanglement entropy, without rescaling, could be obtained as:
+        
+        .. math::
+        
+            \exp(\texttt{log_norm})^2 \cdot S(\rho_A) - 
+            \exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}
+        
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,
+        as :meth:`canonicalize` may change the form of the tensors.
+        
+        Parameters
+        ----------
+        middle_site : int
+            Position that separates regios :math:`A` and :math:`B`. It should
+            be between 0 and ``n_features - 2``.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPS.
+        
+        Returns
+        -------
+        float or tuple[float, float]
+        """
+        self.reset()
+
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
+        
+        if (middle_site < 0) or (middle_site > (self._n_features - 2)):
+            raise ValueError(
+                '`middle_site` should be between 0 and `n_features` - 2')
+        
+        log_norm = 0
+        
+        nodes = self._mats_env[:]
+        if self._boundary == 'obc':
+            nodes[0].tensor[1:] = torch.zeros_like(
+                nodes[0].tensor[1:])
+            nodes[-1].tensor[..., 1:] = torch.zeros_like(
+                nodes[-1].tensor[..., 1:])
+        
+        # Keep track of which nodes are parameterized
+        set_params = [isinstance(node, ParamNode) for node in nodes]
+        
+        for i in range(middle_site):
+            result1, result2 = nodes[i]['right'].svd_(
+                side='right',
+                rank=nodes[i]['right'].size())
+            
+            if renormalize:
+                aux_norm = result2.norm()
+                if not aux_norm.isinf() and (aux_norm > 0):
+                    result2.tensor = result2.tensor / aux_norm
+                    log_norm += aux_norm.log()
+            
+            nodes[i] = result1.parameterize(set_param=set_params[i])
+            nodes[i + 1] = result2
+
+        for i in range(len(nodes) - 1, middle_site, -1):
+            result1, result2 = nodes[i]['left'].svd_(
+                side='left',
+                rank=nodes[i]['left'].size())
+            
+            if renormalize:
+                aux_norm = result1.norm()
+                if not aux_norm.isinf() and (aux_norm > 0):
+                    result1.tensor = result1.tensor / aux_norm
+                    log_norm += aux_norm.log()
+
+            nodes[i] = result2.parameterize(set_param=set_params[i])
+            nodes[i - 1] = result1
+        
+        nodes[middle_site] = nodes[middle_site].parameterize(
+            set_param=set_params[middle_site])
+        
+        # Compute entanglement entropy
+        middle_tensor = nodes[middle_site].tensor.clone()
+        _, s, _ = torch.linalg.svd(
+            middle_tensor.reshape(middle_tensor.shape[:-1].numel(), # left x input
+                                  middle_tensor.shape[-1]),         # right
+            full_matrices=False)
+        
+        s /= s.norm()
+        s2 = s[s > 0].pow(2)
+        entropy = -(s2 * s2.log()).sum()
+        
+        # Rescale
+        if renormalize and (log_norm != 0):
+            rescale = (log_norm / len(nodes)).exp()
+            for node in nodes:
+                node.tensor = node.tensor * rescale
+        
+        # Update variables
+        self._mats_env = nodes
+        self.update_bond_dim()
+
+        self.auto_stack = prev_auto_stack
+        
+        if renormalize:
+            return entropy, log_norm
+        else:
+            return entropy
+    
     @staticmethod
     def _site_arg_to_dict(arg,
                           name: Text,

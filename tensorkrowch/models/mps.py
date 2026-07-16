@@ -1067,6 +1067,32 @@ class MPS(TensorNetwork):  # MARK: MPS
         return self._contract_envs_inline(mats_env=aux_nodes,
                                           renormalize=renormalize)
 
+    def _absorb_in_results_in_out_regions(self,
+                                          in_results: List[Node]
+                                          ) -> List[AbstractNode]:
+        """Absorbs contracted input regions into the output regions."""
+        nodes_out_env = []
+        out_first = self.out_regions[0][0] == 0
+        out_last = self.out_regions[-1][-1] == (self._n_features - 1)
+        
+        for i, region in enumerate(self.out_regions):
+            aux_out_env = [self._mats_env[j] for j in region]
+            
+            if (i == 0) and out_first:
+                if self._boundary == 'obc':
+                    aux_out_env[0] = self._left_node @ aux_out_env[0]
+            else:
+                aux_out_env[0] = in_results[i - out_first] @ aux_out_env[0]
+            nodes_out_env += aux_out_env
+
+        if out_last:
+            if self._boundary == 'obc':
+                nodes_out_env[-1] = nodes_out_env[-1] @ self._right_node
+        else:
+            nodes_out_env[-1] = nodes_out_env[-1] @ in_results[-1]
+        
+        return nodes_out_env
+
     def _zipup_contraction(self,
                            nodes_envs: List[List[AbstractNode]],
                            renormalize: bool = False) -> Node:
@@ -1203,7 +1229,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if not isinstance(mat, torch.Tensor):
                     raise TypeError(
                         '`embedding_matrices` should be torch.Tensor type')
-                if len(mat.shape) != 2:
+                if mat.ndim != 2:
                     raise ValueError(
                         '`embedding_matrices should ne rank-2 tensors')
                 if mat.shape[0] != mat.shape[1]:
@@ -1230,21 +1256,6 @@ class MPS(TensorNetwork):  # MARK: MPS
             input_nodes=[node.neighbours('input') for node in self.in_env],
             inline_input=inline_input)
         
-        # NOTE: to leave the input edges open and marginalize output
-        # data_nodes = []
-        # for node in self.in_env:
-        #     data_node = node.neighbours('input')
-        #     if data_node:
-        #         data_nodes.append(data_node)
-        
-        # if data_nodes:
-        #     mats_in_env = self._input_contraction(
-        #         nodes_env=self.in_env,
-        #         input_nodes=data_nodes,
-        #         inline_input=inline_input)
-        # else:
-        #     mats_in_env = self.in_env
-        
         in_results = []
         for region in in_regions:
             if inline_mats:
@@ -1264,27 +1275,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             result = in_results[0]
         
         else:
-            # Contract each in_result with the next output node
-            nodes_out_env = []
-            out_first = out_regions[0][0] == 0
-            out_last = out_regions[-1][-1] == (self._n_features - 1)
-                
-            for i in range(len(out_regions)):
-                aux_out_env = [self._mats_env[j] for j in out_regions[i]]
-                
-                if (i == 0) and out_first:
-                    if self._boundary == 'obc':
-                        aux_out_env[0] = self._left_node @ aux_out_env[0]
-                else:
-                    aux_out_env[0] = in_results[i - out_first] @ aux_out_env[0]
-                
-                nodes_out_env += aux_out_env
-            
-            if out_last:
-                if self._boundary == 'obc':
-                    nodes_out_env[-1] = nodes_out_env[-1] @ self._right_node
-            else:
-                nodes_out_env[-1] = nodes_out_env[-1] @ in_results[-1]
+            nodes_out_env = self._absorb_in_results_in_out_regions(in_results)
             
             if not marginalize_output:
                 # Contract all output nodes sequentially

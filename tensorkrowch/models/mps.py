@@ -1777,6 +1777,139 @@ class MPS(TensorNetwork):  # MARK: MPS
         else:
             return entropy
     
+    @torch.no_grad()
+    def condition(self,
+                  data: Union[torch.Tensor, Sequence[torch.Tensor]]) -> 'MPS':
+        """
+        Conditions output nodes on embedded data and returns a new MPS.
+
+        Each conditioned node is contracted with its data vector. Consecutive
+        conditioned nodes are then absorbed into the closest input node.
+        
+        If there are ``resultant`` nodes in the MPS, it will be first
+        :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Embedded data can be passed as a single tensor with one of the
+        following layouts:
+
+        * ``(phys_dim,)`` when there is only one output node.
+        * ``(len(out_features), phys_dim)`` with no batch dimension.
+        * ``(n_features, phys_dim)`` with no batch dimension. Only the entries
+          corresponding to ``out_features`` are used.
+        * Either of the two previous layouts with an initial batch dimension
+          of size 1.
+
+        It can also be passed as a list or tuple containing either
+        ``len(out_features)`` or ``n_features`` tensors. Each tensor should
+        have shape ``(phys_dim,)`` or ``(1, phys_dim)``. In the latter case,
+        the initial dimension is a batch dimension of size 1. For a sequence
+        with ``n_features`` elements, only those corresponding to
+        ``out_features`` are used.
+
+        Thus, all accepted layouts represent a single configuration; batches
+        with more than one element are not accepted.
+
+        Parameters
+        ----------
+        data : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor]
+            Embedded data used to condition the output nodes, with one of the
+            layouts described above.
+
+        Returns
+        -------
+        MPS
+
+        Examples
+        --------
+        >>> mps = tk.models.MPSLayer(n_features=4,
+        ...                          in_dim=2,
+        ...                          out_dim=3,
+        ...                          bond_dim=5)
+        >>> label = torch.tensor(1)
+        >>> embedded_label = tk.embeddings.basis(label, dim=3).float()
+        >>> embedded_label.shape
+        torch.Size([3])
+        >>> cond_mps = mps.condition(embedded_label)
+        >>> cond_mps.n_features
+        3
+
+        >>> mps = tk.models.MPS(n_features=4, phys_dim=2, bond_dim=5,
+        ...                     out_features=[1, 3])
+        >>> all_data = tk.embeddings.basis(
+        ...     torch.tensor([[0, 1, 0, 1]]), dim=2).float()
+        >>> cond_mps = mps.condition(all_data)
+        >>> samples = cond_mps.sample(n_samples=10)
+        """
+        
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before conditioning the TN')
+            self.reset()
+        if self._data_nodes:
+            self.unset_data_nodes()
+
+        if not self._out_features:
+            raise ValueError('Cannot condition an MPS with no output nodes')
+        if not self._in_features:
+            raise ValueError('Conditioning all nodes would not return an MPS')
+
+        # Remove the optional batch dimension and select output data.
+        if isinstance(data, torch.Tensor):
+            if data.ndim == 3:
+                if data.shape[0] != 1:
+                    raise ValueError('`data` should have batch size 1')
+                data = data.squeeze(0)
+            elif data.ndim == 1:
+                data = data.unsqueeze(0)
+            elif data.ndim != 2:
+                raise ValueError(
+                    '`data` should be provided without batch dimension or '
+                    'with batch size 1')
+
+            if data.shape[-2] == self._n_features:
+                data = data[self._out_features]
+        else:
+            if len(data) == self._n_features:
+                data = [data[site] for site in self._out_features]
+
+            data = list(data)
+            for i, tensor in enumerate(data):
+                if tensor.ndim == 2:
+                    if tensor.shape[0] != 1:
+                        raise ValueError('`data` should have batch size 1')
+                    data[i] = tensor.squeeze(0)
+                elif tensor.ndim != 1:
+                    raise ValueError(
+                        '`data` should be provided without batch dimension or '
+                        'with batch size 1')
+
+        # Temporarily turn conditioned output nodes into inputs with data.
+        self.in_features = self.out_features
+        super().set_data_nodes(input_edges=[node['input'] for node in self.in_env],
+                               num_batch_edges=0)
+        self.add_data(data)
+
+        mats_in_env = self._input_contraction(
+            nodes_env=self.in_env,
+            input_nodes=[node.neighbours('input') for node in self.in_env],
+            inline_input=True)
+        
+        in_results = []
+        for region in self.in_regions:
+            result = self._contract_envs_inline(mats_env=mats_in_env[:len(region)])
+            mats_in_env = mats_in_env[len(region):]
+            in_results.append(result)
+
+        nodes_out_env = self._absorb_in_results_in_out_regions(in_results)
+        
+        cond_mps = MPS(tensors=[node.tensor for node in nodes_out_env])
+        
+        self.reset()
+        self.unset_data_nodes()
+        self.in_features = self.out_features
+        
+        return cond_mps
+    
     @staticmethod
     def _site_arg_to_dict(arg,
                           name: Text,

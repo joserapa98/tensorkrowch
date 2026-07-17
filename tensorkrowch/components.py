@@ -1716,8 +1716,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         
         # When tracing network, node is recorded in inverse memory
         if address in net._inverse_memory:
-                if net._inverse_memory[address]['erase']:
-                    net._inverse_memory[address]['accessed'] += 1
+            if net._inverse_memory[address]['erase']:
+                net._inverse_memory[address]['accessed'] += 1
         else:
             # Node can only be erased if both itself and the node from which
             # it is taking the tensor information (node_ref) are resultant or

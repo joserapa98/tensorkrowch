@@ -23,11 +23,11 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
             ({}, 4),
             ({'rank': 2}, 2),
             ({'cutoff': 1.0}, 2),
-            ({'tol': 1.0}, 3),
-            ({'rtol': 0.2}, 2),
-            ({'cum_percentage': 0.8}, 2),
-            ({'rank': 3, 'cutoff': 1.0, 'tol': 1.0}, 2),
-            ({'rank': 4, 'rtol': 0.2, 'cum_percentage': 0.95}, 2),
+            ({'atol': 1.05}, 2),
+            ({'rtol': 0.03}, 2),
+            ({'cum_percentage': 0.97}, 2),
+            ({'rank': 3, 'cutoff': 1.0, 'atol': 1.05}, 2),
+            ({'rank': 4, 'rtol': 0.03, 'cum_percentage': 0.97}, 2),
         ],
     )
     def test_truncated_svd_rank_selection(self, diag_tensor, kwargs, expected_rank):
@@ -44,9 +44,9 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
             torch.diag(torch.tensor([4.0, 2.0, 0.5, 0.05])),
         ])
 
-        u, s, vh = tk.utils.truncated_svd(tensor, cutoff=0.5, tol=1.0)
+        u, s, vh = tk.utils.truncated_svd(tensor, cutoff=0.5, atol=1.0)
 
-        # cutoff gives rank 3 (because one batch has 1.0), tol gives rank 3 -> final rank 3
+        # cutoff gives rank 3 (because one batch has 1.0), atol gives rank 3 -> final rank 3
         assert u.shape == (2, 4, 3)
         assert s.shape == (2, 3)
         assert vh.shape == (2, 3, 4)
@@ -58,7 +58,7 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
             {'rank': 1.5},
             {'cutoff': -1.0},
             {'cutoff': '1'},
-            {'tol': -0.1},
+            {'atol': -0.1},
             {'rtol': -0.1},
             {'rtol': 1.1},
             {'cum_percentage': -0.1},

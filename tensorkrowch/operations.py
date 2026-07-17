@@ -1677,7 +1677,7 @@ def _check_first_split(node: AbstractNode,
                        side: Optional[Text] = 'left',
                        rank: Optional[int] = None,
                        cutoff: Optional[float] = None,
-                       tol: Optional[float] = None,
+                       atol: Optional[float] = None,
                        rtol: Optional[float] = None,
                        cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     args = (node,
@@ -1687,7 +1687,7 @@ def _check_first_split(node: AbstractNode,
             side,
             rank,
             cutoff,
-            tol,
+            atol,
             rtol,
             cum_percentage)
     successors = node._successors.get('split')
@@ -1703,7 +1703,7 @@ def _split_first(node: AbstractNode,
                  side: Optional[Text] = 'left',
                  rank: Optional[int] = None,
                  cutoff: Optional[float] = None,
-                 tol: Optional[float] = None,
+                 atol: Optional[float] = None,
                  rtol: Optional[float] = None,
                  cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     if not isinstance(node1_axes, Sequence):
@@ -1718,7 +1718,7 @@ def _split_first(node: AbstractNode,
             side,
             rank,
             cutoff,
-            tol,
+            atol,
             rtol,
             cum_percentage)
 
@@ -1774,7 +1774,7 @@ def _split_first(node: AbstractNode,
         u, s, vh = truncated_svd(tensor=node_tensor,
                                  rank=rank,
                                  cutoff=cutoff,
-                                 tol=tol,
+                                 atol=atol,
                                  rtol=rtol,
                                  cum_percentage=cum_percentage)
         rank = s.shape[-1]
@@ -1921,7 +1921,7 @@ def _split_next(successor: Successor,
                 side: Optional[Text] = 'left',
                 rank: Optional[int] = None,
                 cutoff: Optional[float] = None,
-                tol: Optional[float] = None,
+                atol: Optional[float] = None,
                 rtol: Optional[float] = None,
                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     batch_axes = successor.hints['batch_axes']
@@ -1951,7 +1951,7 @@ def _split_next(successor: Successor,
         u, s, vh = truncated_svd(tensor=node_tensor,
                                  rank=rank,
                                  cutoff=cutoff,
-                                 tol=tol,
+                                 atol=atol,
                                  rtol=rtol,
                                  cum_percentage=cum_percentage)
         rank = s.shape[-1]
@@ -2021,7 +2021,7 @@ def split(node: AbstractNode,
           side: Optional[Text] = 'left',
           rank: Optional[int] = None,
           cutoff: Optional[float] = None,
-          tol: Optional[float] = None,
+          atol: Optional[float] = None,
           rtol: Optional[float] = None,
           cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
@@ -2109,21 +2109,22 @@ def split(node: AbstractNode,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2148,7 +2149,7 @@ def split(node: AbstractNode,
     Edge( split_0[split] <-> split_1[split] )
     """
     return split_op(node, node1_axes, node2_axes,
-                    mode, side, rank, cutoff, tol, rtol, cum_percentage)
+                    mode, side, rank, cutoff, atol, rtol, cum_percentage)
 
 
 split_node = copy_func(split)
@@ -2184,21 +2185,22 @@ split_node.__doc__ = \
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2232,7 +2234,7 @@ def split_(node: AbstractNode,
            side: Optional[Text] = 'left',
            rank: Optional[int] = None,
            cutoff: Optional[float] = None,
-           tol: Optional[float] = None,
+           atol: Optional[float] = None,
            rtol: Optional[float] = None,
            cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
@@ -2271,21 +2273,22 @@ def split_(node: AbstractNode,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2318,7 +2321,7 @@ def split_(node: AbstractNode,
     >>> del node
     """
     node1, node2 = split(node, node1_axes, node2_axes,
-                         mode, side, rank, cutoff, tol, rtol, cum_percentage)
+                         mode, side, rank, cutoff, atol, rtol, cum_percentage)
     node1.reattach_edges(override=True)
     node2.reattach_edges(override=True)
     node1._unrestricted_set_tensor(node1.tensor.detach())
@@ -2385,21 +2388,22 @@ split_node_.__doc__ = \
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2438,7 +2442,7 @@ def svd(edge: Edge,
         side: Text = 'left',
         rank: Optional[int] = None,
         cutoff: Optional[float] = None,
-        tol: Optional[float] = None,
+        atol: Optional[float] = None,
         rtol: Optional[float] = None,
         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
@@ -2466,21 +2470,22 @@ def svd(edge: Edge,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2545,7 +2550,7 @@ def svd(edge: Edge,
                                  side=side,
                                  rank=rank,
                                  cutoff=cutoff,
-                                 tol=tol,
+                                 atol=atol,
                                  rtol=rtol,
                                  cum_percentage=cum_percentage)
 
@@ -2601,21 +2606,22 @@ svd_edge.__doc__ = \
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2659,7 +2665,7 @@ def svd_(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
          cutoff: Optional[float] = None,
-         tol: Optional[float] = None,
+         atol: Optional[float] = None,
          rtol: Optional[float] = None,
          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
@@ -2692,21 +2698,22 @@ def svd_(edge: Edge,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2767,7 +2774,7 @@ def svd_(edge: Edge,
                                   side=side,
                                   rank=rank,
                                   cutoff=cutoff,
-                                  tol=tol,
+                                  atol=atol,
                                   rtol=rtol,
                                   cum_percentage=cum_percentage)
 
@@ -2830,21 +2837,22 @@ svd_edge_.__doc__ = \
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2883,7 +2891,7 @@ def svdr(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
          cutoff: Optional[float] = None,
-         tol: Optional[float] = None,
+         atol: Optional[float] = None,
          rtol: Optional[float] = None,
          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
@@ -2911,21 +2919,22 @@ def svdr(edge: Edge,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -2990,7 +2999,7 @@ def svdr(edge: Edge,
                                  side=side,
                                  rank=rank,
                                  cutoff=cutoff,
-                                 tol=tol,
+                                 atol=atol,
                                  rtol=rtol,
                                  cum_percentage=cum_percentage)
 
@@ -3046,21 +3055,22 @@ svdr_edge.__doc__ = \
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -3104,7 +3114,7 @@ def svdr_(edge: Edge,
           side: Text = 'left',
           rank: Optional[int] = None,
           cutoff: Optional[float] = None,
-          tol: Optional[float] = None,
+          atol: Optional[float] = None,
           rtol: Optional[float] = None,
           cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
@@ -3137,21 +3147,22 @@ def svdr_(edge: Edge,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns
@@ -3212,7 +3223,7 @@ def svdr_(edge: Edge,
                                   side=side,
                                   rank=rank,
                                   cutoff=cutoff,
-                                  tol=tol,
+                                  atol=atol,
                                   rtol=rtol,
                                   cum_percentage=cum_percentage)
 
@@ -3275,21 +3286,22 @@ svdr_edge_.__doc__ = \
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     Returns

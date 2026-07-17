@@ -176,12 +176,12 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
     return Phi_tilde_k
 
 
-def trimming(mat, rank, cutoff, tol, rtol, cum_percentage):
+def trimming(mat, rank, cutoff, atol, rtol, cum_percentage):
     """Given a matrix returns the U from the SVD and an appropiate rank"""
     u, s, vh = truncated_svd(tensor=mat,
                              rank=rank,
                              cutoff=cutoff,
-                             tol=tol,
+                             atol=atol,
                              rtol=rtol,
                              cum_percentage=cum_percentage)
     aux_rank = s.shape[-1]
@@ -307,7 +307,7 @@ def tt_rss(function: Callable,
            out_position: Optional[int] = None,
            rank: Optional[int] = None,
            cutoff: Optional[float] = None,
-           tol: Optional[float] = None,
+           atol: Optional[float] = None,
            rtol: Optional[float] = None,
            cum_percentage: Optional[float] = None,
            batch_size: int = 64,
@@ -390,25 +390,25 @@ def tt_rss(function: Callable,
         Threshold used to determine the rank of each core independently. When
         selecting the bond dimension of a core, singular values ``<= cutoff``
         are discarded. It must be non-negative.
-    tol : float, optional
+    atol : float, optional
         Absolute tolerance used to determine the rank of each core
         independently. Starting from the smallest singular values, these are
-        discarded while their accumulated sum is ``<= tol``. It must be
+        discarded while their accumulated sum of squares is ``<= atol``. It must be
         non-negative.
     rtol : float, optional
         Relative tolerance used to determine the rank of each core
         independently. Starting from the smallest singular values, these are
-        discarded while their accumulated sum divided by the total sum is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        discarded while their accumulated sum of squares divided by the
+        total sum of squares is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction to keep when determining the rank of each core from
-        its singular values. Equivalent to setting ``cum_percentage = 1 - rtol``.
+        Minimum fraction of squared singular-value mass to keep when determining
+        the rank of each core. Equivalent to setting ``rtol = 1 - cum_percentage``.
         Therefore, it allows different bond dimensions across cores. It must
         be in ``(0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
     batch_size : int
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
@@ -684,7 +684,7 @@ def tt_rss(function: Callable,
             u, _, _, D_k = trimming(mat=Phi_tilde_k,
                                     rank=D_k,
                                     cutoff=cutoff,
-                                    tol=tol,
+                                    atol=atol,
                                     rtol=rtol,
                                     cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # phys_dim x D_k
@@ -744,7 +744,7 @@ def tt_rss(function: Callable,
                                                             Phi_tilde_k.size(2)),
                                     rank=D_k,
                                     cutoff=cutoff,
-                                    tol=tol,
+                                    atol=atol,
                                     rtol=rtol,
                                     cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # (D_k_minus_1 * phys_dim) x D_k

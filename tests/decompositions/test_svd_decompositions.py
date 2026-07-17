@@ -14,11 +14,11 @@ TRUNCATION_CASES = [
     ({}, 4),
     ({'rank': 2}, 2),
     ({'cutoff': 1.0}, 2),
-    ({'tol': 1.0}, 3),
-    ({'rtol': 0.2}, 2),
-    ({'cum_percentage': 0.8}, 2),
-    ({'rank': 3, 'cutoff': 1.0, 'tol': 1.0}, 2),
-    ({'rank': 4, 'rtol': 0.2, 'cum_percentage': 0.95}, 2),
+    ({'atol': 1.05}, 2),
+    ({'rtol': 0.03}, 2),
+    ({'cum_percentage': 0.97}, 2),
+    ({'rank': 3, 'cutoff': 1.0, 'atol': 1.05}, 2),
+    ({'rank': 4, 'rtol': 0.03, 'cum_percentage': 0.97}, 2),
 ]
 
 
@@ -132,10 +132,10 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
             'full-rank',
             'rank',
             'cutoff',
-            'tol',
+            'atol',
             'rtol',
             'cum_percentage',
-            'rank-cutoff-tol',
+            'rank-cutoff-atol',
             'rank-rtol-cum_percentage',
         ],
     )
@@ -254,10 +254,10 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
             'full-rank',
             'rank',
             'cutoff',
-            'tol',
+            'atol',
             'rtol',
             'cum_percentage',
-            'rank-cutoff-tol',
+            'rank-cutoff-atol',
             'rank-rtol-cum_percentage',
         ],
     )

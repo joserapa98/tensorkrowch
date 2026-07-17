@@ -15,7 +15,7 @@ def vec_to_mps(vec: torch.Tensor,
                n_batches: int = 0,
                rank: Optional[int] = None,
                cutoff: Optional[float] = None,
-               tol: Optional[float] = None,
+               atol: Optional[float] = None,
                rtol: Optional[float] = None,
                cum_percentage: Optional[float] = None,
                renormalize: bool = False) -> List[torch.Tensor]:
@@ -64,21 +64,22 @@ def vec_to_mps(vec: torch.Tensor,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
     renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
@@ -121,7 +122,7 @@ def vec_to_mps(vec: torch.Tensor,
         u, s, vh = truncated_svd(tensor=vec,
                                  rank=rank,
                                  cutoff=cutoff,
-                                 tol=tol,
+                                 atol=atol,
                                  rtol=rtol,
                                  cum_percentage=cum_percentage)
         aux_rank = s.shape[-1]
@@ -157,7 +158,7 @@ def vec_to_mps(vec: torch.Tensor,
 def mat_to_mpo(mat: torch.Tensor,
                rank: Optional[int] = None,
                cutoff: Optional[float] = None,
-               tol: Optional[float] = None,
+               atol: Optional[float] = None,
                rtol: Optional[float] = None,
                cum_percentage: Optional[float] = None,
                renormalize: bool = False) -> List[torch.Tensor]:
@@ -193,21 +194,22 @@ def mat_to_mpo(mat: torch.Tensor,
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
-    tol : float, optional
-        Absolute tolerance over the tail sum of singular values. Starting from
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
         the smallest singular value, values are discarded while the accumulated
-        sum is ``<= tol``. It must be non-negative.
+        sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum
-        divided by the total sum is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of singular-value mass to keep. Equivalent to setting
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
         ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
     renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
@@ -248,7 +250,7 @@ def mat_to_mpo(mat: torch.Tensor,
         u, s, vh = truncated_svd(tensor=mat,
                                  rank=rank,
                                  cutoff=cutoff,
-                                 tol=tol,
+                                 atol=atol,
                                  rtol=rtol,
                                  cum_percentage=cum_percentage)
         aux_rank = s.shape[-1]

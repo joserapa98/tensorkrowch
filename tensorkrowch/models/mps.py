@@ -2787,7 +2787,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
-                     tol: Optional[float] = None,
+                     atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
                      renormalize: bool = False) -> None:
@@ -2843,22 +2843,23 @@ class MPS(TensorNetwork):  # MARK: MPS
         cutoff : float, optional
             Minimum singular value to keep. It must be non-negative. Singular
             values ``<= cutoff`` are removed.
-        tol : float, optional
-            Absolute tolerance over the tail sum of singular values. Starting
-            from the smallest singular value, values are discarded while the
-            accumulated sum is ``<= tol``. It must be non-negative.
+        atol : float, optional
+            Absolute tolerance over the tail sum of squared singular values.
+            Starting from the smallest singular value, values are discarded
+            while the accumulated sum of squares is ``<= atol``. It must be
+            non-negative.
         rtol : float, optional
-            Relative tolerance over the tail sum of singular values. Starting
-            from the smallest singular value, values are discarded while the
-            tail sum divided by the total sum is ``<= rtol``. It must be in
-            ``[0, 1]``.
+            Relative tolerance over the tail sum of squared singular values.
+            Starting from the smallest singular value, values are discarded
+            while the tail sum of squares divided by the total sum of squares
+            is ``<= rtol``. It must be in ``[0, 1]``.
         cum_percentage : float, optional
-            Minimum fraction of singular-value mass to keep. Equivalent to setting
-            ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+            Minimum fraction of squared singular-value mass to keep. Equivalent
+            to setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
         renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
@@ -2913,7 +2914,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     side='right',
                     rank=nodes[i]['right'].size() if keep_rank else rank,
                     cutoff=cutoff,
-                    tol=tol,
+                    atol=atol,
                     rtol=rtol,
                     cum_percentage=cum_percentage)
             elif mode == 'svdr':
@@ -2921,7 +2922,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     side='right',
                     rank=nodes[i]['right'].size() if keep_rank else rank,
                     cutoff=cutoff,
-                    tol=tol,
+                    atol=atol,
                     rtol=rtol,
                     cum_percentage=cum_percentage)
             elif mode == 'qr':
@@ -2944,7 +2945,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     side='left',
                     rank=nodes[i]['left'].size() if keep_rank else rank,
                     cutoff=cutoff,
-                    tol=tol,
+                    atol=atol,
                     rtol=rtol,
                     cum_percentage=cum_percentage)
             elif mode == 'svdr':
@@ -2952,7 +2953,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     side='left',
                     rank=nodes[i]['left'].size() if keep_rank else rank,
                     cutoff=cutoff,
-                    tol=tol,
+                    atol=atol,
                     rtol=rtol,
                     cum_percentage=cum_percentage)
             elif mode == 'qr':
@@ -3536,7 +3537,7 @@ class UMPS(MPS):  # MARK: UMPS
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
-                     tol: Optional[float] = None,
+                     atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
                      renormalize: bool = False) -> None:
@@ -4546,7 +4547,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
-                     tol: Optional[float] = None,
+                     atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
                      renormalize: bool = False) -> None:

@@ -1189,11 +1189,11 @@ class TestSplitSVD:  # MARK: TestSplitSVD
         [
             ({'rank': 7}, 7, None, 7),
             ({'cutoff': 0.4}, 6, _split_cutoff_low_rank_tensor, 3),
-            ({'tol': 1.0}, 9, _split_rank_low_rank_tensor, 1),
+            ({'atol': 1.0}, 9, _split_rank_low_rank_tensor, 1),
             ({'rtol': 0.2}, 8, _split_rank_low_rank_tensor, 1),
             ({'cum_percentage': 0.9}, 9, _split_rank_low_rank_tensor, 1),
         ],
-        ids=['rank', 'cutoff', 'tol', 'rtol', 'cum_percentage'],
+        ids=['rank', 'cutoff', 'atol', 'rtol', 'cum_percentage'],
     )
     def test_split_contracted_node_truncation_criterion(self,
                                                         node_cls,
@@ -1217,7 +1217,7 @@ class TestSplitSVD:  # MARK: TestSplitSVD
 
         if 'cutoff' in kwargs:
             result._unrestricted_set_tensor(_split_cutoff_high_rank_tensor())
-        elif any(key in kwargs for key in ('tol', 'rtol', 'cum_percentage')):
+        elif any(key in kwargs for key in ('atol', 'rtol', 'cum_percentage')):
             result._unrestricted_set_tensor(_split_rank_high_rank_tensor())
 
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -1272,33 +1272,33 @@ class TestSplitSVD:  # MARK: TestSplitSVD
         # If several options are specified, the rank will be the one that
         # fulfills all of them, that is, the minimum rank
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=5, # rank = 5
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.4) # rank = 6
+                                        node2_axes=['input_1', 'right'],
+                                        rank=5, # rank = 5
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
 
         assert new_node1.shape == (10, 2, 5, 5)
         assert new_node2.shape == (10, 5, 5, 3)
 
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.4) # rank = 6
+                                        node2_axes=['input_1', 'right'],
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
         
         assert new_node1.shape == (10, 2, 5, 6)
         assert new_node2.shape == (10, 6, 5, 3)
         
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.1) # rank = 10
-        
-        assert new_node1.shape == (10, 2, 5, 8)
-        assert new_node2.shape == (10, 8, 5, 3)
+                                        node2_axes=['input_1', 'right'],
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.1) # rank = 9
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
     
     def test_split_contracted_complex_node(self):
         net = tk.TensorNetwork()
@@ -1662,11 +1662,11 @@ class TestSplitSVDR:  # MARK: TestSplitSVDR
         [
             ({'rank': 7}, 7, None, 7),
             ({'cutoff': 0.4}, 6, _split_cutoff_low_rank_tensor, 3),
-            ({'tol': 1.0}, 9, _split_rank_low_rank_tensor, 1),
+            ({'atol': 1.0}, 9, _split_rank_low_rank_tensor, 1),
             ({'rtol': 0.2}, 8, _split_rank_low_rank_tensor, 1),
             ({'cum_percentage': 0.9}, 9, _split_rank_low_rank_tensor, 1),
         ],
-        ids=['rank', 'cutoff', 'tol', 'rtol', 'cum_percentage'],
+        ids=['rank', 'cutoff', 'atol', 'rtol', 'cum_percentage'],
     )
     def test_split_contracted_node_truncation_criterion(self,
                                                         node_cls,
@@ -1690,7 +1690,7 @@ class TestSplitSVDR:  # MARK: TestSplitSVDR
 
         if 'cutoff' in kwargs:
             result._unrestricted_set_tensor(_split_cutoff_high_rank_tensor())
-        elif any(key in kwargs for key in ('tol', 'rtol', 'cum_percentage')):
+        elif any(key in kwargs for key in ('atol', 'rtol', 'cum_percentage')):
             result._unrestricted_set_tensor(_split_rank_high_rank_tensor())
 
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -1802,10 +1802,10 @@ class TestSplitSVDR:  # MARK: TestSplitSVDR
         # fulfills all of them, that is, the minimum rank
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=5, # rank = 5
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.4) # rank = 6
+                                        mode='svdr',
+                                        rank=5, # rank = 5
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
 
         assert new_node1.shape == (10, 2, 5, 5)
         assert new_node2.shape == (10, 5, 5, 3)
@@ -1813,10 +1813,10 @@ class TestSplitSVDR:  # MARK: TestSplitSVDR
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.4) # rank = 6
+                                        mode='svdr',
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
         
         assert new_node1.shape == (10, 2, 5, 6)
         assert new_node2.shape == (10, 6, 5, 3)
@@ -1824,13 +1824,13 @@ class TestSplitSVDR:  # MARK: TestSplitSVDR
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.1) # rank = 10
-        
-        assert new_node1.shape == (10, 2, 5, 8)
-        assert new_node2.shape == (10, 8, 5, 3)
+                                        mode='svdr',
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.1) # rank = 9
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
     
     def test_split_contracted_complex_node(self):
         net = tk.TensorNetwork()

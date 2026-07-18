@@ -1646,7 +1646,7 @@ class MPS(TensorNetwork):  # MARK: MPS
     @torch.no_grad()
     def entropy(self,
                 middle_site: int,
-                renormalize: bool = False) -> Union[float, Tuple[float]]:
+                renormalize: bool = False) -> torch.Tensor:
         r"""
         Computes the von Neumann entropy of the reduced density matrix
         :math:`\rho_A` (entanglement entropy) between subsystems :math:`A` and
@@ -1659,22 +1659,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         physical dimension multiplied by the other bond dimension of the node,
         it will be cropped to that size.
         
-        If the MPS is not normalized, it may happen that the computation of the
-        entanglement entropy fails due to errors in the Singular Value
-        Decompositions. To avoid this, it is recommended to set
-        ``renormalize = True``. In this case, the norm of each node after the
-        SVD is extracted in logarithmic form, and accumulated. As a result,
-        the function will return the tuple ``(entropy, log_norm)``, which is a
-        scaled entanglement entropy. This is, indeed, the entanglement entropy
-        of a distribution, since the schmidt values are normalized to sum up
-        to 1.
-        
-        The actual entanglement entropy, without rescaling, could be obtained as:
-        
-        .. math::
-        
-            \exp(\texttt{log_norm})^2 \cdot S(\rho_A) - 
-            \exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}
+        The entropy is always computed from the normalized squared Schmidt
+        values, :math:`p_i = s_i^2 / \sum_j s_j^2`, so the returned value is a
+        true entropy independently of the norm of the MPS.
         
         This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,
         as :meth:`canonicalize` may change the form of the tensors.
@@ -1689,13 +1676,12 @@ class MPS(TensorNetwork):  # MARK: MPS
             decompositions. If not, it may happen that the norm explodes as it
             is being accumulated from all nodes. Renormalization aims to avoid
             this undesired behavior by extracting the norm of each node on a
-            logarithmic scale after SVD/QR decompositions are computed. Finally,
-            the normalization factor is evenly distributed among all nodes of
-            the MPS.
+            logarithmic scale after SVD/QR decompositions are computed. It does
+            not change the entropy definition or the return type.
         
         Returns
         -------
-        float or tuple[float, float]
+        torch.Tensor
         """
         self.reset()
 
@@ -1772,10 +1758,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         self.auto_stack = prev_auto_stack
         
-        if renormalize:
-            return entropy, log_norm
-        else:
-            return entropy
+        return entropy
     
     @torch.no_grad()
     def condition(self,

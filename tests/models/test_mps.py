@@ -1858,15 +1858,15 @@ class TestMPS:  # MARK: TestMPS
 
         self._trace_mps_for_canonicalize(mps, n_features, runtime)
 
-        scaled_entropy, log_norm = mps.entropy(middle_site=middle_site,
-                                               renormalize=True)
+        renormalized_entropy = mps.entropy(middle_site=middle_site,
+                                           renormalize=True)
         entropy = mps.entropy(middle_site=middle_site, renormalize=False)
 
         assert all(mps.bond_dim[i] <= bond_dim[i] for i in range(len(bond_dim)))
-
-        sq_norm = log_norm.exp().pow(2)
-        approx_entropy = sq_norm * scaled_entropy - sq_norm * 2 * log_norm
-        assert torch.isclose(entropy, approx_entropy, rtol=1e-03, atol=1e-05)
+        assert torch.isclose(entropy,
+                             renormalized_entropy,
+                             rtol=1e-03,
+                             atol=1e-05)
 
         self._finalize_mps_canonicalize(mps, n_features)
 

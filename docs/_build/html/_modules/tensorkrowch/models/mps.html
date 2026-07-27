@@ -2224,12 +2224,11 @@ title="Source repository"
         <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
         
         <span class="c1"># Rescale</span>
-        <span class="k">if</span> <span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">rescale</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">))</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
-        
-        <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">*</span> <span class="n">rescale</span>
+        <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">rescale</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">))</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">*</span> <span class="n">rescale</span>
         
         <span class="c1"># Update variables</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="n">nodes</span>

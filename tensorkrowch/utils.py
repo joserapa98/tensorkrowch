@@ -17,10 +17,11 @@ This script contains:
     * random_unitary
 """
 
-from typing import Optional, List, Sequence, Text, Union
+from typing import Optional, Tuple, List, Sequence, Text, Union
 
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 
 def print_list(lst: List) -> Text:
@@ -322,3 +323,116 @@ def random_unitary(n,
     ph = d / d.abs()
     q = q @ torch.diag(ph)
     return q
+
+def truncated_svd(tensor: Tensor,
+                  rank: Optional[int] = None,
+                  cutoff: Optional[float] = None,
+                  atol: Optional[float] = None,
+                  rtol: Optional[float] = None,
+                  cum_percentage: Optional[float] = None) -> Tuple[Tensor, Tensor, Tensor]:
+    r"""
+    Computes a truncated SVD. If no truncation criterion is specified, it
+    returns the full SVD. If more than one criterion is specified, the final
+    rank is the minimum one, i.e. the one imposed by the most restrictive
+    criterion.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Tensor to be decomposed, with shape (*, m, n) where * is zero or more
+        batch dimensions.
+    rank : int, optional
+        Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        ``(u, s, vh)`` from ``torch.linalg.svd(tensor, full_matrices=False)``
+        after truncation:
+        ``u`` has shape ``(*, m, r)``, ``s`` has shape ``(*, r)``, and ``vh``
+        has shape ``(*, r, n)``, where ``r`` is the selected final rank.
+    
+    Examples
+    --------
+    >>> tensor = torch.randn(4, 4)
+    >>> u, s, vh = truncated_svd(tensor, rank=2)
+    >>> len(s)
+    2
+    """
+    if rank is not None:
+        if (not isinstance(rank, int)) or (rank < 1):
+            raise ValueError('`rank` should be a positive integer')
+    if cutoff is not None:
+        if (not isinstance(cutoff, (int, float))) or (cutoff < 0):
+            raise ValueError('`cutoff` should be a non-negative number')
+    if atol is not None:
+        if (not isinstance(atol, (int, float))) or (atol < 0):
+            raise ValueError('`atol` should be a non-negative number')
+    if rtol is not None:
+        if ((not isinstance(rtol, (int, float))) or (rtol < 0) or (rtol > 1)):
+            raise ValueError('`rtol` should be a number between 0 and 1')
+    if cum_percentage is not None:
+        if ((not isinstance(cum_percentage, (int, float)))
+            or (cum_percentage < 0) or (cum_percentage > 1)):
+            raise ValueError('`cum_percentage` should be a number between 0 and 1')
+    
+    if cum_percentage is not None:
+        if rtol is None:
+            rtol = 1 - cum_percentage
+        else:
+            rtol = max(rtol, 1 - cum_percentage)
+    
+    u, s, vh = torch.linalg.svd(tensor, full_matrices=False)
+    final_rank = s.shape[-1]
+    
+    if rank is not None:
+        final_rank = min(final_rank, max(1, int(rank)))
+    
+    if cutoff is not None:
+        cutoff_tensor = cutoff * torch.ones_like(s)
+        co_rank = torch.gt(s, cutoff_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
+        final_rank = min(final_rank, max(1, co_rank.item()))
+    
+    if atol is not None:
+        s2 = s.pow(2)
+        s2_sum = s2.flip(dims=[-1]).cumsum(-1)
+        atol_tensor = atol * torch.ones_like(s)
+        atol_rank = torch.gt(s2_sum, atol_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
+        final_rank = min(final_rank, max(1, atol_rank.item()))
+    
+    if rtol is not None:
+        eps = torch.finfo(s.dtype).eps
+        safe_s = torch.clamp(s, min=eps) # To avoid having all 0's
+        safe_s2 = safe_s.pow(2)
+        
+        s2_sum = safe_s2.flip(dims=[-1]).cumsum(-1)
+        s_ratios = s2_sum / (safe_s2.sum(-1, keepdim=True).expand(s.shape))
+        rtol_tensor = rtol * torch.ones_like(s)
+        rtol_rank = torch.gt(s_ratios, rtol_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
+        final_rank = min(final_rank, max(1, rtol_rank.item()))
+    
+    u = u[..., :final_rank]
+    s = s[..., :final_rank]
+    vh = vh[..., :final_rank, :]
+    
+    return u, s, vh

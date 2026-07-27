@@ -187,7 +187,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                                         ' or list[torch.Tensor] type')
                     
                     if i == 0:
-                        if len(t.shape) not in [n_batches + 1,
+                        if t.ndim not in [n_batches + 1,
                                                 n_batches + 2,
                                                 n_batches + 3]:
                             raise ValueError(
@@ -195,10 +195,10 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                                 'should be both rank-(n+2) or rank-(n+3) tensors.'
                                 ' If the first element is also the last one,'
                                 ' it should be a rank-(n+1) tensor')
-                        if len(t.shape) == n_batches + 1:
+                        if t.ndim == n_batches + 1:
                             self._boundary = 'obc'
                             self._phys_dim.append(t.shape[-1])
-                        elif len(t.shape) == n_batches + 2:
+                        elif t.ndim == n_batches + 2:
                             self._boundary = 'obc'
                             self._phys_dim.append(t.shape[-2])
                             self._bond_dim.append(t.shape[-1])
@@ -207,14 +207,14 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                             self._phys_dim.append(t.shape[-2])
                             self._bond_dim.append(t.shape[-1])
                     elif i == (self._n_features - 1):
-                        if len(t.shape) != len(tensors[0].shape):
+                        if t.ndim != tensors[0].ndim:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
                                 'should have the same rank. Both should be '
                                 'rank-(n+2) or rank-(n+3) tensors. If the first'
                                 ' element is also the last one, it should '
                                 'be a rank-(n+1) tensor')
-                        if len(t.shape) == n_batches + 2:
+                        if t.ndim == n_batches + 2:
                             self._phys_dim.append(t.shape[-1])
                         else:
                             if t.shape[-1] != tensors[0].shape[-3]:
@@ -227,7 +227,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                             self._phys_dim.append(t.shape[-2])
                             self._bond_dim.append(t.shape[-1])
                     else:
-                        if len(t.shape) != n_batches + 3:
+                        if t.ndim != n_batches + 3:
                             raise ValueError(
                                 'The elements of `tensors` should be rank-(n+3) '
                                 'tensors, except the first and lest elements'
@@ -317,14 +317,14 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             if not aux_bond_dim:
                 aux_bond_dim = [1]
                 
-            self._left_node = ParamNode(shape=(aux_bond_dim[0],),
-                                        axes_names=('right',),
-                                        name='left_node',
-                                        network=self)
-            self._right_node = ParamNode(shape=(aux_bond_dim[-1],),
-                                         axes_names=('left',),
-                                         name='right_node',
-                                         network=self)
+            self._left_node = Node(shape=(aux_bond_dim[0],),
+                                   axes_names=('right',),
+                                   name='left_node',
+                                   network=self)
+            self._right_node = Node(shape=(aux_bond_dim[-1],),
+                                    axes_names=('left',),
+                                    name='right_node',
+                                    network=self)
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         

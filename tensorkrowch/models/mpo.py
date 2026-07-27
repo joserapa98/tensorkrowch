@@ -79,6 +79,9 @@ class MPO(TensorNetwork):  # MARK: MPO
     init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether MPO nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -122,6 +125,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -204,17 +208,17 @@ class MPO(TensorNetwork):  # MARK: MPO
                                         ' or list[torch.Tensor] type')
                     
                     if i == 0:
-                        if len(t.shape) not in [2, 3, 4]:
+                        if t.ndim not in [2, 3, 4]:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
                                 'should be both rank-3 or rank-4 tensors. If'
                                 ' the first element is also the last one,'
                                 ' it should be a rank-2 tensor')
-                        if len(t.shape) == 2:
+                        if t.ndim == 2:
                             self._boundary = 'obc'
                             self._in_dim.append(t.shape[0])
                             self._out_dim.append(t.shape[1])
-                        elif len(t.shape) == 3:
+                        elif t.ndim == 3:
                             self._boundary = 'obc'
                             self._in_dim.append(t.shape[0])
                             self._bond_dim.append(t.shape[1])
@@ -225,14 +229,14 @@ class MPO(TensorNetwork):  # MARK: MPO
                             self._bond_dim.append(t.shape[2])
                             self._out_dim.append(t.shape[3])
                     elif i == (self._n_features - 1):
-                        if len(t.shape) != len(tensors[0].shape):
+                        if t.ndim != tensors[0].ndim:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
                                 'should have the same rank. Both should be '
                                 'rank-3 or rank-4 tensors. If the first '
                                 'element is also the last one, it should '
                                 'be a rank-2 tensor')
-                        if len(t.shape) == 3:
+                        if t.ndim == 3:
                             self._in_dim.append(t.shape[1])
                             self._out_dim.append(t.shape[2])
                         else:
@@ -246,7 +250,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                             self._bond_dim.append(t.shape[2])
                             self._out_dim.append(t.shape[3])
                     else:
-                        if len(t.shape) != 4:
+                        if t.ndim != 4:
                             raise ValueError(
                                 'The elements of `tensors` should be rank-4 '
                                 'tensors, except the first and lest elements'
@@ -259,6 +263,9 @@ class MPO(TensorNetwork):  # MARK: MPO
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         self._n_batches = n_batches
+
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
         
         # Properties
         self._left_node = None
@@ -266,7 +273,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         self._mats_env = []
 
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize(tensors=tensors,
                         init_method=init_method,
                         device=device,
@@ -309,7 +316,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         if there are already data nodes in the network.
         """
         return self._n_batches
-    
+
     @n_batches.setter
     def n_batches(self, n_batches: int) -> None:
         if n_batches != self._n_batches:
@@ -335,24 +342,24 @@ class MPO(TensorNetwork):  # MARK: MPO
     def mats_env(self) -> List[AbstractNode]:
         """Returns the list of nodes in ``mats_env``."""
         return self._mats_env
-    
+
     @property
     def tensors(self) -> List[torch.Tensor]:
         """Returns the list of MPO tensors."""
         mpo_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
             mpo_tensors[0] = torch.einsum('l,liro->iro',
-                                          self.left_node.tensor,
+                                          self._left_node.tensor,
                                           mpo_tensors[0])
             mpo_tensors[-1] = torch.einsum('liro,r->lio',
                                            mpo_tensors[-1],
-                                           self.right_node.tensor)
+                                           self._right_node.tensor)
         return mpo_tensors
     
     # -------
     # Methods
     # -------
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPO."""
         if self._leaf_nodes:
             raise ValueError('Cannot create MPO nodes if the MPO already has '
@@ -364,25 +371,27 @@ class MPO(TensorNetwork):  # MARK: MPO
             if not aux_bond_dim:
                 aux_bond_dim = [1]
                 
-            self._left_node = ParamNode(shape=(aux_bond_dim[0],),
-                                        axes_names=('right',),
-                                        name='left_node',
-                                        network=self)
-            self._right_node = ParamNode(shape=(aux_bond_dim[-1],),
-                                         axes_names=('left',),
-                                         name='right_node',
-                                         network=self)
+            self._left_node = Node(shape=(aux_bond_dim[0],),
+                                   axes_names=('right',),
+                                   name='left_node',
+                                   network=self)
+            self._right_node = Node(shape=(aux_bond_dim[-1],),
+                                    axes_names=('left',),
+                                    name='right_node',
+                                    network=self)
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         
+        node_cls = ParamNode if parameterized else Node
+        
         for i in range(self._n_features):
-            node = ParamNode(shape=(aux_bond_dim[i - 1],
-                                    self._in_dim[i],
-                                    aux_bond_dim[i],
-                                    self._out_dim[i]),
-                             axes_names=('left', 'input', 'right', 'output'),
-                             name=f'mats_env_node_({i})',
-                             network=self)
+            node = node_cls(shape=(aux_bond_dim[i - 1],
+                                   self._in_dim[i],
+                                   aux_bond_dim[i],
+                                   self._out_dim[i]),
+                            axes_names=('left', 'input', 'right', 'output'),
+                            name=f'mats_env_node_({i})',
+                            network=self)
             self._mats_env.append(node)
 
             if i != 0:
@@ -485,10 +494,11 @@ class MPO(TensorNetwork):  # MARK: MPO
                     if i == 0:
                         # Left node
                         aux_tensor[0] = node.tensor[0]
+                        node.tensor = aux_tensor
                     elif i == (self._n_features - 1):
                         # Right node
                         aux_tensor[..., 0, :] = node.tensor[..., 0, :]
-                    node.tensor = aux_tensor
+                        node.tensor = aux_tensor
         
         if self._boundary == 'obc':
             self._left_node.set_tensor(init_method='copy',
@@ -536,12 +546,23 @@ class MPO(TensorNetwork):  # MARK: MPO
                       device=None,
                       dtype=None)
         new_mpo.name = self.name + '_copy'
+        
+        for i in range(self._n_features):
+            new_mpo._mats_env[i] = new_mpo._mats_env[i].parameterize(
+                set_param=isinstance(self._mats_env[i], ParamNode))
+        
         if share_tensors:
             for new_node, node in zip(new_mpo._mats_env, self._mats_env):
                 new_node.tensor = node.tensor
+            if self._boundary == 'obc':
+                new_mpo._left_node.tensor = self._left_node.tensor
+                new_mpo._right_node.tensor = self._right_node.tensor
         else:
             for new_node, node in zip(new_mpo._mats_env, self._mats_env):
                 new_node.tensor = node.tensor.clone()
+            if self._boundary == 'obc':
+                new_mpo._left_node.tensor = self._left_node.tensor.clone()
+                new_mpo._right_node.tensor = self._right_node.tensor.clone()
         
         return new_mpo
 
@@ -572,11 +593,7 @@ class MPO(TensorNetwork):  # MARK: MPO
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
-        
-        if net._boundary == 'obc':
-            net._left_node = net._left_node.parameterize(set_param)
-            net._right_node = net._right_node.parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
             
         return net
     
@@ -727,7 +744,30 @@ class MPO(TensorNetwork):  # MARK: MPO
         return self._contract_envs_inline(mats_env=aux_nodes,
                                           renormalize=renormalize,
                                           mps=mps)
-    
+
+    def _zipup_contraction(self,
+                           nodes_envs: List[List[AbstractNode]],
+                           renormalize: bool = False) -> Node:
+        """Contracts MPS-MPO via the zip-up method."""
+        for i, node_tuple in enumerate(zip(*nodes_envs)):
+            if i == 0:
+                result_node = node_tuple[0]
+                for node in node_tuple[1:]:
+                    result_node @= node
+            else:
+                for node in node_tuple:
+                    result_node @= node
+                    
+            if renormalize:
+                right_axes = []
+                for ax_name in result_node.axes_names:
+                    if 'right' in ax_name:
+                        right_axes.append(ax_name)
+                if right_axes:
+                    result_node = result_node.renormalize(axis=right_axes)
+        
+        return result_node
+
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
@@ -747,7 +787,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         MPO nodes by hand before contraction, it can be done. However, one
         should first move the MPS nodes to the MPO network.
         
-        Also, when contracting the MPO with and ``MPSData``, if any of the
+        Also, when contracting the MPO with an ``MPSData``, if any of the
         contraction arguments, ``inline_input`` or ``inline_mats``, is set to
         ``False``, the MPO (already connected to the MPS) should be
         :meth:`~tensorkrowch.TensorNetwork.reset` before contraction if new
@@ -799,26 +839,42 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError(
                     '`mps` should have as many features as the MPO')
             
-            # Move MPSData ndoes to self
+            # Move MPSData nodes to self
             mps._mats_env[0].move_to_network(self)
             
             # Connect mps nodes to mpo nodes
             for mps_node, mpo_node in zip(mps._mats_env, self._mats_env):
                 mps_node['feature'] ^ mpo_node['input']
-                
-        mats_env = self._input_contraction(
-            nodes_env=self._mats_env,
-            input_nodes=[node.neighbours('input') for node in self._mats_env],
-            inline_input=inline_input)
+            
+            mpo_nodes = self._mats_env[:]
+            if self._boundary == 'obc':
+                mpo_nodes[0] = self._left_node @ mpo_nodes[0]
+                mpo_nodes[-1] = mpo_nodes[-1] @ self._right_node
+            
+            mps_nodes = mps._mats_env[:]
+            if mps._boundary == 'obc':
+                mps_nodes[0] = mps._left_node @ mps_nodes[0]
+                mps_nodes[-1] = mps_nodes[-1] @ mps._right_node
+            
+            # Contract nodes (MPS-MPO) via zip-up
+            nodes_envs = [mps_nodes, mpo_nodes]
+            result = self._zipup_contraction(nodes_envs=nodes_envs,
+                                             renormalize=renormalize)
         
-        if inline_mats:
-            result = self._contract_envs_inline(mats_env=mats_env,
-                                                renormalize=renormalize,
-                                                mps=mps)
         else:
-            result = self._pairwise_contraction(mats_env=mats_env,
-                                                renormalize=renormalize,
-                                                mps=mps)
+            mats_env = self._input_contraction(
+                nodes_env=self._mats_env,
+                input_nodes=[node.neighbours('input') for node in self._mats_env],
+                inline_input=inline_input)
+            
+            if inline_mats:
+                result = self._contract_envs_inline(mats_env=mats_env,
+                                                    renormalize=renormalize,
+                                                    mps=mps)
+            else:
+                result = self._pairwise_contraction(mats_env=mats_env,
+                                                    renormalize=renormalize,
+                                                    mps=mps)
             
         # Contract periodic edge
         if result.is_connected_to(result):
@@ -844,8 +900,10 @@ class MPO(TensorNetwork):  # MARK: MPO
                      oc: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
-                     cum_percentage: Optional[float] = None,
                      cutoff: Optional[float] = None,
+                     atol: Optional[float] = None,
+                     rtol: Optional[float] = None,
+                     cum_percentage: Optional[float] = None,
                      renormalize: bool = False) -> None:
         r"""
         Turns MPO into `canonical` form via local SVD/QR decompositions in the
@@ -862,8 +920,10 @@ class MPO(TensorNetwork):  # MARK: MPO
         
         If rank is not specified, the current bond dimensions will be used as
         the rank. That is, the current bond dimensions will be the upper bound
-        for the possibly new bond dimensions given by the arguments
-        ``cum_percentage`` and/or ``cutoff``.
+        for the possibly new bond dimensions given by the truncation
+
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`,
+        as canonicalization may change the form of the tensors.
         
         Parameters
         ----------
@@ -879,16 +939,26 @@ class MPO(TensorNetwork):  # MARK: MPO
             :func:`~tensorkrowch.rq_` will be used for nodes at the right.
         rank : int, optional
             Number of singular values to keep.
-        cum_percentage : float, optional
-            Proportion that should be satisfied between the sum of all singular
-            values kept and the total sum of all singular values.
-            
-            .. math::
-            
-                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-                cum\_percentage
         cutoff : float, optional
-            Quantity that lower bounds singular values in order to be kept.
+            Minimum singular value to keep. It must be non-negative. Singular
+            values ``<= cutoff`` are removed.
+        atol : float, optional
+            Absolute tolerance over the tail sum of squared singular values. Starting
+            from the smallest singular value, values are discarded while the
+            accumulated sum of squares is ``<= atol``. It must be non-negative.
+        rtol : float, optional
+            Relative tolerance over the tail sum of squared singular values. Starting
+            from the smallest singular value, values are discarded while the
+            tail sum of squares divided by the total sum of squares is ``<= rtol``.
+            It must be in ``[0, 1]``.
+        cum_percentage : float, optional
+            Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+            ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+            .. math::
+
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+                cum\_percentage
         renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
             decompositions. If not, it may happen that the norm explodes as it
@@ -928,6 +998,9 @@ class MPO(TensorNetwork):  # MARK: MPO
             nodes[-1].tensor[..., 1:, :] = torch.zeros_like(
                 nodes[-1].tensor[..., 1:, :])
         
+        # Keep track of which nodes are parameterized
+        set_params = [isinstance(node, ParamNode) for node in nodes]
+        
         # If mode is svd or svr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
@@ -939,14 +1012,18 @@ class MPO(TensorNetwork):  # MARK: MPO
                 result1, result2 = nodes[i]['right'].svd_(
                     side='right',
                     rank=nodes[i]['right'].size() if keep_rank else rank,
-                    cum_percentage=cum_percentage,
-                    cutoff=cutoff)
+                    cutoff=cutoff,
+                    atol=atol,
+                    rtol=rtol,
+                    cum_percentage=cum_percentage)
             elif mode == 'svdr':
                 result1, result2 = nodes[i]['right'].svdr_(
                     side='right',
                     rank=nodes[i]['right'].size() if keep_rank else rank,
-                    cum_percentage=cum_percentage,
-                    cutoff=cutoff)
+                    cutoff=cutoff,
+                    atol=atol,
+                    rtol=rtol,
+                    cum_percentage=cum_percentage)
             elif mode == 'qr':
                 result1, result2 = nodes[i]['right'].qr_()
             else:
@@ -958,8 +1035,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result1 = result1.parameterize()
-            nodes[i] = result1
+            nodes[i] = result1.parameterize(set_param=set_params[i])
             nodes[i + 1] = result2
 
         for i in range(len(nodes) - 1, oc, -1):
@@ -967,14 +1043,18 @@ class MPO(TensorNetwork):  # MARK: MPO
                 result1, result2 = nodes[i]['left'].svd_(
                     side='left',
                     rank=nodes[i]['left'].size() if keep_rank else rank,
-                    cum_percentage=cum_percentage,
-                    cutoff=cutoff)
+                    cutoff=cutoff,
+                    atol=atol,
+                    rtol=rtol,
+                    cum_percentage=cum_percentage)
             elif mode == 'svdr':
                 result1, result2 = nodes[i]['left'].svdr_(
                     side='left',
                     rank=nodes[i]['left'].size() if keep_rank else rank,
-                    cum_percentage=cum_percentage,
-                    cutoff=cutoff)
+                    cutoff=cutoff,
+                    atol=atol,
+                    rtol=rtol,
+                    cum_percentage=cum_percentage)
             elif mode == 'qr':
                 result1, result2 = nodes[i]['left'].rq_()
             else:
@@ -986,11 +1066,10 @@ class MPO(TensorNetwork):  # MARK: MPO
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()
 
-            result2 = result2.parameterize()
-            nodes[i] = result2
+            nodes[i] = result2.parameterize(set_param=set_params[i])
             nodes[i - 1] = result1
 
-        nodes[oc] = nodes[oc].parameterize()
+        nodes[oc] = nodes[oc].parameterize(set_param=set_params[oc])
         
         # Rescale
         if log_norm != 0:
@@ -1042,6 +1121,9 @@ class UMPO(MPO):  # MARK: UMPO
     init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods.
+    parameterized : bool, optional
+        Boolean indicating whether UMPO nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
     dtype : torch.dtype, optional
@@ -1073,6 +1155,7 @@ class UMPO(MPO):  # MARK: UMPO
                  tensor: Optional[torch.Tensor] = None,
                  n_batches: int = 1,
                  init_method: Text = 'randn',
+                 parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
@@ -1101,7 +1184,7 @@ class UMPO(MPO):  # MARK: UMPO
         else:
             if not isinstance(tensor, torch.Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
-            if len(tensor.shape) != 4:
+            if tensor.ndim != 4:
                 raise ValueError('`tensor` should be a rank-4 tensor')
             if tensor.shape[0] != tensor.shape[2]:
                 raise ValueError('`tensor` first and last dimensions should'
@@ -1118,24 +1201,26 @@ class UMPO(MPO):  # MARK: UMPO
                          tensors=tensors,
                          n_batches=n_batches,
                          init_method=init_method,
+                         parameterized=parameterized,
                          device=device,
                          dtype=dtype,
                          **kwargs)
         self.name = 'umpo'
     
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPO."""
-        super()._make_nodes()
+        super()._make_nodes(parameterized)
         
         # Virtual node
-        uniform_memory = ParamNode(shape=(self._bond_dim[0],
-                                          self._in_dim[0],
-                                          self._bond_dim[0],
-                                          self._out_dim[0]),
-                                   axes_names=('left', 'input', 'right', 'output'),
-                                   name='virtual_uniform',
-                                   network=self,
-                                   virtual=True)
+        node_cls = ParamNode if parameterized else Node
+        uniform_memory = node_cls(shape=(self._bond_dim[0],
+                                         self._in_dim[0],
+                                         self._bond_dim[0],
+                                         self._out_dim[0]),
+                                  axes_names=('left', 'input', 'right', 'output'),
+                                  name='virtual_uniform',
+                                  network=self,
+                                  virtual=True)
         self.uniform_memory = uniform_memory
         
         for node in self._mats_env:
@@ -1207,6 +1292,7 @@ class UMPO(MPO):  # MARK: UMPO
                        tensor=None,
                        n_batches=self._n_batches,
                        init_method=None,
+                       parameterized=isinstance(self.uniform_memory, ParamNode),
                        device=None,
                        dtype=None)
         new_mpo.name = self.name + '_copy'
@@ -1243,11 +1329,11 @@ class UMPO(MPO):  # MARK: UMPO
             net = self.copy(share_tensors=False)
         
         for i in range(self._n_features):
-            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest
         # of the nodes
-        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        net.uniform_memory = net.uniform_memory.parameterize(set_param=set_param)
         
         # Tensor addresses have to be reassigned to reference
         # the uniform memory
@@ -1260,8 +1346,10 @@ class UMPO(MPO):  # MARK: UMPO
                      oc: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
-                     cum_percentage: Optional[float] = None,
                      cutoff: Optional[float] = None,
+                     atol: Optional[float] = None,
+                     rtol: Optional[float] = None,
+                     cum_percentage: Optional[float] = None,
                      renormalize: bool = False) -> None:
         """:meta private:"""
         raise NotImplementedError(

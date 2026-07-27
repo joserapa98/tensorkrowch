@@ -4,9 +4,9 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Components &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>Components &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -582,7 +582,7 @@ parenthesis: <code class="docutils literal notranslate"><span class="pre">&quot;
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>num</strong> (<em>int</em>) – Index of the axis in the node’s axes list.</p></li>
 <li><p><strong>name</strong> (<em>str</em>) – Axis name, should not contain blank spaces or special characters. If it
@@ -973,10 +973,10 @@ their own tensors or use other node’s tensor.</p>
 the size of that axis; otherwise returns the shape of the node (same as
 <a class="reference internal" href="#tensorkrowch.AbstractNode.shape" title="tensorkrowch.AbstractNode.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a>).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the size.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>int or torch.Size</p>
 </dd>
 </dl>
@@ -989,10 +989,10 @@ the size of that axis; otherwise returns the shape of the node (same as
 <code class="docutils literal notranslate"><span class="pre">axis</span></code> is specified, returns only the <code class="docutils literal notranslate"><span class="pre">node1</span></code> of that axis; otherwise
 returns the <code class="docutils literal notranslate"><span class="pre">node1</span></code> of all axes of the node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>bool or list[bool]</p>
 </dd>
 </dl>
@@ -1007,10 +1007,10 @@ the <code class="docutils literal notranslate"><span class="pre">leaf</span></co
 one cannot check if two <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes are connected by looking
 into their neighbours lists. To do that, use <a class="reference internal" href="#tensorkrowch.AbstractNode.is_connected_to" title="tensorkrowch.AbstractNode.is_connected_to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_connected_to()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the neighbour.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode">AbstractNode</a> or list[<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode">AbstractNode</a>]</p>
 </dd>
 </dl>
@@ -1081,7 +1081,7 @@ replacing each previous <code class="docutils literal notranslate"><span class="
 <p>Used for in-place operations like <a class="reference internal" href="operations.html#tensorkrowch.permute_" title="tensorkrowch.permute_"><code class="xref py py-func docutils literal notranslate"><span class="pre">permute_()</span></code></a> or <a class="reference internal" href="operations.html#tensorkrowch.split_" title="tensorkrowch.split_"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_()</span></code></a> and
 to (de)parameterize nodes.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>axis</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – The edge attached to these axes will be reattached. If <code class="docutils literal notranslate"><span class="pre">None</span></code>,
 all edges will be reattached.</p></li>
@@ -1129,7 +1129,7 @@ new <code class="docutils literal notranslate"><span class="pre">result['right']
 <dd><p>Disconnects all edges of the node if they were connected to other nodes.
 If <code class="docutils literal notranslate"><span class="pre">axis</span></code> is sepcified, only the corresponding edge is disconnected.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis whose edge will be disconnected.</p>
 </dd>
 </dl>
@@ -1156,7 +1156,7 @@ If <code class="docutils literal notranslate"><span class="pre">axis</span></cod
 <dd><p>Returns a tensor that can be put in the node, and is initialized according
 to <code class="docutils literal notranslate"><span class="pre">init_method</span></code>. By default, it has the same shape as the node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em><em>, </em><em>optional</em>) – Shape of the tensor. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, node’s shape will be used.</p></li>
 <li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
@@ -1172,10 +1172,10 @@ to <code class="docutils literal notranslate"><span class="pre">init_method</spa
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
-<dt class="field-odd">Raises</dt>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is not one of “zeros”, “ones”, “copy”, “rand”, “randn”.</p>
 </dd>
 </dl>
@@ -1202,7 +1202,7 @@ method of <a class="reference internal" href="#tensorkrowch.TensorNetwork" title
 tensors. This method calls <a class="reference internal" href="#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorNetwork.add_data()</span></code></a>, which can
 also be used to set data tensors into the <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tensor</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor to be set in the node. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, and <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is
 provided, the tensor is created with <a class="reference internal" href="#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>. Otherwise,
@@ -1214,7 +1214,7 @@ a <code class="docutils literal notranslate"><span class="pre">None</span></code
 <a class="reference internal" href="#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Raises</dt>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>ValueError</strong> – If the node is a <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node or if it does not store its own
     tensor.</p>
 </dd>
@@ -1273,10 +1273,10 @@ the <code class="docutils literal notranslate"><span class="pre">other</span></c
 <p>The node and <code class="docutils literal notranslate"><span class="pre">other</span></code> should be both the same type (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or
 <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>). Also, they should be in the same <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Node whose tensor is to be set in current node.</p>
 </dd>
-<dt class="field-even">Raises</dt>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>TypeError</strong> – If <code class="docutils literal notranslate"><span class="pre">other</span></code> is a different type than the current node, or if it is
     in a different network.</p>
 </dd>
@@ -1352,7 +1352,7 @@ to a node connected to it, etc. are also moved to the new network.</p>
 <p>If a node does not store its own tensor, and is moved to other network,
 it will recover the “ownership” of its tensor.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>network</strong> (<a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a>) – Tensor Network to which the nodes will be moved.</p></li>
 <li><p><strong>visited</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em><em>, </em><em>optional</em>) – List indicating the nodes that have been already moved to the new
@@ -1398,10 +1398,10 @@ reduce over all of them.</p>
 instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.sum.html">torch.sum()</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -1432,10 +1432,10 @@ reduce over all of them.</p>
 instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.mean.html">torch.mean()</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -1466,10 +1466,10 @@ reduce over all of them.</p>
 instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.std.html">torch.std()</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -1500,7 +1500,7 @@ reduce over all of them.</p>
 instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.norm.html">torch.norm()</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
 <li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
@@ -1508,7 +1508,7 @@ instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tens
 retained or not.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -1535,7 +1535,7 @@ retained or not.</p></li>
 <dd><p>Returns the total number of elements in the node’s tensor.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.numel.html">torch.numel()</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>int</p>
 </dd>
 </dl>
@@ -1556,7 +1556,7 @@ same tensor.</p>
 <p>See <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.conj.html">conj</a>
 in the <strong>PyTorch</strong> documentation.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -1578,11 +1578,11 @@ names. It can also be performed using the operator <code class="docutils literal
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges&quot;</span></code>.
 The node that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>node2</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Second node of the contraction. Its non-contracted edges will appear
 last in the list of inherited edges of the resultant node.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -1610,11 +1610,11 @@ last in the list of inherited edges of the resultant node.</p>
 underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges_ip&quot;</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>node2</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Second node of the contraction. Its non-contracted edges will appear
 last in the list of inherited edges of the resultant node.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -1657,10 +1657,10 @@ in the <strong>PyTorch</strong> documentation.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;permute&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – List of axes in the permuted order.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -1683,10 +1683,10 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <p>See <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.permute.html">permute</a>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation use the same name as <code class="docutils literal notranslate"><span class="pre">node</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – List of axes in the permuted order.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
 <li><p><em>Node</em></p></li>
 <li><p><em>&gt;&gt;&gt; node = tk.randn((2, 5, 7))</em></p></li>
@@ -1708,13 +1708,13 @@ is divided by its norm.</p>
 different dimensions, or node axes, specifying the argument <code class="docutils literal notranslate"><span class="pre">axis</span></code>.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.norm.html">torch.norm()</a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
 <li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -1737,7 +1737,7 @@ nodes. The axis that corresponds to this edge has the name <code class="docutils
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node1_axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – First set of edges, will appear as the edges of the first (left)
 resultant node.</p></li>
@@ -1759,7 +1759,7 @@ cum\_percentage\]</div>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -1793,7 +1793,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 nodes. The axis that corresponds to this edge has the name <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;split_ip&quot;</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node1_axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – First set of edges, will appear as the edges of the first (left)
 resultant node.</p></li>
@@ -1815,7 +1815,7 @@ cum\_percentage\]</div>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -1875,7 +1875,7 @@ more about these <strong>4 types of nodes</strong>, see <a class="reference inte
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em><em>, </em><em>optional</em>) – Node’s shape, that is, the shape of its tensor. If <code class="docutils literal notranslate"><span class="pre">shape</span></code> and
 <code class="docutils literal notranslate"><span class="pre">init_method</span></code> are provided, a tensor will be made for the node. Otherwise,
@@ -1985,15 +1985,15 @@ fixed <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowc
 <p>Since the node is <strong>replaced</strong>, it will be completely removed from the
 network, and its neighbours will point to the new parameterized node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the node should be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>).
 Otherwise (<code class="docutils literal notranslate"><span class="pre">False</span></code>), the non-parameterized node itself will be
 returned.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The original node or a parameterized version of it.</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
@@ -2031,12 +2031,12 @@ but the exact same edges) and whose name is extended with the suffix
 <p>To create a copy that has its own (non-inherited) edges, one can use
 <a class="reference internal" href="#tensorkrowch.AbstractNode.reattach_edges" title="tensorkrowch.AbstractNode.reattach_edges"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reattach_edges()</span></code></a> afterwards.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em>) – Boolean indicating whether the copied node should store its own
 copy of the tensor (<code class="docutils literal notranslate"><span class="pre">False</span></code>) or share it with the original node
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) storing a reference to it.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -2068,7 +2068,7 @@ copy of the tensor (<code class="docutils literal notranslate"><span class="pre"
 <span class="sig-name descname"><span class="pre">change_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Node.change_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Node.change_type" title="Permalink to this definition">#</a></dt>
 <dd><p>Changes node type, only if node is not a resultant node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>leaf</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">leaf</span></code>.</p></li>
 <li><p><strong>data</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">data</span></code>.</p></li>
@@ -2112,7 +2112,7 @@ a <code class="docutils literal notranslate"><span class="pre">torch.nn.Paramete
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em><em>, </em><em>optional</em>) – Node’s shape, that is, the shape of its tensor. If <code class="docutils literal notranslate"><span class="pre">shape</span></code> and
 <code class="docutils literal notranslate"><span class="pre">init_method</span></code> are provided, a tensor will be made for the node. Otherwise,
@@ -2222,7 +2222,7 @@ should also be provided.</p></li>
 <dd><p>Returns gradient of the param-node’s tensor.</p>
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html">torch.Tensor.grad</a></p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>torch.Tensor or None</p>
 </dd>
 </dl>
@@ -2250,15 +2250,15 @@ turns a <a class="reference internal" href="#tensorkrowch.ParamNode" title="tens
 <p>Since the param-node is <strong>replaced</strong>, it will be completely removed from
 the network, and its neighbours will point to the new node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the node should stay parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>), thus returning the param-node itself. Otherwise (<code class="docutils literal notranslate"><span class="pre">False</span></code>),
 the param-node will be de-parameterized.</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The original node or a de-parameterized version of it.</p>
 </dd>
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a> or <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -2296,12 +2296,12 @@ extended with the suffix <code class="docutils literal notranslate"><span class=
 <p>To create a copy that has its own (non-inherited) edges, one can use
 <a class="reference internal" href="#tensorkrowch.AbstractNode.reattach_edges" title="tensorkrowch.AbstractNode.reattach_edges"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reattach_edges()</span></code></a> afterwards.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em>) – Boolean indicating whether the copied param-node should store its
 own copy of the tensor (<code class="docutils literal notranslate"><span class="pre">False</span></code>) or share it with the original
 param-node (<code class="docutils literal notranslate"><span class="pre">True</span></code>) storing a reference to it.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
@@ -2333,7 +2333,7 @@ param-node (<code class="docutils literal notranslate"><span class="pre">True</s
 <span class="sig-name descname"><span class="pre">change_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamNode.change_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.change_type" title="Permalink to this definition">#</a></dt>
 <dd><p>Changes node type, only if node is not a resultant node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>leaf</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">leaf</span></code>.</p></li>
 <li><p><strong>virtual</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">virtual</span></code>.</p></li>
@@ -2381,7 +2381,7 @@ can be inferred to which nodes the unbound nodes have to be connected.</p>
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em><em>, </em><em>optional</em>) – Sequence of nodes that are to be stacked. They should all be of the same
 class (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>), have the same rank, same
@@ -2477,7 +2477,7 @@ the computation of <a class="reference internal" href="operations.html#tensorkro
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;unbind&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -2548,7 +2548,7 @@ instantiating <code class="docutils literal notranslate"><span class="pre">Param
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They should all be of the same
 class (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>), have the same rank, same
@@ -2644,7 +2644,7 @@ the computation of <a class="reference internal" href="operations.html#tensorkro
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;unbind&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -2713,7 +2713,7 @@ of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="t
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node1</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node to which the edge is connected.</p></li>
 <li><p><strong>axis1</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a>) – Axis of <code class="docutils literal notranslate"><span class="pre">node1</span></code> where the edge is attached.</p></li>
@@ -2837,7 +2837,7 @@ tensor will be cropped; if larger, the tensor will be expanded with zeros.
 In both cases, the process (cropping/expanding) occurs at the “right”,
 “bottom”, “back”, etc. of each dimension.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>size</strong> (<em>int</em>) – New size of the edge.</p>
 </dd>
 </dl>
@@ -2924,10 +2924,10 @@ will not “see” the connection until the <a class="reference internal" href="
 <code class="docutils literal notranslate"><span class="pre">node2</span></code> (and its connected component) will be moved to <code class="docutils literal notranslate"><span class="pre">node1</span></code>’s
 network. See also <a class="reference internal" href="#tensorkrowch.AbstractNode.move_to_network" title="tensorkrowch.AbstractNode.move_to_network"><code class="xref py py-meth docutils literal notranslate"><span class="pre">move_to_network()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – The other edge to which current edge will be connected.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a></p>
 </dd>
 </dl>
@@ -2952,7 +2952,7 @@ network. See also <a class="reference internal" href="#tensorkrowch.AbstractNode
 <dd><p>Disconnects connected edge, that is, the connected edge is split into
 two dangling edges, one for each node.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>]</p>
 </dd>
 </dl>
@@ -2987,7 +2987,7 @@ that were connected through this edge.</p>
 The node that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is
 <code class="docutils literal notranslate"><span class="pre">self.node1</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -3017,7 +3017,7 @@ The node that keeps information about the <a class="reference internal" href="#t
 underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges_ip&quot;</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
@@ -3062,7 +3062,7 @@ a more complete explanation.</p>
 Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
 that were connected through this edge.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3112,7 +3112,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation use the same names as the original
 nodes connected by <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3155,7 +3155,7 @@ a more complete explanation.</p>
 Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
 that were connected through this edge.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3205,7 +3205,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation use the same names as the original
 nodes connected by <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3248,7 +3248,7 @@ a more complete explanation.</p>
 Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
 that were connected through this edge.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
@@ -3265,7 +3265,7 @@ cum\_percentage\]</div>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3315,7 +3315,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation use the same names as the original
 nodes connected by <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
@@ -3332,7 +3332,7 @@ cum\_percentage\]</div>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3375,7 +3375,7 @@ a more complete explanation.</p>
 Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
 that were connected through this edge.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
@@ -3392,7 +3392,7 @@ cum\_percentage\]</div>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3442,7 +3442,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation use the same names as the original
 nodes connected by <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
@@ -3459,7 +3459,7 @@ cum\_percentage\]</div>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
@@ -3509,7 +3509,7 @@ information regarding the nodes’ neighbours, which will be used when :func:
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em>]</em>) – List of edges (one from each node that is being stacked) that are
 attached to the equivalent of <code class="docutils literal notranslate"><span class="pre">axis1</span></code> in each node.</p></li>
@@ -3548,10 +3548,10 @@ that should be already connected. However, this is mandatory, since when
 stacking two sequences of nodes independently it cannot be inferred that
 the resultant <code class="docutils literal notranslate"><span class="pre">StackNodes</span></code> had to be connected.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – The other edge to which current edge will be connected.</p>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge">StackEdge</a></p>
 </dd>
 </dl>
@@ -3613,7 +3613,7 @@ is performed.</p>
 <p>See the different <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">operations</span></code></a> to learn which resultant
 node keeps the <code class="docutils literal notranslate"><span class="pre">Successor</span></code> information.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node_ref</strong> (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>, or </em><em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em>) – For the nodes that are involved in an operation, this are the
 corresponding nodes that store their tensors.</p></li>
@@ -3780,7 +3780,7 @@ user-defined way, one may use brackets or parenthesis: <code class="docutils lit
 <div class="line"><br /></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Network’s name. By default, it is the name of the class
 (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;tensornetwork&quot;</span></code>).</p>
 </dd>
@@ -3889,7 +3889,7 @@ To completely get rid of the node, do not forget to delete it:</p>
 </pre></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node</strong> (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Node to be deleted.</p></li>
 <li><p><strong>move_names</strong> (<em>bool</em>) – Boolean indicating whether names’ enumerations should be decreased
@@ -3943,7 +3943,7 @@ going to be deleted.</p>
 <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes in the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>, it will be first
 <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
@@ -3999,7 +3999,7 @@ during training, since it will be done in the <a class="reference internal" href
 <p>On the other hand, if one does not override <code class="docutils literal notranslate"><span class="pre">set_data_nodes</span></code>, it
 should be called before starting training.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>input_edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em>]</em>) – List of edges to which the <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes’ feature edges will be
 connected.</p></li>
@@ -4062,7 +4062,7 @@ tensor.</p>
 <p>If one wants to customize how data is set into the <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes, this
 method can be overriden.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>torch.Tensor</em><em> or </em><em>list</em><em>[</em><em>torch.Tensor</em><em>]</em>) – <p>If all data nodes have the same shape, thus having its tensor stored
 in <code class="docutils literal notranslate"><span class="pre">&quot;stack_data_memory&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">data</span></code> should be a tensor of shape</p>
 <div class="math notranslate nohighlight">
@@ -4146,7 +4146,7 @@ is contracted with some input data, an example tensor with batch dimension
 1 and filled with zeros would be enough to trace the contraction.</p>
 <p>For an example, check this <a class="reference internal" href="tutorials/5_subclass_tensor_network.html#tutorial-5"><span class="std std-ref">tutorial</span></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>example</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Example tensor used to trace the contraction of the tensor network.
 In case the tensor network is contracted with some input data, an
@@ -4185,7 +4185,7 @@ Hence, the <strong>last operation</strong> in <a class="reference internal" href
 <strong>returns the single output</strong> <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>For an example, check this <a class="reference internal" href="tutorials/5_subclass_tensor_network.html#tutorial-5"><span class="std std-ref">tutorial</span></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em><em> or </em><em>list</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – <p>If all data nodes have the same shape, thus having its tensor stored
 in <code class="docutils literal notranslate"><span class="pre">&quot;stack_data_memory&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">data</span></code> should be a tensor of shape</p>

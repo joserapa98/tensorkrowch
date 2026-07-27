@@ -4821,7 +4821,7 @@ title="Source repository"
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span><span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
                                         <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Nodes names are never repeated, so it is likely that</span>

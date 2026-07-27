@@ -8,6 +8,7 @@ This script contains tests for components:
     * TestSetTensorNode
     * TestSettensorParamNode
     * TestMoveToNetwork
+    * TestTensorTo
     * TestChangeType
     * TestMeasures
     * TestConnect
@@ -24,8 +25,10 @@ import torch
 import torch.nn as nn
 import tensorkrowch as tk
 
+INIT_METHOD_CASES = ["zeros", "ones", "copy", "rand", "randn"]
 
-class TestAxis:
+
+class TestAxis:  # MARK: TestAxis
 
     def test_same_name(self):
         node = tk.Node(shape=(3, 3),
@@ -107,7 +110,7 @@ class TestAxis:
         assert node.get_axis('new_batch').is_batch()
 
 
-class TestInitNode:
+class TestInitNode:  # MARK: TestInitNode
 
     def test_init_node_empty(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -117,7 +120,10 @@ class TestInitNode:
         assert node.name == 'my_node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
+        assert node.order == 3
+        with pytest.warns(FutureWarning, match='`rank` will be deprecated'):
+            assert node.rank == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -140,7 +146,7 @@ class TestInitNode:
         assert not node.is_data()
         assert node.successors == dict()
 
-    def test_init_node_rank_0(self):
+    def test_init_node_ndim_0(self):
         node = tk.Node(shape=tuple(),
                        axes_names=tuple(),
                        name='my_node',
@@ -150,7 +156,7 @@ class TestInitNode:
         assert node.shape == tuple()
         assert node.tensor.shape == tuple()
         assert node.axes_names == []
-        assert node.rank == 0
+        assert node.ndim == 0
         assert node.numel() == 1
 
     def test_init_node_data(self):
@@ -162,7 +168,7 @@ class TestInitNode:
         assert node.name == 'node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -194,7 +200,7 @@ class TestInitNode:
         assert node.name == 'node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -224,7 +230,7 @@ class TestInitNode:
         assert node.name == 'node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['axis_0', 'axis_1', 'axis_2']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is torch.float32
 
         assert torch.equal(node.tensor, tensor)
@@ -260,7 +266,7 @@ class TestInitNode:
                            tensor=torch.randn(2, 5, 2))
 
 
-class TestInitParamNode:
+class TestInitParamNode:  # MARK: TestInitParamNode
 
     def test_init_paramnode_empty(self):
         node = tk.ParamNode(shape=(2, 5, 2),
@@ -270,7 +276,7 @@ class TestInitParamNode:
         assert node.name == 'my_node'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is None
 
         assert node.tensor is None
@@ -303,7 +309,7 @@ class TestInitParamNode:
         assert node.shape == tuple()
         assert node.tensor.shape == tuple()
         assert node.axes_names == []
-        assert node.rank == 0
+        assert node.ndim == 0
         assert node.numel() == 1
 
     def test_init_paramnode_virtual(self):
@@ -321,7 +327,7 @@ class TestInitParamNode:
         assert node.name == 'paramnode'
         assert node.shape == (2, 5, 2)
         assert node.axes_names == ['axis_0', 'axis_1', 'axis_2']
-        assert node.rank == 3
+        assert node.ndim == 3
         assert node.dtype is torch.float32
 
         assert torch.equal(node.tensor, nn.Parameter(tensor))
@@ -355,7 +361,7 @@ class TestInitParamNode:
                                 tensor=torch.randn(2, 5, 2))
 
 
-class TestNodeName:
+class TestNodeName:  # MARK: TestNodeName
 
     @pytest.fixture
     def setup(self):
@@ -460,7 +466,7 @@ class TestNodeName:
         assert node3.name == 'node3'
 
 
-class TestSetTensorNode:
+class TestSetTensorNode:  # MARK: TestSetTensorNode
 
     @pytest.fixture
     def setup(self):
@@ -567,7 +573,8 @@ class TestSetTensorNode:
         # tensor with different size but it is cropped
         # to match the size in the connected edges
         diff_tensor = torch.randn(5, 20, 5)
-        node1.tensor = diff_tensor
+        with pytest.warns(UserWarning):
+            node1.tensor = diff_tensor
         assert node1.shape == (2, 20, 2)
         assert node1['left'].size() == 2
         assert node1['batch'].size() == 20
@@ -594,59 +601,37 @@ class TestSetTensorNode:
         assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
 
-    def test_set_init_method(self, setup):
+    @staticmethod
+    def _assert_node_init_method(node1, node2, init_method, **kwargs):
+        node1.set_tensor(init_method=init_method, **kwargs)
+        assert node1.tensor is not None
+
+        node2.tensor = node1.tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+
+        node1.tensor[0, 0, 0] = 1000
+        assert node2.tensor[0, 0, 0] == 1000
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method(self, setup, init_method):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        self._assert_node_init_method(node1, node2, init_method)
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_cuda(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Changing node1's tensor changes node2's tensor
-            node1.tensor[0, 0, 0] = 1000
-            assert node2.tensor[0, 0, 0] == 1000
-    
-    def test_set_init_method_cuda(self, setup):
-        node1, node2, tensor = setup
-        assert node1.tensor is None
-        
-        # Send to cuda if possible
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self._assert_node_init_method(node1, node2, init_method, device=device)
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, device=device)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Changing node1's tensor changes node2's tensor
-            node1.tensor[0, 0, 0] = 1000
-            assert node2.tensor[0, 0, 0] == 1000
-    
-    def test_set_init_method_complex(self, setup):
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_complex(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
-
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, dtype=torch.complex64)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Changing node1's tensor changes node2's tensor
-            node1.tensor[0, 0, 0] = 1000
-            assert node2.tensor[0, 0, 0] == 1000
+        self._assert_node_init_method(node1, node2, init_method,
+                                      dtype=torch.complex64)
 
     def test_set_tensor_from(self, setup):
         node1, node2, tensor = setup
@@ -806,7 +791,7 @@ class TestSetTensorNode:
         assert not torch.equal(node1.tensor, node2.tensor)
 
 
-class TestSetTensorParamNode:
+class TestSetTensorParamNode:  # MARK: TestSetTensorParamNode
 
     @pytest.fixture
     def setup(self):
@@ -907,7 +892,8 @@ class TestSetTensorParamNode:
         # tensor with different size but it is cropped
         # to match the size in the connected edges
         diff_tensor = torch.randn(5, 20, 5)
-        node1.tensor = diff_tensor
+        with pytest.warns(UserWarning):
+            node1.tensor = diff_tensor
         assert node1.shape == (2, 20, 2)
         assert node1['left'].size() == 2
         assert node1['batch'].size() == 20
@@ -934,59 +920,38 @@ class TestSetTensorParamNode:
         assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
 
-    def test_set_init_method(self, setup):
+    @staticmethod
+    def _assert_paramnode_init_method(node1, node2, init_method, **kwargs):
+        node1.set_tensor(init_method=init_method, **kwargs)
+        assert node1.tensor is not None
+
+        node2.tensor = node1.tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+
+        with pytest.raises(RuntimeError):
+            node1.tensor[0, 0, 0] = 1000
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method(self, setup, init_method):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        self._assert_paramnode_init_method(node1, node2, init_method)
+
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_cuda(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Cannot change element of Parameter
-            with pytest.raises(RuntimeError):
-                node1.tensor[0, 0, 0] = 1000
-    
-    def test_set_init_method_cuda(self, setup):
-        node1, node2, tensor = setup
-        assert node1.tensor is None
-        
-        # Send to cuda if possible
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self._assert_paramnode_init_method(node1, node2, init_method,
+                                           device=device)
 
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, device=device)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Cannot change element of Parameter
-            with pytest.raises(RuntimeError):
-                node1.tensor[0, 0, 0] = 1000
-    
-    def test_set_init_method_complex(self, setup):
+    @pytest.mark.parametrize('init_method', INIT_METHOD_CASES)
+    def test_set_init_method_complex(self, setup, init_method):
         node1, node2, tensor = setup
         assert node1.tensor is None
-
-        # Initialize tensor of node1
-        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
-            node1.set_tensor(init_method=init_method, dtype=torch.complex64)
-            assert node1.tensor is not None
-
-            # Set node1's tensor as node2's tensor
-            node2.tensor = node1.tensor
-            assert torch.equal(node1.tensor, node2.tensor)
-
-            # Cannot change element of Parameter
-            with pytest.raises(RuntimeError):
-                node1.tensor[0, 0, 0] = 1000
+        self._assert_paramnode_init_method(node1, node2, init_method,
+                                           dtype=torch.complex64)
 
     def test_set_parametric(self, setup):
         node1, node2, tensor = setup
@@ -1175,7 +1140,7 @@ class TestSetTensorParamNode:
         assert node2.tensor_address() == None  #node1's address
 
 
-class TestMoveToNetwork:
+class TestMoveToNetwork:  # MARK: TestMoveToNetwork
 
     def test_change_network(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
@@ -1307,7 +1272,84 @@ class TestMoveToNetwork:
         assert torch.equal(node1.tensor, node2.tensor)
 
 
-class TestChangeType:
+class TestTensorTo:  # MARK: TestTensorTo
+
+    def test_node_to_device_and_type(self):
+        """
+        Test moving a single node's tensor to a different device and changing its dtype.
+        """
+        # Create a node with a random float tensor on CPU.
+        node = tk.randn(shape=(2, 3))
+        assert node.device.type == 'cpu'
+        assert node.dtype == torch.float32
+        
+        # If CUDA is available, move it to CUDA and verify.
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        node.to(device=device)
+        assert node.device.type == device.type
+        
+        # Change the tensor's dtype to complex and verify.
+        node.to(dtype=torch.complex64)
+        assert node.dtype == torch.complex64
+        assert node.device.type == device.type
+
+    def test_node_to_returns_self(self):
+        node = tk.randn(shape=(2, 3))
+
+        returned_node = node.to(dtype=torch.float64)
+
+        assert returned_node is node
+
+    def test_network_to_returns_self(self):
+        net = tk.TensorNetwork()
+        _ = tk.randn(shape=(2, 3), network=net)
+
+        returned_net = net.to(dtype=torch.float64)
+
+        assert returned_net is net
+
+    def test_shared_node_to(self):
+        """
+        Test that `to` method correctly propagates device/dtype changes
+        across multiple nodes sharing the same tensor.
+        """
+        # Create three nodes with the same shape in the same network.
+        net = tk.TensorNetwork()
+        node1 = tk.randn(shape=(2, 3), network=net)
+        node2 = tk.empty(shape=(2, 3), network=net)
+        node3 = tk.empty(shape=(2, 3), network=net)
+        
+        # Set node2 and node3 to reference the tensor of node1.
+        node2.set_tensor_from(node1)
+        node3.set_tensor_from(node1)
+        
+        # Assert initial dtypes are float32.
+        assert node1.dtype == torch.float32
+        assert node2.dtype == torch.float32
+        assert node3.dtype == torch.float32
+        
+        # Change the dtype of one of the referencing nodes (node2).
+        node2.to(dtype=torch.float64)
+        
+        # Verify that all three nodes now have the new dtype.
+        assert node1.dtype == torch.float64
+        assert node2.dtype == torch.float64
+        assert node3.dtype == torch.float64
+        
+        # Determine target device (CUDA if available, else CPU).
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        # Change the device of another referencing node (node3).
+        node3.to(device=device)
+        
+        # Verify that all three nodes now reside on the new device.
+        assert node1.device.type == device.type
+        assert node2.device.type == device.type
+        assert node3.device.type == device.type
+
+
+class TestChangeType:  # MARK: TestChangeType
     
     def test_change_type_node(self):
         net = tk.TensorNetwork()
@@ -1409,7 +1451,7 @@ class TestChangeType:
             node3.change_type(leaf=True)
 
 
-class TestMeasures:
+class TestMeasures:  # MARK: TestMeasures
 
     def test_sum(self):
         tensor = torch.randn(2, 3)
@@ -1467,7 +1509,7 @@ class TestMeasures:
         assert node.numel() == tensor.numel()
 
 
-class TestConnect:
+class TestConnect:  # MARK: TestConnect
 
     def test_connect_edges(self):
         node1 = tk.Node(shape=(2, 5, 2),
@@ -1886,7 +1928,7 @@ class TestConnect:
         assert node4['input'] == node3['input']
 
 
-class TestChangeSizeEdge:
+class TestChangeSizeEdge:  # MARK: TestChangeSizeEdge
 
     def test_change_size_dangling(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -1964,7 +2006,7 @@ class TestChangeSizeEdge:
         assert not torch.allclose(old_tensors[1], new_tensors[1])
 
 
-class TestParameterize:
+class TestParameterize:  # MARK: TestParameterize
 
     def test_parameterize_node(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
@@ -2067,7 +2109,7 @@ class TestParameterize:
         assert paramnode3[2] != node2[2]
 
 
-class TestCopy:
+class TestCopy:  # MARK: TestCopy
 
     def test_copy_edge(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
@@ -2103,7 +2145,7 @@ class TestCopy:
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2131,7 +2173,7 @@ class TestCopy:
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2159,7 +2201,7 @@ class TestCopy:
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2187,7 +2229,7 @@ class TestCopy:
         assert len(net.nodes) == 3
         assert len(net.edges) == 6
 
-        for i in range(copy.rank):
+        for i in range(copy.ndim):
             edge = node1[i]
             copy_edge = copy[i]
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
@@ -2214,7 +2256,7 @@ class TestCopy:
         assert copy.name == 'node_0_copy'
 
 
-class TestStack:
+class TestStack:  # MARK: TestStack
 
     def test_stack_nodes_in_stacknode(self):
         net = tk.TensorNetwork()
@@ -2487,7 +2529,7 @@ class TestStack:
             stack.get_axis('stack').name = 'other_name'
 
 
-class TestTensorNetwork:
+class TestTensorNetwork:  # MARK: TestTensorNetwork
 
     def test_add_remove(self):
         net = tk.TensorNetwork()
@@ -2694,6 +2736,54 @@ class TestTensorNetwork:
         assert len(submodules) == 0
         assert len(net._parameters) == 0
 
+    def test_to(self):
+        net = tk.TensorNetwork(name='net')
+        for _ in range(4):
+            _ = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        net.to(device=device, dtype=dtype)
+
+        for node in net.nodes.values():
+            assert node.device == device
+            assert node.dtype == dtype
+
+    def test_to_resultant_nodes(self):
+        net = tk.TensorNetwork(name='net')
+        for _ in range(4):
+            _ = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        node = net['node_0']
+        for i in range(1, 4):
+            node @= net[f'node_{i}']
+
+        assert net.resultant_nodes
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        dtype = torch.float64
+
+        net.to(device=device, dtype=dtype)
+
+        for node in net.nodes.values():
+            assert node.device == device
+            assert node.dtype == dtype
+
     def test_set_data_nodes_same_shape(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
@@ -2768,7 +2858,8 @@ class TestTensorNetwork:
         # This causes no error, because the data tensor will be cropped to fit
         # the shape of the stack_data_memory node. It gives a warning
         data = torch.randn(10, 3, 5)
-        net.add_data(data)
+        with pytest.warns(UserWarning):
+            net.add_data(data)
 
         assert net.data_nodes['data_0'].shape == (10, 5)
         assert net.data_nodes['data_1'].shape == (10, 5)
@@ -2837,7 +2928,7 @@ class TestTensorNetwork:
 
         for i in range(3):
             net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
-
+        
         net.add_data(data)
         for i in range(4):
             assert torch.equal(net.data_nodes[f'data_{i}'].tensor, data[i])
@@ -2849,12 +2940,14 @@ class TestTensorNetwork:
         # greater than any of the "feature" dimensions used in data nodes,
         # since we are cropping
         data = torch.randn(4, 6, 100)
-        net.add_data(data)
+        with pytest.warns(UserWarning):
+            net.add_data(data)
 
         # If feature dimension is small, it would raise an error
         data = torch.randn(4, 4, 100)
         with pytest.raises(ValueError):
-            net.add_data(data)
+            with pytest.warns(UserWarning):
+                net.add_data(data)
 
         # Add data with no data nodes raises error
         net.unset_data_nodes()
@@ -3228,7 +3321,42 @@ class TestTensorNetwork:
         assert len(net.edges) == 6
 
     def test_trace(self):
-        pass
+        class SimpleTraceTN(tk.TensorNetwork):
+
+            def __init__(self):
+                super().__init__(name='simple_trace_tn')
+
+                node = tk.ParamNode(shape=(2,),
+                                    axes_names=('input',),
+                                    name='node',
+                                    network=self)
+                node.tensor = torch.tensor([2., 0.])
+                self.node = node
+
+            def set_data_nodes(self) -> None:
+                super().set_data_nodes([self.node['input']], num_batch_edges=1)
+
+            def contract(self, renormalize: bool) -> tk.Node:
+                data_node = self.node.neighbours('input')
+                result = self.node @ data_node
+
+                if renormalize:
+                    result = result.renormalize()
+
+                return result
+
+        net = SimpleTraceTN()
+        data = torch.tensor([[[1., 0.]]])
+
+        net.trace(data, True)
+        result = net(data, True)
+        assert result.norm().isclose(torch.tensor(1.))
+        
+        with pytest.warns(UserWarning,
+                          match='Arguments of contract have changed'):
+            result = net(data, False)
+
+        assert not result.norm().isclose(torch.tensor(1.))
 
     def test_auto_stack(self):
         net = tk.TensorNetwork(name='net')

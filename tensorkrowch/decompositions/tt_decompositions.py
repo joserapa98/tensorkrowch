@@ -18,7 +18,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 
 from tensorkrowch.embeddings import basis
-from tensorkrowch.utils import random_unitary
+from tensorkrowch.utils import random_unitary, truncated_svd
 import tensorkrowch.models as models
 
 
@@ -58,7 +58,7 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
             outputs = outputs.gather(dim=1, index=ids)
             
             # batch_size x n_features x in_dim
-            if len(samples.shape) == 3:
+            if samples.ndim == 3:
                 # In this case, labels are copied along dimension `in_dim`
                 ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
             
@@ -71,7 +71,7 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
         outputs = torch.ones_like(ids).float()
         
         # batch_size x n_features x in_dim
-        if len(samples.shape) == 3:
+        if samples.ndim == 3:
             # In this case, labels are the same along dimension `in_dim`
             ids = ids.unsqueeze(2).expand(-1, -1, samples.shape[2])
         
@@ -92,7 +92,7 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
     sizes = []
     for tensor in tensors_list:
         assert isinstance(tensor, torch.Tensor)
-        assert len(tensor.shape) in [2, 3]
+        assert tensor.ndim in [2, 3]
         sizes.append(tensor.size(1))
     
     # Expand all tensors so that each one has shape d1 x ... x dm x ni
@@ -110,7 +110,7 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
         view_shape.append(tensors_list[i].size(1))
         expand_shape.append(-1)
         
-        if len(tensors_list[i].shape) == 3:
+        if tensors_list[i].ndim == 3:
             # If shape is di x ni x in_dim, add in_dim to all tensors
             view_shape.append(tensors_list[i].size(2))
             expand_shape.append(-1)
@@ -176,29 +176,15 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
     return Phi_tilde_k
 
 
-def trimming(mat, rank, cum_percentage):
+def trimming(mat, rank, cutoff, atol, rtol, cum_percentage):
     """Given a matrix returns the U from the SVD and an appropiate rank"""
-    u, s, vh = torch.linalg.svd(mat, full_matrices=False)
-    
-    if rank is None:
-        rank = len(s)
-
-    percentages = s.cumsum(0) / (s.sum().expand(s.shape) + 1e-10)
-    cum_percentage_tensor = torch.tensor(cum_percentage)
-    
-    aux_rank = 0
-    for p in percentages:
-        if p == 0:
-            if aux_rank == 0:
-                aux_rank = 1
-            break
-        aux_rank += 1
-        
-        # Cut when ``cum_percentage`` is exceeded
-        if p >= cum_percentage_tensor:
-            break
-        elif aux_rank >= rank:
-            break
+    u, s, vh = truncated_svd(tensor=mat,
+                             rank=rank,
+                             cutoff=cutoff,
+                             atol=atol,
+                             rtol=rtol,
+                             cum_percentage=cum_percentage)
+    aux_rank = s.shape[-1]
         
     return u, s, vh, aux_rank
 
@@ -261,7 +247,7 @@ def create_projector(S_k_minus_1, S_k):
             [0],
             [0]])]
     """
-    if len(S_k.shape) == 2:
+    if S_k.ndim == 2:
         # n x k
         s_k_0 = torch.empty_like(S_k[:, -1]).long()
         where_equal_dim = 1
@@ -320,6 +306,9 @@ def tt_rss(function: Callable,
            domain_multiplier: int = 1,
            out_position: Optional[int] = None,
            rank: Optional[int] = None,
+           cutoff: Optional[float] = None,
+           atol: Optional[float] = None,
+           rtol: Optional[float] = None,
            cum_percentage: Optional[float] = None,
            batch_size: int = 64,
            device: Optional[torch.device] = None,
@@ -396,13 +385,31 @@ def tt_rss(function: Callable,
         If the ``function`` is vector-valued, position of the output core in
         the resulting MPS.
     rank : int, optional
-        Upper bound for the bond dimension of all cores.
+        Maximum bond dimension allowed for all cores.
+    cutoff : float, optional
+        Threshold used to determine the rank of each core independently. When
+        selecting the bond dimension of a core, singular values ``<= cutoff``
+        are discarded. It must be non-negative.
+    atol : float, optional
+        Absolute tolerance used to determine the rank of each core
+        independently. Starting from the smallest singular values, these are
+        discarded while their accumulated sum of squares is ``<= atol``. It must be
+        non-negative.
+    rtol : float, optional
+        Relative tolerance used to determine the rank of each core
+        independently. Starting from the smallest singular values, these are
+        discarded while their accumulated sum of squares divided by the
+        total sum of squares is ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        When getting the proper bond dimension of each core via truncated SVD,
-        this is the proportion that should be satisfied between the sum of all
-        singular values kept and the total sum of all singular values. Therefore,
-        it specifies the rank of each core independently, allowing for
-        varying bond dimensions.
+        Minimum fraction of squared singular-value mass to keep when determining
+        the rank of each core. Equivalent to setting ``rtol = 1 - cum_percentage``.
+        Therefore, it allows different bond dimensions across cores. It must
+        be in ``(0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
     batch_size : int
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
         during the decomposition.
@@ -430,6 +437,22 @@ def tt_rss(function: Callable,
         List of tensor cores of the MPS.
     dictionary
         If ``return_info`` is ``True``.
+
+    Examples
+    --------
+    >>> def function(data):
+    ...     return data.prod(dim=1, keepdim=True)
+    >>> def embedding(data):
+    ...     return torch.stack([data, 1 - data], dim=-1)
+    >>> sketch_samples = torch.rand(32, 3)
+    >>> tensors = tk.decompositions.tt_rss(function=function,
+    ...                                    embedding=embedding,
+    ...                                    sketch_samples=sketch_samples,
+    ...                                    rank=2,
+    ...                                    rtol=1e-2,
+    ...                                    verbose=False)
+    >>> len(tensors)
+    3
     """
     if not isinstance(function, Callable):
         raise TypeError('`function` should be callable')
@@ -440,7 +463,7 @@ def tt_rss(function: Callable,
     # Number of input features
     if not isinstance(sketch_samples, torch.Tensor):
         raise TypeError('`sketch_samples` should be torch.Tensor type')
-    if len(sketch_samples.shape) not in [2, 3]:
+    if sketch_samples.ndim not in [2, 3]:
         # batch_size x n_features or batch_size x n_features x in_dim
         raise ValueError(
             '`sketch_samples` should be a tensor with shape (batch_size, '
@@ -458,7 +481,7 @@ def tt_rss(function: Callable,
             '`embedding` should take as argument a single tensor with shape '
             '(batch_size, n_features) or (batch_size, n_features, in_dim)')
         
-    if len(aux_embed.shape) != 3:
+    if aux_embed.ndim != 3:
         raise ValueError('`embedding` should return a tensor of shape '
                          '(batch_size, n_features, embed_dim)')
     embed_dim = aux_embed.size(2)
@@ -473,7 +496,7 @@ def tt_rss(function: Callable,
             '`function` should take as argument a single tensor with shape '
             '(batch_size, n_features) or (batch_size, n_features, in_dim)')
         
-    if len(aux_output.shape) != 2:
+    if aux_output.ndim != 2:
         raise ValueError(
             '`function` should return a tensor of shape (batch_size, out_dim).'
             ' If `function` is scalar, out_dim = 1')
@@ -510,13 +533,13 @@ def tt_rss(function: Callable,
                         'If `domain` is given as a sequence of tensors, it should'
                         ' have as many elements as input variables')
         else:
-            if len(domain.shape) != (len(sketch_samples.shape) - 1):
+            if domain.ndim != (sketch_samples.ndim - 1):
                 raise ValueError(
                     'If `domain` is given as a torch.Tensor, it should have '
                     'shape (n_values,) or (n_values, in_dim), and it should '
                     'only include `in_dim` if it also appears in the shape of '
                     '`sketch_samples`')
-            if len(domain.shape) == 2:
+            if domain.ndim == 2:
                 if domain.shape[1] == 1:
                     raise ValueError()
     
@@ -584,7 +607,7 @@ def tt_rss(function: Callable,
         with shape ``batch_size x basis_dim``.
         """
         # batch_size x n_features(=1) x in_dim
-        if len(data.shape) == 3:
+        if data.ndim == 3:
             # In this case, labels are the same along dimension `in_dim`
             data = data[:, :, 0]
         return basis(data.int(), dim=out_dim).squeeze(1).to(dtype)
@@ -660,6 +683,9 @@ def tt_rss(function: Callable,
             # Trimming
             u, _, _, D_k = trimming(mat=Phi_tilde_k,
                                     rank=D_k,
+                                    cutoff=cutoff,
+                                    atol=atol,
+                                    rtol=rtol,
                                     cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # phys_dim x D_k
             
@@ -717,6 +743,9 @@ def tt_rss(function: Callable,
             u, _, _, D_k = trimming(mat=Phi_tilde_k.reshape(-1,
                                                             Phi_tilde_k.size(2)),
                                     rank=D_k,
+                                    cutoff=cutoff,
+                                    atol=atol,
+                                    rtol=rtol,
                                     cum_percentage=cum_percentage)
             B_k = u[:, :D_k]  # (D_k_minus_1 * phys_dim) x D_k
             

@@ -32,6 +32,10 @@ This script contains:
         * get_shared_edges
         * contract_between
         * contract_between_  (in-place)
+        * merge_edges
+        * merge_edges_       (in-place)
+        * split_edge                    (also edge operation)
+        * split_edge_        (in-place) (also edge operation)
         * stack
         * unbind
         * einsum
@@ -47,7 +51,7 @@ import opt_einsum
 
 from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
-                                list2slice, permute_list)
+                                list2slice, permute_list, truncated_svd)
 
 
 def copy_func(f):
@@ -450,6 +454,10 @@ def tprod(node1: AbstractNode, node2: AbstractNode) -> Node:
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((4, 5), network=net)
+    >>> result = tk.tprod(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3, 4, 5])
+
     >>> result = nodeA % nodeB
     >>> result.shape
     torch.Size([2, 3, 4, 5])
@@ -484,9 +492,14 @@ tprod_node.__doc__ = \
     >>> result = nodeA.tprod(nodeB)
     >>> result.shape
     torch.Size([2, 3, 4, 5])
+
+    >>> result = nodeA % nodeB
+    >>> result.shape
+    torch.Size([2, 3, 4, 5])
     """
 
 AbstractNode.__mod__ = tprod_node
+AbstractNode.tprod = tprod_node
 
 
 ###################################   MUL    ##################################
@@ -631,6 +644,10 @@ def mul(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.mul(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA * nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -638,6 +655,10 @@ def mul(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.mul(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA * tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -680,15 +701,24 @@ mul_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA * nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.mul(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA * tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__mul__ = mul_node
+AbstractNode.mul = mul_node
 
 
 ###################################   DIV    ##################################
@@ -833,6 +863,10 @@ def div(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.div(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA / nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -840,6 +874,10 @@ def div(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.div(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA / tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -882,15 +920,24 @@ div_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA / nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.div(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA / tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__truediv__ = div_node
+AbstractNode.div = div_node
 
 
 ###################################   ADD    ##################################
@@ -1035,6 +1082,10 @@ def add(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.add(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA + nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -1042,6 +1093,10 @@ def add(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.add(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA + tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -1084,15 +1139,24 @@ add_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA + nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.add(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA + tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__add__ = add_node
+AbstractNode.add = add_node
 
 
 ###################################   SUB    ##################################
@@ -1237,6 +1301,10 @@ def sub(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = tk.sub(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA - nodeB
     >>> result.shape
     torch.Size([2, 3])
@@ -1244,6 +1312,10 @@ def sub(node1: AbstractNode,
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
+    >>> result = tk.sub(nodeA, tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> result = nodeA - tensorB
     >>> result.shape
     torch.Size([2, 3])
@@ -1286,15 +1358,24 @@ sub_node.__doc__ = \
     >>> result.shape
     torch.Size([2, 3])
     
+    >>> result = nodeA - nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
     >>> result = nodeA.sub(tensorB)
     >>> result.shape
     torch.Size([2, 3])
+
+    >>> result = nodeA - tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__sub__ = sub_node
+AbstractNode.sub = sub_node
 
 
 ###############################   renormalize    ##############################
@@ -1595,16 +1676,20 @@ def _check_first_split(node: AbstractNode,
                        mode: Text = 'svd',
                        side: Optional[Text] = 'left',
                        rank: Optional[int] = None,
-                       cum_percentage: Optional[float] = None,
-                       cutoff: Optional[float] = None) -> Optional[Successor]:
+                       cutoff: Optional[float] = None,
+                       atol: Optional[float] = None,
+                       rtol: Optional[float] = None,
+                       cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     args = (node,
             tuple(node1_axes),
             tuple(node2_axes),
             mode,
             side,
             rank,
-            cum_percentage,
-            cutoff)
+            cutoff,
+            atol,
+            rtol,
+            cum_percentage)
     successors = node._successors.get('split')
     if not successors:
         return None
@@ -1617,8 +1702,10 @@ def _split_first(node: AbstractNode,
                  mode: Text = 'svd',
                  side: Optional[Text] = 'left',
                  rank: Optional[int] = None,
-                 cum_percentage: Optional[float] = None,
-                 cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+                 cutoff: Optional[float] = None,
+                 atol: Optional[float] = None,
+                 rtol: Optional[float] = None,
+                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     if not isinstance(node1_axes, Sequence):
         raise TypeError('`node1_edges` should be list or tuple type')
     if not isinstance(node2_axes, Sequence):
@@ -1630,8 +1717,10 @@ def _split_first(node: AbstractNode,
             mode,
             side,
             rank,
-            cum_percentage,
-            cutoff)
+            cutoff,
+            atol,
+            rtol,
+            cum_percentage)
 
     node1_axes = [node.get_axis_num(axis) for axis in node1_axes]
     node2_axes = [node.get_axis_num(axis) for axis in node2_axes]
@@ -1644,9 +1733,9 @@ def _split_first(node: AbstractNode,
         j = 0
         k = all_axes[0]
     else:
-        k = node.rank
+        k = node.ndim
 
-    for i in range(node.rank):
+    for i in range(node.ndim):
         if i < k:
             if not node._edges[i].is_batch():
                 raise ValueError(f'Edge {node._edges[i]} is not a batch '
@@ -1656,7 +1745,7 @@ def _split_first(node: AbstractNode,
                 batch_axes.append(i)
         else:
             if (j + 1) == len(all_axes):
-                k = node.rank
+                k = node.ndim
             else:
                 j += 1
                 k = all_axes[j]
@@ -1666,7 +1755,7 @@ def _split_first(node: AbstractNode,
     node2_shape = torch.tensor(node.shape)[node2_axes]
 
     permutation_dims = batch_axes + node1_axes + node2_axes
-    if permutation_dims == list(range(node.rank)):
+    if permutation_dims == list(range(node.ndim)):
         permutation_dims = []
 
     if permutation_dims:
@@ -1682,40 +1771,13 @@ def _split_first(node: AbstractNode,
                        [node2_shape.prod().item()]))
 
     if (mode == 'svd') or (mode == 'svdr'):
-        u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
-        
-        lst_ranks = []
-        
-        if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
-        else:
-            lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
-            
-        if cum_percentage is not None:
-            s_percentages = s.cumsum(-1) / \
-                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
-            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
-            cp_rank = torch.lt(
-                s_percentages,
-                cum_percentage_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, cp_rank.item() + 1))
-            
-        if cutoff is not None:
-            cutoff_tensor = cutoff * torch.ones_like(s)
-            co_rank = torch.ge(
-                s,
-                cutoff_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, co_rank.item()))
-        
-        # Select rank from specified restrictions
-        rank = min(lst_ranks)
-        
-        u = u[..., :rank]
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
+        u, s, vh = truncated_svd(tensor=node_tensor,
+                                 rank=rank,
+                                 cutoff=cutoff,
+                                 atol=atol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
+        rank = s.shape[-1]
         
         if u.is_complex():
             s = s.to(u.dtype)
@@ -1858,8 +1920,10 @@ def _split_next(successor: Successor,
                 mode: Text = 'svd',
                 side: Optional[Text] = 'left',
                 rank: Optional[int] = None,
-                cum_percentage: Optional[float] = None,
-                cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+                cutoff: Optional[float] = None,
+                atol: Optional[float] = None,
+                rtol: Optional[float] = None,
+                cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     batch_axes = successor.hints['batch_axes']
     node1_axes = successor.hints['node1_axes']
     node2_axes = successor.hints['node2_axes']
@@ -1884,40 +1948,13 @@ def _split_next(successor: Successor,
                        [node2_shape.prod().item()]))
 
     if (mode == 'svd') or (mode == 'svdr'):
-        u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
-        
-        lst_ranks = []
-        
-        if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
-        else:
-            lst_ranks.append(min(max(1, rank), s.shape[-1]))
-            
-        if cum_percentage is not None:
-            s_percentages = s.cumsum(-1) / \
-                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
-            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
-            cp_rank = torch.lt(
-                s_percentages,
-                cum_percentage_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, cp_rank.item() + 1))
-            
-        if cutoff is not None:
-            cutoff_tensor = cutoff * torch.ones_like(s)
-            co_rank = torch.ge(
-                s,
-                cutoff_tensor
-                ).view(-1, s.shape[-1]).any(dim=0).sum()
-            lst_ranks.append(max(1, co_rank.item()))
-        
-        # Select rank from specified restrictions
-        rank = min(lst_ranks)
-        
-        u = u[..., :rank]
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
+        u, s, vh = truncated_svd(tensor=node_tensor,
+                                 rank=rank,
+                                 cutoff=cutoff,
+                                 atol=atol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
+        rank = s.shape[-1]
         
         if u.is_complex():
             s = s.to(u.dtype)
@@ -1983,8 +2020,10 @@ def split(node: AbstractNode,
           mode: Text = 'svd',
           side: Optional[Text] = 'left',
           rank: Optional[int] = None,
-          cum_percentage: Optional[float] = None,
-          cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+          cutoff: Optional[float] = None,
+          atol: Optional[float] = None,
+          rtol: Optional[float] = None,
+          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     Splits one node in two via the decomposition specified in ``mode``. To
     perform this operation the set of edges has to be split in two sets,
@@ -2035,9 +2074,9 @@ def split(node: AbstractNode,
       where R is a lower triangular matrix and Q is unitary.
 
     If ``mode`` is "svd" or "svdr", ``side`` must be provided. Besides, at least
-    one of ``rank``, ``cum_percentage`` and ``cutoff`` is required. If more than
-    one is specified, the resulting rank will be the one that satisfies all
-    conditions.
+    one truncation criterion is required. If more than one criterion is specified,
+    the final rank is the minimum one, i.e. the one imposed by the most restrictive
+    criterion.
     
     Since the node is `split` in two, a new edge appears connecting both
     nodes. The axis that corresponds to this edge has the name ``"split"``.
@@ -2067,16 +2106,26 @@ def split(node: AbstractNode,
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2100,7 +2149,7 @@ def split(node: AbstractNode,
     Edge( split_0[split] <-> split_1[split] )
     """
     return split_op(node, node1_axes, node2_axes,
-                    mode, side, rank, cum_percentage, cutoff)
+                    mode, side, rank, cutoff, atol, rtol, cum_percentage)
 
 
 split_node = copy_func(split)
@@ -2133,16 +2182,26 @@ split_node.__doc__ = \
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
-    cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
-        .. math::
-        
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-            cum\_percentage
     cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
 
     Returns
     -------
@@ -2174,8 +2233,10 @@ def split_(node: AbstractNode,
            mode: Text = 'svd',
            side: Optional[Text] = 'left',
            rank: Optional[int] = None,
-           cum_percentage: Optional[float] = None,
-           cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+           cutoff: Optional[float] = None,
+           atol: Optional[float] = None,
+           rtol: Optional[float] = None,
+           cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     In-place version of :func:`split`.
 
@@ -2209,16 +2270,26 @@ def split_(node: AbstractNode,
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2250,7 +2321,7 @@ def split_(node: AbstractNode,
     >>> del node
     """
     node1, node2 = split(node, node1_axes, node2_axes,
-                         mode, side, rank, cum_percentage, cutoff)
+                         mode, side, rank, cutoff, atol, rtol, cum_percentage)
     node1.reattach_edges(override=True)
     node2.reattach_edges(override=True)
     node1._unrestricted_set_tensor(node1.tensor.detach())
@@ -2314,16 +2385,26 @@ split_node_.__doc__ = \
         :math:`SV^{\dagger}`, respectively.
     rank : int, optional
         Number of singular values to keep.
-    cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
-        .. math::
-        
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-            cum\_percentage
     cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
 
     Returns
     -------
@@ -2360,8 +2441,10 @@ AbstractNode.split_ = split_node_
 def svd(edge: Edge,
         side: Text = 'left',
         rank: Optional[int] = None,
-        cum_percentage: Optional[float] = None,
-        cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+        cutoff: Optional[float] = None,
+        atol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svd"``. See :func:`split` for a more complete explanation.
@@ -2384,16 +2467,26 @@ def svd(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2456,28 +2549,30 @@ def svd(edge: Edge,
                                  mode='svd',
                                  side=side,
                                  rank=rank,
-                                 cum_percentage=cum_percentage,
-                                 cutoff=cutoff)
+                                 cutoff=cutoff,
+                                 atol=atol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -2508,16 +2603,26 @@ svd_edge.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2559,8 +2664,10 @@ Edge.svd = svd_edge
 def svd_(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None,
-         cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+         cutoff: Optional[float] = None,
+         atol: Optional[float] = None,
+         rtol: Optional[float] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     In-place version of :func:`svd`.
     
@@ -2588,16 +2695,26 @@ def svd_(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2656,28 +2773,30 @@ def svd_(edge: Edge,
                                   mode='svd',
                                   side=side,
                                   rank=rank,
-                                  cum_percentage=cum_percentage,
-                                  cutoff=cutoff)
+                                  cutoff=cutoff,
+                                  atol=atol,
+                                  rtol=rtol,
+                                  cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -2715,16 +2834,26 @@ svd_edge_.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
-    cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
-        .. math::
-        
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-            cum\_percentage
     cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
 
     Returns
     -------
@@ -2761,8 +2890,10 @@ Edge.svd_ = svd_edge_
 def svdr(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None,
-         cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+         cutoff: Optional[float] = None,
+         atol: Optional[float] = None,
+         rtol: Optional[float] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svdr"``. See :func:`split` for a more complete explanation.
@@ -2785,16 +2916,26 @@ def svdr(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2857,28 +2998,30 @@ def svdr(edge: Edge,
                                  mode='svdr',
                                  side=side,
                                  rank=rank,
-                                 cum_percentage=cum_percentage,
-                                 cutoff=cutoff)
+                                 cutoff=cutoff,
+                                 atol=atol,
+                                 rtol=rtol,
+                                 cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -2909,16 +3052,26 @@ svdr_edge.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -2960,8 +3113,10 @@ Edge.svdr = svdr_edge
 def svdr_(edge: Edge,
           side: Text = 'left',
           rank: Optional[int] = None,
-          cum_percentage: Optional[float] = None,
-          cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+          cutoff: Optional[float] = None,
+          atol: Optional[float] = None,
+          rtol: Optional[float] = None,
+          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     r"""
     In-place version of :func:`svdr`.
     
@@ -2989,16 +3144,26 @@ def svdr_(edge: Edge,
         respectively.
     rank : int, optional
         Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
     cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
-    cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
 
     Returns
     -------
@@ -3057,28 +3222,30 @@ def svdr_(edge: Edge,
                                   mode='svdr',
                                   side=side,
                                   rank=rank,
-                                  cum_percentage=cum_percentage,
-                                  cutoff=cutoff)
+                                  cutoff=cutoff,
+                                  atol=atol,
+                                  rtol=rtol,
+                                  cum_percentage=cum_percentage)
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -3116,16 +3283,26 @@ svdr_edge_.__doc__ = \
         respectively.
     rank : int, optional
         Number of singular values to keep.
-    cum_percentage : float, optional
-        Proportion that should be satisfied between the sum of all singular
-        values kept and the total sum of all singular values.
-        
-        .. math::
-        
-            \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
-            cum\_percentage
     cutoff : float, optional
-        Quantity that lower bounds singular values in order to be kept.
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the accumulated
+        sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values. Starting from
+        the smallest singular value, values are discarded while the tail sum of
+        squares divided by the total sum of squares is ``<= rtol``. It must be
+        in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
 
     Returns
     -------
@@ -3237,23 +3414,23 @@ def qr(edge: Edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -3390,23 +3567,23 @@ def qr_(edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -3544,23 +3721,23 @@ def rq(edge: Edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute(permutation)
         
@@ -3697,23 +3874,23 @@ def rq_(edge) -> Tuple[Node, Node]:
 
     # new_node1
     prev_nums = [ax._num for ax in batch_axes]
-    for i in range(new_node1.rank):
+    for i in range(new_node1.ndim):
         if (i not in prev_nums) and (i != axis1._num):
             prev_nums.append(i)
     prev_nums += [axis1._num]
 
-    if prev_nums != list(range(new_node1.rank)):
+    if prev_nums != list(range(new_node1.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
     prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
                  for ax in batch_axes] + [axis2._num]
-    for i in range(new_node2.rank):
+    for i in range(new_node2.ndim):
         if i not in prev_nums:
             prev_nums.append(i)
 
-    if prev_nums != list(range(new_node2.rank)):
+    if prev_nums != list(range(new_node2.ndim)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
 
@@ -3843,7 +4020,7 @@ def _contract_edges_first(edges: Optional[List[Edge]],
     # Trace
     if node1 == node2:
         result = node1.tensor
-        axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
+        axes_nums = dict(zip(range(node1.ndim), range(node1.ndim)))
 
         for edge in edges:
             axes = node1.in_which_axis(edge)
@@ -4018,7 +4195,7 @@ def _contract_edges_next(successor: Successor,
         edges = successor.hints
         result = node1._direct_get_tensor(successor.node_ref[0],
                                           successor.index[0])
-        axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
+        axes_nums = dict(zip(range(node1.ndim), range(node1.ndim)))
 
         for edge in edges:
             axes = node1.in_which_axis(edge)
@@ -4415,6 +4592,10 @@ contract_between_node.__doc__ = \
     ...                  name='nodeB')
     ...
     >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> result = nodeA.contract_between(nodeB)
+    >>> result.shape
+    torch.Size([100, 10, 7])
+
     >>> result = nodeA @ nodeB
     >>> result.shape
     torch.Size([100, 10, 7])
@@ -4551,6 +4732,1451 @@ contract_between_node_.__doc__ = \
     """
 
 AbstractNode.contract_between_ = contract_between_node_
+
+
+###############################   MERGE_EDGES   ###############################
+# MARK: merge_edges
+def _check_first_merge_edges(edges: Sequence[Edge]) -> Optional[Successor]:
+    if not isinstance(edges, Sequence):
+        raise TypeError('`edges` should be a list or tuple of edges')
+    if not edges:
+        raise ValueError('`edges` should be a non-empty sequence of edges')
+    if not isinstance(edges[0], Edge):
+        raise TypeError('`edges` should be a sequence of edges')
+
+    args = (tuple(edges),)
+    successors = edges[0].node1._successors.get('merge_edges')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _merge_edges_first(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
+    if not isinstance(edges, Sequence):
+        raise TypeError('`edges` should be a list or tuple of edges')
+    if not edges:
+        raise ValueError('`edges` should be a non-empty sequence of edges')
+
+    edges = list(edges)
+    if len(set(edges)) != len(edges):
+        raise ValueError('Repeated edges cannot be merged')
+
+    for edge in edges:
+        if isinstance(edge, StackEdge):
+            raise TypeError('Cannot merge StackEdges')
+        if not isinstance(edge, Edge):
+            raise TypeError('`edges` should be a sequence of edges')
+        if edge.is_batch():
+            raise ValueError('Batch edges cannot be merged')
+
+    node1 = edges[0].node1
+    node2 = edges[0].node2
+    connected = node2 is not None
+    same_node = connected and (node1 is node2)
+    net = node1._network
+
+    # Normalize every edge with respect to the first edge orientation.
+    node1_axes = []
+    node2_axes = []
+    for edge in edges:
+        if edge.is_dangling() == connected:
+            raise ValueError('Edges to be merged should be either all dangling '
+                             'or all connected')
+
+        if not connected:
+            if edge.node1 is not node1:
+                raise ValueError('Dangling edges to be merged should be attached '
+                                 'to the same node')
+            node1_axes.append(edge.axis1._num)
+        else:
+            if same_node:
+                if (edge.node1 is not node1) or (edge.node2 is not node1):
+                    raise ValueError('Loop edges to be merged should connect the '
+                                     'same node to itself')
+                node1_axes.append(edge.axis1._num)
+                node2_axes.append(edge.axis2._num)
+            elif (edge.node1 is node1) and (edge.node2 is node2):
+                node1_axes.append(edge.axis1._num)
+                node2_axes.append(edge.axis2._num)
+            elif (edge.node1 is node2) and (edge.node2 is node1):
+                node1_axes.append(edge.axis2._num)
+                node2_axes.append(edge.axis1._num)
+            else:
+                raise ValueError('Connected edges to be merged should connect '
+                                 'the same pair of nodes')
+
+    if len(set(node1_axes)) != len(node1_axes):
+        raise ValueError('Edges to be merged should be attached to different '
+                         'axes of node1')
+    if connected and (len(set(node2_axes)) != len(node2_axes)):
+        raise ValueError('Edges to be merged should be attached to different '
+                         'axes of node2')
+
+    args = (tuple(edges),)
+
+    if same_node:
+        # A self-loop needs two merged axes in the same resultant node.
+        all_axes = node1_axes + node2_axes
+        if len(set(all_axes)) != len(all_axes):
+            raise ValueError('Loop edges to be merged should be attached to '
+                             'different axes')
+
+        pos1 = node1_axes[0]
+        pos2 = node2_axes[0]
+        selected = set(all_axes)
+        group_positions = {pos1: 0, pos2: 1}
+        group_axes = [node1_axes, node2_axes]
+        permutation_dims = []
+        new_shape = []
+        new_axes_names = []
+        entries = []
+        shape = list(node1.shape)
+
+        for i in range(node1.ndim):
+            if i in group_positions:
+                axes = group_axes[group_positions[i]]
+                permutation_dims += axes
+                size = 1
+                for axis in axes:
+                    size *= shape[axis]
+                new_shape.append(size)
+                new_axes_names.append('merged')
+                entries.append(('merged', group_positions[i]))
+            elif i in selected:
+                continue
+            else:
+                permutation_dims.append(i)
+                new_shape.append(shape[i])
+                new_axes_names.append(node1.axes_names[i])
+                entries.append(('axis', i))
+
+        if permutation_dims == list(range(node1.ndim)):
+            permutation_dims = []
+
+        # Move the axes to merge together, then flatten each selected group.
+        if permutation_dims:
+            new_tensor = node1.tensor.permute(permutation_dims).reshape(new_shape)
+        else:
+            new_tensor = node1.tensor.reshape(new_shape)
+
+        new_node = Node._create_resultant(axes_names=new_axes_names,
+                                          name='merge_edges',
+                                          network=net,
+                                          tensor=new_tensor)
+
+        merged_positions = dict()
+        for i, entry in enumerate(entries):
+            if entry[0] == 'axis':
+                # Preserve all untouched edges in their new positions.
+                net._remove_edge(new_node._edges[i])
+                axis_num = entry[1]
+                new_node._add_edge(edge=node1._edges[axis_num],
+                                   axis=i,
+                                   node1=node1.is_node1(axis_num))
+            else:
+                merged_positions[entry[1]] = i
+
+        for pos in merged_positions.values():
+            net._remove_edge(new_node._edges[pos])
+
+        # Replace all old loop edges with a single loop edge.
+        merged_edge = Edge(node1=new_node,
+                           axis1=merged_positions[0],
+                           node2=new_node,
+                           axis2=merged_positions[1])
+        new_node._add_edge(edge=merged_edge,
+                           axis=merged_positions[0],
+                           node1=True)
+        new_node._add_edge(edge=merged_edge,
+                           axis=merged_positions[1],
+                           node1=False)
+
+        successor = Successor(node_ref=node1.node_ref(),
+                              index=node1._tensor_info['index'],
+                              child=new_node,
+                              hints={'same_node': True,
+                                     'node1_axes': node1_axes,
+                                     'node2_axes': node2_axes,
+                                     'entries': entries})
+
+        if 'merge_edges' in node1._successors:
+            node1._successors['merge_edges'].update({args: successor})
+        else:
+            node1._successors['merge_edges'] = {args: successor}
+
+        net._seq_ops.append(('merge_edges', args))
+
+        if net._tracing:
+            node1._record_in_inverse_memory()
+
+        return new_node, new_node
+
+    # Keep the merged axis where the first selected edge was in node1.
+    node1_pos = node1_axes[0]
+    node1_selected = set(node1_axes)
+    node1_before = [i for i in range(node1.ndim)
+                    if (i not in node1_selected) and (i < node1_pos)]
+    node1_after = [i for i in range(node1.ndim)
+                   if (i not in node1_selected) and (i > node1_pos)]
+    node1_permutation = node1_before + node1_axes + node1_after
+    if node1_permutation == list(range(node1.ndim)):
+        node1_permutation = []
+
+    shape1 = list(node1.shape)
+    merged_dim1 = 1
+    for axis in node1_axes:
+        merged_dim1 *= shape1[axis]
+    new_shape1 = [shape1[i] for i in node1_before] + \
+        [merged_dim1] + [shape1[i] for i in node1_after]
+    # Permute only when the selected axes were not already consecutive.
+    if node1_permutation:
+        new_tensor1 = node1.tensor.permute(node1_permutation).reshape(new_shape1)
+    else:
+        new_tensor1 = node1.tensor.reshape(new_shape1)
+
+    node1_entries = node1_before + ['merged'] + node1_after
+    node1_axes_names = []
+    for entry in node1_entries:
+        if entry == 'merged':
+            node1_axes_names.append('merged')
+        else:
+            node1_axes_names.append(node1.axes_names[entry])
+
+    new_node1 = Node._create_resultant(axes_names=node1_axes_names,
+                                       name='merge_edges',
+                                       network=net,
+                                       tensor=new_tensor1)
+    merged_pos1 = node1_entries.index('merged')
+    # Reuse original non-merged edges so external connections are preserved.
+    for i, entry in enumerate(node1_entries):
+        if entry != 'merged':
+            net._remove_edge(new_node1._edges[i])
+            new_node1._add_edge(edge=node1._edges[entry],
+                                axis=i,
+                                node1=node1.is_node1(entry))
+
+    if not connected:
+        successor = Successor(node_ref=node1.node_ref(),
+                              index=node1._tensor_info['index'],
+                              child=new_node1,
+                              hints={'same_node': False,
+                                     'node1_axes': node1_axes,
+                                     'node1_before': node1_before,
+                                     'node1_after': node1_after})
+
+        if 'merge_edges' in node1._successors:
+            node1._successors['merge_edges'].update({args: successor})
+        else:
+            node1._successors['merge_edges'] = {args: successor}
+
+        net._seq_ops.append(('merge_edges', args))
+
+        if net._tracing:
+            node1._record_in_inverse_memory()
+
+        return new_node1
+
+    # Repeat the same reshape on the other side of connected edges.
+    node2_pos = node2_axes[0]
+    node2_selected = set(node2_axes)
+    node2_before = [i for i in range(node2.ndim)
+                    if (i not in node2_selected) and (i < node2_pos)]
+    node2_after = [i for i in range(node2.ndim)
+                   if (i not in node2_selected) and (i > node2_pos)]
+    node2_permutation = node2_before + node2_axes + node2_after
+    if node2_permutation == list(range(node2.ndim)):
+        node2_permutation = []
+
+    shape2 = list(node2.shape)
+    merged_dim2 = 1
+    for axis in node2_axes:
+        merged_dim2 *= shape2[axis]
+    new_shape2 = [shape2[i] for i in node2_before] + \
+        [merged_dim2] + [shape2[i] for i in node2_after]
+    if node2_permutation:
+        new_tensor2 = node2.tensor.permute(node2_permutation).reshape(new_shape2)
+    else:
+        new_tensor2 = node2.tensor.reshape(new_shape2)
+
+    node2_entries = node2_before + ['merged'] + node2_after
+    node2_axes_names = []
+    for entry in node2_entries:
+        if entry == 'merged':
+            node2_axes_names.append('merged')
+        else:
+            node2_axes_names.append(node2.axes_names[entry])
+
+    new_node2 = Node._create_resultant(axes_names=node2_axes_names,
+                                       name='merge_edges',
+                                       network=net,
+                                       tensor=new_tensor2)
+    merged_pos2 = node2_entries.index('merged')
+    for i, entry in enumerate(node2_entries):
+        if entry != 'merged':
+            net._remove_edge(new_node2._edges[i])
+            new_node2._add_edge(edge=node2._edges[entry],
+                                axis=i,
+                                node1=node2.is_node1(entry))
+
+    # Connect the two resultants through the new merged edge.
+    net._remove_edge(new_node1._edges[merged_pos1])
+    net._remove_edge(new_node2._edges[merged_pos2])
+    merged_edge = Edge(node1=new_node1,
+                       axis1=merged_pos1,
+                       node2=new_node2,
+                       axis2=merged_pos2)
+    new_node1._add_edge(edge=merged_edge,
+                        axis=merged_pos1,
+                        node1=True)
+    new_node2._add_edge(edge=merged_edge,
+                        axis=merged_pos2,
+                        node1=False)
+
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
+                          child=[new_node1, new_node2],
+                          hints={'same_node': False,
+                                 'node1_axes': node1_axes,
+                                 'node2_axes': node2_axes,
+                                 'node1_before': node1_before,
+                                 'node1_after': node1_after,
+                                 'node2_before': node2_before,
+                                 'node2_after': node2_after})
+
+    if 'merge_edges' in node1._successors:
+        node1._successors['merge_edges'].update({args: successor})
+    else:
+        node1._successors['merge_edges'] = {args: successor}
+
+    net._seq_ops.append(('merge_edges', args))
+
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
+
+    return new_node1, new_node2
+
+
+def _merge_edges_next(successor: Successor,
+                      edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
+    hints = successor.hints
+
+    if hints['same_node']:
+        node1 = edges[0].node1
+        node1_tensor = node1._direct_get_tensor(successor.node_ref,
+                                                successor.index)
+        # Replay the same loop reshaping using the stored axis order.
+        shape = list(node1_tensor.shape)
+        permutation_dims = []
+        new_shape = []
+        for entry in hints['entries']:
+            if entry[0] == 'axis':
+                permutation_dims.append(entry[1])
+                new_shape.append(shape[entry[1]])
+            elif entry[1] == 0:
+                permutation_dims += hints['node1_axes']
+                size = 1
+                for axis in hints['node1_axes']:
+                    size *= shape[axis]
+                new_shape.append(size)
+            else:
+                permutation_dims += hints['node2_axes']
+                size = 1
+                for axis in hints['node2_axes']:
+                    size *= shape[axis]
+                new_shape.append(size)
+
+        if permutation_dims == list(range(len(shape))):
+            permutation_dims = []
+
+        if permutation_dims:
+            new_tensor = node1_tensor.permute(
+                permutation_dims).reshape(new_shape)
+        else:
+            new_tensor = node1_tensor.reshape(new_shape)
+
+        child = successor.child
+        child._direct_set_tensor(new_tensor)
+
+        if node1._network._traced:
+            node1._check_inverse_memory(successor.node_ref)
+
+        return child, child
+
+    node1 = edges[0].node1
+    connected = isinstance(successor.node_ref, tuple)
+    node1_tensor = node1._direct_get_tensor(successor.node_ref[0]
+                                           if connected
+                                           else successor.node_ref,
+                                           successor.index[0]
+                                           if connected
+                                           else successor.index)
+    shape1 = list(node1_tensor.shape)
+    # Recompute the merged dimension from the current tensor shape.
+    merged_dim1 = 1
+    for axis in hints['node1_axes']:
+        merged_dim1 *= shape1[axis]
+    new_shape1 = [shape1[i] for i in hints['node1_before']] + \
+        [merged_dim1] + [shape1[i] for i in hints['node1_after']]
+    node1_permutation = hints['node1_before'] + hints['node1_axes'] + \
+        hints['node1_after']
+    if node1_permutation == list(range(len(shape1))):
+        node1_permutation = []
+    if node1_permutation:
+        new_tensor1 = node1_tensor.permute(
+            node1_permutation).reshape(new_shape1)
+    else:
+        new_tensor1 = node1_tensor.reshape(new_shape1)
+
+    if not connected:
+        child = successor.child
+        child._direct_set_tensor(new_tensor1)
+
+        if node1._network._traced:
+            node1._check_inverse_memory(successor.node_ref)
+
+        return child
+
+    node2 = edges[0].node2
+    node2_tensor = node2._direct_get_tensor(successor.node_ref[1],
+                                           successor.index[1])
+    shape2 = list(node2_tensor.shape)
+    merged_dim2 = 1
+    for axis in hints['node2_axes']:
+        merged_dim2 *= shape2[axis]
+    new_shape2 = [shape2[i] for i in hints['node2_before']] + \
+        [merged_dim2] + [shape2[i] for i in hints['node2_after']]
+    node2_permutation = hints['node2_before'] + hints['node2_axes'] + \
+        hints['node2_after']
+    if node2_permutation == list(range(len(shape2))):
+        node2_permutation = []
+    if node2_permutation:
+        new_tensor2 = node2_tensor.permute(
+            node2_permutation).reshape(new_shape2)
+    else:
+        new_tensor2 = node2_tensor.reshape(new_shape2)
+
+    children = successor.child
+    children[0]._direct_set_tensor(new_tensor1)
+    children[1]._direct_set_tensor(new_tensor2)
+
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref[0])
+        node2._check_inverse_memory(successor.node_ref[1])
+
+    return children[0], children[1]
+
+
+merge_edges_op = Operation('merge_edges',
+                           _check_first_merge_edges,
+                           _merge_edges_first,
+                           _merge_edges_next)
+
+
+def merge_edges(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    Merges several edges of a node into a single edge.
+
+    This operation adapts the idea of
+    `reshape <https://pytorch.org/docs/stable/generated/torch.reshape.html>`_
+    in **PyTorch** to tensor network nodes. The tensor dimensions corresponding
+    to ``edges`` are grouped into a single dimension, and the node's axes and
+    edges are updated accordingly.
+
+    If ``edges`` are dangling, all of them must belong to the same node and the
+    result is one node. If they are connected, all of them must connect the same
+    pair of nodes; both nodes are reshaped and the result is a pair of nodes
+    connected by one edge. Self-loop edges are also supported, returning the
+    same resultant node twice.
+
+    The new ``"merged"`` edge is placed where the first edge in ``edges`` was.
+    For connected edges, this same rule is applied on each affected node, using
+    the orientation of the first edge as reference.
+
+    The new axis has name ``"merged"``. Nodes ``resultant`` from this operation
+    are called ``"merge_edges"``. The node that keeps information about the
+    :class:`Successor` is the first node of the first edge in ``edges``.
+
+    This operation is the same as :meth:`~AbstractNode.merge_edges`.
+
+    Parameters
+    ----------
+    edges : list[Edge]
+        Edges that are to be merged, in the order in which their dimensions
+        should be grouped.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(2, 3, 4),
+    ...                 axes_names=('left', 'input', 'right'))
+    >>> result = tk.merge_edges([node['left'], node['right']])
+    >>> result.shape
+    torch.Size([8, 3])
+
+    >>> result.axes_names
+    ['merged', 'input']
+    """
+    return merge_edges_op(edges)
+
+
+def merge_edges_node(node: AbstractNode,
+                     edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    Merges several edges attached to ``self`` into a single edge. See
+    :func:`merge_edges` for a more complete explanation.
+
+    This is the node method form of a reshape-like operation: dimensions of
+    ``self`` associated with ``edges`` are grouped into one dimension, while
+    preserving the tensor-network connections affected by those edges.
+
+    The new ``"merged"`` edge is placed where the first edge in ``edges`` was.
+    For connected edges, this same rule is applied on each affected node.
+
+    The new axis has name ``"merged"``. Nodes ``resultant`` from this operation
+    are called ``"merge_edges"``. The node that keeps information about the
+    :class:`Successor` is ``self``.
+
+    Parameters
+    ----------
+    edges : list[Edge]
+        Edges attached to ``self`` that are to be merged.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(2, 3, 4),
+    ...                 axes_names=('left', 'input', 'right'))
+    >>> result = node.merge_edges([node['left'], node['right']])
+    >>> result.shape
+    torch.Size([8, 3])
+
+    >>> result.axes_names
+    ['merged', 'input']
+    """
+    for edge in edges:
+        if not edge.is_attached_to(node):
+            raise ValueError('All edges should be attached to `self`')
+    return merge_edges(edges)
+
+
+AbstractNode.merge_edges = merge_edges_node
+
+
+def merge_edges_(edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    In-place version of :func:`merge_edges`.
+
+    This operation adapts **PyTorch**'s reshape semantics to nodes by grouping
+    several edge dimensions into one. When merged edges are connected, the node
+    on the other side is reshaped in the same way, so the network connectivity
+    remains consistent.
+
+    The new ``"merged"`` edge is placed where the first edge in ``edges`` was.
+    For connected edges, this same rule is applied on each affected node, using
+    the orientation of the first edge as reference.
+
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes affected by ``edges``.
+
+    This operation is the same as :meth:`~AbstractNode.merge_edges_`.
+
+    Parameters
+    ----------
+    edges : list[Edge]
+        Edges that are to be merged, in the order in which their dimensions
+        should be grouped.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(2, 3, 4),
+    ...                 axes_names=('left', 'input', 'right'),
+    ...                 name='node')
+    >>> result = tk.merge_edges_([node['left'], node['right']])
+    >>> result.shape
+    torch.Size([8, 3])
+
+    >>> result.name
+    'node'
+
+    >>> node.network is None
+    True
+    """
+    if not isinstance(edges, Sequence):
+        raise TypeError('`edges` should be a list or tuple of edges')
+    if not edges:
+        raise ValueError('`edges` should be a non-empty sequence of edges')
+
+    edges = list(edges)
+    node1 = edges[0].node1
+    node2 = edges[0].node2
+    connected = node2 is not None
+    same_node = connected and (node1 is node2)
+    node1_name = node1._name
+    node2_name = None if node2 is None else node2._name
+
+    result = merge_edges(edges)
+
+    # Promote the resultant node to leaf status and remove the old one.
+    if not connected:
+        result.reattach_edges(override=True)
+        result._unrestricted_set_tensor(result.tensor.detach())
+
+        net = result.network
+        net.delete_node(node1)
+
+        for res_edge in result._edges:
+            net._add_edge(res_edge)
+
+        result._leaf = True
+        del net._resultant_nodes[result._name]
+        net._leaf_nodes[result._name] = result
+
+        node1._successors = dict()
+        net._seq_ops = []
+
+        result.name = node1_name
+        return result
+
+    new_node1, new_node2 = result
+    if same_node:
+        # Self-loop operations return the same resultant twice.
+        new_node1.reattach_edges(override=True)
+        new_node1._unrestricted_set_tensor(new_node1.tensor.detach())
+
+        net = new_node1.network
+        net.delete_node(node1)
+
+        for res_edge in new_node1._edges:
+            net._add_edge(res_edge)
+
+        new_node1._leaf = True
+        del net._resultant_nodes[new_node1._name]
+        net._leaf_nodes[new_node1._name] = new_node1
+
+        node1._successors = dict()
+        net._seq_ops = []
+
+        new_node1.name = node1_name
+        return new_node1, new_node1
+
+    # Connected edges replace both original leaf nodes at once.
+    new_node1.reattach_edges(override=True)
+    new_node2.reattach_edges(override=True)
+    new_node1._unrestricted_set_tensor(new_node1.tensor.detach())
+    new_node2._unrestricted_set_tensor(new_node2.tensor.detach())
+
+    net = new_node1.network
+    nodes = [node1, node2]
+    for node in nodes:
+        net.delete_node(node)
+
+    for res_edge in new_node1._edges + new_node2._edges:
+        net._add_edge(res_edge)
+
+    new_node1._leaf = True
+    del net._resultant_nodes[new_node1._name]
+    net._leaf_nodes[new_node1._name] = new_node1
+
+    new_node2._leaf = True
+    del net._resultant_nodes[new_node2._name]
+    net._leaf_nodes[new_node2._name] = new_node2
+
+    for node in nodes:
+        node._successors = dict()
+    net._seq_ops = []
+
+    new_node1.name = node1_name
+    new_node2.name = node2_name
+
+    return new_node1, new_node2
+
+
+def merge_edges_node_(node: AbstractNode,
+                      edges: Sequence[Edge]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    In-place version of :meth:`~AbstractNode.merge_edges`.
+
+    This is the node method form of a reshape-like operation: dimensions of
+    ``self`` associated with ``edges`` are grouped into one dimension, while
+    preserving the tensor-network connections affected by those edges.
+
+    The new ``"merged"`` edge is placed where the first edge in ``edges`` was.
+    For connected edges, this same rule is applied on each affected node.
+
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes affected by ``edges``.
+
+    Parameters
+    ----------
+    edges : list[Edge]
+        Edges attached to ``self`` that are to be merged.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(2, 3, 4),
+    ...                 axes_names=('left', 'input', 'right'),
+    ...                 name='node')
+    >>> result = node.merge_edges_([node['left'], node['right']])
+    >>> result.shape
+    torch.Size([8, 3])
+
+    >>> result.name
+    'node'
+
+    >>> node.network is None
+    True
+    """
+    for edge in edges:
+        if not edge.is_attached_to(node):
+            raise ValueError('All edges should be attached to `self`')
+    return merge_edges_(edges)
+
+
+AbstractNode.merge_edges_ = merge_edges_node_
+
+
+###############################   SPLIT_EDGE   ################################
+# MARK: split_edge
+def _check_first_split_edge(edge: Edge,
+                            shape: Sequence[int]) -> Optional[Successor]:
+    if not isinstance(edge, Edge):
+        raise TypeError('`edge` should be Edge type')
+    if not isinstance(shape, Sequence):
+        raise TypeError('`shape` should be a list or tuple of ints')
+
+    args = (edge, tuple(shape))
+    successors = edge.node1._successors.get('split_edge')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _split_edge_first(edge: Edge,
+                      shape: Sequence[int]) -> Union[Node, Tuple[Node, Node]]:
+    if isinstance(edge, StackEdge):
+        raise TypeError('Cannot split StackEdges')
+    if not isinstance(edge, Edge):
+        raise TypeError('`edge` should be Edge type')
+    if edge.is_batch():
+        raise ValueError('Batch edges cannot be split')
+    if not isinstance(shape, Sequence):
+        raise TypeError('`shape` should be a list or tuple of ints')
+    if not shape:
+        raise ValueError('`shape` should be a non-empty sequence')
+
+    shape = tuple(shape)
+    size = 1
+    for dim in shape:
+        if not isinstance(dim, int):
+            raise TypeError('`shape` should be a sequence of ints')
+        if dim <= 0:
+            raise ValueError('All dimensions in `shape` should be positive')
+        size *= dim
+
+    if size != edge.size():
+        raise ValueError('Product of `shape` dimensions should equal edge size')
+
+    node1 = edge.node1
+    node2 = edge.node2
+    # Preserve edge orientation; if connected, node2 is reshaped analogously.
+    connected = node2 is not None
+    same_node = connected and (node1 is node2)
+    net = node1._network
+    args = (edge, shape)
+
+    if same_node:
+        # Split both sides of the loop inside the same resultant node.
+        axis1_num = edge.axis1._num
+        axis2_num = edge.axis2._num
+        selected = {axis1_num, axis2_num}
+        new_shape = []
+        new_axes_names = []
+        entries = []
+
+        for i, dim in enumerate(node1.shape):
+            if i == axis1_num:
+                new_shape += list(shape)
+                new_axes_names += ['split'] * len(shape)
+                entries.append(('split1', i))
+            elif i == axis2_num:
+                new_shape += list(shape)
+                new_axes_names += ['split'] * len(shape)
+                entries.append(('split2', i))
+            elif i not in selected:
+                new_shape.append(dim)
+                new_axes_names.append(node1.axes_names[i])
+                entries.append(('axis', i))
+
+        new_tensor = node1.tensor.reshape(new_shape)
+        new_node = Node._create_resultant(axes_names=new_axes_names,
+                                          name='split_edge',
+                                          network=net,
+                                          tensor=new_tensor)
+
+        split1_positions = []
+        split2_positions = []
+        i = 0
+        for entry in entries:
+            if entry[0] == 'axis':
+                # Carry over untouched edges before wiring the new loop edges.
+                net._remove_edge(new_node._edges[i])
+                axis_num = entry[1]
+                new_node._add_edge(edge=node1._edges[axis_num],
+                                   axis=i,
+                                   node1=node1.is_node1(axis_num))
+                i += 1
+            elif entry[0] == 'split1':
+                split1_positions = list(range(i, i + len(shape)))
+                i += len(shape)
+            else:
+                split2_positions = list(range(i, i + len(shape)))
+                i += len(shape)
+
+        # Each pair of split axes replaces one side of the original loop edge.
+        for pos1, pos2 in zip(split1_positions, split2_positions):
+            net._remove_edge(new_node._edges[pos1])
+            net._remove_edge(new_node._edges[pos2])
+            split_edge = Edge(node1=new_node,
+                              axis1=pos1,
+                              node2=new_node,
+                              axis2=pos2)
+            new_node._add_edge(edge=split_edge,
+                               axis=pos1,
+                               node1=True)
+            new_node._add_edge(edge=split_edge,
+                               axis=pos2,
+                               node1=False)
+
+        successor = Successor(node_ref=node1.node_ref(),
+                              index=node1._tensor_info['index'],
+                              child=new_node,
+                              hints={'same_node': True,
+                                     'entries': entries})
+
+        if 'split_edge' in node1._successors:
+            node1._successors['split_edge'].update({args: successor})
+        else:
+            node1._successors['split_edge'] = {args: successor}
+
+        net._seq_ops.append(('split_edge', args))
+
+        if net._tracing:
+            node1._record_in_inverse_memory()
+
+        return new_node, new_node
+
+    # Replace the selected axis in node1 by consecutive split axes.
+    axis1_num = edge.axis1._num
+    new_shape1 = []
+    new_axes_names1 = []
+    entries1 = []
+    for i, dim in enumerate(node1.shape):
+        if i == axis1_num:
+            new_shape1 += list(shape)
+            new_axes_names1 += ['split'] * len(shape)
+            entries1 += ['split'] * len(shape)
+        else:
+            new_shape1.append(dim)
+            new_axes_names1.append(node1.axes_names[i])
+            entries1.append(i)
+
+    new_tensor1 = node1.tensor.reshape(new_shape1)
+    new_node1 = Node._create_resultant(axes_names=new_axes_names1,
+                                       name='split_edge',
+                                       network=net,
+                                       tensor=new_tensor1)
+    split_positions1 = []
+    for i, entry in enumerate(entries1):
+        if entry == 'split':
+            split_positions1.append(i)
+        else:
+            # Non-split edges keep their original connectivity.
+            net._remove_edge(new_node1._edges[i])
+            new_node1._add_edge(edge=node1._edges[entry],
+                                axis=i,
+                                node1=node1.is_node1(entry))
+
+    if not connected:
+        successor = Successor(node_ref=node1.node_ref(),
+                              index=node1._tensor_info['index'],
+                              child=new_node1,
+                              hints={'same_node': False,
+                                     'axis1_num': axis1_num})
+
+        if 'split_edge' in node1._successors:
+            node1._successors['split_edge'].update({args: successor})
+        else:
+            node1._successors['split_edge'] = {args: successor}
+
+        net._seq_ops.append(('split_edge', args))
+
+        if net._tracing:
+            node1._record_in_inverse_memory()
+
+        return new_node1
+
+    # Split the matching axis in node2 with the same target dimensions.
+    axis2_num = edge.axis2._num
+    new_shape2 = []
+    new_axes_names2 = []
+    entries2 = []
+    for i, dim in enumerate(node2.shape):
+        if i == axis2_num:
+            new_shape2 += list(shape)
+            new_axes_names2 += ['split'] * len(shape)
+            entries2 += ['split'] * len(shape)
+        else:
+            new_shape2.append(dim)
+            new_axes_names2.append(node2.axes_names[i])
+            entries2.append(i)
+
+    new_tensor2 = node2.tensor.reshape(new_shape2)
+    new_node2 = Node._create_resultant(axes_names=new_axes_names2,
+                                       name='split_edge',
+                                       network=net,
+                                       tensor=new_tensor2)
+    split_positions2 = []
+    for i, entry in enumerate(entries2):
+        if entry == 'split':
+            split_positions2.append(i)
+        else:
+            net._remove_edge(new_node2._edges[i])
+            new_node2._add_edge(edge=node2._edges[entry],
+                                axis=i,
+                                node1=node2.is_node1(entry))
+
+    # Pair each new axis from node1 with the corresponding new axis from node2.
+    for pos1, pos2 in zip(split_positions1, split_positions2):
+        net._remove_edge(new_node1._edges[pos1])
+        net._remove_edge(new_node2._edges[pos2])
+        new_edge = Edge(node1=new_node1,
+                        axis1=pos1,
+                        node2=new_node2,
+                        axis2=pos2)
+        new_node1._add_edge(edge=new_edge,
+                            axis=pos1,
+                            node1=True)
+        new_node2._add_edge(edge=new_edge,
+                            axis=pos2,
+                            node1=False)
+
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
+                          child=[new_node1, new_node2],
+                          hints={'same_node': False,
+                                 'axis1_num': axis1_num,
+                                 'axis2_num': axis2_num})
+
+    if 'split_edge' in node1._successors:
+        node1._successors['split_edge'].update({args: successor})
+    else:
+        node1._successors['split_edge'] = {args: successor}
+
+    net._seq_ops.append(('split_edge', args))
+
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
+
+    return new_node1, new_node2
+
+
+def _split_edge_next(successor: Successor,
+                     edge: Edge,
+                     shape: Sequence[int]) -> Union[Node, Tuple[Node, Node]]:
+    hints = successor.hints
+
+    if hints['same_node']:
+        node1 = edge.node1
+        tensor = node1._direct_get_tensor(successor.node_ref,
+                                          successor.index)
+        # Replay only reshapes here; connectivity was fixed in the first call.
+        shape = tuple(shape)
+        new_shape = []
+        for entry in hints['entries']:
+            if entry[0] == 'axis':
+                new_shape.append(tensor.shape[entry[1]])
+            else:
+                new_shape += list(shape)
+
+        child = successor.child
+        child._direct_set_tensor(tensor.reshape(new_shape))
+
+        if node1._network._traced:
+            node1._check_inverse_memory(successor.node_ref)
+
+        return child, child
+
+    node1 = edge.node1
+    connected = isinstance(successor.node_ref, tuple)
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0]
+                                       if connected
+                                       else successor.node_ref,
+                                       successor.index[0]
+                                       if connected
+                                       else successor.index)
+    shape = tuple(shape)
+    new_shape1 = []
+    for i, dim in enumerate(tensor1.shape):
+        if i == hints['axis1_num']:
+            new_shape1 += list(shape)
+        else:
+            new_shape1.append(dim)
+
+    if not connected:
+        child = successor.child
+        child._direct_set_tensor(tensor1.reshape(new_shape1))
+
+        if node1._network._traced:
+            node1._check_inverse_memory(successor.node_ref)
+
+        return child
+
+    node2 = edge.node2
+    tensor2 = node2._direct_get_tensor(successor.node_ref[1],
+                                       successor.index[1])
+    new_shape2 = []
+    for i, dim in enumerate(tensor2.shape):
+        if i == hints['axis2_num']:
+            new_shape2 += list(shape)
+        else:
+            new_shape2.append(dim)
+
+    children = successor.child
+    children[0]._direct_set_tensor(tensor1.reshape(new_shape1))
+    children[1]._direct_set_tensor(tensor2.reshape(new_shape2))
+
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref[0])
+        node2._check_inverse_memory(successor.node_ref[1])
+
+    return children[0], children[1]
+
+
+split_edge_op = Operation('split_edge',
+                          _check_first_split_edge,
+                          _split_edge_first,
+                          _split_edge_next)
+
+
+def split_edge(edge: Edge,
+               shape: Sequence[int]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    Splits one edge into several edges whose sizes are given by ``shape``.
+
+    This operation adapts the idea of
+    `reshape <https://pytorch.org/docs/stable/generated/torch.reshape.html>`_
+    in **PyTorch** to tensor network nodes. The tensor dimension corresponding
+    to ``edge`` is ungrouped into several dimensions, and the node's axes and
+    edges are updated accordingly.
+
+    If ``edge`` is dangling, only its node is reshaped. If it is connected, the
+    node on the other side is reshaped in the same way and each new split axis
+    is connected to its counterpart. Self-loop edges are also supported,
+    returning the same resultant node twice.
+
+    The new ``"split"`` edges replace ``edge`` in its original position, in the
+    same order as the dimensions in ``shape``. For connected edges, this same
+    replacement is applied on both affected nodes.
+
+    The new axes have name ``"split"``. Nodes ``resultant`` from this operation
+    are called ``"split_edge"``. The node that keeps information about the
+    :class:`Successor` is the first node of ``edge``.
+
+    This operation is the same as :meth:`~Edge.split_edge`.
+
+    Parameters
+    ----------
+    edge : Edge
+        Edge that is to be split.
+    shape : list[int]
+        Target dimensions. Their product must be equal to the current size of
+        ``edge``.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(2, 6, 3),
+    ...                  axes_names=('left', 'bond', 'right'))
+    >>> nodeB = tk.randn(shape=(6, 5),
+    ...                  axes_names=('bond', 'output'))
+    >>> edge = nodeA['bond'] ^ nodeB['bond']
+    >>> new_nodeA, new_nodeB = tk.split_edge(edge, (2, 3))
+    >>> new_nodeA.shape
+    torch.Size([2, 2, 3, 3])
+
+    >>> new_nodeB.shape
+    torch.Size([2, 3, 5])
+    """
+    return split_edge_op(edge, shape)
+
+
+def split_edge_node(node: AbstractNode,
+                    edge: Edge,
+                    shape: Sequence[int]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    Splits one edge attached to ``self`` into several edges. See
+    :func:`split_edge` for a more complete explanation.
+
+    This is the node method form of a reshape-like operation: one dimension of
+    ``self`` associated with ``edge`` is ungrouped into several dimensions,
+    while preserving the tensor-network connections affected by that edge.
+
+    The new ``"split"`` edges replace ``edge`` in its original position, in the
+    same order as the dimensions in ``shape``. For connected edges, this same
+    replacement is applied on both affected nodes.
+
+    The new axes have name ``"split"``. Nodes ``resultant`` from this operation
+    are called ``"split_edge"``. The node that keeps information about the
+    :class:`Successor` is ``self``.
+
+    Parameters
+    ----------
+    edge : Edge
+        Edge attached to ``self`` that is to be split.
+    shape : list[int]
+        Target dimensions. Their product must be equal to the current size of
+        ``edge``.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(8, 3),
+    ...                 axes_names=('merged', 'input'))
+    >>> result = node.split_edge(node['merged'], (2, 4))
+    >>> result.shape
+    torch.Size([2, 4, 3])
+
+    >>> result.axes_names
+    ['split_0', 'split_1', 'input']
+    """
+    if not edge.is_attached_to(node):
+        raise ValueError('`edge` should be attached to `self`')
+    return split_edge(edge, shape)
+
+AbstractNode.split_edge = split_edge_node
+
+
+split_edge_edge = copy_func(split_edge)
+split_edge_edge.__doc__ = \
+    r"""
+    Splits ``self`` into several edges whose sizes are given by ``shape``. See
+    :func:`split_edge` for a more complete explanation.
+
+    This is the edge method form of a reshape-like operation: the dimensions
+    associated with ``self`` are ungrouped into several dimensions, taking care
+    of whether the edge is dangling, connects two different nodes, or is a
+    self-loop.
+
+    The new ``"split"`` edges replace ``self`` in its original position, in the
+    same order as the dimensions in ``shape``. For connected edges, this same
+    replacement is applied on both affected nodes.
+
+    The new axes have name ``"split"``. Nodes ``resultant`` from this operation
+    are called ``"split_edge"``. The node that keeps information about the
+    :class:`Successor` is the first node of ``self``.
+
+    Parameters
+    ----------
+    shape : list[int]
+        Target dimensions. Their product must be equal to the current size of
+        ``self``.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(2, 6, 3),
+    ...                  axes_names=('left', 'bond', 'right'))
+    >>> nodeB = tk.randn(shape=(6, 5),
+    ...                  axes_names=('bond', 'output'))
+    >>> edge = nodeA['bond'] ^ nodeB['bond']
+    >>> new_nodeA, new_nodeB = edge.split_edge((2, 3))
+    >>> new_nodeA.shape
+    torch.Size([2, 2, 3, 3])
+
+    >>> new_nodeB.shape
+    torch.Size([2, 3, 5])
+    """
+
+Edge.split_edge = split_edge_edge
+
+
+def split_edge_(edge: Edge,
+                shape: Sequence[int]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    In-place version of :func:`split_edge`.
+
+    This operation adapts **PyTorch**'s reshape semantics to nodes by
+    ungrouping one edge dimension into several dimensions. When ``edge`` is
+    connected, the node on the other side is reshaped in the same way, so the
+    network connectivity remains consistent.
+
+    The new ``"split"`` edges replace ``edge`` in its original position, in the
+    same order as the dimensions in ``shape``. For connected edges, this same
+    replacement is applied on both affected nodes.
+
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``edge``.
+
+    This operation is the same as :meth:`~Edge.split_edge_`.
+
+    Parameters
+    ----------
+    edge : Edge
+        Edge that is to be split.
+    shape : list[int]
+        Target dimensions. Their product must be equal to the current size of
+        ``edge``.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(8, 3),
+    ...                 axes_names=('merged', 'input'),
+    ...                 name='node')
+    >>> result = tk.split_edge_(node['merged'], (2, 4))
+    >>> result.shape
+    torch.Size([2, 4, 3])
+
+    >>> result.name
+    'node'
+
+    >>> node.network is None
+    True
+    """
+    if not isinstance(edge, Edge):
+        raise TypeError('`edge` should be Edge type')
+
+    node1 = edge.node1
+    node2 = edge.node2
+    connected = node2 is not None
+    same_node = connected and (node1 is node2)
+    node1_name = node1._name
+    node2_name = None if node2 is None else node2._name
+
+    result = split_edge(edge, shape)
+
+    # Promote the resultant node to leaf status and remove the old one.
+    if not connected:
+        result.reattach_edges(override=True)
+        result._unrestricted_set_tensor(result.tensor.detach())
+
+        net = result.network
+        net.delete_node(node1)
+
+        for res_edge in result._edges:
+            net._add_edge(res_edge)
+
+        result._leaf = True
+        del net._resultant_nodes[result._name]
+        net._leaf_nodes[result._name] = result
+
+        node1._successors = dict()
+        net._seq_ops = []
+
+        result.name = node1_name
+        return result
+
+    new_node1, new_node2 = result
+    if same_node:
+        # Self-loop operations return the same resultant twice.
+        new_node1.reattach_edges(override=True)
+        new_node1._unrestricted_set_tensor(new_node1.tensor.detach())
+
+        net = new_node1.network
+        net.delete_node(node1)
+
+        for res_edge in new_node1._edges:
+            net._add_edge(res_edge)
+
+        new_node1._leaf = True
+        del net._resultant_nodes[new_node1._name]
+        net._leaf_nodes[new_node1._name] = new_node1
+
+        node1._successors = dict()
+        net._seq_ops = []
+
+        new_node1.name = node1_name
+        return new_node1, new_node1
+
+    # Connected edges replace both original leaf nodes at once.
+    new_node1.reattach_edges(override=True)
+    new_node2.reattach_edges(override=True)
+    new_node1._unrestricted_set_tensor(new_node1.tensor.detach())
+    new_node2._unrestricted_set_tensor(new_node2.tensor.detach())
+
+    net = new_node1.network
+    nodes = [node1, node2]
+    for node in nodes:
+        net.delete_node(node)
+
+    for res_edge in new_node1._edges + new_node2._edges:
+        net._add_edge(res_edge)
+
+    new_node1._leaf = True
+    del net._resultant_nodes[new_node1._name]
+    net._leaf_nodes[new_node1._name] = new_node1
+
+    new_node2._leaf = True
+    del net._resultant_nodes[new_node2._name]
+    net._leaf_nodes[new_node2._name] = new_node2
+
+    for node in nodes:
+        node._successors = dict()
+    net._seq_ops = []
+
+    new_node1.name = node1_name
+    new_node2.name = node2_name
+
+    return new_node1, new_node2
+
+
+def split_edge_node_(node: AbstractNode,
+                     edge: Edge,
+                     shape: Sequence[int]) -> Union[Node, Tuple[Node, Node]]:
+    r"""
+    In-place version of :meth:`~AbstractNode.split_edge`.
+
+    This is the node method form of a reshape-like operation: one dimension of
+    ``self`` associated with ``edge`` is ungrouped into several dimensions,
+    while preserving the tensor-network connections affected by that edge.
+
+    The new ``"split"`` edges replace ``edge`` in its original position, in the
+    same order as the dimensions in ``shape``. For connected edges, this same
+    replacement is applied on both affected nodes.
+
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes affected by ``edge``.
+
+    Parameters
+    ----------
+    edge : Edge
+        Edge attached to ``self`` that is to be split.
+    shape : list[int]
+        Target dimensions. Their product must be equal to the current size of
+        ``edge``.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> node = tk.randn(shape=(8, 3),
+    ...                 axes_names=('merged', 'input'),
+    ...                 name='node')
+    >>> result = node.split_edge_(node['merged'], (2, 4))
+    >>> result.shape
+    torch.Size([2, 4, 3])
+
+    >>> result.name
+    'node'
+
+    >>> node.network is None
+    True
+    """
+    if not edge.is_attached_to(node):
+        raise ValueError('`edge` should be attached to `self`')
+    return split_edge_(edge, shape)
+
+AbstractNode.split_edge_ = split_edge_node_
+
+
+split_edge_edge_ = copy_func(split_edge_)
+split_edge_edge_.__doc__ = \
+    r"""
+    In-place version of :meth:`~Edge.split_edge`.
+
+    This is the edge method form of a reshape-like operation: the dimensions
+    associated with ``self`` are ungrouped into several dimensions, taking care
+    of whether the edge is dangling, connects two different nodes, or is a
+    self-loop.
+
+    The new ``"split"`` edges replace ``self`` in its original position, in the
+    same order as the dimensions in ``shape``. For connected edges, this same
+    replacement is applied on both affected nodes.
+
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``self``.
+
+    Parameters
+    ----------
+    shape : list[int]
+        Target dimensions. Their product must be equal to the current size of
+        ``self``.
+
+    Returns
+    -------
+    Node or tuple[Node, Node]
+
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(2, 6, 3),
+    ...                  axes_names=('left', 'bond', 'right'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(6, 5),
+    ...                  axes_names=('bond', 'output'),
+    ...                  name='nodeB')
+    >>> edge = nodeA['bond'] ^ nodeB['bond']
+    >>> new_nodeA, new_nodeB = edge.split_edge_((2, 3))
+    >>> new_nodeA.shape
+    torch.Size([2, 2, 3, 3])
+
+    >>> new_nodeB.shape
+    torch.Size([2, 3, 5])
+
+    >>> nodeA.network is None
+    True
+    """
+
+Edge.split_edge_ = split_edge_edge_
+
 
 
 #####################################   STACK   ###############################

@@ -24,6 +24,7 @@ This script contains:
 """
 
 import copy
+import inspect
 import warnings
 from abc import abstractmethod, ABC
 from typing import (overload,
@@ -622,9 +623,24 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         return self._shape
 
     @property
-    def rank(self) -> int:
-        """Length of node's :attr:`shape`, that is, number of edges of the node."""
+    def ndim(self) -> int:
+        """Number of dimensions of the node."""
         return len(self._shape)
+
+    @property
+    def order(self) -> int:
+        """Order of the node, that is, its number of dimensions."""
+        return self.ndim
+
+    @property
+    def rank(self) -> int:
+        """Alias for :attr:`ndim` to be deprecated in future versions."""
+        warnings.warn(
+            '`rank` will be deprecated in future versions; '
+            'use `ndim` or `order` instead',
+            FutureWarning,
+            stacklevel=2)
+        return self.ndim
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
@@ -978,7 +994,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = Size(aux_shape)
-                correct_format_tensor = self._set_tensor_format(tensor[index])
+                correct_format_tensor = self._set_tensor_format(tensor[tuple(index)])
                 self._direct_set_tensor(correct_format_tensor)
 
             elif size > self._shape[axis_num]:
@@ -1007,7 +1023,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         """Returns axis' ``num`` given the :class:`Axis` or its ``name``."""
         if isinstance(axis, int):
             if axis < 0:
-                axis = axis % self.rank  # When indexing with -1, -2, ...
+                axis = axis % self.ndim  # When indexing with -1, -2, ...
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num
@@ -1308,7 +1324,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         that the sizes in all axes must match except for the batch axes, where
         sizes can be different.
         """
-        if len(tensor.shape) == self.rank:
+        if tensor.ndim == self.ndim:
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
                 if not edge.is_batch() and (dim != edge.size()):
@@ -1333,7 +1349,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         -------
         torch.Tensor
         """
-        if len(tensor.shape) == self.rank:
+        if tensor.ndim == self.ndim:
             index = []
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
@@ -1345,7 +1361,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                 else:
                     raise ValueError(f'Cannot crop tensor if its size at axis {i}'
                                      ' is smaller than node\'s size')
-            return tensor[index]
+            return tensor[tuple(index)]
 
         else:
             raise ValueError('`tensor` should have the same number of'
@@ -1700,8 +1716,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         
         # When tracing network, node is recorded in inverse memory
         if address in net._inverse_memory:
-                if net._inverse_memory[address]['erase']:
-                    net._inverse_memory[address]['accessed'] += 1
+            if net._inverse_memory[address]['erase']:
+                net._inverse_memory[address]['accessed'] += 1
         else:
             # Node can only be erased if both itself and the node from which
             # it is taking the tensor information (node_ref) are resultant or
@@ -1769,6 +1785,28 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                 visited.append(self)
                 for neighbour in self.neighbours():
                     neighbour.move_to_network(network=network, visited=visited)
+
+    def to(self, *args, **kwargs):
+        """
+        Equivalent to `torch.Tensor.to()
+        <https://docs.pytorch.org/docs/stable/generated/torch.Tensor.to.html>`_.
+        Unlike PyTorch, this method acts in-place and returns the same node.
+        If the node stores its own tensor, it transforms it. Otherwise, it
+        transforms the tensor in the node that stores it, thus transforming all
+        nodes that were accessing it.
+
+        Be careful: since this operation is in-place, all nodes that share the
+        same tensor will observe the change immediately.
+        """
+        # Get the actual node that holds the tensor data
+        node_ref = self.node_ref()
+        tensor = node_ref.tensor
+        if tensor is not None:
+            new_tensor = tensor.to(*args, **kwargs)
+            # Use _unrestricted_set_tensor to allow device/dtype change
+            # even for resultant nodes and handle ParamNode wrapping
+            node_ref._unrestricted_set_tensor(tensor=new_tensor)
+        return self
 
     @overload
     def __getitem__(self, key: slice) -> List['Edge']:
@@ -2726,7 +2764,7 @@ class StackNode(Node):  # MARK: StackNode
     * Provide a sequence of nodes: if ``nodes`` are provided, their tensors will
       be stacked and stored in the ``StackNode``. It is necessary that all nodes
       are of the same class (:class:`Node` or :class:`ParamNode`), have the same
-      rank (although dimension of each leg can be different for different nodes;
+      order (although dimension of each leg can be different for different nodes;
       in which case smaller tensors are extended with 0's to match the dimensions
       of the largest tensor in the stack), same axes names (to ensure only the
       "same kind" of nodes are stacked), belong to the same network and have edges
@@ -2754,7 +2792,7 @@ class StackNode(Node):  # MARK: StackNode
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode], optional
         Sequence of nodes that are to be stacked. They should all be of the same
-        class (:class:`Node` or :class:`ParamNode`), have the same rank, same
+        class (:class:`Node` or :class:`ParamNode`), have the same order, same
         axes names and belong to the same network. They do not need to have equal
         shapes.
     axes_names : list[str], tuple[str], optional
@@ -2840,7 +2878,7 @@ class StackNode(Node):  # MARK: StackNode
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
                                     'must be either all Node or all ParamNode type')
-                if nodes[i].rank != nodes[i + 1].rank:
+                if nodes[i].ndim != nodes[i + 1].ndim:
                     raise ValueError(
                         'Cannot stack nodes with different number of edges')
 
@@ -2992,7 +3030,7 @@ class ParamStackNode(ParamNode):  # MARK: ParamStackNode
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode]
         Sequence of nodes that are to be stacked. They should all be of the same
-        class (:class:`Node` or :class:`ParamNode`), have the same rank, same
+        class (:class:`Node` or :class:`ParamNode`), have the same order, same
         axes names and belong to the same network. They do not need to have equal
         shapes.
     name : str, optional
@@ -3064,7 +3102,7 @@ class ParamStackNode(ParamNode):  # MARK: ParamStackNode
             if not isinstance(nodes[i], type(nodes[i + 1])):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
                                 'must be either all Node or all ParamNode type')
-            if nodes[i].rank != nodes[i + 1].rank:
+            if nodes[i].ndim != nodes[i + 1].ndim:
                 raise ValueError(
                     'Cannot stack nodes with different number of edges')
 
@@ -4062,6 +4100,7 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
 
         # Lis of operations used to contract the TN
         self._seq_ops = []
+        self._contract_args = None
 
     # ----------
     # Properties
@@ -4613,6 +4652,29 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
 
         return net
 
+    def to(self, *args, **kwargs):
+        """
+        Applies :meth:`AbstractNode.to` to all tensor-owning nodes in the
+        network. This can be used to change the device or dtype of every tensor
+        in the network, including tensors from ``resultant`` and ``virtual``
+        nodes. If several nodes share the same tensor, that tensor is
+        transformed only once and all the referencing nodes are updated
+        accordingly.
+
+        Unlike PyTorch's `nn.Module.to()
+        <https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html>_`,
+        this method acts in-place over the tensors stored in the tensor network
+        internal memory and returns the same network. Be careful when several
+        nodes share tensors, since the change is applied immediately to all of
+        them.
+        """
+        for node in list(self.nodes.values()):
+            # Avoid nodes that don't store their tensors not to repeat
+            # transforming nodes that have several other nodes accessing its tensor
+            if node._tensor_info['address'] is not None:
+                node.to(*args, **kwargs)
+        return self
+
     def set_data_nodes(self,
                        input_edges: List[Edge],
                        num_batch_edges: int) -> None:
@@ -4888,6 +4950,7 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         """
         self._traced = False
         self._seq_ops = []
+        self._contract_args = None
         self._inverse_memory = dict()
 
         if self._resultant_nodes or self._virtual_nodes:
@@ -4985,6 +5048,13 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         self(example, *args, **kwargs)
         self._traced = True
 
+    def _normalize_contract_args(self,
+                                 *args: Any,
+                                 **kwargs: Any) -> Dict[Text, Any]:
+        bound = inspect.signature(self.contract).bind(*args, **kwargs)
+        bound.apply_defaults()
+        return dict(bound.arguments)
+
     def contract(self) -> Node:
         """
         Contracts the whole tensor network returning a single :class:`Node`.
@@ -5056,10 +5126,20 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             self.add_data(data=data)
 
         if not self._resultant_nodes:
+            self._contract_args = self._normalize_contract_args(*args, **kwargs)
             output = self.contract(*args, **kwargs)
             return output.tensor
 
         else:
+            contract_args = self._normalize_contract_args(*args, **kwargs)
+            if contract_args != self._contract_args:
+                warnings.warn(
+                    'Arguments of contract have changed. The tensor network '
+                    'has been reset, but not traced again. Consider calling '
+                    'trace if you want to keep the optimized contraction path')
+                self.reset()
+                return self.forward(data, *args, **kwargs)
+
             output = list(map(lambda op: self.operations[op[0]](*op[1]),
                               self._seq_ops))[-1]
 

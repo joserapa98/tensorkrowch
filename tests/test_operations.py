@@ -13,6 +13,7 @@ This script contains tests for operations:
     * TestRQ
     * TestContractEdge
     * TestContractBetween
+    * TestMergeSplitEdge
     * TestStackUnbind
     * TestEinsum
     * TestTNModels
@@ -27,7 +28,40 @@ import tensorkrowch as tk
 from typing import Sequence
 
 
-class TestPermute:
+AUTO_BOOL_CASES = [True, False]
+# Centralize the stack/unbind runtime combinations reused across the suite.
+STACK_AUTO_CASES = [
+    (True, False),
+    (False, False),
+    (True, True),
+    (False, True),
+]
+
+
+class TestPermute:  # MARK: TestPermute
+
+    def test_permute_top_level(self):
+        tensor = torch.arange(20, dtype=torch.float32).reshape(2, 5, 2)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       tensor=tensor)
+
+        permuted_node = tk.permute(node, (0, 2, 1))
+
+        assert permuted_node.shape == (2, 2, 5)
+        assert torch.equal(permuted_node.tensor, tensor.permute(0, 2, 1))
+
+    def test_permute_top_level_in_place(self):
+        tensor = torch.arange(20, dtype=torch.float32).reshape(2, 5, 2)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       tensor=tensor)
+
+        permuted_node = tk.permute_(node, (0, 2, 1))
+
+        assert permuted_node.shape == (2, 2, 5)
+        assert torch.equal(permuted_node.tensor, tensor.permute(0, 2, 1))
+        assert node.network is None
 
     def test_permute_node(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -159,7 +193,7 @@ class TestPermute:
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
 
-class TestTensorOps:
+class TestTensorOps:  # MARK: TestTensorOps
 
     @pytest.fixture
     def setup(self):
@@ -172,6 +206,82 @@ class TestTensorOps:
                         name='node2',
                         init_method='randn')
         return node1, node2
+
+    def test_top_level_tensor_ops(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(6, 12, dtype=torch.float32).reshape(2, 3)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        assert torch.equal(tk.mul(node1, node2).tensor, tensor1 * tensor2)
+        assert torch.equal(tk.div(node1, node2).tensor, tensor1 / tensor2)
+        assert torch.equal(tk.add(node1, node2).tensor, tensor1 + tensor2)
+        assert torch.equal(tk.sub(node1, node2).tensor, tensor1 - tensor2)
+
+    def test_top_level_tprod(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(20, dtype=torch.float32).reshape(4, 5)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('up', 'down'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        result = tk.tprod(node1, node2)
+
+        assert result.shape == (2, 3, 4, 5)
+        assert torch.equal(result.tensor,
+                           torch.outer(tensor1.flatten(),
+                                       tensor2.flatten()).reshape(2, 3, 4, 5))
+
+    def test_node_method_tensor_ops(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(6, 12, dtype=torch.float32).reshape(2, 3)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        assert torch.equal(node1.mul(node2).tensor, tensor1 * tensor2)
+        assert torch.equal(node1.div(node2).tensor, tensor1 / tensor2)
+        assert torch.equal(node1.add(node2).tensor, tensor1 + tensor2)
+        assert torch.equal(node1.sub(node2).tensor, tensor1 - tensor2)
+
+    def test_node_method_tprod(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(6, dtype=torch.float32).reshape(2, 3)
+        tensor2 = torch.arange(20, dtype=torch.float32).reshape(4, 5)
+        node1 = tk.Node(axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('up', 'down'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        result = node1.tprod(node2)
+
+        assert result.shape == (2, 3, 4, 5)
+        assert torch.equal(result.tensor,
+                           torch.outer(tensor1.flatten(),
+                                       tensor2.flatten()).reshape(2, 3, 4, 5))
 
     def test_tprod(self, setup):
         node1, node2 = setup
@@ -950,7 +1060,30 @@ class TestTensorOps:
         node2 = tk.conj(node1)
 
 
-class TestSplitSVD:
+def _split_rank_high_rank_tensor():
+    return torch.eye(10, 15).expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
+
+
+def _split_rank_low_rank_tensor():
+    tensor = torch.zeros(10, 15)
+    tensor[0, 0] = 1.
+    return tensor.expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
+
+
+def _split_cutoff_high_rank_tensor():
+    tensor = torch.zeros(10, 15)
+    tensor[:10, :10] = torch.diag(
+        torch.tensor([1., .9, .8, .7, .6, .5, .4, .3, .2, .1]))
+    return tensor.expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
+
+
+def _split_cutoff_low_rank_tensor():
+    tensor = torch.zeros(10, 15)
+    tensor[:5, :5] = torch.diag(torch.tensor([1., .8, .6, .4, .2]))
+    return tensor.expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
+
+
+class TestSplitSVD:  # MARK: TestSplitSVD
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -996,6 +1129,8 @@ class TestSplitSVD:
                                            tuple(['input_1', 'right']),
                                            'svd',
                                            'left',
+                                           None,
+                                           None,
                                            None,
                                            None,
                                            None)].child == [new_node1, new_node2]
@@ -1047,204 +1182,70 @@ class TestSplitSVD:
         assert new_node2.axes_names == [
             'batch1', 'split', 'right', 'batch2', 'input']
 
-    def test_split_contracted_node_rank(self):
+    @pytest.mark.parametrize('node_cls', [tk.Node, tk.ParamNode],
+                             ids=['node', 'paramnode'])
+    @pytest.mark.parametrize(
+        'kwargs, expected_rank, low_rank_tensor_fn, low_rank_expected_rank',
+        [
+            ({'rank': 7}, 7, None, 7),
+            ({'cutoff': 0.4}, 6, _split_cutoff_low_rank_tensor, 3),
+            ({'atol': 1.0}, 9, _split_rank_low_rank_tensor, 1),
+            ({'rtol': 0.2}, 8, _split_rank_low_rank_tensor, 1),
+            ({'cum_percentage': 0.9}, 9, _split_rank_low_rank_tensor, 1),
+        ],
+        ids=['rank', 'cutoff', 'atol', 'rtol', 'cum_percentage'],
+    )
+    def test_split_contracted_node_truncation_criterion(self,
+                                                        node_cls,
+                                                        kwargs,
+                                                        expected_rank,
+                                                        low_rank_tensor_fn,
+                                                        low_rank_expected_rank):
         net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(10, 2, 5, 4),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node1',
-                        init_method='randn',
-                        network=net)
-        node2 = tk.Node(shape=(10, 4, 5, 3),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node2',
-                        init_method='randn',
-                        network=net)
+        node1 = node_cls(shape=(10, 2, 5, 4),
+                         axes_names=('batch', 'left', 'input', 'right'),
+                         name='node1',
+                         init_method='randn',
+                         network=net)
+        node2 = node_cls(shape=(10, 4, 5, 3),
+                         axes_names=('batch', 'left', 'input', 'right'),
+                         name='node2',
+                         init_method='randn',
+                         network=net)
         edge = node1[3] ^ node2[1]
         result = node1 @ node2
 
-        # Split result
+        if 'cutoff' in kwargs:
+            result._unrestricted_set_tensor(_split_cutoff_high_rank_tensor())
+        elif any(key in kwargs for key in ('atol', 'rtol', 'cum_percentage')):
+            result._unrestricted_set_tensor(_split_rank_high_rank_tensor())
+
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            rank=7)
+                                            **kwargs)
 
-        assert new_node1.shape == (10, 2, 5, 7)
+        assert new_node1.shape == (10, 2, 5, expected_rank)
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 7
+        assert new_node1['split'].size() == expected_rank
 
-        assert new_node2.shape == (10, 7, 5, 3)
+        assert new_node2.shape == (10, expected_rank, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 7
+        assert new_node2['split'].size() == expected_rank
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
-        # Repeat operation
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=7)
-
-        assert new_node1.shape == (10, 2, 5, 7)
-        assert new_node2.shape == (10, 7, 5, 3)
-
-    def test_split_contracted_node_cum_percentage(self):
-        net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(10, 2, 5, 4),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node1',
-                        init_method='randn',
-                        network=net)
-        node2 = tk.Node(shape=(10, 4, 5, 3),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node2',
-                        init_method='randn',
-                        network=net)
-        edge = node1[3] ^ node2[1]
-        result = node1 @ node2
-
-        high_rank_tensor = torch.eye(10, 15).expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(high_rank_tensor)
-
-        # Split result
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            cum_percentage=0.9)
-
-        assert new_node1.shape == (10, 2, 5, 9)
-        assert new_node1['batch'].size() == 10
-        assert new_node1['left'].size() == 2
-        assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 9
-
-        assert new_node2.shape == (10, 9, 5, 3)
-        assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 9
-        assert new_node2['input'].size() == 5
-        assert new_node2['right'].size() == 3
-
-        # Repeat operation with low rank tensor
-        low_rank_tensor = torch.zeros(10, 15)
-        low_rank_tensor[0, 0] = 1.
-        low_rank_tensor = low_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(low_rank_tensor)
+        if low_rank_tensor_fn is not None:
+            result._unrestricted_set_tensor(low_rank_tensor_fn())
 
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            cum_percentage=0.9)
+                                            **kwargs)
 
-        # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the split edge changes with it
-        assert new_node1.shape == (10, 2, 5, 1)
-        assert new_node2.shape == (10, 1, 5, 3)
+        assert new_node1.shape == (10, 2, 5, low_rank_expected_rank)
+        assert new_node2.shape == (10, low_rank_expected_rank, 5, 3)
 
-    def test_split_contracted_node_paramnode_cum_percentage(self):
-        net = tk.TensorNetwork()
-        node1 = tk.ParamNode(shape=(10, 2, 5, 4),
-                             axes_names=('batch', 'left', 'input', 'right'),
-                             name='node1',
-                             init_method='randn',
-                             network=net)
-        node2 = tk.ParamNode(shape=(10, 4, 5, 3),
-                             axes_names=('batch', 'left', 'input', 'right'),
-                             name='node2',
-                             init_method='randn',
-                             network=net)
-        edge = node1[3] ^ node2[1]
-        result = node1 @ node2
-
-        high_rank_tensor = torch.eye(10, 15).expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(high_rank_tensor)
-
-        # Split result
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            cum_percentage=0.9)
-
-        assert new_node1.shape == (10, 2, 5, 9)
-        assert new_node1['batch'].size() == 10
-        assert new_node1['left'].size() == 2
-        assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 9
-
-        assert new_node2.shape == (10, 9, 5, 3)
-        assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 9
-        assert new_node2['input'].size() == 5
-        assert new_node2['right'].size() == 3
-
-        # Repeat operation with low rank tensor
-        low_rank_tensor = torch.zeros(10, 15)
-        low_rank_tensor[0, 0] = 1.
-        low_rank_tensor = low_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(low_rank_tensor)
-
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            cum_percentage=0.9)
-
-        # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the split edge changes with it
-        assert new_node1.shape == (10, 2, 5, 1)
-        assert new_node2.shape == (10, 1, 5, 3)
-
-    def test_split_contracted_node_cutoff(self):
-        net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(10, 2, 5, 4),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node1',
-                        init_method='randn',
-                        network=net)
-        node2 = tk.Node(shape=(10, 4, 5, 3),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node2',
-                        init_method='randn',
-                        network=net)
-        edge = node1[3] ^ node2[1]
-        result = node1 @ node2
-
-        high_rank_tensor = torch.zeros(10, 15)
-        high_rank_tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
-        high_rank_tensor = high_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(high_rank_tensor)
-
-        # Split result
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            cutoff=0.5)
-
-        assert new_node1.shape == (10, 2, 5, 6)
-        assert new_node1['batch'].size() == 10
-        assert new_node1['left'].size() == 2
-        assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 6
-
-        assert new_node2.shape == (10, 6, 5, 3)
-        assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 6
-        assert new_node2['input'].size() == 5
-        assert new_node2['right'].size() == 3
-
-        # Repeat operation with low rank tensor
-        low_rank_tensor = torch.zeros(10, 15)
-        low_rank_tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
-        low_rank_tensor = low_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(low_rank_tensor)
-
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            cutoff=0.5)
-
-        # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the split edge changes with it
-        assert new_node1.shape == (10, 2, 5, 3)
-        assert new_node2.shape == (10, 3, 5, 3)
-        
     def test_split_contracted_node_rank_cum_percentage_cutoff(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(10, 2, 5, 4),
@@ -1261,7 +1262,8 @@ class TestSplitSVD:
         result = node1 @ node2
 
         tensor = torch.zeros(10, 15)
-        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor[:10, :10] = torch.diag(
+            torch.tensor([1., .9, .8, .7, .6, .5, .4, .3, .2, .1]))
         tensor = tensor.expand(
             10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(tensor)
@@ -1270,33 +1272,33 @@ class TestSplitSVD:
         # If several options are specified, the rank will be the one that
         # fulfills all of them, that is, the minimum rank
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=5, # rank = 5
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.5) # rank = 6
+                                        node2_axes=['input_1', 'right'],
+                                        rank=5, # rank = 5
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
 
         assert new_node1.shape == (10, 2, 5, 5)
         assert new_node2.shape == (10, 5, 5, 3)
 
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.5) # rank = 6
+                                        node2_axes=['input_1', 'right'],
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
         
         assert new_node1.shape == (10, 2, 5, 6)
         assert new_node2.shape == (10, 6, 5, 3)
         
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.1) # rank = 10
-        
-        assert new_node1.shape == (10, 2, 5, 8)
-        assert new_node2.shape == (10, 8, 5, 3)
+                                        node2_axes=['input_1', 'right'],
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.1) # rank = 9
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
     
     def test_split_contracted_complex_node(self):
         net = tk.TensorNetwork()
@@ -1344,6 +1346,8 @@ class TestSplitSVD:
                                            tuple(['input_1', 'right']),
                                            'svd',
                                            'left',
+                                           None,
+                                           None,
                                            None,
                                            None,
                                            None)].child == [new_node1, new_node2]
@@ -1549,7 +1553,7 @@ class TestSplitSVD:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSplitSVDR:
+class TestSplitSVDR:  # MARK: TestSplitSVDR
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -1596,6 +1600,8 @@ class TestSplitSVDR:
                                            tuple(['input_1', 'right']),
                                            'svdr',
                                            'left',
+                                           None,
+                                           None,
                                            None,
                                            None,
                                            None)].child == [new_node1, new_node2]
@@ -1649,101 +1655,71 @@ class TestSplitSVDR:
         assert new_node2.axes_names == [
             'batch1', 'split', 'right', 'batch2', 'input']
 
-    def test_split_contracted_node_rank(self):
+    @pytest.mark.parametrize('node_cls', [tk.Node, tk.ParamNode],
+                             ids=['node', 'paramnode'])
+    @pytest.mark.parametrize(
+        'kwargs, expected_rank, low_rank_tensor_fn, low_rank_expected_rank',
+        [
+            ({'rank': 7}, 7, None, 7),
+            ({'cutoff': 0.4}, 6, _split_cutoff_low_rank_tensor, 3),
+            ({'atol': 1.0}, 9, _split_rank_low_rank_tensor, 1),
+            ({'rtol': 0.2}, 8, _split_rank_low_rank_tensor, 1),
+            ({'cum_percentage': 0.9}, 9, _split_rank_low_rank_tensor, 1),
+        ],
+        ids=['rank', 'cutoff', 'atol', 'rtol', 'cum_percentage'],
+    )
+    def test_split_contracted_node_truncation_criterion(self,
+                                                        node_cls,
+                                                        kwargs,
+                                                        expected_rank,
+                                                        low_rank_tensor_fn,
+                                                        low_rank_expected_rank):
         net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(10, 2, 5, 4),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node1',
-                        init_method='randn',
-                        network=net)
-        node2 = tk.Node(shape=(10, 4, 5, 3),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node2',
-                        init_method='randn',
-                        network=net)
+        node1 = node_cls(shape=(10, 2, 5, 4),
+                         axes_names=('batch', 'left', 'input', 'right'),
+                         name='node1',
+                         init_method='randn',
+                         network=net)
+        node2 = node_cls(shape=(10, 4, 5, 3),
+                         axes_names=('batch', 'left', 'input', 'right'),
+                         name='node2',
+                         init_method='randn',
+                         network=net)
         edge = node1[3] ^ node2[1]
         result = node1 @ node2
 
-        # Split result
+        if 'cutoff' in kwargs:
+            result._unrestricted_set_tensor(_split_cutoff_high_rank_tensor())
+        elif any(key in kwargs for key in ('atol', 'rtol', 'cum_percentage')):
+            result._unrestricted_set_tensor(_split_rank_high_rank_tensor())
+
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
                                             mode='svdr',
-                                            rank=7)
+                                            **kwargs)
 
-        assert new_node1.shape == (10, 2, 5, 7)
+        assert new_node1.shape == (10, 2, 5, expected_rank)
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 7
+        assert new_node1['split'].size() == expected_rank
 
-        assert new_node2.shape == (10, 7, 5, 3)
+        assert new_node2.shape == (10, expected_rank, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 7
+        assert new_node2['split'].size() == expected_rank
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
-        # Repeat operation
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=7)
-
-        assert new_node1.shape == (10, 2, 5, 7)
-        assert new_node2.shape == (10, 7, 5, 3)
-
-    def test_split_contracted_node_cum_percentage(self):
-        net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(10, 2, 5, 4),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node1',
-                        init_method='randn',
-                        network=net)
-        node2 = tk.Node(shape=(10, 4, 5, 3),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node2',
-                        init_method='randn',
-                        network=net)
-        edge = node1[3] ^ node2[1]
-        result = node1 @ node2
-
-        high_rank_tensor = torch.eye(10, 15).expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(high_rank_tensor)
-
-        # Split result
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            cum_percentage=0.9)
-
-        assert new_node1.shape == (10, 2, 5, 9)
-        assert new_node1['batch'].size() == 10
-        assert new_node1['left'].size() == 2
-        assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 9
-
-        assert new_node2.shape == (10, 9, 5, 3)
-        assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 9
-        assert new_node2['input'].size() == 5
-        assert new_node2['right'].size() == 3
-
-        # Repeat operation with low rank tensor
-        low_rank_tensor = torch.zeros(10, 15)
-        low_rank_tensor[0, 0] = 1.
-        low_rank_tensor = low_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(low_rank_tensor)
+        if low_rank_tensor_fn is not None:
+            result._unrestricted_set_tensor(low_rank_tensor_fn())
 
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
                                             mode='svdr',
-                                            cum_percentage=0.9)
+                                            **kwargs)
 
-        # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the split edge changes with it
-        assert new_node1.shape == (10, 2, 5, 1)
-        assert new_node2.shape == (10, 1, 5, 3)
+        assert new_node1.shape == (10, 2, 5, low_rank_expected_rank)
+        assert new_node2.shape == (10, low_rank_expected_rank, 5, 3)
 
     def test_split_contracted_node_paramnode_cum_percentage(self):
         net = tk.TensorNetwork()
@@ -1799,62 +1775,6 @@ class TestSplitSVDR:
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
         
-    def test_split_contracted_node_cutoff(self):
-        net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(10, 2, 5, 4),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node1',
-                        init_method='randn',
-                        network=net)
-        node2 = tk.Node(shape=(10, 4, 5, 3),
-                        axes_names=('batch', 'left', 'input', 'right'),
-                        name='node2',
-                        init_method='randn',
-                        network=net)
-        edge = node1[3] ^ node2[1]
-        result = node1 @ node2
-
-        high_rank_tensor = torch.zeros(10, 15)
-        high_rank_tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
-        high_rank_tensor = high_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(high_rank_tensor)
-
-        # Split result
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            cutoff=0.5)
-
-        assert new_node1.shape == (10, 2, 5, 6)
-        assert new_node1['batch'].size() == 10
-        assert new_node1['left'].size() == 2
-        assert new_node1['input'].size() == 5
-        assert new_node1['split'].size() == 6
-
-        assert new_node2.shape == (10, 6, 5, 3)
-        assert new_node2['batch'].size() == 10
-        assert new_node2['split'].size() == 6
-        assert new_node2['input'].size() == 5
-        assert new_node2['right'].size() == 3
-
-        # Repeat operation with low rank tensor
-        low_rank_tensor = torch.zeros(10, 15)
-        low_rank_tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
-        low_rank_tensor = low_rank_tensor.expand(
-            10, 10, 15).reshape(10, 2, 5, 5, 3)
-        result._unrestricted_set_tensor(low_rank_tensor)
-
-        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
-                                            node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            cutoff=0.5)
-
-        # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the split edge changes with it
-        assert new_node1.shape == (10, 2, 5, 3)
-        assert new_node2.shape == (10, 3, 5, 3)
-        
     def test_split_contracted_node_rank_cum_percentage_cutoff(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(10, 2, 5, 4),
@@ -1871,7 +1791,8 @@ class TestSplitSVDR:
         result = node1 @ node2
 
         tensor = torch.zeros(10, 15)
-        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor[:10, :10] = torch.diag(
+            torch.tensor([1., .9, .8, .7, .6, .5, .4, .3, .2, .1]))
         tensor = tensor.expand(
             10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(tensor)
@@ -1881,10 +1802,10 @@ class TestSplitSVDR:
         # fulfills all of them, that is, the minimum rank
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=5, # rank = 5
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.5) # rank = 6
+                                        mode='svdr',
+                                        rank=5, # rank = 5
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
 
         assert new_node1.shape == (10, 2, 5, 5)
         assert new_node2.shape == (10, 5, 5, 3)
@@ -1892,10 +1813,10 @@ class TestSplitSVDR:
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.5) # rank = 6
+                                        mode='svdr',
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.4) # rank = 6
         
         assert new_node1.shape == (10, 2, 5, 6)
         assert new_node2.shape == (10, 6, 5, 3)
@@ -1903,13 +1824,13 @@ class TestSplitSVDR:
         # Repeat operation changing restrictions
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
                                             node2_axes=['input_1', 'right'],
-                                            mode='svdr',
-                                            rank=10, # rank = 10
-                                            cum_percentage=0.9, # rank = 8
-                                            cutoff=0.1) # rank = 10
-        
-        assert new_node1.shape == (10, 2, 5, 8)
-        assert new_node2.shape == (10, 8, 5, 3)
+                                        mode='svdr',
+                                        rank=10, # rank = 10
+                                        cum_percentage=0.9, # rank = 6
+                                        cutoff=0.1) # rank = 9
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
     
     def test_split_contracted_complex_node(self):
         net = tk.TensorNetwork()
@@ -1958,6 +1879,8 @@ class TestSplitSVDR:
                                            tuple(['input_1', 'right']),
                                            'svdr',
                                            'left',
+                                           None,
+                                           None,
                                            None,
                                            None,
                                            None)].child == [new_node1, new_node2]
@@ -2170,7 +2093,7 @@ class TestSplitSVDR:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSplitQR:
+class TestSplitQR:  # MARK: TestSplitQR
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -2217,6 +2140,8 @@ class TestSplitQR:
                                            tuple(['input_1', 'right']),
                                            'qr',
                                            'left',
+                                           None,
+                                           None,
                                            None,
                                            None,
                                            None)].child == [new_node1, new_node2]
@@ -2475,7 +2400,7 @@ class TestSplitQR:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSplitRQ:
+class TestSplitRQ:  # MARK: TestSplitRQ
 
     def test_split_contracted_node(self):
         net = tk.TensorNetwork()
@@ -2522,6 +2447,8 @@ class TestSplitRQ:
                                            tuple(['input_1', 'right']),
                                            'rq',
                                            'left',
+                                           None,
+                                           None,
                                            None,
                                            None,
                                            None)].child == [new_node1, new_node2]
@@ -2780,7 +2707,7 @@ class TestSplitRQ:
         assert net.edges == [node2['left'], node2['right']]
 
 
-class TestSVD:
+class TestSVD:  # MARK: TestSVD
 
     @pytest.fixture
     def setup(self):
@@ -3129,7 +3056,7 @@ class TestSVD:
             new_node1, new_node2 = node1['right'].svd(rank=2)
 
 
-class TestSVDR:
+class TestSVDR:  # MARK: TestSVDR
 
     @pytest.fixture
     def setup(self):
@@ -3479,7 +3406,7 @@ class TestSVDR:
             new_node1, new_node2 = node1['right'].svdr(rank=2)
 
 
-class TestQR:
+class TestQR:  # MARK: TestQR
 
     @pytest.fixture
     def setup(self):
@@ -3755,7 +3682,7 @@ class TestQR:
             new_node1, new_node2 = node1['right'].qr()
 
 
-class TestRQ:
+class TestRQ:  # MARK: TestRQ
 
     @pytest.fixture
     def setup(self):
@@ -4031,7 +3958,7 @@ class TestRQ:
             new_node1, new_node2 = node1['right'].rq()
 
 
-class TestContractEdge:
+class TestContractEdge:  # MARK: TestContractEdge
     
     def test_contract_edge(self):
         net = tk.TensorNetwork()
@@ -4237,7 +4164,7 @@ class TestContractEdge:
         assert node1.successors == dict()
 
 
-class TestContractBetween:
+class TestContractBetween:  # MARK: TestContractBetween
 
     def test_contract_nodes(self):
         net = tk.TensorNetwork()
@@ -4898,7 +4825,518 @@ class TestContractBetween:
             node2 = node1.contract_between_(node1)
 
 
-class TestStackUnbind:
+class TestMergeSplitEdge:  # MARK: TestMergeSplitEdge
+
+    def test_merge_dangling_edges_and_split_from_node(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        result = node.merge_edges([node['left'], node['right']])
+
+        assert result.shape == (8, 3)
+        assert result.axes_names == ['merged', 'input']
+        assert torch.equal(result.tensor,
+                           tensor.permute(0, 2, 1).reshape(8, 3))
+        assert result['merged'].is_dangling()
+        assert result['input'] == node['input']
+        assert result.is_resultant()
+        assert len(net.resultant_nodes) == 1
+
+        args = (tuple([node['left'], node['right']]),)
+        assert node.successors['merge_edges'][args].child == result
+
+        repeated = node.merge_edges([node['left'], node['right']])
+        assert repeated == result
+
+        split = result.split_edge(result['merged'], (2, 4))
+
+        assert split.shape == (2, 4, 3)
+        assert split.axes_names == ['split_0', 'split_1', 'input']
+        assert torch.equal(split.tensor, result.tensor.reshape(2, 4, 3))
+        assert split['split_0'].is_dangling()
+        assert split['split_1'].is_dangling()
+        assert split['input'] == node['input']
+        assert len(net.resultant_nodes) == 2
+
+        args = (result['merged'], tuple([2, 4]))
+        assert result.successors['split_edge'][args].child == split
+
+        repeated = result.split_edge(result['merged'], (2, 4))
+        assert repeated == split
+
+    def test_merge_connected_edges_with_reversed_orientation(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        tensor2 = torch.arange(40, dtype=torch.float32).reshape(5, 4, 2)
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('other', 'right', 'left'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge_left = node1['left'] ^ node2['left']
+        edge_right = node2['right'] ^ node1['right']
+
+        new_node1, new_node2 = node1.merge_edges([edge_left, edge_right])
+
+        assert new_node1.shape == (8, 3)
+        assert new_node1.axes_names == ['merged', 'input']
+        assert torch.equal(new_node1.tensor,
+                           tensor1.permute(0, 2, 1).reshape(8, 3))
+
+        assert new_node2.shape == (5, 8)
+        assert new_node2.axes_names == ['other', 'merged']
+        assert torch.equal(new_node2.tensor,
+                           tensor2.permute(0, 2, 1).reshape(5, 8))
+
+        assert new_node1['merged'] == new_node2['merged']
+        assert new_node1['input'] == node1['input']
+        assert new_node2['other'] == node2['other']
+        assert len(net.resultant_nodes) == 2
+
+        args = (tuple([edge_left, edge_right]),)
+        assert node1.successors['merge_edges'][args].child == [
+            new_node1, new_node2]
+        assert node2.successors == dict()
+
+        repeated_node1, repeated_node2 = tk.merge_edges([edge_left,
+                                                         edge_right])
+        assert repeated_node1 == new_node1
+        assert repeated_node2 == new_node2
+
+    def test_split_connected_edge_from_edge(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(36, dtype=torch.float32).reshape(2, 6, 3)
+        tensor2 = torch.arange(30, dtype=torch.float32).reshape(6, 5)
+        node1 = tk.Node(axes_names=('left', 'bond', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('bond', 'output'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge = node1['bond'] ^ node2['bond']
+        new_node1, new_node2 = edge.split_edge((2, 3))
+
+        assert new_node1.shape == (2, 2, 3, 3)
+        assert new_node1.axes_names == ['left', 'split_0',
+                                        'split_1', 'right']
+        assert torch.equal(new_node1.tensor, tensor1.reshape(2, 2, 3, 3))
+
+        assert new_node2.shape == (2, 3, 5)
+        assert new_node2.axes_names == ['split_0', 'split_1', 'output']
+        assert torch.equal(new_node2.tensor, tensor2.reshape(2, 3, 5))
+
+        assert new_node1['split_0'] == new_node2['split_0']
+        assert new_node1['split_1'] == new_node2['split_1']
+        assert new_node1['left'] == node1['left']
+        assert new_node1['right'] == node1['right']
+        assert new_node2['output'] == node2['output']
+
+        args = (edge, tuple([2, 3]))
+        assert node1.successors['split_edge'][args].child == [
+            new_node1, new_node2]
+        assert node2.successors == dict()
+
+        repeated_node1, repeated_node2 = edge.split_edge((2, 3))
+        assert repeated_node1 == new_node1
+        assert repeated_node2 == new_node2
+
+    def test_merge_and_split_loop_edges(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(36, dtype=torch.float32).reshape(2, 3, 2, 3)
+        node = tk.Node(axes_names=('left', 'up', 'right', 'down'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        edge1 = node['left'] ^ node['right']
+        edge2 = node['up'] ^ node['down']
+
+        new_node1, new_node2 = node.merge_edges([edge1, edge2])
+
+        assert new_node1 == new_node2
+        assert new_node1.shape == (6, 6)
+        assert new_node1.axes_names == ['merged_0', 'merged_1']
+        assert torch.equal(new_node1.tensor, tensor.reshape(6, 6))
+        assert new_node1[0] == new_node1[1]
+        assert new_node1[0].node1 == new_node1
+        assert new_node1[0].node2 == new_node1
+        assert len(net.resultant_nodes) == 1
+
+        args = (tuple([edge1, edge2]),)
+        assert node.successors['merge_edges'][args].child == new_node1
+
+        repeated_node1, repeated_node2 = tk.merge_edges([edge1, edge2])
+        assert repeated_node1 == new_node1
+        assert repeated_node2 == new_node1
+
+        split_node1, split_node2 = new_node1.split_edge(new_node1[0], (2, 3))
+
+        assert split_node1 == split_node2
+        assert split_node1.shape == (2, 3, 2, 3)
+        assert split_node1.axes_names == ['split_0', 'split_1',
+                                          'split_2', 'split_3']
+        assert torch.equal(split_node1.tensor,
+                           new_node1.tensor.reshape(2, 3, 2, 3))
+        assert split_node1[0] == split_node1[2]
+        assert split_node1[1] == split_node1[3]
+        assert len(net.resultant_nodes) == 2
+
+        args = (new_node1[0], tuple([2, 3]))
+        assert new_node1.successors['split_edge'][args].child == split_node1
+
+        repeated_split1, repeated_split2 = tk.split_edge(new_node1[0], (2, 3))
+        assert repeated_split1 == split_node1
+        assert repeated_split2 == split_node1
+
+    def test_merge_split_edge_errors(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 4),
+                        axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        node3 = tk.Node(shape=(5,),
+                        axes_names=('other',),
+                        name='node3',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node2['left']
+
+        with pytest.raises(ValueError):
+            tk.merge_edges([node1['left'], edge])
+
+        with pytest.raises(ValueError):
+            tk.split_edge(edge, (2, 2))
+
+        with pytest.raises(ValueError):
+            node1.merge_edges([node3['other']])
+
+        with pytest.raises(ValueError):
+            node1.split_edge(node3['other'], (5,))
+
+    def test_merge_edges_trace_replay(self):
+        class Net(tk.TensorNetwork):
+
+            def __init__(self):
+                super().__init__()
+                self.node1 = tk.Node(shape=(2, 3, 7),
+                                     axes_names=('left', 'right', 'input'),
+                                     name='node1',
+                                     network=self,
+                                     init_method='randn')
+                self.node2 = tk.Node(shape=(2, 3, 5),
+                                     axes_names=('left', 'right', 'output'),
+                                     name='node2',
+                                     network=self,
+                                     init_method='randn')
+                self.edge1 = self.node1['left'] ^ self.node2['left']
+                self.edge2 = self.node1['right'] ^ self.node2['right']
+
+            def contract(self):
+                node1, node2 = self.node1.merge_edges([self.edge1,
+                                                        self.edge2])
+                return node1 @ node2
+
+        net = Net()
+
+        result1 = net()
+        result2 = net()
+
+        assert result1.shape == (7, 5)
+        assert torch.equal(result1, result2)
+        assert len(net.resultant_nodes) == 3
+
+        net.trace()
+        result3 = net()
+
+        assert result3.shape == (7, 5)
+        assert net._traced
+
+    def test_merge_dangling_edges_in_place(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        result = node.merge_edges_([node['left'], node['right']])
+
+        assert result.shape == (8, 3)
+        assert result.axes_names == ['merged', 'input']
+        assert result.name == 'node'
+        assert torch.equal(result.tensor,
+                           tensor.permute(0, 2, 1).reshape(8, 3))
+        assert result.network == net
+        assert node.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+        assert node.successors == dict()
+
+    def test_split_dangling_edge_in_place_from_node(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(8, 3)
+        node = tk.Node(axes_names=('merged', 'input'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        result = node.split_edge_(node['merged'], (2, 4))
+
+        assert result.shape == (2, 4, 3)
+        assert result.axes_names == ['split_0', 'split_1', 'input']
+        assert result.name == 'node'
+        assert torch.equal(result.tensor, tensor.reshape(2, 4, 3))
+        assert result.network == net
+        assert node.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+        assert node.successors == dict()
+
+    def test_top_level_in_place_forms(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        node = tk.Node(axes_names=('left', 'input', 'right'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        merged = tk.merge_edges_([node['left'], node['right']])
+
+        assert merged.shape == (8, 3)
+        assert node.network is None
+
+        split = tk.split_edge_(merged['merged'], (2, 4))
+
+        assert split.shape == (2, 4, 3)
+        assert split.name == 'node'
+        assert merged.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+    def test_merge_connected_edges_in_place(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+        tensor2 = torch.arange(40, dtype=torch.float32).reshape(5, 4, 2)
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('other', 'right', 'left'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge_left = node1['left'] ^ node2['left']
+        edge_right = node2['right'] ^ node1['right']
+
+        new_node1, new_node2 = node1.merge_edges_([edge_left, edge_right])
+
+        assert new_node1.shape == (8, 3)
+        assert new_node2.shape == (5, 8)
+        assert new_node1.name == 'node1'
+        assert new_node2.name == 'node2'
+        assert new_node1['merged'] == new_node2['merged']
+        assert torch.equal(new_node1.tensor,
+                           tensor1.permute(0, 2, 1).reshape(8, 3))
+        assert torch.equal(new_node2.tensor,
+                           tensor2.permute(0, 2, 1).reshape(5, 8))
+        assert node1.network is None
+        assert node2.network is None
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+    def test_split_connected_edge_in_place_from_edge(self):
+        net = tk.TensorNetwork()
+        tensor1 = torch.arange(36, dtype=torch.float32).reshape(2, 6, 3)
+        tensor2 = torch.arange(30, dtype=torch.float32).reshape(6, 5)
+        node1 = tk.Node(axes_names=('left', 'bond', 'right'),
+                        name='node1',
+                        network=net,
+                        tensor=tensor1)
+        node2 = tk.Node(axes_names=('bond', 'output'),
+                        name='node2',
+                        network=net,
+                        tensor=tensor2)
+
+        edge = node1['bond'] ^ node2['bond']
+        new_node1, new_node2 = edge.split_edge_((2, 3))
+
+        assert new_node1.shape == (2, 2, 3, 3)
+        assert new_node2.shape == (2, 3, 5)
+        assert new_node1.name == 'node1'
+        assert new_node2.name == 'node2'
+        assert new_node1['split_0'] == new_node2['split_0']
+        assert new_node1['split_1'] == new_node2['split_1']
+        assert torch.equal(new_node1.tensor, tensor1.reshape(2, 2, 3, 3))
+        assert torch.equal(new_node2.tensor, tensor2.reshape(2, 3, 5))
+        assert node1.network is None
+        assert node2.network is None
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+    def test_merge_and_split_loop_edges_in_place(self):
+        net = tk.TensorNetwork()
+        tensor = torch.arange(36, dtype=torch.float32).reshape(2, 3, 2, 3)
+        node = tk.Node(axes_names=('left', 'up', 'right', 'down'),
+                       name='node',
+                       network=net,
+                       tensor=tensor)
+
+        edge1 = node['left'] ^ node['right']
+        edge2 = node['up'] ^ node['down']
+
+        new_node1, new_node2 = node.merge_edges_([edge1, edge2])
+
+        assert new_node1 == new_node2
+        assert new_node1.shape == (6, 6)
+        assert new_node1.name == 'node'
+        assert new_node1[0] == new_node1[1]
+        assert node.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        merged_tensor = new_node1.tensor
+        split_node1, split_node2 = new_node1.split_edge_(new_node1[0],
+                                                         (2, 3))
+
+        assert split_node1 == split_node2
+        assert split_node1.shape == (2, 3, 2, 3)
+        assert split_node1.name == 'node'
+        assert split_node1[0] == split_node1[2]
+        assert split_node1[1] == split_node1[3]
+        assert torch.equal(split_node1.tensor,
+                           merged_tensor.reshape(2, 3, 2, 3))
+        assert new_node1.network is None
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+
+class TestStackUnbind:  # MARK: TestStackUnbind
+
+    def _assert_stack_info(self, stack, expected_cls, address, node_ref):
+        # Every stack/unbind test checks the same metadata contract.
+        assert isinstance(stack, expected_cls)
+        assert stack.axes_names == ['stack', 'left', 'input', 'right']
+        assert stack._tensor_info['address'] == address
+        assert stack._tensor_info['node_ref'] == node_ref
+
+    def _assert_nodes_match(self, nodes, reference_nodes, address, node_ref,
+                            shapes=None):
+        for i, node in enumerate(nodes):
+            assert torch.equal(node.tensor, reference_nodes[i].tensor)
+            if shapes is not None:
+                assert node.shape == shapes[i]
+            assert node._tensor_info['address'] == address(node)
+            assert node._tensor_info['node_ref'] == node_ref
+
+    def _assert_original_nodes_after_stack(self, nodes, stack, auto_stack,
+                                           shapes=None):
+        # Original nodes either keep their own storage or become views of the
+        # stack depending on auto_stack.
+        for i, node in enumerate(nodes):
+            expected_address = None if auto_stack else node.name
+            expected_ref = stack if auto_stack else None
+            assert node._tensor_info['address'] == expected_address
+            assert node._tensor_info['node_ref'] == expected_ref
+
+            if shapes is not None:
+                assert node.shape == shapes[i]
+                for j in range(node.ndim):
+                    assert shapes[i][j] <= stack.shape[j + 1]
+
+    def _run_stack_roundtrip(self, nodes, initial_stack_cls, auto_stack,
+                             auto_unbind, shapes=None):
+        # Roundtrip stack -> unbind -> stack, optionally checking ragged shapes.
+        def node_name(node):
+            return node.name
+
+        stack = tk.stack(nodes)
+        self._assert_stack_info(stack, initial_stack_cls, stack.name, None)
+        self._assert_original_nodes_after_stack(nodes, stack, auto_stack, shapes)
+
+        unbound = tk.unbind(stack)
+        unbound_address = (lambda _: None) if auto_unbind else node_name
+        unbound_ref = stack if auto_unbind else None
+        self._assert_nodes_match(unbound, nodes, unbound_address, unbound_ref, shapes)
+
+        restack = tk.stack(unbound)
+        restack_address = None if auto_unbind else restack.name
+        restack_ref = stack if auto_unbind else None
+        self._assert_stack_info(restack, tk.StackNode, restack_address, restack_ref)
+        self._assert_nodes_match(unbound, nodes, unbound_address, unbound_ref, shapes)
+
+        if shapes is not None:
+            reunbound = tk.unbind(restack)
+            self._assert_nodes_match(reunbound, nodes, unbound_address, unbound_ref,
+                                     shapes)
+
+    def _run_irregular_roundtrip(self, nodes, shapes, initial_stack_cls,
+                                 auto_stack):
+        # Irregular re-stacking exercises the index mode used when only a subset
+        # of unbound nodes is stacked back together.
+        stack = tk.stack(nodes)
+        self._assert_stack_info(stack, initial_stack_cls, stack.name, None)
+        if auto_stack:
+            for node in nodes:
+                assert node._tensor_info['address'] is None
+                assert node._tensor_info['node_ref'] == stack
+        else:
+            for node in nodes:
+                assert node._tensor_info['address'] == node.name
+                assert node._tensor_info['node_ref'] is None
+
+        unbound = tk.unbind(stack)
+        self._assert_nodes_match(unbound, nodes, lambda _: None, stack, shapes)
+
+        restack = tk.stack(unbound[::2])
+        self._assert_stack_info(restack, tk.StackNode, None, stack)
+        assert restack._tensor_info['index'][0] == slice(0, len(nodes) - 1, 2)
+
+        even_index = list(range(0, len(nodes), 2))
+        reunbound = tk.unbind(restack)
+        self._assert_nodes_match(
+            reunbound,
+            [nodes[i] for i in even_index],
+            lambda _: None,
+            stack,
+            [shapes[i] for i in even_index],
+        )
+
+        all_index = list(range(1, len(nodes), 2)) + even_index
+        restack_all = tk.stack(unbound[1::2] + reunbound)
+        self._assert_stack_info(restack_all, tk.StackNode, None, stack)
+        assert restack_all._tensor_info['index'] == [all_index]
+
+        reunbound_all = tk.unbind(restack_all)
+        self._assert_nodes_match(
+            reunbound_all,
+            [nodes[i] for i in all_index],
+            lambda _: None,
+            stack,
+            [shapes[i] for i in all_index],
+        )
 
     @pytest.fixture
     def setup(self):
@@ -4917,257 +5355,16 @@ class TestStackUnbind:
 
         return net, nodes
 
-    def test_stack_all_leaf_all_non_param_auto_stack(self, setup):
+    @pytest.mark.parametrize('auto_stack,auto_unbind', STACK_AUTO_CASES)
+    def test_stack_all_leaf_all_non_param(self, setup, auto_stack, auto_unbind):
+        # Cover all memory-management combinations for regular non-param stacks.
         net, nodes = setup
 
-        net.auto_stack = True
-        net.auto_unbind = False
+        net.auto_stack = auto_stack
+        net.auto_unbind = auto_unbind
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_non_param(self, setup):
-        net, nodes = setup
-
-        net.auto_stack = False
-        net.auto_unbind = False
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_non_param_auto_stack_auto_unbind(self, setup):
-        net, nodes = setup
-
-        net.auto_stack = True
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_all_leaf_all_non_param_auto_unbind(self, setup):
-        net, nodes = setup
-
-        net.auto_stack = False
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
+        for _ in range(2):
+            self._run_stack_roundtrip(nodes, tk.StackNode, auto_stack, auto_unbind)
 
     @pytest.fixture
     def setup_param(self):
@@ -5186,257 +5383,19 @@ class TestStackUnbind:
 
         return net, nodes
 
-    def test_stack_all_leaf_all_param_auto_stack(self, setup_param):
+    @pytest.mark.parametrize('auto_stack,auto_unbind', STACK_AUTO_CASES)
+    def test_stack_all_leaf_all_param(self, setup_param, auto_stack,
+                                      auto_unbind):
+        # ParamNode stacks share the same invariants, but the initial stack type
+        # changes when auto-stacking is enabled.
         net, nodes = setup_param
 
-        net.auto_stack = True
-        net.auto_unbind = False
+        net.auto_stack = auto_stack
+        net.auto_unbind = auto_unbind
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_param(self, setup_param):
-        net, nodes = setup_param
-
-        net.auto_stack = False
-        net.auto_unbind = False
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_all_leaf_all_param_auto_stack_auto_unbind(self, setup_param):
-        net, nodes = setup_param
-
-        net.auto_stack = True
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_all_leaf_all_param_auto_unbind(self, setup_param):
-        net, nodes = setup_param
-
-        net.auto_stack = False
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for node in nodes:
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
+        initial_cls = tk.ParamStackNode if auto_stack else tk.StackNode
+        for _ in range(2):
+            self._run_stack_roundtrip(nodes, initial_cls, auto_stack, auto_unbind)
 
     @pytest.fixture
     def setup_diff_shapes(self):
@@ -5466,566 +5425,32 @@ class TestStackUnbind:
 
         return net, nodes, shapes
 
-    def test_stack_diff_shapes_all_leaf_all_param_auto_stack(self, setup_diff_shapes):
+    @pytest.mark.parametrize('auto_stack,auto_unbind', STACK_AUTO_CASES)
+    def test_stack_diff_shapes_all_leaf_all_param(self, setup_diff_shapes,
+                                                  auto_stack, auto_unbind):
+        # Verify the same roundtrip when the stacked tensors need shape padding.
         net, nodes, shapes = setup_diff_shapes
 
-        net.auto_stack = True
-        net.auto_unbind = False
+        net.auto_stack = auto_stack
+        net.auto_unbind = auto_unbind
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
+        initial_cls = tk.ParamStackNode if auto_stack else tk.StackNode
+        for _ in range(2):
+            self._run_stack_roundtrip(nodes, initial_cls, auto_stack,
+                                      auto_unbind, shapes)
 
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_diff_shapes_all_leaf_all_param(self, setup_diff_shapes):
+    @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
+    def test_stack_irregular_all_leaf_all_param(self, setup_diff_shapes,
+                                                auto_stack):
+        # Index mode is only meaningful together with auto_unbind.
         net, nodes, shapes = setup_diff_shapes
 
-        net.auto_stack = False
-        net.auto_unbind = False
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] == restack.name
-        assert restack._tensor_info['node_ref'] is None
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-    def test_stack_diff_shapes_all_leaf_all_param_auto_stack_auto_unbind(
-            self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = True
+        net.auto_stack = auto_stack
         net.auto_unbind = True
 
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_diff_shapes_all_leaf_all_param_auto_unbind(
-            self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = False
-        net.auto_unbind = True
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are resultant nodes, so memory is not optimized
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        for i, node in enumerate(nodes):
-            assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] is None
-
-            assert node.shape == shapes[i]
-            for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j + 1]
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound)
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        reunbound = tk.unbind(restack)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_irregular_all_leaf_all_param_auto_stack_auto_unbind(
-            self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = True
-        net.auto_unbind = True
-        # It only has sense to study the index mode case
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-        # Here index is a list of slices, since the re-stack max shape is
-        # smaller than the shape of the original stack
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack all
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        # Re-unbind all
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.ParamStackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-    def test_stack_irregular_all_leaf_all_param_auto_unbind(self, setup_diff_shapes):
-        net, nodes, shapes = setup_diff_shapes
-
-        net.auto_stack = False
-        net.auto_unbind = True
-        # It only has sense to study the index mode case
-
-        # Stack
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        # Unbind
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-
-        # Re-unbind
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Re-stack all
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        # Re-unbind all
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        # Repeat operations
-        stack = tk.stack(nodes)
-        assert isinstance(stack, tk.StackNode)
-        assert stack.axes_names == ['stack', 'left', 'input', 'right']
-        assert stack._tensor_info['address'] == stack.name
-
-        unbound = tk.unbind(stack)
-        for i, node in enumerate(unbound):
-            assert node.shape == shapes[i]
-            assert torch.equal(node.tensor, nodes[i].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack = tk.stack(unbound[::2])
-        assert isinstance(restack, tk.StackNode)
-        assert restack.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack._tensor_info['address'] is None
-        assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
-
-        reunbound = tk.unbind(restack)
-        new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbound):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
-
-        restack_all = tk.stack(unbound[1::2] + reunbound)
-        new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
-        assert isinstance(restack_all, tk.StackNode)
-        assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
-        assert restack_all._tensor_info['address'] is None
-        assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['index'] == [new_index]
-
-        reunbound_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbound_all):
-            assert node.shape == shapes[new_index[i]]
-            assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
-            assert node._tensor_info['address'] is None
-            assert node._tensor_info['node_ref'] == stack
+        initial_cls = tk.ParamStackNode if auto_stack else tk.StackNode
+        for _ in range(2):
+            self._run_irregular_roundtrip(nodes, shapes, initial_cls, auto_stack)
 
     def test_error_stack_stacks(self):
         net = tk.TensorNetwork()
@@ -6461,7 +5886,7 @@ class TestStackUnbind:
             assert aux_node.shape == (25, 35, 2)
 
 
-class TestEinsum:
+class TestEinsum:  # MARK: TestEinsum
 
     @pytest.fixture
     def setup(self):
@@ -6704,7 +6129,7 @@ class TestEinsum:
         assert torch.allclose(node1.tensor, node2.tensor, atol=1e-7, rtol=1e-3)
 
 
-class TestTNModels:
+class TestTNModels:  # MARK: TestTNModels
 
     @pytest.fixture
     def setup_mps(self):
@@ -7292,9 +6717,6 @@ class TestTNModels:
                                         padding=padding,
                                         dilation=dilation)
 
-                # self.nodelayer = NodeLayer(in_channels=in_channels,
-                #                            out_channels=out_channels,
-                #                            kernel_size=kernel_size)
                 self.nodelayer = MPSLayer(in_channels=in_channels,
                                           out_channels=out_channels,
                                           kernel_size=kernel_size)
@@ -7303,8 +6725,8 @@ class TestTNModels:
                 example = torch.zeros(1, in_channels, *example_dims)
                 patches = self.unfold(example).transpose(1, 2)
                 patches = patches.view(
-                    *patches.shape[:-1], self.in_channels, -1)
-                patches = patches.permute(3, 0, 1, 2)
+                     *patches.shape[:-1], self.in_channels, -1)
+                patches = patches.transpose(2, 3)
 
                 self.nodelayer.trace(patches)
 

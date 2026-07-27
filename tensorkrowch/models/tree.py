@@ -43,6 +43,9 @@ class Tree(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+    parameterized : bool, optional
+        Boolean indicating whether Tree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
     
     Examples
     --------
@@ -57,7 +60,8 @@ class Tree(TensorNetwork):
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[Sequence[int]],
-                 n_batches: int = 1) -> None:
+                 n_batches: int = 1,
+                 parameterized: bool = True) -> None:
 
         super().__init__(name='tree')
 
@@ -112,8 +116,11 @@ class Tree(TensorNetwork):
             raise TypeError('`n_batches should be int type')
         self._n_batches = n_batches
 
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
+
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize()
 
     @property
@@ -142,23 +149,24 @@ class Tree(TensorNetwork):
         """Returns number of batch edges of the ``data`` nodes."""
         return self._n_batches
 
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the Tree."""
         if self._leaf_nodes:
             raise ValueError('Cannot create Tree nodes if the Tree already has'
                              ' nodes')
 
         self.layers = []
+        node_cls = ParamNode if parameterized else Node
 
         for i, n_sites in enumerate(self.sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self.bond_dim[i],),
-                                 axes_names=(*(['input'] * (
-                                         len(self.bond_dim[i]) - 1)),
-                                             'output'),
-                                 name=f'tree_node_({i},{j})',
-                                 network=self)
+                node = node_cls(shape=(*self.bond_dim[i],),
+                                axes_names=(*(['input'] * (
+                                        len(self.bond_dim[i]) - 1)),
+                                            'output'),
+                                name=f'tree_node_({i},{j})',
+                                network=self)
                 layer_lst.append(node)
 
             if i > 0:
@@ -185,7 +193,7 @@ class Tree(TensorNetwork):
         for layer in self.layers:
             for node in layer:
                 tensor = torch.randn(node.shape) * std
-                tensor[(0,) * node.rank] = 1.
+                tensor[(0,) * node.ndim] = 1.
                 node.tensor = tensor
 
     def set_data_nodes(self) -> None:
@@ -210,7 +218,7 @@ class Tree(TensorNetwork):
             result_lst = []
             i = 0
             for node in layer2:
-                for _ in range(node.rank - 1):
+                for _ in range(node.ndim - 1):
                     node = layer1[i] @ node
                     i += 1
                 result_lst.append(node)
@@ -218,7 +226,7 @@ class Tree(TensorNetwork):
             return result_lst
 
         else:
-            n_input = layer2[0].rank - 1
+            n_input = layer2[0].ndim - 1
             stack2 = op.stack(layer2)
 
             layer1_stacks = []
@@ -268,9 +276,11 @@ class Tree(TensorNetwork):
                             layer2: List[ParamNode],
                             mode: Text = 'svd',
                             rank: Optional[int] = None,
-                            cum_percentage: Optional[float] = None,
-                            cutoff: Optional[float] = None) -> Tuple[List[ParamNode],
-                                                                     List[ParamNode]]:
+                            cutoff: Optional[float] = None,
+                            atol: Optional[float] = None,
+                            rtol: Optional[float] = None,
+                            cum_percentage: Optional[float] = None) -> Tuple[List[ParamNode],
+                                                                             List[ParamNode]]:
         """
         Turns each layer into canonical form, moving singular values matrices
         or non-isometries to the upper layer.
@@ -279,19 +289,23 @@ class Tree(TensorNetwork):
         new_layer2 = []
         i = 0
         for node in layer2:
-            for _ in range(node.rank - 1):
+            for _ in range(node.ndim - 1):
                 if mode == 'svd':
                     result1, node = layer1[i]['output'].svd_(
                         side='right',
                         rank=rank,
-                        cum_percentage=cum_percentage,
-                        cutoff=cutoff)
+                        cutoff=cutoff,
+                        atol=atol,
+                        rtol=rtol,
+                        cum_percentage=cum_percentage)
                 elif mode == 'svdr':
                     result1, node = layer1[i]['output'].svdr_(
                         side='right',
                         rank=rank,
-                        cum_percentage=cum_percentage,
-                        cutoff=cutoff)
+                        cutoff=cutoff,
+                        atol=atol,
+                        rtol=rtol,
+                        cum_percentage=cum_percentage)
                 elif mode == 'qr':
                     result1, node = layer1[i]['output'].qr_()
                 else:
@@ -307,11 +321,17 @@ class Tree(TensorNetwork):
     def canonicalize(self,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
-                     cum_percentage: Optional[float] = None,
-                     cutoff: Optional[float] = None) -> None:
+                     cutoff: Optional[float] = None,
+                     atol: Optional[float] = None,
+                     rtol: Optional[float] = None,
+                     cum_percentage: Optional[float] = None) -> None:
         r"""
         Turns Tree into canonical form via local SVD/QR decompositions, moving
         singular values matrices or non-isometries to the upper layers.
+
+        This method internally calls :meth:`~tensorkrowch.TensorNetwork.reset`
+        when there is more than one layer, as canonicalization may change the
+        form of the tensors.
         
         Parameters
         ----------
@@ -323,13 +343,25 @@ class Tree(TensorNetwork):
             used for nodes at the right.
         rank : int, optional
             Number of singular values to keep.
+        cutoff : float, optional
+            Minimum singular value to keep. It must be non-negative. Singular
+            values ``<= cutoff`` are removed.
+        atol : float, optional
+            Absolute tolerance over the tail sum of squared singular values. Starting
+            from the smallest singular value, values are discarded while the
+            accumulated sum of squares is ``<= atol``. It must be non-negative.
+        rtol : float, optional
+            Relative tolerance over the tail sum of squared singular values. Starting
+            from the smallest singular value, values are discarded while the
+            tail sum of squares divided by the total sum of squares is ``<= rtol``.
+            It must be in ``[0, 1]``.
         cum_percentage : float, optional
-            Proportion that should be satisfied between the sum of all singular
-            values kept and the total sum of all singular values.
-            
+            Minimum fraction of squared singular-value mass to keep. Equivalent to setting
+            ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
             .. math::
-            
-                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
         cutoff : float, optional
             Quantity that lower bounds singular values in order to be kept.
@@ -355,8 +387,10 @@ class Tree(TensorNetwork):
                     layer1, layer2,
                     mode=mode,
                     rank=rank,
-                    cum_percentage=cum_percentage,
-                    cutoff=cutoff)
+                    cutoff=cutoff,
+                    atol=atol,
+                    rtol=rtol,
+                    cum_percentage=cum_percentage)
                 self.layers[i] = layer1
                 self.layers[i + 1] = layer2
 
@@ -397,6 +431,9 @@ class UTree(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+    parameterized : bool, optional
+        Boolean indicating whether UTree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
         
     Examples
     --------
@@ -415,7 +452,8 @@ class UTree(TensorNetwork):
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[int],
-                 n_batches: int = 1) -> None:
+                 n_batches: int = 1,
+                 parameterized: bool = True) -> None:
 
         super().__init__(name='tree')
 
@@ -456,8 +494,11 @@ class UTree(TensorNetwork):
             raise TypeError('`n_batches should be int type')
         self._n_batches = n_batches
 
+        if not isinstance(parameterized, bool):
+            raise TypeError('`parameterized` should be bool type')
+
         # Create Tensor Network
-        self._make_nodes()
+        self._make_nodes(parameterized)
         self.initialize()
 
     @property
@@ -478,22 +519,23 @@ class UTree(TensorNetwork):
         """Returns number of batch edges of the ``data`` nodes."""
         return self._n_batches
 
-    def _make_nodes(self) -> None:
+    def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the Tree."""
         if self._leaf_nodes:
             raise ValueError('Cannot create Tree nodes if the Tree already has'
                              ' nodes')
 
         self.layers = []
+        node_cls = ParamNode if parameterized else Node
 
         for i, n_sites in enumerate(self._sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self.bond_dim,),
-                                 axes_names=(*(['input'] * (len(self.bond_dim) - 1)),
-                                             'output'),
-                                 name=f'tree_node_({i},{j})',
-                                 network=self)
+                node = node_cls(shape=(*self.bond_dim,),
+                                axes_names=(*(['input'] * (len(self.bond_dim) - 1)),
+                                            'output'),
+                                name=f'tree_node_({i},{j})',
+                                network=self)
                 layer_lst.append(node)
 
             if i > 0:
@@ -516,20 +558,20 @@ class UTree(TensorNetwork):
             self.layers.append(layer_lst)
 
         # Virtual node
-        uniform_memory = node = ParamNode(shape=(*self.bond_dim,),
-                                          axes_names=(*(['input'] * (
-                                                  len(self.bond_dim) - 1)),
-                                                      'output'),
-                                          name='virtual_uniform',
-                                          network=self,
-                                          virtual=True)
+        uniform_memory = node = node_cls(shape=(*self.bond_dim,),
+                                         axes_names=(*(['input'] * (
+                                                 len(self.bond_dim) - 1)),
+                                                     'output'),
+                                         name='virtual_uniform',
+                                         network=self,
+                                         virtual=True)
         self.uniform_memory = uniform_memory
 
     def initialize(self, std: float = 1e-9) -> None:
         """Initializes all the nodes."""
         # Virtual node
         tensor = torch.randn(self.uniform_memory._shape) * std
-        tensor[(0,) * len(tensor.shape)] = 1.
+        tensor[(0,) * tensor.ndim] = 1.
         self.uniform_memory.tensor = tensor
 
         for layer in self.layers:
@@ -557,7 +599,7 @@ class UTree(TensorNetwork):
             result_lst = []
             i = 0
             for node in layer2:
-                for _ in range(node.rank - 1):
+                for _ in range(node.ndim - 1):
                     node = layer1[i] @ node
                     i += 1
                 result_lst.append(node)
@@ -565,7 +607,7 @@ class UTree(TensorNetwork):
             return result_lst
 
         else:
-            n_input = layer2[0].rank - 1
+            n_input = layer2[0].ndim - 1
             stack2 = op.stack(layer2)
 
             layer1_stacks = []
@@ -648,6 +690,9 @@ class ConvTree(Tree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    parameterized : bool, optional
+        Boolean indicating whether ConvTree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
         
     Examples
     --------
@@ -666,7 +711,8 @@ class ConvTree(Tree):
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
-                 dilation: int = 1):
+                 dilation: int = 1,
+                 parameterized: bool = True):
 
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -695,7 +741,8 @@ class ConvTree(Tree):
 
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
-                         n_batches=2)
+                         n_batches=2,
+                         parameterized=parameterized)
         self._in_channels = bond_dim[0][0]
 
         self.unfold = nn.Unfold(kernel_size=kernel_size,
@@ -829,6 +876,9 @@ class ConvUTree(UTree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    parameterized : bool, optional
+        Boolean indicating whether ConvUTree nodes should be created as
+        :class:`ParamNode` (``True``) or as :class:`Node` (``False``).
         
     Examples
     --------
@@ -851,7 +901,8 @@ class ConvUTree(UTree):
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
-                 dilation: int = 1):
+                 dilation: int = 1,
+                 parameterized: bool = True):
 
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -880,7 +931,8 @@ class ConvUTree(UTree):
 
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
-                         n_batches=2)
+                         n_batches=2,
+                         parameterized=parameterized)
         self._in_channels = bond_dim[0]
 
         self.unfold = nn.Unfold(kernel_size=kernel_size,

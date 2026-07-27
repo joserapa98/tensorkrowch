@@ -509,7 +509,7 @@ def fourier(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
             
     Examples
     --------
-    >>> a = torch.ones(5)
+    >>> a = torch.rand(5)
     >>> a
     tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])
     

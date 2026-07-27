@@ -203,8 +203,17 @@ Quantum **8**, 1364 (2024), arXiv:2306.08595.
   pages={1364},
   year={2024},
   publisher={Verein zur F{\"o}rderung des Open Access Publizierens in den Quantenwissenschaften},
-  doi = {10.22331/q-2024-06-11-1364},
-  archivePrefix = {arXiv},
-  eprint = {2306.08595}
+  doi={10.22331/q-2024-06-11-1364},
+  archivePrefix={arXiv},
+  eprint={2306.08595}
 }
 ```
+
+
+## Acknowledgments
+
+This work has been financially supported by the Ministry for Digital
+Transformation and of Civil Service of the Spanish Government through the
+QUANTUM ENIA project call – Quantum Spain project, and by the European Union
+through the Recovery, Transformation and Resilience Plan – NextGenerationEU
+within the framework of the Digital Spain 2026 Agenda.

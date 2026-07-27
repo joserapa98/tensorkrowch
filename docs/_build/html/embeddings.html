@@ -4,9 +4,9 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Embeddings &#8212; TensorKrowch 1.1.5 documentation</title>
+    <title>Embeddings &#8212; TensorKrowch 1.1.6 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -482,7 +482,7 @@ will be</p>
     (\cos{\frac{\pi}{2}x_j})^{d-s_j}(\sin{\frac{\pi}{2}x_j})^{s_j-1}\]</div>
 <p>being <span class="math notranslate nohighlight">\(d\)</span> the desired output dimension (<code class="docutils literal notranslate"><span class="pre">dim</span></code>).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
@@ -500,7 +500,7 @@ shape</p>
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -549,7 +549,7 @@ That is, given a vector</p>
                 1 &amp; x_N
           \end{bmatrix}\end{split}\]</div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
@@ -566,7 +566,7 @@ shape</p>
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -616,7 +616,7 @@ shape</p>
 <p>being <span class="math notranslate nohighlight">\(n\)</span> the <code class="docutils literal notranslate"><span class="pre">degree</span></code> of the monomials.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">degree</span> <span class="pre">=</span> <span class="pre">1</span></code>, it is equivalent to <a class="reference internal" href="#tensorkrowch.embeddings.add_ones" title="tensorkrowch.embeddings.add_ones"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_ones()</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
@@ -635,7 +635,7 @@ shape</p>
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -688,7 +688,7 @@ are all between 0 and 1. That is, given a vector</p>
           \end{bmatrix}\end{split}\]</div>
 <p>where <span class="math notranslate nohighlight">\(b\)</span> stands for <code class="docutils literal notranslate"><span class="pre">base</span></code>, and <span class="math notranslate nohighlight">\(l\)</span> for <code class="docutils literal notranslate"><span class="pre">level</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
@@ -709,7 +709,7 @@ shape</p>
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -771,7 +771,7 @@ computational basis. That is, given a vector</p>
               \lvert x_N \rangle
           \end{bmatrix}\end{split}\]</div>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
@@ -791,7 +791,7 @@ shape</p>
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
@@ -856,7 +856,7 @@ That is, given the vector</p>
           \end{bmatrix}\end{split}\]</div>
 <p>where the number of columns is specified by <code class="docutils literal notranslate"><span class="pre">dim</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
@@ -874,7 +874,7 @@ shape</p>
 </p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type</dt>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>

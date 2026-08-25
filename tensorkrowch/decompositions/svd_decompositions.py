@@ -167,17 +167,21 @@ def mat_to_mpo(mat: torch.Tensor,
     decompositions. The resultant tensors can be used to instantiate a
     :class:`~tensorkrowch.models.MPO` with ``boundary = "obc"``.
     
-    The number of resultant tensors and their respective input/output dimensions
-    depend on the shape of the input matrix. That is, if one expects to recover
-    a MPO with input/output dimensions
+    The dimensions of ``mat`` must be interleaved by site, with each input
+    dimension immediately followed by its corresponding output dimension. The
+    number of resultant tensors and their respective input/output dimensions
+    depend on this shape. That is, if one expects to recover a MPO with
+    input/output dimensions
     
     .. math::
     
         in_1 \times out_1 \times \cdots \times in_n \times out_n
     
-    the input matrix will have to be provided with that shape. Thus it must
-    have an even number of dimensions. To accomplish this, it may happen that
-    some input/output dimensions are 1. This can be done with
+    the input matrix must have shape
+    ``(in_1, out_1, ..., in_n, out_n)``. A tensor whose axes are grouped as
+    ``(in_1, ..., in_n, out_1, ..., out_n)`` has to be permuted first. Thus the
+    input must have an even number of dimensions. To accomplish this, it may
+    happen that some input/output dimensions are 1. This can be done with
     `reshape <https://pytorch.org/docs/stable/generated/torch.reshape.html>`_.
     
     To specify the bond dimension of each cut done via SVD, one can use the

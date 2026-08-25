@@ -21,6 +21,8 @@ TRUNCATION_CASES = [
     ({'rank': 3, 'cutoff': 1.0, 'atol': 1.05}, 2),
     ({'rank': 4, 'rtol': 0.03, 'cum_percentage': 0.97}, 2),
 ]
+DEVICE_CASES = ['cpu', 'cuda', 'mps']
+SVD_METHOD_CASES = ['svd', 'qr_svd']
 
 
 def _make_tensor(shape, dtype, scale):
@@ -37,18 +39,55 @@ def _make_tensor(shape, dtype, scale):
     return base.to(dtype)
 
 
-def _contract_mps(mps):
-    result = mps.left_node
-    for node in mps.mats_env + [mps.right_node]:
-        result @= node
-    return result.tensor
+def _device(device_name):
+    if device_name == 'cuda':
+        if not torch.cuda.is_available():
+            pytest.skip('CUDA is not available')
+    elif device_name == 'mps':
+        if not getattr(torch.backends, 'mps', None) or \
+                not torch.backends.mps.is_available():
+            pytest.skip('MPS is not available')
+    return torch.device(device_name)
 
 
-def _contract_mpo(mpo):
-    result = mpo.left_node
-    for node in mpo.mats_env + [mpo.right_node]:
-        result @= node
-    return result.tensor
+def _contract_tt_cores(tensors, n_batches=0):
+    """Contracts TT cores using only batched PyTorch matrix products."""
+    result = tensors[0]
+    if len(tensors) == 1:
+        return result
+
+    for i, tensor in enumerate(tensors[1:], 1):
+        batch_shape = result.shape[:n_batches]
+        prev_phys_dims = result.shape[n_batches:-1]
+        prev_rank = result.shape[-1]
+        result = result.reshape(*batch_shape, -1, prev_rank)
+
+        if i < (len(tensors) - 1):
+            phys_dims = tensor.shape[(n_batches + 1):-1]
+            rank = tensor.shape[-1]
+            tensor = tensor.reshape(*batch_shape, prev_rank, -1)
+            result = (result @ tensor).reshape(
+                *batch_shape, *prev_phys_dims, *phys_dims, rank)
+        else:
+            phys_dims = tensor.shape[(n_batches + 1):]
+            tensor = tensor.reshape(*batch_shape, prev_rank, -1)
+            result = (result @ tensor).reshape(
+                *batch_shape, *prev_phys_dims, *phys_dims)
+
+    return result
+
+
+def _contract_ttm_cores(tensors):
+    """Contracts TTM cores into an interleaved input/output tensor."""
+    if len(tensors) == 1:
+        return tensors[0]
+
+    # Move each right rank behind the physical input/output dimensions.
+    result = tensors[0].permute(0, 2, 1)
+    for tensor in tensors[1:-1]:
+        tensor = tensor.permute(0, 1, 3, 2)
+        result = torch.tensordot(result, tensor, dims=([-1], [0]))
+    return torch.tensordot(result, tensors[-1], dims=([-1], [0]))
 
 
 class TestSVDDecompositions:  # MARK: TestSVDDecompositions
@@ -115,12 +154,7 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
                                                cum_percentage=0.9999,
                                                renormalize=renormalize)
 
-        if n_batches == 0:
-            mps = tk.models.MPS(tensors=tensors)
-        else:
-            mps = tk.models.MPSData(tensors=tensors, n_batches=n_batches)
-
-        approx_vec = _contract_mps(mps)
+        approx_vec = _contract_tt_cores(tensors, n_batches=n_batches)
         diff = vec - approx_vec
         assert diff.norm() < 1e-1
 
@@ -165,6 +199,8 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
 
     @pytest.mark.parametrize('renormalize', [True, False],
                              ids=['renorm', 'no-renorm'])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.complex64],
+                             ids=['float32', 'complex64'])
     @pytest.mark.parametrize(
         'dims',
         [
@@ -174,8 +210,8 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
         ],
         ids=['one-site', 'two-sites', 'three-sites'],
     )
-    def test_mat_to_mpo(self, renormalize, dims):
-        mat = _make_tensor(dims, torch.float32, scale=1e-5)
+    def test_mat_to_mpo(self, renormalize, dtype, dims):
+        mat = _make_tensor(dims, dtype, scale=1e-5)
         tensors = tk.decompositions.mat_to_mpo(mat=mat,
                                                rank=5,
                                                renormalize=renormalize)
@@ -194,6 +230,8 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
 
     @pytest.mark.parametrize('renormalize', [True, False],
                              ids=['renorm', 'no-renorm'])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.complex64],
+                             ids=['float32', 'complex64'])
     @pytest.mark.parametrize(
         'dims',
         [
@@ -202,14 +240,13 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
         ],
         ids=['two-sites', 'three-sites'],
     )
-    def test_mat_to_mpo_accuracy(self, renormalize, dims):
-        mat = _make_tensor(dims, torch.float32, scale=1e-1)
+    def test_mat_to_mpo_accuracy(self, renormalize, dtype, dims):
+        mat = _make_tensor(dims, dtype, scale=1e-1)
         tensors = tk.decompositions.mat_to_mpo(mat=mat,
                                                cum_percentage=0.9999,
                                                renormalize=renormalize)
 
-        mpo = tk.models.MPO(tensors=tensors)
-        approx_mat = _contract_mpo(mpo)
+        approx_mat = _contract_ttm_cores(tensors)
         diff = mat - approx_mat
         assert diff.norm() < 1e-1
 
@@ -240,7 +277,7 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
         assert mpo.in_dim == list(in_dims)
         assert mpo.out_dim == list(out_dims)
 
-        approx_mat = _contract_mpo(mpo)
+        approx_mat = _contract_ttm_cores(tensors)
         inverse_permute = tuple(range(0, 2 * len(in_dims), 2)) + \
             tuple(range(1, 2 * len(in_dims), 2))
         approx_mat = approx_mat.permute(*inverse_permute)
@@ -288,28 +325,150 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
         assert mpo.bond_dim[0] == expected_rank
         assert mpo.bond_dim[1] <= expected_rank
 
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_one_site_dense_oracles(self, svd_method, dtype):
+        vec = _make_tensor((5,), dtype, scale=1e-2)
+        mat = _make_tensor((3, 4), dtype, scale=1e-2)
+
+        with tk.svd_method(svd_method):
+            tt_cores = tk.decompositions.vec_to_mps(vec)
+            ttm_cores = tk.decompositions.mat_to_mpo(mat)
+
+        assert len(tt_cores) == 1
+        assert len(ttm_cores) == 1
+        assert torch.equal(_contract_tt_cores(tt_cores), vec)
+        assert torch.equal(_contract_ttm_cores(ttm_cores), mat)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    @pytest.mark.parametrize('renormalize', [True, False])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('n_batches', [0, 1])
+    def test_vec_to_mps_exact_dense_oracle(self,
+                                           svd_method,
+                                           renormalize,
+                                           dtype,
+                                           n_batches):
+        shape = (2, 3, 4) if n_batches == 0 else (2, 2, 3, 4)
+        vec = _make_tensor(shape, dtype, scale=1e-2)
+
+        with tk.svd_method(svd_method):
+            tensors = tk.decompositions.vec_to_mps(
+                vec=vec,
+                n_batches=n_batches,
+                renormalize=renormalize)
+
+        result = _contract_tt_cores(tensors, n_batches=n_batches)
+        assert torch.allclose(result, vec, rtol=1e-10, atol=1e-12)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    @pytest.mark.parametrize('renormalize', [True, False])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_mat_to_mpo_exact_dense_oracle(self,
+                                           svd_method,
+                                           renormalize,
+                                           dtype):
+        mat = _make_tensor((2, 3, 4, 2, 3, 2), dtype, scale=1e-2)
+
+        with tk.svd_method(svd_method):
+            tensors = tk.decompositions.mat_to_mpo(
+                mat=mat,
+                renormalize=renormalize)
+
+        result = _contract_ttm_cores(tensors)
+        assert torch.allclose(result, mat, rtol=1e-10, atol=1e-12)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    @pytest.mark.parametrize('device_name', DEVICE_CASES)
+    def test_decompositions_preserve_device(self, svd_method, device_name):
+        device = _device(device_name)
+        vec = torch.randn(2, 3, 4, device=device)
+        mat = torch.randn(2, 3, 4, 5, device=device)
+
+        with tk.svd_method(svd_method):
+            tt_cores = tk.decompositions.vec_to_mps(vec)
+            ttm_cores = tk.decompositions.mat_to_mpo(mat)
+
+        assert all(tensor.device == device for tensor in tt_cores)
+        assert all(tensor.device == device for tensor in ttm_cores)
+        assert torch.allclose(_contract_tt_cores(tt_cores), vec,
+                              rtol=1e-5, atol=1e-6)
+        assert torch.allclose(_contract_ttm_cores(ttm_cores), mat,
+                              rtol=1e-5, atol=1e-6)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    @pytest.mark.parametrize('decomposition', ['tt', 'ttm'])
+    def test_decompositions_gradcheck(self, svd_method, decomposition):
+        generator = torch.Generator().manual_seed(0)
+        if decomposition == 'tt':
+            tensor = torch.randn(2, 3, 4, dtype=torch.float64,
+                                 generator=generator,
+                                 requires_grad=True)
+
+            def reconstruct(value):
+                tensors = tk.decompositions.vec_to_mps(value)
+                return _contract_tt_cores(tensors)
+        else:
+            tensor = torch.randn(2, 3, 2, 3, dtype=torch.float64,
+                                 generator=generator,
+                                 requires_grad=True)
+
+            def reconstruct(value):
+                tensors = tk.decompositions.mat_to_mpo(value)
+                return _contract_ttm_cores(tensors)
+
+        with tk.svd_method(svd_method):
+            assert torch.autograd.gradcheck(
+                reconstruct,
+                (tensor,),
+                eps=1e-6,
+                atol=1e-4,
+                rtol=1e-3)
+
+    @pytest.mark.parametrize(
+        'decomposition, kwargs, error_type, match',
+        [
+            ('tt', {'vec': [1, 2]}, TypeError,
+             '`vec` should be torch.Tensor type'),
+            ('tt', {'vec': torch.ones(2, 3), 'n_batches': 3}, ValueError,
+             '`n_batches` should be between 0 and the rank of `vec`'),
+            ('ttm', {'mat': [1, 2]}, TypeError,
+             '`mat` should be torch.Tensor type'),
+            ('ttm', {'mat': torch.ones(2, 3, 4)}, ValueError,
+             '`mat` have an even number of dimensions'),
+        ],
+    )
+    def test_public_argument_errors(self,
+                                    decomposition,
+                                    kwargs,
+                                    error_type,
+                                    match):
+        function = (tk.decompositions.vec_to_mps
+                    if decomposition == 'tt'
+                    else tk.decompositions.mat_to_mpo)
+        with pytest.raises(error_type, match=match):
+            function(**kwargs)
+
 
 class TestSVDKernelCallers:  # MARK: TestSVDKernelCallers
 
-    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     def test_vec_to_mps_and_mat_to_mpo_backend(self, svd_method):
         generator = torch.Generator().manual_seed(0)
         vec = torch.randn(2, 3, 4, dtype=torch.float64, generator=generator)
         with tk.svd_method(svd_method):
             tensors = tk.decompositions.vec_to_mps(vec=vec)
-        mps = tk.models.MPS(tensors=tensors)
         assert torch.allclose(
-            _contract_mps(mps), vec, rtol=1e-10, atol=1e-12)
+            _contract_tt_cores(tensors), vec, rtol=1e-10, atol=1e-12)
 
         mat = torch.randn(
             2, 3, 4, 5, dtype=torch.float64, generator=generator)
         with tk.svd_method(svd_method):
             tensors = tk.decompositions.mat_to_mpo(mat=mat)
-        mpo = tk.models.MPO(tensors=tensors)
         assert torch.allclose(
-            _contract_mpo(mpo), mat, rtol=1e-10, atol=1e-12)
+            _contract_ttm_cores(tensors), mat, rtol=1e-10, atol=1e-12)
 
-    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     @pytest.mark.parametrize('operation', ['split', 'svd', 'svdr'])
     def test_node_operations_backend(self, operation, svd_method):
         generator = torch.Generator().manual_seed(1)
@@ -352,7 +511,7 @@ class TestSVDKernelCallers:  # MARK: TestSVDKernelCallers
             rtol=1e-10,
             atol=1e-12)
 
-    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     def test_tt_rss_trimming_backend(self, svd_method):
         domain = torch.tensor([0.0, 1.0])
         sketch_samples = torch.cartesian_prod(domain, domain, domain)

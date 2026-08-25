@@ -1,5 +1,7 @@
 """Tests for structured decomposition metrics."""
 
+import math
+
 import pytest
 
 import torch
@@ -38,6 +40,46 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
 
         assert record.selected_rank == 3
         assert record.discarded_squared_norm_per_batch.device.type == 'cpu'
+
+    def test_truncation_record_from_svd_info(self):
+        tensor = torch.stack([
+            torch.diag(torch.tensor([4.0, 3.0])),
+            torch.diag(torch.tensor([2.0, 1.0])),
+        ])
+        *_, info = tk.utils.truncated_svd(
+            tensor, rank=1, return_info=True)
+
+        record = tk.decompositions.TruncationRecord.from_svd_info(
+            info,
+            site=2,
+            log_scale_per_batch=torch.tensor([0.0, math.log(2.0)]),
+            global_input_norm=10.0,
+            global_input_norm_per_batch=torch.tensor([5.0, 4.0]))
+
+        # Discarded energies are 3**2 and (2 * 1)**2 after rescaling.
+        assert record.discarded_squared_norm == pytest.approx(13.0)
+        assert record.local_absolute_error == pytest.approx(math.sqrt(13.0))
+        assert record.input_norm == pytest.approx(math.sqrt(45.0))
+        assert record.local_relative_error == pytest.approx(
+            math.sqrt(13.0 / 45.0))
+        assert record.global_relative_contribution == pytest.approx(
+            math.sqrt(13.0) / 10.0)
+        assert torch.allclose(record.local_absolute_error_per_batch,
+                              torch.tensor([3.0, 2.0]))
+        assert torch.allclose(
+            record.global_relative_contribution_per_batch,
+            torch.tensor([0.6, 0.5]))
+
+    def test_truncation_record_zero_norm_policy(self):
+        *_, info = tk.utils.truncated_svd(
+            torch.zeros(3, 3), rank=1, return_info=True)
+
+        record = tk.decompositions.TruncationRecord.from_svd_info(
+            info, site=0, global_input_norm=0.0)
+
+        assert record.local_absolute_error == 0.0
+        assert record.local_relative_error == 0.0
+        assert record.global_relative_contribution == 0.0
 
     def test_timing_record_children(self):
         child = tk.decompositions.TimingRecord(name='svd', elapsed=0.1)

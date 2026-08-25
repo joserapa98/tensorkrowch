@@ -28,6 +28,20 @@ def _optional_cpu_tensor(value: Optional[torch.Tensor],
     return value.detach().cpu()
 
 
+def _zero_safe_ratio(numerator: torch.Tensor,
+                     denominator: torch.Tensor) -> torch.Tensor:
+    """Divides non-negative errors with an explicit zero-denominator policy."""
+    positive = denominator > 0
+    safe_denominator = torch.where(
+        positive, denominator, torch.ones_like(denominator))
+    ratio = numerator / safe_denominator
+    zero_ratio = torch.where(
+        numerator == 0,
+        torch.zeros_like(numerator),
+        torch.full_like(numerator, torch.inf))
+    return torch.where(positive, ratio, zero_ratio)
+
+
 def _record_as_dict(record: Any) -> Dict[str, Any]:
     """Returns dataclass fields without deep-copying diagnostic tensors."""
     result = {}
@@ -116,6 +130,120 @@ class TruncationRecord:
     global_relative_contribution_per_batch: Optional[torch.Tensor] = None
     log_scale_per_batch: Optional[torch.Tensor] = None
     singular_values: Optional[torch.Tensor] = None
+
+    @classmethod
+    def from_svd_info(cls,
+                      info: Any,
+                      site: int,
+                      log_scale: Optional[float] = None,
+                      log_scale_per_batch: Optional[torch.Tensor] = None,
+                      global_input_norm: Optional[float] = None,
+                      global_input_norm_per_batch: Optional[
+                          torch.Tensor] = None,
+                      singular_values: Optional[torch.Tensor] = None
+                      ) -> 'TruncationRecord':
+        """Builds a high-level record from ``_TruncatedSVDInfo``."""
+        if (log_scale is not None) and (log_scale_per_batch is not None):
+            raise ValueError(
+                'Only one of `log_scale` and `log_scale_per_batch` may be set')
+
+        total_per_batch = info.total_squared_norm_per_batch
+        discarded_per_batch = info.discarded_squared_norm_per_batch
+        if log_scale_per_batch is not None:
+            if not isinstance(log_scale_per_batch, torch.Tensor):
+                raise TypeError(
+                    '`log_scale_per_batch` should be torch.Tensor type')
+            log_scale_per_batch = log_scale_per_batch.to(
+                device=total_per_batch.device,
+                dtype=total_per_batch.dtype)
+            if log_scale_per_batch.shape != total_per_batch.shape:
+                raise ValueError(
+                    '`log_scale_per_batch` should match the SVD batch shape')
+            if not torch.isfinite(log_scale_per_batch).all():
+                raise ValueError('`log_scale_per_batch` should be finite')
+            scale = log_scale_per_batch.exp()
+        elif log_scale is not None:
+            log_scale = _scalar_float(log_scale, 'log_scale')
+            if not isfinite(log_scale):
+                raise ValueError('`log_scale` should be finite')
+            scale = total_per_batch.new_tensor(log_scale).exp()
+        else:
+            scale = torch.ones_like(total_per_batch)
+        if not torch.isfinite(scale).all():
+            raise ValueError('The truncation scale should be finite')
+
+        total_per_batch = total_per_batch * scale.square()
+        discarded_per_batch = discarded_per_batch * scale.square()
+        if singular_values is not None:
+            if not isinstance(singular_values, torch.Tensor):
+                raise TypeError('`singular_values` should be torch.Tensor type')
+            if singular_values.shape[:-1] != total_per_batch.shape:
+                raise ValueError(
+                    '`singular_values` should match the SVD batch shape')
+            singular_values = singular_values.to(
+                device=total_per_batch.device,
+                dtype=total_per_batch.dtype)
+            singular_values = singular_values * scale.unsqueeze(-1)
+        input_norm_per_batch = total_per_batch.sqrt()
+        absolute_per_batch = discarded_per_batch.sqrt()
+        relative_per_batch = _zero_safe_ratio(
+            absolute_per_batch, input_norm_per_batch)
+
+        input_norm = input_norm_per_batch.square().sum().sqrt()
+        absolute = absolute_per_batch.square().sum().sqrt()
+        relative = _zero_safe_ratio(absolute, input_norm)
+
+        global_contribution = None
+        global_contribution_per_batch = None
+        if global_input_norm is not None:
+            global_input_norm = _scalar_float(
+                global_input_norm, 'global_input_norm')
+            if global_input_norm < 0:
+                raise ValueError('`global_input_norm` should be non-negative')
+            global_norm = total_per_batch.new_tensor(global_input_norm)
+            global_contribution = _zero_safe_ratio(absolute, global_norm)
+        if global_input_norm_per_batch is not None:
+            if not isinstance(global_input_norm_per_batch, torch.Tensor):
+                raise TypeError(
+                    '`global_input_norm_per_batch` should be torch.Tensor type')
+            global_norms = global_input_norm_per_batch.to(
+                device=total_per_batch.device,
+                dtype=total_per_batch.dtype)
+            if global_norms.shape != total_per_batch.shape:
+                raise ValueError(
+                    '`global_input_norm_per_batch` should match the SVD batch '
+                    'shape')
+            if torch.any(global_norms < 0):
+                raise ValueError(
+                    '`global_input_norm_per_batch` should be non-negative')
+            global_contribution_per_batch = _zero_safe_ratio(
+                absolute_per_batch, global_norms)
+
+        has_batches = total_per_batch.ndim > 0
+        return cls(
+            site=site,
+            full_rank=info.full_rank,
+            selected_rank=info.selected_rank,
+            discarded_squared_norm=discarded_per_batch.sum(),
+            local_absolute_error=absolute,
+            input_norm=input_norm,
+            local_relative_error=relative,
+            global_relative_contribution=global_contribution,
+            log_scale=log_scale,
+            svd_method=info.svd_method,
+            discarded_squared_norm_per_batch=(
+                discarded_per_batch if has_batches else None),
+            local_absolute_error_per_batch=(
+                absolute_per_batch if has_batches else None),
+            input_norm_per_batch=(
+                input_norm_per_batch if has_batches else None),
+            local_relative_error_per_batch=(
+                relative_per_batch if has_batches else None),
+            global_relative_contribution_per_batch=(
+                global_contribution_per_batch if has_batches else None),
+            log_scale_per_batch=(
+                log_scale_per_batch if has_batches else None),
+            singular_values=singular_values)
 
     def __post_init__(self) -> None:
         for name in ('site', 'full_rank', 'selected_rank'):

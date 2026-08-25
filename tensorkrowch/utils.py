@@ -18,7 +18,7 @@ This script contains:
     * truncated_svd
 """
 
-from typing import Optional, Tuple, List, Sequence, Text, Union
+from typing import NamedTuple, Optional, Tuple, List, Sequence, Text, Union
 
 import torch
 import torch.nn as nn
@@ -329,16 +329,10 @@ def random_unitary(n,
 
 
 def _compact_svd(tensor: Tensor,
-                 svd_method: Optional[Text] = None) -> Tuple[Tensor,
-                                                             Tensor,
-                                                             Tensor]:
-    """Computes an exact economy-size SVD with the selected backend."""
+                 svd_method: Text) -> Tuple[Tensor, Tensor, Tensor]:
+    """Computes an exact economy-size SVD with an already-resolved backend."""
     if not isinstance(tensor, Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
-    if svd_method is None:
-        svd_method = get_svd_method()
-    else:
-        svd_method = _validate_svd_method(svd_method)
     if tensor.ndim < 2:
         # Preserve the exception type and message of the historical direct
         # SVD path instead of defining a second dimensionality contract here.
@@ -362,15 +356,28 @@ def _compact_svd(tensor: Tensor,
     return u, s, vh
 
 
+class _TruncatedSVDInfo(NamedTuple):
+    """Numerical diagnostics from one call to :func:`truncated_svd`."""
+
+    full_rank: int
+    selected_rank: int
+    total_squared_norm: Tensor
+    discarded_squared_norm: Tensor
+    total_squared_norm_per_batch: Tensor
+    discarded_squared_norm_per_batch: Tensor
+    svd_method: Text
+
+
 def truncated_svd(tensor: Tensor,
                   rank: Optional[int] = None,
                   cutoff: Optional[float] = None,
                   atol: Optional[float] = None,
                   rtol: Optional[float] = None,
                   cum_percentage: Optional[float] = None,
-                  svd_method: Optional[Text] = None) -> Tuple[Tensor,
-                                                              Tensor,
-                                                              Tensor]:
+                  svd_method: Optional[Text] = None,
+                  return_info: bool = False) -> Union[
+                      Tuple[Tensor, Tensor, Tensor],
+                      Tuple[Tensor, Tensor, Tensor, _TruncatedSVDInfo]]:
     r"""
     Computes a truncated SVD. If no truncation criterion is specified, it
     returns the full SVD. If more than one criterion is specified, the final
@@ -422,18 +429,25 @@ def truncated_svd(tensor: Tensor,
             requirements of :func:`torch.linalg.qr`: the input needs full
             column rank in the tall case and full row rank in the wide case.
 
+    return_info : bool
+        If ``True``, also returns ``_TruncatedSVDInfo`` with the full and
+        selected ranks, the total and discarded squared norms, their per-batch
+        values and the effective SVD backend. The complete singular value
+        spectrum is not retained in this record.
+
     Returns
     -------
-    tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-        ``(u, s, vh)`` from an exact economy-size SVD after truncation:
-        ``u`` has shape ``(*, m, r)``, ``s`` has shape ``(*, r)``, and ``vh``
-        has shape ``(*, r, n)``, where ``r`` is the selected final rank.
+    tuple
+        By default, returns ``(u, s, vh)`` from an exact economy-size SVD after
+        truncation. ``u`` has shape ``(*, m, r)``, ``s`` has shape ``(*, r)``,
+        and ``vh`` has shape ``(*, r, n)``, where ``r`` is the selected final
+        rank. If ``return_info=True``, returns ``(u, s, vh, info)``.
 
     Raises
     ------
     TypeError
         If ``tensor`` is not a :class:`torch.Tensor` or ``svd_method`` is not
-        a string.
+        a string, or if ``return_info`` is not boolean.
     ValueError
         If a truncation criterion is invalid, or ``svd_method`` is not one of
         the accepted values.
@@ -448,6 +462,8 @@ def truncated_svd(tensor: Tensor,
     >>> len(s)
     2
     """
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
     if rank is not None:
         if (not isinstance(rank, int)) or (rank < 1):
             raise ValueError('`rank` should be a positive integer')
@@ -470,8 +486,18 @@ def truncated_svd(tensor: Tensor,
             rtol = 1 - cum_percentage
         else:
             rtol = max(rtol, 1 - cum_percentage)
+
+    if not isinstance(tensor, Tensor):
+        raise TypeError('`tensor` should be torch.Tensor type')
     
-    u, s, vh = _compact_svd(tensor=tensor, svd_method=svd_method)
+    if svd_method is None:
+        effective_svd_method = get_svd_method()
+    else:
+        effective_svd_method = _validate_svd_method(svd_method)
+
+    u, s, vh = _compact_svd(
+        tensor=tensor,
+        svd_method=effective_svd_method)
     final_rank = s.shape[-1]
     
     if rank is not None:
@@ -500,8 +526,25 @@ def truncated_svd(tensor: Tensor,
         rtol_rank = torch.gt(s_ratios, rtol_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, rtol_rank.item()))
     
+    if return_info:
+        squared_s = s.square()
+        total_squared_norm_per_batch = squared_s.sum(dim=-1)
+        discarded_squared_norm_per_batch = squared_s[..., final_rank:].sum(
+            dim=-1)
+        info = _TruncatedSVDInfo(
+            full_rank=s.shape[-1],
+            selected_rank=final_rank,
+            total_squared_norm=total_squared_norm_per_batch.sum(),
+            discarded_squared_norm=discarded_squared_norm_per_batch.sum(),
+            total_squared_norm_per_batch=total_squared_norm_per_batch,
+            discarded_squared_norm_per_batch=(
+                discarded_squared_norm_per_batch),
+            svd_method=effective_svd_method)
+
     u = u[..., :final_rank]
     s = s[..., :final_rank]
     vh = vh[..., :final_rank, :]
     
+    if return_info:
+        return u, s, vh, info
     return u, s, vh

@@ -8,6 +8,10 @@ Tensor Networks with PyTorch
 # Version
 __version__ = '1.1.6'
 
+# Runtime configuration
+import tensorkrowch.config as config
+from tensorkrowch.config import get_svd_method, set_svd_method, svd_method
+
 # Network components
 from tensorkrowch.components import Axis
 from tensorkrowch.components import AbstractNode, Node, ParamNode

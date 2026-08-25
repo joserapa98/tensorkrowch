@@ -26,7 +26,8 @@ from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 from tensorkrowch.models import MPO, UMPO
 from tensorkrowch.embeddings import basis
-from tensorkrowch.utils import split_sequence_into_regions, random_unitary
+from tensorkrowch.utils import (random_unitary, split_sequence_into_regions,
+                                truncated_svd)
 
 
 class MPS(TensorNetwork):  # MARK: MPS
@@ -1737,10 +1738,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         # Compute entanglement entropy
         middle_tensor = nodes[middle_site].tensor.clone()
-        _, s, _ = torch.linalg.svd(
+        _, s, _ = truncated_svd(
             middle_tensor.reshape(middle_tensor.shape[:-1].numel(), # left x input
-                                  middle_tensor.shape[-1]),         # right
-            full_matrices=False)
+                                  middle_tensor.shape[-1]))         # right
         
         s /= s.norm()
         s2 = s[s > 0].pow(2)

@@ -2,6 +2,7 @@
 Tests for svd decompositions:
 
     * TestSVDDecompositions
+    * TestSVDKernelCallers
 """
 
 import pytest
@@ -286,3 +287,96 @@ class TestSVDDecompositions:  # MARK: TestSVDDecompositions
         assert mpo.out_dim == [2, 2, 2]
         assert mpo.bond_dim[0] == expected_rank
         assert mpo.bond_dim[1] <= expected_rank
+
+
+class TestSVDKernelCallers:  # MARK: TestSVDKernelCallers
+
+    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    def test_vec_to_mps_and_mat_to_mpo_backend(self, svd_method):
+        generator = torch.Generator().manual_seed(0)
+        vec = torch.randn(2, 3, 4, dtype=torch.float64, generator=generator)
+        with tk.svd_method(svd_method):
+            tensors = tk.decompositions.vec_to_mps(vec=vec)
+        mps = tk.models.MPS(tensors=tensors)
+        assert torch.allclose(
+            _contract_mps(mps), vec, rtol=1e-10, atol=1e-12)
+
+        mat = torch.randn(
+            2, 3, 4, 5, dtype=torch.float64, generator=generator)
+        with tk.svd_method(svd_method):
+            tensors = tk.decompositions.mat_to_mpo(mat=mat)
+        mpo = tk.models.MPO(tensors=tensors)
+        assert torch.allclose(
+            _contract_mpo(mpo), mat, rtol=1e-10, atol=1e-12)
+
+    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('operation', ['split', 'svd', 'svdr'])
+    def test_node_operations_backend(self, operation, svd_method):
+        generator = torch.Generator().manual_seed(1)
+        if operation == 'split':
+            tensor = torch.randn(
+                5, 7, dtype=torch.float64, generator=generator)
+            node = tk.Node(
+                tensor=tensor,
+                axes_names=('left', 'right'))
+            with tk.svd_method(svd_method):
+                node1, node2 = node.split(
+                    node1_axes=['left'],
+                    node2_axes=['right'])
+        else:
+            tensor1 = torch.randn(
+                5, 3, dtype=torch.float64, generator=generator)
+            tensor2 = torch.randn(
+                3, 7, dtype=torch.float64, generator=generator)
+            tensor = tensor1 @ tensor2
+            node1 = tk.Node(
+                tensor=tensor1,
+                axes_names=('left', 'bond'))
+            node2 = tk.Node(
+                tensor=tensor2,
+                axes_names=('bond', 'right'),
+                network=node1.network)
+            edge = node1['bond'] ^ node2['bond']
+            if operation == 'svd':
+                with tk.svd_method(svd_method):
+                    node1, node2 = tk.svd(edge)
+            else:
+                with torch.random.fork_rng():
+                    torch.manual_seed(2)
+                    with tk.svd_method(svd_method):
+                        node1, node2 = tk.svdr(edge)
+
+        assert torch.allclose(
+            node1.tensor @ node2.tensor,
+            tensor,
+            rtol=1e-10,
+            atol=1e-12)
+
+    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    def test_tt_rss_trimming_backend(self, svd_method):
+        domain = torch.tensor([0.0, 1.0])
+        sketch_samples = torch.cartesian_prod(domain, domain, domain)
+
+        def function(data):
+            return data.prod(dim=1, keepdim=True)
+
+        def embedding(data):
+            return torch.stack([data, 1 - data], dim=-1)
+
+        with torch.random.fork_rng():
+            torch.manual_seed(0)
+            with tk.svd_method(svd_method):
+                cores, info = tk.decompositions.tt_rss(
+                    function=function,
+                    embedding=embedding,
+                    sketch_samples=sketch_samples,
+                    domain=domain,
+                    rank=2,
+                    batch_size=8,
+                    verbose=False,
+                    return_info=True)
+
+        assert [tuple(core.shape) for core in cores] == [
+            (2, 2), (2, 2, 2), (2, 2)]
+        assert all(torch.isfinite(core).all() for core in cores)
+        assert info['val_eps'] < 1e-6

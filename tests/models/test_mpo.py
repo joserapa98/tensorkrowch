@@ -20,6 +20,7 @@ INIT_N_CASES = [1, 2, 5]
 INIT_METHODS = ['zeros', 'ones', 'copy', 'rand', 'randn']
 MODEL_N_FEATURES_CASES = [1, 2, 3, 4, 6]
 CANONICALIZE_MODES = ['svd', 'svdr', 'qr']
+SVD_METHOD_CASES = ['svd', 'qr_svd']
 CANONICALIZE_CASES = [
     (n_features, boundary, oc, mode, renormalize)
     for n_features in SMALL_N_FEATURES_CASES
@@ -695,11 +696,13 @@ class TestMPO:  # MARK: TestMPO
         self._run_mpo_mps_data_case(n_features, mpo_boundary, mps_boundary,
                                     inline_input, inline_mats, renormalize)
     
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     @pytest.mark.parametrize(
         'n_features,boundary,oc,mode,renormalize',
         CANONICALIZE_CASES,
     )
-    def test_canonicalize(self, n_features, boundary, oc, mode, renormalize):
+    def test_canonicalize(self, svd_method, n_features, boundary, oc, mode,
+                          renormalize):
         # Canonicalization should respect the requested rank constraint and
         # preserve the expected boundary bookkeeping.
         mpo = tk.models.MPO(n_features=n_features,
@@ -709,12 +712,13 @@ class TestMPO:  # MARK: TestMPO
                             boundary=boundary)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mpo.canonicalize(oc=oc,
-                         mode=mode,
-                         rank=rank,
-                         cum_percentage=0.98,
-                         cutoff=1e-5,
-                         renormalize=renormalize)
+        with tk.svd_method(svd_method):
+            mpo.canonicalize(oc=oc,
+                             mode=mode,
+                             rank=rank,
+                             cum_percentage=0.98,
+                             cutoff=1e-5,
+                             renormalize=renormalize)
 
         self._assert_canonicalized_mpo_bond_dim(mpo, rank, mode)
         self._assert_mpo_leaf_nodes(mpo, n_features)

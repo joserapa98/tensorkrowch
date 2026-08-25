@@ -13,6 +13,7 @@ import torch
 import tensorkrowch as tk
 
 AUTO_BOOL_CASES = [True, False]
+SVD_METHOD_CASES = ['svd', 'qr_svd']
 SIDE_CASES = ['up', 'down', 'left', 'right']
 BOUNDARY_CASES = ['obc', 'pbc']
 BOUNDARY_PAIR_CASES = [
@@ -590,7 +591,9 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
         assert result.shape == (10,)
         assert exact_calls > 0
 
-    def test_contract_uses_svd_when_max_bond_is_saturated(self, monkeypatch):
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    def test_contract_uses_svd_when_max_bond_is_saturated(
+            self, monkeypatch, svd_method):
         data = torch.randn(10, 9, 5)
         split_calls = 0
         original_split = tk.AbstractNode.split
@@ -614,7 +617,8 @@ class TestPEPS(_PEPSTestMixin):  # MARK: TestPEPS
                               bond_dim=[2, 3],
                               boundary=['obc', 'obc'])
 
-        result = peps(data, from_side='left', max_bond=8)
+        with tk.svd_method(svd_method):
+            result = peps(data, from_side='left', max_bond=8)
 
         assert result.shape == (10,)
         assert split_calls > 0

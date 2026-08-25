@@ -33,6 +33,7 @@ MODEL_N_FEATURES_CASES = [1, 2, 3, 4, 6]
 MPSDATA_INIT_METHODS = ['zeros', 'ones', 'copy', 'rand', 'randn']
 CANONICALIZE_MODES = ['svd', 'svdr', 'qr']
 CANONICALIZE_DIFF_BOND_MODES = ['svd', 'svdr']
+SVD_METHOD_CASES = ['svd', 'qr_svd']
 CANONICALIZE_CASES = [
     (n_features, boundary, oc, mode, renormalize)
     for n_features in SMALL_N_FEATURES_CASES
@@ -1840,8 +1841,10 @@ class TestMPS:  # MARK: TestMPS
         assert torch.allclose(captured[0][0].cpu(), expected)
 
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)
-    def test_entropy(self, runtime, n_features, boundary, middle_site):
+    def test_entropy(self, runtime, svd_method, n_features, boundary,
+                     middle_site):
         # Compare the renormalized entropy output with the non-renormalized one.
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
@@ -1858,9 +1861,11 @@ class TestMPS:  # MARK: TestMPS
 
         self._trace_mps_for_canonicalize(mps, n_features, runtime)
 
-        renormalized_entropy = mps.entropy(middle_site=middle_site,
-                                           renormalize=True)
-        entropy = mps.entropy(middle_site=middle_site, renormalize=False)
+        with tk.svd_method(svd_method):
+            renormalized_entropy = mps.entropy(middle_site=middle_site,
+                                               renormalize=True)
+            entropy = mps.entropy(middle_site=middle_site,
+                                  renormalize=False)
 
         assert all(mps.bond_dim[i] <= bond_dim[i] for i in range(len(bond_dim)))
         assert torch.isclose(entropy,
@@ -1899,11 +1904,12 @@ class TestMPS:  # MARK: TestMPS
         _assert_parameterization_pattern(mps.mats_env, expected_param_flags)
     
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     @pytest.mark.parametrize(
         'n_features,boundary,oc,mode,renormalize',
         CANONICALIZE_CASES,
     )
-    def test_canonicalize(self, runtime, n_features, boundary, oc,
+    def test_canonicalize(self, runtime, svd_method, n_features, boundary, oc,
                           mode, renormalize):
         # Cover all canonicalization modes and ensure the post-state can still
         # be evaluated after unsetting traced data.
@@ -1924,12 +1930,13 @@ class TestMPS:  # MARK: TestMPS
         self._trace_mps_for_canonicalize(mps, n_features, runtime)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mps.canonicalize(oc=oc,
-                         mode=mode,
-                         rank=rank,
-                         cum_percentage=0.98,
-                         cutoff=1e-5,
-                         renormalize=renormalize)
+        with tk.svd_method(svd_method):
+            mps.canonicalize(oc=oc,
+                             mode=mode,
+                             rank=rank,
+                             cum_percentage=0.98,
+                             cutoff=1e-5,
+                             renormalize=renormalize)
 
         self._assert_canonicalized_bond_dim(mps, rank, mode)
         self._finalize_mps_canonicalize(mps, n_features)

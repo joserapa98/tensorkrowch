@@ -15,6 +15,7 @@ This script contains:
     * list2slice
     * split_sequence_into_regions
     * random_unitary
+    * truncated_svd
 """
 
 from typing import Optional, Tuple, List, Sequence, Text, Union
@@ -22,6 +23,8 @@ from typing import Optional, Tuple, List, Sequence, Text, Union
 import torch
 import torch.nn as nn
 from torch import Tensor
+
+from tensorkrowch.config import _validate_svd_method, get_svd_method
 
 
 def print_list(lst: List) -> Text:
@@ -324,12 +327,50 @@ def random_unitary(n,
     q = q @ torch.diag(ph)
     return q
 
+
+def _compact_svd(tensor: Tensor,
+                 svd_method: Optional[Text] = None) -> Tuple[Tensor,
+                                                             Tensor,
+                                                             Tensor]:
+    """Computes an exact economy-size SVD with the selected backend."""
+    if not isinstance(tensor, Tensor):
+        raise TypeError('`tensor` should be torch.Tensor type')
+    if svd_method is None:
+        svd_method = get_svd_method()
+    else:
+        svd_method = _validate_svd_method(svd_method)
+    if tensor.ndim < 2:
+        # Preserve the exception type and message of the historical direct
+        # SVD path instead of defining a second dimensionality contract here.
+        return torch.linalg.svd(tensor, full_matrices=False)
+
+    if svd_method == 'svd':
+        return torch.linalg.svd(tensor, full_matrices=False)
+
+    if tensor.shape[-2] >= tensor.shape[-1]:
+        q, r = torch.linalg.qr(tensor, mode='reduced')
+        u_r, s, vh = torch.linalg.svd(r, full_matrices=False)
+        u = q @ u_r
+        return u, s, vh
+
+    tensor_h = tensor.transpose(-2, -1).conj()
+    q, r = torch.linalg.qr(tensor_h, mode='reduced')
+    r_h = r.transpose(-2, -1).conj()
+    u, s, vh_r = torch.linalg.svd(r_h, full_matrices=False)
+    q_h = q.transpose(-2, -1).conj()
+    vh = vh_r @ q_h
+    return u, s, vh
+
+
 def truncated_svd(tensor: Tensor,
                   rank: Optional[int] = None,
                   cutoff: Optional[float] = None,
                   atol: Optional[float] = None,
                   rtol: Optional[float] = None,
-                  cum_percentage: Optional[float] = None) -> Tuple[Tensor, Tensor, Tensor]:
+                  cum_percentage: Optional[float] = None,
+                  svd_method: Optional[Text] = None) -> Tuple[Tensor,
+                                                              Tensor,
+                                                              Tensor]:
     r"""
     Computes a truncated SVD. If no truncation criterion is specified, it
     returns the full SVD. If more than one criterion is specified, the final
@@ -364,13 +405,41 @@ def truncated_svd(tensor: Tensor,
             \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
+    svd_method : {"svd", "qr_svd"}, optional
+        Exact backend used to compute the economy-size SVD. ``"svd"`` calls
+        :func:`torch.linalg.svd` directly. ``"qr_svd"`` first reduces the
+        larger matrix dimension with QR. If omitted, it uses the active value
+        from :func:`~tensorkrowch.get_svd_method`, whose initial default is
+        ``"svd"``. The active backend can be changed globally with
+        :func:`~tensorkrowch.set_svd_method`, or temporarily with the
+        :func:`~tensorkrowch.svd_method` context manager. These configuration
+        mechanisms also select the backend for higher-level methods that call
+        :func:`truncated_svd` internally.
+
+        .. note::
+
+            Backward through ``"qr_svd"`` follows the differentiability
+            requirements of :func:`torch.linalg.qr`: the input needs full
+            column rank in the tall case and full row rank in the wide case.
+
     Returns
     -------
     tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-        ``(u, s, vh)`` from ``torch.linalg.svd(tensor, full_matrices=False)``
-        after truncation:
+        ``(u, s, vh)`` from an exact economy-size SVD after truncation:
         ``u`` has shape ``(*, m, r)``, ``s`` has shape ``(*, r)``, and ``vh``
         has shape ``(*, r, n)``, where ``r`` is the selected final rank.
+
+    Raises
+    ------
+    TypeError
+        If ``tensor`` is not a :class:`torch.Tensor` or ``svd_method`` is not
+        a string.
+    ValueError
+        If a truncation criterion is invalid, or ``svd_method`` is not one of
+        the accepted values.
+    RuntimeError
+        If ``tensor`` has fewer than two dimensions, as raised by
+        :func:`torch.linalg.svd`.
     
     Examples
     --------
@@ -402,7 +471,7 @@ def truncated_svd(tensor: Tensor,
         else:
             rtol = max(rtol, 1 - cum_percentage)
     
-    u, s, vh = torch.linalg.svd(tensor, full_matrices=False)
+    u, s, vh = _compact_svd(tensor=tensor, svd_method=svd_method)
     final_rank = s.shape[-1]
     
     if rank is not None:

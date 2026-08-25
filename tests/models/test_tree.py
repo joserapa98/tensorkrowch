@@ -14,6 +14,7 @@ import tensorkrowch as tk
 
 AUTO_BOOL_CASES = [True, False]
 INLINE_CASES = [True, False]
+SVD_METHOD_CASES = ['svd', 'qr_svd']
 TREE_CASES = [
     ('all_algorithms', [6, 2, 1], [[5, 5, 4], [4, 4, 4, 3], [3, 3, 2]],
      (1, 12, 5), (100, 12, 5), (100, 2), 9, 12, 4),
@@ -116,6 +117,21 @@ class _TreeTestMixin:
 
 
 class TestTree(_TreeTestMixin):  # MARK: TestTree
+
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    def test_canonicalize_svd_method(self, svd_method):
+        tree = tk.models.Tree(
+            sites_per_layer=[4, 2, 1],
+            bond_dim=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
+
+        with tk.svd_method(svd_method):
+            tree.canonicalize(mode='svd', rank=2)
+
+        assert tree.bond_dim == [
+            [[3, 3, 2], [3, 3, 2], [3, 3, 2], [3, 3, 2]],
+            [[2, 2, 2], [2, 2, 2]],
+            [[2, 2, 2]],
+        ]
 
     @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
     def test_initialize_parameterized(self, parameterized):

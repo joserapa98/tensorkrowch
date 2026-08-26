@@ -1,6 +1,7 @@
 """Tests for shared decomposition docstring contracts."""
 
 import inspect
+import re
 
 import pytest
 
@@ -9,27 +10,36 @@ import tensorkrowch as tk
 from tensorkrowch.utils import truncated_svd
 
 
-def _truncation_parameters(obj, next_parameter):
-    """Extracts the shared truncation-parameter section from a docstring."""
+def _parameter_documentation(obj, parameter):
+    """Extracts one complete parameter entry from a docstring."""
     docstring = inspect.getdoc(obj)
-    start = docstring.index('rank : int, optional')
-    end = docstring.index(f'\n{next_parameter} :', start)
-    return docstring[start:end]
+    match = re.search(
+        rf'^{parameter} :[^\n]*\n.*?(?=^[A-Za-z_]\w* :|^Returns\n)',
+        docstring,
+        flags=re.MULTILINE | re.DOTALL)
+    if match is None:
+        raise ValueError(f'Could not find `{parameter}` in the docstring')
+    return match.group(0)
 
 
 @pytest.mark.parametrize(
-    'obj, next_parameter',
+    'obj',
     [
-        (tk.decompositions.TTSVD.fit, 'renormalize'),
-        (tk.decompositions.tt_svd, 'renormalize'),
-        (tk.decompositions.TTMSVD.fit, 'renormalize'),
-        (tk.decompositions.ttm_svd, 'renormalize'),
-        (tk.decompositions.vec_to_mps, 'renormalize'),
-        (tk.decompositions.mat_to_mpo, 'renormalize'),
-        (tk.decompositions.tt_rss, 'batch_size'),
+        tk.decompositions.TTSVD.fit,
+        tk.decompositions.tt_svd,
+        tk.decompositions.TTMSVD.fit,
+        tk.decompositions.ttm_svd,
+        tk.decompositions.TRSVD.fit,
+        tk.decompositions.tr_svd,
+        tk.decompositions.vec_to_mps,
+        tk.decompositions.mat_to_mpo,
+        tk.decompositions.tt_rss,
     ],
 )
-def test_truncation_parameter_documentation_is_canonical(
-        obj, next_parameter):
-    reference = _truncation_parameters(truncated_svd, 'svd_method')
-    assert _truncation_parameters(obj, next_parameter) == reference
+@pytest.mark.parametrize(
+    'parameter',
+    ['rank', 'cutoff', 'atol', 'rtol', 'cum_percentage'],
+)
+def test_truncation_parameter_documentation_is_canonical(obj, parameter):
+    reference = _parameter_documentation(truncated_svd, parameter)
+    assert _parameter_documentation(obj, parameter) == reference

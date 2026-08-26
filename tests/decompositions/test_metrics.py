@@ -41,6 +41,25 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
         assert record.selected_rank == 3
         assert record.discarded_squared_norm_per_batch.device.type == 'cpu'
 
+    def test_truncation_record_optional_phase(self):
+        record = tk.decompositions.TruncationRecord(
+            site=0,
+            full_rank=2,
+            selected_rank=1,
+            discarded_squared_norm=1.0,
+            local_absolute_error=1.0,
+            phase='initial_bipartition')
+
+        assert record.phase == 'initial_bipartition'
+        with pytest.raises(TypeError, match='`phase` should be str type'):
+            tk.decompositions.TruncationRecord(
+                site=0,
+                full_rank=2,
+                selected_rank=1,
+                discarded_squared_norm=1.0,
+                local_absolute_error=1.0,
+                phase=1)
+
     def test_truncation_record_from_svd_info(self):
         tensor = torch.stack([
             torch.diag(torch.tensor([4.0, 3.0])),

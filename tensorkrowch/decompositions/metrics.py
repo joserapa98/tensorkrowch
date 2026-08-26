@@ -169,6 +169,7 @@ class TruncationRecord:
     global_relative_contribution_per_batch: Optional[torch.Tensor] = None
     log_scale_per_batch: Optional[torch.Tensor] = None
     singular_values: Optional[torch.Tensor] = None
+    phase: Optional[str] = None
 
     @classmethod
     def from_svd_info(cls,
@@ -359,6 +360,8 @@ class TruncationRecord:
         if (self.svd_method is not None) and \
                 (self.svd_method not in ('svd', 'qr_svd')):
             raise ValueError('`svd_method` should be "svd" or "qr_svd"')
+        if (self.phase is not None) and (not isinstance(self.phase, str)):
+            raise TypeError('`phase` should be str type')
 
         tensor_fields = (
             'discarded_squared_norm_per_batch',

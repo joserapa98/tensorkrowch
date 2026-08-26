@@ -11,8 +11,8 @@ from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TTDecomposition,
                                                  TTMDecomposition,
                                                  TRDecomposition)
-from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, tt_svd,
-                                             ttm_svd)
+from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, tt_svd,
+                                             ttm_svd, tr_svd)
 from tensorkrowch.decompositions.svd_decompositions import (mat_to_mpo,
                                                            vec_to_mps)
 from tensorkrowch.decompositions.tt_decompositions import tt_rss
@@ -34,8 +34,10 @@ __all__ = [
     'HistoryObserver',
     'TTSVD',
     'TTMSVD',
+    'TRSVD',
     'tt_svd',
     'ttm_svd',
+    'tr_svd',
     'vec_to_mps',
     'mat_to_mpo',
     'tt_rss',

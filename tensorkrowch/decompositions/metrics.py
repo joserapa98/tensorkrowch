@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field, fields, is_dataclass
 from math import isfinite
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import torch
 
@@ -380,6 +380,82 @@ class TruncationRecord:
 
 
 @dataclass(frozen=True)
+class LocalSolveRecord:
+    """Stores diagnostics for one local least-squares solve."""
+
+    environment_shape: Tuple[int, int]
+    target_shape: Tuple[int, ...]
+    driver: str
+    residual_absolute: float
+    residual_relative: float
+    target_norm: float
+    l2_reg: float = 0.0
+    effective_l2_reg: float = 0.0
+    l2_reg_mode: str = 'absolute'
+    column_scaling: bool = False
+    system_scaling: bool = False
+    system_scale: float = 1.0
+    site: Optional[Any] = None
+    sweep: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        environment_shape = tuple(self.environment_shape)
+        target_shape = tuple(self.target_shape)
+        if (len(environment_shape) != 2) or \
+                any((not isinstance(dim, int)) or (dim < 1)
+                    for dim in environment_shape):
+            raise ValueError(
+                '`environment_shape` should contain two positive integers')
+        if (not target_shape) or \
+                any((not isinstance(dim, int)) or (dim < 1)
+                    for dim in target_shape):
+            raise ValueError(
+                '`target_shape` should contain positive integers')
+        object.__setattr__(self, 'environment_shape', environment_shape)
+        object.__setattr__(self, 'target_shape', target_shape)
+
+        if not isinstance(self.driver, str):
+            raise TypeError('`driver` should be str type')
+        for name in (
+                'residual_absolute',
+                'residual_relative',
+                'target_norm',
+                'l2_reg',
+                'effective_l2_reg',
+                'system_scale'):
+            value = _scalar_float(getattr(self, name), name)
+            if value < 0:
+                raise ValueError(f'`{name}` should be non-negative')
+            if (name == 'residual_relative') and (value != value):
+                raise ValueError('`residual_relative` should not be NaN')
+            if (name != 'residual_relative') and (not isfinite(value)):
+                raise ValueError(f'`{name}` should be finite')
+            object.__setattr__(self, name, value)
+        if self.l2_reg_mode not in ('absolute', 'relative'):
+            raise ValueError(
+                "`l2_reg_mode` should be 'absolute' or 'relative'")
+        if not isinstance(self.column_scaling, bool):
+            raise TypeError('`column_scaling` should be bool type')
+        if not isinstance(self.system_scaling, bool):
+            raise TypeError('`system_scaling` should be bool type')
+        if self.site is not None:
+            if isinstance(self.site, int) and not isinstance(self.site, bool):
+                valid_site = self.site >= 0
+            elif isinstance(self.site, tuple):
+                valid_site = bool(self.site) and all(
+                    isinstance(item, int) and item >= 0 for item in self.site)
+            else:
+                valid_site = False
+            if not valid_site:
+                raise ValueError(
+                    '`site` should be a non-negative int or tuple of ints')
+        if self.sweep is not None:
+            if isinstance(self.sweep, bool) or \
+                    (not isinstance(self.sweep, int)) or (self.sweep < 0):
+                raise ValueError('`sweep` should be a non-negative integer')
+
+
+@dataclass(frozen=True)
 class TimingRecord:
     """Stores elapsed time for a decomposition phase or site."""
 
@@ -484,6 +560,7 @@ class DecompositionMetrics:
 __all__ = [
     'ErrorRecord',
     'TruncationRecord',
+    'LocalSolveRecord',
     'TimingRecord',
     'FidelityRecord',
     'DecompositionMetrics',

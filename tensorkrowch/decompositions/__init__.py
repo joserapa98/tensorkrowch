@@ -1,13 +1,15 @@
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  FidelityRecord,
+                                                 LocalSolveRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
 from tensorkrowch.decompositions.observers import (ConsoleObserver,
                                                    DecompositionEvent,
                                                    DecompositionObserver,
                                                    HistoryObserver)
-from tensorkrowch.decompositions.als import ALSProblem, ObservedEntries
+from tensorkrowch.decompositions.als import (ALSProblem, LeastSquaresSolver,
+                                             ObservedEntries)
 from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TTDecomposition,
                                                  TTMDecomposition,
@@ -35,6 +37,7 @@ __all__ = [
     'TRDecomposition',
     'ErrorRecord',
     'TruncationRecord',
+    'LocalSolveRecord',
     'TimingRecord',
     'FidelityRecord',
     'DecompositionMetrics',
@@ -53,6 +56,7 @@ __all__ = [
     'as_tensor_source',
     'ALSProblem',
     'ObservedEntries',
+    'LeastSquaresSolver',
     'TTSVD',
     'TTMSVD',
     'TRSVD',

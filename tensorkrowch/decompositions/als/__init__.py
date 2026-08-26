@@ -1,5 +1,11 @@
 """Alternating least-squares decomposition infrastructure."""
 
+from tensorkrowch.decompositions.als.environments import (
+    CoreUpdateSet,
+    EnvironmentCache,
+    TTEnvironmentCache,
+    TTLocalEnvironment,
+)
 from tensorkrowch.decompositions.als.problem import (ALSProblem,
                                                      ObservedEntries)
 from tensorkrowch.decompositions.als.sampling import (ExactRows, ObservedRows,
@@ -19,4 +25,8 @@ __all__ = [
     'ObservedRows',
     'UniformRows',
     'SampleRefreshPolicy',
+    'EnvironmentCache',
+    'CoreUpdateSet',
+    'TTLocalEnvironment',
+    'TTEnvironmentCache',
 ]

@@ -7,10 +7,20 @@ from tensorkrowch.decompositions.observers import (ConsoleObserver,
                                                    DecompositionEvent,
                                                    DecompositionObserver,
                                                    HistoryObserver)
+from tensorkrowch.decompositions.als import ALSProblem, ObservedEntries
 from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TTDecomposition,
                                                  TTMDecomposition,
                                                  TRDecomposition)
+from tensorkrowch.decompositions.sources import (CallableTensorSource,
+                                                 ConfigurationBatch,
+                                                 DenseTensorSource,
+                                                 EmpiricalDistribution,
+                                                 FiberTensorSource,
+                                                 SparseTensorSource,
+                                                 TensorSource,
+                                                 TTTensorSource,
+                                                 as_tensor_source)
 from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, tt_svd,
                                              ttm_svd, tr_svd)
 from tensorkrowch.decompositions.svd.tt import vec_to_mps
@@ -32,6 +42,17 @@ __all__ = [
     'DecompositionObserver',
     'ConsoleObserver',
     'HistoryObserver',
+    'ConfigurationBatch',
+    'TensorSource',
+    'FiberTensorSource',
+    'CallableTensorSource',
+    'DenseTensorSource',
+    'SparseTensorSource',
+    'EmpiricalDistribution',
+    'TTTensorSource',
+    'as_tensor_source',
+    'ALSProblem',
+    'ObservedEntries',
     'TTSVD',
     'TTMSVD',
     'TRSVD',

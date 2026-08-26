@@ -57,7 +57,8 @@ readme = {file = "README.md", content-type = "text/markdown"}
 packages = [
     "tensorkrowch",
     "tensorkrowch.models",
-    "tensorkrowch.decompositions"
+    "tensorkrowch.decompositions",
+    "tensorkrowch.decompositions.svd"
 ]
 
 

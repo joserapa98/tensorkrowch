@@ -11,6 +11,16 @@ import torch
 import tensorkrowch as tk
 
 
+pytestmark = [
+    pytest.mark.filterwarnings(
+        'ignore:`vec_to_mps` is deprecated; use `tt_svd` instead:'
+        'FutureWarning'),
+    pytest.mark.filterwarnings(
+        'ignore:`mat_to_mpo` is deprecated; use `ttm_svd` instead:'
+        'FutureWarning'),
+]
+
+
 TRUNCATION_CASES = [
     ({}, 4),
     ({'rank': 2}, 2),

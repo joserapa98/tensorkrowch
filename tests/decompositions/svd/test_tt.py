@@ -409,7 +409,9 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
                 rank=2,
                 output_device=None,
                 return_info=True)
-            legacy_cores = tk.decompositions.vec_to_mps(tensor, rank=2)
+            with pytest.warns(
+                    FutureWarning, match='`vec_to_mps` is deprecated'):
+                legacy_cores = tk.decompositions.vec_to_mps(tensor, rank=2)
 
         assert info['rank'] == [2, 2]
         assert info['metadata']['algorithm'] == 'tt_svd'

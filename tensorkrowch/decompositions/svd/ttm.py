@@ -2,6 +2,7 @@
 
 from math import prod
 from typing import List, Optional, Sequence, Tuple, Union
+import warnings
 
 import torch
 
@@ -70,8 +71,9 @@ class TTMSVD:
         sites as ``input_dim``.
     layout : {"interleaved", "grouped"}
         Axis layout of a tensorized input. The default is ``"interleaved"``,
-        matching the historical :func:`mat_to_mpo` convention. It does not
-        alter the two matrix axes in the explicit-dimension route.
+        matching the historical
+        :func:`~tensorkrowch.decompositions.mat_to_mpo` convention. It does
+        not alter the two matrix axes in the explicit-dimension route.
     output_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the input device.
@@ -561,4 +563,98 @@ def ttm_svd(tensor: torch.Tensor,
     return result.cores
 
 
-__all__ = ['TTMSVD', 'ttm_svd']
+def mat_to_mpo(mat: torch.Tensor,
+               rank: Optional[int] = None,
+               cutoff: Optional[float] = None,
+               atol: Optional[float] = None,
+               rtol: Optional[float] = None,
+               cum_percentage: Optional[float] = None,
+               renormalize: bool = False,
+               verbose: Union[bool, int] = 0,
+               return_info: bool = False):
+    r"""Compatibility wrapper for :func:`ttm_svd`.
+
+    .. deprecated:: 1.2
+        Use :func:`ttm_svd` for TTM terminology, grouped or matrix layouts,
+        explicit output-device policy and repeated fits through
+        :class:`TTMSVD`.
+
+    The historical ``mat`` argument and interleaved layout are preserved.
+    Final cores remain on the input device, matching the previous behavior.
+    ``mat`` should have shape
+    ``(in_1, out_1, ..., in_n, out_n)``.
+
+    Parameters
+    ----------
+    mat : torch.Tensor
+        Dense tensor with interleaved input/output dimensions.
+    rank : int, optional
+        Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
+
+    renormalize : bool
+        If ``True``, normalizes each residual and accumulates its scale
+        logarithmically before redistributing it over the final cores.
+    verbose : bool or int
+        Console verbosity level forwarded to :func:`ttm_svd`.
+    return_info : bool
+        If ``True``, returns ``(cores, info)`` with ranks, dimensions,
+        metadata and structured metrics.
+
+    Returns
+    -------
+    list[torch.Tensor] or tuple
+        TTM cores, optionally followed by their structured information.
+
+    Examples
+    --------
+    The canonical replacement keeps the historical interleaved layout:
+
+    >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
+    >>> cores = ttm_svd(tensor, rank=2)
+    >>> [tuple(core.shape) for core in cores]
+    [(2, 2, 2), (2, 2, 2)]
+    """
+    warnings.warn(
+        '`mat_to_mpo` is deprecated; use `ttm_svd` instead',
+        FutureWarning,
+        stacklevel=2)
+    if not isinstance(mat, torch.Tensor):
+        raise TypeError('`mat` should be torch.Tensor type')
+    if mat.ndim < 2 or (mat.ndim % 2):
+        raise ValueError('`mat` have an even number of dimensions')
+
+    return ttm_svd(
+        tensor=mat,
+        layout='interleaved',
+        rank=rank,
+        cutoff=cutoff,
+        atol=atol,
+        rtol=rtol,
+        cum_percentage=cum_percentage,
+        renormalize=renormalize,
+        output_device=None,
+        verbose=verbose,
+        return_info=return_info)
+
+
+__all__ = ['TTMSVD', 'ttm_svd', 'mat_to_mpo']

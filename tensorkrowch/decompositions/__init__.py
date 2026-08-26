@@ -13,8 +13,8 @@ from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TRDecomposition)
 from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, tt_svd,
                                              ttm_svd, tr_svd)
-from tensorkrowch.decompositions.svd_decompositions import (mat_to_mpo,
-                                                           vec_to_mps)
+from tensorkrowch.decompositions.svd.tt import vec_to_mps
+from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
 from tensorkrowch.decompositions.tt_decompositions import tt_rss
 
 

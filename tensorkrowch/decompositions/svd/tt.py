@@ -3,6 +3,7 @@
 from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
+import warnings
 
 import torch
 
@@ -646,4 +647,104 @@ def tt_svd(tensor: torch.Tensor,
     return result.cores
 
 
-__all__ = ['TTSVD', 'tt_svd']
+def vec_to_mps(vec: torch.Tensor,
+               n_batches: int = 0,
+               rank: Optional[int] = None,
+               cutoff: Optional[float] = None,
+               atol: Optional[float] = None,
+               rtol: Optional[float] = None,
+               cum_percentage: Optional[float] = None,
+               renormalize: bool = False,
+               verbose: Union[bool, int] = 0,
+               return_info: bool = False):
+    r"""Compatibility wrapper for :func:`tt_svd`.
+
+    .. deprecated:: 1.2
+        Use :func:`tt_svd` for TT terminology, explicit output-device policy
+        and repeated fits through :class:`TTSVD`.
+
+    The historical ``vec`` and ``n_batches`` arguments are preserved. Final
+    cores remain on the input device, matching the previous behavior. The
+    tensor should have shape ``(*batch_shape, d_1, ..., d_n)``, where each
+    non-batch axis is the input dimension of one TT site.
+
+    Parameters
+    ----------
+    vec : torch.Tensor
+        Dense tensor to decompose.
+    n_batches : int
+        Number of leading tensor axes interpreted as batch dimensions.
+    rank : int, optional
+        Number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
+
+    renormalize : bool
+        If ``True``, normalizes each residual and accumulates its scale
+        logarithmically before redistributing it over the final cores.
+    verbose : bool or int
+        Console verbosity level forwarded to :func:`tt_svd`.
+    return_info : bool
+        If ``True``, returns ``(cores, info)`` with ranks, dimensions,
+        metadata and structured metrics.
+
+    Returns
+    -------
+    list[torch.Tensor] or tuple
+        TT cores, optionally followed by their structured information.
+
+    Examples
+    --------
+    The canonical replacement only changes the function and tensor argument
+    names:
+
+    >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
+    >>> cores = tt_svd(tensor, rank=2)
+    >>> [tuple(core.shape) for core in cores]
+    [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
+    """
+    warnings.warn(
+        '`vec_to_mps` is deprecated; use `tt_svd` instead',
+        FutureWarning,
+        stacklevel=2)
+    if not isinstance(vec, torch.Tensor):
+        raise TypeError('`vec` should be torch.Tensor type')
+    if isinstance(n_batches, bool) or not isinstance(n_batches, int):
+        raise TypeError('`n_batches` should be int type')
+    if (n_batches < 0) or (n_batches >= vec.ndim):
+        raise ValueError(
+            '`n_batches` should be between 0 and the rank of `vec`')
+
+    return tt_svd(
+        tensor=vec,
+        n_batches=n_batches,
+        rank=rank,
+        cutoff=cutoff,
+        atol=atol,
+        rtol=rtol,
+        cum_percentage=cum_percentage,
+        renormalize=renormalize,
+        output_device=None,
+        verbose=verbose,
+        return_info=return_info)
+
+
+__all__ = ['TTSVD', 'tt_svd', 'vec_to_mps']

@@ -256,6 +256,21 @@ class TTSVD:
         used. At least one singular value is always retained. The same
         criteria are applied at every TT cut.
 
+        The fixed tensor should have shape
+        ``(*batch_shape, d_1, ..., d_n)``, where the first ``n_batches`` axes
+        are optional batch dimensions and each remaining axis is the input
+        dimension of one TT site. Thus, the desired number and input
+        dimensions of the cores are specified directly by the non-batch shape
+        of the tensor; reshape the tensor before constructing :class:`TTSVD`
+        if a different site factorization is required.
+
+        For more than one site, the returned cores have shapes
+        ``(*batch_shape, d_1, rank_1)``,
+        ``(*batch_shape, rank_{k-1}, d_k, rank_k)`` at interior sites, and
+        ``(*batch_shape, rank_{n-1}, d_n)`` at the last site. A one-site tensor
+        is returned as a single core with its original shape. Consequently,
+        the result always represents an open-boundary TT.
+
         Parameters
         ----------
         rank : int, optional
@@ -314,9 +329,8 @@ class TTSVD:
         Fix a tensor once and compare decompositions with different maximum
         ranks:
 
-        >>> import tensorkrowch as tk
         >>> tensor = torch.arange(24.).reshape(2, 3, 4)
-        >>> decomposer = tk.decompositions.TTSVD(tensor)
+        >>> decomposer = TTSVD(tensor)
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2, collect_metrics=True)
         >>> rank_one.rank
@@ -518,12 +532,27 @@ def tt_svd(tensor: torch.Tensor,
     several truncation criteria are specified, their most restrictive rank is
     used at every cut and at least one singular value is retained.
 
+    The input should have shape ``(*batch_shape, d_1, ..., d_n)``. The first
+    ``n_batches`` axes are interpreted as optional batch dimensions, while
+    every remaining axis defines the input dimension of one TT site. The
+    function therefore returns ``n`` open-boundary cores. To obtain a TT with
+    a particular sequence of input dimensions, reshape ``tensor`` to those
+    dimensions before calling this function.
+
+    For multiple sites, the first core has shape
+    ``(*batch_shape, d_1, rank_1)``, interior cores have shape
+    ``(*batch_shape, rank_{k-1}, d_k, rank_k)``, and the final core has shape
+    ``(*batch_shape, rank_{n-1}, d_n)``. For one site, the only core has the
+    same shape as the input tensor.
+
     Parameters
     ----------
     tensor : torch.Tensor
-        Dense tensor with optional leading batch dimensions.
+        Dense tensor whose optional leading batch axes are followed by one
+        input dimension per TT site.
     n_batches : int
-        Number of leading batch dimensions.
+        Number of leading tensor axes interpreted as batch dimensions. At
+        least one non-batch input dimension should remain.
     rank : int, optional
         Maximum number of singular values retained at every cut. It should be
         at least one.
@@ -576,15 +605,14 @@ def tt_svd(tensor: torch.Tensor,
     --------
     Decompose a four-site tensor and inspect the resulting core shapes:
 
-    >>> import tensorkrowch as tk
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
+    >>> cores = tt_svd(tensor, rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
 
     Request structured ranks, errors and timings when they are needed:
 
-    >>> cores, info = tk.decompositions.tt_svd(
+    >>> cores, info = tt_svd(
     ...     tensor, rank=2, return_info=True)
     >>> info['rank']
     [2, 2, 2]

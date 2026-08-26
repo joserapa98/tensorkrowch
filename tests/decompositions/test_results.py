@@ -82,6 +82,63 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert result.batch_shape == (3,)
         assert torch.allclose(result.contract_dense(), expected)
 
+    @pytest.mark.parametrize(
+        'result_type, cores, boundary',
+        [
+            (
+                tk.decompositions.TTDecomposition,
+                [torch.arange(12.).reshape(3, 4),
+                 torch.arange(20.).reshape(4, 5)],
+                'obc',
+            ),
+            (
+                tk.decompositions.TRDecomposition,
+                [torch.arange(24.).reshape(2, 3, 4),
+                 torch.arange(40.).reshape(4, 5, 2)],
+                'pbc',
+            ),
+        ],
+    )
+    def test_state_result_initializes_mps(self,
+                                          result_type,
+                                          cores,
+                                          boundary):
+        result = result_type(cores)
+        mps = tk.models.MPS(
+            tensors=result.cores,
+            parameterized=False)
+
+        assert mps.boundary == boundary
+        assert mps.phys_dim == list(result.input_dim)
+        assert mps.bond_dim == result.rank
+        assert all(torch.allclose(model_core, result_core)
+                   for model_core, result_core
+                   in zip(mps.tensors, result.cores))
+
+    @pytest.mark.parametrize(
+        'result',
+        [
+            tk.decompositions.TTDecomposition([
+                torch.arange(24.).reshape(3, 2, 4),
+                torch.arange(60.).reshape(3, 4, 5),
+            ], n_batches=1),
+            tk.decompositions.TRDecomposition([
+                torch.arange(120.).reshape(3, 2, 4, 5),
+                torch.arange(180.).reshape(3, 5, 6, 2),
+            ], n_batches=1),
+        ],
+    )
+    def test_batched_state_result_initializes_mps_data(self, result):
+        mps_data = tk.models.MPSData(
+            tensors=result.cores,
+            n_batches=result.n_batches)
+
+        assert mps_data.boundary == ('obc' if result.topology == 'tt'
+                                     else 'pbc')
+        assert mps_data.n_batches == result.n_batches
+        assert mps_data.phys_dim == list(result.input_dim)
+        assert mps_data.bond_dim == result.rank
+
     def test_ttm_validation_dense_contraction_and_apply(self):
         first = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
         second = torch.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]])

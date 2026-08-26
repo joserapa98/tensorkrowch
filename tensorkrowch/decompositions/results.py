@@ -366,7 +366,41 @@ class TensorDecomposition(ABC):
 
 @dataclass
 class TTDecomposition(TensorDecomposition):
-    """Lightweight tensor-train decomposition with open boundaries."""
+    """Lightweight tensor-train decomposition with open boundaries.
+
+    This result stores the TT cores, ranks, metrics and metadata without
+    constructing a TensorKrowch graph. Methods such as :meth:`contract_dense`
+    and :meth:`evaluate` operate directly on the core tensors with PyTorch.
+    Consequently, creating or inspecting a decomposition has less overhead
+    than creating a :class:`~tensorkrowch.models.MPS` model.
+
+    For graph contractions, training or the rest of the model API, an MPS can
+    be initialized directly from the cores:
+
+    >>> tensor = torch.randn(2, 3, 4)
+    >>> result = tk.decompositions.TTSVD(tensor).fit(rank=2)
+    >>> mps = tk.models.MPS(tensors=result.cores)
+    >>> mps.boundary
+    'obc'
+
+    The model infers open boundaries and dimensions from the core shapes.
+    Metrics and metadata remain attached to ``result`` and are not transferred
+    to the model. Pass ``parameterized=False`` to :class:`~tensorkrowch.models.MPS`
+    when trainable parameter nodes are not required. Clone the cores before
+    construction if independent tensor storage is required.
+
+    If :attr:`n_batches` is positive, the batch dimensions belong to the cores
+    themselves. Such a result should instead initialize an
+    :class:`~tensorkrowch.models.MPSData`:
+
+    >>> batched = tk.decompositions.TTSVD(
+    ...     torch.randn(8, 2, 3, 4), n_batches=1).fit(rank=2)
+    >>> mps_data = tk.models.MPSData(tensors=batched.cores,
+    ...                              n_batches=batched.n_batches)
+
+    The latter form applies only to a result that was created with batch
+    dimensions; ordinary non-batched decompositions use ``MPS`` as above.
+    """
 
     _family: ClassVar[str] = 'state'
     _topology: ClassVar[str] = 'tt'
@@ -482,7 +516,39 @@ class TTDecomposition(TensorDecomposition):
 
 @dataclass
 class TRDecomposition(TensorDecomposition):
-    """Lightweight tensor-ring decomposition with cyclic boundaries."""
+    """Lightweight tensor-ring decomposition with cyclic boundaries.
+
+    This result stores raw TR cores, ranks, metrics and metadata, but it is not
+    itself a TensorKrowch graph. :meth:`contract_dense` and :meth:`evaluate`
+    close the cyclic trace directly with PyTorch operations.
+
+    TensorKrowch represents a TR as an :class:`~tensorkrowch.models.MPS` with
+    periodic boundaries. The model can be initialized directly from the cores;
+    their shapes identify the cyclic topology:
+
+    >>> cores = [torch.randn(2, 3, 4), torch.randn(4, 5, 2)]
+    >>> result = tk.decompositions.TRDecomposition(cores)
+    >>> mps = tk.models.MPS(tensors=result.cores)
+    >>> mps.boundary
+    'pbc'
+
+    Metrics and metadata remain attached to ``result`` and are not transferred
+    to the model. Pass ``parameterized=False`` to :class:`~tensorkrowch.models.MPS`
+    when trainable parameter nodes are not required. Clone the cores before
+    construction if independent tensor storage is required.
+
+    Batched TR cores should initialize
+    :class:`~tensorkrowch.models.MPSData` instead:
+
+    >>> batched_cores = [torch.randn(8, 2, 3, 4),
+    ...                  torch.randn(8, 4, 5, 2)]
+    >>> batched = tk.decompositions.TRDecomposition(
+    ...     batched_cores, n_batches=1)
+    >>> mps_data = tk.models.MPSData(tensors=batched.cores,
+    ...                              n_batches=batched.n_batches)
+
+    The ``MPSData`` form applies only when :attr:`n_batches` is positive.
+    """
 
     _family: ClassVar[str] = 'state'
     _topology: ClassVar[str] = 'tr'

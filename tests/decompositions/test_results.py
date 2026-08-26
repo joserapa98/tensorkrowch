@@ -158,6 +158,21 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         ])
         assert torch.allclose(result.apply(inputs), expected_apply)
 
+    def test_ttm_result_initializes_mpo(self):
+        result = tk.decompositions.TTMSVD(
+            torch.randn(2, 3, 4, 5), output_device=None).fit(rank=2)
+        mpo = tk.models.MPO(
+            tensors=result.cores,
+            parameterized=False)
+
+        assert mpo.boundary == 'obc'
+        assert mpo.in_dim == list(result.input_dim)
+        assert mpo.out_dim == list(result.output_dim)
+        assert mpo.bond_dim == result.rank
+        assert all(torch.allclose(model_core, result_core)
+                   for model_core, result_core
+                   in zip(mpo.tensors, result.cores))
+
     def test_norm_overlap_fidelity_and_phase(self):
         vectors = [
             torch.tensor([1.0, 2.0], dtype=torch.complex128),

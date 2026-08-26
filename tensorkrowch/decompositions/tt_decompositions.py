@@ -323,20 +323,23 @@ def tt_rss(function: Callable,
     in a Matrix Product State of :math:`N` cores, each corresponding to one
     input variable, in the same order as they are provided to the function. To
     turn each input variable into a vector that can be contracted with the
-    corresponding MPS core, an embedding function is required. The dimension of
-    the embedding will be used as the input dimension of the MPS.
+    corresponding :class:`~tensorkrowch.models.MPS` core, an embedding function
+    is required. The dimension of the embedding will be used as the input
+    dimension of the :class:`~tensorkrowch.models.MPS`.
     
     If the function is vector-valued, it will be seen as a :math:`N + 1` scalar
-    function, returning a MPS with :math:`N + 1` cores. The output variable will
-    use the embedding :func:`~tensorkrowch.basis`, which maps integers
+    function, returning a :class:`~tensorkrowch.models.MPS` with
+    :math:`N + 1` cores. The output variable will use the embedding
+    :func:`~tensorkrowch.basis`, which maps integers
     (corresponding to indices of the output vector) to basis vectors:
     :math:`i \mapsto \langle i \rvert`. It can be specified the position in
     which the output core will be. By default, it will be in the middle of the
-    MPS.
+    :class:`~tensorkrowch.models.MPS`.
     
-    To specify the bond dimension of each MPS core, one can use the arguments
-    ``rank`` and ``cum_percentage``. If more than one is specified, the
-    resulting rank will be the one that satisfies all conditions.
+    To specify the bond dimension of each
+    :class:`~tensorkrowch.models.MPS` core, one can use the arguments ``rank``
+    and ``cum_percentage``. If more than one is specified, the resulting rank
+    will be the one that satisfies all conditions.
     
     Parameters
     ----------
@@ -368,10 +371,11 @@ def tt_rss(function: Callable,
         possible values that can take each variable. If all variables live in
         the same domain, it should be given as a tensor with shape ``n_values``
         or ``n_values x in_dim``, where the possible ``n_values`` should be at
-        least as large as the desired input dimension of the MPS cores, which
-        is the ``embed_dim`` of the ``embedding``. The more values are given,
-        the more accurate will be the tensorization but more costly will be to
-        do it. If ``domain`` is given as a list, it should have the same
+        least as large as the desired input dimension of the
+        :class:`~tensorkrowch.models.MPS` cores, which is the ``embed_dim`` of
+        the ``embedding``. The more values are given, the more accurate will be
+        the tensorization but more costly will be to do it. If ``domain`` is
+        given as a list, it should have the same
         number of elements as input variables, so that each variable can live
         in a different domain. If ``domain`` is not given, it will be obtained
         from the values each variable takes in the ``sketch_samples``.
@@ -383,33 +387,30 @@ def tt_rss(function: Callable,
         ``domain_multiplier * embed_dim`` values will be taken randomly.
     out_position : int, optional
         If the ``function`` is vector-valued, position of the output core in
-        the resulting MPS.
+        the resulting :class:`~tensorkrowch.models.MPS`.
     rank : int, optional
-        Maximum bond dimension allowed for all cores.
+        Number of singular values to keep.
     cutoff : float, optional
-        Threshold used to determine the rank of each core independently. When
-        selecting the bond dimension of a core, singular values ``<= cutoff``
-        are discarded. It must be non-negative.
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
     atol : float, optional
-        Absolute tolerance used to determine the rank of each core
-        independently. Starting from the smallest singular values, these are
-        discarded while their accumulated sum of squares is ``<= atol``. It must be
-        non-negative.
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance used to determine the rank of each core
-        independently. Starting from the smallest singular values, these are
-        discarded while their accumulated sum of squares divided by the
-        total sum of squares is ``<= rtol``. It must be in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of squared singular-value mass to keep when determining
-        the rank of each core. Equivalent to setting ``rtol = 1 - cum_percentage``.
-        Therefore, it allows different bond dimensions across cores. It must
-        be in ``(0, 1]``.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
+
     batch_size : int
         Batch size used to process ``sketch_samples`` with ``DataLoaders``
         during the decomposition.
@@ -434,7 +435,7 @@ def tt_rss(function: Callable,
     Returns
     -------
     list[torch.Tensor]
-        List of tensor cores of the MPS.
+        List of tensor cores of the :class:`~tensorkrowch.models.MPS`.
     dictionary
         If ``return_info`` is ``True``.
 

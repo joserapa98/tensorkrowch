@@ -21,13 +21,14 @@ def vec_to_mps(vec: torch.Tensor,
                cum_percentage: Optional[float] = None,
                renormalize: bool = False) -> List[torch.Tensor]:
     r"""
-    Splits a vector into a sequence of MPS tensors via consecutive SVD
-    decompositions. The resultant tensors can be used to instantiate a
+    Splits a vector into a sequence of :class:`~tensorkrowch.models.MPS`
+    tensors via consecutive SVD decompositions. The resultant tensors can be
+    used to instantiate a
     :class:`~tensorkrowch.models.MPS` with ``boundary = "obc"``.
     
     The number of resultant tensors and their respective physical dimensions
     depend on the shape of the input vector. That is, if one expects to recover
-    a MPS with physical dimensions
+    a :class:`~tensorkrowch.models.MPS` with physical dimensions
     
     .. math::
     
@@ -66,22 +67,23 @@ def vec_to_mps(vec: torch.Tensor,
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
     atol : float, optional
-        Absolute tolerance over the tail sum of squared singular values. Starting from
-        the smallest singular value, values are discarded while the accumulated
-        sum of squares is ``<= atol``. It must be non-negative.
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of squared singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum of
-        squares divided by the total sum of squares is ``<= rtol``. It must be
-        in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
-        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
+
     renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
             decompositions. If not, it may happen that the norm explodes as it
@@ -89,7 +91,7 @@ def vec_to_mps(vec: torch.Tensor,
             this undesired behavior by extracting the norm of each node on a
             logarithmic scale after SVD/QR decompositions are computed. Finally,
             the normalization factor is evenly distributed among all nodes of
-            the MPS.
+            the :class:`~tensorkrowch.models.MPS`.
 
     Returns
     -------
@@ -129,14 +131,16 @@ def mat_to_mpo(mat: torch.Tensor,
                cum_percentage: Optional[float] = None,
                renormalize: bool = False) -> List[torch.Tensor]:
     r"""
-    Splits a matrix into a sequence of MPO tensors via consecutive SVD
-    decompositions. The resultant tensors can be used to instantiate a
+    Splits a matrix into a sequence of :class:`~tensorkrowch.models.MPO`
+    tensors via consecutive SVD decompositions. The resultant tensors can be
+    used to instantiate a
     :class:`~tensorkrowch.models.MPO` with ``boundary = "obc"``.
     
     The dimensions of ``mat`` must be interleaved by site, with each input
     dimension immediately followed by its corresponding output dimension. The
     number of resultant tensors and their respective input/output dimensions
-    depend on this shape. That is, if one expects to recover a MPO with
+    depend on this shape. That is, if one expects to recover a
+    :class:`~tensorkrowch.models.MPO` with
     input/output dimensions
     
     .. math::
@@ -165,22 +169,23 @@ def mat_to_mpo(mat: torch.Tensor,
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
     atol : float, optional
-        Absolute tolerance over the tail sum of squared singular values. Starting from
-        the smallest singular value, values are discarded while the accumulated
-        sum of squares is ``<= atol``. It must be non-negative.
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance over the tail sum of squared singular values. Starting from
-        the smallest singular value, values are discarded while the tail sum of
-        squares divided by the total sum of squares is ``<= rtol``. It must be
-        in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of squared singular-value mass to keep. Equivalent to setting
-        ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
 
         .. math::
 
             \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
+
     renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
             decompositions. If not, it may happen that the norm explodes as it
@@ -188,7 +193,7 @@ def mat_to_mpo(mat: torch.Tensor,
             this undesired behavior by extracting the norm of each node on a
             logarithmic scale after SVD/QR decompositions are computed. Finally,
             the normalization factor is evenly distributed among all nodes of
-            the MPS.
+            the :class:`~tensorkrowch.models.MPO`.
 
     Returns
     -------

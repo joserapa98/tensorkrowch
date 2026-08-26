@@ -243,7 +243,7 @@ class TTSVD:
             verbose: Union[bool, int] = 0,
             observer: Optional[
                 DecompositionObserver] = None) -> TTDecomposition:
-        """Runs TT-SVD with a shared truncation policy at every cut.
+        r"""Runs TT-SVD with a shared truncation policy at every cut.
 
         The active exact SVD backend is selected through
         :func:`tensorkrowch.set_svd_method` or
@@ -274,24 +274,28 @@ class TTSVD:
         Parameters
         ----------
         rank : int, optional
-            Maximum number of singular values retained at every cut. It should
-            be at least one.
+            Number of singular values to keep.
         cutoff : float, optional
-            Minimum singular value retained. Singular values less than or
-            equal to ``cutoff`` are discarded. It should be non-negative.
+            Minimum singular value to keep. It must be non-negative. Singular
+            values ``<= cutoff`` are removed.
         atol : float, optional
-            Absolute tolerance for the tail sum of squared singular values.
-            Starting from the smallest value, singular values are discarded
-            while the accumulated sum is less than or equal to ``atol``. It
-            should be non-negative.
+            Absolute tolerance over the tail sum of squared singular values.
+            Starting from the smallest singular value, values are discarded while
+            the accumulated sum of squares is ``<= atol``. It must be non-negative.
         rtol : float, optional
-            Relative tolerance for the tail sum of squared singular values.
-            Values are discarded while the tail sum divided by the total sum
-            is less than or equal to ``rtol``. It should lie in ``[0, 1]``.
+            Relative tolerance over the tail sum of squared singular values.
+            Starting from the smallest singular value, values are discarded while
+            the tail sum of squares divided by the total sum of squares is
+            ``<= rtol``. It must be in ``[0, 1]``.
         cum_percentage : float, optional
-            Minimum fraction of squared singular-value mass retained. It is
-            equivalent to ``rtol = 1 - cum_percentage`` and should lie in
-            ``[0, 1]``.
+            Minimum fraction of squared singular-value mass to keep. Equivalent to
+            setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+            .. math::
+
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+                cum\_percentage
+
         renormalize : bool
             If ``True``, normalizes the residual before every SVD and
             accumulates the extracted scale logarithmically. The complete
@@ -525,7 +529,7 @@ def tt_svd(tensor: torch.Tensor,
            output_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False):
-    """Decomposes a dense tensor into TT cores by consecutive SVDs.
+    r"""Decomposes a dense tensor into TT cores by consecutive SVDs.
 
     This is the simple functional interface. Use :class:`TTSVD` to repeat
     fits of the same tensor or to access the lightweight result object. If
@@ -554,24 +558,28 @@ def tt_svd(tensor: torch.Tensor,
         Number of leading tensor axes interpreted as batch dimensions. At
         least one non-batch input dimension should remain.
     rank : int, optional
-        Maximum number of singular values retained at every cut. It should be
-        at least one.
+        Number of singular values to keep.
     cutoff : float, optional
-        Minimum singular value retained. Singular values less than or equal
-        to ``cutoff`` are discarded. It should be non-negative.
+        Minimum singular value to keep. It must be non-negative. Singular
+        values ``<= cutoff`` are removed.
     atol : float, optional
-        Absolute tolerance for the tail sum of squared singular values.
-        Starting from the smallest value, singular values are discarded while
-        the accumulated sum is less than or equal to ``atol``. It should be
-        non-negative.
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be non-negative.
     rtol : float, optional
-        Relative tolerance for the tail sum of squared singular values.
-        Values are discarded while the tail sum divided by the total sum is
-        less than or equal to ``rtol``. It should lie in ``[0, 1]``.
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be in ``[0, 1]``.
     cum_percentage : float, optional
-        Minimum fraction of squared singular-value mass retained. It is
-        equivalent to ``rtol = 1 - cum_percentage`` and should lie in
-        ``[0, 1]``.
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
+
     renormalize : bool
         If ``True``, normalizes the residual before every SVD, accumulates its
         scale logarithmically and evenly redistributes the complete scale over

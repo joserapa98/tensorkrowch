@@ -374,8 +374,9 @@ class TTDecomposition(TensorDecomposition):
     Consequently, creating or inspecting a decomposition has less overhead
     than creating a :class:`~tensorkrowch.models.MPS` model.
 
-    For graph contractions, training or the rest of the model API, an MPS can
-    be initialized directly from the cores:
+    For graph contractions, training or the rest of the model API, an
+    :class:`~tensorkrowch.models.MPS` can be initialized directly from the
+    cores:
 
     >>> tensor = torch.randn(2, 3, 4)
     >>> result = tk.decompositions.TTSVD(tensor).fit(rank=2)
@@ -399,7 +400,8 @@ class TTDecomposition(TensorDecomposition):
     ...                              n_batches=batched.n_batches)
 
     The latter form applies only to a result that was created with batch
-    dimensions; ordinary non-batched decompositions use ``MPS`` as above.
+    dimensions; ordinary non-batched decompositions use
+    :class:`~tensorkrowch.models.MPS` as above.
     """
 
     _family: ClassVar[str] = 'state'
@@ -547,7 +549,8 @@ class TRDecomposition(TensorDecomposition):
     >>> mps_data = tk.models.MPSData(tensors=batched.cores,
     ...                              n_batches=batched.n_batches)
 
-    The ``MPSData`` form applies only when :attr:`n_batches` is positive.
+    The :class:`~tensorkrowch.models.MPSData` form applies only when
+    :attr:`n_batches` is positive.
     """
 
     _family: ClassVar[str] = 'state'
@@ -625,7 +628,28 @@ class TRDecomposition(TensorDecomposition):
 
 @dataclass
 class TTMDecomposition(TensorDecomposition):
-    """Lightweight tensor-train matrix decomposition with open boundaries."""
+    """Lightweight tensor-train matrix decomposition with open boundaries.
+
+    This result stores TTM cores, ranks, input/output dimensions, metrics and
+    metadata without constructing a TensorKrowch graph. Dense contraction and
+    application to product inputs operate directly on its PyTorch tensors.
+
+    TensorKrowch models call this structure an
+    :class:`~tensorkrowch.models.MPO`. A model can be initialized directly from
+    the TTM cores when graph contractions or training are required:
+
+    >>> tensor = torch.randn(2, 3, 4, 5)
+    >>> result = tk.decompositions.TTMSVD(tensor).fit(rank=2)
+    >>> mpo = tk.models.MPO(tensors=result.cores)
+    >>> mpo.boundary
+    'obc'
+
+    The model infers dimensions and open boundaries from the core shapes.
+    Metrics and metadata remain attached to ``result`` and are not transferred
+    to the model. Pass ``parameterized=False`` when trainable parameter nodes
+    are not required, and clone the cores first if independent tensor storage
+    is required. TTM decomposition batches are currently unsupported.
+    """
 
     _family: ClassVar[str] = 'ttm'
     _topology: ClassVar[str] = 'ttm'

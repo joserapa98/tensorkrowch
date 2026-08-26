@@ -10,10 +10,6 @@ import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tt as tt_module
 import tensorkrowch.decompositions.svd.ttm as ttm_module
-from tensorkrowch.decompositions.svd_decompositions import (
-    mat_to_mpo as facade_mat_to_mpo,
-    vec_to_mps as facade_vec_to_mps,
-)
 
 
 class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
@@ -24,11 +20,9 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
         assert tk.decompositions.tt_svd is tt_module.tt_svd
         assert tk.decompositions.ttm_svd is ttm_module.ttm_svd
 
-    def test_legacy_facade_reexports_canonical_wrappers(self):
+    def test_public_aliases_export_canonical_wrappers(self):
         assert tk.decompositions.vec_to_mps is tt_module.vec_to_mps
         assert tk.decompositions.mat_to_mpo is ttm_module.mat_to_mpo
-        assert facade_vec_to_mps is tt_module.vec_to_mps
-        assert facade_mat_to_mpo is ttm_module.mat_to_mpo
 
     @pytest.mark.parametrize(
         'function, tensor, message',

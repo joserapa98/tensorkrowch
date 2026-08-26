@@ -8,6 +8,7 @@ This script contains:
 from typing import (List, Optional)
 import torch
 
+from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.utils import truncated_svd
 
 
@@ -103,56 +104,21 @@ def vec_to_mps(vec: torch.Tensor,
     """
     if not isinstance(vec, torch.Tensor):
         raise TypeError('`vec` should be torch.Tensor type')
-    
+
     if n_batches > vec.ndim:
         raise ValueError(
             '`n_batches` should be between 0 and the rank of `vec`')
-    
-    batches_shape = vec.shape[:n_batches]
-    phys_dims = torch.tensor(vec.shape[n_batches:])
-    
-    log_norm = 0
-    prev_bond = 1
-    tensors = []
-    for i in range(len(phys_dims) - 1):
-        vec = vec.reshape(*batches_shape,
-                          prev_bond * phys_dims[i],
-                          phys_dims[(i + 1):].prod())
-        
-        u, s, vh = truncated_svd(tensor=vec,
-                                 rank=rank,
-                                 cutoff=cutoff,
-                                 atol=atol,
-                                 rtol=rtol,
-                                 cum_percentage=cum_percentage)
-        aux_rank = s.shape[-1]
-        
-        if i > 0:
-            u = u.reshape(*batches_shape, prev_bond, phys_dims[i], aux_rank)
-        
-        if renormalize:
-            aux_norm = s.norm(dim=-1, keepdim=True)
-            if not aux_norm.isinf().any() and (aux_norm > 0).any():
-                s = s / aux_norm
-                log_norm += aux_norm.log()
-        
-        # If u is not cloned, it leads to errors in backward computation
-        tensors.append(u.clone())
-        prev_bond = aux_rank
-        
-        if vh.is_complex():
-            s = s.to(vh.dtype)
-        vec = torch.diag_embed(s) @ vh
-        
-    tensors.append(vec)
-    
-    if renormalize and isinstance(log_norm, torch.Tensor):
-        rescale = (log_norm / len(tensors)).exp()
-        for vec in tensors:
-            vec *= rescale.view(*vec.shape[:n_batches],
-                                *([1] * (vec.ndim - n_batches)))
-    
-    return tensors
+
+    return TTSVD(
+        tensor=vec,
+        n_batches=n_batches,
+        output_device=None).fit(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            renormalize=renormalize).cores
 
 
 def mat_to_mpo(mat: torch.Tensor,

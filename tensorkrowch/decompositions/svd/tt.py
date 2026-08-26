@@ -308,6 +308,23 @@ class TTSVD:
             Lightweight result containing cores and ranks. Its structured
             metrics are empty unless ``collect_metrics=True``, ``verbose>0``
             or an ``observer`` is provided.
+
+        Examples
+        --------
+        Fix a tensor once and compare decompositions with different maximum
+        ranks:
+
+        >>> import tensorkrowch as tk
+        >>> tensor = torch.arange(24.).reshape(2, 3, 4)
+        >>> decomposer = tk.decompositions.TTSVD(tensor)
+        >>> rank_one = decomposer.fit(rank=1)
+        >>> rank_two = decomposer.fit(rank=2, collect_metrics=True)
+        >>> rank_one.rank
+        [1, 1]
+        >>> rank_two.rank
+        [2, 2]
+        >>> len(rank_two.metrics.truncations)
+        2
         """
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
@@ -554,6 +571,25 @@ def tt_svd(tensor: torch.Tensor,
     list[torch.Tensor] or tuple
         TT cores by default. If ``return_info=True``, returns
         ``(cores, info)`` with ranks and structured metrics.
+
+    Examples
+    --------
+    Decompose a four-site tensor and inspect the resulting core shapes:
+
+    >>> import tensorkrowch as tk
+    >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
+    >>> [tuple(core.shape) for core in cores]
+    [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
+
+    Request structured ranks, errors and timings when they are needed:
+
+    >>> cores, info = tk.decompositions.tt_svd(
+    ...     tensor, rank=2, return_info=True)
+    >>> info['rank']
+    [2, 2, 2]
+    >>> len(info['metrics']['truncations'])
+    3
     """
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')

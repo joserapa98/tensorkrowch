@@ -7,6 +7,10 @@ from typing import Callable, Optional, Protocol, Sequence, Tuple
 import torch
 
 from tensorkrowch.decompositions.als.problem import ObservedEntries
+from tensorkrowch.decompositions.sources import ConfigurationBatch
+from tensorkrowch.decompositions.sources.base import (_discrete_indices,
+                                                      _ravel_indices,
+                                                      _unravel_indices)
 
 
 _INTEGER_DTYPES = (
@@ -338,6 +342,267 @@ class UniformRows:
         return state.update_core(site)
 
 
+def _region_metrics(cores: Sequence[torch.Tensor]) -> Sequence[torch.Tensor]:
+    """Builds backward density metrics for row-norm sampling."""
+    if not cores:
+        return ()
+    metric = torch.eye(
+        cores[-1].shape[-1],
+        device=cores[-1].device,
+        dtype=cores[-1].dtype)
+    metrics = [metric]
+    for core in reversed(cores):
+        metric = torch.einsum(
+            'apb,bc,dpc->ad', core, metric, core.conj())
+        metrics.append(metric)
+    return tuple(reversed(metrics))
+
+
+def _sample_region(cores: Sequence[torch.Tensor],
+                   n_samples: int,
+                   generator: Optional[torch.Generator]
+                   ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Samples a chain region from its normalized row-norm distribution."""
+    if not cores:
+        device = torch.device('cpu') if generator is None \
+            else torch.device(generator.device)
+        return (torch.empty((n_samples, 0), device=device, dtype=torch.long),
+                torch.ones(n_samples, device=device))
+
+    metrics = _region_metrics(cores)
+    environment = cores[0].new_ones((n_samples, cores[0].shape[0]))
+    joint_probability = environment.real.new_ones(n_samples)
+    sampled_sites = []
+    for site, core in enumerate(cores):
+        candidates = torch.einsum('ja,apb->jpb', environment, core)
+        scores = torch.einsum(
+            'jpb,bc,jpc->jp',
+            candidates,
+            metrics[site + 1],
+            candidates.conj()).real.clamp_min(0)
+        normalization = scores.sum(dim=1, keepdim=True)
+        if torch.any(normalization <= 0):
+            raise ValueError(
+                'A leverage recursion reached a zero-probability prefix')
+        conditional = scores / normalization
+        selected = torch.multinomial(
+            conditional, 1, replacement=True, generator=generator).squeeze(1)
+        selected_probability = conditional.gather(
+            1, selected.unsqueeze(1)).squeeze(1)
+        joint_probability = joint_probability * selected_probability
+        selected_slices = core[:, selected, :].permute(1, 0, 2)
+        environment = torch.einsum(
+            'ja,jab->jb', environment, selected_slices)
+        sampled_sites.append(selected)
+    return torch.stack(sampled_sites, dim=1), joint_probability
+
+
+def _region_row_probability(cores: Sequence[torch.Tensor],
+                            indices: torch.Tensor) -> torch.Tensor:
+    """Evaluates normalized row-norm probabilities for selected indices."""
+    if not cores:
+        return torch.ones(
+            indices.shape[0], device=indices.device,
+            dtype=torch.get_default_dtype())
+    environment = cores[0].new_ones((indices.shape[0], cores[0].shape[0]))
+    for site, core in enumerate(cores):
+        selected = core[:, indices[:, site], :].permute(1, 0, 2)
+        environment = torch.einsum('ja,jab->jb', environment, selected)
+    row_norm = environment.abs().square().sum(dim=1)
+    total = _region_metrics(cores)[0].trace().real
+    if total <= 0:
+        raise ValueError('A leverage region should have positive total norm')
+    return row_norm / total
+
+
+class TTLeverageRows:
+    """Samples TT local-design rows from mixed-canonical leverage scores.
+
+    The current cores are obtained from ``cores`` at every draw. Cores to the
+    left of the selected site must be left-isometric, and cores to its right
+    right-isometric. Under this invariant, the leverage distribution factors
+    into left row norms, a uniform current input and right row norms, so rows
+    are sampled recursively without materializing the full local design.
+
+    ``uniform_mix`` mixes the normalized leverage distribution with a global
+    uniform distribution. A positive value gives every row non-zero support.
+    Importance weighting makes the sampled Gram matrix and right-hand side
+    unbiased when support is sufficient; it does not make the nonlinear
+    least-squares solution itself an unbiased estimator.
+    """
+
+    proposal_exact = True
+    refreshable = True
+
+    def __init__(self,
+                 cores: Callable[[], Sequence[torch.Tensor]],
+                 uniform_mix: float = 0.0) -> None:
+        if not callable(cores):
+            raise TypeError('`cores` should be a callable returning TT cores')
+        if isinstance(uniform_mix, bool) or \
+                (not isinstance(uniform_mix, (int, float))):
+            raise TypeError('`uniform_mix` should be a number in [0, 1]')
+        if (uniform_mix < 0) or (uniform_mix > 1):
+            raise ValueError('`uniform_mix` should be in [0, 1]')
+        self._cores = cores
+        self.uniform_mix = float(uniform_mix)
+
+    @staticmethod
+    def _right_sampling_cores(
+            cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
+        """Reverses a right-canonical region into left-sampling form."""
+        return tuple(
+            core.permute(2, 1, 0).conj() for core in reversed(cores))
+
+    def _current_cores(self) -> Tuple[torch.Tensor, ...]:
+        """Validates current standard TT cores."""
+        cores = tuple(self._cores())
+        if not cores:
+            raise ValueError('The leverage sampler requires TT cores')
+        if any((not isinstance(core, torch.Tensor)) or (core.ndim != 3)
+               for core in cores):
+            raise ValueError('Leverage sampling requires standard TT cores')
+        return cores
+
+    @staticmethod
+    def _validate_mixed_canonical(
+            cores: Sequence[torch.Tensor], site: int) -> None:
+        """Checks the isometries that turn row norms into leverage scores."""
+        real_dtype = cores[0].real.dtype
+        tolerance = 100 * torch.finfo(real_dtype).eps * max(
+            max(core.shape) for core in cores)
+        for core in cores[:site]:
+            matrix = core.reshape(-1, core.shape[-1])
+            identity = torch.eye(
+                matrix.shape[1], device=matrix.device, dtype=matrix.dtype)
+            if not torch.allclose(
+                    matrix.mH @ matrix, identity,
+                    atol=tolerance, rtol=tolerance):
+                raise ValueError(
+                    'Cores left of the leverage site should be left-isometric')
+        for core in cores[site + 1:]:
+            matrix = core.reshape(core.shape[0], -1)
+            identity = torch.eye(
+                matrix.shape[0], device=matrix.device, dtype=matrix.dtype)
+            if not torch.allclose(
+                    matrix @ matrix.mH, identity,
+                    atol=tolerance, rtol=tolerance):
+                raise ValueError(
+                    'Cores right of the leverage site should be right-isometric')
+
+    def _probabilities_from_indices(
+            self,
+            cores: Sequence[torch.Tensor],
+            site: int,
+            indices: torch.Tensor) -> torch.Tensor:
+        """Evaluates mixed probabilities after canonical validation."""
+        input_dim = tuple(core.shape[1] for core in cores)
+        left_probability = _region_row_probability(
+            cores[:site], indices[:, :site])
+        right_cores = self._right_sampling_cores(cores[site + 1:])
+        right_probability = _region_row_probability(
+            right_cores,
+            indices[:, site + 1:].flip(1))
+        leverage = left_probability * right_probability / input_dim[site]
+        uniform = leverage.new_full(
+            leverage.shape, 1 / prod(input_dim))
+        return (1 - self.uniform_mix) * leverage + \
+            self.uniform_mix * uniform
+
+    def probabilities(self,
+                      site: int,
+                      configurations: ConfigurationBatch) -> torch.Tensor:
+        """Returns the mixed proposal probability of selected global rows."""
+        cores = self._current_cores()
+        if isinstance(site, bool) or \
+                (not isinstance(site, int)) or \
+                (site < 0) or (site >= len(cores)):
+            raise ValueError('`site` should identify a TT core')
+        self._validate_mixed_canonical(cores, site)
+        indices = _discrete_indices(
+            configurations,
+            tuple(core.shape[1] for core in cores),
+            cores[0].device)
+        return self._probabilities_from_indices(cores, site, indices)
+
+    def draw(self,
+             state: _RowSamplingState,
+             site: int,
+             n_samples: Optional[int],
+             generator: Optional[torch.Generator] = None) -> SampleBatch:
+        """Draws recursive leverage rows and records proposal versions."""
+        _validate_draw(state, site, n_samples)
+        if n_samples is None:
+            raise ValueError('`n_samples` is required for TTLeverageRows')
+        cores = self._current_cores()
+        if len(cores) != len(state.core_versions):
+            raise ValueError('Sampling state should match the current TT')
+        if cores[0].device != state.device:
+            raise ValueError('Sampling state and TT cores should share a device')
+        self._validate_mixed_canonical(cores, site)
+        if generator is not None and \
+                torch.device(generator.device).type != state.device.type:
+            raise ValueError(
+                '`generator` device should match the sampling state device')
+
+        left_ids, left_probability = _sample_region(
+            cores[:site], n_samples, generator)
+        current_ids = torch.randint(
+            cores[site].shape[1],
+            (n_samples, 1),
+            device=state.device,
+            generator=generator)
+        right_sampling_cores = self._right_sampling_cores(
+            cores[site + 1:])
+        reversed_right_ids, right_probability = _sample_region(
+            right_sampling_cores, n_samples, generator)
+        right_ids = reversed_right_ids.flip(1)
+        leverage_indices = torch.cat(
+            (left_ids.to(state.device), current_ids,
+             right_ids.to(state.device)), dim=1)
+
+        if self.uniform_mix > 0:
+            uniform_ids = torch.randint(
+                state.n_rows,
+                (n_samples,),
+                device=state.device,
+                generator=generator)
+            uniform_indices = _unravel_indices(
+                uniform_ids, tuple(core.shape[1] for core in cores))
+            use_uniform = torch.rand(
+                n_samples,
+                device=state.device,
+                generator=generator) < self.uniform_mix
+            indices = torch.where(
+                use_uniform.unsqueeze(1), uniform_indices, leverage_indices)
+        else:
+            indices = leverage_indices
+
+        input_dim = tuple(core.shape[1] for core in cores)
+        ids = _ravel_indices(indices, input_dim)
+        if self.uniform_mix == 0:
+            probabilities = left_probability.to(state.device) * \
+                right_probability.to(state.device) / input_dim[site]
+        else:
+            probabilities = self._probabilities_from_indices(
+                cores, site, indices)
+        if torch.any(probabilities <= 0):
+            raise ValueError('Drawn leverage rows should have positive support')
+        return _sample_batch(
+            ids=ids,
+            probabilities=probabilities,
+            state=state,
+            site=site,
+            proposal_core_versions=state.core_versions,
+            proposal_exact=True)
+
+    def update_after_core(self,
+                          state: _RowSamplingState,
+                          site: int) -> _RowSamplingState:
+        """Invalidates design-dependent probabilities after core changes."""
+        return state.update_core(site)
+
+
 @dataclass(frozen=True)
 class SampleRefreshPolicy:
     """Deterministic generation policy for reusable sampled rows.
@@ -397,5 +662,6 @@ __all__ = [
     'ExactRows',
     'ObservedRows',
     'UniformRows',
+    'TTLeverageRows',
     'SampleRefreshPolicy',
 ]

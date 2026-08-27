@@ -397,6 +397,8 @@ class LocalSolveRecord:
     system_scale: float = 1.0
     site: Optional[Any] = None
     sweep: Optional[int] = None
+    sampling_exact: Optional[bool] = None
+    sample_generation: Optional[int] = None
 
     def __post_init__(self) -> None:
         environment_shape = tuple(self.environment_shape)
@@ -453,6 +455,15 @@ class LocalSolveRecord:
             if isinstance(self.sweep, bool) or \
                     (not isinstance(self.sweep, int)) or (self.sweep < 0):
                 raise ValueError('`sweep` should be a non-negative integer')
+        if (self.sampling_exact is not None) and \
+                (not isinstance(self.sampling_exact, bool)):
+            raise TypeError('`sampling_exact` should be bool type or None')
+        if self.sample_generation is not None:
+            if isinstance(self.sample_generation, bool) or \
+                    (not isinstance(self.sample_generation, int)) or \
+                    (self.sample_generation < 0):
+                raise ValueError(
+                    '`sample_generation` should be a non-negative integer')
 
 
 @dataclass(frozen=True)

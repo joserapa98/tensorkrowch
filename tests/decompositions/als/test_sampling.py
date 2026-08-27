@@ -1,11 +1,29 @@
 """Tests for ALS row sampling and refresh semantics."""
 
+from math import prod
+
 import pytest
 
 import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.als.sampling import _RowSamplingState
+from tests.decompositions.als._oracles import dense_local_design
+
+
+def _mixed_canonical_cores(tensor, site, rank=2):
+    """Builds standard TT cores mixed-canonical around ``site``."""
+    result = tk.decompositions.TTSVD(
+        tensor, output_device=None).fit(rank=rank)
+    cores = [result.cores[0].unsqueeze(0),
+             *result.cores[1:-1],
+             result.cores[-1].unsqueeze(-1)]
+    gauge = tk.decompositions.QRGauge()
+    for current in reversed(range(site + 1, len(cores))):
+        cores[current], factor = gauge.factor(cores[current], 'reverse')
+        cores[current - 1] = gauge.absorb(
+            factor, cores[current - 1], 'reverse')
+    return cores
 
 
 class TestSampleBatch:  # MARK: TestSampleBatch
@@ -222,3 +240,121 @@ class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
 
         assert [policy.generation(sweep) for sweep in range(8)] == [
             0, 0, 0, 1, 1, 1, 2, 2]
+
+
+class TestTTLeverageRows:  # MARK: TestTTLeverageRows
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_probabilities_match_dense_leverage_scores(self, dtype):
+        generator = torch.Generator().manual_seed(35)
+        tensor = torch.randn(
+            2, 3, 2, dtype=dtype, generator=generator)
+        site = 1
+        cores = _mixed_canonical_cores(tensor, site)
+        sampler = tk.decompositions.TTLeverageRows(lambda: cores)
+        flat_ids = torch.arange(prod(tensor.shape))
+        indices = torch.stack(torch.unravel_index(
+            flat_ids, tensor.shape), dim=1)
+
+        probabilities = sampler.probabilities(
+            site,
+            tk.decompositions.ConfigurationBatch(indices))
+        design = dense_local_design(cores, site, topology='tt')
+        q, _ = torch.linalg.qr(design, mode='reduced')
+        expected = q.abs().square().sum(dim=1) / q.shape[1]
+
+        assert torch.allclose(
+            probabilities, expected, atol=1e-11, rtol=1e-11)
+        assert probabilities.sum() == pytest.approx(1.)
+
+    def test_uniform_mixture_adds_full_support(self):
+        cores = [
+            torch.tensor([[[1.], [0.]]]),
+            torch.tensor([[[1.], [0.]]]),
+        ]
+        configurations = tk.decompositions.ConfigurationBatch(
+            torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]]))
+
+        pure = tk.decompositions.TTLeverageRows(
+            lambda: cores).probabilities(0, configurations)
+        mixed = tk.decompositions.TTLeverageRows(
+            lambda: cores, uniform_mix=0.2).probabilities(
+                0, configurations)
+
+        assert torch.any(pure == 0)
+        assert torch.all(mixed > 0)
+        assert mixed.sum() == pytest.approx(1.)
+
+    def test_recursive_draw_records_design_versions_and_probabilities(self):
+        tensor = torch.randn(2, 3, 2, dtype=torch.float64)
+        site = 1
+        cores = _mixed_canonical_cores(tensor, site)
+        sampler = tk.decompositions.TTLeverageRows(
+            lambda: cores, uniform_mix=0.1)
+        state = _RowSamplingState(
+            n_rows=tensor.numel(),
+            core_versions=(2, 4, 3))
+
+        batch = sampler.draw(
+            state,
+            site=site,
+            n_samples=100,
+            generator=torch.Generator().manual_seed(36))
+
+        indices = torch.stack(torch.unravel_index(
+            batch.ids, tensor.shape), dim=1)
+        expected = sampler.probabilities(
+            site, tk.decompositions.ConfigurationBatch(indices))
+        assert torch.allclose(batch.probabilities, expected)
+        assert batch.is_exact_for((2, 4, 3))
+        assert not batch.is_exact_for((2, 5, 3))
+        assert batch.site == site
+
+    def test_reweighted_gram_and_rhs_are_unbiased_in_expectation(self):
+        generator = torch.Generator().manual_seed(38)
+        tensor = torch.randn(2, 3, 2, dtype=torch.float64,
+                             generator=generator)
+        site = 1
+        cores = _mixed_canonical_cores(tensor, site)
+        design = dense_local_design(cores, site, topology='tt')
+        target = torch.randn(design.shape[0], dtype=torch.float64,
+                             generator=generator)
+        sampler = tk.decompositions.TTLeverageRows(
+            lambda: cores, uniform_mix=0.1)
+        state = _RowSamplingState(
+            n_rows=design.shape[0], core_versions=(0, 0, 0))
+
+        batch = sampler.draw(
+            state,
+            site=site,
+            n_samples=100_000,
+            generator=generator)
+        sampled_design, sampled_target = batch.gather_and_weight(
+            design, target)
+
+        assert torch.allclose(
+            sampled_design.mH @ sampled_design,
+            design.mH @ design,
+            rtol=2e-2,
+            atol=2e-2)
+        assert torch.allclose(
+            sampled_design.mH @ sampled_target,
+            design.mH @ target,
+            rtol=2e-2,
+            atol=2e-2)
+
+    def test_noncanonical_regions_are_rejected(self):
+        cores = [
+            torch.randn(1, 2, 2),
+            torch.randn(2, 2, 2),
+            torch.randn(2, 2, 1),
+        ]
+        sampler = tk.decompositions.TTLeverageRows(lambda: cores)
+        state = _RowSamplingState(n_rows=8, core_versions=(0, 0, 0))
+
+        with pytest.raises(ValueError, match='isometric'):
+            sampler.draw(
+                state,
+                site=1,
+                n_samples=4,
+                generator=torch.Generator().manual_seed(37))

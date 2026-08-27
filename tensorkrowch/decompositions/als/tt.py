@@ -10,15 +10,19 @@ from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
 from tensorkrowch.decompositions.als.driver import ALSSweepDriver
 from tensorkrowch.decompositions.als.environments import (CoreUpdateSet,
-                                                          TTEnvironmentCache)
+                                                          TTEnvironmentCache,
+                                                          _environment_norm)
 from tensorkrowch.decompositions.als.gauges import (GaugePolicy, NoGauge,
+                                                    QRGauge, SVDGauge,
                                                     resolve_gauge_policy)
 from tensorkrowch.decompositions.als.problem import (ALSProblem,
                                                      ObservedEntries)
 from tensorkrowch.decompositions.als.sampling import (
     ObservedRows,
     RowSampler,
+    SampleBatch,
     SampleRefreshPolicy,
+    TTLeverageRows,
     UniformRows,
     _RowSamplingState,
 )
@@ -140,6 +144,88 @@ def _relative_error(absolute: torch.Tensor,
     return torch.full_like(absolute, torch.inf)
 
 
+def _solve_local_proposal(
+        solver: LeastSquaresSolver,
+        environment: torch.Tensor,
+        target: torch.Tensor,
+        current: torch.Tensor,
+        site: int,
+        sweep: int,
+        update_policy: UpdatePolicy,
+        return_record: bool,
+        regularization_scale: Optional[torch.Tensor] = None,
+        sampling_exact: Optional[bool] = None,
+        sample_generation: Optional[int] = None
+        ) -> Tuple[torch.Tensor, object]:
+    """Solves, damps and optionally accepts one TT local proposal."""
+    solution, record = solver.solve(
+        environment,
+        target,
+        site=site,
+        sweep=sweep,
+        return_record=return_record,
+        regularization_scale=regularization_scale)
+    proposal = update_policy.apply(current, solution.reshape(current.shape))
+    record_needs_update = return_record and (update_policy.damping != 1)
+    if update_policy.acceptance == 'non_increasing':
+        current_error = torch.linalg.vector_norm(
+            environment @ current.reshape(-1) - target)
+        proposal_error = torch.linalg.vector_norm(
+            environment @ proposal.reshape(-1) - target)
+        if not update_policy.accepts(
+                float(current_error.detach().cpu().item()),
+                float(proposal_error.detach().cpu().item())):
+            proposal = current
+        record_needs_update = return_record
+    if record_needs_update:
+        residual = environment @ proposal.reshape(-1) - target
+        residual_absolute = torch.linalg.vector_norm(residual)
+        target_norm = torch.linalg.vector_norm(target)
+        record = replace(
+            record,
+            residual_absolute=residual_absolute,
+            residual_relative=_relative_error(
+                residual_absolute, target_norm),
+            target_norm=target_norm)
+    if record is not None and sampling_exact is not None:
+        record = replace(
+            record,
+            sampling_exact=sampling_exact,
+            sample_generation=sample_generation)
+    return proposal, record
+
+
+def _gauge_core_update(
+        cores: Sequence[torch.Tensor],
+        versions: Sequence[int],
+        fixed_sites: Sequence[int],
+        gauge: GaugePolicy,
+        direction: str,
+        site: int,
+        proposal: torch.Tensor) -> CoreUpdateSet:
+    """Builds one atomic current-plus-receiver gauge update."""
+    receiver = site + 1 if direction == 'forward' else site - 1
+    legal_receiver = (0 <= receiver < len(cores)) and \
+        (receiver not in fixed_sites)
+    effective_gauge = gauge if legal_receiver else NoGauge()
+    gauged_core, factor = effective_gauge.factor(proposal, direction)
+
+    sites = [site]
+    updated_cores = [gauged_core]
+    updated_versions = [versions[site] + 1]
+    if factor is not None:
+        neighbor = effective_gauge.absorb(
+            factor, cores[receiver], direction)
+        sites.append(receiver)
+        updated_cores.append(neighbor)
+        updated_versions.append(versions[receiver] + 1)
+    return CoreUpdateSet(
+        sites=sites,
+        cores=updated_cores,
+        versions=updated_versions,
+        reason='local_solve')
+
+
 class _TTALSBackend:
     """Adapts exact, sampled and completion TT solves to the common driver."""
 
@@ -238,24 +324,6 @@ class _TTALSBackend:
         self.cache.prepare_sweep(order, samples=batch)
         return batch.generation, refreshed
 
-    def _updated_record(self,
-                        record,
-                        environment: torch.Tensor,
-                        target: torch.Tensor,
-                        proposal: torch.Tensor):
-        """Updates diagnostics when damping or acceptance changes a solve."""
-        if record is None:
-            return None
-        residual = environment @ proposal.reshape(-1) - target
-        residual_absolute = torch.linalg.vector_norm(residual)
-        target_norm = torch.linalg.vector_norm(target)
-        residual_relative = _relative_error(residual_absolute, target_norm)
-        return replace(
-            record,
-            residual_absolute=residual_absolute,
-            residual_relative=residual_relative,
-            target_norm=target_norm)
-
     def solve_site(self,
                    site: int,
                    sweep: int,
@@ -290,53 +358,32 @@ class _TTALSBackend:
         if (self.solver.l2_reg_mode == 'absolute') and \
                 (self.solver.l2_reg > 0):
             regularization_scale = (-2 * local_environment.log_scale).exp()
-        solution, record = self.solver.solve(
-            environment,
-            target,
+        current = self.cache.cores[site]
+        sampling_exact = None if self.sample_batch is None else \
+            self.sample_batch.is_exact_for(self.cache.core_versions)
+        proposal, record = _solve_local_proposal(
+            solver=self.solver,
+            environment=environment,
+            target=target,
+            current=current,
             site=site,
             sweep=sweep,
+            update_policy=update_policy,
             return_record=return_record,
-            regularization_scale=regularization_scale)
-
-        current = self.cache.cores[site]
-        proposal = solution.reshape(current.shape)
-        proposal = update_policy.apply(current, proposal)
-        record_needs_update = return_record and \
-            (update_policy.damping != 1)
-        if update_policy.acceptance == 'non_increasing':
-            current_error = torch.linalg.vector_norm(
-                environment @ current.reshape(-1) - target)
-            proposal_error = torch.linalg.vector_norm(
-                environment @ proposal.reshape(-1) - target)
-            if not update_policy.accepts(
-                    float(current_error.detach().cpu().item()),
-                    float(proposal_error.detach().cpu().item())):
-                proposal = current
-            record_needs_update = return_record
-        if record_needs_update:
-            record = self._updated_record(
-                record, environment, target, proposal)
-
-        receiver = site + 1 if self._direction == 'forward' else site - 1
-        legal_receiver = (0 <= receiver < self.n_sites) and \
-            (receiver not in self.fixed_sites)
-        gauge = self.gauge if legal_receiver else NoGauge()
-        gauged_core, factor = gauge.factor(proposal, self._direction)
-
-        sites = [site]
-        cores = [gauged_core]
-        versions = [self.cache.core_versions[site] + 1]
-        if factor is not None:
-            neighbor = gauge.absorb(
-                factor, self.cache.cores[receiver], self._direction)
-            sites.append(receiver)
-            cores.append(neighbor)
-            versions.append(self.cache.core_versions[receiver] + 1)
-        return CoreUpdateSet(
-            sites=sites,
-            cores=cores,
-            versions=versions,
-            reason='local_solve'), record
+            regularization_scale=regularization_scale,
+            sampling_exact=sampling_exact,
+            sample_generation=(
+                None if self.sample_batch is None
+                else self.sample_batch.generation))
+        update_set = _gauge_core_update(
+            cores=self.cache.cores,
+            versions=self.cache.core_versions,
+            fixed_sites=self.fixed_sites,
+            gauge=self.gauge,
+            direction=self._direction,
+            site=site,
+            proposal=proposal)
+        return update_set, record
 
     def skip_site(self, site: int) -> None:
         self.cache.local_environment(site)
@@ -379,6 +426,233 @@ class _TTALSBackend:
     def restore(self, cores: Sequence[torch.Tensor]) -> None:
         self.cache = TTEnvironmentCache(
             cores, renormalize=self.cache.renormalize)
+
+
+def _direct_sampled_tt_design(
+        cores: Sequence[torch.Tensor],
+        site: int,
+        indices: torch.Tensor,
+        renormalize: bool) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Builds correlated sampled TT rows for one independently drawn site."""
+    n_samples = indices.shape[0]
+    left = cores[0].new_ones((n_samples, 1))
+    right = cores[0].new_ones((n_samples, 1))
+    log_scale = cores[0].real.new_zeros(())
+
+    for current in range(site):
+        selected = cores[current][:, indices[:, current], :].permute(1, 0, 2)
+        left = torch.einsum('ja,jab->jb', left, selected)
+        if renormalize:
+            norm = _environment_norm(left)
+            if norm > 0:
+                left = left / norm
+                log_scale = log_scale + norm.log()
+    for current in reversed(range(site + 1, len(cores))):
+        selected = cores[current][:, indices[:, current], :].permute(1, 0, 2)
+        right = torch.einsum('jab,jb->ja', selected, right)
+        if renormalize:
+            norm = _environment_norm(right)
+            if norm > 0:
+                right = right / norm
+                log_scale = log_scale + norm.log()
+
+    basis = torch.nn.functional.one_hot(
+        indices[:, site], cores[site].shape[1]).to(
+            device=cores[0].device, dtype=cores[0].dtype)
+    design = torch.einsum(
+        'ja,jp,jb->japb', left, basis, right)
+    return design.reshape(n_samples, -1), log_scale
+
+
+class _TTLeverageALSBackend:
+    """Runs site-dependent recursive TT leverage sampling."""
+
+    def __init__(self,
+                 problem: ALSProblem,
+                 cores: Sequence[torch.Tensor],
+                 solver: LeastSquaresSolver,
+                 gauge: GaugePolicy,
+                 n_samples: int,
+                 mode: str,
+                 uniform_mix: float,
+                 refresh_policy: SampleRefreshPolicy,
+                 generator: Optional[torch.Generator],
+                 renormalize: bool) -> None:
+        self.problem = problem
+        self._cores = TTEnvironmentCache._validate_cores(cores)
+        self._versions = (0,) * len(self._cores)
+        self.solver = solver
+        self.gauge = gauge
+        self.n_samples = n_samples
+        self.mode = mode
+        self.refresh_policy = refresh_policy
+        self.generator = generator
+        self.renormalize = renormalize
+        self.sampler = TTLeverageRows(
+            lambda: self._cores, uniform_mix=uniform_mix)
+        self._sampling_state = _RowSamplingState(
+            n_rows=prod(core.shape[1] for core in self._cores),
+            core_versions=self._versions,
+            device=self._cores[0].device)
+        self._batches = {}
+        self._targets = {}
+        self._generation = None
+        self._direction = None
+        self._initialized = False
+        self.sample_exact_flags = []
+
+    @property
+    def n_sites(self) -> int:
+        return len(self._cores)
+
+    @property
+    def trainable_sites(self) -> Sequence[int]:
+        return tuple(range(self.n_sites))
+
+    @property
+    def cores(self) -> Sequence[torch.Tensor]:
+        return self._cores
+
+    def _canonicalize_initial(self, direction: str) -> None:
+        """Places the initial TT in mixed-canonical form at the first site."""
+        cores = list(self._cores)
+        versions = list(self._versions)
+        gauge = self.gauge
+        if direction == 'forward':
+            sites = reversed(range(1, self.n_sites))
+            factor_direction = 'reverse'
+            receiver_offset = -1
+        else:
+            sites = range(self.n_sites - 1)
+            factor_direction = 'forward'
+            receiver_offset = 1
+        for site in sites:
+            cores[site], factor = gauge.factor(
+                cores[site], factor_direction)
+            receiver = site + receiver_offset
+            cores[receiver] = gauge.absorb(
+                factor, cores[receiver], factor_direction)
+            versions[site] += 1
+            versions[receiver] += 1
+        self._cores = TTEnvironmentCache._validate_cores(cores)
+        self._versions = tuple(versions)
+        self._sampling_state = replace(
+            self._sampling_state, core_versions=self._versions)
+
+    def prepare_sweep(self,
+                      order: Sequence[int],
+                      sweep: int) -> Tuple[Optional[int], bool]:
+        self._direction = 'forward' if order[0] == 0 else 'reverse'
+        if not self._initialized:
+            self._canonicalize_initial(self._direction)
+            self._initialized = True
+
+        generation = sweep if self.mode == 'exact' \
+            else self.refresh_policy.generation(sweep)
+        refreshed = generation != self._generation
+        if refreshed:
+            self._batches = {}
+            self._targets = {}
+            self._generation = generation
+        return generation, refreshed
+
+    def _site_batch(self, site: int) -> Tuple[SampleBatch, torch.Tensor, bool]:
+        """Draws or reuses one site-dependent proposal and its target values."""
+        if (self.mode == 'exact') or (site not in self._batches):
+            state = replace(
+                self._sampling_state,
+                core_versions=self._versions,
+                generation=self._generation)
+            batch = self.sampler.draw(
+                state=state,
+                site=site,
+                n_samples=self.n_samples,
+                generator=self.generator)
+            indices = _unravel_indices(
+                batch.ids, tuple(core.shape[1] for core in self._cores))
+            target = self.problem.evaluate(
+                ConfigurationBatch(indices, kind='indices'))
+            if target.shape != (self.n_samples,):
+                raise ValueError(
+                    'TT-ALS currently requires a scalar tensor source')
+            if not torch.isfinite(target).all():
+                raise ValueError(
+                    'The tensor source should return only finite values')
+            self._batches[site] = batch
+            self._targets[site] = target
+        batch = self._batches[site]
+        target = self._targets[site]
+        exact = batch.is_exact_for(self._versions)
+        self.sample_exact_flags.append(exact)
+        return batch, target, exact
+
+    def solve_site(self,
+                   site: int,
+                   sweep: int,
+                   update_policy: UpdatePolicy,
+                   return_record: bool):
+        batch, target, sampling_exact = self._site_batch(site)
+        indices = _unravel_indices(
+            batch.ids, tuple(core.shape[1] for core in self._cores))
+        environment, log_scale = _direct_sampled_tt_design(
+            self._cores, site, indices, self.renormalize)
+        target = target * (-log_scale).exp().to(target.dtype)
+        sample_weights = batch.weights.to(environment.dtype)
+        environment = environment * sample_weights.unsqueeze(1)
+        target = target * sample_weights
+
+        regularization_scale = None
+        if (self.solver.l2_reg_mode == 'absolute') and \
+                (self.solver.l2_reg > 0):
+            regularization_scale = (-2 * log_scale).exp()
+        proposal, record = _solve_local_proposal(
+            solver=self.solver,
+            environment=environment,
+            target=target,
+            current=self._cores[site],
+            site=site,
+            sweep=sweep,
+            update_policy=update_policy,
+            return_record=return_record,
+            regularization_scale=regularization_scale,
+            sampling_exact=sampling_exact,
+            sample_generation=batch.generation)
+        update_set = _gauge_core_update(
+            cores=self._cores,
+            versions=self._versions,
+            fixed_sites=(),
+            gauge=self.gauge,
+            direction=self._direction,
+            site=site,
+            proposal=proposal)
+        return update_set, record
+
+    def skip_site(self, site: int) -> None:
+        raise RuntimeError('Leverage TT-ALS does not support fixed sites')
+
+    def commit(self, update_set: CoreUpdateSet) -> None:
+        cores = list(self._cores)
+        versions = list(self._versions)
+        for site, (core, version) in update_set.updates.items():
+            if version <= versions[site]:
+                raise ValueError('Every updated core version should increase')
+            cores[site] = core
+            versions[site] = version
+        self._cores = TTEnvironmentCache._validate_cores(cores)
+        self._versions = tuple(versions)
+        self._sampling_state = replace(
+            self._sampling_state, core_versions=self._versions)
+
+    def measure_objective(
+            self, problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+        raise RuntimeError(
+            'Renewable leverage batches do not define a global objective')
+
+    def snapshot(self) -> Sequence[torch.Tensor]:
+        return tuple(core.clone() for core in self._cores)
+
+    def restore(self, cores: Sequence[torch.Tensor]) -> None:
+        self._cores = TTEnvironmentCache._validate_cores(cores)
 
 
 class TTALS:
@@ -701,6 +975,8 @@ class TTALS:
             sampling: Optional[str] = None,
             n_samples: Optional[int] = None,
             sample_reuse_sweeps: int = 1,
+            leverage_mode: str = 'exact',
+            leverage_uniform_mix: float = 0.0,
             solver: Optional[LeastSquaresSolver] = None,
             convergence: Optional[ConvergencePolicy] = None,
             update_policy: Optional[UpdatePolicy] = None,
@@ -735,7 +1011,8 @@ class TTALS:
             Factorization moved to the next trainable site after a local
             solve. If the immediate receiver is fixed or absent, ``NoGauge``
             is used before factorization so no factor is ever discarded.
-        sampling : {``"exact"``, ``"uniform"``, ``"observed"``}, optional
+        sampling : {``"exact"``, ``"uniform"``, ``"leverage"``,
+            ``"observed"``}, optional
             Row strategy. The default is ``"exact"`` for a known source and
             ``"observed"`` for :meth:`completion`.
         n_samples : int, optional
@@ -744,6 +1021,13 @@ class TTALS:
         sample_reuse_sweeps : int
             Complete sweeps that reuse exactly the same sampled ids,
             probabilities and cached source values before refreshing.
+        leverage_mode : {``"exact"``, ``"frozen"``}
+            Exact mode redraws from the current mixed-canonical design at every
+            site. Frozen mode reuses each site's original ids and draw
+            probabilities for the selected sample generation.
+        leverage_uniform_mix : float
+            Global uniform component mixed into leverage probabilities, in
+            ``[0, 1]``. Positive values guarantee full row support.
         solver : LeastSquaresSolver, optional
             Stable local solver. The default uses its standard scaling and no
             regularization.
@@ -806,9 +1090,10 @@ class TTALS:
         if sampling is None:
             sampling = 'observed' if self.problem.observations is not None \
                 else 'exact'
-        if sampling not in ('exact', 'uniform', 'observed'):
+        if sampling not in ('exact', 'uniform', 'leverage', 'observed'):
             raise ValueError(
-                "`sampling` should be 'exact', 'uniform' or 'observed'")
+                "`sampling` should be 'exact', 'uniform', 'leverage' or "
+                "'observed'")
         if self.problem.observations is not None:
             if sampling != 'observed':
                 raise ValueError(
@@ -816,17 +1101,34 @@ class TTALS:
         elif sampling == 'observed':
             raise ValueError(
                 '`sampling="observed"` requires TTALS.completion')
-        if sampling == 'uniform':
+        if sampling in ('uniform', 'leverage'):
             if isinstance(n_samples, bool) or \
                     (not isinstance(n_samples, int)) or (n_samples < 1):
                 raise ValueError(
-                    '`n_samples` should be a positive integer for uniform '
+                    '`n_samples` should be a positive integer for sampled '
                     'sampling')
         elif n_samples is not None:
             raise ValueError(
-                '`n_samples` is only used with uniform sampling')
+                '`n_samples` is only used with uniform or leverage sampling')
         refresh_policy = SampleRefreshPolicy(
             reuse_sweeps=sample_reuse_sweeps)
+        if leverage_mode not in ('exact', 'frozen'):
+            raise ValueError(
+                "`leverage_mode` should be 'exact' or 'frozen'")
+        if sampling == 'leverage':
+            if leverage_mode == 'exact' and sample_reuse_sweeps != 1:
+                raise ValueError(
+                    'Exact leverage sampling requires '
+                    '`sample_reuse_sweeps=1`')
+            if not isinstance(gauge_policy, (QRGauge, SVDGauge)):
+                raise ValueError(
+                    'Leverage sampling requires a QR or SVD gauge policy')
+            if isinstance(leverage_uniform_mix, bool) or \
+                    (not isinstance(leverage_uniform_mix, (int, float))) or \
+                    (leverage_uniform_mix < 0) or \
+                    (leverage_uniform_mix > 1):
+                raise ValueError(
+                    '`leverage_uniform_mix` should be in [0, 1]')
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity) or (observer is not None)
         collect_metrics = collect_metrics or emit_events
@@ -840,7 +1142,7 @@ class TTALS:
         if sampling == 'exact':
             configurations, target = self._exact_target()
             runtime_reference = target
-        elif sampling == 'uniform':
+        elif sampling in ('uniform', 'leverage'):
             sampler = UniformRows()
             problem = ALSProblem(source=self.source, selector=sampler)
             runtime_reference = self._runtime_reference()
@@ -866,18 +1168,35 @@ class TTALS:
             init=init,
             fixed_cores=fixed_cores,
             generator=generator)
-        backend = _TTALSBackend(
-            problem=problem,
-            cores=cores,
-            target=target,
-            solver=solver,
-            gauge=gauge_policy,
-            fixed_sites=fixed_sites,
-            renormalize=renormalize,
-            sampler=sampler,
-            n_samples=n_samples,
-            refresh_policy=refresh_policy,
-            generator=generator)
+        if sampling == 'leverage':
+            if fixed_sites:
+                raise ValueError(
+                    'Leverage sampling does not support fixed cores because '
+                    'they prevent mixed-canonical gauge preparation')
+            backend = _TTLeverageALSBackend(
+                problem=problem,
+                cores=cores,
+                solver=solver,
+                gauge=gauge_policy,
+                n_samples=n_samples,
+                mode=leverage_mode,
+                uniform_mix=leverage_uniform_mix,
+                refresh_policy=refresh_policy,
+                generator=generator,
+                renormalize=renormalize)
+        else:
+            backend = _TTALSBackend(
+                problem=problem,
+                cores=cores,
+                target=target,
+                solver=solver,
+                gauge=gauge_policy,
+                fixed_sites=fixed_sites,
+                renormalize=renormalize,
+                sampler=sampler,
+                n_samples=n_samples,
+                refresh_policy=refresh_policy,
+                generator=generator)
         driver_result = ALSSweepDriver().fit(
             problem=problem,
             backend=backend,
@@ -905,6 +1224,14 @@ class TTALS:
                 'sampling': sampling,
                 'n_samples': n_samples,
                 'sample_reuse_sweeps': sample_reuse_sweeps,
+                'leverage_mode': (
+                    leverage_mode if sampling == 'leverage' else None),
+                'leverage_uniform_mix': (
+                    leverage_uniform_mix
+                    if sampling == 'leverage' else None),
+                'sampling_exact': (
+                    None if sampling != 'leverage'
+                    else all(backend.sample_exact_flags)),
                 'exact_configurations': (
                     None if configurations is None
                     else configurations.batch_size),
@@ -921,6 +1248,8 @@ def tt_als(source,
            sampling: str = 'exact',
            n_samples: Optional[int] = None,
            sample_reuse_sweeps: int = 1,
+           leverage_mode: str = 'exact',
+           leverage_uniform_mix: float = 0.0,
            max_sweeps: int = 10,
            error_atol: Optional[float] = None,
            error_rtol: Optional[float] = None,
@@ -966,12 +1295,18 @@ def tt_als(source,
         Tensor entries remain fixed throughout all sweeps.
     gauge : {``"none"``, ``"qr"``, ``"svd"``} or GaugePolicy
         Gauge applied after each local solve when its receiver is trainable.
-    sampling : {``"exact"``, ``"uniform"``}
-        Whether local systems use all global rows or uniformly sampled rows.
+    sampling : {``"exact"``, ``"uniform"``, ``"leverage"``}
+        Whether local systems use all rows, uniform rows or recursive TT
+        leverage rows.
     n_samples : int, optional
         Rows per uniform sample generation. Required for uniform sampling.
     sample_reuse_sweeps : int
         Sweeps that reuse sampled ids, probabilities and source values.
+    leverage_mode : {``"exact"``, ``"frozen"``}
+        Whether leverage probabilities are redrawn at every site or frozen by
+        sample generation.
+    leverage_uniform_mix : float
+        Uniform mixture component added to leverage probabilities.
     max_sweeps : int
         Maximum number of complete alternating sweeps.
     error_atol, error_rtol, change_rtol : float, optional
@@ -1057,6 +1392,8 @@ def tt_als(source,
             sampling=sampling,
             n_samples=n_samples,
             sample_reuse_sweeps=sample_reuse_sweeps,
+            leverage_mode=leverage_mode,
+            leverage_uniform_mix=leverage_uniform_mix,
             solver=solver,
             convergence=convergence,
             update_policy=update_policy,

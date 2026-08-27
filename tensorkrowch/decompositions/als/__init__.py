@@ -16,6 +16,7 @@ from tensorkrowch.decompositions.als.problem import (ALSProblem,
 from tensorkrowch.decompositions.als.sampling import (ExactRows, ObservedRows,
                                                       RowSampler, SampleBatch,
                                                       SampleRefreshPolicy,
+                                                      TTLeverageRows,
                                                       UniformRows)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.als.tt import TTALS, tt_als
@@ -30,6 +31,7 @@ __all__ = [
     'ExactRows',
     'ObservedRows',
     'UniformRows',
+    'TTLeverageRows',
     'SampleRefreshPolicy',
     'EnvironmentCache',
     'CoreUpdateSet',

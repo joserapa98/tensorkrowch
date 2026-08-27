@@ -428,3 +428,105 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
         assert info['metadata']['sampling'] == 'uniform'
         assert [record['sample_generation']
                 for record in info['metrics']['sweeps']] == [0, 0]
+
+
+class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
+
+    @pytest.mark.parametrize('gauge', ['qr', 'svd'])
+    def test_exact_mode_redraws_current_design_at_every_site(self, gauge):
+        tensor = torch.randn(2, 3, 2, dtype=torch.float64)
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=2,
+                sampling='leverage',
+                n_samples=12,
+                gauge=gauge,
+                leverage_uniform_mix=0.1,
+                generator=torch.Generator().manual_seed(55),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2),
+                collect_metrics=True)
+
+        assert result.metadata['sampling_exact']
+        assert all(record.sampling_exact
+                   for record in result.metrics.local_solves)
+        assert [record.sample_generation
+                for record in result.metrics.sweeps] == [0, 1]
+        assert all(record.absolute_error is None
+                   for record in result.metrics.sweeps)
+
+    def test_frozen_mode_preserves_original_probabilities_and_marks_staleness(
+            self):
+        tensor = torch.randn(2, 3, 2, dtype=torch.float64)
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=2,
+                sampling='leverage',
+                n_samples=10,
+                leverage_mode='frozen',
+                sample_reuse_sweeps=2,
+                generator=torch.Generator().manual_seed(56),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=3),
+                collect_metrics=True)
+
+        exactness = [record.sampling_exact
+                     for record in result.metrics.local_solves]
+        generations = [record.sample_generation
+                       for record in result.metrics.local_solves]
+        assert exactness == [True, True, True, False, False, False,
+                             True, True, True]
+        assert generations == [0, 0, 0, 0, 0, 0, 1, 1, 1]
+        assert not result.metadata['sampling_exact']
+
+    def test_leverage_evaluates_only_site_batches(self):
+        tensor = torch.randn(2, 2, 2, dtype=torch.float64)
+        evaluations = []
+
+        def function(indices):
+            evaluations.append(indices.clone())
+            return tensor[tuple(indices[:, site]
+                                for site in range(indices.shape[1]))]
+
+        tk.decompositions.TTALS(
+            function,
+            input_dim=tensor.shape,
+            dtype=torch.float64).fit(
+                rank=2,
+                sampling='leverage',
+                n_samples=7,
+                leverage_mode='frozen',
+                sample_reuse_sweeps=2,
+                generator=torch.Generator().manual_seed(57),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=3))
+
+        assert len(evaluations) == 2 * tensor.ndim
+        assert all(values.shape == (7, tensor.ndim)
+                   for values in evaluations)
+
+    def test_leverage_requires_canonical_gauges_and_consistent_reuse(self):
+        decomposition = tk.decompositions.TTALS(torch.ones(2, 2, 2))
+
+        with pytest.raises(ValueError, match='QR or SVD'):
+            decomposition.fit(
+                rank=2, sampling='leverage', n_samples=5, gauge='none')
+        with pytest.raises(ValueError, match='reuse_sweeps=1'):
+            decomposition.fit(
+                rank=2,
+                sampling='leverage',
+                n_samples=5,
+                sample_reuse_sweeps=2)
+
+    def test_leverage_rejects_fixed_cores(self):
+        initial, tensor = _exact_tt()
+
+        with pytest.raises(ValueError, match='does not support fixed cores'):
+            tk.decompositions.TTALS(
+                tensor, output_device=None).fit(
+                    initial_cores=initial,
+                    fixed_cores=[None, initial[1], None],
+                    sampling='leverage',
+                    n_samples=8,
+                    convergence=tk.decompositions.ConvergencePolicy(
+                        max_sweeps=1))

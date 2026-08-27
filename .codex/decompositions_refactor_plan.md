@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 15/20 implementadas; 15 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 16/20 implementadas; 16 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -3212,7 +3212,7 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **RING-03 — Implementar mapas y diagnósticos de gauge**
 
-  Estado: implementado y validado localmente; pendiente de commit y de
+  Estado: implementado, validado y commiteado en `34ba6c4`; pendiente de
   revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `GaugeMap` y un único kernel para:
@@ -3261,7 +3261,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
     incidencias; el barrido Ruff histórico completo sigue señalando cuatro
     incidencias preexistentes en `tt_decompositions.py`.
 
-- [ ] **RING-04 — Implementar `BidirectionalRingDriver`**
+- [x] **RING-04 — Implementar `BidirectionalRingDriver`**
+
+  Estado: implementado y validado localmente; pendiente de commit y de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Primero con un provider sintético:
 
@@ -3273,6 +3276,39 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - errores de incompatibilidad.
 
   No integrar aún TT→TR ni RSS hasta pasar tests del driver aislado.
+
+  Implementación:
+
+  - `RingTargetProvider` desacopla el driver de la semántica futura TT/RSS y
+    proporciona target, ranks y contexto solo para el bloque/sites solicitados;
+  - `GaugeRecursion` define `advance_left`/`advance_right` y
+    `GaugeRecursionStep` transporta el gauge fijo, `GaugeRecord` y diagnósticos
+    sin imponer una implementación TT o sketching;
+  - `BidirectionalRingDriver` abre el bloque central, alterna sites por derecha
+    e izquierda y reserva el último site de la región cíclica restante para un
+    solve con ambos gauges;
+  - el esquema cruza de forma explícita las fronteras `0`/`n_sites - 1`, por lo
+    que centers interiores y de frontera usan el mismo algoritmo;
+  - un `boundary_opener` separado permite usar `FixedGaugeCoreOpener` cuando la
+    estrategia central/one-gauge no soporta dos gauges;
+  - cada apertura comprueba orientación, número de cores y conservación bit a
+    bit de gauges fijados antes de incorporarse al ensamblado;
+  - `BidirectionalRingResult` valida cobertura exacta de sites, orden original,
+    compatibilidad cíclica de ranks mediante `TRDecomposition`, métricas y
+    trazabilidad completa de aperturas/recursiones;
+  - un bloque central que agota todos los sites se rechaza porque no queda un
+    site para reconciliar sus dos gauges salientes;
+  - no se ha conectado aún el driver a TT→TR ni sketching, tal como exige el
+    orden de esta subtarea.
+
+  Evidencia local:
+
+  - `26 passed` en driver+gauges sintéticos: bloque central simple/multisite,
+    dos barridos, centers de frontera, fixed-left/right/both, opener de frontera,
+    orden de ensamblado y errores de capacidad/gauge/rank;
+  - `274 passed, 1 skipped` en ring+ALS+métricas;
+  - `629 passed, 11 skipped` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **TT2TR-01 — Refactorizar `tt2tr_fixed_rank`**
 

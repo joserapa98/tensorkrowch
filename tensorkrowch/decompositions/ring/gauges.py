@@ -2,12 +2,14 @@
 
 from dataclasses import dataclass, field
 from math import isfinite
-from typing import Optional
+from typing import (Any, Mapping, Optional, Protocol, Sequence,
+                    runtime_checkable)
 
 import torch
 
 from tensorkrowch.decompositions.metrics import GaugeRecord
 from tensorkrowch.decompositions.observers import DecompositionEvent
+from tensorkrowch.decompositions.ring.opening import LoopOpening
 
 
 def _validate_non_negative_float(value: Optional[float],
@@ -291,4 +293,45 @@ class GaugeMap:
             })
 
 
-__all__ = ['GaugeMap']
+@dataclass(frozen=True)
+class GaugeRecursionStep:
+    """Stores the fixed gauge and diagnostics produced by one recursion."""
+
+    gauge: torch.Tensor
+    records: Sequence[GaugeRecord] = ()
+    diagnostics: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.gauge, torch.Tensor):
+            raise TypeError('`gauge` should be torch.Tensor type')
+        if self.gauge.ndim != 3:
+            raise ValueError('`gauge` should be a three-dimensional core')
+        records = tuple(self.records)
+        if not all(isinstance(record, GaugeRecord) for record in records):
+            raise TypeError('`records` should contain GaugeRecord objects')
+        if not isinstance(self.diagnostics, Mapping):
+            raise TypeError('`diagnostics` should be a mapping')
+        object.__setattr__(self, 'records', records)
+        object.__setattr__(self, 'diagnostics', dict(self.diagnostics))
+
+
+@runtime_checkable
+class GaugeRecursion(Protocol):
+    """Protocol for advancing an opened gauge to either neighboring site."""
+
+    def advance_left(
+            self,
+            opening: LoopOpening,
+            local_target: Any,
+            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+        """Builds the fixed right gauge for the next site to the left."""
+
+    def advance_right(
+            self,
+            opening: LoopOpening,
+            local_target: Any,
+            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+        """Builds the fixed left gauge for the next site to the right."""
+
+
+__all__ = ['GaugeMap', 'GaugeRecursionStep', 'GaugeRecursion']

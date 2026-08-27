@@ -114,6 +114,22 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
         assert record.normalized_overlap == 0.5j
         assert record.fidelity == 0.25
 
+    def test_gauge_record_reports_cancellability(self):
+        record = tk.decompositions.GaugeRecord(
+            orientation='left',
+            shape=(8, 4),
+            numerical_rank=4,
+            cancellable_rank=4,
+            condition_number=2.0,
+            cancellation_error=1e-12,
+            projective=False,
+            inverse_method='solve',
+            tolerance=1e-8,
+            rank_tolerance=1e-14,
+            site=2)
+
+        assert record.cancellable
+
     def test_metrics_as_info(self):
         error = tk.decompositions.ErrorRecord(
             kind='samples', absolute=1.0, relative=0.5)
@@ -121,12 +137,24 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
         metrics = tk.decompositions.DecompositionMetrics(
             errors=[error],
             fidelities=[fidelity],
+            gauges=[tk.decompositions.GaugeRecord(
+                orientation='right',
+                shape=(4, 2),
+                numerical_rank=2,
+                cancellable_rank=2,
+                condition_number=1.0,
+                cancellation_error=0.0,
+                projective=False,
+                inverse_method='pinv',
+                tolerance=1e-8,
+                rank_tolerance=1e-14)],
             warnings=['diagnostic'])
 
         info = metrics.as_info()
 
         assert info['errors'][0]['kind'] == 'samples'
         assert info['fidelities'][0]['fidelity'] == 1.0
+        assert info['gauges'][0]['orientation'] == 'right'
         assert info['warnings'] == ['diagnostic']
 
     @pytest.mark.parametrize(

@@ -467,6 +467,70 @@ class LocalSolveRecord:
 
 
 @dataclass(frozen=True)
+class GaugeRecord:
+    """Stores rank, conditioning and cancellation diagnostics for one gauge."""
+
+    orientation: str
+    shape: Tuple[int, int]
+    numerical_rank: int
+    cancellable_rank: int
+    condition_number: float
+    cancellation_error: float
+    projective: bool
+    inverse_method: str
+    tolerance: float
+    rank_tolerance: float
+    site: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        if self.orientation not in ('left', 'right'):
+            raise ValueError("`orientation` should be 'left' or 'right'")
+        shape = tuple(self.shape)
+        if len(shape) != 2 or any(
+                isinstance(value, bool) or not isinstance(value, int) or
+                value < 1 for value in shape):
+            raise ValueError('`shape` should contain two positive integers')
+        object.__setattr__(self, 'shape', shape)
+        for name in ('numerical_rank', 'cancellable_rank'):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+            if value < 0:
+                raise ValueError(f'`{name}` should be non-negative')
+        if self.numerical_rank > min(shape):
+            raise ValueError('`numerical_rank` exceeds the matrix dimensions')
+        if self.cancellable_rank != shape[1]:
+            raise ValueError(
+                '`cancellable_rank` should equal the number of columns')
+        for name in (
+                'condition_number',
+                'cancellation_error',
+                'tolerance',
+                'rank_tolerance'):
+            value = _scalar_float(getattr(self, name), name)
+            if (value < 0) or (value != value):
+                raise ValueError(f'`{name}` should be non-negative and not NaN')
+            if name != 'condition_number' and not isfinite(value):
+                raise ValueError(f'`{name}` should be finite')
+            object.__setattr__(self, name, value)
+        if not isinstance(self.projective, bool):
+            raise TypeError('`projective` should be bool type')
+        if self.inverse_method not in ('solve', 'inverse', 'pinv'):
+            raise ValueError(
+                "`inverse_method` should be 'solve', 'inverse' or 'pinv'")
+        if self.site is not None:
+            if isinstance(self.site, bool) or not isinstance(self.site, int):
+                raise TypeError('`site` should be int type or None')
+            if self.site < 0:
+                raise ValueError('`site` should be non-negative')
+
+    @property
+    def cancellable(self) -> bool:
+        """Whether the measured cancellation lies within its tolerance."""
+        return self.cancellation_error <= self.tolerance
+
+
+@dataclass(frozen=True)
 class SweepRecord:
     """Stores objective metrics measured once at the end of an ALS sweep."""
 
@@ -573,6 +637,7 @@ class DecompositionMetrics:
     fidelities: List[FidelityRecord] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     local_solves: List[LocalSolveRecord] = field(default_factory=list)
+    gauges: List[GaugeRecord] = field(default_factory=list)
     sweeps: List[SweepRecord] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -582,6 +647,7 @@ class DecompositionMetrics:
         self.fidelities = list(self.fidelities)
         self.warnings = list(self.warnings)
         self.local_solves = list(self.local_solves)
+        self.gauges = list(self.gauges)
         self.sweeps = list(self.sweeps)
 
         collections = (
@@ -590,6 +656,7 @@ class DecompositionMetrics:
             ('timings', self.timings, TimingRecord),
             ('fidelities', self.fidelities, FidelityRecord),
             ('local_solves', self.local_solves, LocalSolveRecord),
+            ('gauges', self.gauges, GaugeRecord),
             ('sweeps', self.sweeps, SweepRecord),
         )
         for name, records, record_type in collections:
@@ -616,6 +683,10 @@ class DecompositionMetrics:
             info['local_solves'] = [
                 _record_as_dict(record) for record in self.local_solves
             ]
+        if self.gauges:
+            info['gauges'] = [
+                _record_as_dict(record) for record in self.gauges
+            ]
         if self.sweeps:
             info['sweeps'] = [
                 _record_as_dict(record) for record in self.sweeps
@@ -627,6 +698,7 @@ __all__ = [
     'ErrorRecord',
     'TruncationRecord',
     'LocalSolveRecord',
+    'GaugeRecord',
     'SweepRecord',
     'TimingRecord',
     'FidelityRecord',

@@ -1,5 +1,6 @@
 """Reusable loop-opening and tensor-ring conversion infrastructure."""
 
+from tensorkrowch.decompositions.ring.gauges import GaugeMap
 from tensorkrowch.decompositions.ring.opening import (
     ALSLoopOpener,
     CallableLoopOpener,
@@ -12,6 +13,7 @@ from tensorkrowch.decompositions.ring.opening import (
 
 
 __all__ = [
+    'GaugeMap',
     'LoopOpening',
     'LoopOpenerCapabilities',
     'LoopOpener',

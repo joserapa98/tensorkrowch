@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 14/20 implementadas; 14 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 15/20 implementadas; 15 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -3158,7 +3158,7 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **RING-02 — Centralizar selección de bloques y ranks**
 
-  Estado: implementado y validado localmente; pendiente de commit y de
+  Estado: implementado, validado y commiteado en `c00d157`; pendiente de
   revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Portar y generalizar:
@@ -3210,7 +3210,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - `602 passed, 11 skipped` en toda la suite de decompositions;
   - configuración de paquetes, `ruff` y `git diff --check` sin incidencias.
 
-- [ ] **RING-03 — Implementar mapas y diagnósticos de gauge**
+- [x] **RING-03 — Implementar mapas y diagnósticos de gauge**
+
+  Estado: implementado y validado localmente; pendiente de commit y de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `GaugeMap` y un único kernel para:
 
@@ -3224,6 +3227,39 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
   Sustituye los bloques duplicados de diagnóstico de
   `tt2tr_fixed_rank`.
+
+  Implementación:
+
+  - `GaugeMap` normaliza gauges izquierdos y derechos a una matriz común
+    `external_dim x (cyclic_rank * local_rank)` y su mirror conserva
+    exactamente esa transformación;
+  - `inverse_or_pinv` admite `auto`, `solve`, `inverse` y `pinv`; `auto` usa
+    solve para matrices cuadradas y pseudoinversa para rectangulares o como
+    fallback singular;
+  - el dual complejo se define por conjugación Hermitian para verificar
+    `G.mH @ F = I`, corrigiendo la transposición simple del prototipo;
+  - `rank_rtol` controla de forma coherente el cutoff de pseudoinversa y el
+    diagnóstico de rank numérico;
+  - `GaugeRecord` almacena orientación, shape, rank numérico/cancelable,
+    condición, error relativo de cancelación, carácter proyectivo, método y
+    tolerancias; `DecompositionMetrics` solo añade `gauges` a `as_info` cuando
+    existen records, preservando las salidas legacy vacías;
+  - `require_cancellable` implementa la política opt-in de gauges proyectivos
+    y produce un error con site, shape, rank y error de cancelación;
+  - `as_event` genera eventos estructurados que el futuro driver puede enviar
+    al observer sin duplicar formateo ni diagnósticos;
+  - construir/matricizar/invertir gauges conserva los tensores en el device;
+    las conversiones a escalares CPU ocurren solo al solicitar diagnósticos.
+
+  Evidencia local:
+
+  - `28 passed` en gauges y métricas, cubriendo mirrors, los cuatro métodos,
+    real/complejo, fallback singular, proyectores, tolerancias y eventos;
+  - `264 passed, 1 skipped` en ring+métricas+ALS;
+  - `619 passed, 11 skipped` en toda la suite de decompositions;
+  - `ruff` dirigido a los archivos nuevos/modificados y `git diff --check` sin
+    incidencias; el barrido Ruff histórico completo sigue señalando cuatro
+    incidencias preexistentes en `tt_decompositions.py`.
 
 - [ ] **RING-04 — Implementar `BidirectionalRingDriver`**
 

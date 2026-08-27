@@ -147,3 +147,35 @@ class TestGaugeMapDiagnostics:  # MARK: TestGaugeMapDiagnostics
         assert event.site == 1
         assert event.values['rank'] == '4/4'
         assert not event.values['projective']
+
+
+class TestPseudoinverseGaugeRecursion:  # MARK: TestPseudoinverseGaugeRecursion
+
+    @pytest.mark.parametrize(
+        ('direction', 'outgoing_orientation', 'fixed_orientation'),
+        [('left', 'left', 'right'), ('right', 'right', 'left')])
+    def test_directional_recursion_dualizes_and_mirrors_outgoing_gauge(
+            self, direction, outgoing_orientation, fixed_orientation):
+        opening = tk.decompositions.LoopOpening(
+            left_gauge=_full_rank_core('left'),
+            cores=(torch.randn(2, 3, 2, dtype=torch.float64),),
+            right_gauge=_full_rank_core('right'),
+            rank=(2, 2, 2))
+        recursion = tk.decompositions.PseudoinverseGaugeRecursion()
+        context = {'to_sites': (4,)}
+
+        step = getattr(recursion, f'advance_{direction}')(
+            opening, None, context)
+        outgoing = getattr(opening, f'{direction}_gauge')
+        outgoing_map = tk.decompositions.GaugeMap(
+            outgoing, outgoing_orientation)
+        fixed_map = tk.decompositions.GaugeMap(
+            step.gauge, fixed_orientation)
+
+        assert torch.allclose(
+            outgoing_map.matrix.T @ fixed_map.matrix,
+            torch.eye(4, dtype=torch.float64),
+            rtol=2e-10,
+            atol=2e-10)
+        assert step.records[0].site == 4
+        assert not step.records[0].projective

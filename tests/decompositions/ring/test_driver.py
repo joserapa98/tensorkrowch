@@ -8,6 +8,7 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.ring.driver import (
+    BoundaryClosure,
     BidirectionalRingDriver,
     BidirectionalRingResult,
 )
@@ -30,6 +31,19 @@ class SyntheticProvider:
             'input_dim': (1, *(self.input_dim[site] for site in sites), 1),
             'sites': tuple(sites),
         }
+
+
+class SyntheticOpenProvider(SyntheticProvider):
+    """Adds provider-specific absorption of both open target boundaries."""
+
+    boundary_mode = 'open'
+
+    def close_boundary(self, site, direction, opening, context):
+        return BoundaryClosure(
+            site=site,
+            direction=direction,
+            core=torch.full((1, self.input_dim[site], 1), float(site + 1)),
+            diagnostics={'synthetic_boundary': True})
 
 
 @dataclass
@@ -198,6 +212,26 @@ class TestBidirectionalRingDriver:  # MARK: TestBidirectionalRingDriver
         assert boundary_calls[0]['fixed_left']
         assert boundary_calls[0]['fixed_right']
         assert result.directions[-1] == 'boundary'
+
+    def test_open_target_boundaries_use_two_independent_sweeps(self):
+        open_calls = []
+        result = BidirectionalRingDriver().fit(
+            SyntheticOpenProvider((2,) * 7),
+            rank=1,
+            opener=_synthetic_opener(open_calls, supports_two=False),
+            recursion=SyntheticRecursion([]),
+            center=3)
+
+        assert result.order == (
+            (3,), (4,), (5,), (6,), (2,), (1,), (0,))
+        assert result.directions == (
+            'center', 'right', 'right', 'right_boundary',
+            'left', 'left', 'left_boundary')
+        assert set(result.boundaries) == {0, 6}
+        assert all(not (call['fixed_left'] and call['fixed_right'])
+                   for call in open_calls)
+        assert [core[0, 0, 0].item() for core in result.cores] == [
+            1, 2, 3, 4, 5, 6, 7]
 
     def test_infeasible_central_selection_has_explicit_diagnostic(self):
         with pytest.raises(ValueError, match='available_sites_exhausted'):

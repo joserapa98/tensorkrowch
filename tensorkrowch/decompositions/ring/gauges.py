@@ -335,4 +335,94 @@ class GaugeRecursion(Protocol):
         """Builds the fixed left gauge for the next site to the right."""
 
 
-__all__ = ['GaugeMap', 'GaugeRecursionStep', 'GaugeRecursion']
+class PseudoinverseGaugeRecursion:
+    """Advances gauges by directional inverse or pseudoinverse cancellation.
+
+    This is the direct recursion used by the characterized TT-to-TR method.
+    An outgoing right gauge is dualized and mirrored into the fixed left gauge
+    of the next site; the leftward operation is its exact mirror.
+    """
+
+    def __init__(self,
+                 inverse_policy: str = 'pinv',
+                 allow_projective: bool = False,
+                 tolerance: float = 1e-8,
+                 rank_rtol: Optional[float] = None) -> None:
+        if inverse_policy not in ('auto', 'solve', 'inverse', 'pinv'):
+            raise ValueError(
+                "`inverse_policy` should be 'auto', 'solve', 'inverse' or "
+                "'pinv'")
+        if not isinstance(allow_projective, bool):
+            raise TypeError('`allow_projective` should be bool type')
+        self.inverse_policy = inverse_policy
+        self.allow_projective = allow_projective
+        self.tolerance = _validate_non_negative_float(
+            tolerance, 'tolerance')
+        self.rank_rtol = _validate_non_negative_float(
+            rank_rtol, 'rank_rtol')
+
+    def _advance(self,
+                 opening: LoopOpening,
+                 recursion_context: Mapping[str, Any],
+                 direction: str) -> GaugeRecursionStep:
+        """Dualizes and mirrors the outgoing gauge in one direction."""
+        if not isinstance(opening, LoopOpening):
+            raise TypeError('`opening` should be LoopOpening type')
+        if not isinstance(recursion_context, Mapping):
+            raise TypeError('`recursion_context` should be a mapping')
+        to_sites = recursion_context.get('to_sites')
+        if not isinstance(to_sites, tuple) or len(to_sites) != 1:
+            raise ValueError(
+                '`recursion_context` should identify one destination site')
+        if direction == 'right':
+            outgoing = opening.right_gauge
+            orientation = 'right'
+        else:
+            outgoing = opening.left_gauge
+            orientation = 'left'
+        if outgoing is None:
+            raise ValueError(
+                f'The opening has no outgoing {orientation} gauge')
+
+        fixed_map = GaugeMap(
+            outgoing,
+            orientation=orientation,
+            site=to_sites[0]).inverse_or_pinv(
+                self.inverse_policy,
+                rank_rtol=self.rank_rtol).mirror()
+        record = fixed_map.require_cancellable(
+            tolerance=self.tolerance,
+            allow_projective=self.allow_projective,
+            rank_rtol=self.rank_rtol)
+        return GaugeRecursionStep(
+            gauge=fixed_map.core,
+            records=(record,),
+            diagnostics={
+                'inverse_method': record.inverse_method,
+                'projective': record.projective,
+                'cancellation_error': record.cancellation_error,
+            })
+
+    def advance_left(
+            self,
+            opening: LoopOpening,
+            local_target: Any,
+            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+        """Builds the fixed right gauge for the next site to the left."""
+        return self._advance(opening, recursion_context, 'left')
+
+    def advance_right(
+            self,
+            opening: LoopOpening,
+            local_target: Any,
+            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+        """Builds the fixed left gauge for the next site to the right."""
+        return self._advance(opening, recursion_context, 'right')
+
+
+__all__ = [
+    'GaugeMap',
+    'GaugeRecursionStep',
+    'GaugeRecursion',
+    'PseudoinverseGaugeRecursion',
+]

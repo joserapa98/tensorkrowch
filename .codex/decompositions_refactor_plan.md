@@ -1,11 +1,10 @@
 # Plan maestro de refactorización y ampliación de `decompositions`
 
-> Estado del documento: implementación en curso; `SVD-KERNEL-00` implementada
-> y pendiente de confirmación del usuario.
+> Estado del documento: implementación en curso; fase 2 en TT→TR.
 >
 > Rama de referencia inicial: `tt_rss`.
 >
-> Última actualización: 2026-08-27.
+> Última actualización: 2026-08-28.
 >
 > Nota de versionado: esta guía se mantiene versionada explícitamente aunque
 > `.codex/` esté ignorada por el `.gitignore` general.
@@ -78,7 +77,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 16/20 implementadas; 16 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 17/20 implementadas; 17 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -3312,7 +3311,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - `629 passed, 11 skipped` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **TT2TR-01 — Refactorizar `tt2tr_fixed_rank`**
+- [x] **TT2TR-01 — Refactorizar `tt2tr_fixed_rank`**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear `TT2TR` y `tt2tr` usando:
 
@@ -3335,6 +3337,50 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - projective gauges on/off;
   - boundaries y centers;
   - normalized overlap/fidelity frente a denso.
+
+  Implementación:
+
+  - `TT2TR` fija una `TTDecomposition`, una secuencia de cores TT o un
+    adaptador `MPS` OBC, y permite repetir `.fit(...)` con distintos `rank`,
+    `tr_rank`, centers y estrategias de apertura;
+  - `tt2tr` conserva la API sencilla: devuelve cores por defecto y
+    `(cores, info)` con `return_info=True`; las opciones ALS avanzadas quedan
+    encapsuladas en `loop_opener`, sin ensanchar la firma pública;
+  - `rank` prescribe todos los links no cíclicos y `tr_rank` únicamente el
+    link cíclico; el `rank_spec` interno se construye una vez y nunca se reduce
+    silenciosamente en esta ruta fixed-rank;
+  - `_TTCoreProvider` reutiliza `TTTensorSource`, forma supercores locales solo
+    cuando son necesarios y declara boundary mode abierto;
+  - el modo abierto de `BidirectionalRingDriver` abre un center interno,
+    realiza dos sweeps independientes y absorbe los gauges finales en los
+    cores TT de rango unidad de ambos extremos; el modo cíclico previo se
+    conserva sin cambios para TR-RSS;
+  - `PseudoinverseGaugeRecursion` dualiza el gauge saliente con `GaugeMap`, lo
+    refleja a la orientación entrante del siguiente site y aplica de forma
+    explícita la política de gauges proyectivos;
+  - fidelity, normalized overlap y error de reconstrucción absoluto/relativo
+    se calculan siempre con contracciones TT/TR escaladas y sin densificar;
+    para redes prácticamente idénticas, el residuo obtenido a partir del
+    overlap tiene el límite numérico inherente `O(sqrt(eps))`, mientras los
+    tests de exactitud comparan además las contracciones densas pequeñas;
+  - todas las métricas locales, gauges, tiempos y eventos estructurados se
+    conservan en `TRDecomposition`; los cores finales respetan
+    `output_device` y la ejecución numérica intermedia permanece en el device
+    de entrada;
+  - la ruta no trivial sigue siendo una aproximación no convexa cuando el
+    opener es ALS: se preservan exactamente los ranks solicitados y las
+    métricas cuantifican la calidad obtenida, sin afirmar conversión exacta.
+
+  Evidencia local:
+
+  - `41 passed` en TT→TR, driver y gauges: ranks uno/mayores, tres centers,
+    real/complejo, rank cíclico distinto, projective on/off, boundaries,
+    adaptador MPS, wrapper, observer y recursión direccional;
+  - fidelity, normalized overlap y errores de una aproximación no trivial se
+    contrastan con un oracle denso construido solo en tests;
+  - `277 passed, 1 skipped` en ring+ALS;
+  - `644 passed, 11 skipped` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **TT2TR-02 — Implementar `TTCoreGaugeRecursion`**
 

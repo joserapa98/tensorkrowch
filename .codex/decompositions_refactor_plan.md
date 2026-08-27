@@ -77,7 +77,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 17/20 implementadas; 17 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 18/20 implementadas; 18 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -1241,8 +1241,10 @@ boundaries.
 
 - `__init__(tt, *, output_device="cpu")`: acepta cores o adaptador de modelo.
 - `.fit(rank, tr_rank=None, center=None, loop_opener="als",
-  allow_projective_gauges=False, ...)`.
-- Usa `TTCoreGaugeRecursion`.
+  gauge_recursion="pseudoinverse", allow_projective_gauges=False, ...)`.
+- Usa por defecto la recursión de pseudoinversa caracterizada y permite
+  seleccionar `TTCoreGaugeRecursion` mediante `gauge_recursion="tt_core"`
+  mientras la nueva estrategia permanezca experimental.
 - Calcula normalized overlap, fidelity y error relativo por defecto.
 
 La primera referencia de comportamiento será `tt2tr_fixed_rank` de
@@ -3313,8 +3315,8 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **TT2TR-01 — Refactorizar `tt2tr_fixed_rank`**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `eaeac8a`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `TT2TR` y `tt2tr` usando:
 
@@ -3382,7 +3384,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - `644 passed, 11 skipped` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **TT2TR-02 — Implementar `TTCoreGaugeRecursion`**
+- [x] **TT2TR-02 — Implementar `TTCoreGaugeRecursion`**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Implementación experimental especificada:
 
@@ -3402,7 +3407,53 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - fidelity final;
   - estabilidad por condición.
 
-  Hasta completar estos tests, API y docs llevan `ExperimentalWarning`.
+  Aunque estos tests queden completos localmente, API y docs mantendrán
+  `ExperimentalWarning` hasta la revisión detallada del usuario.
+
+  Implementación:
+
+  - `TTCoreGaugeRecursion` construye la base de prefix/suffix contrayendo el
+    gauge entrante con el core TR ya retenido; después expresa esa base en el
+    siguiente enlace TT mediante un solve local contra el unfolding del core
+    TT original;
+  - hacia la derecha resuelve
+    `TT_(left,input;right) @ E = (left_gauge · TR_core)` y devuelve `E` como
+    nuevo gauge izquierdo; hacia la izquierda aplica exactamente el unfolding
+    y orientación espejo;
+  - `auto`, `solve`, `inverse` y `pinv` comparten la semántica de `GaugeMap`:
+    solve/inverse exigen unfolding cuadrado, auto usa solve cuadrado y pinv
+    rectangular, y `rank_rtol` controla rango numérico y pseudoinversa;
+  - cada transición registra rank, condición y residuo de proyección; un
+    transporte rank-deficient o fuera de la imagen se rechaza salvo opt-in
+    explícito mediante `allow_projective_gauges=True`;
+  - los boundaries no contraen directamente el entorno recursivo con el core
+    TT extremo: primero construyen su dual mediante `GaugeMap`, equivalente al
+    least-squares final de TR-RSS, y después absorben ese mapa saliente en el
+    core OBC de rango unidad;
+  - el driver solo invoca este hook de boundary cuando la recursión lo ofrece;
+    por tanto la recursión de pseudoinversa y el comportamiento TT2TR-01 no
+    cambian;
+  - `TT2TR.fit` y `tt2tr` aceptan
+    `gauge_recursion="pseudoinverse"|"tt_core"|GaugeRecursion`; el default
+    permanece en la ruta caracterizada y seleccionar `"tt_core"` emite
+    `ExperimentalWarning`;
+  - la primera versión experimental requiere aperturas de un único site. Los
+    bloques centrales multi-site deberán dividirse antes de la recursión, como
+    ya prevé `split_block_ttsvd` para rank discovery/TR-RSS.
+
+  Evidencia local:
+
+  - `19 passed` en la suite específica: transiciones directas left/right,
+    real/complejo, solve/inverse/auto, rectangulares pinv, rechazo/opt-in de
+    proyectores, cutoff, condición, boundary dual, cadena completa y fidelity;
+  - la cadena rank-one reproduce el TT y una cadena rank mayor conserva ranks
+    y hace coincidir normalized overlap/error con el oracle denso;
+  - `296 passed, 1 skipped` en ring+ALS;
+  - una primera ejecución completa tuvo un único fallo estocástico de
+    tolerancia en el test preexistente que compara `TTDecomposition` con dos
+    órdenes de contracción float32; el caso pasó aislado inmediatamente y la
+    repetición completa terminó con `663 passed, 11 skipped`;
+  - doctests de TT2TR, Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **BLOSTR-01 — Aislar y verificar BLOSTR**
 

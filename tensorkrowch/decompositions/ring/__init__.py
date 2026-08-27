@@ -1,9 +1,11 @@
 """Reusable loop-opening and tensor-ring conversion infrastructure."""
 
-from tensorkrowch.decompositions.ring.gauges import GaugeMap
+from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
+                                                     GaugeMap)
 from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
                                                      GaugeRecursionStep,
-                                                     PseudoinverseGaugeRecursion)
+                                                     PseudoinverseGaugeRecursion,
+                                                     TTCoreGaugeRecursion)
 from tensorkrowch.decompositions.ring.opening import (
     ALSLoopOpener,
     CallableLoopOpener,
@@ -18,9 +20,11 @@ from tensorkrowch.decompositions.ring.tt2tr import TT2TR, tt2tr
 
 __all__ = [
     'GaugeMap',
+    'ExperimentalWarning',
     'GaugeRecursion',
     'GaugeRecursionStep',
     'PseudoinverseGaugeRecursion',
+    'TTCoreGaugeRecursion',
     'LoopOpening',
     'LoopOpenerCapabilities',
     'LoopOpener',

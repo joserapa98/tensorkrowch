@@ -20,7 +20,9 @@ from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
 from tensorkrowch.decompositions.ring.driver import (BoundaryClosure,
                                                      BidirectionalRingDriver)
 from tensorkrowch.decompositions.ring.gauges import (
+    GaugeRecursion,
     PseudoinverseGaugeRecursion,
+    TTCoreGaugeRecursion,
 )
 from tensorkrowch.decompositions.ring.opening import (ALSLoopOpener,
                                                       CallableLoopOpener,
@@ -151,20 +153,22 @@ class _TTCoreProvider:
                        site: int,
                        direction: str,
                        opening,
-                       context: Mapping[str, Any]) -> BoundaryClosure:
+        context: Mapping[str, Any]) -> BoundaryClosure:
         """Absorbs the propagated gauge into the matching unit TT edge."""
         if direction == 'left':
-            if site != 0 or opening.left_gauge is None:
+            gauge = context.get('boundary_gauge', opening.left_gauge)
+            if site != 0 or gauge is None:
                 raise ValueError('Invalid left TT boundary closure')
             edge = self.cores[site].squeeze(0)
             core = torch.einsum(
-                'dm,cmr->cdr', edge, opening.left_gauge)
+                'dm,cmr->cdr', edge, gauge)
         elif direction == 'right':
-            if site != len(self.cores) - 1 or opening.right_gauge is None:
+            gauge = context.get('boundary_gauge', opening.right_gauge)
+            if site != len(self.cores) - 1 or gauge is None:
                 raise ValueError('Invalid right TT boundary closure')
             edge = self.cores[site].squeeze(-1)
             core = torch.einsum(
-                'rmc,md->rdc', opening.right_gauge, edge)
+                'rmc,md->rdc', gauge, edge)
         else:
             raise ValueError("`direction` should be 'left' or 'right'")
         return BoundaryClosure(
@@ -199,6 +203,34 @@ def _resolve_loop_opener(loop_opener) -> LoopOpener:
                 supports_blocks=True))
     raise TypeError(
         '`loop_opener` should be "als", a LoopOpener or a callable')
+
+
+def _resolve_gauge_recursion(
+        gauge_recursion,
+        *,
+        inverse_policy: str,
+        allow_projective: bool,
+        tolerance: float,
+        rank_rtol: Optional[float]) -> GaugeRecursion:
+    """Normalizes stable and experimental gauge-recursion strategies."""
+    options = {
+        'inverse_policy': inverse_policy,
+        'allow_projective': allow_projective,
+        'tolerance': tolerance,
+        'rank_rtol': rank_rtol,
+    }
+    if isinstance(gauge_recursion, str):
+        if gauge_recursion == 'pseudoinverse':
+            return PseudoinverseGaugeRecursion(**options)
+        if gauge_recursion == 'tt_core':
+            return TTCoreGaugeRecursion(**options)
+        raise ValueError(
+            "`gauge_recursion` should be 'pseudoinverse', 'tt_core' or a "
+            'GaugeRecursion object')
+    if isinstance(gauge_recursion, GaugeRecursion):
+        return gauge_recursion
+    raise TypeError(
+        '`gauge_recursion` should be str type or implement GaugeRecursion')
 
 
 def _fidelity_error(tt: TTDecomposition,
@@ -267,6 +299,7 @@ class TT2TR:
             tr_rank: Optional[int] = None,
             center: Optional[int] = None,
             loop_opener: Union[str, LoopOpener] = 'als',
+            gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
             allow_projective_gauges: bool = False,
             gauge_tolerance: float = 1e-8,
             inverse_policy: str = 'pinv',
@@ -287,6 +320,12 @@ class TT2TR:
         normalized overlap and absolute/relative reconstruction error are
         always measured by scaled TT/TR contractions without densifying.
 
+        .. warning::
+           ``gauge_recursion="tt_core"`` is experimental. It emits
+           :class:`~tensorkrowch.decompositions.ExperimentalWarning` and may
+           accept projected local transports only when
+           ``allow_projective_gauges=True``.
+
         Parameters
         ----------
         rank : int
@@ -299,6 +338,10 @@ class TT2TR:
             Local loop-opening strategy. The simple preset uses exact TR-ALS;
             advanced ALS options should be encapsulated in an
             :class:`~tensorkrowch.decompositions.ALSLoopOpener`.
+        gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
+            Strategy used to propagate virtual bases. ``"pseudoinverse"`` is
+            the stable characterized default. ``"tt_core"`` uses the
+            original TT cores as recursive projectors and is experimental.
         allow_projective_gauges : bool
             Whether rank-deficient directional pseudoinverses may propagate a
             projector instead of cancelling exactly.
@@ -342,7 +385,8 @@ class TT2TR:
         fit_observer = _resolve_observer(verbosity, observer) \
             if verbosity or observer is not None else None
         opener = _resolve_loop_opener(loop_opener)
-        recursion = PseudoinverseGaugeRecursion(
+        recursion = _resolve_gauge_recursion(
+            gauge_recursion,
             inverse_policy=inverse_policy,
             allow_projective=allow_projective_gauges,
             tolerance=gauge_tolerance,
@@ -386,6 +430,9 @@ class TT2TR:
             'requested_rank': list(rank_spec),
             'adaptive': False,
             'inverse_policy': inverse_policy,
+            'gauge_recursion': (
+                gauge_recursion if isinstance(gauge_recursion, str)
+                else type(gauge_recursion).__name__),
             'allow_projective_gauges': allow_projective_gauges,
         })
         result = TRDecomposition(
@@ -449,6 +496,7 @@ def tt2tr(tt,
           tr_rank: Optional[int] = None,
           center: Optional[int] = None,
           loop_opener: Union[str, LoopOpener] = 'als',
+          gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
           allow_projective_gauges: bool = False,
           gauge_tolerance: float = 1e-8,
           inverse_policy: str = 'pinv',
@@ -484,6 +532,7 @@ def tt2tr(tt,
         tr_rank=tr_rank,
         center=center,
         loop_opener=loop_opener,
+        gauge_recursion=gauge_recursion,
         allow_projective_gauges=allow_projective_gauges,
         gauge_tolerance=gauge_tolerance,
         inverse_policy=inverse_policy,

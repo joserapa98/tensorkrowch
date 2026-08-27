@@ -496,7 +496,16 @@ class BidirectionalRingDriver:
             site=len(input_dim) - 1,
             direction='right',
             opening=right_opening,
-            context=context)
+            context=self._boundary_context(
+                recursion=recursion,
+                direction='right',
+                opening=right_opening,
+                boundary_site=len(input_dim) - 1,
+                provider=provider,
+                context=context,
+                openings=openings,
+                metrics=metrics,
+                diagnostics=recursion_diagnostics))
         self._store_boundary(
             right_closure, cores, boundaries, order, directions, metrics)
 
@@ -533,7 +542,16 @@ class BidirectionalRingDriver:
             site=0,
             direction='left',
             opening=left_opening,
-            context=context)
+            context=self._boundary_context(
+                recursion=recursion,
+                direction='left',
+                opening=left_opening,
+                boundary_site=0,
+                provider=provider,
+                context=context,
+                openings=openings,
+                metrics=metrics,
+                diagnostics=recursion_diagnostics))
         self._store_boundary(
             left_closure, cores, boundaries, order, directions, metrics)
 
@@ -561,6 +579,51 @@ class BidirectionalRingDriver:
             if candidate is opening:
                 return sites
         raise RuntimeError('The recursion source opening was not stored')
+
+    @classmethod
+    def _boundary_context(
+            cls,
+            recursion: GaugeRecursion,
+            direction: str,
+            opening: LoopOpening,
+            boundary_site: int,
+            provider: RingTargetProvider,
+            context: Mapping[str, Any],
+            openings: Mapping[Tuple[int, ...], LoopOpening],
+            metrics: DecompositionMetrics,
+            diagnostics: list) -> Mapping[str, Any]:
+        """Lets a recursion prepare an optional boundary-absorption gauge."""
+        boundary_context = dict(context)
+        prepare_boundary = getattr(recursion, 'prepare_boundary', None)
+        if not callable(prepare_boundary):
+            return boundary_context
+
+        sites = (boundary_site,)
+        recursion_context = dict(context)
+        recursion_context.update({
+            'direction': direction,
+            'from_sites': cls._opening_sites(openings, opening),
+            'to_sites': sites,
+            'provider': provider,
+            'boundary': True,
+        })
+        step = prepare_boundary(
+            opening,
+            provider.local_target(sites, context),
+            recursion_context,
+            direction)
+        if not isinstance(step, GaugeRecursionStep):
+            raise TypeError(
+                '`prepare_boundary` should return GaugeRecursionStep')
+        metrics.gauges.extend(step.records)
+        diagnostics.append({
+            'direction': direction,
+            'from_sites': recursion_context['from_sites'],
+            'to_sites': sites,
+            **step.diagnostics,
+        })
+        boundary_context['boundary_gauge'] = step.gauge
+        return boundary_context
 
     @staticmethod
     def _advance(

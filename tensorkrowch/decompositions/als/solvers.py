@@ -122,9 +122,29 @@ class LeastSquaresSolver:
         self.driver = driver
 
     def _effective_regularization(
-            self, environment: torch.Tensor) -> torch.Tensor:
+            self,
+            environment: torch.Tensor,
+            regularization_scale: Optional[torch.Tensor] = None
+            ) -> torch.Tensor:
         """Determines lambda in the unscaled problem."""
         value = environment.real.new_tensor(self.l2_reg)
+        if regularization_scale is not None:
+            if not isinstance(regularization_scale, torch.Tensor):
+                raise TypeError(
+                    '`regularization_scale` should be a scalar tensor or None')
+            if regularization_scale.numel() != 1:
+                raise ValueError('`regularization_scale` should be a scalar')
+            if regularization_scale.device != environment.device:
+                raise ValueError(
+                    '`regularization_scale` and environment should share a '
+                    'device')
+            regularization_scale = regularization_scale.to(
+                dtype=environment.real.dtype)
+            if (not torch.isfinite(regularization_scale)) or \
+                    (regularization_scale < 0):
+                raise ValueError(
+                    '`regularization_scale` should be finite and non-negative')
+            value = value * regularization_scale
         if (self.l2_reg_mode == 'absolute') or (self.l2_reg == 0):
             return value
         rms_column_norm = _stable_norm(environment) / sqrt(
@@ -208,13 +228,17 @@ class LeastSquaresSolver:
               target: torch.Tensor,
               site=None,
               sweep: Optional[int] = None,
-              return_record: bool = True):
+              return_record: bool = True,
+              regularization_scale: Optional[torch.Tensor] = None):
         """Solves one local system and optionally records its diagnostics.
 
         ``target`` may be one- or two-dimensional. A one-dimensional target
         produces a one-dimensional solution; multiple right-hand sides are
         solved together. With ``return_record=False`` the second tuple element
         is ``None`` and no residual or Python scalar diagnostics are computed.
+        ``regularization_scale`` rescales ``lambda`` when a caller has applied
+        the same global normalization to ``environment`` and ``target``; it is
+        intended for absolute regularization in normalized environment caches.
         """
         if not isinstance(environment, torch.Tensor):
             raise TypeError('`environment` should be torch.Tensor type')
@@ -249,7 +273,8 @@ class LeastSquaresSolver:
 
         vector_target = target.ndim == 1
         target_matrix = target.unsqueeze(1) if vector_target else target
-        effective_l2_reg = self._effective_regularization(environment)
+        effective_l2_reg = self._effective_regularization(
+            environment, regularization_scale=regularization_scale)
         transformed_environment, transformed_target = self._augment(
             environment, target_matrix, effective_l2_reg)
 

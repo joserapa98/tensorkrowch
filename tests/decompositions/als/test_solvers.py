@@ -80,6 +80,26 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
         assert record.effective_l2_reg == pytest.approx(effective)
         assert torch.allclose(solution, expected, rtol=1e-12, atol=1e-12)
 
+    def test_explicit_regularization_scale_preserves_normalized_system(self):
+        generator = torch.Generator().manual_seed(25)
+        environment = torch.randn(
+            9, 4, dtype=torch.float64, generator=generator)
+        target = torch.randn(9, dtype=torch.float64, generator=generator)
+        scale = environment.new_tensor(7.)
+        solver = tk.decompositions.LeastSquaresSolver(
+            l2_reg=0.3,
+            column_scaling=True,
+            system_scaling=True)
+
+        direct, _ = solver.solve(environment, target)
+        normalized, record = solver.solve(
+            environment / scale,
+            target / scale,
+            regularization_scale=scale.square().reciprocal())
+
+        assert record.effective_l2_reg == pytest.approx(0.3 / 49)
+        assert torch.allclose(normalized, direct, rtol=1e-11, atol=1e-11)
+
     def test_scalings_preserve_an_imbalanced_regularized_solution(self):
         generator = torch.Generator().manual_seed(22)
         q, _ = torch.linalg.qr(torch.randn(

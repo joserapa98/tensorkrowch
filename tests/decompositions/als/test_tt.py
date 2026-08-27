@@ -1,0 +1,269 @@
+"""Tests for exact tensor-train alternating least squares."""
+
+import pytest
+
+import torch
+import tensorkrowch as tk
+
+
+def _exact_tt(dtype=torch.float64):
+    """Returns a small heterogeneous TT and its dense contraction."""
+    generator = torch.Generator().manual_seed(7)
+    cores = [
+        torch.randn(2, 2, dtype=dtype, generator=generator),
+        torch.randn(2, 3, 2, dtype=dtype, generator=generator),
+        torch.randn(2, 2, dtype=dtype, generator=generator),
+    ]
+    result = tk.decompositions.TTDecomposition(cores)
+    return cores, result.contract_dense()
+
+
+class TestTTALSExact:  # MARK: TestTTALSExact
+
+    @pytest.mark.parametrize('gauge', ['none', 'qr', 'svd'])
+    def test_svd_initialization_recovers_dense_tensor(self, gauge):
+        _, tensor = _exact_tt()
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=2,
+                init='svd',
+                gauge=gauge,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2),
+                collect_metrics=True)
+
+        assert isinstance(result, tk.decompositions.TTDecomposition)
+        assert result.input_dim == tensor.shape
+        assert result.rank == [2, 2]
+        assert torch.allclose(
+            result.contract_dense(), tensor, atol=1e-10, rtol=1e-10)
+        assert len(result.metrics.sweeps) == 2
+        assert result.metrics.sweeps[-1].absolute_error < 1e-10
+
+    def test_exact_objective_is_monotone_up_to_roundoff(self):
+        generator = torch.Generator().manual_seed(11)
+        tensor = torch.randn(2, 3, 2, dtype=torch.float64,
+                             generator=generator)
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=2,
+                generator=torch.Generator().manual_seed(12),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=4),
+                collect_metrics=True)
+
+        errors = [record.absolute_error for record in result.metrics.sweeps]
+        for previous, current in zip(errors, errors[1:]):
+            tolerance = 1e-12 * max(1., previous)
+            assert current <= previous + tolerance
+        assert errors[-1] < 1e-10
+
+    def test_complex_callable_uses_common_source_contract(self):
+        dense = torch.tensor(
+            [[[1 + 2j, 2 - 1j], [3j, -1 + 0.5j]],
+             [[2 + 0j, 1j], [-2j, 4 - 1j]]],
+            dtype=torch.complex128)
+
+        def function(indices):
+            return dense[indices[:, 0], indices[:, 1], indices[:, 2]]
+
+        result = tk.decompositions.TTALS(
+            function,
+            input_dim=(2, 2, 2),
+            dtype=torch.complex128,
+            output_device=None).fit(
+                rank=2,
+                init='svd',
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1))
+
+        assert result.dtype == torch.complex128
+        assert torch.allclose(
+            result.contract_dense(), dense, atol=1e-11, rtol=1e-11)
+
+    def test_callable_target_is_cached_across_repeated_fits(self):
+        dense = torch.arange(8., dtype=torch.float64).reshape(2, 2, 2)
+        evaluations = []
+
+        def function(indices):
+            evaluations.append(indices.clone())
+            return dense[indices[:, 0], indices[:, 1], indices[:, 2]]
+
+        decomposition = tk.decompositions.TTALS(
+            function,
+            input_dim=(2, 2, 2),
+            dtype=torch.float64,
+            output_device=None)
+        convergence = tk.decompositions.ConvergencePolicy(max_sweeps=1)
+
+        first = decomposition.fit(
+            rank=2, init='svd', convergence=convergence)
+        second = decomposition.fit(
+            rank=1, init='svd', convergence=convergence)
+
+        assert len(evaluations) == 1
+        assert first.rank == [2, 2]
+        assert second.rank == [1, 1]
+
+    def test_feasible_ranks_are_clipped_per_cut(self):
+        tensor = torch.randn(2, 3, 4, dtype=torch.float64)
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=100,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1))
+
+        assert result.rank == [2, 4]
+
+    def test_one_site_tensor_uses_the_same_driver(self):
+        tensor = torch.tensor([1., -2., 3.], dtype=torch.float64)
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=1,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1),
+                collect_metrics=True)
+
+        assert result.rank == []
+        assert torch.allclose(result.cores[0], tensor)
+        assert result.metrics.sweeps[0].absolute_error == pytest.approx(0.)
+
+    def test_fixed_core_remains_bitwise_equal_and_blocks_absorption(self):
+        initial, tensor = _exact_tt()
+        fixed = initial[1].clone()
+        fixed_cores = [None, fixed, None]
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                initial_cores=initial,
+                fixed_cores=fixed_cores,
+                gauge='qr',
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2))
+
+        assert torch.equal(result.cores[1], fixed)
+        assert result.metadata['fixed_sites'] == [1]
+        assert torch.allclose(
+            result.contract_dense(), tensor, atol=1e-10, rtol=1e-10)
+
+    def test_all_fixed_cores_stop_without_updates(self):
+        initial, tensor = _exact_tt()
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                initial_cores=initial,
+                fixed_cores=initial)
+
+        assert result.metadata['converged']
+        assert result.metadata['stop_reason'] == 'all_cores_fixed'
+        assert result.metadata['n_sweeps'] == 0
+        assert all(torch.equal(actual, expected)
+                   for actual, expected in zip(result.cores, initial))
+
+    def test_fast_path_does_not_collect_local_or_sweep_records(self):
+        _, tensor = _exact_tt()
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=2,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1),
+                collect_metrics=False)
+
+        assert result.metrics.local_solves == []
+        assert result.metrics.sweeps == []
+
+    def test_relative_error_convergence_uses_exact_dense_objective(self):
+        _, tensor = _exact_tt()
+        result = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                rank=2,
+                init='svd',
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=5, error_rtol=1e-10),
+                collect_metrics=True)
+
+        assert result.metadata['converged']
+        assert result.metadata['stop_reason'] == 'error_rtol'
+        assert result.metadata['n_sweeps'] == 1
+
+
+class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
+
+    def test_rank_is_required_without_initial_cores(self):
+        decomposition = tk.decompositions.TTALS(torch.ones(2, 2))
+
+        with pytest.raises(ValueError, match='rank.*required'):
+            decomposition.fit()
+
+    def test_initial_rank_above_cap_is_rejected(self):
+        tensor = torch.randn(2, 2, dtype=torch.float64)
+        initial = [
+            torch.randn(2, 2, dtype=torch.float64),
+            torch.randn(2, 2, dtype=torch.float64),
+        ]
+
+        with pytest.raises(ValueError, match='rank.*cap'):
+            tk.decompositions.TTALS(tensor).fit(
+                rank=1, initial_cores=initial)
+
+    def test_vector_output_is_rejected_explicitly(self):
+        tensor = torch.randn(2, 2, 3)
+        source = tk.decompositions.DenseTensorSource(
+            tensor, input_dim=(2, 2))
+
+        with pytest.raises(ValueError, match='scalar tensor source'):
+            tk.decompositions.TTALS(source).fit(rank=2)
+
+    def test_functional_wrapper_returns_cores_and_optional_info(self):
+        _, tensor = _exact_tt()
+        cores = tk.decompositions.tt_als(
+            tensor,
+            rank=2,
+            init='svd',
+            max_sweeps=1,
+            output_device=None)
+        cores_info, info = tk.decompositions.tt_als(
+            tensor,
+            rank=2,
+            init='svd',
+            max_sweeps=1,
+            output_device=None,
+            return_info=True)
+
+        assert len(cores) == len(cores_info) == tensor.ndim
+        assert info['metadata']['algorithm'] == 'tt_als'
+        assert len(info['metrics']['sweeps']) == 1
+        assert torch.allclose(
+            tk.decompositions.TTDecomposition(cores).contract_dense(),
+            tensor,
+            atol=1e-10,
+            rtol=1e-10)
+
+    def test_absolute_regularization_respects_environment_normalization(self):
+        _, tensor = _exact_tt()
+        initial = tk.decompositions.TTSVD(
+            tensor, output_device=None).fit(rank=2)
+        solver = tk.decompositions.LeastSquaresSolver(
+            l2_reg=1e-4,
+            l2_reg_mode='absolute')
+
+        normalized = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                initial_cores=initial,
+                solver=solver,
+                gauge='none',
+                renormalize=True,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1))
+        direct = tk.decompositions.TTALS(
+            tensor, output_device=None).fit(
+                initial_cores=initial,
+                solver=solver,
+                gauge='none',
+                renormalize=False,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1))
+
+        assert torch.allclose(
+            normalized.contract_dense(),
+            direct.contract_dense(),
+            atol=1e-9,
+            rtol=1e-9)

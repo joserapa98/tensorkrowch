@@ -6,6 +6,8 @@ from tensorkrowch.decompositions.als.environments import (
     TTEnvironmentCache,
     TTLocalEnvironment,
 )
+from tensorkrowch.decompositions.als.gauges import (GaugePolicy, NoGauge,
+                                                    QRGauge, SVDGauge)
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
 from tensorkrowch.decompositions.als.driver import ALSSweepDriver
@@ -16,6 +18,7 @@ from tensorkrowch.decompositions.als.sampling import (ExactRows, ObservedRows,
                                                       SampleRefreshPolicy,
                                                       UniformRows)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
+from tensorkrowch.decompositions.als.tt import TTALS, tt_als
 
 
 __all__ = [
@@ -35,4 +38,10 @@ __all__ = [
     'ConvergencePolicy',
     'UpdatePolicy',
     'ALSSweepDriver',
+    'GaugePolicy',
+    'NoGauge',
+    'QRGauge',
+    'SVDGauge',
+    'TTALS',
+    'tt_als',
 ]

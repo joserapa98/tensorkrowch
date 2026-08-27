@@ -603,6 +603,209 @@ class TTLeverageRows:
         return state.update_core(site)
 
 
+class TRProductLeverageRows:
+    """Samples an approximate product-leverage proposal for TR designs.
+
+    For every core outside the active site, the proposal computes row leverage
+    in both oriented core unfoldings and marginalizes their virtual row index
+    onto the input index. The active input is uniform. Their product is an
+    inexpensive surrogate for product-leverage bounds, but it ignores cyclic
+    correlations and cancellations. It is therefore always labelled
+    ``proposal_exact=False`` and does not inherit TT leverage guarantees.
+
+    ``uniform_mix`` adds global uniform support. Importance weights always use
+    the actual mixed draw probability, so sampled Gram matrices and right-hand
+    sides target the full row objective even though the proposal is only an
+    approximation to leverage scores.
+    """
+
+    proposal_exact = False
+    refreshable = True
+
+    def __init__(self,
+                 cores: Callable[[], Sequence[torch.Tensor]],
+                 uniform_mix: float = 0.0) -> None:
+        if not callable(cores):
+            raise TypeError('`cores` should be a callable returning TR cores')
+        if isinstance(uniform_mix, bool) or \
+                (not isinstance(uniform_mix, (int, float))):
+            raise TypeError('`uniform_mix` should be a number in [0, 1]')
+        if (uniform_mix < 0) or (uniform_mix > 1):
+            raise ValueError('`uniform_mix` should be in [0, 1]')
+        self._cores = cores
+        self.uniform_mix = float(uniform_mix)
+
+    def _current_cores(self) -> Tuple[torch.Tensor, ...]:
+        """Validates current standard TR cores and cyclic ranks."""
+        cores = tuple(self._cores())
+        if not cores:
+            raise ValueError('The product-leverage sampler requires TR cores')
+        if any((not isinstance(core, torch.Tensor)) or (core.ndim != 3)
+               for core in cores):
+            raise ValueError(
+                'Product-leverage sampling requires standard TR cores')
+        device = cores[0].device
+        dtype = cores[0].dtype
+        for site, core in enumerate(cores):
+            if core.device != device or core.dtype != dtype:
+                raise ValueError('All TR cores should share dtype and device')
+            if core.shape[0] != cores[site - 1].shape[-1]:
+                raise ValueError('Adjacent TR ranks should match cyclically')
+        return cores
+
+    @staticmethod
+    def _row_leverage(matrix: torch.Tensor) -> torch.Tensor:
+        """Computes normalized numerical row leverage of one matrix."""
+        u, singular_values, _ = torch.linalg.svd(
+            matrix, full_matrices=False)
+        if singular_values.numel() == 0:
+            return matrix.real.new_full((matrix.shape[0],), 1 / matrix.shape[0])
+        tolerance = (
+            max(matrix.shape) * torch.finfo(matrix.real.dtype).eps *
+            singular_values.max())
+        active = singular_values > tolerance
+        scores = (u.abs().square() * active.unsqueeze(0)).sum(dim=1)
+        total = scores.sum()
+        if total > 0:
+            return scores / total
+        return scores.new_full((matrix.shape[0],), 1 / matrix.shape[0])
+
+    @staticmethod
+    def _input_leverage(core: torch.Tensor) -> torch.Tensor:
+        """Marginalizes row leverage from both oriented core unfoldings."""
+        left_rank, input_dim, right_rank = core.shape
+        forward = core.reshape(left_rank * input_dim, right_rank)
+        forward = TRProductLeverageRows._row_leverage(forward).reshape(
+            left_rank, input_dim).sum(dim=0)
+        reverse = core.permute(1, 2, 0).reshape(
+            input_dim * right_rank, left_rank)
+        reverse = TRProductLeverageRows._row_leverage(reverse).reshape(
+            input_dim, right_rank).sum(dim=1)
+        scores = forward + reverse
+        return scores / scores.sum()
+
+    @staticmethod
+    def _site_probabilities(
+            cores: Sequence[torch.Tensor], site: int) -> Tuple[torch.Tensor, ...]:
+        """Returns independent unfolding-leverage marginals."""
+        probabilities = []
+        for current, core in enumerate(cores):
+            input_dim = core.shape[1]
+            if current == site:
+                probability = core.real.new_full(
+                    (input_dim,), 1 / input_dim)
+            else:
+                probability = TRProductLeverageRows._input_leverage(core)
+            probabilities.append(probability)
+        return tuple(probabilities)
+
+    def _probabilities_from_indices(
+            self,
+            cores: Sequence[torch.Tensor],
+            site: int,
+            indices: torch.Tensor) -> torch.Tensor:
+        """Evaluates the mixed product proposal at selected rows."""
+        marginals = self._site_probabilities(cores, site)
+        return self._mixed_probabilities(
+            marginals, indices, prod(core.shape[1] for core in cores))
+
+    def _mixed_probabilities(
+            self,
+            marginals: Sequence[torch.Tensor],
+            indices: torch.Tensor,
+            n_rows: int) -> torch.Tensor:
+        """Evaluates already-computed marginals and their uniform mixture."""
+        product_probability = marginals[0].index_select(0, indices[:, 0])
+        for current, marginal in enumerate(marginals[1:], 1):
+            product_probability = product_probability * marginal.index_select(
+                0, indices[:, current])
+        uniform = product_probability.new_full(
+            product_probability.shape, 1 / n_rows)
+        return (1 - self.uniform_mix) * product_probability + \
+            self.uniform_mix * uniform
+
+    def probabilities(self,
+                      site: int,
+                      configurations: ConfigurationBatch) -> torch.Tensor:
+        """Returns approximate mixed proposal probabilities for rows."""
+        cores = self._current_cores()
+        if isinstance(site, bool) or not isinstance(site, int) or \
+                (site < 0) or (site >= len(cores)):
+            raise ValueError('`site` should identify a TR core')
+        indices = _discrete_indices(
+            configurations,
+            tuple(core.shape[1] for core in cores),
+            cores[0].device)
+        return self._probabilities_from_indices(cores, site, indices)
+
+    def draw(self,
+             state: _RowSamplingState,
+             site: int,
+             n_samples: Optional[int],
+             generator: Optional[torch.Generator] = None) -> SampleBatch:
+        """Draws independent product rows with immutable mixed weights."""
+        _validate_draw(state, site, n_samples)
+        if n_samples is None:
+            raise ValueError(
+                '`n_samples` is required for TRProductLeverageRows')
+        cores = self._current_cores()
+        if len(cores) != len(state.core_versions):
+            raise ValueError('Sampling state should match the current TR')
+        if cores[0].device != state.device:
+            raise ValueError('Sampling state and TR cores should share a device')
+        if generator is not None and \
+                torch.device(generator.device).type != state.device.type:
+            raise ValueError(
+                '`generator` device should match the sampling state device')
+
+        marginals = self._site_probabilities(cores, site)
+        product_indices = torch.stack([
+            torch.multinomial(
+                marginal,
+                n_samples,
+                replacement=True,
+                generator=generator)
+            for marginal in marginals
+        ], dim=1)
+        if self.uniform_mix > 0:
+            uniform_ids = torch.randint(
+                state.n_rows,
+                (n_samples,),
+                device=state.device,
+                generator=generator)
+            uniform_indices = _unravel_indices(
+                uniform_ids, tuple(core.shape[1] for core in cores))
+            use_uniform = torch.rand(
+                n_samples,
+                device=state.device,
+                generator=generator) < self.uniform_mix
+            indices = torch.where(
+                use_uniform.unsqueeze(1), uniform_indices, product_indices)
+        else:
+            indices = product_indices
+
+        input_dim = tuple(core.shape[1] for core in cores)
+        ids = _ravel_indices(indices, input_dim)
+        probabilities = self._mixed_probabilities(
+            marginals, indices, state.n_rows)
+        if torch.any(probabilities <= 0):
+            raise ValueError(
+                'Drawn product-leverage rows should have positive support')
+        return _sample_batch(
+            ids=ids,
+            probabilities=probabilities,
+            state=state,
+            site=site,
+            proposal_core_versions=state.core_versions,
+            proposal_exact=False)
+
+    def update_after_core(self,
+                          state: _RowSamplingState,
+                          site: int) -> _RowSamplingState:
+        """Invalidates the design-dependent product after a core update."""
+        return state.update_core(site)
+
+
 @dataclass(frozen=True)
 class SampleRefreshPolicy:
     """Deterministic generation policy for reusable sampled rows.
@@ -663,5 +866,6 @@ __all__ = [
     'ObservedRows',
     'UniformRows',
     'TTLeverageRows',
+    'TRProductLeverageRows',
     'SampleRefreshPolicy',
 ]

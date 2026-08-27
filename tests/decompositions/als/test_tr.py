@@ -189,6 +189,51 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             relative.item())
         assert result.metadata['sampling'] == 'observed'
 
+    def test_product_leverage_redraws_current_approximation_per_site(self):
+        tensor = torch.arange(8., dtype=torch.float64).reshape(2, 2, 2)
+        evaluations = []
+
+        def function(indices):
+            evaluations.append(indices.clone())
+            return tensor[tuple(indices[:, site]
+                                for site in range(indices.shape[1]))]
+
+        result = tk.decompositions.TRALS(
+            function,
+            input_dim=tensor.shape,
+            dtype=torch.float64,
+            output_device=None).fit(
+                rank=2,
+                gauge='none',
+                sampling='leverage',
+                n_samples=10,
+                leverage_uniform_mix=0.2,
+                generator=torch.Generator().manual_seed(106),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2),
+                collect_metrics=True)
+
+        assert len(evaluations) == 2 * tensor.ndim
+        assert len(result.metrics.local_solves) == 2 * tensor.ndim
+        assert [record.sample_generation
+                for record in result.metrics.local_solves] == [0] * 3 + [1] * 3
+        assert all(record.sampling_exact is False
+                   for record in result.metrics.local_solves)
+        assert result.metadata['sampling_exact'] is False
+        assert result.metadata['leverage_uniform_mix'] == pytest.approx(0.2)
+        assert all(record.absolute_error is None
+                   for record in result.metrics.sweeps)
+
+    def test_product_leverage_requires_sitewise_refresh(self):
+        decomposition = tk.decompositions.TRALS(torch.ones(2, 2, 2))
+
+        with pytest.raises(ValueError, match='redraws per site'):
+            decomposition.fit(
+                rank=2,
+                sampling='leverage',
+                n_samples=5,
+                sample_reuse_sweeps=2)
+
 
 class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
 
@@ -237,3 +282,20 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
         assert info['metadata']['algorithm'] == 'tr_als'
         assert len(info['metrics']['sweeps']) == 1
         assert tk.decompositions.TRDecomposition(cores).topology == 'tr'
+
+    def test_wrapper_supports_approximate_leverage_sampling(self):
+        tensor = torch.randn(2, 2, 2, dtype=torch.float64)
+        cores, info = tk.decompositions.tr_als(
+            tensor,
+            rank=2,
+            sampling='leverage',
+            n_samples=8,
+            leverage_uniform_mix=0.1,
+            max_sweeps=1,
+            output_device=None,
+            generator=torch.Generator().manual_seed(107),
+            return_info=True)
+
+        assert len(cores) == tensor.ndim
+        assert info['metadata']['sampling'] == 'leverage'
+        assert info['metadata']['sampling_exact'] is False

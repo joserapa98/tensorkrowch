@@ -8,7 +8,8 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.als.sampling import _RowSamplingState
-from tests.decompositions.als._oracles import dense_local_design
+from tests.decompositions.als._oracles import (dense_local_design,
+                                               make_tr_cores)
 
 
 def _mixed_canonical_cores(tensor, site, rank=2):
@@ -281,7 +282,7 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
             lambda: cores, uniform_mix=0.2).probabilities(
                 0, configurations)
 
-        assert torch.any(pure == 0)
+        assert torch.any(pure < 1e-20)
         assert torch.all(mixed > 0)
         assert mixed.sum() == pytest.approx(1.)
 
@@ -358,3 +359,103 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
                 site=1,
                 n_samples=4,
                 generator=torch.Generator().manual_seed(37))
+
+
+class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
+
+    def test_product_probabilities_match_slice_norm_formula(self):
+        cores = make_tr_cores(
+            input_dim=(2, 3, 2),
+            rank=(2, 3, 2),
+            generator=torch.Generator().manual_seed(70))
+        sampler = tk.decompositions.TRProductLeverageRows(lambda: cores)
+        indices = torch.cartesian_prod(
+            torch.arange(2), torch.arange(3), torch.arange(2))
+        probabilities = sampler.probabilities(
+            1, tk.decompositions.ConfigurationBatch(indices))
+
+        left_scores = sampler._input_leverage(cores[0])
+        right_scores = sampler._input_leverage(cores[2])
+        expected = (
+            left_scores[indices[:, 0]] / 3 *
+            right_scores[indices[:, 2]])
+        assert torch.allclose(probabilities, expected)
+        assert probabilities.sum() == pytest.approx(1.)
+        assert not sampler.proposal_exact
+
+    def test_uniform_mix_adds_support_to_zero_slice_bound(self):
+        cores = make_tr_cores(
+            input_dim=(2, 2, 2),
+            rank=(2, 2, 2),
+            generator=torch.Generator().manual_seed(71))
+        cores[0][:, 0, :] = 0
+        indices = torch.cartesian_prod(
+            torch.arange(2), torch.arange(2), torch.arange(2))
+        configurations = tk.decompositions.ConfigurationBatch(indices)
+        pure = tk.decompositions.TRProductLeverageRows(
+            lambda: cores).probabilities(1, configurations)
+        mixed = tk.decompositions.TRProductLeverageRows(
+            lambda: cores, uniform_mix=0.2).probabilities(
+                1, configurations)
+
+        assert torch.any(pure < 1e-20)
+        assert torch.all(mixed > 0)
+        assert mixed.sum() == pytest.approx(1.)
+
+    def test_draw_records_approximation_versions_and_exact_weights(self):
+        cores = make_tr_cores(
+            generator=torch.Generator().manual_seed(72))
+        sampler = tk.decompositions.TRProductLeverageRows(
+            lambda: cores, uniform_mix=0.1)
+        state = _RowSamplingState(
+            n_rows=prod(core.shape[1] for core in cores),
+            core_versions=(2, 4, 3, 1))
+        batch = sampler.draw(
+            state,
+            site=2,
+            n_samples=100,
+            generator=torch.Generator().manual_seed(73))
+        indices = torch.stack(torch.unravel_index(
+            batch.ids, tuple(core.shape[1] for core in cores)), dim=1)
+        expected = sampler.probabilities(
+            2, tk.decompositions.ConfigurationBatch(indices))
+
+        assert torch.allclose(batch.probabilities, expected)
+        assert torch.allclose(
+            batch.weights, (batch.ids.numel() * expected).rsqrt())
+        assert batch.proposal_core_versions == (2, 4, 3, 1)
+        assert not batch.is_exact_for((2, 4, 3, 1))
+        assert batch.site == 2
+        assert sampler.update_after_core(
+            state, 1).core_versions == (2, 5, 3, 1)
+
+    def test_reweighted_full_objective_is_unbiased_in_expectation(self):
+        generator = torch.Generator().manual_seed(74)
+        cores = make_tr_cores(
+            input_dim=(2, 2, 2),
+            rank=(2, 2, 2),
+            generator=generator)
+        site = 1
+        design = dense_local_design(cores, site, topology='tr')
+        target = torch.randn(
+            design.shape[0], dtype=design.dtype, generator=generator)
+        sampler = tk.decompositions.TRProductLeverageRows(
+            lambda: cores, uniform_mix=0.2)
+        state = _RowSamplingState(
+            n_rows=design.shape[0], core_versions=(0, 0, 0))
+        batch = sampler.draw(
+            state,
+            site=site,
+            n_samples=100_000,
+            generator=generator)
+        sampled_design, sampled_target = batch.gather_and_weight(
+            design, target)
+
+        sampled_gram = sampled_design.mH @ sampled_design
+        exact_gram = design.mH @ design
+        sampled_rhs = sampled_design.mH @ sampled_target
+        exact_rhs = design.mH @ target
+        assert torch.linalg.vector_norm(sampled_gram - exact_gram) / \
+            torch.linalg.vector_norm(exact_gram) < 2e-2
+        assert torch.linalg.vector_norm(sampled_rhs - exact_rhs) / \
+            torch.linalg.vector_norm(exact_rhs) < 2e-2

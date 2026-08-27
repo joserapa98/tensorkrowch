@@ -11,7 +11,9 @@ from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
 from tensorkrowch.decompositions.als.driver import ALSSweepDriver
 from tensorkrowch.decompositions.als.environments import (
     CoreUpdateSet,
+    DirectTREnvironment,
     TRSegmentEnvironmentCache,
+    _environment_norm,
 )
 from tensorkrowch.decompositions.als.gauges import (GaugePolicy, NoGauge,
                                                     resolve_gauge_policy)
@@ -20,6 +22,7 @@ from tensorkrowch.decompositions.als.sampling import (
     ObservedRows,
     RowSampler,
     SampleRefreshPolicy,
+    TRProductLeverageRows,
     UniformRows,
     _RowSamplingState,
 )
@@ -400,6 +403,161 @@ class _TRALSBackend:
             renormalize=self.cache.renormalize)
 
 
+class _TRProductLeverageALSBackend:
+    """Runs site-dependent approximate product-leverage TR sampling."""
+
+    def __init__(self,
+                 problem: ALSProblem,
+                 cores: Sequence[torch.Tensor],
+                 solver: LeastSquaresSolver,
+                 gauge: GaugePolicy,
+                 fixed_sites: Sequence[int],
+                 n_samples: int,
+                 uniform_mix: float,
+                 generator: Optional[torch.Generator],
+                 normalize: bool,
+                 renormalize: bool) -> None:
+        self.problem = problem
+        self._cores = TRSegmentEnvironmentCache._validate_cores(cores)
+        self._versions = (0,) * len(self._cores)
+        self.solver = solver
+        self.gauge = gauge
+        self.fixed_sites = frozenset(fixed_sites)
+        self.n_samples = n_samples
+        self.generator = generator
+        self.normalize = normalize
+        self.renormalize = renormalize
+        self.sampler = TRProductLeverageRows(
+            lambda: self._cores, uniform_mix=uniform_mix)
+        self._sampling_state = _RowSamplingState(
+            n_rows=prod(core.shape[1] for core in self._cores),
+            core_versions=self._versions,
+            device=self._cores[0].device)
+        self._direction = None
+        self._generation = None
+
+    @property
+    def n_sites(self) -> int:
+        return len(self._cores)
+
+    @property
+    def trainable_sites(self) -> Sequence[int]:
+        return tuple(site for site in range(self.n_sites)
+                     if site not in self.fixed_sites)
+
+    @property
+    def cores(self) -> Sequence[torch.Tensor]:
+        return self._cores
+
+    def prepare_sweep(self,
+                      order: Sequence[int],
+                      sweep: int) -> Tuple[Optional[int], bool]:
+        self._direction = 'forward' if order[0] == 0 else 'reverse'
+        self._generation = sweep
+        return sweep, True
+
+    def solve_site(self,
+                   site: int,
+                   sweep: int,
+                   update_policy: UpdatePolicy,
+                   return_record: bool):
+        state = replace(
+            self._sampling_state,
+            core_versions=self._versions,
+            generation=self._generation)
+        batch = self.sampler.draw(
+            state=state,
+            site=site,
+            n_samples=self.n_samples,
+            generator=self.generator)
+        indices = _unravel_indices(
+            batch.ids, tuple(core.shape[1] for core in self._cores))
+        target = self.problem.evaluate(
+            ConfigurationBatch(indices, kind='indices'))
+        if target.shape != (self.n_samples,):
+            raise ValueError(
+                'TR-ALS currently requires a scalar tensor source')
+        if not torch.isfinite(target).all():
+            raise ValueError(
+                'The tensor source should return only finite values')
+
+        local = DirectTREnvironment(self._cores).local_environment(
+            site, samples=batch)
+        environment = local.design()
+        log_scale = environment.real.new_zeros(())
+        if self.renormalize:
+            norm = _environment_norm(environment)
+            if norm > 0:
+                environment = environment / norm
+                log_scale = norm.log()
+                target = target / norm.to(target.dtype)
+        sample_weights = batch.weights.to(environment.dtype)
+        environment = environment * sample_weights.unsqueeze(1)
+        target = target * sample_weights
+
+        regularization_scale = None
+        if (self.solver.l2_reg_mode == 'absolute') and \
+                (self.solver.l2_reg > 0):
+            regularization_scale = (-2 * log_scale).exp()
+        sampling_exact = batch.is_exact_for(self._versions)
+        proposal, record = _solve_local_proposal(
+            solver=self.solver,
+            environment=environment,
+            target=target,
+            current=self._cores[site],
+            site=site,
+            sweep=sweep,
+            update_policy=update_policy,
+            return_record=return_record,
+            regularization_scale=regularization_scale,
+            sampling_exact=sampling_exact,
+            sample_generation=batch.generation)
+        update_set = _tr_gauge_core_update(
+            cores=self._cores,
+            versions=self._versions,
+            fixed_sites=self.fixed_sites,
+            gauge=self.gauge,
+            direction=self._direction,
+            site=site,
+            proposal=proposal)
+        if self.normalize:
+            update_set = _normalize_tr_core_update(
+                update_set=update_set,
+                cores=self._cores,
+                versions=self._versions,
+                fixed_sites=self.fixed_sites,
+                direction=self._direction,
+                site=site)
+        return update_set, record
+
+    def skip_site(self, site: int) -> None:
+        return None
+
+    def commit(self, update_set: CoreUpdateSet) -> None:
+        cores = list(self._cores)
+        versions = list(self._versions)
+        for site, (core, version) in update_set.updates.items():
+            if version <= versions[site]:
+                raise ValueError('Every updated core version should increase')
+            cores[site] = core
+            versions[site] = version
+        self._cores = TRSegmentEnvironmentCache._validate_cores(cores)
+        self._versions = tuple(versions)
+        self._sampling_state = replace(
+            self._sampling_state, core_versions=self._versions)
+
+    def measure_objective(
+            self, problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+        raise RuntimeError(
+            'Renewable product-leverage batches do not define a global objective')
+
+    def snapshot(self) -> Sequence[torch.Tensor]:
+        return tuple(core.clone() for core in self._cores)
+
+    def restore(self, cores: Sequence[torch.Tensor]) -> None:
+        self._cores = TRSegmentEnvironmentCache._validate_cores(cores)
+
+
 class TRALS(TTALS):
     """Approximates a fixed scalar tensor problem by cyclic TR-ALS.
 
@@ -532,6 +690,7 @@ class TRALS(TTALS):
             sampling: Optional[str] = None,
             n_samples: Optional[int] = None,
             sample_reuse_sweeps: int = 1,
+            leverage_uniform_mix: float = 0.0,
             n_segments: Optional[int] = None,
             solver: Optional[LeastSquaresSolver] = None,
             convergence: Optional[ConvergencePolicy] = None,
@@ -549,9 +708,11 @@ class TRALS(TTALS):
         rank per core, so ``rank[-1]`` is the cyclic closing link. With supplied
         cores, these values are upper bounds and no core is silently truncated.
 
-        ``sampling`` may be ``"exact"``, ``"uniform"`` or ``"observed"``.
-        Exact and observed objectives record comparable complete-sweep errors;
-        renewable uniform samples deliberately do not.
+        ``sampling`` may be ``"exact"``, ``"uniform"``, ``"leverage"`` or
+        ``"observed"``. TR leverage currently means the explicitly approximate
+        product proposal implemented by :class:`TRProductLeverageRows`. Exact
+        and observed objectives record comparable complete-sweep errors;
+        renewable sampled batches deliberately do not.
 
         Parameters
         ----------
@@ -567,12 +728,17 @@ class TRALS(TTALS):
         gauge : {``"none"``, ``"qr"``, ``"svd"``} or GaugePolicy
             Gauge moved to the immediate cyclic receiver only when that core
             is trainable and the prescribed ranks make the factorization legal.
-        sampling : {``"exact"``, ``"uniform"``, ``"observed"``}, optional
+        sampling : {``"exact"``, ``"uniform"``, ``"leverage"``,
+            ``"observed"``}, optional
             Row strategy. Completion always uses its permanent observations.
         n_samples : int, optional
-            Rows per uniform sample generation.
+            Rows per uniform generation or product-leverage local solve.
         sample_reuse_sweeps : int
             Sweeps reusing sampled ids, probabilities and source values.
+            Product leverage redraws after every design change and requires 1.
+        leverage_uniform_mix : float
+            Uniform component mixed with the approximate product-leverage
+            proposal, in ``[0, 1]``.
         n_segments : int, optional
             Number of balanced environment-cache segments. Defaults to at most
             three and already defines future worker partitions.
@@ -640,9 +806,10 @@ class TRALS(TTALS):
         if sampling is None:
             sampling = 'observed' if self.problem.observations is not None \
                 else 'exact'
-        if sampling not in ('exact', 'uniform', 'observed'):
+        if sampling not in ('exact', 'uniform', 'leverage', 'observed'):
             raise ValueError(
-                "`sampling` should be 'exact', 'uniform' or 'observed'")
+                "`sampling` should be 'exact', 'uniform', 'leverage' or "
+                "'observed'")
         if self.problem.observations is not None:
             if sampling != 'observed':
                 raise ValueError(
@@ -650,16 +817,25 @@ class TRALS(TTALS):
         elif sampling == 'observed':
             raise ValueError(
                 '`sampling="observed"` requires TRALS.completion')
-        if sampling == 'uniform':
+        if sampling in ('uniform', 'leverage'):
             if isinstance(n_samples, bool) or \
                     (not isinstance(n_samples, int)) or (n_samples < 1):
                 raise ValueError(
-                    '`n_samples` should be positive for uniform sampling')
+                    '`n_samples` should be positive for sampled ALS')
         elif n_samples is not None:
             raise ValueError(
-                '`n_samples` is only used with uniform sampling')
+                '`n_samples` is only used with sampled ALS')
         refresh_policy = SampleRefreshPolicy(
             reuse_sweeps=sample_reuse_sweeps)
+        if isinstance(leverage_uniform_mix, bool) or \
+                (not isinstance(leverage_uniform_mix, (int, float))) or \
+                (leverage_uniform_mix < 0) or (leverage_uniform_mix > 1):
+            raise ValueError(
+                '`leverage_uniform_mix` should be in [0, 1]')
+        if sampling == 'leverage' and sample_reuse_sweeps != 1:
+            raise ValueError(
+                'Product-leverage sampling redraws per site and requires '
+                '`sample_reuse_sweeps=1`')
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity) or (observer is not None)
         collect_metrics = collect_metrics or emit_events
@@ -673,7 +849,7 @@ class TRALS(TTALS):
         if sampling == 'exact':
             configurations, target = self._exact_target()
             runtime_reference = target
-        elif sampling == 'uniform':
+        elif sampling in ('uniform', 'leverage'):
             sampler = UniformRows()
             problem = ALSProblem(source=self.source, selector=sampler)
             runtime_reference = self._runtime_reference()
@@ -699,20 +875,33 @@ class TRALS(TTALS):
             init=init,
             fixed_cores=fixed_cores,
             generator=generator)
-        backend = _TRALSBackend(
-            problem=problem,
-            cores=cores,
-            target=target,
-            solver=solver,
-            gauge=gauge_policy,
-            fixed_sites=fixed_sites,
-            normalize=normalize,
-            renormalize=renormalize,
-            n_segments=n_segments,
-            sampler=sampler,
-            n_samples=n_samples,
-            refresh_policy=refresh_policy,
-            generator=generator)
+        if sampling == 'leverage':
+            backend = _TRProductLeverageALSBackend(
+                problem=problem,
+                cores=cores,
+                solver=solver,
+                gauge=gauge_policy,
+                fixed_sites=fixed_sites,
+                n_samples=n_samples,
+                uniform_mix=leverage_uniform_mix,
+                generator=generator,
+                normalize=normalize,
+                renormalize=renormalize)
+        else:
+            backend = _TRALSBackend(
+                problem=problem,
+                cores=cores,
+                target=target,
+                solver=solver,
+                gauge=gauge_policy,
+                fixed_sites=fixed_sites,
+                normalize=normalize,
+                renormalize=renormalize,
+                n_segments=n_segments,
+                sampler=sampler,
+                n_samples=n_samples,
+                refresh_policy=refresh_policy,
+                generator=generator)
         driver_result = ALSSweepDriver().fit(
             problem=problem,
             backend=backend,
@@ -740,12 +929,19 @@ class TRALS(TTALS):
                 'sampling': sampling,
                 'n_samples': n_samples,
                 'sample_reuse_sweeps': sample_reuse_sweeps,
-                'n_segments': len(backend.cache.segments),
+                'n_segments': (
+                    None if sampling == 'leverage'
+                    else len(backend.cache.segments)),
                 'normalize': normalize,
                 'sampling_exact': (
-                    None if backend.sample_batch is None else
-                    backend.sample_batch.is_exact_for(
-                        backend.cache.core_versions)),
+                    False
+                    if sampling == 'leverage' else
+                    (None if backend.sample_batch is None else
+                     backend.sample_batch.is_exact_for(
+                         backend.cache.core_versions))),
+                'leverage_uniform_mix': (
+                    leverage_uniform_mix
+                    if sampling == 'leverage' else None),
                 'exact_configurations': (
                     None if configurations is None else
                     configurations.batch_size),
@@ -762,6 +958,7 @@ def tr_als(source,
            sampling: str = 'exact',
            n_samples: Optional[int] = None,
            sample_reuse_sweeps: int = 1,
+           leverage_uniform_mix: float = 0.0,
            n_segments: Optional[int] = None,
            max_sweeps: int = 10,
            error_atol: Optional[float] = None,
@@ -825,6 +1022,7 @@ def tr_als(source,
             sampling=sampling,
             n_samples=n_samples,
             sample_reuse_sweeps=sample_reuse_sweeps,
+            leverage_uniform_mix=leverage_uniform_mix,
             n_segments=n_segments,
             solver=solver,
             convergence=convergence,

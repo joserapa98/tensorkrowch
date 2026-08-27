@@ -59,6 +59,7 @@ packages = [
     "tensorkrowch.models",
     "tensorkrowch.decompositions",
     "tensorkrowch.decompositions.als",
+    "tensorkrowch.decompositions.ring",
     "tensorkrowch.decompositions.sources",
     "tensorkrowch.decompositions.svd"
 ]

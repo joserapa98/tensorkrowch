@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 13/20 implementadas; 13 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 14/20 implementadas; 14 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -1195,7 +1195,7 @@ razón de selección.
 
 #### `RingRankEstimator` `[I]`
 
-- `.estimate(left_dim, right_dim, physical_rank, rank_caps)`;
+- `.estimate(left_dim, right_dim, auxiliary_rank, rank_caps)`;
 - reproduce de forma controlada la estimación
   `sqrt(D_left * D_right / auxiliary_rank)`;
 - respeta caps y registra infeasibilidad, sin zero-padding silencioso.
@@ -3109,8 +3109,8 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **RING-01 — Extraer contratos de apertura local**
 
-  Estado: implementado y validado localmente; pendiente de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `98bfbd2`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Implementar `LoopOpening`, `LoopOpenerCapabilities`, `LoopOpener`,
   `ALSLoopOpener`, `FixedGaugeCoreOpener`, `CallableLoopOpener` y
@@ -3156,7 +3156,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - `584 passed, 11 skipped` en toda la suite de decompositions;
   - `ruff` y `git diff --check` sin incidencias.
 
-- [ ] **RING-02 — Centralizar selección de bloques y ranks**
+- [x] **RING-02 — Centralizar selección de bloques y ranks**
+
+  Estado: implementado y validado localmente; pendiente de commit y de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Portar y generalizar:
 
@@ -3175,6 +3178,37 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - padding solo si el usuario lo solicita y siempre registrado;
   - exactitud del split contra supercore;
   - `rank` público escalar; listas efectivas internas.
+
+  Implementación:
+
+  - `CentralBlockSelector` acepta un provider con `input_dim` o la secuencia
+    directamente, normaliza el `rank` TR compartido/por enlace y conserva el
+    historial de crecimiento bilateral;
+  - `BlockSelection` distingue capacidad de inputs, capacidad requerida,
+    factibilidad, razón de parada y contacto con frontera izquierda/derecha;
+  - agotar los sites disponibles produce un resultado no factible y
+    diagnosticable, no una excepción que pierda la selección alcanzada;
+  - `RingRankEstimator` porta la heurística
+    `sqrt(D_left * D_right / auxiliary_rank)`, adapta los tres ranks a sus caps
+    y enumera por separado toda capacidad izquierda, derecha o auxiliar no
+    satisfecha;
+  - `split_block_ttsvd` fusiona únicamente los ranks externos con el primer y
+    último input, delega todos los cortes en `TTSVD` y restaura supercores con
+    ranks externos arbitrarios;
+  - `BlockSplit` separa ranks efectivos, ranks almacenados y padding por corte;
+    el zero-padding solo ocurre con `pad_rank=True` y queda en metadata;
+  - el split conserva el fast path sin métricas, admite los criterios de
+    truncación comunes, ambos backends SVD, real/complejo y `output_device`;
+  - el subpaquete `tensorkrowch.decompositions.ring` queda incluido en el
+    empaquetado instalado, además de funcionar desde el checkout.
+
+  Evidencia local:
+
+  - `18 passed` en selección central/boundary, caps, split exacto/truncado,
+    padding opt-in, real/complejo y `svd`/`qr_svd`;
+  - `236 passed, 1 skipped` en ring+ALS;
+  - `602 passed, 11 skipped` en toda la suite de decompositions;
+  - configuración de paquetes, `ruff` y `git diff --check` sin incidencias.
 
 - [ ] **RING-03 — Implementar mapas y diagnósticos de gauge**
 

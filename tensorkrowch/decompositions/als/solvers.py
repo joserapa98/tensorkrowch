@@ -11,6 +11,14 @@ from tensorkrowch.decompositions.metrics import LocalSolveRecord
 ColumnScaling = Union[bool, str]
 
 
+class NonFiniteLocalSystemError(ValueError):
+    """Raised when a local environment or target contains NaN/Inf."""
+
+
+class NonFiniteSolutionError(RuntimeError):
+    """Raised when a local least-squares solution contains NaN/Inf."""
+
+
 def _stable_norm(tensor: torch.Tensor) -> torch.Tensor:
     """Computes a Frobenius norm after removing the largest magnitude."""
     scale = tensor.abs().amax()
@@ -231,9 +239,11 @@ class LeastSquaresSolver:
             raise TypeError(
                 '`environment` should have a floating or complex dtype')
         if not torch.isfinite(environment).all():
-            raise ValueError('`environment` should contain only finite values')
+            raise NonFiniteLocalSystemError(
+                '`environment` should contain only finite values')
         if not torch.isfinite(target).all():
-            raise ValueError('`target` should contain only finite values')
+            raise NonFiniteLocalSystemError(
+                '`target` should contain only finite values')
         if not isinstance(return_record, bool):
             raise TypeError('`return_record` should be bool type')
 
@@ -269,7 +279,8 @@ class LeastSquaresSolver:
         solution = scaled_solution / \
             column_scales.to(scaled_solution.dtype).unsqueeze(1)
         if not torch.isfinite(solution).all():
-            raise RuntimeError('Least-squares solution contains non-finite values')
+            raise NonFiniteSolutionError(
+                'Least-squares solution contains non-finite values')
 
         returned_solution = solution.squeeze(1) if vector_target else solution
         if not return_record:
@@ -306,4 +317,8 @@ class LeastSquaresSolver:
         return returned_solution, record
 
 
-__all__ = ['LeastSquaresSolver']
+__all__ = [
+    'LeastSquaresSolver',
+    'NonFiniteLocalSystemError',
+    'NonFiniteSolutionError',
+]

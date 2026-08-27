@@ -6,6 +6,9 @@ from tensorkrowch.decompositions.als.environments import (
     TTEnvironmentCache,
     TTLocalEnvironment,
 )
+from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
+                                                         UpdatePolicy)
+from tensorkrowch.decompositions.als.driver import ALSSweepDriver
 from tensorkrowch.decompositions.als.problem import (ALSProblem,
                                                      ObservedEntries)
 from tensorkrowch.decompositions.als.sampling import (ExactRows, ObservedRows,
@@ -29,4 +32,7 @@ __all__ = [
     'CoreUpdateSet',
     'TTLocalEnvironment',
     'TTEnvironmentCache',
+    'ConvergencePolicy',
+    'UpdatePolicy',
+    'ALSSweepDriver',
 ]

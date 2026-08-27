@@ -19,6 +19,7 @@ class DecompositionEvent:
     elapsed: Optional[float] = None
     values: Dict[str, Any] = field(default_factory=dict)
     worker: Optional[int] = None
+    sweep: Optional[int] = None
 
     def __post_init__(self) -> None:
         for name in ('name', 'phase'):
@@ -34,6 +35,10 @@ class DecompositionEvent:
                 raise TypeError(f'`{name}` should be int type')
             if (value is not None) and (value < 0):
                 raise ValueError(f'`{name}` should be non-negative')
+        if self.sweep is not None:
+            if isinstance(self.sweep, bool) or \
+                    (not isinstance(self.sweep, int)) or (self.sweep < 0):
+                raise ValueError('`sweep` should be a non-negative integer')
         if self.elapsed is not None:
             if not isinstance(self.elapsed, (int, float)):
                 raise TypeError('`elapsed` should be a real scalar')
@@ -128,6 +133,16 @@ class ConsoleObserver:
             print('\nSummary', file=self.stream)
             print('-------', file=self.stream)
             self._print_values(event.values)
+        elif event.name in ('sweep_start', 'sweep_complete'):
+            position = '?' if event.sweep is None else event.sweep + 1
+            label = 'Sweep' if event.name == 'sweep_start' else 'Sweep complete'
+            print(f'\n{label} {position}', file=self.stream)
+            if event.elapsed is not None:
+                values = dict(event.values)
+                values['elapsed'] = f'{event.elapsed:.6f} s'
+            else:
+                values = event.values
+            self._print_values(values)
         elif event.name == 'core':
             position = event.site + 1 if event.site is not None else '?'
             print(f'\nCore {position}', file=self.stream)

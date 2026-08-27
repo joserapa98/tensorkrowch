@@ -456,6 +456,46 @@ class LocalSolveRecord:
 
 
 @dataclass(frozen=True)
+class SweepRecord:
+    """Stores objective metrics measured once at the end of an ALS sweep."""
+
+    sweep: int
+    absolute_error: Optional[float] = None
+    relative_error: Optional[float] = None
+    relative_change: Optional[float] = None
+    elapsed: Optional[float] = None
+    sample_generation: Optional[int] = None
+    stop_reason: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.sweep, bool) or \
+                (not isinstance(self.sweep, int)) or (self.sweep < 0):
+            raise ValueError('`sweep` should be a non-negative integer')
+        for name in (
+                'absolute_error', 'relative_error', 'relative_change',
+                'elapsed'):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            value = _scalar_float(value, name)
+            if (value < 0) or (value != value):
+                raise ValueError(f'`{name}` should be non-negative and not NaN')
+            if (name in ('relative_change', 'elapsed')) and \
+                    (not isfinite(value)):
+                raise ValueError(f'`{name}` should be finite')
+            object.__setattr__(self, name, value)
+        if self.sample_generation is not None:
+            if isinstance(self.sample_generation, bool) or \
+                    (not isinstance(self.sample_generation, int)) or \
+                    (self.sample_generation < 0):
+                raise ValueError(
+                    '`sample_generation` should be a non-negative integer')
+        if (self.stop_reason is not None) and \
+                (not isinstance(self.stop_reason, str)):
+            raise TypeError('`stop_reason` should be str type')
+
+
+@dataclass(frozen=True)
 class TimingRecord:
     """Stores elapsed time for a decomposition phase or site."""
 
@@ -521,6 +561,8 @@ class DecompositionMetrics:
     timings: List[TimingRecord] = field(default_factory=list)
     fidelities: List[FidelityRecord] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+    local_solves: List[LocalSolveRecord] = field(default_factory=list)
+    sweeps: List[SweepRecord] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.errors = list(self.errors)
@@ -528,12 +570,16 @@ class DecompositionMetrics:
         self.timings = list(self.timings)
         self.fidelities = list(self.fidelities)
         self.warnings = list(self.warnings)
+        self.local_solves = list(self.local_solves)
+        self.sweeps = list(self.sweeps)
 
         collections = (
             ('errors', self.errors, ErrorRecord),
             ('truncations', self.truncations, TruncationRecord),
             ('timings', self.timings, TimingRecord),
             ('fidelities', self.fidelities, FidelityRecord),
+            ('local_solves', self.local_solves, LocalSolveRecord),
+            ('sweeps', self.sweeps, SweepRecord),
         )
         for name, records, record_type in collections:
             if not all(isinstance(record, record_type) for record in records):
@@ -544,7 +590,7 @@ class DecompositionMetrics:
 
     def as_info(self) -> Dict[str, Any]:
         """Returns a dictionary suitable for functional ``return_info`` APIs."""
-        return {
+        info = {
             'errors': [_record_as_dict(record) for record in self.errors],
             'truncations': [
                 _record_as_dict(record) for record in self.truncations
@@ -555,12 +601,22 @@ class DecompositionMetrics:
             ],
             'warnings': list(self.warnings),
         }
+        if self.local_solves:
+            info['local_solves'] = [
+                _record_as_dict(record) for record in self.local_solves
+            ]
+        if self.sweeps:
+            info['sweeps'] = [
+                _record_as_dict(record) for record in self.sweeps
+            ]
+        return info
 
 
 __all__ = [
     'ErrorRecord',
     'TruncationRecord',
     'LocalSolveRecord',
+    'SweepRecord',
     'TimingRecord',
     'FidelityRecord',
     'DecompositionMetrics',

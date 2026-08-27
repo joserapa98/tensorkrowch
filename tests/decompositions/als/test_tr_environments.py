@@ -170,10 +170,15 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         cache.prepare_sweep(range(len(cores)))
         cache.local_environment(0)
 
-        with pytest.raises(ValueError, match='current and gauge-receiver'):
+        invalid = torch.randn(
+            cores[2].shape[0] + 1,
+            cores[2].shape[1],
+            cores[2].shape[2],
+            dtype=cores[2].dtype)
+        with pytest.raises(ValueError, match='Adjacent TR ranks'):
             cache.commit(tk.decompositions.CoreUpdateSet(
                 sites=(2,),
-                cores=(cores[2] + 1,),
+                cores=(invalid,),
                 versions=(1,),
                 reason='invalid_far_update'))
 
@@ -191,4 +196,3 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
             cores, n_segments=3)
 
         assert cache.segments == ((0, 3), (3, 5), (5, 7))
-

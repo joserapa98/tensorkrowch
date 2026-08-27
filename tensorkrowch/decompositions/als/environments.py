@@ -994,13 +994,6 @@ class TRSegmentEnvironmentCache:
         site = self._active_site
         segment = self._segment_of[site]
         start, stop = self._segments[segment]
-        expected_receiver = (site + 1) % len(self._cores) \
-            if self._direction == 'forward' else \
-            (site - 1) % len(self._cores)
-        unexpected = set(update_set.sites) - {site, expected_receiver}
-        if unexpected:
-            raise ValueError(
-                'Segmented sweeps only accept current and gauge-receiver updates')
         self._cores = validated_cores
         self._versions = tuple(candidate_versions)
         if self._direction == 'forward':

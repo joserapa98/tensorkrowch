@@ -23,6 +23,7 @@ from tensorkrowch.decompositions.als.sampling import (ExactRows, ObservedRows,
                                                       UniformRows)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.als.tt import TTALS, tt_als
+from tensorkrowch.decompositions.als.tr import TRALS, tr_als
 
 
 __all__ = [
@@ -52,4 +53,6 @@ __all__ = [
     'SVDGauge',
     'TTALS',
     'tt_als',
+    'TRALS',
+    'tr_als',
 ]

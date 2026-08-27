@@ -418,6 +418,11 @@ def _region_row_probability(cores: Sequence[torch.Tensor],
 class TTLeverageRows:
     """Samples TT local-design rows from mixed-canonical leverage scores.
 
+    The exact mixed-canonical construction follows *Efficient Leverage Score
+    Sampling for Tensor Train Decomposition* (2024), available in this
+    `paper <https://arxiv.org/abs/2406.02749>`_ by Vivek Bharadwaj, Beheshteh
+    T. Rakhshan, Osman Asif Malik and Guillaume Rabusseau.
+
     The current cores are obtained from ``cores`` at every draw. Cores to the
     left of the selected site must be left-isometric, and cores to its right
     right-isometric. Under this invariant, the leverage distribution factors
@@ -606,14 +611,14 @@ class TTLeverageRows:
 class TRProductLeverageRows:
     """Samples an approximate product-leverage proposal for TR designs.
 
-    This implements the product proposal from Algorithm 2 of Malik and Becker,
-    `A Sampling-Based Method for Tensor Ring Decomposition
-    <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021. For every
-    core outside the active site, it computes row leverage scores of the
-    mode-input unfolding with shape ``(input, left rank * right rank)``. Their
-    product bounds the leverage distribution of the complete cyclic design,
-    but is not that exact distribution, so batches are labelled
-    ``proposal_exact=False``.
+    This implements the product proposal from Algorithm 2 of *A Sampling-Based
+    Method for Tensor Ring Decomposition* (2021), available in this
+    `paper <https://arxiv.org/abs/2010.08581>`_ by Osman Asif Malik and Stephen
+    Becker. For every core outside the active site, it computes row leverage
+    scores of the mode-input unfolding with shape
+    ``(input, left rank * right rank)``. Their product bounds the leverage
+    distribution of the complete cyclic design, but is not that exact
+    distribution, so batches are labelled ``proposal_exact=False``.
 
     The published algorithm samples environment configurations and retains the
     full active input fiber. Accordingly, ``n_samples`` counts environments;
@@ -837,13 +842,14 @@ class _TRExactLeverageState:
 class TRExactLeverageRows:
     """Samples exact leverage rows of a cyclic TR local design.
 
-    This specializes Sections 4.1--4.2 and Appendix B.2 of Malik, Bharadwaj
-    and Murray, `Sampling-Based Decomposition Algorithms for Arbitrary Tensor
-    Networks <https://arxiv.org/abs/2210.03828>`_, 2022, to a TR one-site ALS
-    environment. It contracts the double-layer Gram matrix, computes its small
-    pseudoinverse and draws the joint input configuration sequentially from
-    exact conditional probabilities. The exponentially tall design matrix and
-    its complete leverage vector are never formed.
+    This specializes Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
+    Decomposition Algorithms for Arbitrary Tensor Networks* (2022), available
+    in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik,
+    Vivek Bharadwaj and Riley Murray, to a TR one-site ALS environment. It
+    contracts the double-layer Gram matrix, computes its small pseudoinverse
+    and draws the joint input configuration sequentially from exact
+    conditional probabilities. The exponentially tall design matrix and its
+    complete leverage vector are never formed.
 
     As in the paper, ``n_samples`` counts environment configurations and every
     selected environment retains the complete active input fiber. TensorKrowch

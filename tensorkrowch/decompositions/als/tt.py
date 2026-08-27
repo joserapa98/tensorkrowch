@@ -666,6 +666,12 @@ class TTALS:
     ALS evaluates and caches only one sampled generation, while completion
     never queries entries outside its fixed observations.
 
+    Exact leverage sampling follows *Efficient Leverage Score Sampling for
+    Tensor Train Decomposition* (2024), available in this
+    `paper <https://arxiv.org/abs/2406.02749>`_ by Vivek Bharadwaj, Beheshteh
+    T. Rakhshan, Osman Asif Malik and Guillaume Rabusseau. Frozen leverage and
+    the optional uniform mixture are TensorKrowch extensions.
+
     Parameters
     ----------
     source : TensorSource, TTDecomposition, torch.Tensor or callable
@@ -995,6 +1001,13 @@ class TTALS:
         ``min(rank, prod(input_dim[:k]), prod(input_dim[k:]))``. Existing cores
         that exceed this cap are rejected rather than silently truncated.
 
+        With ``sampling="leverage"``, exact sampling follows *Efficient
+        Leverage Score Sampling for Tensor Train Decomposition* (2024),
+        available in this `paper <https://arxiv.org/abs/2406.02749>`_ by Vivek
+        Bharadwaj, Beheshteh T. Rakhshan, Osman Asif Malik and Guillaume
+        Rabusseau. Frozen batches and ``leverage_uniform_mix`` are TensorKrowch
+        extensions.
+
         Parameters
         ----------
         rank : int, optional
@@ -1278,6 +1291,12 @@ def tt_als(source,
     Callables require ``input_dim`` and receive integer configurations with
     shape ``(batch, sites)``. Use :class:`TTALS` for repeated fits of the same
     source or to pass advanced policy objects directly.
+
+    With ``sampling="leverage"``, the exact mixed-canonical method follows
+    *Efficient Leverage Score Sampling for Tensor Train Decomposition* (2024),
+    available in this `paper <https://arxiv.org/abs/2406.02749>`_ by Vivek
+    Bharadwaj, Beheshteh T. Rakhshan, Osman Asif Malik and Guillaume Rabusseau.
+    See :meth:`TTALS.fit` for the TensorKrowch extensions.
 
     Parameters
     ----------

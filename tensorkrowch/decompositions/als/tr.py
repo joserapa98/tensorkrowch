@@ -588,19 +588,21 @@ class TRALS(TTALS):
     every result is a :class:`TRDecomposition` with cyclic cores of shape
     ``(left rank, input, right rank)``.
 
-    ``sampling="leverage"`` implements Algorithm 2 of Malik and Becker,
-    `A Sampling-Based Method for Tensor Ring Decomposition
-    <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021. It uses
-    their approximate product-leverage proposal and evaluates complete active
-    input fibers. The optional uniform mixture and the common TensorKrowch
-    solver, gauge and convergence policies are library extensions.
+    ``sampling="leverage"`` with the product method implements Algorithm 2 of
+    *A Sampling-Based Method for Tensor Ring Decomposition* (2021), available
+    in this `paper <https://arxiv.org/abs/2010.08581>`_ by Osman Asif Malik and
+    Stephen Becker. It uses their approximate product-leverage proposal and
+    evaluates complete active input fibers. The optional uniform mixture and
+    the common TensorKrowch solver, gauge and convergence policies are library
+    extensions.
 
     With ``sampling="leverage", leverage_method="exact"``, sampling instead
-    specializes Sections 4.1--4.2 and Appendix B.2 of Malik, Bharadwaj and
-    Murray, `Sampling-Based Decomposition Algorithms for Arbitrary Tensor
-    Networks <https://arxiv.org/abs/2210.03828>`_, 2022. This contracts the
-    cyclic double-layer Gram and samples exact conditional leverage
-    probabilities without forming the exponentially tall design.
+    specializes Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
+    Decomposition Algorithms for Arbitrary Tensor Networks* (2022), available
+    in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik,
+    Vivek Bharadwaj and Riley Murray. This contracts the cyclic double-layer
+    Gram and samples exact conditional leverage probabilities without forming
+    the exponentially tall design.
     """
 
     @classmethod
@@ -743,13 +745,13 @@ class TRALS(TTALS):
 
         ``sampling`` may be ``"exact"``, ``"uniform"``, ``"leverage"`` or
         ``"observed"``. For leverage, ``leverage_method="product"`` implements
-        Algorithm 2 of Malik and Becker, `A Sampling-Based Method for Tensor
-        Ring Decomposition
-        <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021.
-        ``leverage_method="exact"`` implements the exact TN sampler in Sections
-        4.1--4.2 and Appendix B.2 of Malik, Bharadwaj and Murray,
-        `Sampling-Based Decomposition Algorithms for Arbitrary Tensor Networks
-        <https://arxiv.org/abs/2210.03828>`_, 2022. Exact and observed
+        Algorithm 2 of *A Sampling-Based Method for Tensor Ring Decomposition*
+        (2021), available in this `paper <https://arxiv.org/abs/2010.08581>`_
+        by Osman Asif Malik and Stephen Becker. ``leverage_method="exact"``
+        implements Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
+        Decomposition Algorithms for Arbitrary Tensor Networks* (2022),
+        available in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman
+        Asif Malik, Vivek Bharadwaj and Riley Murray. Exact and observed
         objectives record comparable complete-sweep errors; renewable sampled
         batches deliberately do not.
 
@@ -1039,11 +1041,13 @@ def tr_als(source,
     repeated fits, completion or advanced policy objects. ``rank`` is either a
     shared value or one right-link value per site; the last value is the cyclic
     closing rank. With ``sampling="leverage"``, the product method implements
-    Algorithm 2 of Malik and Becker, `A Sampling-Based Method for Tensor Ring
-    Decomposition <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML
-    2021; the exact method implements Sections 4.1--4.2 and Appendix B.2 of
-    Malik, Bharadwaj and Murray, `Sampling-Based Decomposition Algorithms for
-    Arbitrary Tensor Networks <https://arxiv.org/abs/2210.03828>`_, 2022.
+    Algorithm 2 of *A Sampling-Based Method for Tensor Ring Decomposition*
+    (2021), available in this `paper <https://arxiv.org/abs/2010.08581>`_ by
+    Osman Asif Malik and Stephen Becker. The exact method implements Sections
+    4.1--4.2 and Appendix B.2 of *Sampling-Based Decomposition Algorithms for
+    Arbitrary Tensor Networks* (2022), available in this
+    `paper <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik, Vivek
+    Bharadwaj and Riley Murray.
     """
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')

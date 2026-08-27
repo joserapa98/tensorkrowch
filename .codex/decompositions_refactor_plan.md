@@ -4842,6 +4842,9 @@ Todo método cuyo algoritmo proceda de un artículo debe identificarlo en el
 docstring de su clase principal y de su función pública. La referencia debe
 incluir autores, título, año y un enlace estable, e indicar con precisión:
 
+- cuando exista una versión pública, usar un enlace abierto y la sintaxis reST
+  habitual de la librería: `` `paper <https://...>`_ ``;
+
 - qué algoritmo, ecuación o sección del artículo se implementa;
 - qué extensiones o adaptaciones son propias de TensorKrowch;
 - qué garantías del artículo siguen siendo aplicables y cuáles no.
@@ -4868,7 +4871,7 @@ publicado que no quede inequívocamente documentado por su caller principal.
 - Leverage sampling TT:
   [NeurIPS 2024 paper](https://papers.nips.cc/paper_files/paper/2024/hash/86c1fd74fa25bd6be0072937803e0bd1-Paper-Conference.pdf).
 - Leverage sampling aproximado para TR:
-  [PMLR 139, Malik–Becker](https://proceedings.mlr.press/v139/malik21b.html).
+  [arXiv:2010.08581](https://arxiv.org/abs/2010.08581).
 - Sampling leverage para tensor networks:
   [arXiv:2210.03828](https://arxiv.org/abs/2210.03828).
 

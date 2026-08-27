@@ -606,12 +606,20 @@ class TTLeverageRows:
 class TRProductLeverageRows:
     """Samples an approximate product-leverage proposal for TR designs.
 
-    For every core outside the active site, the proposal computes row leverage
-    in both oriented core unfoldings and marginalizes their virtual row index
-    onto the input index. The active input is uniform. Their product is an
-    inexpensive surrogate for product-leverage bounds, but it ignores cyclic
-    correlations and cancellations. It is therefore always labelled
-    ``proposal_exact=False`` and does not inherit TT leverage guarantees.
+    This implements the product proposal from Algorithm 2 of Malik and Becker,
+    `A Sampling-Based Method for Tensor Ring Decomposition
+    <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021. For every
+    core outside the active site, it computes row leverage scores of the
+    mode-input unfolding with shape ``(input, left rank * right rank)``. Their
+    product bounds the leverage distribution of the complete cyclic design,
+    but is not that exact distribution, so batches are labelled
+    ``proposal_exact=False``.
+
+    The published algorithm samples environment configurations and retains the
+    full active input fiber. Accordingly, ``n_samples`` counts environments;
+    the returned batch contains ``n_samples * input_dim[site]`` scalar rows.
+    Expanding fibers is a TensorKrowch row-interface adaptation and preserves
+    the paper's sampling weights.
 
     ``uniform_mix`` adds global uniform support. Importance weights always use
     the actual mixed draw probability, so sampled Gram matrices and right-hand
@@ -672,17 +680,11 @@ class TRProductLeverageRows:
 
     @staticmethod
     def _input_leverage(core: torch.Tensor) -> torch.Tensor:
-        """Marginalizes row leverage from both oriented core unfoldings."""
+        """Returns row leverage of the core's mode-input unfolding."""
         left_rank, input_dim, right_rank = core.shape
-        forward = core.reshape(left_rank * input_dim, right_rank)
-        forward = TRProductLeverageRows._row_leverage(forward).reshape(
-            left_rank, input_dim).sum(dim=0)
-        reverse = core.permute(1, 2, 0).reshape(
-            input_dim * right_rank, left_rank)
-        reverse = TRProductLeverageRows._row_leverage(reverse).reshape(
-            input_dim, right_rank).sum(dim=1)
-        scores = forward + reverse
-        return scores / scores.sum()
+        unfolding = core.permute(1, 0, 2).reshape(
+            input_dim, left_rank * right_rank)
+        return TRProductLeverageRows._row_leverage(unfolding)
 
     @staticmethod
     def _site_probabilities(
@@ -743,7 +745,7 @@ class TRProductLeverageRows:
              site: int,
              n_samples: Optional[int],
              generator: Optional[torch.Generator] = None) -> SampleBatch:
-        """Draws independent product rows with immutable mixed weights."""
+        """Draws product environments and expands complete active fibers."""
         _validate_draw(state, site, n_samples)
         if n_samples is None:
             raise ValueError(
@@ -768,13 +770,20 @@ class TRProductLeverageRows:
             for marginal in marginals
         ], dim=1)
         if self.uniform_mix > 0:
+            environment_rows = state.n_rows // cores[site].shape[1]
             uniform_ids = torch.randint(
-                state.n_rows,
+                environment_rows,
                 (n_samples,),
                 device=state.device,
                 generator=generator)
-            uniform_indices = _unravel_indices(
-                uniform_ids, tuple(core.shape[1] for core in cores))
+            environment_dim = tuple(
+                core.shape[1] for current, core in enumerate(cores)
+                if current != site)
+            uniform_environment = _unravel_indices(
+                uniform_ids, environment_dim)
+            uniform_indices = product_indices.clone()
+            uniform_indices[:, :site] = uniform_environment[:, :site]
+            uniform_indices[:, site + 1:] = uniform_environment[:, site:]
             use_uniform = torch.rand(
                 n_samples,
                 device=state.device,
@@ -785,6 +794,12 @@ class TRProductLeverageRows:
             indices = product_indices
 
         input_dim = tuple(core.shape[1] for core in cores)
+        active_values = torch.arange(
+            input_dim[site], device=state.device, dtype=torch.long)
+        indices = indices.unsqueeze(1).expand(
+            n_samples, input_dim[site], len(cores)).clone()
+        indices[:, :, site] = active_values.unsqueeze(0)
+        indices = indices.reshape(-1, len(cores))
         ids = _ravel_indices(indices, input_dim)
         probabilities = self._mixed_probabilities(
             marginals, indices, state.n_rows)

@@ -214,6 +214,11 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                 collect_metrics=True)
 
         assert len(evaluations) == 2 * tensor.ndim
+        for site, indices in enumerate(evaluations[:tensor.ndim]):
+            fibers = indices.reshape(10, tensor.shape[site], tensor.ndim)
+            assert torch.equal(
+                fibers[:, :, site],
+                torch.arange(tensor.shape[site]).expand(10, -1))
         assert len(result.metrics.local_solves) == 2 * tensor.ndim
         assert [record.sample_generation
                 for record in result.metrics.local_solves] == [0] * 3 + [1] * 3

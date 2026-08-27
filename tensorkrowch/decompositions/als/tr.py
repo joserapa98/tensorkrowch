@@ -33,7 +33,8 @@ from tensorkrowch.decompositions.observers import (DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
-from tensorkrowch.decompositions.sources import ConfigurationBatch
+from tensorkrowch.decompositions.sources import (ConfigurationBatch,
+                                                  FiberTensorSource)
 from tensorkrowch.decompositions.sources.base import _unravel_indices
 from tensorkrowch.decompositions.svd.tr import TRSVD
 
@@ -404,7 +405,7 @@ class _TRALSBackend:
 
 
 class _TRProductLeverageALSBackend:
-    """Runs site-dependent approximate product-leverage TR sampling."""
+    """Runs Malik--Becker product-leverage TR sampling by active fibers."""
 
     def __init__(self,
                  problem: ALSProblem,
@@ -472,9 +473,16 @@ class _TRProductLeverageALSBackend:
             generator=self.generator)
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
-        target = self.problem.evaluate(
-            ConfigurationBatch(indices, kind='indices'))
-        if target.shape != (self.n_samples,):
+        input_dim = self._cores[site].shape[1]
+        if isinstance(self.problem.source, FiberTensorSource):
+            base_indices = indices[::input_dim].clone()
+            target = self.problem.source.fiber(
+                ConfigurationBatch(base_indices, kind='indices'), site)
+            target = target.reshape(-1)
+        else:
+            target = self.problem.evaluate(
+                ConfigurationBatch(indices, kind='indices'))
+        if target.shape != (batch.ids.numel(),):
             raise ValueError(
                 'TR-ALS currently requires a scalar tensor source')
         if not torch.isfinite(target).all():
@@ -569,6 +577,13 @@ class TRALS(TTALS):
     Parameters are the same source/runtime parameters as :class:`TTALS`, but
     every result is a :class:`TRDecomposition` with cyclic cores of shape
     ``(left rank, input, right rank)``.
+
+    ``sampling="leverage"`` implements Algorithm 2 of Malik and Becker,
+    `A Sampling-Based Method for Tensor Ring Decomposition
+    <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021. It uses
+    their approximate product-leverage proposal and evaluates complete active
+    input fibers. The optional uniform mixture and the common TensorKrowch
+    solver, gauge and convergence policies are library extensions.
     """
 
     @classmethod
@@ -709,10 +724,13 @@ class TRALS(TTALS):
         cores, these values are upper bounds and no core is silently truncated.
 
         ``sampling`` may be ``"exact"``, ``"uniform"``, ``"leverage"`` or
-        ``"observed"``. TR leverage currently means the explicitly approximate
-        product proposal implemented by :class:`TRProductLeverageRows`. Exact
-        and observed objectives record comparable complete-sweep errors;
-        renewable sampled batches deliberately do not.
+        ``"observed"``. ``"leverage"`` is the explicitly approximate product
+        proposal of Algorithm 2 in Malik and Becker, `A Sampling-Based Method
+        for Tensor Ring Decomposition
+        <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021,
+        implemented by :class:`TRProductLeverageRows`. Exact and observed
+        objectives record comparable complete-sweep errors; renewable sampled
+        batches deliberately do not.
 
         Parameters
         ----------
@@ -732,7 +750,8 @@ class TRALS(TTALS):
             ``"observed"``}, optional
             Row strategy. Completion always uses its permanent observations.
         n_samples : int, optional
-            Rows per uniform generation or product-leverage local solve.
+            Rows per uniform generation. With product leverage, number of
+            sampled environments; every active input fiber is retained.
         sample_reuse_sweeps : int
             Sweeps reusing sampled ids, probabilities and source values.
             Product leverage redraws after every design change and requires 1.
@@ -987,7 +1006,10 @@ def tr_als(source,
     This functional interface returns a core list. Use :class:`TRALS` for
     repeated fits, completion or advanced policy objects. ``rank`` is either a
     shared value or one right-link value per site; the last value is the cyclic
-    closing rank.
+    closing rank. ``sampling="leverage"`` implements Algorithm 2 of Malik and
+    Becker, `A Sampling-Based Method for Tensor Ring Decomposition
+    <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021, with the
+    TensorKrowch extensions documented by :meth:`TRALS.fit`.
     """
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')

@@ -363,7 +363,7 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
 
 class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
 
-    def test_product_probabilities_match_slice_norm_formula(self):
+    def test_product_probabilities_match_mode_input_leverage_formula(self):
         cores = make_tr_cores(
             input_dim=(2, 3, 2),
             rank=(2, 3, 2),
@@ -382,6 +382,15 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
         assert torch.allclose(probabilities, expected)
         assert probabilities.sum() == pytest.approx(1.)
         assert not sampler.proposal_exact
+
+        unfolding = cores[0].permute(1, 0, 2).reshape(2, -1)
+        u, singular_values, _ = torch.linalg.svd(
+            unfolding, full_matrices=False)
+        tolerance = max(unfolding.shape) * torch.finfo(torch.float64).eps * \
+            singular_values.max()
+        expected_left = u[:, singular_values > tolerance].abs().square().sum(1)
+        expected_left = expected_left / expected_left.sum()
+        assert torch.allclose(left_scores, expected_left)
 
     def test_uniform_mix_adds_support_to_zero_slice_bound(self):
         cores = make_tr_cores(
@@ -426,6 +435,15 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
         assert batch.proposal_core_versions == (2, 4, 3, 1)
         assert not batch.is_exact_for((2, 4, 3, 1))
         assert batch.site == 2
+        assert batch.ids.numel() == 100 * cores[2].shape[1]
+        fibers = indices.reshape(100, cores[2].shape[1], len(cores))
+        assert torch.equal(
+            fibers[:, :, 2],
+            torch.arange(cores[2].shape[1]).expand(100, -1))
+        assert torch.equal(
+            fibers[:, :, :2], fibers[:, :1, :2].expand(-1, 2, -1))
+        assert torch.equal(
+            fibers[:, :, 3:], fibers[:, :1, 3:].expand(-1, 2, -1))
         assert sampler.update_after_core(
             state, 1).core_versions == (2, 5, 3, 1)
 
@@ -446,7 +464,7 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
         batch = sampler.draw(
             state,
             site=site,
-            n_samples=100_000,
+            n_samples=50_000,
             generator=generator)
         sampled_design, sampled_target = batch.gather_and_weight(
             design, target)

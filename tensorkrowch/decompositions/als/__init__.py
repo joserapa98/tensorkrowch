@@ -2,7 +2,10 @@
 
 from tensorkrowch.decompositions.als.environments import (
     CoreUpdateSet,
+    DirectTREnvironment,
     EnvironmentCache,
+    TRLocalEnvironment,
+    TRSegmentEnvironmentCache,
     TTEnvironmentCache,
     TTLocalEnvironment,
 )
@@ -37,6 +40,9 @@ __all__ = [
     'CoreUpdateSet',
     'TTLocalEnvironment',
     'TTEnvironmentCache',
+    'TRLocalEnvironment',
+    'DirectTREnvironment',
+    'TRSegmentEnvironmentCache',
     'ConvergencePolicy',
     'UpdatePolicy',
     'ALSSweepDriver',

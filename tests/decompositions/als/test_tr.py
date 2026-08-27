@@ -239,6 +239,42 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                 n_samples=5,
                 sample_reuse_sweeps=2)
 
+    def test_exact_leverage_uses_fibers_and_current_conditional_design(self):
+        tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
+        evaluations = []
+
+        def function(indices):
+            evaluations.append(indices.clone())
+            return tensor[tuple(indices[:, site]
+                                for site in range(indices.shape[1]))]
+
+        result = tk.decompositions.TRALS(
+            function,
+            input_dim=tensor.shape,
+            dtype=torch.float64,
+            output_device=None).fit(
+                rank=2,
+                gauge='none',
+                sampling='leverage',
+                leverage_method='exact',
+                n_samples=6,
+                generator=torch.Generator().manual_seed(108),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1),
+                collect_metrics=True)
+
+        assert len(evaluations) == tensor.ndim
+        for site, indices in enumerate(evaluations):
+            fibers = indices.reshape(6, tensor.shape[site], tensor.ndim)
+            assert torch.equal(
+                fibers[:, :, site],
+                torch.arange(tensor.shape[site]).expand(6, -1))
+        assert all(record.sampling_exact is True
+                   for record in result.metrics.local_solves)
+        assert result.metadata['sampling_exact'] is True
+        assert result.metadata['leverage_method'] == 'exact'
+        assert result.metadata['n_samples'] == 6
+
 
 class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
 
@@ -268,6 +304,10 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
         with pytest.raises(ValueError, match='rank.*caps'):
             tk.decompositions.TRALS(tensor).fit(
                 rank=1, initial_cores=initial)
+
+        with pytest.raises(ValueError, match='leverage_method'):
+            tk.decompositions.TRALS(tensor).fit(
+                rank=2, leverage_method='diagonal')
 
     def test_wrapper_returns_cores_and_optional_info(self):
         _, tensor = _exact_tr()
@@ -304,3 +344,20 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
         assert len(cores) == tensor.ndim
         assert info['metadata']['sampling'] == 'leverage'
         assert info['metadata']['sampling_exact'] is False
+
+    def test_wrapper_supports_exact_leverage_sampling(self):
+        tensor = torch.randn(2, 2, 2, dtype=torch.float64)
+        cores, info = tk.decompositions.tr_als(
+            tensor,
+            rank=2,
+            sampling='leverage',
+            leverage_method='exact',
+            n_samples=5,
+            max_sweeps=1,
+            output_device=None,
+            generator=torch.Generator().manual_seed(109),
+            return_info=True)
+
+        assert len(cores) == tensor.ndim
+        assert info['metadata']['leverage_method'] == 'exact'
+        assert info['metadata']['sampling_exact'] is True

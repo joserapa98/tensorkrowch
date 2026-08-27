@@ -761,14 +761,17 @@ class TRProductLeverageRows:
                 '`generator` device should match the sampling state device')
 
         marginals = self._site_probabilities(cores, site)
-        product_indices = torch.stack([
-            torch.multinomial(
-                marginal,
-                n_samples,
-                replacement=True,
-                generator=generator)
-            for marginal in marginals
-        ], dim=1)
+        product_indices = torch.zeros(
+            (n_samples, len(cores)),
+            device=state.device,
+            dtype=torch.long)
+        for current, marginal in enumerate(marginals):
+            if current != site:
+                product_indices[:, current] = torch.multinomial(
+                    marginal,
+                    n_samples,
+                    replacement=True,
+                    generator=generator)
         if self.uniform_mix > 0:
             environment_rows = state.n_rows // cores[site].shape[1]
             uniform_ids = torch.randint(
@@ -818,6 +821,306 @@ class TRProductLeverageRows:
                           state: _RowSamplingState,
                           site: int) -> _RowSamplingState:
         """Invalidates the design-dependent product after a core update."""
+        return state.update_core(site)
+
+
+@dataclass(frozen=True)
+class _TRExactLeverageState:
+    """Contractions defining one exact cyclic leverage distribution."""
+
+    order: Tuple[int, ...]
+    suffix_metrics: Tuple[torch.Tensor, ...]
+    gram_pseudoinverse: torch.Tensor
+    numerical_rank: int
+
+
+class TRExactLeverageRows:
+    """Samples exact leverage rows of a cyclic TR local design.
+
+    This specializes Sections 4.1--4.2 and Appendix B.2 of Malik, Bharadwaj
+    and Murray, `Sampling-Based Decomposition Algorithms for Arbitrary Tensor
+    Networks <https://arxiv.org/abs/2210.03828>`_, 2022, to a TR one-site ALS
+    environment. It contracts the double-layer Gram matrix, computes its small
+    pseudoinverse and draws the joint input configuration sequentially from
+    exact conditional probabilities. The exponentially tall design matrix and
+    its complete leverage vector are never formed.
+
+    As in the paper, ``n_samples`` counts environment configurations and every
+    selected environment retains the complete active input fiber. TensorKrowch
+    additionally permits ``uniform_mix`` for full-support robustness. A mixed
+    proposal still stores and uses its exact draw probabilities, although only
+    ``uniform_mix=0`` is the pure leverage distribution analyzed in the paper.
+    """
+
+    proposal_exact = True
+    refreshable = True
+
+    def __init__(self,
+                 cores: Callable[[], Sequence[torch.Tensor]],
+                 uniform_mix: float = 0.0) -> None:
+        if not callable(cores):
+            raise TypeError('`cores` should be a callable returning TR cores')
+        if isinstance(uniform_mix, bool) or \
+                (not isinstance(uniform_mix, (int, float))):
+            raise TypeError('`uniform_mix` should be a number in [0, 1]')
+        if (uniform_mix < 0) or (uniform_mix > 1):
+            raise ValueError('`uniform_mix` should be in [0, 1]')
+        self._cores = cores
+        self.uniform_mix = float(uniform_mix)
+
+    def _current_cores(self) -> Tuple[torch.Tensor, ...]:
+        """Validates current standard TR cores and cyclic ranks."""
+        cores = tuple(self._cores())
+        if not cores:
+            raise ValueError('The exact-leverage sampler requires TR cores')
+        if any((not isinstance(core, torch.Tensor)) or (core.ndim != 3)
+               for core in cores):
+            raise ValueError(
+                'Exact-leverage sampling requires standard TR cores')
+        device = cores[0].device
+        dtype = cores[0].dtype
+        for site, core in enumerate(cores):
+            if core.device != device or core.dtype != dtype:
+                raise ValueError('All TR cores should share dtype and device')
+            if core.shape[0] != cores[site - 1].shape[-1]:
+                raise ValueError('Adjacent TR ranks should match cyclically')
+        return cores
+
+    @staticmethod
+    def _suffix_metrics(
+            cores: Sequence[torch.Tensor],
+            order: Sequence[int]) -> Tuple[torch.Tensor, ...]:
+        """Contracts suffix double layers after summing their input edges."""
+        end_rank = cores[order[-1]].shape[-1] if order \
+            else cores[0].shape[0]
+        identity = torch.eye(
+            end_rank, device=cores[0].device, dtype=cores[0].dtype)
+        metric = torch.einsum('xa,yb->xayb', identity, identity.conj())
+        metrics = [None] * (len(order) + 1)
+        metrics[-1] = metric
+        for position in reversed(range(len(order))):
+            core = cores[order[position]]
+            metric = torch.einsum(
+                'xiu,yiv,uavb->xayb', core, core.conj(), metric)
+            metrics[position] = metric
+        return tuple(metrics)
+
+    @staticmethod
+    def _gram_pseudoinverse(
+            suffix_metric: torch.Tensor
+            ) -> Tuple[torch.Tensor, int]:
+        """Builds the Hermitian Gram pseudoinverse and numerical rank."""
+        gram = suffix_metric.conj().permute(1, 0, 3, 2)
+        gram = gram.reshape(
+            gram.shape[0] * gram.shape[1],
+            gram.shape[2] * gram.shape[3])
+        gram = (gram + gram.mH) / 2
+        eigenvalues, eigenvectors = torch.linalg.eigh(gram)
+        scale = eigenvalues.abs().amax()
+        tolerance = max(gram.shape) * torch.finfo(gram.real.dtype).eps * scale
+        active = eigenvalues > tolerance
+        numerical_rank = int(active.sum().item())
+        if numerical_rank == 0:
+            raise ValueError(
+                'The cyclic local design should have positive numerical rank')
+        active_vectors = eigenvectors[:, active]
+        inverse = active_vectors / eigenvalues[active].unsqueeze(0)
+        pseudoinverse = inverse @ active_vectors.mH
+        return pseudoinverse, numerical_rank
+
+    @classmethod
+    def _exact_state(
+            cls,
+            cores: Sequence[torch.Tensor],
+            site: int) -> _TRExactLeverageState:
+        """Creates the double-layer state for one active TR site."""
+        order = (*range(site + 1, len(cores)), *range(site))
+        suffix_metrics = cls._suffix_metrics(cores, order)
+        pseudoinverse, numerical_rank = cls._gram_pseudoinverse(
+            suffix_metrics[0])
+        return _TRExactLeverageState(
+            order=tuple(order),
+            suffix_metrics=suffix_metrics,
+            gram_pseudoinverse=pseudoinverse,
+            numerical_rank=numerical_rank)
+
+    @staticmethod
+    def _environment_features(
+            cores: Sequence[torch.Tensor],
+            site: int,
+            indices: torch.Tensor) -> torch.Tensor:
+        """Contracts selected cyclic environments in local column order."""
+        order = (*range(site + 1, len(cores)), *range(site))
+        if not order:
+            rank = cores[site].shape[0]
+            environment = torch.eye(
+                rank, device=cores[0].device, dtype=cores[0].dtype)
+            environment = environment.expand(indices.shape[0], -1, -1)
+        else:
+            environment = None
+            for current in order:
+                core = cores[current]
+                selected = core[:, indices[:, current], :].permute(1, 0, 2)
+                environment = selected if environment is None else \
+                    torch.bmm(environment, selected)
+        return environment.transpose(-2, -1).reshape(indices.shape[0], -1)
+
+    @classmethod
+    def _environment_probabilities(
+            cls,
+            cores: Sequence[torch.Tensor],
+            site: int,
+            indices: torch.Tensor,
+            exact_state: _TRExactLeverageState) -> torch.Tensor:
+        """Evaluates normalized exact environment leverage probabilities."""
+        features = cls._environment_features(cores, site, indices)
+        scores = torch.einsum(
+            'ja,ab,jb->j',
+            features,
+            exact_state.gram_pseudoinverse,
+            features.conj()).real
+        tolerance = 100 * torch.finfo(scores.dtype).eps * scores.abs().amax()
+        if torch.any(scores < -tolerance):
+            raise ValueError('Exact leverage contraction became non-positive')
+        return scores.clamp_min(0) / exact_state.numerical_rank
+
+    def probabilities(self,
+                      site: int,
+                      configurations: ConfigurationBatch) -> torch.Tensor:
+        """Returns exact mixed proposal probabilities for scalar rows."""
+        cores = self._current_cores()
+        if isinstance(site, bool) or not isinstance(site, int) or \
+                (site < 0) or (site >= len(cores)):
+            raise ValueError('`site` should identify a TR core')
+        input_dim = tuple(core.shape[1] for core in cores)
+        indices = _discrete_indices(
+            configurations, input_dim, cores[0].device)
+        exact_state = self._exact_state(cores, site)
+        environment_probability = self._environment_probabilities(
+            cores, site, indices, exact_state)
+        environment_rows = prod(input_dim) // input_dim[site]
+        mixed_environment = (
+            (1 - self.uniform_mix) * environment_probability +
+            self.uniform_mix / environment_rows)
+        return mixed_environment / input_dim[site]
+
+    @staticmethod
+    def _conditional_scores(
+            candidates: torch.Tensor,
+            suffix_metric: torch.Tensor,
+            pseudoinverse: torch.Tensor,
+            left_rank: int,
+            right_rank: int) -> torch.Tensor:
+        """Contracts all suffixes for every candidate next input value."""
+        phi = pseudoinverse.reshape(
+            left_rank, right_rank, left_rank, right_rank)
+        scores = torch.einsum(
+            'jirc,arAR,caCA,jiRC->ji',
+            candidates,
+            phi,
+            suffix_metric,
+            candidates.conj()).real
+        tolerance = 100 * torch.finfo(scores.dtype).eps * \
+            scores.abs().amax(dim=1, keepdim=True)
+        if torch.any(scores < -tolerance):
+            raise ValueError(
+                'A conditional leverage contraction became non-positive')
+        return scores.clamp_min(0)
+
+    def draw(self,
+             state: _RowSamplingState,
+             site: int,
+             n_samples: Optional[int],
+             generator: Optional[torch.Generator] = None) -> SampleBatch:
+        """Draws exact conditional environments and expands active fibers."""
+        _validate_draw(state, site, n_samples)
+        if n_samples is None:
+            raise ValueError(
+                '`n_samples` is required for TRExactLeverageRows')
+        cores = self._current_cores()
+        if len(cores) != len(state.core_versions):
+            raise ValueError('Sampling state should match the current TR')
+        if cores[0].device != state.device:
+            raise ValueError('Sampling state and TR cores should share a device')
+        if generator is not None and \
+                torch.device(generator.device).type != state.device.type:
+            raise ValueError(
+                '`generator` device should match the sampling state device')
+
+        exact_state = self._exact_state(cores, site)
+        right_rank = cores[site].shape[-1]
+        left_rank = cores[site].shape[0]
+        prefix = torch.eye(
+            right_rank, device=state.device, dtype=cores[0].dtype)
+        prefix = prefix.expand(n_samples, -1, -1)
+        indices = torch.zeros(
+            (n_samples, len(cores)), device=state.device, dtype=torch.long)
+        for position, current in enumerate(exact_state.order):
+            core = cores[current]
+            candidates = torch.einsum('jrc,cid->jird', prefix, core)
+            scores = self._conditional_scores(
+                candidates=candidates,
+                suffix_metric=exact_state.suffix_metrics[position + 1],
+                pseudoinverse=exact_state.gram_pseudoinverse,
+                left_rank=left_rank,
+                right_rank=right_rank)
+            normalization = scores.sum(dim=1, keepdim=True)
+            if torch.any(normalization <= 0):
+                raise ValueError(
+                    'An exact leverage prefix has zero conditional mass')
+            conditional = scores / normalization
+            selected = torch.multinomial(
+                conditional, 1, replacement=True,
+                generator=generator).squeeze(1)
+            indices[:, current] = selected
+            prefix = candidates[
+                torch.arange(n_samples, device=state.device), selected]
+
+        if self.uniform_mix > 0:
+            uniform_indices = indices.clone()
+            for current, dim in enumerate(core.shape[1] for core in cores):
+                if current != site:
+                    uniform_indices[:, current] = torch.randint(
+                        dim, (n_samples,), device=state.device,
+                        generator=generator)
+            use_uniform = torch.rand(
+                n_samples, device=state.device,
+                generator=generator) < self.uniform_mix
+            indices = torch.where(
+                use_uniform.unsqueeze(1), uniform_indices, indices)
+
+        environment_probability = self._environment_probabilities(
+            cores, site, indices, exact_state)
+        input_dim = tuple(core.shape[1] for core in cores)
+        environment_rows = state.n_rows // input_dim[site]
+        mixed_environment = (
+            (1 - self.uniform_mix) * environment_probability +
+            self.uniform_mix / environment_rows)
+
+        active_values = torch.arange(
+            input_dim[site], device=state.device, dtype=torch.long)
+        indices = indices.unsqueeze(1).expand(
+            n_samples, input_dim[site], len(cores)).clone()
+        indices[:, :, site] = active_values.unsqueeze(0)
+        indices = indices.reshape(-1, len(cores))
+        ids = _ravel_indices(indices, input_dim)
+        probabilities = mixed_environment.repeat_interleave(
+            input_dim[site]) / input_dim[site]
+        if torch.any(probabilities <= 0):
+            raise ValueError(
+                'Drawn exact-leverage rows should have positive support')
+        return _sample_batch(
+            ids=ids,
+            probabilities=probabilities,
+            state=state,
+            site=site,
+            proposal_core_versions=state.core_versions,
+            proposal_exact=True)
+
+    def update_after_core(self,
+                          state: _RowSamplingState,
+                          site: int) -> _RowSamplingState:
+        """Invalidates exact design contractions after a core update."""
         return state.update_core(site)
 
 
@@ -882,5 +1185,6 @@ __all__ = [
     'UniformRows',
     'TTLeverageRows',
     'TRProductLeverageRows',
+    'TRExactLeverageRows',
     'SampleRefreshPolicy',
 ]

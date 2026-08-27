@@ -5,11 +5,10 @@
 >
 > Rama de referencia inicial: `tt_rss`.
 >
-> Última actualización: 2026-08-25.
+> Última actualización: 2026-08-27.
 >
-> Nota de versionado: `.codex/` está ignorada por el `.gitignore` actual. Esta
-> guía es local y no entrará en los commits salvo instrucción explícita para
-> versionarla.
+> Nota de versionado: esta guía se mantiene versionada explícitamente aunque
+> `.codex/` esté ignorada por el `.gitignore` general.
 
 ## 0. Misión y guía para retomar el proyecto
 
@@ -3020,9 +3019,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **ALS-11 — Añadir leverage sampling TR por etapas**
 
-  Estado: etapa A implementada, validada y commiteada en `2e3248b`; pendiente
-  de revisión detallada del usuario antes de considerarla completamente
-  cerrada. La etapa B permanece deliberadamente como trabajo `EXP` posterior.
+  Estado: etapa A corregida para seguir literalmente Malik--Becker, validada y
+  commiteada en `32e70f5`. Etapa B exacta implementada, validada y commiteada
+  junto con esta anotación; queda pendiente de revisión detallada del usuario
+  antes de considerar ALS-11 completamente cerrada.
 
   Etapa A, necesaria:
 
@@ -3068,10 +3068,25 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
     pero no convierte la solución least-squares no lineal en un estimador
     insesgado ni aporta las garantías mixed-canonical de TT.
 
-  Etapa B pendiente (`EXP`, no implementada ni expuesta):
+  Implementación de etapa B (`EXP`):
 
-  - [ ] `TRExactLeverageRows`, Gram double-layer implícito, pseudoinversa
-    pequeña, sampling condicional y benchmarks de coste/beneficio.
+  - [x] `TRExactLeverageRows` especializa Sections 4.1--4.2 y Appendix B.2 de
+    Malik--Bharadwaj--Murray (2022) al entorno local TR;
+  - construye `AᴴA` mediante una cadena double-layer que elimina primero los
+    inputs y obtiene una pseudoinversa Hermitian de shape
+    `(left rank * right rank) x (left rank * right rank)`, sin formar el
+    diseño alto;
+  - muestrea la configuración conjunta en orden cíclico mediante
+    probabilidades condicionadas y suffix metrics, sin enumerar el vector
+    leverage completo;
+  - conserva la fibra input activa completa, repondera con la probabilidad
+    conjunta exacta y redibuja tras cada cambio del diseño;
+  - `TRALS.fit(..., sampling="leverage", leverage_method="exact")` y
+    `tr_als` exponen la ruta; `leverage_method="product"` permanece como
+    default barato y retrocompatible;
+  - `uniform_mix` es una extensión robusta: se conoce exactamente la
+    probabilidad mixta, pero solo mix cero es la distribución leverage pura
+    analizada en el paper.
 
   Evidencia local:
 
@@ -3080,14 +3095,16 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
     pesos y etiqueta aproximada cubiertos;
   - Gram y right-hand side reponderados se contrastan estadísticamente con el
     sistema denso;
-  - integración verifica redraw por sitio/generación, records siempre falsos,
-    metadata y validación del refresh;
-  - `195 passed, 1 skipped` en toda la suite ALS;
-  - `561 passed, 11 skipped` en la repetición completa de decompositions; dos
-    fallos ajenos y no deterministas en `allclose` aleatorios de
-    `TRDecomposition` no se reprodujeron aislados ni en sus repeticiones
-    completas, por lo que se registran como flakiness preexistente y no como
-    suites inicialmente limpias;
+  - integración verifica redraw por sitio/generación, etiqueta aproximada en
+    product, etiqueta exacta en exact, metadata y validación del refresh;
+  - en etapa B, probabilidades reales y complejas coinciden con el leverage de
+    un QR/SVD denso usado solo como oracle; las frecuencias del sampling
+    condicional, fibras, versiones, pesos, wrapper y metadata están cubiertos;
+  - microbenchmark orientativo CPU (`N=6`, `input=4`, `rank=2`, `J=128`):
+    product `0.16 ms`, exact `1.21 ms`; confirma mantener product como default,
+    sin convertir estos tiempos dependientes de hardware en tests frágiles;
+  - `202 passed, 1 skipped` en toda la suite ALS;
+  - `568 passed, 11 skipped` en toda la suite de decompositions;
   - docstring example, `ruff` y `git diff --check` sin incidencias.
 
 - [ ] **RING-01 — Extraer contratos de apertura local**
@@ -4771,14 +4788,13 @@ benchmark concreto:
 2. **Duración exacta de aliases deprecated.** Mínimo un ciclo de versión;
    fijar versión de eliminación al preparar release.
 3. **BLOSTR como método completo público.** Depende de `BLOSTR-01`.
-4. **TR exact leverage.** Solo tras medir la aproximación producto.
-5. **Framework distribuido.** Se elige en `PAR-10`.
-6. **Schedule par/impar como default TR.** Solo si `RSS-13/PAR-06` superan al
+4. **Framework distribuido.** Se elige en `PAR-10`.
+5. **Schedule par/impar como default TR.** Solo si `RSS-13/PAR-06` superan al
    center-out.
-7. **Checkerboard PEPS como default.** Solo tras refinability y benchmarks.
-8. **Autograd a través de RSS entero.** Fuera del alcance inicial; solo fitter
+6. **Checkerboard PEPS como default.** Solo tras refinability y benchmarks.
+7. **Autograd a través de RSS entero.** Fuera del alcance inicial; solo fitter
    entrenable local.
-9. **Persistencia de caches entre fits.** No se implementa hasta demostrar una
+8. **Persistencia de caches entre fits.** No se implementa hasta demostrar una
     cache inmutable segura y útil.
 
 Decisiones ya cerradas y que no deben reabrirse sin evidencia:
@@ -4791,6 +4807,8 @@ Decisiones ya cerradas y que no deben reabrirse sin evidencia:
 - resultados ligeros/raw cores, no nuevos modelos ricos;
 - multiple output sites con `basis`;
 - `GlobalValueTransform`/`LocalValueTransform`;
+- leverage TR producto como default y leverage TR exacto como método
+  experimental opt-in mediante `leverage_method="exact"`;
 - `.quantized`, `qtt_rss` y `qtr_rss`, no `from_qtt`;
 - `MarginalSketch` con preset `.markov(...)`;
 - serial antes de paralelo;

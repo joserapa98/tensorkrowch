@@ -22,6 +22,7 @@ from tensorkrowch.decompositions.als.sampling import (
     ObservedRows,
     RowSampler,
     SampleRefreshPolicy,
+    TRExactLeverageRows,
     TRProductLeverageRows,
     UniformRows,
     _RowSamplingState,
@@ -404,8 +405,8 @@ class _TRALSBackend:
             renormalize=self.cache.renormalize)
 
 
-class _TRProductLeverageALSBackend:
-    """Runs Malik--Becker product-leverage TR sampling by active fibers."""
+class _TRLeverageALSBackend:
+    """Runs product or exact TR leverage sampling by active fibers."""
 
     def __init__(self,
                  problem: ALSProblem,
@@ -414,6 +415,7 @@ class _TRProductLeverageALSBackend:
                  gauge: GaugePolicy,
                  fixed_sites: Sequence[int],
                  n_samples: int,
+                 leverage_method: str,
                  uniform_mix: float,
                  generator: Optional[torch.Generator],
                  normalize: bool,
@@ -428,8 +430,16 @@ class _TRProductLeverageALSBackend:
         self.generator = generator
         self.normalize = normalize
         self.renormalize = renormalize
-        self.sampler = TRProductLeverageRows(
-            lambda: self._cores, uniform_mix=uniform_mix)
+        if leverage_method == 'product':
+            self.sampler = TRProductLeverageRows(
+                lambda: self._cores, uniform_mix=uniform_mix)
+        elif leverage_method == 'exact':
+            self.sampler = TRExactLeverageRows(
+                lambda: self._cores, uniform_mix=uniform_mix)
+        else:
+            raise ValueError(
+                "`leverage_method` should be 'product' or 'exact'")
+        self.leverage_method = leverage_method
         self._sampling_state = _RowSamplingState(
             n_rows=prod(core.shape[1] for core in self._cores),
             core_versions=self._versions,
@@ -557,7 +567,7 @@ class _TRProductLeverageALSBackend:
     def measure_objective(
             self, problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
         raise RuntimeError(
-            'Renewable product-leverage batches do not define a global objective')
+            'Renewable leverage batches do not define a global objective')
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         return tuple(core.clone() for core in self._cores)
@@ -584,6 +594,13 @@ class TRALS(TTALS):
     their approximate product-leverage proposal and evaluates complete active
     input fibers. The optional uniform mixture and the common TensorKrowch
     solver, gauge and convergence policies are library extensions.
+
+    With ``sampling="leverage", leverage_method="exact"``, sampling instead
+    specializes Sections 4.1--4.2 and Appendix B.2 of Malik, Bharadwaj and
+    Murray, `Sampling-Based Decomposition Algorithms for Arbitrary Tensor
+    Networks <https://arxiv.org/abs/2210.03828>`_, 2022. This contracts the
+    cyclic double-layer Gram and samples exact conditional leverage
+    probabilities without forming the exponentially tall design.
     """
 
     @classmethod
@@ -705,6 +722,7 @@ class TRALS(TTALS):
             sampling: Optional[str] = None,
             n_samples: Optional[int] = None,
             sample_reuse_sweeps: int = 1,
+            leverage_method: str = 'product',
             leverage_uniform_mix: float = 0.0,
             n_segments: Optional[int] = None,
             solver: Optional[LeastSquaresSolver] = None,
@@ -724,11 +742,14 @@ class TRALS(TTALS):
         cores, these values are upper bounds and no core is silently truncated.
 
         ``sampling`` may be ``"exact"``, ``"uniform"``, ``"leverage"`` or
-        ``"observed"``. ``"leverage"`` is the explicitly approximate product
-        proposal of Algorithm 2 in Malik and Becker, `A Sampling-Based Method
-        for Tensor Ring Decomposition
-        <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021,
-        implemented by :class:`TRProductLeverageRows`. Exact and observed
+        ``"observed"``. For leverage, ``leverage_method="product"`` implements
+        Algorithm 2 of Malik and Becker, `A Sampling-Based Method for Tensor
+        Ring Decomposition
+        <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021.
+        ``leverage_method="exact"`` implements the exact TN sampler in Sections
+        4.1--4.2 and Appendix B.2 of Malik, Bharadwaj and Murray,
+        `Sampling-Based Decomposition Algorithms for Arbitrary Tensor Networks
+        <https://arxiv.org/abs/2210.03828>`_, 2022. Exact and observed
         objectives record comparable complete-sweep errors; renewable sampled
         batches deliberately do not.
 
@@ -750,14 +771,18 @@ class TRALS(TTALS):
             ``"observed"``}, optional
             Row strategy. Completion always uses its permanent observations.
         n_samples : int, optional
-            Rows per uniform generation. With product leverage, number of
-            sampled environments; every active input fiber is retained.
+            Rows per uniform generation. With leverage, number of sampled
+            environments; every active input fiber is retained.
         sample_reuse_sweeps : int
             Sweeps reusing sampled ids, probabilities and source values.
-            Product leverage redraws after every design change and requires 1.
+            TR leverage redraws after every design change and requires 1.
+        leverage_method : {``"product"``, ``"exact"``}
+            Product mode uses independent core-unfolding leverage bounds. Exact
+            mode contracts the cyclic Gram and samples conditional leverage.
         leverage_uniform_mix : float
-            Uniform component mixed with the approximate product-leverage
-            proposal, in ``[0, 1]``.
+            Uniform component mixed with the selected leverage proposal, in
+            ``[0, 1]``. Only zero is the pure distribution analyzed in the
+            corresponding paper.
         n_segments : int, optional
             Number of balanced environment-cache segments. Defaults to at most
             three and already defines future worker partitions.
@@ -774,7 +799,7 @@ class TRALS(TTALS):
         renormalize : bool
             Whether environments remove global norms and retain log-scales.
         generator : torch.Generator, optional
-            Generator used by initialization and uniform sampling.
+            Generator used by initialization and randomized sampling.
         collect_metrics : bool
             Whether to retain local solves, sweep errors and timings.
         verbose : bool or int
@@ -846,6 +871,9 @@ class TRALS(TTALS):
                 '`n_samples` is only used with sampled ALS')
         refresh_policy = SampleRefreshPolicy(
             reuse_sweeps=sample_reuse_sweeps)
+        if leverage_method not in ('product', 'exact'):
+            raise ValueError(
+                "`leverage_method` should be 'product' or 'exact'")
         if isinstance(leverage_uniform_mix, bool) or \
                 (not isinstance(leverage_uniform_mix, (int, float))) or \
                 (leverage_uniform_mix < 0) or (leverage_uniform_mix > 1):
@@ -853,7 +881,7 @@ class TRALS(TTALS):
                 '`leverage_uniform_mix` should be in [0, 1]')
         if sampling == 'leverage' and sample_reuse_sweeps != 1:
             raise ValueError(
-                'Product-leverage sampling redraws per site and requires '
+                'TR leverage sampling redraws per site and requires '
                 '`sample_reuse_sweeps=1`')
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity) or (observer is not None)
@@ -895,13 +923,14 @@ class TRALS(TTALS):
             fixed_cores=fixed_cores,
             generator=generator)
         if sampling == 'leverage':
-            backend = _TRProductLeverageALSBackend(
+            backend = _TRLeverageALSBackend(
                 problem=problem,
                 cores=cores,
                 solver=solver,
                 gauge=gauge_policy,
                 fixed_sites=fixed_sites,
                 n_samples=n_samples,
+                leverage_method=leverage_method,
                 uniform_mix=leverage_uniform_mix,
                 generator=generator,
                 normalize=normalize,
@@ -953,11 +982,13 @@ class TRALS(TTALS):
                     else len(backend.cache.segments)),
                 'normalize': normalize,
                 'sampling_exact': (
-                    False
+                    backend.sampler.proposal_exact
                     if sampling == 'leverage' else
                     (None if backend.sample_batch is None else
                      backend.sample_batch.is_exact_for(
                          backend.cache.core_versions))),
+                'leverage_method': (
+                    leverage_method if sampling == 'leverage' else None),
                 'leverage_uniform_mix': (
                     leverage_uniform_mix
                     if sampling == 'leverage' else None),
@@ -977,6 +1008,7 @@ def tr_als(source,
            sampling: str = 'exact',
            n_samples: Optional[int] = None,
            sample_reuse_sweeps: int = 1,
+           leverage_method: str = 'product',
            leverage_uniform_mix: float = 0.0,
            n_segments: Optional[int] = None,
            max_sweeps: int = 10,
@@ -1006,10 +1038,12 @@ def tr_als(source,
     This functional interface returns a core list. Use :class:`TRALS` for
     repeated fits, completion or advanced policy objects. ``rank`` is either a
     shared value or one right-link value per site; the last value is the cyclic
-    closing rank. ``sampling="leverage"`` implements Algorithm 2 of Malik and
-    Becker, `A Sampling-Based Method for Tensor Ring Decomposition
-    <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML 2021, with the
-    TensorKrowch extensions documented by :meth:`TRALS.fit`.
+    closing rank. With ``sampling="leverage"``, the product method implements
+    Algorithm 2 of Malik and Becker, `A Sampling-Based Method for Tensor Ring
+    Decomposition <https://proceedings.mlr.press/v139/malik21b.html>`_, ICML
+    2021; the exact method implements Sections 4.1--4.2 and Appendix B.2 of
+    Malik, Bharadwaj and Murray, `Sampling-Based Decomposition Algorithms for
+    Arbitrary Tensor Networks <https://arxiv.org/abs/2210.03828>`_, 2022.
     """
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
@@ -1044,6 +1078,7 @@ def tr_als(source,
             sampling=sampling,
             n_samples=n_samples,
             sample_reuse_sweeps=sample_reuse_sweeps,
+            leverage_method=leverage_method,
             leverage_uniform_mix=leverage_uniform_mix,
             n_segments=n_segments,
             solver=solver,

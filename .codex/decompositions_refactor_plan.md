@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 12/20 implementadas; 12 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 13/20 implementadas; 13 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -3107,7 +3107,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - `568 passed, 11 skipped` en toda la suite de decompositions;
   - docstring example, `ruff` y `git diff --check` sin incidencias.
 
-- [ ] **RING-01 — Extraer contratos de apertura local**
+- [x] **RING-01 — Extraer contratos de apertura local**
+
+  Estado: implementado y validado localmente; pendiente de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Implementar `LoopOpening`, `LoopOpenerCapabilities`, `LoopOpener`,
   `ALSLoopOpener`, `FixedGaugeCoreOpener`, `CallableLoopOpener` y
@@ -3123,6 +3126,35 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - dos gauges fijos mediante solve directo del core físico;
   - BLOSTR puro solo donde no se imponen gauges;
   - diagnósticos homogéneos.
+
+  Implementación:
+
+  - `LoopOpening` conserva gauge izquierdo, cores físicos, gauge derecho,
+    ranks efectivos, orientación, `LocalSolveRecord` y diagnósticos; valida la
+    cadena cíclica y puede contraer el target local sin construir un modelo;
+  - `LoopOpenerCapabilities` declara y valida soporte de gauge izquierdo,
+    derecho, ambos gauges y bloques antes de ejecutar una estrategia;
+  - `LoopOpener` fija un contrato común con target/source, `rank`, gauges,
+    orientación explícita y contexto extensible;
+  - `ALSLoopOpener` encapsula opciones avanzadas de `TRALS`, admite cero o un
+    gauge fijo, targets densos/callables/`TensorSource` y bloques físicos;
+  - la orientación `left` invierte variables, ranks y cores mediante el espejo
+    TR exacto y restaura la apertura al orden original al terminar;
+  - `FixedGaugeCoreOpener` materializa un único sistema least-squares cuando
+    ambos gauges están fijados y solo queda el core físico;
+  - `CallableLoopOpener` adapta estrategias parciales con capabilities
+    declaradas y `CompositeLoopOpener` usa una apertura irrestricta como
+    inicialización de un refino que impone las restricciones;
+  - las capabilities permiten que BLOSTR futuro declare limpiamente que no
+    admite gauges, sin introducirlo todavía en este paso.
+
+  Evidencia local:
+
+  - `16 passed` en contratos/openers con real y complejo, ambas orientaciones,
+    gauges fijos, target callable, adapter y composición;
+  - `218 passed, 1 skipped` en ring+ALS;
+  - `584 passed, 11 skipped` en toda la suite de decompositions;
+  - `ruff` y `git diff --check` sin incidencias.
 
 - [ ] **RING-02 — Centralizar selección de bloques y ranks**
 

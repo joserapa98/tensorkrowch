@@ -37,7 +37,7 @@ class TestGaugeMapOrientation:  # MARK: TestGaugeMapOrientation
         gauge = tk.decompositions.GaugeMap(
             _full_rank_core(orientation, dtype), orientation)
         dual = gauge.inverse_or_pinv('pinv')
-        product = gauge.matrix.mH @ dual.matrix
+        product = gauge.matrix.T @ dual.matrix
 
         assert dual.orientation == orientation
         assert dual.is_dual
@@ -46,6 +46,12 @@ class TestGaugeMapOrientation:  # MARK: TestGaugeMapOrientation
             torch.eye(4, dtype=dtype),
             rtol=2e-10,
             atol=2e-10)
+        if dtype == torch.complex128:
+            assert not torch.allclose(
+                gauge.matrix.mH @ dual.matrix,
+                torch.eye(4, dtype=dtype),
+                rtol=2e-10,
+                atol=2e-10)
         record = dual.require_cancellable()
         assert isinstance(record, tk.decompositions.GaugeRecord)
         assert record.numerical_rank == 4
@@ -66,7 +72,7 @@ class TestGaugeMapInversePolicies:  # MARK: TestGaugeMapInversePolicies
         dual = gauge.inverse_or_pinv(policy)
 
         assert torch.allclose(
-            gauge.matrix.mH @ dual.matrix,
+            gauge.matrix.T @ dual.matrix,
             torch.eye(4, dtype=matrix.dtype),
             rtol=2e-10,
             atol=2e-10)

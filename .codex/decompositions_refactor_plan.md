@@ -3236,8 +3236,9 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - `inverse_or_pinv` admite `auto`, `solve`, `inverse` y `pinv`; `auto` usa
     solve para matrices cuadradas y pseudoinversa para rectangulares o como
     fallback singular;
-  - el dual complejo se define por conjugación Hermitian para verificar
-    `G.mH @ F = I`, corrigiendo la transposición simple del prototipo;
+  - el dual usa la transposición direccional `(G⁺).T` para verificar
+    `G.T @ F = I`: los enlaces tensoriales son contracciones bilineales y no
+    deben conjugar un gauge complejo;
   - `rank_rtol` controla de forma coherente el cutoff de pseudoinversa y el
     diagnóstico de rank numérico;
   - `GaugeRecord` almacena orientación, shape, rank numérico/cancelable,
@@ -3254,7 +3255,8 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   Evidencia local:
 
   - `28 passed` en gauges y métricas, cubriendo mirrors, los cuatro métodos,
-    real/complejo, fallback singular, proyectores, tolerancias y eventos;
+    real/complejo bilineal (distinguido explícitamente de `G.mH @ F`), fallback
+    singular, proyectores, tolerancias y eventos;
   - `264 passed, 1 skipped` en ring+métricas+ALS;
   - `619 passed, 11 skipped` en toda la suite de decompositions;
   - `ruff` dirigido a los archivos nuevos/modificados y `git diff --check` sin
@@ -3263,7 +3265,7 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **RING-04 — Implementar `BidirectionalRingDriver`**
 
-  Estado: implementado y validado localmente; pendiente de commit y de
+  Estado: implementado, validado y commiteado en `88f3c7f`; pendiente de
   revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Primero con un provider sintético:

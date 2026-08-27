@@ -56,7 +56,8 @@ class GaugeMap:
     changes its core orientation while preserving the represented matrix.
 
     Calling :meth:`inverse_or_pinv` returns the directional dual ``F`` that
-    aims to satisfy ``G.mH @ F = I``. The conjugate transpose is essential for
+    aims to satisfy ``G.T @ F = I``. Tensor-network links use a bilinear index
+    contraction, so this directional transpose deliberately does not conjugate
     complex gauges.
     """
 
@@ -166,19 +167,19 @@ class GaugeMap:
             identity = torch.eye(
                 matrix.shape[1], dtype=matrix.dtype, device=matrix.device)
             try:
-                dual_matrix = torch.linalg.solve(matrix.mH, identity)
+                dual_matrix = torch.linalg.solve(matrix.T, identity)
             except RuntimeError:
                 if policy != 'auto':
                     raise
                 method = 'pinv'
         if method == 'inverse':
-            dual_matrix = torch.linalg.inv(matrix).mH
+            dual_matrix = torch.linalg.inv(matrix).T
         elif method == 'pinv':
             if rank_rtol is None:
-                dual_matrix = torch.linalg.pinv(matrix).mH
+                dual_matrix = torch.linalg.pinv(matrix).T
             else:
                 dual_matrix = torch.linalg.pinv(
-                    matrix, rcond=rank_rtol).mH
+                    matrix, rcond=rank_rtol).T
 
         dual_core = _core_from_matrix(
             dual_matrix,
@@ -221,7 +222,7 @@ class GaugeMap:
             condition_number = float(
                 (singular_values[0] / singular_values[-1]).detach().cpu().item())
 
-        product = reference.mH @ self.matrix
+        product = reference.T @ self.matrix
         identity = torch.eye(
             product.shape[0], dtype=product.dtype, device=product.device)
         cancellation_error = (

@@ -267,3 +267,164 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
             direct.contract_dense(),
             atol=1e-9,
             rtol=1e-9)
+
+
+class TestTTALSCompletion:  # MARK: TestTTALSCompletion
+
+    def test_matrix_completion_minimizes_permanent_observations(self):
+        left = torch.tensor([1., 2., -1.], dtype=torch.float64)
+        right = torch.tensor([2., -1., 3., 4.], dtype=torch.float64)
+        tensor = left[:, None] * right
+        indices = torch.cartesian_prod(torch.arange(3), torch.arange(4))[:-1]
+        values = tensor[indices[:, 0], indices[:, 1]]
+        decomposition = tk.decompositions.TTALS.completion(
+            indices,
+            values,
+            input_dim=tensor.shape,
+            output_device=None)
+
+        result = decomposition.fit(
+            rank=1,
+            generator=torch.Generator().manual_seed(50),
+            convergence=tk.decompositions.ConvergencePolicy(max_sweeps=20),
+            collect_metrics=True)
+
+        errors = [record.relative_error for record in result.metrics.sweeps]
+        assert all(current <= previous + 1e-12
+                   for previous, current in zip(errors, errors[1:]))
+        assert errors[-1] < 1e-4
+        assert result.metadata['sampling'] == 'observed'
+
+    def test_unsorted_weighted_tensor_observations_define_objective(self):
+        tensor = torch.arange(8., dtype=torch.float64).reshape(2, 2, 2)
+        indices = torch.tensor([
+            [1, 1, 1],
+            [0, 0, 0],
+            [1, 0, 1],
+            [0, 1, 0],
+        ])
+        values = tensor[indices[:, 0], indices[:, 1], indices[:, 2]]
+        weights = torch.tensor([2., 1., 0.5, 3.], dtype=torch.float64)
+        observations = tk.decompositions.ObservedEntries(
+            indices=indices,
+            values=values,
+            input_dim=tensor.shape,
+            weights=weights)
+        history = tk.decompositions.HistoryObserver()
+
+        result = tk.decompositions.TTALS.completion(
+            observations, output_device=None).fit(
+                rank=2,
+                generator=torch.Generator().manual_seed(51),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=3),
+                collect_metrics=True,
+                observer=history)
+
+        approximation = result.evaluate(observations.indices)
+        absolute, relative = observations.error(approximation)
+        assert result.metrics.sweeps[-1].absolute_error == pytest.approx(
+            absolute.item())
+        assert result.metrics.sweeps[-1].relative_error == pytest.approx(
+            relative.item())
+        assert [event.sweep for event in history.events
+                if event.name == 'sample_refresh'] == [0]
+
+    def test_completion_rejects_exact_or_svd_initialization(self):
+        decomposition = tk.decompositions.TTALS.completion(
+            torch.tensor([[0, 0], [1, 1]]),
+            torch.tensor([1., 2.]),
+            input_dim=(2, 2))
+
+        with pytest.raises(ValueError, match='permanently observed'):
+            decomposition.fit(rank=2, sampling='exact')
+        with pytest.raises(ValueError, match='requires an exact'):
+            decomposition.fit(rank=2, init='svd')
+
+
+class TestTTALSSampling:  # MARK: TestTTALSSampling
+
+    def test_uniform_samples_and_values_are_reused_by_generation(self):
+        tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
+        evaluations = []
+
+        def function(indices):
+            evaluations.append(indices.clone())
+            return tensor[tuple(indices[:, site]
+                                for site in range(indices.shape[1]))]
+
+        history = tk.decompositions.HistoryObserver()
+        result = tk.decompositions.TTALS(
+            function,
+            input_dim=tensor.shape,
+            dtype=torch.float64,
+            output_device=None).fit(
+                rank=2,
+                sampling='uniform',
+                n_samples=12,
+                sample_reuse_sweeps=2,
+                generator=torch.Generator().manual_seed(52),
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=3),
+                collect_metrics=True,
+                observer=history)
+
+        assert len(evaluations) == 2
+        assert [event.sweep for event in history.events
+                if event.name == 'sample_refresh'] == [0, 2]
+        assert [record.sample_generation
+                for record in result.metrics.sweeps] == [0, 0, 1]
+        assert all(record.absolute_error is None
+                   for record in result.metrics.sweeps)
+        assert result.metadata['exact_configurations'] is None
+
+    def test_uniform_sampling_is_deterministic_with_generator(self):
+        tensor = torch.randn(2, 3, 2, dtype=torch.float64)
+
+        def fit(seed):
+            return tk.decompositions.TTALS(
+                tensor, output_device=None).fit(
+                    rank=2,
+                    sampling='uniform',
+                    n_samples=9,
+                    sample_reuse_sweeps=2,
+                    generator=torch.Generator().manual_seed(seed),
+                    convergence=tk.decompositions.ConvergencePolicy(
+                        max_sweeps=3))
+
+        first = fit(53)
+        second = fit(53)
+
+        assert all(torch.equal(first_core, second_core)
+                   for first_core, second_core in zip(
+                       first.cores, second.cores))
+
+    def test_uniform_sampling_rejects_global_error_convergence(self):
+        decomposition = tk.decompositions.TTALS(torch.ones(2, 2))
+
+        with pytest.raises(ValueError, match='fixed global objective'):
+            decomposition.fit(
+                rank=2,
+                sampling='uniform',
+                n_samples=3,
+                convergence=tk.decompositions.ConvergencePolicy(
+                    max_sweeps=2, error_rtol=0.1))
+
+    def test_functional_wrapper_supports_uniform_sampling(self):
+        tensor = torch.randn(2, 2, 2, dtype=torch.float64)
+
+        cores, info = tk.decompositions.tt_als(
+            tensor,
+            rank=2,
+            sampling='uniform',
+            n_samples=6,
+            sample_reuse_sweeps=2,
+            max_sweeps=2,
+            generator=torch.Generator().manual_seed(54),
+            output_device=None,
+            return_info=True)
+
+        assert len(cores) == tensor.ndim
+        assert info['metadata']['sampling'] == 'uniform'
+        assert [record['sample_generation']
+                for record in info['metrics']['sweeps']] == [0, 0]

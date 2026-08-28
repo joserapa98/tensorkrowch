@@ -4339,7 +4339,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `50 passed` en homogeneidad de docstrings, Ruff dirigido y
     `git diff --check` sin incidencias.
 
-- [ ] **RSS-10 — Activar generalizaciones TT-RSS**
+- [x] **RSS-10 — Activar generalizaciones TT-RSS**
+
+  Implementado y registrado en `837e757`; queda pendiente de revisión
+  detallada por el usuario antes de considerarlo definitivamente cerrado.
 
   Una vez equivalencia básica esté validada, habilitar:
 
@@ -4363,6 +4366,47 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - error absoluto/relativo sobre `sketch_samples` si se solicita;
   - puntos únicos, llamadas/batches y cache hits;
   - warnings de condicionamiento/fitting.
+
+  Implementación:
+
+  - `TTRSS` acepta samples packed, `ConfigurationBatch` o una secuencia de
+    tensores por site. `embedding`, `domain` e `input_dim` se pueden compartir
+    o especificar por site, incluyendo coordenadas con shapes diferentes;
+  - los outputs escalares admiten `(batch,)` y el singleton legacy. Cada eje de
+    un output tensorial se inserta como site basis independiente, con posiciones
+    equiespaciadas por defecto o una secuencia explícita. Los labels siguen
+    siendo índices planos row-major y el muestreo usa `abs(f) ** 2`;
+  - `random_projection=True/False` activa respectivamente el range finder
+    aleatorio o la identidad, con `projection_dim` (por defecto `rank`),
+    oversampling y power iterations. Si no se especifica, se conserva la
+    selección mediante `legacy_projection` para compatibilidad numérica;
+  - verbosity admite niveles 0--3: títulos, detalles/timings y cores completos
+    respectivamente. El fast path no crea timers ni records; los cores solo se
+    materializan en consola en nivel 3;
+  - cada fit crea specs/contexto independientes, respeta generator,
+    device/output_device y no conserva cores. `warm_start` es explícito y se
+    rechaza con `NotImplementedError` hasta definir una actualización RSS con
+    significado matemático, en vez de reutilizar estado de forma accidental;
+  - las métricas incluyen tiempo total y por fase/site, shapes/ranks, records
+    locales de truncación y el agregado
+    `sketch_svd_local_aggregate`, deliberadamente etiquetado como diagnóstico
+    local de los Phi y no como cota de error global. También mantienen error
+    absoluto/relativo sobre sketch samples, estadísticas de evaluación y
+    warnings de fitting mal condicionado;
+  - se retiraron los cinco `xfail(strict=True)` de generalización y se añadieron
+    tests de coordenadas/embeddings heterogéneos, outputs separados con labels
+    planos, projection controls, output device, métricas totales, declaración
+    de input dim y warm start explícito.
+
+  Evidencia local:
+
+  - `86 passed, 2 skipped` en los tests dirigidos de base/specs/TT-RSS y su
+    caracterización legacy;
+  - `874 passed, 13 skipped` en `tests/decompositions`, salvo una desviación
+    aleatoria de tolerancia en el test preexistente de TTM con `qr_svd`; el caso
+    aislado pasó inmediatamente (`2 passed, 4 skipped`), por lo que se conserva
+    como flakiness conocida y no se presenta el gate amplio como limpio;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-11 — Portar TR-RSS usando ring común**
 

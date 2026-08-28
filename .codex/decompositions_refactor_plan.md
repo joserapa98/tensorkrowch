@@ -4516,7 +4516,11 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Evidencia local: `115 passed` en `tests/decompositions/ring` más TR-RSS,
   Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-13 — Implementar schedule TR par/impar serial**
+- [x] **RSS-13 — Implementar schedule TR par/impar serial**
+
+  Estado: implementación experimental validada y commiteada en `a60e1a2`;
+  pendiente de revisión detallada del usuario y de los benchmarks de fase 4
+  antes de promoverla sobre center-out.
 
   Antes de paralelizar, implementar y validar el algoritmo propuesto de forma
   serial:
@@ -4539,6 +4543,34 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - fallback al center-out si gauges no son compatibles.
 
   El schedule sigue `EXP` hasta superar al center-out en estabilidad o coste.
+
+  Implementación:
+
+  - `AlternatingRingDriver` expresa el schedule serial como anchors libres y
+    bloques dependientes. Primero abre todos los anchors sin gauges fijos;
+    después propaga desde ambos vecinos y usa un `fixed_opener` con dos gauges;
+  - el checkerboard cíclico exacto admite bloques de tamaño configurable cuando
+    el número de sites es divisible por dos veces dicho tamaño. El provider
+    abierto usado por TT→TR/TR-RSS admite el patrón exacto de bloques unitarios
+    para un número impar de sites y cierra sus dos fronteras desde los anchors;
+  - antes de propagar se registran espectros singulares, ranks numéricos y
+    condicionamiento de ambos gauges de cada anchor. Esta auditoría conserva
+    la solución local y prepara una canonicalización tipo Vidal posterior sin
+    introducir ahora una transformación no compensada;
+  - particiones no exactas, gauges incompatibles o solves fallidos vuelven a
+    `BidirectionalRingDriver` con `schedule="center_out"`,
+    `requested_schedule="alternating"` y `fallback_reason`; el fallback puede
+    rechazarse explícitamente;
+  - `TT2TR.fit`/`tt2tr` y `TRRSS.fit`/`tr_rss` exponen `schedule` y
+    `schedule_block_size`. El default continúa siendo center-out; alternating
+    emite `ExperimentalWarning`;
+  - TR-RSS planifica los Phi unitarios necesarios para anchors y sites fijos,
+    reutiliza `SketchGaugeRecursion` y resuelve los sites impares mediante
+    `_SketchLoopOpener(FixedGaugeCoreOpener())`, sin ALS local.
+
+  Evidencia local: tests de anillo cíclico par, target abierto impar, bloques
+  mayores, fallback/rechazo, TT→TR y TR-RSS rank-one; `123 passed` en las
+  suites dirigidas de ring más TR-RSS, Ruff y `git diff --check` limpios.
 
 - [ ] **RSS-14 — Implementar sources sparse/empíricas en RS**
 

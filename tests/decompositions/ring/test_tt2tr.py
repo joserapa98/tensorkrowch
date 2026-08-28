@@ -144,6 +144,21 @@ class TestTT2TR:  # MARK: TestTT2TR
         assert info['rank'] == [1, 1, 1, 1, 1]
         assert info['metrics']['fidelities'][0]['fidelity'] == pytest.approx(1)
 
+    def test_blostr_als_preset_falls_back_to_exact_als(self):
+        tt = _rank_one_tt()
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = tk.decompositions.TT2TR(
+                tt, output_device=None).fit(
+                    rank=1,
+                    loop_opener='blostr+als')
+
+        assert result.rank == [1, 1, 1, 1, 1]
+        assert torch.allclose(
+            result.contract_dense(),
+            tt.contract_dense().to(result.cores[0].dtype),
+            rtol=2e-9,
+            atol=2e-9)
+
     def test_history_observer_receives_structured_steps_and_summary(self):
         observer = tk.decompositions.HistoryObserver()
         result = tk.decompositions.TT2TR(

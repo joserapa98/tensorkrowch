@@ -223,4 +223,87 @@ class TestOpeningAdapters:  # MARK: TestOpeningAdapters
             opening.contract_dense(), tensor, rtol=2e-10, atol=2e-10)
         assert opening.diagnostics['initializer']['algorithm'] == \
             'synthetic_initializer'
+        assert opening.diagnostics['initializer']['used'] is True
 
+    def test_composite_can_fall_back_after_clean_initializer_failure(self):
+        cores, tensor = _local_problem()
+
+        def initialize(**kwargs):
+            raise RuntimeError('synthetic spectral failure')
+
+        def refine(**kwargs):
+            return tk.decompositions.LoopOpening(
+                left_gauge=cores[0],
+                cores=(cores[1],),
+                right_gauge=cores[2],
+                rank=(2, 3, 2),
+                orientation=kwargs['orientation'],
+                diagnostics={'algorithm': 'synthetic_refiner'})
+
+        capabilities = tk.decompositions.LoopOpenerCapabilities(
+            supports_blocks=True)
+        initializer = tk.decompositions.CallableLoopOpener(
+            initialize, capabilities)
+        refiner = tk.decompositions.CallableLoopOpener(refine, capabilities)
+        opening = tk.decompositions.CompositeLoopOpener(
+            initializer,
+            refiner,
+            fallback_on_error=True).open(tensor, rank=(2, 3, 2))
+
+        assert torch.allclose(opening.contract_dense(), tensor)
+        assert opening.diagnostics['initializer'] == {
+            'used': False,
+            'error': 'synthetic spectral failure',
+        }
+
+    def test_composite_preserves_initializer_errors_by_default(self):
+        _, tensor = _local_problem()
+
+        def initialize(**kwargs):
+            raise RuntimeError('synthetic spectral failure')
+
+        def refine(**kwargs):
+            raise AssertionError('refiner should not run')
+
+        capabilities = tk.decompositions.LoopOpenerCapabilities(
+            supports_blocks=True)
+        opener = tk.decompositions.CompositeLoopOpener(
+            tk.decompositions.CallableLoopOpener(
+                initialize, capabilities),
+            tk.decompositions.CallableLoopOpener(refine, capabilities))
+
+        with pytest.raises(RuntimeError, match='synthetic spectral failure'):
+            opener.open(tensor, rank=(2, 3, 2))
+
+    def test_als_refiner_casts_real_target_to_complex_initializer(self):
+        real_cores, tensor = _local_problem()
+        complex_cores = tuple(
+            core.to(torch.complex128) for core in real_cores)
+
+        def initialize(**kwargs):
+            return tk.decompositions.LoopOpening(
+                left_gauge=complex_cores[0],
+                cores=(complex_cores[1],),
+                right_gauge=complex_cores[2],
+                rank=(2, 3, 2),
+                orientation=kwargs['orientation'])
+
+        initializer = tk.decompositions.CallableLoopOpener(
+            initialize,
+            tk.decompositions.LoopOpenerCapabilities(
+                supports_blocks=True))
+        refiner = tk.decompositions.ALSLoopOpener({
+            'gauge': 'none',
+            'normalize': False,
+            'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=1),
+        })
+        opening = tk.decompositions.CompositeLoopOpener(
+            initializer, refiner).open(tensor, rank=(2, 3, 2))
+
+        assert all(core.dtype == torch.complex128
+                   for core in opening.all_cores)
+        assert torch.allclose(
+            opening.contract_dense(),
+            tensor.to(torch.complex128),
+            rtol=2e-10,
+            atol=2e-10)

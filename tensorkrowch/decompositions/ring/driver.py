@@ -130,6 +130,10 @@ class BidirectionalRingResult:
             raise TypeError('`metrics` should be DecompositionMetrics type')
         if not isinstance(self.diagnostics, Mapping):
             raise TypeError('`diagnostics` should be a mapping')
+        common_dtype = cores[0].dtype
+        for core in cores[1:]:
+            common_dtype = torch.promote_types(common_dtype, core.dtype)
+        cores = tuple(core.to(dtype=common_dtype) for core in cores)
         decomposition = TRDecomposition(cores, metrics=self.metrics)
         object.__setattr__(self, 'cores', tuple(decomposition.cores))
         object.__setattr__(self, 'openings', openings)

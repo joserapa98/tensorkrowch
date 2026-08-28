@@ -219,6 +219,24 @@ def _mirror_source(source: TensorSource) -> TensorSource:
         device=source.device)
 
 
+def _cast_source(source: TensorSource,
+                 dtype: torch.dtype) -> TensorSource:
+    """Lazily casts target values to an initializer's numerical dtype."""
+    if source.dtype == dtype:
+        return source
+
+    def evaluate(indices: torch.Tensor) -> torch.Tensor:
+        configurations = ConfigurationBatch(indices, kind='indices')
+        return source.evaluate(configurations).to(dtype=dtype)
+
+    return as_tensor_source(
+        evaluate,
+        input_dim=source.input_dim,
+        output_shape=(),
+        dtype=dtype,
+        device=source.device)
+
+
 def _opening_from_result(result: TRDecomposition,
                          orientation: str) -> LoopOpening:
     """Converts an ALS result back from the requested orientation."""
@@ -284,6 +302,38 @@ class ALSLoopOpener:
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         source = _source_from_context(target, context)
+        initial_cores = context.get('initial_cores')
+        runtime_dtype = source.dtype
+        if initial_cores is not None:
+            if isinstance(initial_cores, torch.Tensor):
+                raise TypeError(
+                    '`initial_cores` should contain torch.Tensor objects')
+            try:
+                initial_cores = tuple(initial_cores)
+            except TypeError as exc:
+                raise TypeError(
+                    '`initial_cores` should contain torch.Tensor objects') \
+                    from exc
+            if not initial_cores or not all(
+                    isinstance(core, torch.Tensor) for core in initial_cores):
+                raise TypeError(
+                    '`initial_cores` should contain torch.Tensor objects')
+            for core in initial_cores:
+                runtime_dtype = torch.promote_types(
+                    runtime_dtype, core.dtype)
+        for gauge in (fixed_left, fixed_right):
+            if gauge is not None:
+                runtime_dtype = torch.promote_types(
+                    runtime_dtype, gauge.dtype)
+        source = _cast_source(source, runtime_dtype)
+        if initial_cores is not None:
+            initial_cores = tuple(
+                core.to(dtype=runtime_dtype) for core in initial_cores)
+            context['initial_cores'] = initial_cores
+        if fixed_left is not None:
+            fixed_left = fixed_left.to(dtype=runtime_dtype)
+        if fixed_right is not None:
+            fixed_right = fixed_right.to(dtype=runtime_dtype)
         if len(source.input_dim) < 3:
             raise ValueError(
                 'A local loop opening should contain left, physical and right '
@@ -294,7 +344,6 @@ class ALSLoopOpener:
             fixed_right=fixed_right is not None,
             block_size=len(source.input_dim) - 2)
 
-        initial_cores = context.get('initial_cores')
         if orientation == 'left':
             source = _mirror_source(source)
             ranks = _mirror_rank(ranks)
@@ -486,13 +535,17 @@ class CompositeLoopOpener:
 
     def __init__(self,
                  initializer: LoopOpener,
-                 refiner: LoopOpener) -> None:
+                 refiner: LoopOpener,
+                 fallback_on_error: bool = False) -> None:
         if not isinstance(initializer, LoopOpener):
             raise TypeError('`initializer` should implement LoopOpener')
         if not isinstance(refiner, LoopOpener):
             raise TypeError('`refiner` should implement LoopOpener')
+        if not isinstance(fallback_on_error, bool):
+            raise TypeError('`fallback_on_error` should be bool type')
         self.initializer = initializer
         self.refiner = refiner
+        self.fallback_on_error = fallback_on_error
 
     @property
     def capabilities(self) -> LoopOpenerCapabilities:
@@ -516,13 +569,21 @@ class CompositeLoopOpener:
             block_size=(
                 1 if context.get('input_dim') is None
                 else len(tuple(context['input_dim'])) - 2))
-        initial = self.initializer.open(
-            target,
-            rank,
-            orientation=orientation,
-            context=context)
+        initialization_error = None
+        try:
+            initial = self.initializer.open(
+                target,
+                rank,
+                orientation=orientation,
+                context=context)
+        except (RuntimeError, ValueError) as exc:
+            if not self.fallback_on_error:
+                raise
+            initial = None
+            initialization_error = str(exc)
         refine_context = dict(context)
-        refine_context['initial_cores'] = initial.all_cores
+        if initial is not None:
+            refine_context['initial_cores'] = initial.all_cores
         result = self.refiner.open(
             target,
             rank,
@@ -531,7 +592,16 @@ class CompositeLoopOpener:
             orientation=orientation,
             context=refine_context)
         diagnostics = dict(result.diagnostics)
-        diagnostics['initializer'] = dict(initial.diagnostics)
+        if initial is None:
+            diagnostics['initializer'] = {
+                'used': False,
+                'error': initialization_error,
+            }
+        else:
+            diagnostics['initializer'] = {
+                'used': True,
+                **dict(initial.diagnostics),
+            }
         return LoopOpening(
             left_gauge=result.left_gauge,
             cores=result.cores,

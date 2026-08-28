@@ -77,7 +77,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 18/20 implementadas; 18 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 19/20 implementadas; 19 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -3386,8 +3386,9 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **TT2TR-02 — Implementar `TTCoreGaugeRecursion`**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y guardado en el commit `a0f0f2b`; pendiente
+  de revisión detallada del usuario antes de considerarlo completamente
+  cerrado.
 
   Implementación experimental especificada:
 
@@ -3455,7 +3456,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
     repetición completa terminó con `663 passed, 11 skipped`;
   - doctests de TT2TR, Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **BLOSTR-01 — Aislar y verificar BLOSTR**
+- [x] **BLOSTR-01 — Aislar y verificar BLOSTR**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Portar únicamente tras tests:
 
@@ -3474,6 +3478,51 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
   Tests con TR sintéticos, autovalores degenerados, seeds, fallo limpio,
   comparación densa y shapes. BLOSTR permanece `EXP`.
+
+  Implementación:
+
+  - `ring/blostr.py` aísla el slicing, selección de eigenspaces,
+    balanced clustering reproducible, alineamiento por bloques, primer core y
+    recuperación completa de la cola mediante `truncated_svd`;
+  - `tr_blostr(tensor, rank, ...)` es la API pública simple y devuelve cores
+    TR o `(cores, info)`; `BLOSTRLoopOpener` adapta el mismo motor al contrato
+    avanzado de apertura local;
+  - la implementación actual conserva de forma explícita la hipótesis del
+    paper de rank TR uniforme. Acepta un escalar o una secuencia uniforme y
+    rechaza ranks heterogéneos en vez de devolver una factorización espectral
+    no caracterizada;
+  - las dimensiones de input primera y última deben admitir `rank ** 2`; las
+    slices aleatorias y el clustering comparten `torch.Generator`, incluyendo
+    generators asociados a aceleradores;
+  - una entrada real puede requerir gauges complejos. La descomposición BLOSTR
+    lo documenta y mantiene esos cores; `ALSLoopOpener` promueve de forma
+    coherente target, inicialización y gauges fijos, y el driver ensambla todos
+    los cores con el dtype común promovido;
+  - `CompositeLoopOpener(..., fallback_on_error=True)` conserva el error del
+    inicializador en diagnósticos y ejecuta el refino sin init cuando las
+    hipótesis espectrales fallan;
+  - `TT2TR.fit(loop_opener="blostr+als")` intenta BLOSTR sin gauges y usa ALS
+    para imponer las restricciones; el preset ALS estable sigue siendo el
+    default;
+  - tanto la clase como la función emiten `ExperimentalWarning`; no se han
+    portado `Orbit`, monolitos PBC ni prototipos auxiliares.
+
+  Evidencia local:
+
+  - tests real/complejo contra oracle denso, tres y cuatro sites, shapes,
+    recuperación con varios cortes, slices explícitas, seeds reproducibles,
+    source callable, orientaciones left/right y rechazo previo de gauges;
+  - espectro degenerado, dimensiones insuficientes y ranks no uniformes fallan
+    limpiamente; el composite caracteriza tanto fallback como propagación del
+    error;
+  - el preset TT→TR se verifica con una cadena exacta y cubre la promoción de
+    dtype entre BLOSTR, ALS, recursión y boundaries;
+  - `311 passed, 1 skipped` en ring+ALS y `678 passed, 11 skipped` en toda la
+    suite de decompositions;
+  - doctests de BLOSTR/TT2TR, Ruff dirigido y `git diff --check` sin
+    incidencias. El Ruff global de `decompositions` sigue mostrando cuatro
+    incidencias legacy ya existentes en `tt_decompositions.py`, fuera de esta
+    tarea.
 
 - [ ] **ALS-12 — Gate final de fase**
 

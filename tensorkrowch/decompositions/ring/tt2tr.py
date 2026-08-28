@@ -15,6 +15,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TRDecomposition)
+from tensorkrowch.decompositions.ring.blostr import BLOSTRLoopOpener
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector)
 from tensorkrowch.decompositions.ring.driver import (BoundaryClosure,
@@ -26,6 +27,7 @@ from tensorkrowch.decompositions.ring.gauges import (
 )
 from tensorkrowch.decompositions.ring.opening import (ALSLoopOpener,
                                                       CallableLoopOpener,
+                                                      CompositeLoopOpener,
                                                       LoopOpener,
                                                       LoopOpenerCapabilities)
 from tensorkrowch.decompositions.sources.tt import TTTensorSource
@@ -180,7 +182,7 @@ class _TTCoreProvider:
 
 def _resolve_loop_opener(loop_opener) -> LoopOpener:
     """Normalizes the simple ALS preset or one advanced opening strategy."""
-    if loop_opener == 'als':
+    def als_opener() -> ALSLoopOpener:
         return ALSLoopOpener({
             'gauge': 'none',
             'normalize': False,
@@ -190,7 +192,16 @@ def _resolve_loop_opener(loop_opener) -> LoopOpener:
                 keep_best=True),
         })
     if isinstance(loop_opener, str):
-        raise ValueError("`loop_opener` currently supports only 'als'")
+        if loop_opener == 'als':
+            return als_opener()
+        if loop_opener == 'blostr+als':
+            return CompositeLoopOpener(
+                BLOSTRLoopOpener(),
+                als_opener(),
+                fallback_on_error=True)
+        raise ValueError(
+            "`loop_opener` should be 'als', 'blostr+als' or an advanced "
+            'opening strategy')
     if isinstance(loop_opener, LoopOpener):
         return loop_opener
     if callable(loop_opener):
@@ -334,10 +345,13 @@ class TT2TR:
             Positive cyclic rank. Defaults to ``rank``.
         center : int, optional
             Internal TT site opened first. Defaults to the middle site.
-        loop_opener : {``"als"``}, LoopOpener or callable
+        loop_opener : {``"als"``, ``"blostr+als"``}, LoopOpener or callable
             Local loop-opening strategy. The simple preset uses exact TR-ALS;
             advanced ALS options should be encapsulated in an
             :class:`~tensorkrowch.decompositions.ALSLoopOpener`.
+            ``"blostr+als"`` tries an experimental spectral initialization
+            and falls back cleanly to the same ALS path if BLOSTR assumptions
+            are not satisfied.
         gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
             Strategy used to propagate virtual bases. ``"pseudoinverse"`` is
             the stable characterized default. ``"tt_core"`` uses the

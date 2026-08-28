@@ -2,6 +2,8 @@
 
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeMap)
+from tensorkrowch.decompositions.ring.blostr import (BLOSTRLoopOpener,
+                                                     tr_blostr)
 from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
                                                      GaugeRecursionStep,
                                                      PseudoinverseGaugeRecursion,
@@ -21,6 +23,8 @@ from tensorkrowch.decompositions.ring.tt2tr import TT2TR, tt2tr
 __all__ = [
     'GaugeMap',
     'ExperimentalWarning',
+    'BLOSTRLoopOpener',
+    'tr_blostr',
     'GaugeRecursion',
     'GaugeRecursionStep',
     'PseudoinverseGaugeRecursion',

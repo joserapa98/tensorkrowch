@@ -3527,8 +3527,9 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **ALS-12 — Gate final de fase**
 
-  Estado: gate ejecutado correctamente; pendiente de commit y de revisión
-  detallada del usuario antes de considerar la fase completamente cerrada.
+  Estado: gate ejecutado correctamente y guardado en el commit `2ebdd04`;
+  pendiente de revisión detallada del usuario antes de considerar la fase
+  completamente cerrada.
 
   Ejecutar toda la suite SVD+ALS+ring, benchmarks de entornos y tests de
   fidelity. Confirmar:

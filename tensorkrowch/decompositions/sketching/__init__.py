@@ -12,6 +12,14 @@ from tensorkrowch.decompositions.sketching.projections import (
     RandomizedRangeProjector,
     RangeProjector,
 )
+from tensorkrowch.decompositions.sketching.sketches import (
+    CoreDeterminingSystem,
+    MarginalSketch,
+    SampledSketch,
+    SketchOperator,
+    SketchSystemBuilder,
+    TTStackSketch,
+)
 from tensorkrowch.decompositions.sketching.transforms import (
     CallableGlobalValueTransform,
     CallableLocalValueTransform,
@@ -37,6 +45,12 @@ __all__ = [
     'RangeProjector',
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
+    'SketchOperator',
+    'SketchSystemBuilder',
+    'CoreDeterminingSystem',
+    'SampledSketch',
+    'MarginalSketch',
+    'TTStackSketch',
     'GlobalValueTransform',
     'IdentityGlobalValueTransform',
     'CallableGlobalValueTransform',

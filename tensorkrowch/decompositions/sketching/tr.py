@@ -21,7 +21,9 @@ from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
 from tensorkrowch.decompositions.ring.gauges import GaugeRecursionStep
 from tensorkrowch.decompositions.ring.opening import (LoopOpener,
                                                       LoopOpening,
+                                                      FixedGaugeCoreOpener,
                                                       resolve_loop_opener)
+from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.evaluations import (
     _EvaluationPlanBuilder,
@@ -399,6 +401,8 @@ class TRRSS(TTRSS):
             rank: _Rank = 1,
             center: Optional[int] = None,
             loop_opener: Union[str, LoopOpener] = 'als',
+            schedule: str = 'center_out',
+            schedule_block_size: int = 1,
             block_selector: Optional[CentralBlockSelector] = None,
             adaptive: bool = False,
             pad_to_rank: bool = False,
@@ -444,6 +448,14 @@ class TRRSS(TTRSS):
             supplied through an
             :class:`~tensorkrowch.decompositions.ALSLoopOpener`, not expanded
             into this signature.
+        schedule : {``"center_out"``, ``"alternating"``}, optional
+            Serial ring schedule. The alternating path opens independent
+            anchors first and then solves intervening sites with two fixed
+            recursively propagated gauges. It is experimental and reports any
+            explicit fallback to ``"center_out"`` in the result metadata.
+        schedule_block_size : int, optional
+            Alternating block size. The sampled open-boundary provider
+            currently supports an exact checkerboard for size one.
         block_selector : CentralBlockSelector, optional
             Advanced central-block policy. Adaptive mode otherwise uses the
             balanced common selector restricted to internal sites.
@@ -519,6 +531,14 @@ class TRRSS(TTRSS):
                 'TR-RSS does not yet define a warm-start update; pass None')
         if not isinstance(adaptive, bool):
             raise TypeError('`adaptive` should be bool type')
+        if schedule not in ('center_out', 'alternating'):
+            raise ValueError(
+                "`schedule` should be 'center_out' or 'alternating'")
+        if isinstance(schedule_block_size, bool) or \
+                not isinstance(schedule_block_size, int):
+            raise TypeError('`schedule_block_size` should be int type')
+        if schedule_block_size < 1:
+            raise ValueError('`schedule_block_size` should be positive')
         if not isinstance(pad_to_rank, bool):
             raise TypeError('`pad_to_rank` should be bool type')
         if pad_to_rank and not adaptive:
@@ -567,6 +587,8 @@ class TRRSS(TTRSS):
             'rank_caps': rank_spec,
             'selection': selection,
             'loop_opener': loop_opener,
+            'schedule': schedule,
+            'schedule_block_size': schedule_block_size,
             'adaptive': adaptive,
             'pad_to_rank': pad_to_rank,
         })
@@ -738,9 +760,13 @@ class TRRSS(TTRSS):
     def _decompose(self, context: _SketchingFitContext) -> TRDecomposition:
         selection = context.state['selection']
         target_sites = [selection.sites]
+        if context.state['schedule'] == 'alternating':
+            target_sites.extend(
+                (site,) for site in range(self.outputs.n_sites))
         target_sites.extend(
             (site,) for site in range(self.outputs.n_sites)
             if site not in selection.sites)
+        target_sites = list(dict.fromkeys(target_sites))
         phis = [
             self._build_block_phi(sites, context.regions)
             for sites in target_sites]
@@ -818,14 +844,24 @@ class TRRSS(TTRSS):
             resolve_loop_opener(context.state['loop_opener']),
             truncation_records)
         with context.phase('core.solve'):
-            driver_result = BidirectionalRingDriver().fit(
-                provider=provider,
-                rank=rank_spec,
-                opener=opener,
-                recursion=SketchGaugeRecursion(),
-                block_selector=_SelectedBlockSelector(selection),
-                center=selection.sites[len(selection.sites) // 2],
-                context={'generator': context.generator})
+            driver_options = {
+                'provider': provider,
+                'rank': rank_spec,
+                'opener': opener,
+                'recursion': SketchGaugeRecursion(),
+                'block_selector': _SelectedBlockSelector(selection),
+                'center': selection.sites[len(selection.sites) // 2],
+                'context': {'generator': context.generator},
+            }
+            if context.state['schedule'] == 'alternating':
+                driver_result = AlternatingRingDriver().fit(
+                    **driver_options,
+                    fixed_opener=_SketchLoopOpener(
+                        FixedGaugeCoreOpener(), truncation_records),
+                    block_size=context.state['schedule_block_size'])
+            else:
+                driver_result = BidirectionalRingDriver().fit(
+                    **driver_options)
 
         context.metrics.local_solves.extend(
             driver_result.metrics.local_solves)
@@ -869,6 +905,10 @@ class TRRSS(TTRSS):
                 if self.outputs.n_output_sites == 1
                 else tuple(self.outputs.positions)),
             'center_block': context.state['selection'].sites,
+            'schedule': context.state['driver_result'].diagnostics.get(
+                'schedule', 'center_out'),
+            'requested_schedule': context.state['schedule'],
+            'schedule_block_size': context.state['schedule_block_size'],
             'requested_rank': list(context.state['rank_caps']),
             'work_rank': list(context.state['rank_spec']),
             'rank_caps': list(context.state['rank_caps']),
@@ -929,6 +969,8 @@ def tr_rss(function,
            rank: _Rank = 1,
            center: Optional[int] = None,
            loop_opener: Union[str, LoopOpener] = 'als',
+           schedule: str = 'center_out',
+           schedule_block_size: int = 1,
            adaptive: bool = False,
            pad_to_rank: bool = False,
            cutoff: Optional[float] = None,
@@ -974,6 +1016,11 @@ def tr_rss(function,
         Internal center site used to start both recursions.
     loop_opener : {``"als"``, ``"blostr+als"``} or LoopOpener, optional
         Local loop-opening strategy with advanced options encapsulated in it.
+    schedule : {``"center_out"``, ``"alternating"``}, optional
+        Serial ring-construction schedule. The alternating path is
+        experimental and records any center-out fallback.
+    schedule_block_size : int, optional
+        Number of consecutive sites per alternating block.
     adaptive : bool, optional
         Enables central-block rank discovery under ``rank`` caps.
     pad_to_rank : bool, optional
@@ -1048,8 +1095,10 @@ def tr_rss(function,
             sketch_samples=sketch_samples,
             labels=labels,
             rank=rank,
-            center=center,
-            loop_opener=loop_opener,
+        center=center,
+        loop_opener=loop_opener,
+        schedule=schedule,
+        schedule_block_size=schedule_block_size,
             adaptive=adaptive,
             pad_to_rank=pad_to_rank,
             cutoff=cutoff,

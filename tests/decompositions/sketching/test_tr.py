@@ -1,5 +1,7 @@
 """Tests for Tensor Ring recursive sketching from samples."""
 
+import pytest
+
 import torch
 
 import tensorkrowch as tk
@@ -113,6 +115,40 @@ class TestTRRSS:
         assert torch.allclose(
             adaptive.contract_dense(), padded.contract_dense(),
             rtol=1e-10, atol=1e-12)
+
+    def test_alternating_schedule_solves_odd_ring_in_two_stages(self):
+        function, embedding, samples, domain = _rank_one_problem(n_sites=5)
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = tk.decompositions.TRRSS(
+                function=function,
+                embedding=embedding,
+                domain=domain).fit(
+                    samples,
+                    rank=1,
+                    schedule='alternating',
+                    collect_metrics=True)
+
+        assert result.metadata['schedule'] == 'alternating'
+        assert result.metadata['requested_schedule'] == 'alternating'
+        assert result.metadata['center_block'] == (2,)
+        assert result.metrics.errors[0].relative < 1e-8
+
+    def test_alternating_schedule_records_even_ring_fallback(self):
+        function, embedding, samples, domain = _rank_one_problem(n_sites=4)
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = tk.decompositions.TRRSS(
+                function=function,
+                embedding=embedding,
+                domain=domain).fit(
+                    samples,
+                    rank=1,
+                    schedule='alternating')
+
+        assert result.metadata['schedule'] == 'center_out'
+        assert result.metadata['requested_schedule'] == 'alternating'
+        assert torch.allclose(
+            result.contract_dense(), function(samples).reshape(2, 2, 2, 2),
+            rtol=1e-8, atol=1e-10)
 
 
 __all__ = []

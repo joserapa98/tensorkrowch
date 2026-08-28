@@ -12,6 +12,7 @@ from tensorkrowch.decompositions.ring.driver import (
     BidirectionalRingDriver,
     BidirectionalRingResult,
 )
+from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 
 
 class SyntheticProvider:
@@ -279,3 +280,82 @@ class TestBidirectionalRingDriver:  # MARK: TestBidirectionalRingDriver
                 opener=opener,
                 recursion=IncompatibleRecursion([]),
                 center=2)
+
+
+class TestAlternatingRingDriver:  # MARK: TestAlternatingRingDriver
+
+    def test_cyclic_even_ring_opens_anchors_then_two_fixed_sites(self):
+        calls = []
+        opener = _synthetic_opener(calls)
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = AlternatingRingDriver().fit(
+                SyntheticProvider((2,) * 6),
+                rank=1,
+                opener=opener,
+                fixed_opener=opener,
+                recursion=SyntheticRecursion([]))
+
+        assert result.order == (
+            (0,), (2,), (4,), (1,), (3,), (5,))
+        assert result.directions == (
+            'anchor', 'anchor', 'anchor', 'fixed', 'fixed', 'fixed')
+        assert result.diagnostics['schedule'] == 'alternating'
+        assert result.diagnostics['anchor_blocks'] == ((0,), (2,), (4,))
+        assert all(call['fixed_left'] and call['fixed_right']
+                   for call in calls[3:])
+        assert len(result.diagnostics['gauge_stability']) == 6
+
+    def test_open_odd_ring_closes_edges_from_alternating_anchors(self):
+        calls = []
+        opener = _synthetic_opener(calls)
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = AlternatingRingDriver().fit(
+                SyntheticOpenProvider((2,) * 7),
+                rank=1,
+                opener=opener,
+                fixed_opener=opener,
+                recursion=SyntheticRecursion([]))
+
+        assert result.order == (
+            (1,), (3,), (5,), (2,), (4,), (6,), (0,))
+        assert result.directions == (
+            'anchor', 'anchor', 'anchor', 'fixed', 'fixed',
+            'right_boundary', 'left_boundary')
+        assert set(result.boundaries) == {0, 6}
+        assert result.diagnostics['boundary_mode'] == 'open'
+
+    def test_supports_larger_blocks_with_a_capable_fixed_opener(self):
+        opener = _synthetic_opener([])
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = AlternatingRingDriver().fit(
+                SyntheticProvider((2,) * 8),
+                rank=1,
+                opener=opener,
+                fixed_opener=opener,
+                recursion=SyntheticRecursion([]),
+                block_size=2)
+
+        assert result.order == ((0, 1), (4, 5), (2, 3), (6, 7))
+        assert result.diagnostics['fixed_blocks'] == ((2, 3), (6, 7))
+
+    def test_unsupported_partition_falls_back_explicitly(self):
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = AlternatingRingDriver().fit(
+                SyntheticProvider((2,) * 5),
+                rank=1,
+                opener=_synthetic_opener([]),
+                recursion=SyntheticRecursion([]))
+
+        assert result.diagnostics['schedule'] == 'center_out'
+        assert result.diagnostics['requested_schedule'] == 'alternating'
+        assert 'divisible' in result.diagnostics['fallback_reason']
+
+    def test_can_reject_fallback(self):
+        with pytest.warns(tk.decompositions.ExperimentalWarning), \
+                pytest.raises(ValueError, match='unavailable'):
+            AlternatingRingDriver().fit(
+                SyntheticProvider((2,) * 5),
+                rank=1,
+                opener=_synthetic_opener([]),
+                recursion=SyntheticRecursion([]),
+                fallback=False)

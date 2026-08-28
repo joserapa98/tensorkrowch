@@ -123,7 +123,7 @@ class BidirectionalRingResult:
             raise ValueError('`directions` should align with `order`')
         if not all(direction in (
                 'center', 'left', 'right', 'boundary',
-                'left_boundary', 'right_boundary')
+                'left_boundary', 'right_boundary', 'anchor', 'fixed')
                    for direction in directions):
             raise ValueError('`directions` contains an unknown driver step')
         if not isinstance(self.metrics, DecompositionMetrics):

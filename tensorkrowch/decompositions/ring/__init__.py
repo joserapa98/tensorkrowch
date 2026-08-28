@@ -17,6 +17,7 @@ from tensorkrowch.decompositions.ring.opening import (
     LoopOpenerCapabilities,
     LoopOpening,
 )
+from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 from tensorkrowch.decompositions.ring.tt2tr import TT2TR, tt2tr
 
 
@@ -36,6 +37,7 @@ __all__ = [
     'FixedGaugeCoreOpener',
     'CallableLoopOpener',
     'CompositeLoopOpener',
+    'AlternatingRingDriver',
     'TT2TR',
     'tt2tr',
 ]

@@ -159,6 +159,20 @@ class TestTT2TR:  # MARK: TestTT2TR
             rtol=2e-9,
             atol=2e-9)
 
+    def test_alternating_schedule_is_exact_for_odd_rank_one_tt(self):
+        tt = _rank_one_tt()
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            result = tk.decompositions.TT2TR(
+                tt, output_device=None).fit(
+                    rank=1,
+                    schedule='alternating')
+
+        assert result.metadata['schedule'] == 'alternating'
+        assert result.metadata['requested_schedule'] == 'alternating'
+        assert torch.allclose(
+            result.contract_dense(), tt.contract_dense(),
+            rtol=2e-9, atol=2e-9)
+
     def test_history_observer_receives_structured_steps_and_summary(self):
         observer = tk.decompositions.HistoryObserver()
         result = tk.decompositions.TT2TR(

@@ -25,7 +25,9 @@ from tensorkrowch.decompositions.ring.gauges import (
     TTCoreGaugeRecursion,
 )
 from tensorkrowch.decompositions.ring.opening import (LoopOpener,
+                                                      FixedGaugeCoreOpener,
                                                       resolve_loop_opener)
+from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 from tensorkrowch.decompositions.sources.tt import TTTensorSource
 
 
@@ -236,6 +238,8 @@ class TT2TR:
             tr_rank: Optional[int] = None,
             center: Optional[int] = None,
             loop_opener: Union[str, LoopOpener] = 'als',
+            schedule: str = 'center_out',
+            schedule_block_size: int = 1,
             gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
             allow_projective_gauges: bool = False,
             gauge_tolerance: float = 1e-8,
@@ -278,6 +282,15 @@ class TT2TR:
             ``"blostr+als"`` tries an experimental spectral initialization
             and falls back cleanly to the same ALS path if BLOSTR assumptions
             are not satisfied.
+        schedule : {``"center_out"``, ``"alternating"``}
+            Serial ring-construction schedule. ``"alternating"`` is an
+            experimental anchor/fixed-block schedule and falls back explicitly
+            to ``"center_out"`` when the site layout or propagated gauges are
+            incompatible.
+        schedule_block_size : int
+            Consecutive sites per alternating block. Open-boundary TT targets
+            currently support the exact checkerboard with size one; other
+            layouts use the documented fallback.
         gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
             Strategy used to propagate virtual bases. ``"pseudoinverse"`` is
             the stable characterized default. ``"tt_core"`` uses the
@@ -318,6 +331,14 @@ class TT2TR:
         """
         if not isinstance(allow_projective_gauges, bool):
             raise TypeError('`allow_projective_gauges` should be bool type')
+        if schedule not in ('center_out', 'alternating'):
+            raise ValueError(
+                "`schedule` should be 'center_out' or 'alternating'")
+        if isinstance(schedule_block_size, bool) or \
+                not isinstance(schedule_block_size, int):
+            raise TypeError('`schedule_block_size` should be int type')
+        if schedule_block_size < 1:
+            raise ValueError('`schedule_block_size` should be positive')
         rank_spec = _normalize_rank(rank, tr_rank, len(self.tt.cores))
         if center is None:
             center = len(self.tt.cores) // 2
@@ -345,13 +366,22 @@ class TT2TR:
                 }))
 
         with self._runtime.timer() as timer:
-            driver_result = BidirectionalRingDriver().fit(
-                provider=provider,
-                rank=rank_spec,
-                opener=opener,
-                recursion=recursion,
-                block_selector=PrescribedCentralBlockSelector(),
-                center=center)
+            driver_options = {
+                'provider': provider,
+                'rank': rank_spec,
+                'opener': opener,
+                'recursion': recursion,
+                'block_selector': PrescribedCentralBlockSelector(),
+                'center': center,
+            }
+            if schedule == 'alternating':
+                driver_result = AlternatingRingDriver().fit(
+                    **driver_options,
+                    fixed_opener=FixedGaugeCoreOpener(),
+                    block_size=schedule_block_size)
+            else:
+                driver_result = BidirectionalRingDriver().fit(
+                    **driver_options)
             active_result = driver_result.as_decomposition()
             fidelity = _fidelity_error(self.tt, active_result)
             active_result.metrics.fidelities.append(fidelity)
@@ -367,6 +397,10 @@ class TT2TR:
         metadata.update({
             'algorithm': 'tt2tr',
             'center': center,
+            'schedule': driver_result.diagnostics.get(
+                'schedule', 'center_out'),
+            'requested_schedule': schedule,
+            'schedule_block_size': schedule_block_size,
             'requested_rank': list(rank_spec),
             'adaptive': False,
             'inverse_policy': inverse_policy,
@@ -436,6 +470,8 @@ def tt2tr(tt,
           tr_rank: Optional[int] = None,
           center: Optional[int] = None,
           loop_opener: Union[str, LoopOpener] = 'als',
+          schedule: str = 'center_out',
+          schedule_block_size: int = 1,
           gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
           allow_projective_gauges: bool = False,
           gauge_tolerance: float = 1e-8,
@@ -472,6 +508,8 @@ def tt2tr(tt,
         tr_rank=tr_rank,
         center=center,
         loop_opener=loop_opener,
+        schedule=schedule,
+        schedule_block_size=schedule_block_size,
         gauge_recursion=gauge_recursion,
         allow_projective_gauges=allow_projective_gauges,
         gauge_tolerance=gauge_tolerance,

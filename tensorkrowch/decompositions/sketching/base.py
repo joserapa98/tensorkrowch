@@ -309,6 +309,26 @@ class RecursiveSketching(ABC):
 
     def _execute(self, context: _SketchingFitContext) -> Any:
         """Runs the topology-neutral prefix/suffix around a concrete driver."""
+        total_timer = context.runtime.timer() \
+            if context.need_diagnostics else nullcontext()
+        with total_timer as timer:
+            result = self._execute_phases(context)
+        elapsed = timer.elapsed if context.need_diagnostics else None
+        if context.collect_metrics:
+            context.metrics.timings.append(TimingRecord(
+                name='total',
+                elapsed=0. if elapsed is None else elapsed))
+        context.emit('summary', elapsed=elapsed, values={
+            'n_sites': self.outputs.n_sites,
+            'n_cores': len(context.cores),
+            'ranks': getattr(result, 'rank', None),
+            'core_shapes': [tuple(core.shape) for core in context.cores],
+        })
+        context.close()
+        return result
+
+    def _execute_phases(self, context: _SketchingFitContext) -> Any:
+        """Runs the shared phases enclosed by the total fit timer."""
         context.emit('start', values={'n_sites': self.outputs.n_sites})
         with context.phase('source.prepare'):
             self._prepare_source(context)
@@ -320,11 +340,6 @@ class RecursiveSketching(ABC):
         result = self._decompose(context)
         with context.phase('result.validate'):
             self._validate_result(result, context)
-        context.emit('summary', values={
-            'n_sites': self.outputs.n_sites,
-            'n_cores': len(context.cores),
-        })
-        context.close()
         return result
 
     def _prepare_source(self, context: _SketchingFitContext) -> None:
@@ -371,6 +386,13 @@ class RecursiveSketching(ABC):
             context.fitted_axes[site] = fitted
             if context.collect_metrics and fitted.record is not None:
                 context.metrics.input_fits.append(fitted.record)
+                epsilon = torch.finfo(fitted.tensor.real.dtype).eps
+                threshold = epsilon ** -0.5
+                if fitted.record.condition_number > threshold:
+                    context.metrics.warnings.append(
+                        f'Input fit at site {site} is ill-conditioned '
+                        f'(condition number '
+                        f'{fitted.record.condition_number:.3e})')
         return fitted
 
     def _project_range(self,

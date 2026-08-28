@@ -328,11 +328,8 @@ class TestLegacySketchKernels:  # MARK: TestLegacySketchKernels
         assert torch.equal(sampled_first[1], sampled_second[1])
 
 
-class TestDocumentedLegacyLimitations:  # MARK: TestDocumentedLegacyLimitations
+class TestGeneralizedTTRSS:  # MARK: TestGeneralizedTTRSS
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason='RSS-10 will accept scalar outputs with shape (batch,)')
     def test_scalar_output_without_artificial_axis(self):
         function, embedding, samples, domain = _binary_problem()
         tk.decompositions.tt_rss(
@@ -343,9 +340,6 @@ class TestDocumentedLegacyLimitations:  # MARK: TestDocumentedLegacyLimitations
             rank=2,
             verbose=False)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason='RSS-01/RSS-10 will support one embedding per input site')
     def test_heterogeneous_embeddings(self):
         function, embedding, samples, domain = _binary_problem()
         cores = tk.decompositions.tt_rss(
@@ -357,9 +351,6 @@ class TestDocumentedLegacyLimitations:  # MARK: TestDocumentedLegacyLimitations
             verbose=False)
         assert len(cores) == 3
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason='RSS-01/RSS-10 will split every tensor-output axis')
     def test_multiple_output_axes(self):
         _, embedding, samples, domain = _binary_problem()
 
@@ -377,9 +368,6 @@ class TestDocumentedLegacyLimitations:  # MARK: TestDocumentedLegacyLimitations
             verbose=False)
         assert len(cores) == 5
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason='RSS-07/RSS-10 will make range projection optional')
     def test_random_projection_can_be_disabled(self):
         function, embedding, samples, domain = _binary_problem()
         cores = tk.decompositions.tt_rss(
@@ -392,9 +380,6 @@ class TestDocumentedLegacyLimitations:  # MARK: TestDocumentedLegacyLimitations
             verbose=False)
         assert len(cores) == 3
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason='RSS-08/RSS-10 will provide structured verbosity levels')
     def test_verbosity_level_two_does_not_print_full_cores(self, capsys):
         function, embedding, samples, domain = _binary_problem()
         tk.decompositions.tt_rss(

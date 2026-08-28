@@ -2,8 +2,7 @@
 
 from math import prod
 from time import perf_counter
-from typing import (Callable, Dict, List, Optional, Sequence, Tuple, Union)
-import warnings
+from typing import (Any, Callable, Dict, List, Optional, Sequence, Tuple, Union)
 
 import torch
 
@@ -55,6 +54,16 @@ from tensorkrowch.utils import random_unitary
 
 
 Domain = Optional[Union[torch.Tensor, Sequence[torch.Tensor]]]
+Embedding = Union[
+    torch.Tensor,
+    Callable[[torch.Tensor], torch.Tensor],
+    Sequence[Union[torch.Tensor, Callable[[torch.Tensor], torch.Tensor]]],
+]
+Samples = Union[
+    torch.Tensor,
+    Sequence[torch.Tensor],
+    ConfigurationBatch,
+]
 Device = Optional[Union[str, torch.device]]
 
 
@@ -68,11 +77,12 @@ class TTRSS(RecursiveSketching):
     initialize an :class:`~tensorkrowch.models.MPS` directly with
     ``tk.models.MPS(tensors=result.cores)``.
 
-    This first refactored implementation preserves the scalar/vector contract
-    of the legacy routine. Site-dependent embeddings, tensor-valued outputs
-    and the non-legacy projection options are activated in the next phase.
-    Metadata that depends on ``sketch_samples`` is normalized independently in
-    every fit, so repeating a fit does not retain mutable numerical state.
+    A shared ``embedding`` and ``domain`` are broadcast to every input site;
+    sequences select site-dependent values. Tensor-valued outputs are split
+    into one basis-embedded site per output axis, placed as evenly as possible
+    by default. Metadata that depends on ``sketch_samples`` is normalized
+    independently in every fit, so repeating a fit does not retain mutable
+    numerical state.
 
     Parameters
     ----------
@@ -82,19 +92,22 @@ class TTRSS(RecursiveSketching):
         ``(batch_size, n_features, in_dim)`` and returns shape
         ``(batch_size, output_dim)``. A scalar callable uses
         ``output_dim = 1``.
-    embedding : callable
-        Maps the input tensor to shape
-        ``(batch_size, n_features, input_dim)``. Its last dimension becomes
-        the input dimension of each TT core.
+    embedding : callable, torch.Tensor or sequence
+        Shared input embedding or one entry per input site. A site callable
+        maps shape ``(batch_size, *coordinate_shape)`` to
+        ``(batch_size, input_dim)``; a tensor stores its finite-domain matrix.
+    input_dim : int or sequence of int, optional
+        Expected embedding dimension. One integer is broadcast to every input
+        site. If omitted, dimensions are inferred from the embeddings.
     domain : torch.Tensor or sequence of torch.Tensor, optional
         Finite values used to fit the embedding. One tensor is broadcast to
         every input site; a sequence supplies one domain per site. If omitted,
         each domain is inferred from the corresponding sketch samples.
     domain_multiplier : int, optional
         Maximum inferred-domain size in multiples of ``input_dim``.
-    out_position : int, optional
-        Position of the output core for a vector-valued function. The default
-        splits the input sites into two groups as evenly as possible.
+    out_position : int or sequence of int, optional
+        Position of each tensor-output axis. By default the output sites split
+        the input chain into groups as evenly as possible.
     source : TensorSource, optional
         Explicit source alternative to ``function``. Exactly one of
         ``function`` and ``source`` should be supplied.
@@ -125,10 +138,11 @@ class TTRSS(RecursiveSketching):
     def __init__(
             self,
             function=None,
-            embedding: Optional[Callable] = None,
+            embedding: Optional[Embedding] = None,
+            input_dim: Optional[Union[int, Sequence[int]]] = None,
             domain: Domain = None,
             domain_multiplier: int = 1,
-            out_position: Optional[int] = None,
+            out_position: Optional[Union[int, Sequence[int]]] = None,
             *,
             source: Optional[TensorSource] = None,
             device: Device = None,
@@ -148,8 +162,45 @@ class TTRSS(RecursiveSketching):
             raise TypeError('`function` should be callable')
         if source is not None and not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')
-        if not callable(embedding):
-            raise TypeError('`embedding` should be callable')
+        if embedding is None:
+            raise TypeError('`embedding` should be provided')
+        if not (callable(embedding) or isinstance(embedding, torch.Tensor)):
+            if isinstance(embedding, (str, bytes)):
+                raise TypeError(
+                    '`embedding` should be callable, a tensor or a sequence')
+            try:
+                embedding = tuple(embedding)
+            except TypeError as exc:
+                raise TypeError(
+                    '`embedding` should be callable, a tensor or a sequence') \
+                    from exc
+            if not embedding or not all(
+                    callable(entry) or isinstance(entry, torch.Tensor)
+                    for entry in embedding):
+                raise TypeError(
+                    'Every `embedding` entry should be callable or a tensor')
+        if input_dim is not None:
+            if isinstance(input_dim, bool):
+                raise TypeError(
+                    '`input_dim` should be int, a sequence of ints or None')
+            if isinstance(input_dim, int):
+                if input_dim < 1:
+                    raise ValueError('`input_dim` should be positive')
+            else:
+                if isinstance(input_dim, (str, bytes)):
+                    raise TypeError(
+                        '`input_dim` should be int, a sequence of ints or None')
+                try:
+                    input_dim = tuple(input_dim)
+                except TypeError as exc:
+                    raise TypeError(
+                        '`input_dim` should be int, a sequence of ints or None') \
+                        from exc
+                if not input_dim or any(
+                        isinstance(dim, bool) or not isinstance(dim, int)
+                        or dim < 1 for dim in input_dim):
+                    raise ValueError(
+                        '`input_dim` should contain positive integers')
         if domain is not None and not isinstance(domain, torch.Tensor):
             if isinstance(domain, (str, bytes)):
                 raise TypeError(
@@ -179,6 +230,7 @@ class TTRSS(RecursiveSketching):
 
         self._source_like = source_like
         self._embedding = embedding
+        self._input_dim_option = input_dim
         self._domain = domain
         self._domain_multiplier = domain_multiplier
         self._out_position = out_position
@@ -194,20 +246,26 @@ class TTRSS(RecursiveSketching):
         self._synchronize_timers = synchronize_timers
         self._input_kind = 'coordinates'
 
-    @staticmethod
-    def _validate_samples(sketch_samples: torch.Tensor) -> int:
-        """Validates legacy packed samples and returns their site count."""
-        if not isinstance(sketch_samples, torch.Tensor):
-            raise TypeError('`sketch_samples` should be torch.Tensor type')
-        if sketch_samples.ndim not in (2, 3):
-            raise ValueError(
-                '`sketch_samples` should have shape (batch_size, n_features) '
-                'or (batch_size, n_features, in_dim)')
-        if sketch_samples.shape[0] < 1:
+    def _normalize_samples(self, sketch_samples: Samples) -> ConfigurationBatch:
+        """Normalizes packed or heterogeneous samples for the fixed source."""
+        kind = 'coordinates'
+        if isinstance(self._source_like, TensorSource) and \
+                not isinstance(self._source_like, CallableTensorSource):
+            kind = 'indices'
+        if isinstance(sketch_samples, ConfigurationBatch):
+            samples = sketch_samples
+            if samples.kind != kind:
+                raise ValueError(
+                    f'`sketch_samples.kind` should be {kind!r}')
+        else:
+            samples = ConfigurationBatch(sketch_samples, kind=kind)
+        if samples.batch_size < 1:
             raise ValueError('`sketch_samples` should contain samples')
-        if sketch_samples.shape[1] < 1:
-            raise ValueError('`sketch_samples` should contain input sites')
-        return sketch_samples.shape[1]
+        if isinstance(self._source_like, TensorSource) and \
+                samples.n_sites != len(self._source_like.input_dim):
+            raise ValueError(
+                '`source` and `sketch_samples` should share input sites')
+        return samples
 
     def _domain_on_device(self, device: torch.device) -> Domain:
         """Moves the fixed domain to the active fit device."""
@@ -217,27 +275,52 @@ class TTRSS(RecursiveSketching):
             return self._domain.to(device)
         return tuple(value.to(device) for value in self._domain)
 
-    def _legacy_embedding_for_site(
+    def _embeddings_on_device(
             self,
+            n_input_sites: int,
             device: torch.device,
-            dtype: torch.dtype) -> Callable[[torch.Tensor], torch.Tensor]:
-        """Adapts the legacy all-sites embedding to one input site."""
-        def site_embedding(values: torch.Tensor) -> torch.Tensor:
-            result = self._embedding(values.to(device).unsqueeze(1))
-            if not isinstance(result, torch.Tensor):
-                raise TypeError('`embedding` should return a torch.Tensor')
-            if result.ndim != 3 or result.shape[0] != values.shape[0] or \
-                    result.shape[1] != 1 or result.shape[2] < 1:
-                raise ValueError(
-                    '`embedding` should return shape '
-                    '(batch_size, n_features, input_dim)')
-            return result.squeeze(1).to(device=device, dtype=dtype)
+            dtype: torch.dtype) -> Tuple[Any, ...]:
+        """Broadcasts embeddings and makes their result placement explicit."""
+        entries = (self._embedding,) * n_input_sites \
+            if callable(self._embedding) or \
+            isinstance(self._embedding, torch.Tensor) \
+            else tuple(self._embedding)
+        if len(entries) != n_input_sites:
+            raise ValueError(
+                '`embedding` should contain one entry per input site')
+        normalized = []
+        for entry in entries:
+            if isinstance(entry, torch.Tensor):
+                normalized.append(entry.to(device=device, dtype=dtype))
+                continue
 
-        return site_embedding
+            def site_embedding(values, function=entry):
+                result = function(values.to(device))
+                if not isinstance(result, torch.Tensor):
+                    raise TypeError('`embedding` should return a torch.Tensor')
+                return result.to(device=device, dtype=dtype)
+
+            normalized.append(site_embedding)
+        return tuple(normalized)
+
+    def _validate_input_dim(self, input_dim: Sequence[int]) -> None:
+        """Checks an optional public input-dimension declaration."""
+        expected = self._input_dim_option
+        if expected is None:
+            return
+        expected = (expected,) * len(input_dim) \
+            if isinstance(expected, int) else tuple(expected)
+        if len(expected) != len(input_dim):
+            raise ValueError(
+                '`input_dim` should contain one value per input site')
+        if tuple(input_dim) != expected:
+            raise ValueError(
+                '`input_dim` should match the dimensions returned by '
+                '`embedding`')
 
     def _source_probe(
             self,
-            samples: torch.Tensor,
+            samples: ConfigurationBatch,
             n_input_sites: int) -> Tuple[torch.Tensor, Optional[TensorSource]]:
         """Evaluates one row and returns any already-constructed source."""
         if isinstance(self._source_like, TensorSource):
@@ -249,16 +332,18 @@ class TTRSS(RecursiveSketching):
                 raise ValueError('`source` and `device` should match')
             self._input_kind = 'coordinates' \
                 if isinstance(source, CallableTensorSource) else 'indices'
-            configurations = ConfigurationBatch(
-                samples[:1].to(source.device), kind=self._input_kind)
+            ids = torch.zeros(1, dtype=torch.long, device=samples.device)
+            configurations = samples.index_select(ids).to(source.device)
             probe = source.evaluate(configurations)
             if self._dtype is not None and probe.dtype != self._dtype:
                 raise ValueError('`source` and `dtype` should match')
             return probe, source
 
         device = torch.device('cpu') if self._device is None else self._device
+        ids = torch.zeros(1, dtype=torch.long, device=samples.device)
+        configurations = samples.index_select(ids).to(device)
         try:
-            probe = self._source_like(samples[:1].to(device))
+            probe = self._source_like(configurations.values)
         except Exception as exc:
             raise ValueError(
                 '`function` failed on a sketch-sample batch') from exc
@@ -271,14 +356,15 @@ class TTRSS(RecursiveSketching):
 
     def _initialize_fit(
             self,
-            sketch_samples: torch.Tensor,
-            generator: Optional[torch.Generator]) -> torch.Tensor:
+            sketch_samples: Samples,
+            generator: Optional[torch.Generator]) -> ConfigurationBatch:
         """Normalizes all sample-dependent fixed objects for one fit."""
-        n_input_sites = self._validate_samples(sketch_samples)
-        probe, source = self._source_probe(sketch_samples, n_input_sites)
-        if probe.ndim != 2 or probe.shape[0] != 1 or probe.shape[1] < 1:
+        sample_batch = self._normalize_samples(sketch_samples)
+        n_input_sites = sample_batch.n_sites
+        probe, source = self._source_probe(sample_batch, n_input_sites)
+        if probe.ndim < 1 or probe.shape[0] != 1:
             raise ValueError(
-                '`function` should return shape (batch_size, output_dim)')
+                '`function` should preserve the leading batch dimension')
         if not (probe.is_floating_point() or probe.is_complex()):
             raise TypeError('`function` output should be floating or complex')
         if not torch.isfinite(probe).all():
@@ -287,11 +373,13 @@ class TTRSS(RecursiveSketching):
         device = probe.device
         dtype = probe.dtype if self._dtype is None else self._dtype
         probe = probe.to(dtype=dtype)
-        samples = sketch_samples.to(device)
+        samples = sample_batch.to(device)
         domains = _DomainSpec.normalize(
             self._domain_on_device(device), n_input_sites, samples=samples)
-        site_embedding = self._legacy_embedding_for_site(device, dtype)
-        embeddings = _EmbeddingSpec.normalize(site_embedding, domains)
+        site_embeddings = self._embeddings_on_device(
+            n_input_sites, device, dtype)
+        embeddings = _EmbeddingSpec.normalize(site_embeddings, domains)
+        self._validate_input_dim(embeddings.input_dim)
 
         if domains.inferred:
             inferred_values = []
@@ -308,14 +396,9 @@ class TTRSS(RecursiveSketching):
                     values = values.index_select(0, ids.to(values.device))
                 inferred_values.append(values)
             domains = _DomainSpec(inferred_values, inferred=True)
-            embeddings = _EmbeddingSpec.normalize(site_embedding, domains)
+            embeddings = _EmbeddingSpec.normalize(site_embeddings, domains)
 
         out_position = self._out_position
-        if probe.shape[1] == 1 and out_position is not None:
-            warnings.warn(
-                '`out_position` is ignored for a scalar function',
-                stacklevel=3)
-            out_position = None
         outputs = _OutputSpec.normalize(
             probe, n_input_sites, out_position=out_position)
 
@@ -350,13 +433,15 @@ class TTRSS(RecursiveSketching):
             synchronize_timers=self._synchronize_timers)
         return samples
 
-    def _configuration_batch(self, samples: torch.Tensor) -> ConfigurationBatch:
+    def _configuration_batch(self, samples: Samples) -> ConfigurationBatch:
         """Builds the source configurations for original input samples."""
+        if isinstance(samples, ConfigurationBatch):
+            return samples
         return ConfigurationBatch(samples, kind=self._input_kind)
 
     def _evaluate_samples(
             self,
-            samples: torch.Tensor,
+            samples: Samples,
             batch_size: int) -> torch.Tensor:
         """Evaluates original samples in deterministic contiguous batches."""
         configurations = self._configuration_batch(samples)
@@ -383,7 +468,8 @@ class TTRSS(RecursiveSketching):
                 raise ValueError(
                     '`labels` should be None for a scalar function')
             output_indices = torch.empty(
-                samples.shape[0], 0, device=samples.device, dtype=torch.long)
+                samples.batch_size, 0,
+                device=samples.device, dtype=torch.long)
             selected = None if values is None \
                 else self.outputs.validate_values(values)
             extended_samples = _split_samples(
@@ -396,7 +482,7 @@ class TTRSS(RecursiveSketching):
         else:
             flat_labels = self.outputs._validate_flat_labels(labels).to(
                 samples.device)
-            if flat_labels.shape[0] != samples.shape[0]:
+            if flat_labels.shape[0] != samples.batch_size:
                 raise ValueError(
                     '`labels` and `sketch_samples` should share batch size')
             output_indices = self.outputs.unflatten_labels(flat_labels)
@@ -414,7 +500,7 @@ class TTRSS(RecursiveSketching):
 
     def fit(
             self,
-            sketch_samples: torch.Tensor,
+            sketch_samples: Samples,
             labels: Optional[torch.Tensor] = None,
             rank: Optional[int] = None,
             cutoff: Optional[float] = None,
@@ -423,25 +509,32 @@ class TTRSS(RecursiveSketching):
             cum_percentage: Optional[float] = None,
             batch_size: int = 64,
             generator: Optional[torch.Generator] = None,
+            random_projection: Optional[bool] = None,
+            projection_dim: Optional[int] = None,
+            projection_oversampling: int = 0,
+            n_power_iter: int = 0,
             legacy_projection: bool = True,
-            verbose: bool = False,
+            warm_start: Optional[TTDecomposition] = None,
+            verbose: Union[bool, int] = 0,
             collect_metrics: bool = False,
             observer: Optional[DecompositionObserver] = None
             ) -> TTDecomposition:
         r"""Decomposes the fixed function using correlated sketch samples.
 
         ``sketch_samples`` contains one sample coordinate per original input
-        site. A vector output adds one basis-embedded output site to the final
-        TT, but that site is not present in the supplied sample tensor. Every
-        non-final cut fits its sampled input axis, optionally applies the
-        compatibility random rotation, and calls :func:`truncated_svd` with
-        all active truncation conditions combined.
+        site. It may be a packed tensor or one tensor per site when coordinate
+        shapes differ. Every axis after the callable's batch dimension becomes
+        a separate basis-embedded output site; those sites are absent from the
+        supplied samples. Every non-final cut fits its sampled input axis,
+        optionally projects its range, and calls :func:`truncated_svd` with all
+        active truncation conditions combined.
 
         Parameters
         ----------
-        sketch_samples : torch.Tensor
-            Tensor with shape ``(batch_size, n_features)`` or
-            ``(batch_size, n_features, in_dim)``.
+        sketch_samples : torch.Tensor, sequence of torch.Tensor or ConfigurationBatch
+            Packed coordinates with leading shape
+            ``(batch_size, n_features)``, or one tensor with leading batch
+            dimension per input site.
         labels : torch.Tensor, optional
             Flattened output labels with shape ``(batch_size,)`` for a vector
             function. If omitted, labels are sampled proportionally to the
@@ -473,11 +566,29 @@ class TTRSS(RecursiveSketching):
             Maximum number of unique configurations evaluated together.
         generator : torch.Generator, optional
             Generator for domain subsampling, labels and random rotations.
+        random_projection : bool, optional
+            Selects the shared range-projection strategy explicitly. ``True``
+            uses a randomized range finder and ``False`` keeps the fitted range
+            unchanged. If omitted, ``legacy_projection`` selects the
+            compatibility behavior.
+        projection_dim : int, optional
+            Dimension of the randomized projection output. It defaults to
+            ``rank``; if both are omitted, the projection is square.
+        projection_oversampling : int, optional
+            Extra randomized range dimensions retained before truncation.
+        n_power_iter : int, optional
+            Power iterations used by the randomized range finder.
         legacy_projection : bool, optional
             Whether to preserve the legacy square Haar rotation before every
-            non-final SVD. ``False`` selects the configured range projector.
-        verbose : bool, optional
-            Emits the current high-level phase when ``True``.
+            non-final SVD. An explicit ``random_projection`` takes precedence.
+        warm_start : TTDecomposition, optional
+            Reserved for a future mathematically defined TT-RSS update. Passing
+            a result currently raises ``NotImplementedError`` rather than
+            retaining fit state accidentally.
+        verbose : bool or int, optional
+            Verbosity level from 0 to 3. Level 1 prints phases and site titles,
+            level 2 adds timings and structured details, and level 3 also
+            prints every final core.
         collect_metrics : bool, optional
             Collects timings, truncation, fitting, solve and sample-error
             records. The fast path avoids those diagnostics when ``False``.
@@ -502,7 +613,7 @@ class TTRSS(RecursiveSketching):
         >>> result.input_dim
         (2, 2, 2, 2)
         """
-        self._validate_samples(sketch_samples)
+        sample_batch = self._normalize_samples(sketch_samples)
         if rank is None and cum_percentage is None:
             raise ValueError(
                 'At least one of `rank` and `cum_percentage` should be given')
@@ -511,25 +622,39 @@ class TTRSS(RecursiveSketching):
             raise TypeError('`generator` should be torch.Generator type or None')
         if not isinstance(legacy_projection, bool):
             raise TypeError('`legacy_projection` should be bool type')
-        if not isinstance(verbose, bool):
-            raise TypeError('`verbose` should be bool type')
+        if random_projection is not None and not isinstance(
+                random_projection, bool):
+            raise TypeError('`random_projection` should be bool type or None')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
+        if warm_start is not None:
+            if not isinstance(warm_start, TTDecomposition):
+                raise TypeError(
+                    '`warm_start` should be TTDecomposition type or None')
+            raise NotImplementedError(
+                'TT-RSS does not yet define a warm-start update; pass None')
         if labels is not None:
             if not isinstance(labels, torch.Tensor):
                 raise TypeError('`labels` should be torch.Tensor type')
-            if labels.shape != sketch_samples.shape[:1]:
+            if labels.shape != (sample_batch.batch_size,):
                 raise ValueError(
                     '`labels` should have shape (batch_size,)')
 
-        samples = self._initialize_fit(sketch_samples, generator)
+        samples = self._initialize_fit(sample_batch, generator)
+        use_legacy_projection = legacy_projection \
+            if random_projection is None else False
+        use_random_projection = not use_legacy_projection \
+            if random_projection is None else random_projection
         context = self._new_context(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
             rtol=rtol,
             cum_percentage=cum_percentage,
-            random_projection=not legacy_projection,
+            random_projection=use_random_projection,
+            projection_dim=projection_dim,
+            projection_oversampling=projection_oversampling,
+            n_power_iter=n_power_iter,
             batch_size=batch_size,
             generator=generator,
             collect_metrics=collect_metrics,
@@ -538,7 +663,7 @@ class TTRSS(RecursiveSketching):
         context.state.update({
             'input_samples': samples,
             'labels': labels,
-            'legacy_projection': legacy_projection,
+            'legacy_projection': use_legacy_projection,
         })
         return self._execute(context)
 
@@ -766,9 +891,12 @@ class TTRSS(RecursiveSketching):
         metadata = {
             'algorithm': 'tt_rss',
             'output_shape': tuple(self.outputs.output_shape),
-            'out_position': (
-                None if self.outputs.scalar else self.outputs.positions[0]),
+            'out_position': None if self.outputs.scalar else (
+                self.outputs.positions[0]
+                if self.outputs.n_output_sites == 1
+                else tuple(self.outputs.positions)),
             'legacy_projection': context.state['legacy_projection'],
+            'core_shapes': [tuple(core.shape) for core in context.cores],
         }
         if context.collect_metrics and selected is not None:
             approximation = self._evaluate_extended_cores(
@@ -791,6 +919,24 @@ class TTRSS(RecursiveSketching):
                 denominator=denominator))
             metadata['sample_error'] = float(relative.detach().cpu())
 
+        if context.collect_metrics and context.metrics.truncations:
+            local_squared = sum(
+                record.discarded_squared_norm
+                for record in context.metrics.truncations)
+            local_aggregate = local_squared ** 0.5
+            context.metrics.errors.append(ErrorRecord(
+                kind='sketch_svd_local_aggregate',
+                absolute=local_aggregate,
+                size=len(context.metrics.truncations)))
+            metadata['sketch_svd_local_aggregate'] = local_aggregate
+
+        for site, core in enumerate(context.cores):
+            context.emit('site_complete', site=site, values={
+                'total_sites': len(context.cores),
+                'shape': tuple(core.shape),
+            })
+            context.emit(
+                'core', site=site, level=3, values={'tensor': core})
         cores = [context.runtime.finalize(core) for core in context.cores]
         return TTDecomposition(
             cores=cores,
@@ -813,12 +959,13 @@ class TTRSS(RecursiveSketching):
 @torch.no_grad()
 def tt_rss(
         function: Callable,
-        embedding: Callable,
-        sketch_samples: torch.Tensor,
+        embedding: Embedding,
+        sketch_samples: Samples,
         labels: Optional[torch.Tensor] = None,
+        input_dim: Optional[Union[int, Sequence[int]]] = None,
         domain: Domain = None,
         domain_multiplier: int = 1,
-        out_position: Optional[int] = None,
+        out_position: Optional[Union[int, Sequence[int]]] = None,
         rank: Optional[int] = None,
         cutoff: Optional[float] = None,
         atol: Optional[float] = None,
@@ -828,19 +975,24 @@ def tt_rss(
         device: Device = None,
         dtype: Optional[torch.dtype] = None,
         generator: Optional[torch.Generator] = None,
+        random_projection: Optional[bool] = None,
+        projection_dim: Optional[int] = None,
+        projection_oversampling: int = 0,
+        n_power_iter: int = 0,
         legacy_projection: bool = True,
-        verbose: bool = True,
+        output_device: Device = 'cpu',
+        verbose: Union[bool, int] = 1,
         return_info: bool = False
         ) -> Union[List[torch.Tensor], Tuple[List[torch.Tensor], dict]]:
-    r"""Decomposes a sampled scalar or vector function into a Tensor Train.
+    r"""Decomposes a sampled scalar or tensor-valued function into a TT.
 
-    The callable receives samples with shape ``(batch_size, n_features)`` or
-    ``(batch_size, n_features, in_dim)``. Its embedding returns the same leading
-    dimensions followed by ``input_dim``. Scalar functions return shape
-    ``(batch_size, 1)``; vector functions add one basis-embedded output core at
-    ``out_position``. The returned OBC cores can be passed directly to
-    :class:`~tensorkrowch.models.MPS` (or
-    :class:`~tensorkrowch.models.MPSLayer` for a vector output).
+    The callable receives packed samples or a tuple with one coordinate tensor
+    per input site. It may return a scalar batch with shape ``(batch_size,)``
+    (the legacy ``(batch_size, 1)`` form is also accepted), or a tensor batch
+    with shape ``(batch_size, *output_shape)``. Every tensor-output axis becomes
+    a basis-embedded TT site. The returned OBC cores can be passed directly to
+    :class:`~tensorkrowch.models.MPS`; callers may use the recorded output
+    positions to interpret output sites.
 
     This compatibility function constructs :class:`TTRSS`, calls
     :meth:`TTRSS.fit`, and returns only its core list by default. Use the class
@@ -850,21 +1002,22 @@ def tt_rss(
     ----------
     function : callable
         Scalar- or vector-valued function to approximate.
-    embedding : callable
-        Maps inputs to shape
-        ``(batch_size, n_features, input_dim)``.
-    sketch_samples : torch.Tensor
-        Correlated sketch rows with shape ``(batch_size, n_features)`` or
-        ``(batch_size, n_features, in_dim)``.
+    embedding : callable, torch.Tensor or sequence
+        Shared site embedding, shared finite-domain table, or one entry per
+        input site.
+    sketch_samples : torch.Tensor, sequence of torch.Tensor or ConfigurationBatch
+        Correlated sketch rows in packed or heterogeneous site form.
     labels : torch.Tensor, optional
-        Flattened vector-output labels with shape ``(batch_size,)``. If absent,
+        Flattened tensor-output labels with shape ``(batch_size,)``. If absent,
         labels are sampled proportionally to ``abs(function(samples)) ** 2``.
+    input_dim : int or sequence of int, optional
+        Expected embedding dimension, shared or specified per input site.
     domain : torch.Tensor or sequence of torch.Tensor, optional
         Shared domain or one finite domain per input site.
     domain_multiplier : int, optional
         Maximum inferred-domain size in multiples of ``input_dim``.
-    out_position : int, optional
-        Position of a vector-output core. The default is centered.
+    out_position : int or sequence of int, optional
+        Positions of the output sites. Defaults to an evenly spaced layout.
     rank : int, optional
         Number of singular values to keep.
     cutoff : float, optional
@@ -896,10 +1049,22 @@ def tt_rss(
         Dtype of source values and resulting cores.
     generator : torch.Generator, optional
         Controls output labels, inferred domains and random rotations.
+    random_projection : bool, optional
+        Explicitly enables randomized range projection or disables projection.
+    projection_dim : int, optional
+        Randomized output dimension; defaults to ``rank``.
+    projection_oversampling : int, optional
+        Extra dimensions used by the randomized range finder.
+    n_power_iter : int, optional
+        Power iterations used by the randomized range finder.
     legacy_projection : bool, optional
-        Preserves the former square Haar rotation when ``True``.
-    verbose : bool, optional
-        Prints high-level decomposition phases when ``True``.
+        Preserves the former square Haar rotation unless
+        ``random_projection`` is explicitly supplied.
+    output_device : str, torch.device or None, optional
+        Device receiving final cores. The default is CPU; ``None`` keeps the
+        compute device.
+    verbose : bool or int, optional
+        Verbosity from 0 (silent) to 3 (including final core tensors).
     return_info : bool, optional
         Also returns legacy ``total_time`` and ``val_eps`` keys together with
         structured result information.
@@ -907,7 +1072,7 @@ def tt_rss(
     Returns
     -------
     list[torch.Tensor]
-        TT cores stored on CPU.
+        TT cores stored on ``output_device``.
     tuple[list[torch.Tensor], dict]
         Cores and diagnostic information when ``return_info=True``.
 
@@ -934,12 +1099,13 @@ def tt_rss(
     decomposer = TTRSS(
         function=function,
         embedding=embedding,
+        input_dim=input_dim,
         domain=domain,
         domain_multiplier=domain_multiplier,
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device='cpu')
+        output_device=output_device)
     result = decomposer.fit(
         sketch_samples=sketch_samples,
         labels=labels,
@@ -950,6 +1116,10 @@ def tt_rss(
         cum_percentage=cum_percentage,
         batch_size=batch_size,
         generator=generator,
+        random_projection=random_projection,
+        projection_dim=projection_dim,
+        projection_oversampling=projection_oversampling,
+        n_power_iter=n_power_iter,
         legacy_projection=legacy_projection,
         verbose=verbose,
         collect_metrics=return_info)

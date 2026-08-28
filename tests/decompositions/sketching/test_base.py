@@ -108,7 +108,8 @@ class TestRecursiveSketchingBase:  # MARK: TestRecursiveSketchingBase
             'result.validate',
         ]
         assert history.metrics is result['metrics']
-        assert len(result['metrics'].timings) == 12
+        assert len(result['metrics'].timings) == 13
+        assert result['metrics'].timings[-1].name == 'total'
         assert len(result['metrics'].input_fits) == 1
         assert len(result['metrics'].range_projections) == 1
         assert len(result['metrics'].truncations) == 1

@@ -1,5 +1,6 @@
 """Tests for the refactored TT recursive-sketching decomposition."""
 
+import pytest
 import torch
 
 import tensorkrowch as tk
@@ -163,6 +164,101 @@ class TestTTRSS:
         assert info['topology'] == 'tt'
         assert info['rank'] == [2, 2]
         assert info['metrics']['errors'][0]['kind'] == 'sketch_samples'
+
+    def test_heterogeneous_coordinates_embeddings_and_input_dim(self):
+        scalar_domain = torch.tensor([0., 1.], dtype=torch.float64)
+        vector_domain = torch.tensor(
+            [[0., 0.], [1., 1.]], dtype=torch.float64)
+        first = scalar_domain.repeat_interleave(2)
+        second = vector_domain.repeat((2, 1))
+
+        def function(values):
+            x, vector = values
+            return 1 + x + vector.sum(dim=1)
+
+        embeddings = (
+            lambda values: torch.stack((1 - values, values), dim=1),
+            lambda values: torch.cat(
+                (torch.ones(values.shape[0], 1, dtype=values.dtype), values),
+                dim=1),
+        )
+        result = tk.decompositions.TTRSS(
+            function=function,
+            embedding=embeddings,
+            input_dim=(2, 3),
+            domain=(scalar_domain, vector_domain)).fit(
+                (first, second),
+                rank=2,
+                collect_metrics=True)
+
+        assert result.input_dim == (2, 3)
+        assert result.metrics.errors[0].kind == 'sketch_samples'
+        assert result.metrics.errors[0].relative < 1e-10
+
+    def test_tensor_output_uses_separated_sites_and_flat_labels(self):
+        function, embedding, samples, domain = _problem()
+
+        def tensor_function(data):
+            value = function(data).squeeze(1)
+            return torch.stack(
+                (value, value + 1, 2 * value, 2 * value + 1), dim=1
+            ).reshape(-1, 2, 2)
+
+        labels = torch.arange(samples.shape[0]).remainder(4)
+        result = tk.decompositions.TTRSS(
+            function=tensor_function,
+            embedding=embedding,
+            domain=domain,
+            out_position=(0, 4)).fit(
+                samples,
+                labels=labels,
+                rank=4,
+                collect_metrics=True)
+
+        assert result.input_dim == (2, 2, 2, 2, 2)
+        assert result.metadata['output_shape'] == (2, 2)
+        assert result.metadata['out_position'] == (0, 4)
+        assert result.metrics.errors[0].relative < 1e-10
+
+    def test_projection_controls_total_metrics_and_output_device(self):
+        function, embedding, samples, domain = _problem()
+        result = tk.decompositions.TTRSS(
+            function=function,
+            embedding=embedding,
+            domain=domain,
+            output_device=None).fit(
+                samples,
+                rank=2,
+                random_projection=True,
+                projection_dim=2,
+                collect_metrics=True)
+
+        assert result.device == samples.device
+        assert result.metrics.timings[-1].name == 'total'
+        assert result.metadata['core_shapes'] == [
+            tuple(core.shape) for core in result.cores]
+        assert all(record.requested_dim == 2
+                   for record in result.metrics.range_projections)
+
+    def test_input_dim_and_warm_start_are_explicit(self):
+        function, embedding, samples, domain = _problem()
+        with pytest.raises(ValueError, match='input_dim'):
+            tk.decompositions.TTRSS(
+                function=function,
+                embedding=embedding,
+                input_dim=3,
+                domain=domain).fit(samples, rank=2)
+
+        result = tk.decompositions.TTRSS(
+            function=function,
+            embedding=embedding,
+            domain=domain).fit(samples, rank=2)
+        with pytest.raises(NotImplementedError, match='warm-start'):
+            tk.decompositions.TTRSS(
+                function=function,
+                embedding=embedding,
+                domain=domain).fit(
+                    samples, rank=2, warm_start=result)
 
 
 __all__ = []

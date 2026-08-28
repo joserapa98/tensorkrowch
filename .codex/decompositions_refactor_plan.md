@@ -77,7 +77,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 | Fase | Objetivo | Estado |
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
-| 2 | ALS, apertura de loops y TT→TR | 19/20 implementadas; 19 pendientes de revisión |
+| 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
 | 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
@@ -616,7 +616,7 @@ tensorkrowch/decompositions/
 │
 ├── ring/
 │   ├── __init__.py                     [A] estrategias avanzadas seleccionadas
-│   ├── opening.py                      [A/I/EXP] LoopOpener, ALS y BLOSTR
+│   ├── opening.py                      [A/I/EXP] contratos, ALS y adapters
 │   ├── blocks.py                       [I] selección de bloque y ranks
 │   ├── gauges.py                       [A/I/EXP] mapas y recursión de gauges
 │   ├── driver.py                       [I] barrido bidireccional común
@@ -3458,8 +3458,9 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
 
 - [x] **BLOSTR-01 — Aislar y verificar BLOSTR**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y guardado en el commit `a7eadc4`; pendiente
+  de revisión detallada del usuario antes de considerarlo completamente
+  cerrado.
 
   Portar únicamente tras tests:
 
@@ -3524,7 +3525,10 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
     incidencias legacy ya existentes en `tt_decompositions.py`, fuera de esta
     tarea.
 
-- [ ] **ALS-12 — Gate final de fase**
+- [x] **ALS-12 — Gate final de fase**
+
+  Estado: gate ejecutado correctamente; pendiente de commit y de revisión
+  detallada del usuario antes de considerar la fase completamente cerrada.
 
   Ejecutar toda la suite SVD+ALS+ring, benchmarks de entornos y tests de
   fidelity. Confirmar:
@@ -3535,6 +3539,31 @@ separan los mecanismos comunes de apertura de loops y se implementa TT→TR.
   - batches sampled no controlan convergencia;
   - fixed cores no cambian;
   - TT→TR calcula fidelity por defecto.
+
+  Resultado:
+
+  - `467 passed, 7 skipped` en la ejecución conjunta de `svd/`, `als/` y
+    `ring/`; la suite completa de decompositions de BLOSTR-01 permanece en
+    `678 passed, 11 skipped`;
+  - `283 passed, 4 skipped` en `tests/test_utils.py` y
+    `tests/test_operations.py`, cubriendo también callers subyacentes de SVD;
+  - los tests de entornos contrastan todos los diseños TT y TR, forward y
+    reverse, real y complejo, exactos y sampled contra el oracle denso; los
+    commits atómicos y cambios de segmento/dirección también están cubiertos;
+  - completion TT/TR conserva `ObservedRows` y los mismos ids globales durante
+    todos los sweeps; el error medido es exactamente el objetivo observado;
+  - uniform/leverage sampled reutilizan un batch por generación y rechazan
+    criterios de convergencia de error global que no tengan un objetivo fijo;
+  - los tests TT/TR comprueban igualdad bitwise de cores fijos y el caso con
+    todos los cores fijos; TT→TR contrasta por defecto normalized overlap,
+    fidelity y error absoluto/relativo con un oracle denso;
+  - microbenchmark orientativo CPU, no usado como umbral de tests (`N=10`,
+    `input=2`, `rank=3`, mediana de 15 repeticiones): TT cacheado `0.499 ms`
+    frente a oracle directo `5.370 ms` (`10.77x`), TR segmentado `2.493 ms`
+    frente a entorno directo `4.366 ms` (`1.75x`);
+  - doctests de BLOSTR/TT2TR, Ruff dirigido y `git diff --check` pasaron. Los
+    warnings observados en operations son avisos preexistentes de PyTorch
+    sobre indexing con secuencias.
 
 #### Entregable de la fase
 
@@ -5073,7 +5102,9 @@ benchmark concreto:
    el caso; decidir en `SVD-06` si aporta suficiente valor.
 2. **Duración exacta de aliases deprecated.** Mínimo un ciclo de versión;
    fijar versión de eliminación al preparar release.
-3. **BLOSTR como método completo público.** Depende de `BLOSTR-01`.
+3. **BLOSTR como método completo público.** Resuelto en `BLOSTR-01`:
+   `tr_blostr` y `BLOSTRLoopOpener` se exponen como APIs experimentales sobre
+   un único motor caracterizado para ranks uniformes.
 4. **Framework distribuido.** Se elige en `PAR-10`.
 5. **Schedule par/impar como default TR.** Solo si `RSS-13/PAR-06` superan al
    center-out.

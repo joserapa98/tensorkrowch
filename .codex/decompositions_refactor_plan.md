@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 1/26 implementadas; 1 pendiente de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 2/26 implementadas; 2 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -3579,8 +3579,8 @@ TR-RSS podrá reutilizar.
 #### Objetivo de la fase
 
 Consumir las fuentes comunes creadas para ALS y construir regiones,
-recursiones, Phi lazy y fitting físico. Usar esa infraestructura para
-refactorizar TT-RSS como caso sampled de recursive sketching, sin cambiar
+recursiones, Phi lazy y fitting de índices de entrada. Usar esa infraestructura
+para refactorizar TT-RSS como caso sampled de recursive sketching, sin cambiar
 innecesariamente su matemática. A continuación implementar TR-RSS, fuentes
 sparse/empíricas/TT, nuevos operadores RS, QTT/QTR y Tucker cuantizado.
 
@@ -3591,7 +3591,7 @@ common TensorSource + sketching specs
     -> regions/recursion
     -> Phi/evaluation plan
     -> transforms
-    -> physical fitting
+    -> input fitting
     -> projection/truncation
     -> TTRSS estable
     -> TRRSS/RS/QTT experimentales
@@ -3604,8 +3604,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-00 — Caracterizar TT-RSS legacy**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `e502524`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Añadir tests antes del refactor para:
 
@@ -3664,7 +3664,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
     ese caso terminó con `697 passed, 13 skipped, 5 xfailed`;
   - Ruff sobre los archivos modificados y `git diff --check` sin incidencias.
 
-- [ ] **RSS-01 — Implementar specs de embedding, domain y outputs**
+- [x] **RSS-01 — Implementar specs de embedding, domain y outputs**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear `_EmbeddingSpec`, `_DomainSpec`, `_OutputSpec` y
   `_SketchingFitSpec`.
@@ -3672,7 +3675,7 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Requisitos de embedding/domain:
 
   - un callable/tensor compartido o lista por input variable;
-  - cada embedding puede tener dimensión física distinta;
+  - cada embedding puede tener `input_dim` distinto;
   - cada domain puede tener distinto número/shape de valores;
   - validación por variable con mensajes que indiquen site;
   - output sites no consumen `embedding`, siempre `basis`;
@@ -3692,6 +3695,40 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - recursion de todos los output axes con `basis`.
 
   Tests exhaustivos de posiciones, shapes heterogéneas y complejos.
+
+  Implementación:
+
+  - `_DomainSpec` normaliza un tensor compartido o domains heterogéneos y puede
+    inferir independientemente los valores únicos de cada input site desde un
+    `ConfigurationBatch` packed o heterogéneo;
+  - `_EmbeddingSpec` acepta callables o tablas tensoriales compartidas/por
+    site, valida `input_dim`, dtype, finitud y número de valores con errores
+    localizados, y cachea una única matriz por domain durante la
+    normalización. Las tablas se consultan por los valores reales del domain,
+    no por una suposición implícita de ids contiguos;
+  - `_OutputSpec` normaliza escalares legacy y nativos, sitúa axes tensoriales
+    explícita o equilibradamente, conserva el orden input/output y ofrece
+    flatten/unflatten row-major, selección o sampling complejo por
+    `abs(values) ** 2`, política explícita para filas nulas e inserción de
+    índices sin forzar samples heterogéneos a un tensor packed;
+  - todos los output sites se embeben mediante `basis`; la dimensión completa
+    de cada site se deriva de un único layout ordenado;
+  - `_SketchingFitSpec` compone `_TruncationSpec`, range projection, batching y
+    observabilidad. `projection_dim` hereda `rank`; si ambos son `None`, la
+    futura proyección conserva la dimensión completa, y los diagnósticos
+    pueden quedar completamente desactivados;
+  - estas cuatro dataclasses permanecen internas en
+    `decompositions/sketching/specs.py`; la API pública no exige construirlas.
+
+  Evidencia local:
+
+  - `42 passed` en los tests específicos de domains, embeddings, outputs y fit
+    specs, incluyendo layouts separados, shapes heterogéneos, outputs
+    complejos, reversibilidad exacta y políticas de error;
+  - `125 passed, 2 skipped, 5 xfailed` al combinar todas las pruebas de
+    sketching con sources comunes y contratos de docstrings; skips/xfails son
+    los ya caracterizados en RSS-00;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-02 — Adaptar las fuentes comunes a sketching**
 

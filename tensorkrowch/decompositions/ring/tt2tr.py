@@ -6,7 +6,6 @@ from typing import (Any, Mapping, Optional, Sequence, Tuple, Union)
 import torch
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
-from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.metrics import (ErrorRecord, FidelityRecord,
                                                  TimingRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
@@ -15,9 +14,9 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TRDecomposition)
-from tensorkrowch.decompositions.ring.blostr import BLOSTRLoopOpener
-from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
-                                                     CentralBlockSelector)
+from tensorkrowch.decompositions.ring.blocks import (
+    PrescribedCentralBlockSelector,
+)
 from tensorkrowch.decompositions.ring.driver import (BoundaryClosure,
                                                      BidirectionalRingDriver)
 from tensorkrowch.decompositions.ring.gauges import (
@@ -25,11 +24,8 @@ from tensorkrowch.decompositions.ring.gauges import (
     PseudoinverseGaugeRecursion,
     TTCoreGaugeRecursion,
 )
-from tensorkrowch.decompositions.ring.opening import (ALSLoopOpener,
-                                                      CallableLoopOpener,
-                                                      CompositeLoopOpener,
-                                                      LoopOpener,
-                                                      LoopOpenerCapabilities)
+from tensorkrowch.decompositions.ring.opening import (LoopOpener,
+                                                      resolve_loop_opener)
 from tensorkrowch.decompositions.sources.tt import TTTensorSource
 
 
@@ -69,36 +65,6 @@ def _normalize_rank(rank: int,
             raise ValueError(f'`{name}` should be positive')
     cyclic_rank = rank if tr_rank is None else tr_rank
     return (rank,) * (n_sites - 1) + (cyclic_rank,)
-
-
-class _PrescribedCentralBlockSelector(CentralBlockSelector):
-    """Selects one fixed-rank center without adaptive injectivity growth."""
-
-    def select(self,
-               provider: Any,
-               rank,
-               center: Optional[int] = None,
-               *,
-               bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
-        input_dim = tuple(provider.input_dim)
-        if center is None:
-            center = len(input_dim) // 2
-        if isinstance(center, bool) or not isinstance(center, int):
-            raise TypeError('`center` should be int type or None')
-        if center <= 0 or center >= len(input_dim) - 1:
-            raise ValueError('`center` should be an internal TT site')
-        rank = tuple(rank)
-        return BlockSelection(
-            sites=(center,),
-            input_dim=(input_dim[center],),
-            left_rank_cap=rank[center - 1],
-            right_rank_cap=rank[center],
-            input_capacity=input_dim[center],
-            required_input_capacity=1,
-            feasible=True,
-            reason='prescribed_fixed_rank_center',
-            boundary=None,
-            growth=((center, center),))
 
 
 @dataclass
@@ -174,42 +140,6 @@ class _TTCoreProvider:
             direction=direction,
             core=core,
             diagnostics={'algorithm': 'tt_boundary_absorption'})
-
-
-def _resolve_loop_opener(loop_opener) -> LoopOpener:
-    """Normalizes the simple ALS preset or one advanced opening strategy."""
-    def als_opener() -> ALSLoopOpener:
-        return ALSLoopOpener({
-            'gauge': 'none',
-            'normalize': False,
-            'convergence': ConvergencePolicy(
-                max_sweeps=100,
-                error_rtol=1e-10,
-                keep_best=True),
-        })
-    if isinstance(loop_opener, str):
-        if loop_opener == 'als':
-            return als_opener()
-        if loop_opener == 'blostr+als':
-            return CompositeLoopOpener(
-                BLOSTRLoopOpener(),
-                als_opener(),
-                fallback_on_error=True)
-        raise ValueError(
-            "`loop_opener` should be 'als', 'blostr+als' or an advanced "
-            'opening strategy')
-    if isinstance(loop_opener, LoopOpener):
-        return loop_opener
-    if callable(loop_opener):
-        return CallableLoopOpener(
-            loop_opener,
-            LoopOpenerCapabilities(
-                supports_fixed_left=True,
-                supports_fixed_right=True,
-                supports_two_fixed_gauges=True,
-                supports_blocks=True))
-    raise TypeError(
-        '`loop_opener` should be "als", a LoopOpener or a callable')
 
 
 def _resolve_gauge_recursion(
@@ -394,7 +324,7 @@ class TT2TR:
         verbosity = _normalize_verbosity(verbose)
         fit_observer = _resolve_observer(verbosity, observer) \
             if verbosity or observer is not None else None
-        opener = _resolve_loop_opener(loop_opener)
+        opener = resolve_loop_opener(loop_opener)
         recursion = _resolve_gauge_recursion(
             gauge_recursion,
             inverse_policy=inverse_policy,
@@ -420,7 +350,7 @@ class TT2TR:
                 rank=rank_spec,
                 opener=opener,
                 recursion=recursion,
-                block_selector=_PrescribedCentralBlockSelector(),
+                block_selector=PrescribedCentralBlockSelector(),
                 center=center)
             active_result = driver_result.as_decomposition()
             fidelity = _fidelity_error(self.tt, active_result)

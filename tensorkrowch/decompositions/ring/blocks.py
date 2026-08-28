@@ -231,6 +231,40 @@ class CentralBlockSelector:
             growth=growth)
 
 
+class PrescribedCentralBlockSelector(CentralBlockSelector):
+    """Selects one fixed center without adaptive injectivity growth."""
+
+    def select(self,
+               provider: Any,
+               rank: _Rank,
+               center: Optional[int] = None,
+               *,
+               bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
+        """Returns one internal site with its adjacent right-link caps."""
+        input_dim = _normalize_input_dim(provider)
+        rank_spec = _normalize_rank_spec(rank, len(input_dim))
+        if center is None:
+            center = len(input_dim) // 2
+        if isinstance(center, bool) or not isinstance(center, int):
+            raise TypeError('`center` should be int type or None')
+        if center <= 0 or center >= len(input_dim) - 1:
+            raise ValueError(
+                '`center` should be an internal TT site or TR site')
+        if bounds is not None and not (bounds[0] <= center <= bounds[1]):
+            raise ValueError('`center` should lie inside `bounds`')
+        return BlockSelection(
+            sites=(center,),
+            input_dim=(input_dim[center],),
+            left_rank_cap=rank_spec[center - 1],
+            right_rank_cap=rank_spec[center],
+            input_capacity=input_dim[center],
+            required_input_capacity=1,
+            feasible=True,
+            reason='prescribed_fixed_rank_center',
+            boundary=None,
+            growth=((center, center),))
+
+
 @dataclass(frozen=True)
 class RingRankEstimate:
     """Stores a balanced ring-rank estimate and its cap diagnostics."""
@@ -537,6 +571,7 @@ def split_block_ttsvd(
 __all__ = [
     'BlockSelection',
     'CentralBlockSelector',
+    'PrescribedCentralBlockSelector',
     'RingRankEstimate',
     'RingRankEstimator',
     'BlockSplit',

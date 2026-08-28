@@ -13,14 +13,15 @@ from tensorkrowch.decompositions.observers import DecompositionObserver
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
+                                                     PrescribedCentralBlockSelector,
                                                      RingRankEstimator,
                                                      _normalize_rank_spec)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
 from tensorkrowch.decompositions.ring.gauges import GaugeRecursionStep
 from tensorkrowch.decompositions.ring.opening import (LoopOpener,
-                                                      LoopOpening)
-from tensorkrowch.decompositions.ring.tt2tr import _resolve_loop_opener
+                                                      LoopOpening,
+                                                      resolve_loop_opener)
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.evaluations import (
     _EvaluationPlanBuilder,
@@ -53,29 +54,6 @@ class _SelectedBlockSelector(CentralBlockSelector):
 
     def select(self, provider, rank, center=None, *, bounds=None):
         return self.selection
-
-
-def _prescribed_selection(input_dim: Sequence[int],
-                          rank: Sequence[int],
-                          center: Optional[int]) -> BlockSelection:
-    """Builds a one-site selection for the prescribed-rank RSS route."""
-    if center is None:
-        center = len(input_dim) // 2
-    if isinstance(center, bool) or not isinstance(center, int):
-        raise TypeError('`center` should be int type or None')
-    if center <= 0 or center >= len(input_dim) - 1:
-        raise ValueError('`center` should identify an internal TR site')
-    return BlockSelection(
-        sites=(center,),
-        input_dim=(input_dim[center],),
-        left_rank_cap=rank[(center - 1) % len(rank)],
-        right_rank_cap=rank[center],
-        input_capacity=input_dim[center],
-        required_input_capacity=1,
-        feasible=True,
-        reason='prescribed_fixed_rank_center',
-        boundary=None,
-        growth=((center, center),))
 
 
 @dataclass(frozen=True)
@@ -551,8 +529,10 @@ class TRRSS(TTRSS):
             raise ValueError('TR-RSS requires at least three final sites')
         rank_spec = _normalize_rank_spec(rank, self.outputs.n_sites)
         if block_selector is None and not adaptive:
-            selection = _prescribed_selection(
-                self.outputs.site_dim(self.embeddings), rank_spec, center)
+            selection = PrescribedCentralBlockSelector().select(
+                self.outputs.site_dim(self.embeddings),
+                rank_spec,
+                center=center)
         else:
             if block_selector is None:
                 block_selector = CentralBlockSelector()
@@ -835,7 +815,7 @@ class TRRSS(TTRSS):
             boundary_records=[])
         truncation_records = []
         opener = _SketchLoopOpener(
-            _resolve_loop_opener(context.state['loop_opener']),
+            resolve_loop_opener(context.state['loop_opener']),
             truncation_records)
         with context.phase('core.solve'):
             driver_result = BidirectionalRingDriver().fit(

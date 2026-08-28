@@ -7,6 +7,7 @@ import tensorkrowch as tk
 
 from tests.decompositions.als._oracles import (contract_tr_dense,
                                                make_tr_cores)
+from tensorkrowch.decompositions.ring.opening import resolve_loop_opener
 
 
 def _local_problem(dtype=torch.float64):
@@ -167,6 +168,13 @@ class TestFixedGaugeCoreOpener:  # MARK: TestFixedGaugeCoreOpener
 
 
 class TestOpeningAdapters:  # MARK: TestOpeningAdapters
+
+    def test_shared_resolver_preserves_advanced_openers_and_als_preset(self):
+        advanced = tk.decompositions.ALSLoopOpener()
+
+        assert resolve_loop_opener(advanced) is advanced
+        assert isinstance(
+            resolve_loop_opener('als'), tk.decompositions.ALSLoopOpener)
 
     def test_callable_adapter_forwards_normalized_arguments(self):
         cores, tensor = _local_problem()

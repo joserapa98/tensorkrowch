@@ -614,6 +614,46 @@ class CompositeLoopOpener:
             diagnostics=diagnostics)
 
 
+def resolve_loop_opener(loop_opener) -> LoopOpener:
+    """Normalizes simple ALS presets, advanced strategies and callables."""
+    def als_opener() -> ALSLoopOpener:
+        return ALSLoopOpener({
+            'gauge': 'none',
+            'normalize': False,
+            'convergence': ConvergencePolicy(
+                max_sweeps=100,
+                error_rtol=1e-10,
+                keep_best=True),
+        })
+
+    if isinstance(loop_opener, str):
+        if loop_opener == 'als':
+            return als_opener()
+        if loop_opener == 'blostr+als':
+            from tensorkrowch.decompositions.ring.blostr import (
+                BLOSTRLoopOpener,
+            )
+            return CompositeLoopOpener(
+                BLOSTRLoopOpener(),
+                als_opener(),
+                fallback_on_error=True)
+        raise ValueError(
+            "`loop_opener` should be 'als', 'blostr+als' or an advanced "
+            'opening strategy')
+    if isinstance(loop_opener, LoopOpener):
+        return loop_opener
+    if callable(loop_opener):
+        return CallableLoopOpener(
+            loop_opener,
+            LoopOpenerCapabilities(
+                supports_fixed_left=True,
+                supports_fixed_right=True,
+                supports_two_fixed_gauges=True,
+                supports_blocks=True))
+    raise TypeError(
+        '`loop_opener` should be a supported literal, LoopOpener or callable')
+
+
 __all__ = [
     'LoopOpening',
     'LoopOpenerCapabilities',
@@ -622,4 +662,5 @@ __all__ = [
     'FixedGaugeCoreOpener',
     'CallableLoopOpener',
     'CompositeLoopOpener',
+    'resolve_loop_opener',
 ]

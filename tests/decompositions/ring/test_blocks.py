@@ -8,6 +8,7 @@ import tensorkrowch as tk
 from tensorkrowch.decompositions.ring.blocks import (
     BlockSelection,
     CentralBlockSelector,
+    PrescribedCentralBlockSelector,
     RingRankEstimator,
     split_block_ttsvd,
 )
@@ -71,6 +72,15 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
         assert selection.sites == (1, 2, 3)
         assert not selection.feasible
         assert selection.boundary is None
+
+    def test_prescribed_selector_is_shared_by_fixed_ring_workflows(self):
+        selection = PrescribedCentralBlockSelector().select(
+            (2, 3, 4, 5), rank=(2, 3, 4, 5), center=2)
+
+        assert selection.sites == (2,)
+        assert selection.left_rank_cap == 3
+        assert selection.right_rank_cap == 4
+        assert selection.reason == 'prescribed_fixed_rank_center'
 
 
 class TestRingRankEstimator:  # MARK: TestRingRankEstimator

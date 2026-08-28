@@ -7,6 +7,9 @@ import tensorkrowch as tk
 
 from tensorkrowch.decompositions.sketching.sources import (
     SketchContractableSource,
+    SupportTensorSource,
+    _iter_support,
+    _resolve_rs_source,
 )
 from tests.decompositions.als._oracles import (contract_tt_dense,
                                                make_tt_cores)
@@ -200,3 +203,46 @@ class TestMPSAdapter:  # MARK: TestMPSAdapter
 
         with pytest.raises(ValueError, match='open-boundary'):
             tk.decompositions.as_tensor_source(model)
+
+
+class TestRSInputSources:  # MARK: TestRSInputSources
+
+    def test_dataset_is_normalized_and_duplicate_weights_are_coalesced(self):
+        dataset = torch.tensor([[0, 1], [0, 1], [1, 0]])
+        source = _resolve_rs_source(
+            dataset=dataset,
+            input_dim=(2, 2),
+            weights=torch.tensor([1., 2., 3.], dtype=torch.float64))
+
+        assert isinstance(source, tk.decompositions.EmpiricalDistribution)
+        assert isinstance(source, SupportTensorSource)
+        assert torch.equal(
+            source.support.as_tensor(), torch.tensor([[0, 1], [1, 0]]))
+        assert torch.allclose(
+            source.support_values,
+            torch.tensor([0.5, 0.5], dtype=torch.float64))
+
+    def test_requires_exactly_one_source_form_and_scopes_weights(self):
+        sparse = tk.decompositions.SparseTensorSource(
+            torch.tensor([[0, 0]]), torch.tensor([1.]), (2, 2))
+        with pytest.raises(ValueError, match='Exactly one'):
+            _resolve_rs_source()
+        with pytest.raises(ValueError, match='Exactly one'):
+            _resolve_rs_source(source=sparse, dataset=torch.tensor([[0, 0]]))
+        with pytest.raises(ValueError, match='only be passed'):
+            _resolve_rs_source(source=sparse, weights=torch.tensor([1.]))
+
+    def test_support_iterator_batches_only_declared_nonzero_entries(self):
+        source = tk.decompositions.SparseTensorSource(
+            indices=torch.tensor([[1, 1], [0, 1], [1, 1], [0, 0]]),
+            values=torch.tensor([1., 2., 3., 4.]),
+            input_dim=(3, 3))
+
+        batches = list(_iter_support(source, batch_size=2))
+        indices = torch.cat([batch.as_tensor() for batch, _ in batches])
+        values = torch.cat([value for _, value in batches])
+
+        assert len(batches) == 2
+        assert torch.equal(indices, source.support.as_tensor())
+        assert torch.equal(values, source.support_values)
+        assert indices.shape[0] == 3

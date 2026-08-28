@@ -4239,9 +4239,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-09 — Refactorizar TT-RSS sobre la infraestructura**
 
-  Estado: implementado y validado; preparado para commit independiente y
-  pendiente de revisión detallada del usuario antes de considerarlo
-  completamente cerrado.
+  Estado: implementado, validado y commiteado en `dcee467`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Portar el algoritmo existente conservando primero su matemática:
 

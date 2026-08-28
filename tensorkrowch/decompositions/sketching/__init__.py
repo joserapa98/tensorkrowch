@@ -3,9 +3,13 @@
 from tensorkrowch.decompositions.sketching.evaluations import EvaluationView
 from tensorkrowch.decompositions.sketching.fitting import (
     BasisFitter,
-    FittedInputAxis,
     FixedEmbeddingFitter,
     InputFitter,
+)
+from tensorkrowch.decompositions.sketching.projections import (
+    IdentityRangeProjector,
+    RandomizedRangeProjector,
+    RangeProjector,
 )
 from tensorkrowch.decompositions.sketching.transforms import (
     CallableGlobalValueTransform,
@@ -23,9 +27,11 @@ from tensorkrowch.decompositions.sketching.transforms import (
 __all__ = [
     'EvaluationView',
     'InputFitter',
-    'FittedInputAxis',
     'FixedEmbeddingFitter',
     'BasisFitter',
+    'RangeProjector',
+    'IdentityRangeProjector',
+    'RandomizedRangeProjector',
     'GlobalValueTransform',
     'IdentityGlobalValueTransform',
     'CallableGlobalValueTransform',

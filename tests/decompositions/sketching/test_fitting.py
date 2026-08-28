@@ -8,6 +8,7 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.sketching.phi import _MaterializedPhi
+from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
 from tensorkrowch.decompositions.sketching.specs import (
     _DomainSpec,
     _EmbeddingSpec,
@@ -55,7 +56,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
             _materialized(phi), axis=1, domain=torch.arange(4.))
 
         assert isinstance(fitter, tk.decompositions.InputFitter)
-        assert isinstance(fitted, tk.decompositions.FittedInputAxis)
+        assert isinstance(fitted, FittedInputAxis)
         assert fitted.axis == 1
         assert fitted.domain_size == 4
         assert fitted.input_dim == 2

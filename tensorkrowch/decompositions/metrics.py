@@ -509,6 +509,58 @@ class InputFitRecord:
 
 
 @dataclass(frozen=True)
+class RangeProjectionRecord:
+    """Stores dimensions, approximation error and cost of a range projection."""
+
+    method: str
+    input_shape: Tuple[int, int]
+    axis: int
+    requested_dim: Optional[int]
+    projection_dim: int
+    range_dim: int
+    oversampling: int = 0
+    n_power_iter: int = 0
+    error_absolute: Optional[float] = None
+    error_relative: Optional[float] = None
+    elapsed: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        if self.method not in ('identity', 'randomized'):
+            raise ValueError(
+                "`method` should be 'identity' or 'randomized'")
+        input_shape = tuple(self.input_shape)
+        if len(input_shape) != 2 or any(
+                isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
+                for dim in input_shape):
+            raise ValueError(
+                '`input_shape` should contain two positive integers')
+        object.__setattr__(self, 'input_shape', input_shape)
+        for name in ('axis', 'projection_dim', 'range_dim', 'oversampling',
+                     'n_power_iter'):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+            minimum = 1 if name in ('projection_dim', 'range_dim') else 0
+            if value < minimum:
+                qualifier = 'positive' if minimum else 'non-negative'
+                raise ValueError(f'`{name}` should be {qualifier}')
+        if self.requested_dim is not None:
+            if isinstance(self.requested_dim, bool) or \
+                    not isinstance(self.requested_dim, int):
+                raise TypeError('`requested_dim` should be int type or None')
+            if self.requested_dim < 1:
+                raise ValueError('`requested_dim` should be positive')
+        for name in ('error_absolute', 'error_relative', 'elapsed'):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            value = _scalar_float(value, name)
+            if (value < 0) or (value != value) or (not isfinite(value)):
+                raise ValueError(f'`{name}` should be finite and non-negative')
+            object.__setattr__(self, name, value)
+
+
+@dataclass(frozen=True)
 class GaugeRecord:
     """Stores rank, conditioning and cancellation diagnostics for one gauge."""
 
@@ -717,6 +769,7 @@ class DecompositionMetrics:
     warnings: List[str] = field(default_factory=list)
     local_solves: List[LocalSolveRecord] = field(default_factory=list)
     input_fits: List[InputFitRecord] = field(default_factory=list)
+    range_projections: List[RangeProjectionRecord] = field(default_factory=list)
     gauges: List[GaugeRecord] = field(default_factory=list)
     sweeps: List[SweepRecord] = field(default_factory=list)
 
@@ -729,6 +782,7 @@ class DecompositionMetrics:
         self.warnings = list(self.warnings)
         self.local_solves = list(self.local_solves)
         self.input_fits = list(self.input_fits)
+        self.range_projections = list(self.range_projections)
         self.gauges = list(self.gauges)
         self.sweeps = list(self.sweeps)
 
@@ -740,6 +794,8 @@ class DecompositionMetrics:
             ('fidelities', self.fidelities, FidelityRecord),
             ('local_solves', self.local_solves, LocalSolveRecord),
             ('input_fits', self.input_fits, InputFitRecord),
+            ('range_projections', self.range_projections,
+             RangeProjectionRecord),
             ('gauges', self.gauges, GaugeRecord),
             ('sweeps', self.sweeps, SweepRecord),
         )
@@ -771,6 +827,10 @@ class DecompositionMetrics:
             info['input_fits'] = [
                 _record_as_dict(record) for record in self.input_fits
             ]
+        if self.range_projections:
+            info['range_projections'] = [
+                _record_as_dict(record) for record in self.range_projections
+            ]
         if self.evaluations:
             info['evaluations'] = [
                 _record_as_dict(record) for record in self.evaluations
@@ -791,6 +851,7 @@ __all__ = [
     'TruncationRecord',
     'LocalSolveRecord',
     'InputFitRecord',
+    'RangeProjectionRecord',
     'GaugeRecord',
     'SweepRecord',
     'TimingRecord',

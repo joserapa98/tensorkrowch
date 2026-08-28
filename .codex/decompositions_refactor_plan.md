@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 7/26 implementadas; 7 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 8/26 implementadas; 8 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -4039,8 +4039,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-06 — Implementar input fitting**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `7284bcd`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `InputFitter`, `FittedInputAxis`, `FixedEmbeddingFitter` y
   `BasisFitter`.
@@ -4101,7 +4101,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `826 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-07 — Sustituir `randu` por range projection explícita**
+- [x] **RSS-07 — Sustituir `randu` por range projection explícita**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear `RangeProjector`, `IdentityRangeProjector` y
   `RandomizedRangeProjector`.
@@ -4119,6 +4122,47 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
   Comparar precisión/coste con SVD directa y ruta legacy. No llamar
   “randomized SVD” a una mera multiplicación por matriz aleatoria.
+
+  Implementación:
+
+  - `RangeProjector` es el protocolo avanzado común;
+    `IdentityRangeProjector` conserva la matriz exacta y
+    `RandomizedRangeProjector` implementa realmente
+    `Y=AΩ -> Q=qr(Y) -> B=QᴴA`, con subspace iteration estabilizada por QR;
+  - `ProjectedRange` permanece como resultado interno: guarda `B`, el basis
+    `Q`, layout/axis original y ofrece `lift_left`, `restore_left` y
+    `reconstruct`. Así el consumer aplica `truncated_svd(B)` y recupera
+    `U=Q U_small` sin confundir una rotación aleatoria con randomized SVD;
+  - el axis elegido se mueve a las columnas y todos los demás se aplanan en
+    orden estable. Al levantar los vectores, el mismo axis se reemplaza por el
+    rank obtenido, por lo que la operación sirve también sobre Phi N-D;
+  - `projection_dim` explícito prevalece sobre `rank`; si no se fija hereda
+    `rank`. Cuando ambos son `None`, Ω tiene tantas filas/columnas como el axis
+    proyectado y la representación no reduce el rango. El oversampling se suma
+    antes de limitar por la dimensión disponible;
+  - la proyección admite generador aislado, dtype real/complejo, generator en
+    CPU con cómputo en otro device, `projection_oversampling` y
+    `n_power_iter`. `random_projection=False` se representa limpiamente
+    seleccionando `IdentityRangeProjector`, coherente con `_SketchingFitSpec`;
+  - `RangeProjectionRecord` registra dimensiones solicitada/efectiva, range,
+    oversampling, iteraciones, tiempo sincronizado y error absoluto/relativo,
+    y se integra en `DecompositionMetrics.range_projections`. Sin
+    `return_info`, no hay timer sincronizado ni cálculo del error;
+  - el `randu` legacy permanece únicamente dentro de TT-RSS legacy hasta
+    `RSS-09`. Su caracterización confirma que la matriz cuadrada solo rota el
+    lado derecho y preserva exactamente Gram y singular values, mientras que
+    la nueva ruta reducida construye el range finder completo.
+
+  Evidencia local:
+
+  - `20 passed` en identidad sin copia, caracterización `randu`, dimensiones
+    por rank/oversampling, proyección no reductora, axis N-D, lifting de SVD,
+    complejos, determinismo, power iterations, device y validaciones;
+  - una matriz `40 x 30` usa una SVD pequeña `10 x 30` con rank objetivo 5,
+    oversampling 5 y error dentro de `1.1x` del error óptimo de SVD directa en
+    el caso determinista de prueba;
+  - `846 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-08 — Implementar `RecursiveSketching` y observabilidad**
 

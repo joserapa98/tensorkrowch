@@ -389,7 +389,6 @@ class BasisFitter:
 
 __all__ = [
     'InputFitter',
-    'FittedInputAxis',
     'FixedEmbeddingFitter',
     'BasisFitter',
 ]

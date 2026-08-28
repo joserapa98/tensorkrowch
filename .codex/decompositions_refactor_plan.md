@@ -4166,8 +4166,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-08 — Implementar `RecursiveSketching` y observabilidad**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `d29bf62`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear clase base, `_SketchingFitContext` y eventos:
 

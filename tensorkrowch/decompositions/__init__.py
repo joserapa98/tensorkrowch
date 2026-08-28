@@ -82,6 +82,7 @@ from tensorkrowch.decompositions.sketching import (
     LocalValueTransform,
     RandomizedRangeProjector,
     RangeProjector,
+    RecursiveSketching,
 )
 from tensorkrowch.decompositions.tt_decompositions import tt_rss
 
@@ -171,6 +172,7 @@ __all__ = [
     'vec_to_mps',
     'mat_to_mpo',
     'EvaluationView',
+    'RecursiveSketching',
     'InputFitter',
     'FixedEmbeddingFitter',
     'BasisFitter',

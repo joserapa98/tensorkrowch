@@ -148,8 +148,16 @@ class ConsoleObserver:
             print(f'\nCore {position}', file=self.stream)
             self._print_values(event.values)
         else:
-            print(f'\n{event.phase}: {event.name}', file=self.stream)
-            self._print_values(event.values)
+            label = event.name.replace('.', ' · ').replace('_', ' ').title()
+            if event.site is not None:
+                label = f'Site {event.site + 1} — {label}'
+            print(f'\n{label}', file=self.stream)
+            print('-' * len(label), file=self.stream)
+            if self.verbose >= 2:
+                values = dict(event.values)
+                if event.elapsed is not None:
+                    values['elapsed'] = f'{event.elapsed:.6f} s'
+                self._print_values(values)
 
     def close(self, metrics: DecompositionMetrics) -> None:
         if not isinstance(metrics, DecompositionMetrics):

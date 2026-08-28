@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 8/26 implementadas; 8 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 9/26 implementadas; 9 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -4103,8 +4103,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-07 — Sustituir `randu` por range projection explícita**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `e830dd4`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `RangeProjector`, `IdentityRangeProjector` y
   `RandomizedRangeProjector`.
@@ -4164,7 +4164,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `846 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-08 — Implementar `RecursiveSketching` y observabilidad**
+- [x] **RSS-08 — Implementar `RecursiveSketching` y observabilidad**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear clase base, `_SketchingFitContext` y eventos:
 
@@ -4174,7 +4177,7 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `source.evaluate`;
   - `values.global_transform`;
   - `values.local_transform`;
-  - `physical.fit`;
+  - `input.fit`;
   - `range.project`;
   - `svd.trim`;
   - `recursion.apply`;
@@ -4190,6 +4193,49 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
   La base no conoce TT/TR/PEPS mediante flags; expone hooks sustanciales y usa
   composición.
+
+  Implementación:
+
+  - `RecursiveSketching` fija source, domains, embeddings, outputs, runtime y
+    estrategias; declara hooks sustanciales para construir regions/Phi,
+    resolver dependencias locales y ensamblar el resultado, sin ningún flag de
+    topología ni branches TT/TR/PEPS;
+  - `_SketchingFitContext` es mutable pero pertenece exclusivamente a una
+    llamada: guarda spec, RNG, observer, métricas, regions, Phi, fitted axes,
+    projected ranges, cores y estado auxiliar. Dos llamadas consecutivas no
+    comparten ninguna de estas colecciones;
+  - la base construye por composición un `FixedEmbeddingFitter` cacheado por
+    input site y un `BasisFitter` por output site; los fitters, transforms y
+    projector pueden sustituirse mediante estrategias avanzadas;
+  - `_execute` normaliza el prefijo/sufijo común (`source.prepare`,
+    `regions.build`, driver concreto, `result.validate`) y los helpers
+    `_plan_phi`, `_transform_local`, `_fit_input_axis`, `_project_range` y
+    `_trim` emiten las fases intermedias y agregan records solo si corresponde;
+  - se estandarizan los eventos como `source.prepare`, `regions.build`,
+    `phi.plan`, `source.evaluate`, `values.global_transform`,
+    `values.local_transform`, `input.fit`, `range.project`, `svd.trim`,
+    `recursion.apply`, `core.solve` y `result.validate`; se corrige la antigua
+    mención `physical.fit` para respetar la nomenclatura de input;
+  - verbosity 1 imprime títulos jerárquicos amplios y sites; nivel 2 añade
+    tiempos sincronizados y detalles; nivel 3 permite emitir cores al final.
+    `ConsoleObserver` formatea los nombres estructurados con títulos,
+    subrayados e indentación;
+  - si `verbose=0`, no hay observer y no se piden métricas, no se construyen
+    `DecompositionEvent`, timers sincronizados, condiciones, errores de
+    proyección ni records. Un observer explícito sí activa los diagnósticos que
+    necesita aunque la consola permanezca silenciosa;
+  - los eventos se emiten en el orden determinista del workflow serial. La
+    futura capa de ejecución agregará eventos de workers por task order sin
+    cambiar el contrato del driver.
+
+  Evidencia local:
+
+  - `9 passed` en orden de las doce fases, aislamiento entre fits, selección de
+    estrategias por fit, fast path sin eventos/records, validación y niveles de
+    verbosity 1/2/3;
+  - `176 passed, 2 skipped, 5 xfailed` en toda la carpeta de sketching;
+  - `855 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-09 — Refactorizar TT-RSS sobre la infraestructura**
 

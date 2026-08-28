@@ -1,5 +1,6 @@
 """Recursive-sketching decomposition infrastructure."""
 
+from tensorkrowch.decompositions.sketching.base import RecursiveSketching
 from tensorkrowch.decompositions.sketching.evaluations import EvaluationView
 from tensorkrowch.decompositions.sketching.fitting import (
     BasisFitter,
@@ -25,6 +26,7 @@ from tensorkrowch.decompositions.sketching.transforms import (
 
 
 __all__ = [
+    'RecursiveSketching',
     'EvaluationView',
     'InputFitter',
     'FixedEmbeddingFitter',

@@ -27,7 +27,7 @@ El rediseño debe:
   `tensorkrowch.utils.truncated_svd`;
 - separar los drivers algorítmicos de las estrategias intercambiables:
   truncación, entornos ALS, sampling, apertura local de loops, recursión de
-  sketches, fitting físico, transformaciones de valores y ejecución;
+  sketches, fitting de input indices, transformaciones de valores y ejecución;
 - reutilizar las partes sólidas de los proyectos externos `tt2tr`,
   `peps-rss`, `vmc-rss-solvers` y `l2g-tn-solvers`, pero reescribirlas con los
   contratos y tests de TensorKrowch en lugar de copiarlas;
@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 4/26 implementadas; 4 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 5/26 implementadas; 5 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -504,7 +504,7 @@ RegionSketch ──recursive_projector──> SketchRecursion
                    │
           LocalValueTransform (opcional)
                    │
-             PhysicalFitter
+             InputFitter
                    │
       RangeProjector + truncated_svd
                    │
@@ -632,7 +632,7 @@ tensorkrowch/decompositions/
 │   ├── evaluations.py                  [A/I/EXP] views, planes y sesiones
 │   ├── sketches.py                     [A/I/EXP] operadores y sistemas RS
 │   ├── transforms.py                   [A/EXP] Global/LocalValueTransform
-│   ├── fitting.py                      [A/EXP] fitting físico fijo/entrenable/QTT
+│   ├── fitting.py                      [A/EXP] fitting de input fijo/entrenable/QTT
 │   ├── projections.py                  [A/I] range finder y randomized SVD
 │   ├── quantization.py                 [A/I] layout, mapas y source adapter QTT
 │   ├── tt.py                           [P/A] TT-RSS/RS/QTT y QTT-Tucker
@@ -1328,7 +1328,7 @@ No se expone como requisito público.
 
 #### Phi lazy (`sketching/phi.py`, `sketching/evaluations.py`)
 
-`PhiOperator` `[I/EXP]` une una fuente, region sketches laterales, axes físicos
+`PhiOperator` `[I/EXP]` une una fuente, region sketches laterales, input axes
 abiertos y output layout.
 
 - `.evaluate(index_selection)`: evalúa solo configuraciones pedidas;
@@ -1337,7 +1337,7 @@ abiertos y output layout.
 - `.select(index_selection)`: devuelve una vista lazy;
 - `.configuration_batch(index_selection)`: produce configuraciones finales sin
   evaluar la función, para el caso sampled PEPS;
-- `.fit(axis, fitter)`: delega dependencia física a un `PhysicalFitter`.
+- `.fit(axis, fitter)`: delega la dependencia del input a un `InputFitter`.
 
 La unión correlacionada de regions produce `RegionSketch`; un producto
 cartesiano o selección batched produce un `ConfigurationBatch` y un
@@ -1443,13 +1443,13 @@ cualquier transform global no trivial, el driver cae explícitamente a
 combinación. Ningún backend estructurado puede omitir silenciosamente el
 transform.
 
-#### Fitting físico (`sketching/fitting.py`)
+#### Input fitting (`sketching/fitting.py`)
 
-`PhysicalFitter` `[A, Protocol]`:
+`InputFitter` `[A, Protocol]`:
 
 - `.required_queries(phi_view, axis, domain, context)`: declara consultas para
   la fase `collect`, si no están ya en el plan;
-- `.fit(phi_view: PhiView, axis, domain, context) -> FittedPhysicalAxis`.
+- `.fit(phi_view: PhiView, axis, domain, context) -> FittedInputAxis`.
 
 Implementaciones:
 
@@ -1457,14 +1457,14 @@ Implementaciones:
 - `BasisFitter`: selección exacta para output sites y bases discretas;
 - `TrainableEmbeddingFitter` `[EXP]`: entrena un modelo que mapea `x_k` al
   espacio físico;
-- `QTTPhysicalFitter` `[EXP]`: llama a RSS local sobre la fibra cuantizada.
+- `QTTInputFitter` `[EXP]`: llama a RSS local sobre la fibra cuantizada.
 
-`FittedPhysicalAxis` `[I, dataclass]` guarda tensor/core, dimensión física,
+`FittedInputAxis` `[I, dataclass]` guarda tensor/core, `input_dim`,
 residuo y metadatos. El fitter consume una fibra funcional y por tanto no exige
 materializar Phi antes de entrenar o cuantizar.
 
 `SiteRegion`, `RegionSketch`, `SketchRecursion`, `PhiOperator`,
-`_EvaluationPlan` y `FittedPhysicalAxis` permanecen internos/experimentales
+`_EvaluationPlan` y `FittedInputAxis` permanecen internos/experimentales
 hasta validar parity de TT-RSS y el adapter PEPS. Después se decidirá si alguno
 merece export público avanzado; la API funcional no depende de ello.
 
@@ -1504,7 +1504,7 @@ Fija fuente, embedding, domain, outputs y runtime. Métodos:
 - `.fit(...)`: abstracto;
 - `._build_regions(context)` `[I]`;
 - `._build_phi(site, regions, context)` `[I]`;
-- `._fit_physical_axis(phi, site, context)` `[I]`;
+- `._fit_input_axis(phi, site, context)` `[I]`;
 - `._trim(phi, site, context)` `[I]`;
 - `._solve_local(...)` `[I]`;
 - `._assemble_result(...)` `[I]`.
@@ -1725,7 +1725,7 @@ Son estrategias explícitas; no modos ocultos dentro de `peps_als`.
 
 `PEPSCTMDriver` gestiona boundaries, incoming environments, traversal y Phi
 explícito/lazy. `PEPSRSS` compone dicho driver con `PhiOperator`,
-`PhysicalFitter` y un solver local ALS/VO/natural-gradient seleccionado. La
+`InputFitter` y un solver local ALS/VO/natural-gradient seleccionado. La
 firma pública no reproducirá los ~100 argumentos de `_peps_rss_ctm`; las
 opciones avanzadas viven en objetos de estrategia.
 
@@ -3808,8 +3808,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-03 — Implementar geometría de regiones**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `8e77b12`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `SiteRegion`, `_SamplePool`, `RegionSketch` y `SketchRecursion`.
 
@@ -3873,7 +3873,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
     (`2221x`);
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-04 — Implementar Phi lazy y evaluación deduplicada**
+- [x] **RSS-04 — Implementar Phi lazy y evaluación deduplicada**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear `PhiView`, `EvaluationView`, `PhiOperator`,
   `_EvaluationPlanBuilder`, `_EvaluationPlan`, `_EvaluationSession`,
@@ -3881,7 +3884,7 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
   Funcionalidad:
 
-  - construir layout de regions y axes físicos;
+  - construir layout de regions e input axes;
   - acceso completo, por ids y por fibra;
   - ensamblar configuraciones globales;
   - eliminar output sites de la llamada y hacer gather tensorial correcto;
@@ -3904,6 +3907,55 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - sparse y TT contra callable denso;
   - selección batched PEPS sintética.
 
+  Implementación:
+
+  - `PhiOperator` representa el producto cartesiano ordenado de
+    `RegionSketch` y axes sampleados `(site, values)`, sin confundirlo con una
+    unión correlacionada. Valida cobertura exacta de input/output sites y
+    conserva un layout de axes estable;
+  - `.configuration_batch` ensambla solo los source inputs en el orden
+    declarado, elimina todos los output sites y conserva batches packed o
+    coordenadas heterogéneas según corresponda;
+  - `_OutputSpec` se usa para convertir todos los output indices en labels
+    row-major y hacer gather del tensor devuelto por la source. Outputs
+    distintos de un mismo input comparten una sola evaluación global;
+  - `PhiView`, `_SelectedPhiView` y `_MaterializedPhi` ofrecen evaluación por
+    ids, fibers y materialización sin obligar a un consumer a conocer si la
+    representación sigue lazy;
+  - `_EvaluationPlanBuilder` impone el ciclo `collect -> expand -> freeze` y
+    rechaza requests tardíos. `expand` ya admite closure points genéricos para
+    transforms posteriores y `snapshot`/`EvaluationView` no exponen storage
+    mutable;
+  - `_EvaluationRegistry` concatena requests compatibles, deduplica todas las
+    configuraciones mediante `_SamplePool` y crea un `_IncidenceMap` por Phi.
+    `_EvaluationPlan` solo guarda source, configuraciones únicas, incidencias y
+    stats, por lo que puede shardearse posteriormente sin depender de closures
+    de Python;
+  - `_EvaluationSession` evalúa los puntos únicos una sola vez, con batching
+    contiguo opcional, y hace scatter/gather determinista a cada result shape.
+    Repetir `.evaluate` reutiliza la tabla y no llama de nuevo a la source;
+  - las sources sparse usan su lookup sobre soporte en esta misma sesión. Las
+    fibers sobre una source con `FiberTensorSource`, en particular TT, llaman a
+    la contracción prefix/suffix especializada y seleccionan después outputs
+    tensoriales si existen;
+  - sites con coordenadas N-D usan exactamente `PhiOperator` y `SiteRegion`;
+    el test de grid sintético no introduce ninguna rama PEPS.
+
+  Evidencia local:
+
+  - `15 passed` en evaluación lazy/materializada/selected, lifecycle del plan,
+    deduplicación cross-Phi, closure, batching, fibers, outputs múltiples,
+    inputs heterogéneos y sources dense/sparse/TT;
+  - dos Phi completos de dos sites solicitan 8 filas pero evalúan 4 únicas en
+    una llamada; el Phi con output `(2, 3)` solicita 24 entradas y evalúa solo
+    sus 4 source inputs;
+  - la fibra TT usa la ruta prefix/suffix y registra 3 puntos en una sola
+    llamada, sin pasar por materialización densa;
+  - `149 passed, 2 skipped, 5 xfailed` al combinar sketching, sources y
+    métricas;
+  - `797 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
+
 - [ ] **RSS-05 — Implementar transforms de valores**
 
   Crear protocolos `GlobalValueTransform` y `LocalValueTransform`, adaptadores
@@ -3919,7 +3971,7 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
       -> GlobalValueTransform.apply once
       -> scatter into PhiView views
       -> LocalValueTransform.apply
-      -> PhysicalFitter
+      -> InputFitter
   ```
 
   Requisitos:
@@ -3944,14 +3996,14 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   `EmpiricalDistribution -> MarginalSketch.markov -> callback local de
   suavizado por kernel -> fitting local -> core-determining equations`.
 
-- [ ] **RSS-06 — Implementar fitting físico**
+- [ ] **RSS-06 — Implementar input fitting**
 
-  Crear `PhysicalFitter`, `FittedPhysicalAxis`, `FixedEmbeddingFitter` y
+  Crear `InputFitter`, `FittedInputAxis`, `FixedEmbeddingFitter` y
   `BasisFitter`.
 
   `FixedEmbeddingFitter`:
 
-  - least squares sobre el eje físico indicado;
+  - least squares sobre el input axis indicado;
   - embedding distinto por site;
   - regularización/escalado mediante `LeastSquaresSolver`;
   - puede consumir Phi completo o fibers;
@@ -4259,7 +4311,7 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - no obliga a materializar Phi;
   - grad local aislado.
 
-  Verificar que `SampledPhysicalFitter` no es un nombre necesario:
+  Verificar que `SampledInputFitter` no es un nombre necesario:
   `SampledSketch` describe el sketch; el fitter describe la representación del
   eje físico.
 
@@ -4330,7 +4382,7 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - no se afirma equivalencia por permutar una lista de cores;
   - error comparado en coordenadas físicas.
 
-- [ ] **QTT-04 — Implementar `QTTPhysicalFitter`**
+- [ ] **QTT-04 — Implementar `QTTInputFitter`**
 
   Sobre una fibra local continua:
 

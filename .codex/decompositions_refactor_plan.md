@@ -4408,7 +4408,11 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
     como flakiness conocida y no se presenta el gate amplio como limpio;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-11 — Portar TR-RSS usando ring común**
+- [x] **RSS-11 — Portar TR-RSS usando ring común**
+
+  Estado: implementado, validado y commiteado en `40f8224`; pendiente de
+  revisión detallada del usuario antes de considerarlo definitivamente
+  cerrado.
 
   Fuentes:
 
@@ -4445,7 +4449,39 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   El antiguo `_create_right_projector` desaparece; left/right son la misma
   abstracción orientada.
 
-- [ ] **RSS-12 — Verificar reutilización TT→TR / TR-RSS**
+  Implementación:
+
+  - `TRRSS` y `tr_rss` reutilizan sources, outputs, regiones, evaluación lazy,
+    transforms, fitting y runtime de TT-RSS, y delegan la apertura cíclica en
+    `BidirectionalRingDriver`;
+  - la ruta prescrita acepta un cap compartido o un cap por enlace derecho,
+    cuyo último elemento es el enlace cíclico. El Phi central se recorta por
+    ambos lados, se abre mediante un `LoopOpener` encapsulado y se propaga con
+    una única `SketchGaugeRecursion` orientada;
+  - la ruta adaptativa selecciona un bloque central injectivo, estima los
+    ranks cíclico/adyacentes mediante `RingRankEstimator`, descubre los ranks
+    restantes bajo sus caps y devuelve ranks efectivos. El padding hasta los
+    caps solo ocurre con `pad_to_rank=True`;
+  - las fronteras no injectivas se mantienen como solves abiertos sobre los
+    ranks efectivos reducidos, evitando padding implícito. Los bloques
+    centrales de varios sites se delegan al opener común, que conserva los
+    diagnostics de trimming y apertura;
+  - scalar, outputs múltiples, embeddings/domains heterogéneos, labels planos,
+    generator, output device, métricas y error sobre sketch samples conservan
+    la semántica de `TTRSS`.
+
+  Evidencia local:
+
+  - tests de equivalencia densa rank-one, reutilización del objeto, outputs
+    tensoriales, ruta adaptativa y padding;
+  - `47 passed` en los tests dirigidos de TR-RSS/ring, `3 passed` en doctests y
+    `879 passed, 13 skipped` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
+
+- [x] **RSS-12 — Verificar reutilización TT→TR / TR-RSS**
+
+  Estado: implementado, validado y commiteado en `f5c0529`; pendiente de
+  revisión detallada del usuario.
 
   Crear tests de contrato comunes:
 
@@ -4463,6 +4499,22 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - rank/block search;
   - bidirectional sweep;
   - split TT-SVD.
+
+  Implementación:
+
+  - `PrescribedCentralBlockSelector` es el contrato común para seleccionar un
+    centro fijo en TT→TR y TR-RSS;
+  - `resolve_loop_opener` concentra presets ALS/BLOSTR+ALS, estrategias
+    avanzadas y callables, sin duplicar argumentos ALS en los drivers;
+  - ambos algoritmos conservan `BidirectionalRingDriver`, `LoopOpening`,
+    `GaugeRecursionStep`, `GaugeMap`/política de cancelación y los contratos de
+    selección/split ya compartidos. Solo cambian el provider y la recursión:
+    cores TT frente a Phi/recursiones de regiones;
+  - los imports diferidos de BLOSTR evitan un ciclo entre el resolver común y
+    su implementación concreta.
+
+  Evidencia local: `115 passed` en `tests/decompositions/ring` más TR-RSS,
+  Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-13 — Implementar schedule TR par/impar serial**
 

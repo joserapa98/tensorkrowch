@@ -4237,7 +4237,11 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `855 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-09 — Refactorizar TT-RSS sobre la infraestructura**
+- [x] **RSS-09 — Refactorizar TT-RSS sobre la infraestructura**
+
+  Estado: implementado y validado; preparado para commit independiente y
+  pendiente de revisión detallada del usuario antes de considerarlo
+  completamente cerrado.
 
   Portar el algoritmo existente conservando primero su matemática:
 
@@ -4267,6 +4271,74 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `return_info` mantiene keys legacy además de las nuevas durante transición;
   - wrappers temporales para helpers importados por `tt2tr`;
   - mismo resultado numérico bajo modo `legacy_projection`.
+
+  Implementación:
+
+  - `sketching/tt.py` introduce la API avanzada `TTRSS` y la función canónica
+    `tt_rss`. El objeto fija function/source, embedding, domain, output layout,
+    runtime y estrategias; cada `.fit(...)` vuelve a normalizar únicamente la
+    información dependiente de sus samples y crea un `_SketchingFitContext`
+    aislado. Así se pueden comparar ranks con el mismo problema sin compartir
+    cores, Phi, métricas ni estado RNG mutable entre fits;
+  - el contrato público de esta etapa conserva deliberadamente la función
+    escalar/vectorial legacy, embedding homogéneo y verbosity booleana. Las
+    cinco extensiones documentadas siguen como `xfail(strict=True)` hasta
+    `RSS-10`, evitando activar parcialmente una semántica pública aún no
+    terminada;
+  - un `_SamplePool` de la cadena extendida construye y cachea todos los
+    prefixes y suffixes contiguos como `RegionSketch`. Cada Phi se expresa como
+    `prefix/current/suffix` mediante `PhiOperator`, incluyendo el output site
+    como axis basis y excluyéndolo correctamente de las configuraciones de la
+    fuente;
+  - todos los Phi se registran antes del freeze en un único
+    `_EvaluationPlanBuilder`; `_EvaluationSession` evalúa una tabla global de
+    configuraciones únicas y dispersa después los valores a cada layout. Se
+    conservan los incidence maps para transforms y se registra un solo
+    `EvaluationStats` global;
+  - el current axis de cada Phi pasa por `FixedEmbeddingFitter` o
+    `BasisFitter`. La ruta `legacy_projection=True` mantiene la rotación Haar
+    cuadrada en el axis derecho y la representa como `ProjectedRange`; la otra
+    ruta ya puede consumir el `RangeProjector` común sin duplicar trimming;
+  - `_trim` admite un override interno de rank para combinar el upper bound
+    público con las capacidades TT izquierda/derecha de cada corte. Sigue
+    delegando toda la selección a `truncated_svd`, respeta el backend SVD
+    global y agrega `TruncationRecord` solo cuando se solicitan diagnósticos;
+  - todos los `B_k` se ajustan y truncan antes de la fase topológica. Después,
+    cada `A_k` se obtiene con
+    `prefix[k].recursive_projector(prefix[k + 1])`, gather de la base anterior
+    y contracción con el embedding/basis del site nuevo. Finalmente, el
+    `LeastSquaresSolver` común resuelve en bloque
+    `A_{k-1} G_k = B_k`, con records opcionales y sin formar pseudoinversas;
+  - `TTRSS.fit` ensambla un `TTDecomposition` OBC, comprueba sites/input dims y
+    mueve solo los cores terminados a `output_device` (CPU por defecto). Cuando
+    se piden métricas calcula error absoluto/relativo exclusivamente en
+    `sketch_samples`; el fast path evita esa evaluación y sus reducciones;
+  - `tt_rss` instancia la clase, llama a `.fit` y devuelve la lista de cores.
+    Con `return_info=True` conserva `total_time` y `val_eps` y añade la
+    información estructurada del resultado. `tt_decompositions.py` permanece
+    temporalmente para `extend_with_output`, `sketching`, `create_projector`,
+    `val_error` y callers externos hasta completar el refactor RSS;
+  - los docstrings de `TTRSS`, `.fit` y `tt_rss` documentan shapes, relación
+    con `MPS`, runtime, compatibilidad y ejemplos. Los cinco argumentos de
+    truncation reproducen literalmente el contrato canónico de
+    `truncated_svd`, protegido también por el test común de documentación.
+
+  Evidencia local:
+
+  - `6 passed` nuevos para resultado ligero, reutilización reproducible del
+    objeto, equivalencia del tensor denso con TT-RSS legacy, evaluación global
+    deduplicada/eventos/records, source explícita, range projection común y
+    compatibilidad de `return_info`;
+  - `20 passed, 2 skipped, 5 xfailed` en la caracterización legacy después de
+    sustituir la ruta pública; los cinco `xfail` previstos siguen sin activarse;
+  - `182 passed, 2 skipped, 5 xfailed` en toda la carpeta de sketching y
+    `866 passed, 13 skipped, 5 xfailed` en decompositions;
+  - `15350 passed, 201 skipped, 5 xfailed` con `pytest -q tests`. El discovery
+    desde la raíz añade el script experimental `training_scripts/test_mps_pbc2.py`
+    y falla durante collection en su álgebra top-level, fuera de los archivos
+    modificados; por ello no se presenta esa invocación como suite limpia;
+  - `50 passed` en homogeneidad de docstrings, Ruff dirigido y
+    `git diff --check` sin incidencias.
 
 - [ ] **RSS-10 — Activar generalizaciones TT-RSS**
 

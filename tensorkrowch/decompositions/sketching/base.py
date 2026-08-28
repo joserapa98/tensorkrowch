@@ -394,21 +394,25 @@ class RecursiveSketching(ABC):
     def _trim(self,
               site: int,
               projected: ProjectedRange,
-              context: _SketchingFitContext):
+              context: _SketchingFitContext,
+              rank: Optional[int] = None):
         """Truncates a projected range and lifts its selected left vectors."""
+        truncation_kwargs = context.spec.truncation.as_kwargs()
+        if rank is not None:
+            truncation_kwargs['rank'] = rank
         with context.phase('svd.trim', site=site):
             if context.need_diagnostics:
                 u, s, vh, info = truncated_svd(
                     projected.small_matrix,
                     return_info=True,
-                    **context.spec.truncation.as_kwargs())
+                    **truncation_kwargs)
                 record = TruncationRecord.from_svd_info(info, site=site)
                 if context.collect_metrics:
                     context.metrics.truncations.append(record)
             else:
                 u, s, vh = truncated_svd(
                     projected.small_matrix,
-                    **context.spec.truncation.as_kwargs())
+                    **truncation_kwargs)
                 record = None
             u = projected.restore_left(u)
         return u, s, vh, record

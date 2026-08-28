@@ -33,6 +33,7 @@ def _parameter_documentation(obj, parameter):
         tk.decompositions.tr_svd,
         tk.decompositions.vec_to_mps,
         tk.decompositions.mat_to_mpo,
+        tk.decompositions.TTRSS.fit,
         tk.decompositions.tt_rss,
     ],
 )

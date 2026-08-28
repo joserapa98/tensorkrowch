@@ -419,7 +419,7 @@ class _EvaluationSession:
         """Evaluates and scatters the plan, reusing results on repeated calls."""
         if self._results is not None:
             return self._results
-        self._raw_values = self._evaluate_unique(batch_size)
+        self.evaluate_source(batch_size=batch_size)
         if self.global_transform is None:
             self._values = self._raw_values
         else:
@@ -442,6 +442,14 @@ class _EvaluationSession:
             self._scatter(self._values, incidence)
             for incidence in self.plan.incidences)
         return self._results
+
+    def evaluate_source(
+            self,
+            batch_size: Optional[int] = None) -> torch.Tensor:
+        """Evaluates and caches only the globally unique source values."""
+        if self._raw_values is None:
+            self._raw_values = self._evaluate_unique(batch_size)
+        return self._raw_values
 
     def result(self,
                handle: int,

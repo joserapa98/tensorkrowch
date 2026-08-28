@@ -83,8 +83,9 @@ from tensorkrowch.decompositions.sketching import (
     RandomizedRangeProjector,
     RangeProjector,
     RecursiveSketching,
+    TTRSS,
+    tt_rss,
 )
-from tensorkrowch.decompositions.tt_decompositions import tt_rss
 
 
 __all__ = [
@@ -188,5 +189,6 @@ __all__ = [
     'IdentityLocalValueTransform',
     'CallableLocalValueTransform',
     'CompositeLocalValueTransform',
+    'TTRSS',
     'tt_rss',
 ]

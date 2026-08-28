@@ -23,6 +23,7 @@ from tensorkrowch.decompositions.sketching.transforms import (
     LocalTransformContext,
     LocalValueTransform,
 )
+from tensorkrowch.decompositions.sketching.tt import TTRSS, tt_rss
 
 
 __all__ = [
@@ -43,4 +44,6 @@ __all__ = [
     'IdentityLocalValueTransform',
     'CallableLocalValueTransform',
     'CompositeLocalValueTransform',
+    'TTRSS',
+    'tt_rss',
 ]

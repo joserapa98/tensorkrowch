@@ -1,0 +1,283 @@
+"""Tests for sampled-input fitting strategies."""
+
+import math
+
+import pytest
+
+import torch
+import tensorkrowch as tk
+
+from tensorkrowch.decompositions.sketching.phi import _MaterializedPhi
+from tensorkrowch.decompositions.sketching.specs import (
+    _DomainSpec,
+    _EmbeddingSpec,
+)
+
+
+class _FiberOnlyPhi:
+    """Phi test double that forbids complete materialization."""
+
+    def __init__(self, tensor):
+        self.base = _MaterializedPhi(tensor, range(tensor.ndim))
+        self.shape = tuple(tensor.shape)
+        self.fiber_calls = 0
+
+    def evaluate(self, index_selection):
+        return self.base.evaluate(index_selection)
+
+    def fiber(self, axis, fixed_indices=None):
+        self.fiber_calls += 1
+        return self.base.fiber(axis, fixed_indices)
+
+    def materialize(self, batch_size=None):
+        raise AssertionError('The fitter should consume fibers')
+
+
+def _materialized(tensor):
+    return _MaterializedPhi(tensor, range(tensor.ndim))
+
+
+class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
+
+    def test_exact_deembedding_preserves_phi_axis_order(self):
+        embedding = torch.tensor([
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+            [2.0, -1.0],
+        ], dtype=torch.float64)
+        coefficients = torch.arange(
+            12, dtype=torch.float64).reshape(2, 2, 3)
+        phi = torch.einsum('xi,aib->axb', embedding, coefficients)
+        fitter = tk.decompositions.FixedEmbeddingFitter(embedding)
+
+        fitted = fitter.fit(
+            _materialized(phi), axis=1, domain=torch.arange(4.))
+
+        assert isinstance(fitter, tk.decompositions.InputFitter)
+        assert isinstance(fitted, tk.decompositions.FittedInputAxis)
+        assert fitted.axis == 1
+        assert fitted.domain_size == 4
+        assert fitted.input_dim == 2
+        assert fitted.record is None
+        assert torch.allclose(fitted.tensor, coefficients)
+
+    def test_overdetermined_fit_records_residual_and_condition(self):
+        embedding = torch.tensor([
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+            [2.0, -1.0],
+            [-1.0, 2.0],
+        ], dtype=torch.float64)
+        coefficients = torch.tensor([
+            [1.0, -2.0, 0.5],
+            [3.0, 4.0, -1.0],
+        ], dtype=torch.float64)
+        phi = embedding @ coefficients
+
+        fitted = tk.decompositions.FixedEmbeddingFitter(embedding).fit(
+            _materialized(phi),
+            axis=0,
+            domain=torch.linspace(-1, 1, 5),
+            return_info=True)
+
+        assert torch.allclose(fitted.tensor, coefficients)
+        assert fitted.record.method == 'fixed_embedding'
+        assert fitted.record.residual_absolute < 1e-12
+        assert fitted.record.residual_relative < 1e-12
+        assert math.isfinite(fitted.record.condition_number)
+        assert fitted.record.local_solve is not None
+        info = tk.decompositions.DecompositionMetrics(
+            input_fits=[fitted.record]).as_info()
+        assert info['input_fits'][0]['method'] == 'fixed_embedding'
+
+    def test_complex_embedding_and_vector_coordinate_domain(self):
+        domain = torch.tensor([
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+        ], dtype=torch.float64)
+
+        def embedding(values):
+            return torch.stack((
+                torch.ones(values.shape[0], dtype=torch.complex128),
+                values[:, 0] + 1j * values[:, 1],
+            ), dim=1)
+
+        coefficients = torch.tensor([
+            [1.0 + 2.0j, -1.0j],
+            [3.0 - 1.0j, 2.0 + 0.5j],
+        ], dtype=torch.complex128)
+        phi = embedding(domain) @ coefficients
+
+        fitted = tk.decompositions.FixedEmbeddingFitter(embedding).fit(
+            _materialized(phi), axis=0, domain=domain)
+
+        assert fitted.tensor.dtype == torch.complex128
+        assert torch.allclose(fitted.tensor, coefficients)
+
+    def test_fiber_path_matches_materialization_without_calling_it(self):
+        embedding = torch.tensor([
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+        ])
+        coefficients = torch.randn(2, 2, 2)
+        phi = torch.einsum('xi,aib->axb', embedding, coefficients)
+        fiber_phi = _FiberOnlyPhi(phi)
+        fitter = tk.decompositions.FixedEmbeddingFitter(
+            embedding, fiber_batch_size=3)
+
+        fitted = fitter.fit(
+            fiber_phi,
+            axis=1,
+            domain=torch.arange(3),
+            return_info=True)
+
+        assert torch.allclose(fitted.tensor, coefficients, atol=1e-6)
+        assert fitted.record.used_fibers
+        assert fiber_phi.fiber_calls == math.ceil((2 * 2) / 3)
+
+    def test_regularization_is_delegated_to_shared_solver(self):
+        embedding = torch.tensor([
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+        ], dtype=torch.float64)
+        target = torch.tensor([1.0, 2.0, 4.0], dtype=torch.float64)
+        l2_reg = 0.2
+        solver = tk.decompositions.LeastSquaresSolver(
+            l2_reg=l2_reg,
+            column_scaling=False,
+            system_scaling=False)
+        fitter = tk.decompositions.FixedEmbeddingFitter(
+            embedding, solver=solver)
+        augmented = torch.cat((
+            embedding,
+            math.sqrt(l2_reg) * torch.eye(2, dtype=torch.float64),
+        ), dim=0)
+        augmented_target = torch.cat((target, torch.zeros(
+            2, dtype=torch.float64)))
+        expected = torch.linalg.lstsq(
+            augmented, augmented_target).solution
+
+        fitted = fitter.fit(
+            _materialized(target), axis=0, domain=torch.arange(3))
+
+        assert torch.allclose(fitted.tensor, expected)
+
+    def test_no_diagnostics_skips_condition_number_svd(self, monkeypatch):
+        embedding = torch.eye(2)
+        fitter = tk.decompositions.FixedEmbeddingFitter(embedding)
+
+        def fail_condition(*args, **kwargs):
+            raise AssertionError('Condition number should not be computed')
+
+        monkeypatch.setattr(torch.linalg, 'svdvals', fail_condition)
+
+        fitted = fitter.fit(
+            _materialized(torch.tensor([1.0, 2.0])),
+            axis=0,
+            domain=torch.arange(2),
+            return_info=False)
+
+        assert torch.equal(fitted.tensor, torch.tensor([1.0, 2.0]))
+        assert fitted.record is None
+
+    def test_fixed_fitter_declares_no_additional_queries(self):
+        phi = _materialized(torch.ones(3, 2))
+        fitter = tk.decompositions.FixedEmbeddingFitter(torch.randn(3, 2))
+
+        assert fitter.required_queries(
+            phi, axis=0, domain=torch.arange(3)) == ()
+
+    def test_cached_heterogeneous_site_embeddings_feed_independent_fitters(
+            self):
+        domains = _DomainSpec((
+            torch.tensor([-1., 0., 1.]),
+            torch.tensor([[0., 0.], [1., 0.], [0., 1.], [1., 1.]]),
+        ))
+        embeddings = _EmbeddingSpec.normalize((
+            lambda x: torch.stack((torch.ones_like(x), x), dim=1),
+            lambda x: torch.stack((
+                torch.ones(x.shape[0]), x[:, 0], x[:, 1]), dim=1),
+        ), domains)
+        coefficients = (torch.randn(2, 2), torch.randn(3, 2))
+
+        for site in range(2):
+            phi = embeddings.matrix(site) @ coefficients[site]
+            fitted = tk.decompositions.FixedEmbeddingFitter(
+                embeddings.matrix(site)).fit(
+                    _materialized(phi),
+                    axis=0,
+                    domain=domains.for_site(site))
+
+            assert fitted.input_dim == coefficients[site].shape[0]
+            assert torch.allclose(fitted.tensor, coefficients[site], atol=1e-6)
+
+
+class TestBasisFitter:  # MARK: TestBasisFitter
+
+    def test_multiple_basis_axes_can_be_fitted_independently(self):
+        tensor = torch.arange(12.).reshape(3, 2, 2)
+        first_labels = torch.tensor([2, 0, 1])
+        second_labels = torch.tensor([1, 0])
+        first = tk.decompositions.BasisFitter(input_dim=3).fit(
+            _materialized(tensor),
+            axis=0,
+            domain=first_labels,
+            return_info=True)
+        second = tk.decompositions.BasisFitter(input_dim=2).fit(
+            _materialized(first.tensor),
+            axis=2,
+            domain=second_labels,
+            return_info=True)
+        expected_first = torch.zeros_like(tensor)
+        expected_first.index_copy_(0, first_labels, tensor)
+        expected = torch.zeros_like(expected_first)
+        expected.index_copy_(2, second_labels, expected_first)
+
+        assert torch.equal(second.tensor, expected)
+        assert first.record.method == 'basis'
+        assert second.record.condition_number == 1.
+
+    def test_missing_basis_labels_are_filled_with_zero(self):
+        values = torch.tensor([3.0, 5.0])
+
+        fitted = tk.decompositions.BasisFitter(input_dim=4).fit(
+            _materialized(values),
+            axis=0,
+            domain=torch.tensor([3, 1]))
+
+        assert torch.equal(fitted.tensor, torch.tensor([0., 5., 0., 3.]))
+
+    def test_basis_fitter_supports_fibers(self):
+        tensor = torch.arange(12.).reshape(2, 3, 2)
+        phi = _FiberOnlyPhi(tensor)
+
+        fitted = tk.decompositions.BasisFitter(
+            input_dim=3, fiber_batch_size=2).fit(
+                phi,
+                axis=1,
+                domain=torch.tensor([1, 2, 0]),
+                return_info=True)
+        expected = torch.zeros_like(tensor)
+        expected.index_copy_(1, torch.tensor([1, 2, 0]), tensor)
+
+        assert torch.equal(fitted.tensor, expected)
+        assert fitted.record.used_fibers
+
+    @pytest.mark.parametrize(
+        'domain, match',
+        [
+            (torch.tensor([0., 1.]), 'integer vector'),
+            (torch.tensor([0, 0]), 'unique'),
+            (torch.tensor([-1, 0]), 'inside'),
+        ])
+    def test_invalid_basis_domains_are_rejected(self, domain, match):
+        fitter = tk.decompositions.BasisFitter(input_dim=2)
+
+        with pytest.raises(ValueError, match=match):
+            fitter.fit(_materialized(torch.ones(2)), 0, domain)

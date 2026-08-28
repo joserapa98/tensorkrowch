@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 6/26 implementadas; 6 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 7/26 implementadas; 7 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -3958,8 +3958,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-05 — Implementar transforms de valores**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `ed51141`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear protocolos `GlobalValueTransform` y `LocalValueTransform`, adaptadores
   de callable e identidades.
@@ -4037,7 +4037,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `812 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-06 — Implementar input fitting**
+- [x] **RSS-06 — Implementar input fitting**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear `InputFitter`, `FittedInputAxis`, `FixedEmbeddingFitter` y
   `BasisFitter`.
@@ -4059,6 +4062,44 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
   Tests de de-embedding exacto, sobredeterminado, complejo, domains distintos y
   no materialización.
+
+  Implementación:
+
+  - `InputFitter` define el contrato avanzado para declarar queries y reemplazar
+    un axis sampleado de Phi por su axis de input; `FittedInputAxis` devuelve el
+    tensor ajustado, axis, tamaños y un registro opcional ligero;
+  - `FixedEmbeddingFitter` acepta una matriz de embedding cacheada o un callable
+    y resuelve simultáneamente todas las fibras mediante el
+    `LeastSquaresSolver` común. Así hereda regularización Tikhonov, escalado de
+    columnas/sistema, `rcond` y fallback de drivers sin duplicar normal
+    equations;
+  - los embeddings y domains pueden variar por site: el driver entregará a cada
+    fitter la matriz ya cacheada por `_EmbeddingSpec`. Real, complejo y domains
+    con coordenadas vectoriales siguen el mismo camino;
+  - el modo materializado mueve el axis objetivo al frente y realiza un solo
+    solve multiright-hand-side. `fiber_batch_size` activa una ruta que enumera
+    las fibras en bloques row-major y nunca llama a `PhiView.materialize`, útil
+    para fuentes TT y futuros Phi funcionales;
+  - `BasisFitter` coloca exactamente los valores por sus labels enteros, cubre
+    output sites y variables discretas, admite labels reordenados/parciales y
+    permite aplicar la misma operación de manera independiente a varios output
+    axes;
+  - `InputFitRecord` se integra en `DecompositionMetrics.input_fits` y distingue
+    explícitamente fitting de truncation. Solo con `return_info=True` se calcula
+    condición, residuo y `LocalSolveRecord`; la ruta rápida evita el SVD de
+    diagnóstico y los escalares/sincronizaciones asociados;
+  - los fitters built-in no necesitan queries adicionales y lo declaran con una
+    secuencia vacía. Fitters adaptativos posteriores podrán usar el mismo
+    protocolo antes del `freeze`.
+
+  Evidencia local:
+
+  - `14 passed` en fitting exacto/sobredeterminado, regularizado, complejo,
+    domains heterogéneos, ejes intermedios, varios output axes, basis parcial,
+    ruta por fibras y omisión efectiva de diagnósticos;
+  - `147 passed, 2 skipped, 5 xfailed` en toda la carpeta de sketching;
+  - `826 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-07 — Sustituir `randu` por range projection explícita**
 

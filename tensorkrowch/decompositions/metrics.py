@@ -467,6 +467,48 @@ class LocalSolveRecord:
 
 
 @dataclass(frozen=True)
+class InputFitRecord:
+    """Stores diagnostics for fitting one sampled Phi input axis."""
+
+    method: str
+    axis: int
+    domain_size: int
+    input_dim: int
+    residual_absolute: float
+    residual_relative: float
+    condition_number: float
+    used_fibers: bool = False
+    local_solve: Optional[LocalSolveRecord] = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.method, str) or not self.method:
+            raise TypeError('`method` should be a non-empty string')
+        for name in ('axis', 'domain_size', 'input_dim'):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+            if value < (0 if name == 'axis' else 1):
+                qualifier = 'non-negative' if name == 'axis' else 'positive'
+                raise ValueError(f'`{name}` should be {qualifier}')
+        for name in (
+                'residual_absolute',
+                'residual_relative',
+                'condition_number'):
+            value = _scalar_float(getattr(self, name), name)
+            if (value < 0) or (value != value):
+                raise ValueError(f'`{name}` should be non-negative and not NaN')
+            if (name == 'residual_absolute') and (not isfinite(value)):
+                raise ValueError('`residual_absolute` should be finite')
+            object.__setattr__(self, name, value)
+        if not isinstance(self.used_fibers, bool):
+            raise TypeError('`used_fibers` should be bool type')
+        if self.local_solve is not None and \
+                not isinstance(self.local_solve, LocalSolveRecord):
+            raise TypeError(
+                '`local_solve` should be LocalSolveRecord type or None')
+
+
+@dataclass(frozen=True)
 class GaugeRecord:
     """Stores rank, conditioning and cancellation diagnostics for one gauge."""
 
@@ -674,6 +716,7 @@ class DecompositionMetrics:
     fidelities: List[FidelityRecord] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     local_solves: List[LocalSolveRecord] = field(default_factory=list)
+    input_fits: List[InputFitRecord] = field(default_factory=list)
     gauges: List[GaugeRecord] = field(default_factory=list)
     sweeps: List[SweepRecord] = field(default_factory=list)
 
@@ -685,6 +728,7 @@ class DecompositionMetrics:
         self.fidelities = list(self.fidelities)
         self.warnings = list(self.warnings)
         self.local_solves = list(self.local_solves)
+        self.input_fits = list(self.input_fits)
         self.gauges = list(self.gauges)
         self.sweeps = list(self.sweeps)
 
@@ -695,6 +739,7 @@ class DecompositionMetrics:
             ('evaluations', self.evaluations, EvaluationStats),
             ('fidelities', self.fidelities, FidelityRecord),
             ('local_solves', self.local_solves, LocalSolveRecord),
+            ('input_fits', self.input_fits, InputFitRecord),
             ('gauges', self.gauges, GaugeRecord),
             ('sweeps', self.sweeps, SweepRecord),
         )
@@ -722,6 +767,10 @@ class DecompositionMetrics:
             info['local_solves'] = [
                 _record_as_dict(record) for record in self.local_solves
             ]
+        if self.input_fits:
+            info['input_fits'] = [
+                _record_as_dict(record) for record in self.input_fits
+            ]
         if self.evaluations:
             info['evaluations'] = [
                 _record_as_dict(record) for record in self.evaluations
@@ -741,6 +790,7 @@ __all__ = [
     'ErrorRecord',
     'TruncationRecord',
     'LocalSolveRecord',
+    'InputFitRecord',
     'GaugeRecord',
     'SweepRecord',
     'TimingRecord',

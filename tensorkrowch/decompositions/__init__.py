@@ -83,7 +83,10 @@ from tensorkrowch.decompositions.sketching import (
     RandomizedRangeProjector,
     RangeProjector,
     RecursiveSketching,
+    SketchGaugeRecursion,
     TTRSS,
+    TRRSS,
+    tr_rss,
     tt_rss,
 )
 
@@ -191,4 +194,7 @@ __all__ = [
     'CompositeLocalValueTransform',
     'TTRSS',
     'tt_rss',
+    'SketchGaugeRecursion',
+    'TRRSS',
+    'tr_rss',
 ]

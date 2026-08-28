@@ -360,6 +360,8 @@ class ALSLoopOpener:
         fit_options = dict(self.fit_options)
         fit_options.setdefault(
             'convergence', ConvergencePolicy(max_sweeps=10))
+        if context.get('generator') is not None:
+            fit_options.setdefault('generator', context['generator'])
         result = TRALS(source, output_device=None).fit(
             rank=ranks,
             initial_cores=initial_cores,

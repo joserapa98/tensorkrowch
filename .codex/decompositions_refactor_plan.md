@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 3/26 implementadas; 3 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 4/26 implementadas; 4 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -3732,8 +3732,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-02 — Adaptar las fuentes comunes a sketching**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `f497b98`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Reutilizar las clases de `decompositions/sources/` creadas en `ALS-01` y
   añadir solo capacidades/adaptadores específicos de sketching, como
@@ -3806,7 +3806,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `752 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-03 — Implementar geometría de regiones**
+- [x] **RSS-03 — Implementar geometría de regiones**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear `SiteRegion`, `_SamplePool`, `RegionSketch` y `SketchRecursion`.
 
@@ -3824,6 +3827,51 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - cuatro direcciones PEPS serán adapters, no branches aquí.
 
   Benchmarks contra `create_projector` Python-loop y tests de igualdad exacta.
+
+  Implementación:
+
+  - `SiteRegion` separa el orden semántico de sus sites de las operaciones de
+    pertenencia, valida sites lineales o coordenadas N-D hashables y ofrece
+    containment, union, difference e intersection sin introducir ramas 1D/2D;
+  - `_SamplePool` conserva las filas correlacionadas, su identidad estable y
+    una cache por región. Acepta samples packed, `ConfigurationBatch` o
+    secuencias heterogéneas, incluidos distintos `in_dim`, dtypes mixtos de
+    inputs/output indices y coordenadas complejas finitas;
+  - la deduplicación es vectorizada y jerárquica: obtiene inverse ids por site
+    y después unique/inverse de sus firmas enteras. Así no concatena
+    coordenadas heterogéneas ni convierte ids enteros grandes a float;
+  - `RegionSketch` guarda valores únicos, `representative_row_ids` e
+    `inverse_ids` respecto al pool. `restrict` usa la cache y `combine` toma la
+    unión correlacionada en el orden canónico del pool, independientemente del
+    orden de llamada; pools distintos nunca se convierten en producto
+    cartesiano implícito;
+  - `compare` devuelve regiones común, exclusiva actual y nueva; los mismos
+    métodos funcionan con sites lineales y coordenadas de grid;
+  - `recursive_projector` exige child contenido en parent y construye
+    `gather = child.inverse_ids[parent.representative_row_ids]`, junto a los
+    valores parent-aligned de todos los sites nuevos. No construye ni almacena
+    una matriz projector;
+  - `SketchRecursion.apply` usa `index_select` sobre cualquier axis,
+    `.compose` compone expansiones consecutivas y alinea sus nuevos valores, e
+    `.inverse` solo existe cuando el gather es realmente biyectivo;
+  - las recursiones left/right TT son el mismo containment con regiones
+    ordenadas distintas. Las cuatro direcciones PEPS quedan para adapters de
+    geometría, sin branches en este núcleo.
+
+  Evidencia local:
+
+  - `30 passed` en geometría lineal/N-D, samples escalares/vectoriales,
+    heterogeneidad y complejos, unión correlacionada, comparación, cache,
+    recursiones izquierda/derecha, composición e inversión;
+  - los casos scalar e `in_dim=2` coinciden exactamente con
+    `create_projector`; las recursiones compuestas coinciden con la relación
+    child→parent construida directamente;
+  - `103 passed, 2 skipped, 5 xfailed` en toda la carpeta de sketching;
+  - `782 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - microbenchmark CPU orientativo, sin umbral de tests, para 1024 estados
+    child y 2048 parent: gather nuevo `0.014 ms`, loop legacy `30.356 ms`
+    (`2221x`);
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-04 — Implementar Phi lazy y evaluación deduplicada**
 

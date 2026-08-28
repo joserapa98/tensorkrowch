@@ -602,6 +602,42 @@ class TimingRecord:
 
 
 @dataclass(frozen=True)
+class EvaluationStats:
+    """Counts point evaluations performed by a tensor source or session."""
+
+    requested_points: int = 0
+    unique_points: int = 0
+    batches: int = 0
+    cache_hits: int = 0
+    source_calls: int = 0
+
+    def __post_init__(self) -> None:
+        for name in (
+                'requested_points', 'unique_points', 'batches', 'cache_hits',
+                'source_calls'):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+            if value < 0:
+                raise ValueError(f'`{name}` should be non-negative')
+
+    def delta(self, previous: 'EvaluationStats') -> 'EvaluationStats':
+        """Returns the non-negative counter increment from ``previous``."""
+        if not isinstance(previous, EvaluationStats):
+            raise TypeError('`previous` should be EvaluationStats type')
+        values = {}
+        for name in (
+                'requested_points', 'unique_points', 'batches', 'cache_hits',
+                'source_calls'):
+            value = getattr(self, name) - getattr(previous, name)
+            if value < 0:
+                raise ValueError(
+                    '`previous` counters should not exceed current counters')
+            values[name] = value
+        return EvaluationStats(**values)
+
+
+@dataclass(frozen=True)
 class FidelityRecord:
     """Stores a phase-aware normalized overlap and its fidelity."""
 
@@ -634,6 +670,7 @@ class DecompositionMetrics:
     errors: List[ErrorRecord] = field(default_factory=list)
     truncations: List[TruncationRecord] = field(default_factory=list)
     timings: List[TimingRecord] = field(default_factory=list)
+    evaluations: List[EvaluationStats] = field(default_factory=list)
     fidelities: List[FidelityRecord] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     local_solves: List[LocalSolveRecord] = field(default_factory=list)
@@ -644,6 +681,7 @@ class DecompositionMetrics:
         self.errors = list(self.errors)
         self.truncations = list(self.truncations)
         self.timings = list(self.timings)
+        self.evaluations = list(self.evaluations)
         self.fidelities = list(self.fidelities)
         self.warnings = list(self.warnings)
         self.local_solves = list(self.local_solves)
@@ -654,6 +692,7 @@ class DecompositionMetrics:
             ('errors', self.errors, ErrorRecord),
             ('truncations', self.truncations, TruncationRecord),
             ('timings', self.timings, TimingRecord),
+            ('evaluations', self.evaluations, EvaluationStats),
             ('fidelities', self.fidelities, FidelityRecord),
             ('local_solves', self.local_solves, LocalSolveRecord),
             ('gauges', self.gauges, GaugeRecord),
@@ -683,6 +722,10 @@ class DecompositionMetrics:
             info['local_solves'] = [
                 _record_as_dict(record) for record in self.local_solves
             ]
+        if self.evaluations:
+            info['evaluations'] = [
+                _record_as_dict(record) for record in self.evaluations
+            ]
         if self.gauges:
             info['gauges'] = [
                 _record_as_dict(record) for record in self.gauges
@@ -701,6 +744,7 @@ __all__ = [
     'GaugeRecord',
     'SweepRecord',
     'TimingRecord',
+    'EvaluationStats',
     'FidelityRecord',
     'DecompositionMetrics',
 ]

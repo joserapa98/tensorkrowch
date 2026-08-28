@@ -10,11 +10,12 @@ from tensorkrowch.decompositions.sources.base import (
     _fiber_configurations,
     _normalize_input_dim,
     _ravel_indices,
+    _SourceEvaluationTracker,
     _unravel_indices,
 )
 
 
-class SparseTensorSource:
+class SparseTensorSource(_SourceEvaluationTracker):
     """Sparse tensor source with declared zeros outside its support.
 
     Repeated support indices are coalesced by summing their values, matching
@@ -35,6 +36,7 @@ class SparseTensorSource:
                  indices: torch.Tensor,
                  values: torch.Tensor,
                  input_dim: Sequence[int]) -> None:
+        self._initialize_evaluation_stats()
         if not isinstance(indices, torch.Tensor):
             raise TypeError('`indices` should be torch.Tensor type')
         if not isinstance(values, torch.Tensor):
@@ -119,6 +121,7 @@ class SparseTensorSource:
                 (self._flat_ids.index_select(0, safe_positions) == flat_ids)
             result[matched] = self._values.index_select(
                 0, safe_positions[matched])
+        self._record_evaluation(points=indices.shape[0])
         return result
 
     def fiber(self,

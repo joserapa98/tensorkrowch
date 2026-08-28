@@ -9,10 +9,11 @@ from tensorkrowch.decompositions.sources.base import (
     _discrete_indices,
     _fiber_configurations,
     _normalize_input_dim,
+    _SourceEvaluationTracker,
 )
 
 
-class CallableTensorSource:
+class CallableTensorSource(_SourceEvaluationTracker):
     """Tensor source evaluated by a user callable.
 
     Packed configurations are passed to ``function`` as a tensor. A
@@ -45,6 +46,7 @@ class CallableTensorSource:
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
                  batch_size: Optional[int] = None) -> None:
+        self._initialize_evaluation_stats()
         if not callable(function):
             raise TypeError('`function` should be callable')
         if output_shape is None:
@@ -140,10 +142,12 @@ class CallableTensorSource:
             if (self.output_shape is None) or (self.dtype is None):
                 raise ValueError(
                     'An empty first evaluation requires output shape and dtype')
-            return torch.empty(
+            result = torch.empty(
                 (0, *self.output_shape),
                 device=self.device,
                 dtype=self.dtype)
+            self._record_evaluation(points=0, batches=0)
+            return result
 
         batch_size = self.batch_size or configurations.batch_size
         chunks = []
@@ -152,7 +156,10 @@ class CallableTensorSource:
             ids = torch.arange(start, stop, device=configurations.device)
             chunks.append(self._evaluate_batch(
                 configurations.index_select(ids)))
-        return torch.cat(chunks, dim=0)
+        result = torch.cat(chunks, dim=0)
+        self._record_evaluation(
+            points=configurations.batch_size, batches=len(chunks))
+        return result
 
     def fiber(self,
               configurations: ConfigurationBatch,

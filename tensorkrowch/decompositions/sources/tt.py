@@ -1,33 +1,55 @@
 """Tensor-train backed tensor sources."""
 
-from typing import Optional, Sequence, Tuple, Union
+from typing import (Optional, Protocol, Sequence, Tuple, Union)
 
 import torch
 
-from tensorkrowch.decompositions.results import TTDecomposition
+from tensorkrowch.decompositions.results import (TTDecomposition,
+                                                 TTMDecomposition)
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _discrete_indices)
+                                                      _discrete_indices,
+                                                      _SourceEvaluationTracker)
 
 
-class TTTensorSource:
+class _MPSAdapter(Protocol):
+    """Minimal model surface required to extract open-boundary TT cores."""
+
+    @property
+    def boundary(self) -> str:
+        """Boundary-condition identifier."""
+
+    @property
+    def tensors(self) -> Sequence[torch.Tensor]:
+        """Raw compact MPS tensors."""
+
+
+class TTTensorSource(_SourceEvaluationTracker):
     """Scalar tensor source represented directly by TT cores.
 
     The source contracts raw PyTorch cores without constructing a
     TensorKrowch graph. It accepts a
-    :class:`~tensorkrowch.decompositions.TTDecomposition` or a core sequence
-    with the same open-boundary conventions. Keeping the specialized
-    contractions here avoids routing repeated ALS/sketching evaluations
-    through :class:`~tensorkrowch.models.MPS`.
+    :class:`~tensorkrowch.decompositions.TTDecomposition`, an open-boundary
+    :class:`~tensorkrowch.models.MPS` adapter or a core sequence with the same
+    conventions. Model adapters only extract their tensors. Keeping the
+    specialized contractions here avoids routing repeated ALS/sketching
+    evaluations through a TensorKrowch graph.
 
     Parameters
     ----------
-    tensor : TTDecomposition or sequence of torch.Tensor
-        Lightweight TT result or raw open-boundary TT cores.
+    tensor : TTDecomposition, MPS or sequence of torch.Tensor
+        Lightweight TT result, open-boundary model or raw TT cores.
     """
 
     def __init__(
             self,
-            tensor: Union[TTDecomposition, Sequence[torch.Tensor]]) -> None:
+            tensor: Union[TTDecomposition, Sequence[torch.Tensor],
+                          _MPSAdapter]) -> None:
+        self._initialize_evaluation_stats()
+        if hasattr(tensor, 'boundary') and hasattr(type(tensor), 'tensors'):
+            if tensor.boundary != 'obc':
+                raise ValueError(
+                    'Only open-boundary MPS models can define TT sources')
+            tensor = tensor.tensors
         if isinstance(tensor, TTDecomposition):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')
@@ -94,6 +116,20 @@ class TTTensorSource:
         self.cores = standard_cores
         self._input_dim = tuple(core.shape[1] for core in standard_cores)
 
+    @staticmethod
+    def _standard_ttm_cores(
+            sketch: TTMDecomposition) -> Tuple[torch.Tensor, ...]:
+        """Returns TTM cores with left, input, output and right axes."""
+        if sketch.n_batches:
+            raise ValueError('Batched TTM sketches are not supported')
+        if len(sketch.cores) == 1:
+            return (sketch.cores[0].unsqueeze(0).unsqueeze(-1),)
+        cores = [sketch.cores[0].permute(0, 2, 1).unsqueeze(0)]
+        cores.extend(core.permute(0, 1, 3, 2)
+                     for core in sketch.cores[1:-1])
+        cores.append(sketch.cores[-1].unsqueeze(-1))
+        return tuple(cores)
+
     @property
     def input_dim(self) -> Tuple[int, ...]:
         """Input dimension at every TT site."""
@@ -129,7 +165,9 @@ class TTTensorSource:
         result = matrices[0]
         for matrix in matrices[1:]:
             result = result @ matrix
-        return result[:, 0, 0]
+        result = result[:, 0, 0]
+        self._record_evaluation(points=indices.shape[0])
+        return result
 
     def fiber(self,
               configurations: ConfigurationBatch,
@@ -154,6 +192,8 @@ class TTTensorSource:
             'ba,apr,br->bp', left, self.cores[site], right)
 
         if values is None:
+            self._record_evaluation(
+                points=indices.shape[0] * self.input_dim[site])
             return result
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
@@ -164,7 +204,77 @@ class TTTensorSource:
         values = values.to(device=self.device, dtype=torch.long)
         if torch.any(values < 0) or torch.any(values >= self.input_dim[site]):
             raise ValueError('`values` are out of bounds for the selected site')
-        return result.index_select(1, values)
+        result = result.index_select(1, values)
+        self._record_evaluation(points=indices.shape[0] * values.shape[0])
+        return result
+
+    def contract_sketch(
+            self,
+            sketch: Union['TTTensorSource', TTDecomposition, TTMDecomposition,
+                          Sequence[torch.Tensor]],
+            conjugate_sketch: bool = True
+            ) -> Union[torch.Tensor, TTDecomposition]:
+        """Contracts the source input indices with a scalar TT or TTM sketch.
+
+        A scalar TT sketch returns its inner product with the source. A TTM
+        sketch returns a lightweight :class:`TTDecomposition` over the TTM
+        output indices, keeping the contraction structured. By default the
+        sketch is conjugated, as in a complex linear range projection.
+        """
+        if not isinstance(conjugate_sketch, bool):
+            raise TypeError('`conjugate_sketch` should be bool type')
+
+        if isinstance(sketch, TTMDecomposition):
+            if sketch.input_dim != self.input_dim:
+                raise ValueError(
+                    'Source and sketch should have matching input dimensions')
+            if sketch.device != self.device:
+                raise ValueError('Source and sketch should share a device')
+            sketch_cores = self._standard_ttm_cores(sketch)
+            dtype = torch.promote_types(self.dtype, sketch.dtype)
+            result_cores = []
+            for source_core, sketch_core in zip(self.cores, sketch_cores):
+                source_core = source_core.to(dtype=dtype)
+                sketch_core = sketch_core.to(dtype=dtype)
+                if conjugate_sketch:
+                    sketch_core = sketch_core.conj()
+                core = torch.einsum(
+                    'aib,ciod->acobd', source_core, sketch_core)
+                result_cores.append(core.reshape(
+                    source_core.shape[0] * sketch_core.shape[0],
+                    sketch_core.shape[2],
+                    source_core.shape[2] * sketch_core.shape[3]))
+            if len(result_cores) == 1:
+                compact_cores = [result_cores[0].reshape(-1)]
+            else:
+                compact_cores = [result_cores[0].squeeze(0)]
+                compact_cores.extend(result_cores[1:-1])
+                compact_cores.append(result_cores[-1].squeeze(-1))
+            self._record_evaluation(
+                points=0, batches=0, unique_points=0)
+            return TTDecomposition(compact_cores)
+
+        sketch_source = sketch if isinstance(sketch, TTTensorSource) \
+            else TTTensorSource(sketch)
+        if sketch_source.input_dim != self.input_dim:
+            raise ValueError(
+                'Source and sketch should have matching input dimensions')
+        if sketch_source.device != self.device:
+            raise ValueError('Source and sketch should share a device')
+        dtype = torch.promote_types(self.dtype, sketch_source.dtype)
+        environment = torch.ones((1, 1), device=self.device, dtype=dtype)
+        for source_core, sketch_core in zip(
+                self.cores, sketch_source.cores):
+            sketch_core = sketch_core.to(dtype=dtype)
+            if conjugate_sketch:
+                sketch_core = sketch_core.conj()
+            environment = torch.einsum(
+                'ac,aib,cid->bd',
+                environment,
+                source_core.to(dtype=dtype),
+                sketch_core)
+        self._record_evaluation(points=0, batches=0, unique_points=0)
+        return environment.squeeze()
 
 
 __all__ = ['TTTensorSource']

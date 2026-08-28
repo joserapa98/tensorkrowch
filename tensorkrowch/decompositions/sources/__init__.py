@@ -40,6 +40,8 @@ def as_tensor_source(
             SparseTensorSource,
             TTTensorSource)):
         return source
+    if hasattr(source, 'boundary') and hasattr(type(source), 'tensors'):
+        return TTTensorSource(source)
     if isinstance(source, torch.Tensor):
         return DenseTensorSource(source, input_dim=input_dim)
     if builtins.callable(source):

@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 2/26 implementadas; 2 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 3/26 implementadas; 3 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -3666,8 +3666,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-01 — Implementar specs de embedding, domain y outputs**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `7712bd7`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `_EmbeddingSpec`, `_DomainSpec`, `_OutputSpec` y
   `_SketchingFitSpec`.
@@ -3730,7 +3730,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
     los ya caracterizados en RSS-00;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-02 — Adaptar las fuentes comunes a sketching**
+- [x] **RSS-02 — Adaptar las fuentes comunes a sketching**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Reutilizar las clases de `decompositions/sources/` creadas en `ALS-01` y
   añadir solo capacidades/adaptadores específicos de sketching, como
@@ -3761,6 +3764,47 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - evaluación por prefix/suffix;
   - contracción con sketches TT/TTStack cuando sea más eficiente;
   - no crear TensorKrowch graph.
+
+  Implementación:
+
+  - todas las sources built-in reutilizadas por ALS y sketching exponen
+    `evaluation_stats` acumulativas y reseteables: puntos pedidos/entregados al
+    backend, batches efectivos, cache hits y llamadas lógicas. El registro solo
+    actualiza enteros de Python a partir de shapes; no introduce timers,
+    `.item()`, copias a CPU ni sincronizaciones de device;
+  - `EvaluationStats` se integra como registro público y opcional de
+    `DecompositionMetrics`; `.delta(previous)` permite aislar una sesión sin
+    mutar ni reemplazar la source;
+  - `as_tensor_source` continúa siendo el único normalizador compartido de
+    tensors, callables y sources, y ahora acepta un `MPS` OBC extrayendo sus
+    tensores una sola vez. Un modelo PBC no se interpreta silenciosamente como
+    TT y no se construye ningún graph nuevo;
+  - `SketchContractableSource` queda como capability protocol en
+    `sketching/sources.py`, sin obligar a `DenseTensorSource`,
+    `CallableTensorSource` o `SparseTensorSource` a implementar una ruta que no
+    puedan acelerar;
+  - `TTTensorSource.contract_sketch` contrae directamente cores PyTorch con un
+    TT escalar o un TTM. El primer caso devuelve el inner product; el segundo
+    devuelve un `TTDecomposition` sobre los output indices del sketch y cubre
+    la representación estructurada que consumirá `TTStackSketch`, sin
+    densificar ni construir un `MPS`;
+  - la conjugación del sketch es explícita y activada por defecto; real,
+    complejo y la ruta sin conjugación se contrastan con oráculos densos;
+  - `SparseTensorSource` y `EmpiricalDistribution` ya satisfacen coalescing
+    determinista, lookup sparse, values tensoriales, pesos y normalización. El
+    wrapper RS posterior podrá convertir un dataset directamente mediante
+    `EmpiricalDistribution` sin añadir otra source.
+
+  Evidencia local:
+
+  - `11 passed` en capabilities específicas de sketching: stats, sparse y
+    distribución empírica, contracción TT/TTM real y compleja y adapter MPS;
+  - `42 passed` al combinar esos contratos con todas las pruebas comunes de
+    sources y métricas;
+  - `239 passed, 1 skipped` en ALS, TT→TR, sources, métricas y las nuevas rutas
+    estructuradas;
+  - `752 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-03 — Implementar geometría de regiones**
 

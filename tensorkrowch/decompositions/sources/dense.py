@@ -9,10 +9,11 @@ from tensorkrowch.decompositions.sources.base import (
     _discrete_indices,
     _fiber_configurations,
     _normalize_input_dim,
+    _SourceEvaluationTracker,
 )
 
 
-class DenseTensorSource:
+class DenseTensorSource(_SourceEvaluationTracker):
     """Tensor source backed by an explicitly stored dense tensor.
 
     Parameters
@@ -28,6 +29,7 @@ class DenseTensorSource:
     def __init__(self,
                  tensor: torch.Tensor,
                  input_dim: Optional[Sequence[int]] = None) -> None:
+        self._initialize_evaluation_stats()
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if tensor.ndim < 1:
@@ -68,8 +70,10 @@ class DenseTensorSource:
         """Gathers dense values at discrete global configurations."""
         indices = _discrete_indices(
             configurations, self.input_dim, self.device)
-        return self.tensor[tuple(indices[:, site]
-                                 for site in range(indices.shape[1]))]
+        result = self.tensor[tuple(indices[:, site]
+                                   for site in range(indices.shape[1]))]
+        self._record_evaluation(points=indices.shape[0])
+        return result
 
     def fiber(self,
               configurations: ConfigurationBatch,

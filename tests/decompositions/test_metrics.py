@@ -107,6 +107,33 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
 
         assert parent.children == (child,)
 
+    def test_evaluation_stats_delta_and_validation(self):
+        previous = tk.decompositions.EvaluationStats(
+            requested_points=5,
+            unique_points=4,
+            batches=2,
+            cache_hits=1,
+            source_calls=1)
+        current = tk.decompositions.EvaluationStats(
+            requested_points=12,
+            unique_points=9,
+            batches=5,
+            cache_hits=3,
+            source_calls=3)
+
+        assert current.delta(previous) == tk.decompositions.EvaluationStats(
+            requested_points=7,
+            unique_points=5,
+            batches=3,
+            cache_hits=2,
+            source_calls=2)
+        with pytest.raises(ValueError, match='non-negative'):
+            tk.decompositions.EvaluationStats(requested_points=-1)
+        with pytest.raises(TypeError, match='int type'):
+            tk.decompositions.EvaluationStats(source_calls=True)
+        with pytest.raises(ValueError, match='should not exceed'):
+            previous.delta(current)
+
     def test_fidelity_record_preserves_phase(self):
         overlap = torch.tensor(0.0 + 0.5j)
         record = tk.decompositions.FidelityRecord(overlap)
@@ -137,6 +164,12 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
         metrics = tk.decompositions.DecompositionMetrics(
             errors=[error],
             fidelities=[fidelity],
+            evaluations=[tk.decompositions.EvaluationStats(
+                requested_points=8,
+                unique_points=6,
+                batches=2,
+                cache_hits=2,
+                source_calls=1)],
             gauges=[tk.decompositions.GaugeRecord(
                 orientation='right',
                 shape=(4, 2),
@@ -155,6 +188,7 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
         assert info['errors'][0]['kind'] == 'samples'
         assert info['fidelities'][0]['fidelity'] == 1.0
         assert info['gauges'][0]['orientation'] == 'right'
+        assert info['evaluations'][0]['unique_points'] == 6
         assert info['warnings'] == ['diagnostic']
 
     @pytest.mark.parametrize(

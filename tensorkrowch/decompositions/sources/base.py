@@ -7,6 +7,8 @@ from typing import (Optional, Protocol, Sequence, Tuple, Union,
 
 import torch
 
+from tensorkrowch.decompositions.metrics import EvaluationStats
+
 
 ConfigurationValues = Union[torch.Tensor, Sequence[torch.Tensor]]
 
@@ -204,6 +206,45 @@ class FiberTensorSource(TensorSource, Protocol):
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Evaluates a site fiber for every base configuration."""
+
+
+class _SourceEvaluationTracker:
+    """Adds inexpensive cumulative evaluation counters to built-in sources."""
+
+    def _initialize_evaluation_stats(self) -> None:
+        self._requested_points = 0
+        self._unique_points = 0
+        self._evaluation_batches = 0
+        self._cache_hits = 0
+        self._source_calls = 0
+
+    def _record_evaluation(self,
+                           points: int,
+                           batches: int = 1,
+                           unique_points: Optional[int] = None,
+                           cache_hits: int = 0) -> None:
+        """Records one successful source query without tensor synchronization."""
+        if unique_points is None:
+            unique_points = points
+        self._requested_points += points
+        self._unique_points += unique_points
+        self._evaluation_batches += batches
+        self._cache_hits += cache_hits
+        self._source_calls += 1
+
+    @property
+    def evaluation_stats(self) -> EvaluationStats:
+        """Cumulative point-evaluation counters for this source."""
+        return EvaluationStats(
+            requested_points=self._requested_points,
+            unique_points=self._unique_points,
+            batches=self._evaluation_batches,
+            cache_hits=self._cache_hits,
+            source_calls=self._source_calls)
+
+    def reset_evaluation_stats(self) -> None:
+        """Resets cumulative point-evaluation counters to zero."""
+        self._initialize_evaluation_stats()
 
 
 def _normalize_input_dim(input_dim: Sequence[int]) -> Tuple[int, ...]:

@@ -43,10 +43,6 @@ def _as_tt_decomposition(tt) -> TTDecomposition:
             raise ValueError('TT-to-TR does not support decomposition batches')
         result = tt
     else:
-        if hasattr(tt, 'boundary') and hasattr(tt, 'tensors'):
-            if tt.boundary != 'obc':
-                raise ValueError('Only open-boundary MPS models can be converted')
-            tt = tt.tensors
         source = TTTensorSource(tt)
         compact_cores = list(source.cores)
         if len(compact_cores) == 1:

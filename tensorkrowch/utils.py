@@ -244,7 +244,7 @@ def list2slice(lst: List) -> Union[List, slice]:
             if aux_slice[0] is None:
                 aux_slice[0] = el
                 aux_slice[1] = el
-            elif aux_slice[2] == None:
+            elif aux_slice[2] is None:
                 aux_slice[1] = el
                 aux_slice[2] = aux_slice[1] - aux_slice[0]
             else:
@@ -313,14 +313,19 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
 
 def random_unitary(n,
                    device: Optional[torch.device] = None,
-                   dtype: Optional[torch.dtype] = None):
+                   dtype: Optional[torch.dtype] = None,
+                   generator: Optional[torch.Generator] = None):
     """
     Returns random unitary matrix from the Haar measure of size n x n.
     
     Unitary matrix is created as described in this `paper
     <https://arxiv.org/abs/math-ph/0609050v2>`_.
+
+    ``generator`` controls the Gaussian matrix without modifying the global
+    random state and should belong to the requested ``device``.
     """
-    mat = torch.randn(n, n, device=device, dtype=dtype)
+    mat = torch.randn(
+        n, n, device=device, dtype=dtype, generator=generator)
     q, r = torch.linalg.qr(mat)
     d = torch.diagonal(r)
     ph = d / d.abs()

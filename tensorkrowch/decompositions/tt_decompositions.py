@@ -11,8 +11,7 @@ This script contains:
 
 import time
 import warnings
-from typing import Optional, Union, Callable, Tuple, List, Sequence, Text
-from math import sqrt
+from typing import Optional, Union, Callable, Tuple, List, Sequence
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
@@ -22,7 +21,15 @@ from tensorkrowch.utils import random_unitary, truncated_svd
 import tensorkrowch.models as models
 
 
-def extend_with_output(function, samples, labels, out_position, batch_size, device):
+def _loader_generator(generator):
+    """Isolates DataLoader bookkeeping from the global and fit RNG states."""
+    if generator is None:
+        return None
+    return torch.Generator().manual_seed(generator.initial_seed())
+
+
+def extend_with_output(function, samples, labels, out_position, batch_size,
+                       device, generator=None):
     """
     Extends ``samples`` tensor with the output of the ``function`` evaluated on
     those ``samples``. If ``samples`` is a tensor with shape ``batch_size x
@@ -40,7 +47,8 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
         loader = DataLoader(TensorDataset(samples),
                             batch_size=batch_size,
                             shuffle=False,
-                            num_workers=0)
+                            num_workers=0,
+                            generator=_loader_generator(generator))
         
         with torch.no_grad():
             outputs = []
@@ -52,7 +60,12 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
             labels_distr = outputs.pow(2).cumsum(dim=1)
             labels_distr = labels_distr / labels_distr[:, -1:]
             
-            probs = torch.rand(outputs.size(0), 1)
+            random_device = 'cpu' if generator is None else generator.device
+            probs = torch.rand(
+                outputs.size(0),
+                1,
+                generator=generator,
+                device=random_device).cpu()
             ids = outputs.size(1) - torch.le(probs,
                                              labels_distr).sum(dim=1, keepdim=True)
             outputs = outputs.gather(dim=1, index=ids)
@@ -81,7 +94,8 @@ def extend_with_output(function, samples, labels, out_position, batch_size, devi
         return extended_samples, outputs
 
 
-def sketching(function, tensors_list, out_position, batch_size, device, dtype):
+def sketching(function, tensors_list, out_position, batch_size, device, dtype,
+              generator=None):
     """
     Given ``tensors_list``, a list of ``m`` tensors, where each tensor ``i`` has
     shape ``di x ni (x in_dim)`` and ``sum(n1, ..., nm) = n_features``, creates
@@ -151,7 +165,8 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
                           labels),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=0)
+            num_workers=0,
+            generator=_loader_generator(generator))
     else:
         # di x ni x in_dim
         projection_loader = DataLoader(
@@ -161,7 +176,8 @@ def sketching(function, tensors_list, out_position, batch_size, device, dtype):
                           labels),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=0)
+            num_workers=0,
+            generator=_loader_generator(generator))
     
     Phi_tilde_k = []
     with torch.no_grad():
@@ -313,6 +329,7 @@ def tt_rss(function: Callable,
            batch_size: int = 64,
            device: Optional[torch.device] = None,
            dtype: Optional[torch.dtype] = None,
+           generator: Optional[torch.Generator] = None,
            verbose: bool = True,
            return_info: bool = False) -> Union[List[torch.Tensor],
                                                Tuple[List[torch.Tensor], dict]]:
@@ -426,6 +443,9 @@ def tt_rss(function: Callable,
         to solve the equations during tensorization will be determined by this
         type. If not specified, the ``dtype`` will default to the output type
         of the ``function``.
+    generator : torch.Generator, optional
+        Controls output-label sampling, inferred-domain subsampling and random
+        range rotations without modifying the global random state.
     verbose : bool
         Default is ``True``.
     return_info : bool
@@ -460,6 +480,9 @@ def tt_rss(function: Callable,
     
     if not isinstance(embedding, Callable):
         raise TypeError('`embedding` should be callable')
+
+    if generator is not None and not isinstance(generator, torch.Generator):
+        raise TypeError('`generator` should be torch.Generator type or None')
     
     # Number of input features
     if not isinstance(sketch_samples, torch.Tensor):
@@ -477,10 +500,11 @@ def tt_rss(function: Callable,
     # Embedding dimension
     try:
         aux_embed = embedding(sketch_samples[:1, :1].to(device))
-    except:
+    except Exception as exc:
         raise ValueError(
             '`embedding` should take as argument a single tensor with shape '
-            '(batch_size, n_features) or (batch_size, n_features, in_dim)')
+            '(batch_size, n_features) or (batch_size, n_features, in_dim)') \
+            from exc
         
     if aux_embed.ndim != 3:
         raise ValueError('`embedding` should return a tensor of shape '
@@ -492,10 +516,11 @@ def tt_rss(function: Callable,
     # Output dimension
     try:
         aux_output = function(sketch_samples[:1].to(device))
-    except:
+    except Exception as exc:
         raise ValueError(
             '`function` should take as argument a single tensor with shape '
-            '(batch_size, n_features) or (batch_size, n_features, in_dim)')
+            '(batch_size, n_features) or (batch_size, n_features, in_dim)') \
+            from exc
         
     if aux_output.ndim != 2:
         raise ValueError(
@@ -592,7 +617,8 @@ def tt_rss(function: Callable,
                                                labels=labels,
                                                out_position=out_position,
                                                batch_size=batch_size,
-                                               device=device)
+                                               device=device,
+                                               generator=generator)
         
     def aux_embedding(data):
         """
@@ -634,7 +660,12 @@ def tt_rss(function: Callable,
                 x_k = sketch_samples[:, k:(k + 1)].unique(dim=0)
                 
                 if x_k.size(0) >= (domain_multiplier * embed_dim):
-                    perm = torch.randperm(x_k.size(0))
+                    random_device = (
+                        'cpu' if generator is None else generator.device)
+                    perm = torch.randperm(
+                        x_k.size(0),
+                        generator=generator,
+                        device=random_device).cpu()
                     idx = perm[:(domain_multiplier * embed_dim)]
                     x_k = x_k[idx]
             
@@ -670,10 +701,16 @@ def tt_rss(function: Callable,
                                   out_position=out_position,
                                   batch_size=batch_size,
                                   device=device,
-                                  dtype=dtype)
+                                  dtype=dtype,
+                                  generator=generator)
             
             # Random unitary for T_k_plus_1
-            randu_t = random_unitary(n=Phi_hat_k.size(1), dtype=dtype)
+            random_device = 'cpu' if generator is None else generator.device
+            randu_t = random_unitary(
+                n=Phi_hat_k.size(1),
+                device=random_device,
+                dtype=dtype,
+                generator=generator).cpu()
             Phi_tilde_k = torch.mm(Phi_hat_k, randu_t)
             
             if k != out_position:
@@ -723,11 +760,17 @@ def tt_rss(function: Callable,
                                   out_position=out_position,
                                   batch_size=batch_size,
                                   device=device,
-                                  dtype=dtype)
+                                  dtype=dtype,
+                                  generator=generator)
             
             # Random unitary for T_k_plus_1
-            randu_t = random_unitary(n=Phi_hat_k.size(2), dtype=dtype)\
-                .repeat(Phi_hat_k.size(0), 1, 1)
+            random_device = 'cpu' if generator is None else generator.device
+            randu_t = random_unitary(
+                n=Phi_hat_k.size(2),
+                device=random_device,
+                dtype=dtype,
+                generator=generator).cpu().repeat(
+                    Phi_hat_k.size(0), 1, 1)
             Phi_tilde_k = torch.bmm(Phi_hat_k, randu_t)
             
             if k != out_position:
@@ -789,7 +832,8 @@ def tt_rss(function: Callable,
                                     out_position=out_position,
                                     batch_size=batch_size,
                                     device=device,
-                                    dtype=dtype)
+                                    dtype=dtype,
+                                    generator=generator)
             
             if k != out_position:
                 Phi_tilde_k = torch.linalg.lstsq(

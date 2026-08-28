@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 0/26 tareas |
+| 3 | Sketching (RS/RSS), transforms y QTT | 1/26 implementadas; 1 pendiente de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -3602,7 +3602,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 #### TODOs
 
-- [ ] **RSS-00 — Caracterizar TT-RSS legacy**
+- [x] **RSS-00 — Caracterizar TT-RSS legacy**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Añadir tests antes del refactor para:
 
@@ -3622,6 +3625,44 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Registrar limitaciones actuales como tests `xfail` o especificaciones, no
   perpetuarlas: output único, embedding homogéneo, escalar obligado a
   `(batch,1)`, verbosity booleana y `randu`.
+
+  Implementación:
+
+  - `tests/decompositions/sketching/test_legacy_tt_rss.py` fija los contratos
+    numéricos y de shapes que deberá conservar el refactor, sin convertir la
+    implementación legacy en la arquitectura futura;
+  - se cubren función escalar y vectorial, labels explícitos/muestreados,
+    output primero/medio/último y default centrado, domains compartidos, por
+    site e inferidos, samples escalares y vectoriales, truncation moderna,
+    real/complejo, device, `return_info` y carga en `MPS`/`MPSLayer`;
+  - `sketching` se contrasta con un producto cartesiano explícito y
+    `create_projector` con un oracle de prefix lookup;
+  - cinco `xfail(strict=True)` documentan las generalizaciones pendientes:
+    escalar `(batch,)`, embeddings heterogéneos, varios output axes,
+    range projection desactivable y verbosity multinivel sin imprimir cores en
+    nivel 2;
+  - `tt_rss(..., generator=...)` controla sampling de labels, subsampling de
+    domains inferidos y rotaciones aleatorias. Los DataLoaders usan un
+    generator aislado para no consumir el RNG global;
+  - `random_unitary(..., generator=...)` extiende la utilidad común sin cambiar
+    el comportamiento por defecto ni sus callers existentes;
+  - los cores finalizados siguen almacenándose en CPU; los casos CUDA/MPS del
+    test de compute device se activan automáticamente cuando el backend está
+    disponible.
+
+  Evidencia local:
+
+  - `20 passed, 2 skipped, 5 xfailed` en la caracterización RSS; los skips son
+    CUDA/MPS no disponibles en este entorno;
+  - `67 passed, 2 skipped, 5 xfailed` al combinar caracterización, caller SVD
+    legacy y contratos de docstrings;
+  - `72 passed, 4 skipped` en `tests/test_utils.py` y `750 passed, 28 skipped`
+    en los casos de inicialización MPS afectados por `random_unitary`;
+  - la suite completa de decompositions encontró el conocido fallo de
+    tolerancia float32 entre dos órdenes de contracción en
+    `TTDecomposition.evaluate`; pasó aislado, mientras la suite excluyendo solo
+    ese caso terminó con `697 passed, 13 skipped, 5 xfailed`;
+  - Ruff sobre los archivos modificados y `git diff --check` sin incidencias.
 
 - [ ] **RSS-01 — Implementar specs de embedding, domain y outputs**
 

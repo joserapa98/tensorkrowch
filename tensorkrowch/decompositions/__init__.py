@@ -63,6 +63,18 @@ from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, tt_svd,
                                              ttm_svd, tr_svd)
 from tensorkrowch.decompositions.svd.tt import vec_to_mps
 from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
+from tensorkrowch.decompositions.sketching import (
+    CallableGlobalValueTransform,
+    CallableLocalValueTransform,
+    CompositeGlobalValueTransform,
+    CompositeLocalValueTransform,
+    EvaluationView,
+    GlobalValueTransform,
+    IdentityGlobalValueTransform,
+    IdentityLocalValueTransform,
+    LocalTransformContext,
+    LocalValueTransform,
+)
 from tensorkrowch.decompositions.tt_decompositions import tt_rss
 
 
@@ -148,5 +160,15 @@ __all__ = [
     'tr_svd',
     'vec_to_mps',
     'mat_to_mpo',
+    'EvaluationView',
+    'GlobalValueTransform',
+    'IdentityGlobalValueTransform',
+    'CallableGlobalValueTransform',
+    'CompositeGlobalValueTransform',
+    'LocalTransformContext',
+    'LocalValueTransform',
+    'IdentityLocalValueTransform',
+    'CallableLocalValueTransform',
+    'CompositeLocalValueTransform',
     'tt_rss',
 ]

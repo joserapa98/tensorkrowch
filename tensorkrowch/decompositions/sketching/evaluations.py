@@ -174,6 +174,7 @@ class _EvaluationPlan:
     configurations: ConfigurationBatch
     incidences: Sequence[_IncidenceMap]
     stats: EvaluationStats
+    global_transform_prepared: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.source, TensorSource):
@@ -189,6 +190,8 @@ class _EvaluationPlan:
                 '`incidences` should contain _IncidenceMap objects')
         if not isinstance(self.stats, EvaluationStats):
             raise TypeError('`stats` should be EvaluationStats type')
+        if not isinstance(self.global_transform_prepared, bool):
+            raise TypeError('`global_transform_prepared` should be bool type')
         object.__setattr__(self, 'incidences', incidences)
 
     def view(self) -> EvaluationView:
@@ -205,7 +208,8 @@ class _EvaluationRegistry:
     @staticmethod
     def build(
             source: TensorSource,
-            requests: Sequence[_EvaluationRequest]) -> _EvaluationPlan:
+            requests: Sequence[_EvaluationRequest],
+            global_transform_prepared: bool = False) -> _EvaluationPlan:
         """Freezes requests into one globally deduplicated evaluation plan."""
         requests = tuple(requests)
         configurations = _concatenate_configurations(
@@ -235,7 +239,8 @@ class _EvaluationRegistry:
             source=source,
             configurations=unique_configurations,
             incidences=incidences,
-            stats=stats)
+            stats=stats,
+            global_transform_prepared=global_transform_prepared)
 
 
 class _EvaluationPlanBuilder:
@@ -247,6 +252,7 @@ class _EvaluationPlanBuilder:
         self.source = source
         self._requests = []
         self._phase = 'collect'
+        self._global_transform_prepared = False
 
     @property
     def phase(self) -> str:
@@ -265,6 +271,9 @@ class _EvaluationPlanBuilder:
         """Adds a Phi request during the initial collect phase."""
         if self._phase != 'collect':
             raise RuntimeError('Phi requests can only be collected before expand')
+        if self._global_transform_prepared:
+            raise RuntimeError(
+                'Phi requests should be collected before global preparation')
         self._validate_request(request)
         handle = len(self._requests)
         self._requests.append(request)
@@ -295,13 +304,25 @@ class _EvaluationPlanBuilder:
                 request.configurations for request in self._requests]),
             phase=self._phase)
 
+    def _mark_global_transform_prepared(self) -> None:
+        """Marks that global closure requirements were handled before freeze."""
+        if self._phase == 'frozen':
+            raise RuntimeError(
+                'A global transform cannot be prepared after freeze')
+        if self._global_transform_prepared:
+            raise RuntimeError('The global transform is already prepared')
+        self._global_transform_prepared = True
+
     def freeze(self) -> _EvaluationPlan:
         """Deduplicates every request and permanently freezes this builder."""
         if self._phase == 'frozen':
             raise RuntimeError('The evaluation plan is already frozen')
         if not self._requests:
             raise ValueError('The evaluation plan should contain a request')
-        plan = _EvaluationRegistry.build(self.source, self._requests)
+        plan = _EvaluationRegistry.build(
+            self.source,
+            self._requests,
+            global_transform_prepared=self._global_transform_prepared)
         self._phase = 'frozen'
         return plan
 
@@ -309,11 +330,22 @@ class _EvaluationPlanBuilder:
 class _EvaluationSession:
     """Evaluates one frozen plan once and scatters values to all requests."""
 
-    def __init__(self, plan: _EvaluationPlan) -> None:
+    def __init__(self,
+                 plan: _EvaluationPlan,
+                 global_transform=None,
+                 context=None) -> None:
         if not isinstance(plan, _EvaluationPlan):
             raise TypeError('`plan` should be _EvaluationPlan type')
         self.plan = plan
+        self.global_transform = global_transform
+        self.context = context
+        if global_transform is not None and \
+                not getattr(global_transform, 'is_identity', False) and \
+                not plan.global_transform_prepared:
+            raise RuntimeError(
+                'The global transform should be prepared before freeze')
         self._values = None
+        self._raw_values = None
         self._results = None
         self._stats = None
 
@@ -387,7 +419,25 @@ class _EvaluationSession:
         """Evaluates and scatters the plan, reusing results on repeated calls."""
         if self._results is not None:
             return self._results
-        self._values = self._evaluate_unique(batch_size)
+        self._raw_values = self._evaluate_unique(batch_size)
+        if self.global_transform is None:
+            self._values = self._raw_values
+        else:
+            view = EvaluationView(
+                configurations=self.plan.configurations,
+                values=self._raw_values,
+                incidences=self.plan.incidences,
+                phase='evaluated')
+            self._values = self.global_transform.apply(view, self.context)
+            if not isinstance(self._values, torch.Tensor):
+                raise TypeError(
+                    'A global value transform should return a torch.Tensor')
+            if self._values.shape != self._raw_values.shape:
+                raise ValueError(
+                    'A global value transform should preserve value shape')
+            if self._values.device != self._raw_values.device:
+                raise ValueError(
+                    'A global value transform should preserve value device')
         self._results = tuple(
             self._scatter(self._values, incidence)
             for incidence in self.plan.incidences)

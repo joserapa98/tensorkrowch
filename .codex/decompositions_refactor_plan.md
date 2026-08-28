@@ -78,7 +78,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 5/26 implementadas; 5 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 6/26 implementadas; 6 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -3875,8 +3875,8 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
 - [x] **RSS-04 — Implementar Phi lazy y evaluación deduplicada**
 
-  Estado: implementado y validado; pendiente de commit y de revisión detallada
-  del usuario antes de considerarlo completamente cerrado.
+  Estado: implementado, validado y commiteado en `15b6bbe`; pendiente de
+  revisión detallada del usuario antes de considerarlo completamente cerrado.
 
   Crear `PhiView`, `EvaluationView`, `PhiOperator`,
   `_EvaluationPlanBuilder`, `_EvaluationPlan`, `_EvaluationSession`,
@@ -3956,7 +3956,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - `797 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
   - Ruff dirigido y `git diff --check` sin incidencias.
 
-- [ ] **RSS-05 — Implementar transforms de valores**
+- [x] **RSS-05 — Implementar transforms de valores**
+
+  Estado: implementado y validado; pendiente de commit y de revisión detallada
+  del usuario antes de considerarlo completamente cerrado.
 
   Crear protocolos `GlobalValueTransform` y `LocalValueTransform`, adaptadores
   de callable e identidades.
@@ -3995,6 +3998,44 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   integración vertical sin nombre de aplicación:
   `EmpiricalDistribution -> MarginalSketch.markov -> callback local de
   suavizado por kernel -> fitting local -> core-determining equations`.
+
+  Implementación:
+
+  - `GlobalValueTransform` y `LocalValueTransform` son protocolos avanzados
+    públicos, con identidades, adapters de callable y composiciones ordenadas;
+    `LocalTransformContext` conserva de forma inmutable los datos auxiliares,
+    la vista global evaluada y los resultados de queries predeclaradas;
+  - el builder bloquea nuevas requests tras preparar el transform global,
+    registra esa preparación en el plan congelado y rechaza transforms globales
+    no identidad que no hayan declarado antes sus necesidades de closure;
+  - `_EvaluationSession` evalúa cada configuración única una vez, aplica el
+    transform global exactamente una vez y solo entonces dispersa los valores
+    por todos los incidence maps. Valida que el callback preserve shape y
+    device, pero permite cambiar dtype;
+  - los transforms locales consumen cualquier `PhiView`, pueden devolver una
+    vista lazy o materializada y declaran selecciones adicionales antes de la
+    preparación global. Una query posterior se rechaza de forma explícita;
+  - las identidades devuelven exactamente los tensores/vistas originales, sin
+    copias ni materialización. Un gate interno deshabilita la ruta
+    `contract_sketch` ante transforms globales no identidad; el driver de
+    `RSS-08` será quien seleccione por este gate entre contracción estructurada
+    y `_EvaluationSession` puntual;
+  - `EvaluationView` y los protocolos/adapters se exportan en la API avanzada;
+    las funciones que coordinan collect/prepare/apply permanecen privadas;
+  - se demuestra ya el paso genérico
+    `EmpiricalDistribution -> callback local de suavizado`, sin introducir
+    nombres de aplicación. La integración vertical completa se añade en
+    `RSS-15`, cuando existan `InputFitter`, `MarginalSketch.markov` y
+    `CoreDeterminingSystem`, en vez de anticipar implementaciones ficticias.
+
+  Evidencia local:
+
+  - `15 passed` en los transforms: norma global compartida, closure, orden de
+    requests, composición, contratos inválidos, queries locales, identidad
+    lazy y distribución empírica con transformación local genérica;
+  - `30 passed` al combinar transforms y Phi/evaluations;
+  - `812 passed, 13 skipped, 5 xfailed` en toda la suite de decompositions;
+  - Ruff dirigido y `git diff --check` sin incidencias.
 
 - [ ] **RSS-06 — Implementar input fitting**
 

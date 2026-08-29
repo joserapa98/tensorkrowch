@@ -13,6 +13,7 @@ from tensorkrowch.decompositions.sketching.projections import (
     RandomizedRangeProjector,
     RangeProjector,
 )
+from tensorkrowch.decompositions.sketching.quantization import QuantizedLayout
 from tensorkrowch.decompositions.sketching.sketches import (
     CoreDeterminingSystem,
     MarginalSketch,
@@ -49,6 +50,7 @@ __all__ = [
     'RangeProjector',
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
+    'QuantizedLayout',
     'SketchOperator',
     'SketchSystemBuilder',
     'CoreDeterminingSystem',

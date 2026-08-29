@@ -4850,7 +4850,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   `39 passed` dirigidos y `973 passed, 13 skipped` en decompositions, Ruff y
   diff-check limpios.
 
-- [ ] **QTT-04 — Implementar `QTTInputFitter`**
+- [x] **QTT-04 — Implementar `QTTInputFitter`**
+
+  Estado: implementación commiteada en `f848b27`; pendiente de revisión
+  detallada del usuario.
 
   Sobre una fibra local continua:
 
@@ -4862,6 +4865,16 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - permitir distinto base/level/map por variable.
 
   Tests frente a materializar la fibra en grid y aplicar TT-SVD/RSS ordinario.
+
+  Implementación: `QTTInputFitter` exige un `PhiOperator` funcional, crea una
+  sesión QTT-RSS local e independiente y trata todos los axes restantes como
+  output tensorial consecutivo al extremo de los digits. Devuelve a la vez el
+  eje materializado compatible con el contrato común y el factor
+  `TTDecomposition` jerárquico, sin mezclar observers, RNG ni caches del fit
+  exterior. El driver conserva el Phi perezoso para estos fitters y rechaza de
+  momento combinar esa ruta con transforms de valores no identidad. Evidencia:
+  `20 passed` en fitting, `280 passed, 2 skipped` en sketching, Ruff y
+  diff-check limpios.
 
 - [ ] **QTT-05 — Implementar QTT-Tucker y QTR-Tucker nativos**
 

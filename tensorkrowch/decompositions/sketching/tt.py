@@ -6,9 +6,14 @@ from typing import (Any, Callable, Dict, List, Optional, Sequence, Tuple, Union)
 
 import torch
 
+from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
-from tensorkrowch.decompositions.metrics import ErrorRecord
-from tensorkrowch.decompositions.observers import DecompositionObserver
+from tensorkrowch.decompositions.metrics import (ErrorRecord,
+                                                 TimingRecord)
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   DecompositionObserver,
+                                                   _normalize_verbosity,
+                                                   _resolve_observer)
 from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sketching.base import (
     RecursiveSketching,
@@ -30,6 +35,14 @@ from tensorkrowch.decompositions.sketching.projections import (
 from tensorkrowch.decompositions.sketching.regions import (
     SiteRegion,
     _SamplePool,
+)
+from tensorkrowch.decompositions.sketching.sketches import (
+    MarginalSketch,
+    SketchOperator,
+)
+from tensorkrowch.decompositions.sketching.sources import (
+    SupportTensorSource,
+    _resolve_rs_source,
 )
 from tensorkrowch.decompositions.sketching.specs import (
     _DomainSpec,
@@ -65,6 +78,7 @@ Samples = Union[
     ConfigurationBatch,
 ]
 Device = Optional[Union[str, torch.device]]
+_Rank = Union[int, Sequence[int]]
 
 
 class TTRSS(RecursiveSketching):
@@ -956,6 +970,356 @@ class TTRSS(RecursiveSketching):
             raise ValueError('The result input dimensions are inconsistent')
 
 
+class TTRS:
+    r"""Reusable Tensor Train Recursive Sketching problem.
+
+    Unlike :class:`TTRSS`, this class projects the complete discrete source and
+    therefore does not receive ``sketch_samples`` in :meth:`fit`. The source
+    may be supplied directly, or built from a dataset as a normalized
+    :class:`~tensorkrowch.decompositions.EmpiricalDistribution`. Sparse and
+    empirical sources are contracted only on their declared non-zero support.
+
+    The implementation follows the core-determining equations of
+    `Generative modeling via tensor train sketching
+    <https://arxiv.org/abs/2202.11788>`_ by Hur, Hoskins, Lindsey, Stoudenmire
+    and Khoo (2022). ``sketch_operator`` controls how the recursive left and
+    right sketches are constructed; the default is
+    :meth:`MarginalSketch.markov`.
+
+    The returned :class:`~tensorkrowch.decompositions.TTDecomposition` is a
+    lightweight result. Its cores can initialize an
+    :class:`~tensorkrowch.models.MPS` with
+    ``tk.models.MPS(tensors=result.cores)``.
+
+    Parameters
+    ----------
+    source : TensorSource, TTDecomposition, torch.Tensor or callable, optional
+        Complete discrete scalar source. Exactly one of ``source`` and
+        ``dataset`` is required. Sources without explicit support use a finite
+        grid fallback until their structured backend is selected.
+    dataset : torch.Tensor, optional
+        Integer observations with shape ``(samples, sites)``. Duplicates are
+        coalesced into an empirical distribution.
+    input_dim : sequence of int, optional
+        Complete dimensions. Required for callable sources and optional for a
+        dataset, where it otherwise follows the largest observed indices.
+    weights : torch.Tensor, optional
+        Non-negative empirical mass per dataset row.
+    sketch_operator : SketchOperator, optional
+        Operator that provides a compatible :class:`SketchSystemBuilder`.
+    dtype : torch.dtype, optional
+        Empirical/callable value dtype.
+    device : str or torch.device, optional
+        Device for a dataset or callable source.
+    output_device : str, torch.device or None, optional
+        Device receiving completed cores. The default is CPU; ``None`` keeps
+        the source device.
+
+    Examples
+    --------
+    >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
+    >>> decomposer = TTRS(dataset=dataset, input_dim=(2, 2))
+    >>> result = decomposer.fit(rank=2)
+    >>> result.input_dim
+    (2, 2)
+    >>> len(result.cores)
+    2
+    """
+
+    def __init__(
+            self,
+            source=None,
+            *,
+            dataset: Optional[torch.Tensor] = None,
+            input_dim: Optional[Sequence[int]] = None,
+            weights: Optional[torch.Tensor] = None,
+            sketch_operator: Optional[SketchOperator] = None,
+            dtype: Optional[torch.dtype] = None,
+            device: Device = None,
+            output_device: Device = 'cpu',
+            synchronize_timers: bool = True) -> None:
+        self._source = _resolve_rs_source(
+            source=source,
+            dataset=dataset,
+            input_dim=input_dim,
+            weights=weights,
+            dtype=dtype,
+            device=device)
+        if sketch_operator is None:
+            sketch_operator = MarginalSketch.markov()
+        elif not isinstance(sketch_operator, SketchOperator):
+            raise TypeError('`sketch_operator` should implement SketchOperator')
+        self.sketch_operator = sketch_operator
+        self.output_device = None if output_device is None \
+            else torch.device(output_device)
+        if not isinstance(synchronize_timers, bool):
+            raise TypeError('`synchronize_timers` should be bool type')
+        self.synchronize_timers = synchronize_timers
+
+    @property
+    def source(self) -> TensorSource:
+        """Discrete source fixed for repeated independent fits."""
+        return self._source
+
+    @torch.no_grad()
+    def fit(
+            self,
+            rank: _Rank = 1,
+            *,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            batch_size: Optional[int] = None,
+            generator: Optional[torch.Generator] = None,
+            strict_system: bool = False,
+            warm_start: Optional[TTDecomposition] = None,
+            verbose: Union[bool, int] = 0,
+            collect_metrics: bool = False,
+            observer: Optional[DecompositionObserver] = None
+            ) -> TTDecomposition:
+        r"""Projects the fixed source and solves its TT core equations.
+
+        ``rank`` is one upper bound shared by all open links or one value per
+        link. Each local Phi is trimmed with the same truncation policy before
+        forming the next coefficient matrix. ``strict_system=True`` rejects a
+        coefficient matrix that cannot identify all retained core columns.
+
+        ``verbose`` ranges from 0 (silent), through 1 (sites and summary) and
+        2 (system/timing details), to 3 (complete final cores). Metrics and
+        synchronized timers are skipped unless ``collect_metrics=True``, an
+        observer is supplied, or console output is requested.
+
+        Parameters
+        ----------
+        rank : int or sequence of int, optional
+            Shared maximum rank or one maximum per open TT link.
+        cutoff : float, optional
+            Minimum singular value to keep. It must be non-negative. Singular
+            values ``<= cutoff`` are removed.
+        atol : float, optional
+            Absolute tolerance over the tail sum of squared singular values.
+            Starting from the smallest singular value, values are discarded while
+            the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        rtol : float, optional
+            Relative tolerance over the tail sum of squared singular values.
+            Starting from the smallest singular value, values are discarded while
+            the tail sum of squares divided by the total sum of squares is
+            ``<= rtol``. It must be in ``[0, 1]``.
+        cum_percentage : float, optional
+            Minimum fraction of squared singular-value mass to keep. Equivalent to
+            setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+
+            .. math::
+
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+                cum\_percentage
+
+        batch_size : int, optional
+            Support or finite-grid evaluation batch size.
+        generator : torch.Generator, optional
+            Generator owned by this fit for randomized sketches.
+        strict_system : bool, optional
+            Rejects numerically rank-deficient coefficient systems.
+        warm_start : TTDecomposition, optional
+            Reserved for a future defined update. Non-``None`` values are
+            rejected rather than reused implicitly.
+        verbose : bool or int, optional
+            Structured console verbosity from 0 to 3.
+        collect_metrics : bool, optional
+            Collects timing, truncation, local solves, source statistics and
+            error over a declared sparse support.
+        observer : DecompositionObserver, optional
+            Additional structured-event consumer.
+
+        Returns
+        -------
+        TTDecomposition
+            Lightweight TT result stored on ``output_device``.
+
+        Examples
+        --------
+        >>> indices = torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]])
+        >>> values = torch.tensor([1., 2., 2., 4.])
+        >>> source = tk.decompositions.SparseTensorSource(
+        ...     indices, values, input_dim=(2, 2))
+        >>> result = TTRS(
+        ...     source,
+        ...     sketch_operator=tk.decompositions.SampledSketch()).fit(rank=1)
+        >>> result.rank
+        [1]
+        """
+        if warm_start is not None:
+            if not isinstance(warm_start, TTDecomposition):
+                raise TypeError(
+                    '`warm_start` should be TTDecomposition type or None')
+            raise NotImplementedError(
+                'TT-RS does not yet define a warm-start update; pass None')
+        if generator is not None and not isinstance(generator, torch.Generator):
+            raise TypeError('`generator` should be torch.Generator type or None')
+        if not isinstance(collect_metrics, bool):
+            raise TypeError('`collect_metrics` should be bool type')
+        verbosity = _normalize_verbosity(verbose)
+        need_diagnostics = collect_metrics or bool(verbosity) or \
+            observer is not None
+        fit_observer = _resolve_observer(verbosity, observer) \
+            if bool(verbosity) or observer is not None else None
+        before_stats = getattr(self.source, 'evaluation_stats', None)
+
+        if fit_observer is not None:
+            fit_observer.emit(DecompositionEvent(
+                name='start',
+                phase='TT-RS',
+                values={
+                    'sites': len(self.source.input_dim),
+                    'input_dim': self.source.input_dim,
+                    'operator': type(self.sketch_operator).__name__,
+                }))
+        timer = None
+        start = perf_counter() if need_diagnostics else None
+        system = self.sketch_operator.builder(self.source).build(
+            batch_size=batch_size,
+            generator=generator)
+        result = system.solve(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            strict_system=strict_system,
+            collect_metrics=need_diagnostics)
+        if start is not None:
+            timer = perf_counter() - start
+            result.metrics.timings.append(TimingRecord(
+                name='fit', elapsed=timer))
+        after_stats = getattr(self.source, 'evaluation_stats', None)
+        if collect_metrics and before_stats is not None and after_stats is not None:
+            result.metrics.evaluations.append(after_stats.delta(before_stats))
+
+        metadata = dict(result.metadata)
+        metadata.update({
+            'algorithm': 'tt_rs',
+            'input_dim': tuple(self.source.input_dim),
+            'source_type': type(self.source).__name__,
+        })
+        active = TTDecomposition(
+            result.cores,
+            metrics=result.metrics,
+            metadata=metadata)
+        if collect_metrics and isinstance(self.source, SupportTensorSource):
+            samples = self.source.support.as_tensor()
+            approximation = active.evaluate(samples)
+            target = self.source.support_values.to(
+                device=approximation.device, dtype=approximation.dtype)
+            absolute = torch.linalg.vector_norm(approximation - target)
+            denominator = torch.linalg.vector_norm(target)
+            relative = absolute / denominator if denominator > 0 else absolute
+            active.metrics.errors.append(ErrorRecord(
+                kind='source_support',
+                absolute=absolute,
+                relative=relative,
+                denominator=denominator,
+                size=target.shape[0]))
+
+        if fit_observer is not None:
+            for site, core in enumerate(active.cores):
+                fit_observer.emit(DecompositionEvent(
+                    name='site_complete',
+                    phase='TT-RS',
+                    site=site,
+                    values={
+                        'total_sites': len(active.cores),
+                        'shape': tuple(core.shape),
+                    }))
+            fit_observer.emit(DecompositionEvent(
+                name='summary',
+                phase='TT-RS',
+                values={
+                    'rank': active.rank,
+                    'operator': type(self.sketch_operator).__name__,
+                    'elapsed': None if timer is None else f'{timer:.6f} s',
+                }))
+            for site, core in enumerate(active.cores):
+                fit_observer.emit(DecompositionEvent(
+                    name='core',
+                    phase='TT-RS',
+                    level=3,
+                    site=site,
+                    values={'shape': tuple(core.shape), 'tensor': core}))
+            fit_observer.close(active.metrics)
+
+        runtime = _RuntimePolicy(
+            device=active.device,
+            output_device=self.output_device,
+            dtype=active.dtype,
+            synchronize_timers=self.synchronize_timers)
+        return TTDecomposition(
+            [runtime.finalize(core) for core in active.cores],
+            metrics=active.metrics,
+            metadata=active.metadata)
+
+
+@torch.no_grad()
+def tt_rs(
+        source=None,
+        *,
+        dataset: Optional[torch.Tensor] = None,
+        input_dim: Optional[Sequence[int]] = None,
+        weights: Optional[torch.Tensor] = None,
+        sketch_operator: Optional[SketchOperator] = None,
+        rank: _Rank = 1,
+        cutoff: Optional[float] = None,
+        atol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None,
+        batch_size: Optional[int] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Device = None,
+        generator: Optional[torch.Generator] = None,
+        strict_system: bool = False,
+        output_device: Device = 'cpu',
+        verbose: Union[bool, int] = 0,
+        return_info: bool = False):
+    """Projects a complete discrete source into TT cores with TT-RS.
+
+    This simple interface constructs :class:`TTRS`, calls :meth:`TTRS.fit`
+    and returns only the cores unless ``return_info=True``. Exactly one of
+    ``source`` and ``dataset`` is required; a dataset is normalized into an
+    empirical distribution and is not interpreted as RSS sketch samples.
+
+    Examples
+    --------
+    >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
+    >>> cores = tt_rs(dataset=dataset, input_dim=(2, 2), rank=2)
+    >>> len(cores)
+    2
+    """
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+    result = TTRS(
+        source=source,
+        dataset=dataset,
+        input_dim=input_dim,
+        weights=weights,
+        sketch_operator=sketch_operator,
+        dtype=dtype,
+        device=device,
+        output_device=output_device).fit(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            batch_size=batch_size,
+            generator=generator,
+            strict_system=strict_system,
+            verbose=verbose,
+            collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
+
+
 @torch.no_grad()
 def tt_rss(
         function: Callable,
@@ -1132,4 +1496,4 @@ def tt_rss(
     return result.cores, info
 
 
-__all__ = ['TTRSS', 'tt_rss']
+__all__ = ['TTRSS', 'tt_rss', 'TTRS', 'tt_rs']

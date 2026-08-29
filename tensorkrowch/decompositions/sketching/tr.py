@@ -1,5 +1,6 @@
-"""Tensor-ring decompositions based on recursive sketching from samples."""
+"""Tensor-ring decompositions based on recursive sketching."""
 
+import warnings
 from dataclasses import dataclass
 from math import ceil, prod
 from typing import (Any, Dict, Mapping, Optional, Sequence, Tuple, Union)
@@ -7,9 +8,13 @@ from typing import (Any, Dict, Mapping, Optional, Sequence, Tuple, Union)
 import torch
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
-from tensorkrowch.decompositions.metrics import (ErrorRecord,
+from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+                                                 ErrorRecord,
                                                  TruncationRecord)
-from tensorkrowch.decompositions.observers import DecompositionObserver
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   DecompositionObserver,
+                                                   _normalize_verbosity,
+                                                   _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
@@ -18,11 +23,13 @@ from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      _normalize_rank_spec)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
-from tensorkrowch.decompositions.ring.gauges import GaugeRecursionStep
+from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
+                                                     GaugeRecursionStep)
 from tensorkrowch.decompositions.ring.opening import (LoopOpener,
                                                       LoopOpening,
                                                       FixedGaugeCoreOpener,
                                                       resolve_loop_opener)
+from tensorkrowch.decompositions.ring.tt2tr import TT2TR
 from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.evaluations import (
@@ -39,7 +46,10 @@ from tensorkrowch.decompositions.sketching.transforms import (
     _prepare_global_transform,
 )
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
-from tensorkrowch.decompositions.sketching.tt import Device, Samples, TTRSS
+from tensorkrowch.decompositions.sketching.sketches import SketchOperator
+from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
+from tensorkrowch.decompositions.sketching.tt import (Device, Samples, TTRS,
+                                                      TTRSS)
 from tensorkrowch.utils import truncated_svd
 
 
@@ -955,6 +965,363 @@ class TRRSS(TTRSS):
             raise TypeError('`result` should be TRDecomposition type')
         if result.input_dim != self.outputs.site_dim(self.embeddings):
             raise ValueError('The result input dimensions are inconsistent')
+
+
+def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
+                      tr_metrics: DecompositionMetrics
+                      ) -> DecompositionMetrics:
+    """Combines TT-RS construction and TT-to-TR opening diagnostics."""
+    return DecompositionMetrics(
+        errors=[
+            record for record in tt_metrics.errors
+            if record.kind != 'source_support'
+        ] + tr_metrics.errors,
+        truncations=tt_metrics.truncations + tr_metrics.truncations,
+        timings=tt_metrics.timings + tr_metrics.timings,
+        evaluations=tt_metrics.evaluations + tr_metrics.evaluations,
+        fidelities=tt_metrics.fidelities + tr_metrics.fidelities,
+        warnings=tt_metrics.warnings + tr_metrics.warnings,
+        local_solves=tt_metrics.local_solves + tr_metrics.local_solves,
+        input_fits=tt_metrics.input_fits + tr_metrics.input_fits,
+        range_projections=(tt_metrics.range_projections +
+                           tr_metrics.range_projections),
+        gauges=tt_metrics.gauges + tr_metrics.gauges,
+        sweeps=tt_metrics.sweeps + tr_metrics.sweeps)
+
+
+class TRRS(TTRS):
+    r"""Experimental Tensor Ring Recursive Sketching problem.
+
+    The fixed source and recursive sketch operator have the same semantics as
+    in :class:`~tensorkrowch.decompositions.TTRS`. Each :meth:`fit` first
+    solves the open TT core-determining equations and then opens their loop
+    with the common TT-to-TR ring driver. This separates source sketching from
+    cyclic gauge construction and lets the latter reuse the same
+    ``LoopOpener`` and schedule contracts as TT-to-TR and TR-RSS.
+
+    The open TT equations follow `Generative modeling via tensor train
+    sketching <https://arxiv.org/abs/2202.11788>`_ by Hur, Hoskins, Lindsey,
+    Stoudenmire and Khoo (2022). Their approximation guarantees are for an
+    open TT and do not automatically transfer to this cyclic extension;
+    :class:`TRRS` therefore emits
+    :class:`~tensorkrowch.decompositions.ExperimentalWarning`.
+
+    The returned :class:`~tensorkrowch.decompositions.TRDecomposition` is a
+    lightweight result. Its cores can initialize a periodic
+    :class:`~tensorkrowch.models.MPS` with
+    ``tk.models.MPS(tensors=result.cores)``.
+
+    Parameters are the same as :class:`TTRS`; exactly one of ``source`` and
+    ``dataset`` is required.
+
+    Examples
+    --------
+    >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
+    >>> decomposer = TRRS(dataset=dataset, input_dim=(2, 2, 2))
+    >>> result = decomposer.fit(rank=1)
+    >>> result.rank
+    [1, 1, 1]
+    """
+
+    def __init__(
+            self,
+            source=None,
+            *,
+            dataset: Optional[torch.Tensor] = None,
+            input_dim: Optional[Sequence[int]] = None,
+            weights: Optional[torch.Tensor] = None,
+            sketch_operator: Optional[SketchOperator] = None,
+            dtype: Optional[torch.dtype] = None,
+            device: Device = None,
+            output_device: Device = 'cpu',
+            synchronize_timers: bool = True) -> None:
+        super().__init__(
+            source=source,
+            dataset=dataset,
+            input_dim=input_dim,
+            weights=weights,
+            sketch_operator=sketch_operator,
+            dtype=dtype,
+            device=device,
+            output_device=None,
+            synchronize_timers=synchronize_timers)
+        self._tr_output_device = output_device
+
+    @torch.no_grad()
+    def fit(
+            self,
+            rank: int = 1,
+            *,
+            center: Optional[int] = None,
+            loop_opener: Union[str, LoopOpener] = 'als',
+            schedule: str = 'center_out',
+            schedule_block_size: int = 1,
+            gauge_recursion: str = 'pseudoinverse',
+            allow_projective_gauges: bool = False,
+            gauge_tolerance: float = 1e-8,
+            inverse_policy: str = 'pinv',
+            rank_rtol: Optional[float] = None,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            batch_size: Optional[int] = None,
+            generator: Optional[torch.Generator] = None,
+            strict_system: bool = False,
+            warm_start: Optional[TRDecomposition] = None,
+            verbose: Union[bool, int] = 0,
+            collect_metrics: bool = False,
+            observer: Optional[DecompositionObserver] = None
+            ) -> TRDecomposition:
+        r"""Projects the fixed source and opens the result into a TR.
+
+        ``rank`` is the common maximum rank for the TT solve and every TR
+        link, including the cyclic link. Advanced local-loop options remain
+        encapsulated by ``loop_opener``. Fidelity between the intermediate TT
+        and final TR is always recorded because it validates the loop opening.
+
+        ``verbose`` ranges from 0 (silent), through 1 (sites and summary) and
+        2 (system/timing details), to 3 (complete final cores).
+
+        Parameters
+        ----------
+        rank : int, optional
+            Positive maximum rank shared by all links.
+        center : int, optional
+            Internal site at which cyclic loop opening begins.
+        loop_opener : {``"als"``, ``"blostr+als"``} or LoopOpener, optional
+            Encapsulated local loop-opening strategy.
+        schedule : {``"center_out"``, ``"alternating"``}, optional
+            Serial cyclic construction schedule.
+        schedule_block_size : int, optional
+            Consecutive sites in each alternating block.
+        gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``}, optional
+            Strategy used to propagate cyclic virtual bases.
+        allow_projective_gauges : bool, optional
+            Allows rank-deficient directional gauges to propagate projectors.
+        gauge_tolerance : float, optional
+            Maximum relative gauge-cancellation error.
+        inverse_policy : {``"auto"``, ``"solve"``, ``"inverse"``, ``"pinv"``}
+            Linear algebra used for directional gauge duals.
+        rank_rtol : float, optional
+            Relative threshold for pseudoinverses and numerical gauge ranks.
+        cutoff, atol, rtol, cum_percentage : float, optional
+            Singular-value truncation controls used by the TT-RS systems.
+        batch_size : int, optional
+            Support or finite-grid evaluation batch size.
+        generator : torch.Generator, optional
+            Generator owned by this fit for randomized sketches and openings.
+        strict_system : bool, optional
+            Rejects rank-deficient TT core-determining systems.
+        warm_start : TRDecomposition, optional
+            Reserved for a future defined update; non-``None`` is rejected.
+        verbose : bool or int, optional
+            Structured console verbosity from 0 to 3.
+        collect_metrics : bool, optional
+            Collects TT-RS diagnostics and final sparse-support error.
+        observer : DecompositionObserver, optional
+            Additional structured-event consumer.
+
+        Returns
+        -------
+        TRDecomposition
+            Lightweight cyclic result stored on ``output_device``.
+        """
+        if isinstance(rank, bool) or not isinstance(rank, int):
+            raise TypeError('`rank` should be int type')
+        if rank < 1:
+            raise ValueError('`rank` should be positive')
+        if len(self.source.input_dim) < 3:
+            raise ValueError('TR-RS requires at least three sites')
+        if warm_start is not None:
+            if not isinstance(warm_start, TRDecomposition):
+                raise TypeError(
+                    '`warm_start` should be TRDecomposition type or None')
+            raise NotImplementedError(
+                'TR-RS does not yet define a warm-start update; pass None')
+        if not isinstance(collect_metrics, bool):
+            raise TypeError('`collect_metrics` should be bool type')
+
+        warnings.warn(
+            'TR-RS is an experimental cyclic extension of open TT-RS; '
+            'the TT-RS paper guarantees do not transfer automatically',
+            ExperimentalWarning,
+            stacklevel=2)
+        verbosity = _normalize_verbosity(verbose)
+        fit_observer = _resolve_observer(verbosity, observer) \
+            if verbosity or observer is not None else None
+        if fit_observer is not None:
+            fit_observer.emit(DecompositionEvent(
+                name='start',
+                phase='TR-RS',
+                values={
+                    'sites': len(self.source.input_dim),
+                    'input_dim': self.source.input_dim,
+                    'rank': rank,
+                    'operator': type(self.sketch_operator).__name__,
+                }))
+
+        tt_result = super().fit(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            batch_size=batch_size,
+            generator=generator,
+            strict_system=strict_system,
+            verbose=0,
+            collect_metrics=collect_metrics)
+        tr_result = TT2TR(
+            tt_result,
+            output_device=self._tr_output_device).fit(
+                rank=rank,
+                tr_rank=rank,
+                center=center,
+                loop_opener=loop_opener,
+                schedule=schedule,
+                schedule_block_size=schedule_block_size,
+                gauge_recursion=gauge_recursion,
+                allow_projective_gauges=allow_projective_gauges,
+                gauge_tolerance=gauge_tolerance,
+                inverse_policy=inverse_policy,
+                rank_rtol=rank_rtol,
+                verbose=0)
+        metrics = _merge_rs_metrics(tt_result.metrics, tr_result.metrics)
+        metadata = dict(tr_result.metadata)
+        metadata.update({
+            'algorithm': 'tr_rs',
+            'source_type': type(self.source).__name__,
+            'sketch_operator': type(self.sketch_operator).__name__,
+            'tt_rank': list(tt_result.rank),
+            'experimental': True,
+        })
+        result = TRDecomposition(
+            tr_result.cores,
+            metrics=metrics,
+            metadata=metadata)
+
+        if collect_metrics and isinstance(self.source, SupportTensorSource):
+            samples = self.source.support.as_tensor()
+            approximation = result.evaluate(samples)
+            target = self.source.support_values.to(
+                device=approximation.device, dtype=approximation.dtype)
+            absolute = torch.linalg.vector_norm(approximation - target)
+            denominator = torch.linalg.vector_norm(target)
+            relative = absolute / denominator if denominator > 0 else absolute
+            result.metrics.errors.append(ErrorRecord(
+                kind='source_support',
+                absolute=absolute,
+                relative=relative,
+                denominator=denominator,
+                size=target.shape[0]))
+
+        if fit_observer is not None:
+            for site, core in enumerate(result.cores):
+                fit_observer.emit(DecompositionEvent(
+                    name='site_complete',
+                    phase='TR-RS',
+                    site=site,
+                    values={
+                        'total_sites': len(result.cores),
+                        'shape': tuple(core.shape),
+                    }))
+            fit_observer.emit(DecompositionEvent(
+                name='summary',
+                phase='TR-RS',
+                values={
+                    'rank': result.rank,
+                    'operator': type(self.sketch_operator).__name__,
+                    'fidelity': result.metrics.fidelities[-1].fidelity,
+                }))
+            for site, core in enumerate(result.cores):
+                fit_observer.emit(DecompositionEvent(
+                    name='core',
+                    phase='TR-RS',
+                    level=3,
+                    site=site,
+                    values={'shape': tuple(core.shape), 'tensor': core}))
+            fit_observer.close(result.metrics)
+        return result
+
+
+@torch.no_grad()
+def tr_rs(
+        source=None,
+        *,
+        dataset: Optional[torch.Tensor] = None,
+        input_dim: Optional[Sequence[int]] = None,
+        weights: Optional[torch.Tensor] = None,
+        sketch_operator: Optional[SketchOperator] = None,
+        rank: int = 1,
+        center: Optional[int] = None,
+        loop_opener: Union[str, LoopOpener] = 'als',
+        schedule: str = 'center_out',
+        schedule_block_size: int = 1,
+        gauge_recursion: str = 'pseudoinverse',
+        allow_projective_gauges: bool = False,
+        gauge_tolerance: float = 1e-8,
+        inverse_policy: str = 'pinv',
+        rank_rtol: Optional[float] = None,
+        cutoff: Optional[float] = None,
+        atol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None,
+        batch_size: Optional[int] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Device = None,
+        generator: Optional[torch.Generator] = None,
+        strict_system: bool = False,
+        output_device: Device = 'cpu',
+        verbose: Union[bool, int] = 0,
+        return_info: bool = False):
+    """Projects a complete discrete source into TR cores with TR-RS.
+
+    This simple interface constructs :class:`TRRS`, calls :meth:`TRRS.fit`
+    and returns only the cores unless ``return_info=True``. Exactly one of
+    ``source`` and ``dataset`` is required. The method is experimental and
+    warns that open TT-RS guarantees do not transfer automatically.
+
+    Examples
+    --------
+    >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
+    >>> cores = tr_rs(dataset=dataset, input_dim=(2, 2, 2), rank=1)
+    >>> len(cores)
+    3
+    """
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+    result = TRRS(
+        source=source,
+        dataset=dataset,
+        input_dim=input_dim,
+        weights=weights,
+        sketch_operator=sketch_operator,
+        dtype=dtype,
+        device=device,
+        output_device=output_device).fit(
+            rank=rank,
+            center=center,
+            loop_opener=loop_opener,
+            schedule=schedule,
+            schedule_block_size=schedule_block_size,
+            gauge_recursion=gauge_recursion,
+            allow_projective_gauges=allow_projective_gauges,
+            gauge_tolerance=gauge_tolerance,
+            inverse_policy=inverse_policy,
+            rank_rtol=rank_rtol,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            batch_size=batch_size,
+            generator=generator,
+            strict_system=strict_system,
+            verbose=verbose,
+            collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
 
 
 @torch.no_grad()

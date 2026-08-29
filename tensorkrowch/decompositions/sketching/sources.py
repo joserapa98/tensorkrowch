@@ -51,11 +51,16 @@ def _resolve_rs_source(
         dataset: Optional[torch.Tensor] = None,
         input_dim: Optional[Sequence[int]] = None,
         weights: Optional[torch.Tensor] = None,
-        dtype: Optional[torch.dtype] = None) -> TensorSource:
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[Union[str, torch.device]] = None) -> TensorSource:
     """Normalizes the mutually exclusive source/dataset RS input contract."""
     if (source is None) == (dataset is None):
         raise ValueError('Exactly one of `source` and `dataset` is required')
     if dataset is not None:
+        if device is not None:
+            dataset = dataset.to(device=device)
+            if weights is not None:
+                weights = weights.to(device=device)
         return EmpiricalDistribution(
             dataset=dataset,
             input_dim=input_dim,
@@ -67,7 +72,8 @@ def _resolve_rs_source(
         source,
         input_dim=input_dim,
         output_shape=(),
-        dtype=dtype)
+        dtype=dtype,
+        device='cpu' if device is None else device)
 
 
 def _iter_support(

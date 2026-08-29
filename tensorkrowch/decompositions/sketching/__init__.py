@@ -31,9 +31,11 @@ from tensorkrowch.decompositions.sketching.transforms import (
     LocalTransformContext,
     LocalValueTransform,
 )
-from tensorkrowch.decompositions.sketching.tt import TTRSS, tt_rss
+from tensorkrowch.decompositions.sketching.tt import (TTRS, TTRSS, tt_rs,
+                                                      tt_rss)
 from tensorkrowch.decompositions.sketching.tr import (SketchGaugeRecursion,
-                                                      TRRSS, tr_rss)
+                                                      TRRS, TRRSS, tr_rs,
+                                                      tr_rss)
 
 
 __all__ = [
@@ -62,7 +64,11 @@ __all__ = [
     'CompositeLocalValueTransform',
     'TTRSS',
     'tt_rss',
+    'TTRS',
+    'tt_rs',
     'SketchGaugeRecursion',
+    'TRRS',
+    'tr_rs',
     'TRRSS',
     'tr_rss',
 ]

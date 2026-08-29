@@ -15,7 +15,8 @@ from tensorkrowch.decompositions.sketching.sources import (
     SupportTensorSource,
     _iter_support,
 )
-from tensorkrowch.decompositions.sources import TensorSource
+from tensorkrowch.decompositions.sources import (ConfigurationBatch,
+                                                 TensorSource)
 from tensorkrowch.utils import truncated_svd
 
 
@@ -276,14 +277,13 @@ class CoreDeterminingSystem:
 
 
 class _SupportSketchSystemBuilder:
-    """Contracts one complete sparse support with a sketch operator."""
+    """Contracts finite support, enumerating only non-support sources."""
 
     def __init__(self,
                  source: TensorSource,
                  operator: SketchOperator) -> None:
-        if not isinstance(source, SupportTensorSource):
-            raise TypeError(
-                'This sketch builder requires a source with finite support')
+        if not isinstance(source, TensorSource):
+            raise TypeError('`source` should implement TensorSource')
         if tuple(source.output_shape) != ():
             raise ValueError('TT-RS currently requires a scalar source')
         if len(source.input_dim) < 2:
@@ -296,11 +296,31 @@ class _SupportSketchSystemBuilder:
               batch_size: Optional[int] = None,
               generator: Optional[torch.Generator] = None
               ) -> CoreDeterminingSystem:
-        """Builds all Phi tensors in support-linear memory."""
-        batches = list(_iter_support(self.source, batch_size=batch_size))
-        indices = torch.cat(
-            [batch.as_tensor() for batch, _ in batches], dim=0)
-        values = torch.cat([value for _, value in batches], dim=0)
+        """Builds all Phi tensors in support-linear memory when possible."""
+        if isinstance(self.source, SupportTensorSource):
+            batches = list(_iter_support(self.source, batch_size=batch_size))
+            indices = torch.cat(
+                [batch.as_tensor() for batch, _ in batches], dim=0)
+            values = torch.cat([value for _, value in batches], dim=0)
+            source_path = 'support'
+        else:
+            axes = [
+                torch.arange(dimension, device=self.source.device)
+                for dimension in self.source.input_dim
+            ]
+            indices = torch.cartesian_prod(*axes)
+            if batch_size is None:
+                batch_size = indices.shape[0]
+            if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+                raise TypeError('`batch_size` should be int type or None')
+            if batch_size < 1:
+                raise ValueError('`batch_size` should be positive')
+            values = []
+            for start in range(0, indices.shape[0], batch_size):
+                values.append(self.source.evaluate(ConfigurationBatch(
+                    indices[start:start + batch_size], kind='indices')))
+            values = torch.cat(values, dim=0)
+            source_path = 'enumerated_grid'
         nonzero = values != 0
         indices = indices[nonzero]
         values = values[nonzero]
@@ -333,6 +353,7 @@ class _SupportSketchSystemBuilder:
             operator=type(self.operator).__name__,
             diagnostics={
                 'support_size': values.shape[0],
+                'source_path': source_path,
                 'left_dimensions': tuple(item.shape[1] for item in weights.left),
                 'right_dimensions': tuple(item.shape[1]
                                           for item in weights.right),

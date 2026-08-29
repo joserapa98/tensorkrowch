@@ -1,13 +1,15 @@
 """Quantized layouts and coordinate maps for recursive sketching."""
 
 from dataclasses import dataclass
-from typing import Optional, Sequence, Tuple, Union
+from typing import (Callable, Optional, Protocol, Sequence, Tuple, Union,
+                    runtime_checkable)
 
 import torch
 
 
 IntegerSpec = Union[int, Sequence[int]]
 DigitSite = Tuple[int, int]
+Domain = Optional[Union[torch.Tensor, Sequence[torch.Tensor]]]
 
 
 def _integer_spec(value: IntegerSpec,
@@ -265,4 +267,378 @@ class QuantizedLayout:
         return target.encode_indices(self.decode_digits(digits))
 
 
-__all__ = ['QuantizedLayout']
+def _coordinate_tensor(values: torch.Tensor, name: str) -> torch.Tensor:
+    """Validates floating coordinates with a final variable dimension."""
+    if not isinstance(values, torch.Tensor):
+        raise TypeError(f'`{name}` should be torch.Tensor type')
+    if values.ndim < 1 or values.shape[-1] < 1:
+        raise ValueError(
+            f'`{name}` should contain a final variable dimension')
+    if not values.is_floating_point():
+        raise TypeError(f'`{name}` should be floating')
+    if not torch.isfinite(values).all():
+        raise ValueError(f'`{name}` should contain finite values')
+    return values
+
+
+def _domain_tensor(domain: Domain,
+                   n_variables: int,
+                   device: torch.device,
+                   dtype: torch.dtype) -> torch.Tensor:
+    """Normalizes one shared interval or one interval per variable."""
+    if domain is None:
+        raise ValueError('`domain` is required by this coordinate map')
+    if isinstance(domain, torch.Tensor):
+        intervals = domain
+        if intervals.shape == (2,):
+            intervals = intervals.expand(n_variables, 2)
+        elif intervals.shape != (n_variables, 2):
+            raise ValueError(
+                '`domain` should be one interval or one per variable')
+    else:
+        if isinstance(domain, (str, bytes)):
+            raise TypeError('`domain` should contain interval tensors')
+        try:
+            values = tuple(domain)
+        except TypeError as exc:
+            raise TypeError('`domain` should contain interval tensors') \
+                from exc
+        if len(values) != n_variables:
+            raise ValueError('`domain` should contain one interval per variable')
+        intervals = torch.stack([
+            value if isinstance(value, torch.Tensor)
+            else torch.as_tensor(value)
+            for value in values
+        ])
+        if intervals.shape != (n_variables, 2):
+            raise ValueError('Every domain interval should contain two values')
+    intervals = intervals.to(device=device, dtype=dtype)
+    if not torch.isfinite(intervals).all():
+        raise ValueError('`domain` should contain finite values')
+    if torch.any(intervals[:, 1] <= intervals[:, 0]):
+        raise ValueError('Every domain interval should be strictly increasing')
+    return intervals
+
+
+def _out_of_domain(value: str) -> str:
+    """Validates the explicit out-of-domain policy."""
+    if value not in ('error', 'clip'):
+        raise ValueError("`out_of_domain` should be 'error' or 'clip'")
+    return value
+
+
+def _indices_to_unit(indices: torch.Tensor,
+                     grid_size: Sequence[int],
+                     grid: str,
+                     dtype: Optional[torch.dtype] = None) -> torch.Tensor:
+    """Maps integer grid indices to computational coordinates."""
+    if not isinstance(indices, torch.Tensor) or indices.ndim < 1 or \
+            indices.dtype not in (
+                torch.uint8, torch.int8, torch.int16, torch.int32,
+                torch.int64):
+        raise TypeError('`indices` should be an integer tensor')
+    grid_size = tuple(grid_size)
+    if indices.shape[-1] != len(grid_size):
+        raise ValueError('`grid_size` should match the index variables')
+    if any(isinstance(size, bool) or not isinstance(size, int) or size < 2
+           for size in grid_size):
+        raise ValueError('`grid_size` should contain integers of at least two')
+    if dtype is None:
+        dtype = torch.get_default_dtype()
+    sizes = torch.tensor(grid_size, device=indices.device, dtype=dtype)
+    values = indices.to(dtype=sizes.dtype)
+    if torch.any(values < 0) or torch.any(values >= sizes):
+        raise ValueError('`indices` is out of bounds for `grid_size`')
+    if grid == 'endpoints':
+        return values / (sizes - 1)
+    if grid == 'cell_centers':
+        return (values + 0.5) / sizes
+    raise ValueError("`grid` should be 'endpoints' or 'cell_centers'")
+
+
+def _unit_to_indices(unit_coordinates: torch.Tensor,
+                     grid_size: Sequence[int],
+                     grid: str,
+                     out_of_domain: str) -> torch.Tensor:
+    """Quantizes computational coordinates with lower-index tie breaking."""
+    unit_coordinates = _coordinate_tensor(
+        unit_coordinates, 'unit_coordinates')
+    out_of_domain = _out_of_domain(out_of_domain)
+    grid_size = tuple(grid_size)
+    if unit_coordinates.shape[-1] != len(grid_size):
+        raise ValueError('`grid_size` should match the coordinate variables')
+    sizes = unit_coordinates.new_tensor(grid_size)
+    outside = (unit_coordinates < 0) | (unit_coordinates > 1)
+    if out_of_domain == 'error' and torch.any(outside):
+        raise ValueError('Coordinates lie outside the computational domain')
+    unit = unit_coordinates.clamp(0, 1)
+    if grid == 'endpoints':
+        scaled = unit * (sizes - 1)
+    elif grid == 'cell_centers':
+        scaled = unit * sizes - 0.5
+    else:
+        raise ValueError("`grid` should be 'endpoints' or 'cell_centers'")
+    # ceil(x - 1/2) implements nearest integer with exact half-way values
+    # assigned to the smaller index.
+    return torch.ceil(scaled - 0.5).clamp_min(0).minimum(
+        sizes - 1).to(torch.long)
+
+
+@runtime_checkable
+class CoordinateMap(Protocol):
+    """Maps computational coordinates to a physical coordinate space."""
+
+    def forward(self,
+                unit_coordinates: torch.Tensor,
+                domain: Domain = None) -> torch.Tensor:
+        """Maps ``(..., variables)`` unit coordinates to physical values."""
+
+
+@dataclass(frozen=True)
+class UniformCoordinateMap:
+    """Affine map between a uniform computational grid and physical domains."""
+
+    grid: str = 'endpoints'
+
+    def __post_init__(self) -> None:
+        if self.grid not in ('endpoints', 'cell_centers'):
+            raise ValueError(
+                "`grid` should be 'endpoints' or 'cell_centers'")
+
+    def forward(self,
+                unit_coordinates: torch.Tensor,
+                domain: Domain = None) -> torch.Tensor:
+        """Maps unit coordinates affinely into each physical interval."""
+        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
+        intervals = _domain_tensor(
+            domain, unit.shape[-1], unit.device, unit.dtype)
+        return intervals[:, 0] + unit * (intervals[:, 1] - intervals[:, 0])
+
+    def inverse(self,
+                physical_coordinates: torch.Tensor,
+                domain: Domain = None,
+                out_of_domain: str = 'error') -> torch.Tensor:
+        """Maps physical coordinates back to the unit computational domain."""
+        physical = _coordinate_tensor(
+            physical_coordinates, 'physical_coordinates')
+        intervals = _domain_tensor(
+            domain, physical.shape[-1], physical.device, physical.dtype)
+        unit = (physical - intervals[:, 0]) / (
+            intervals[:, 1] - intervals[:, 0])
+        policy = _out_of_domain(out_of_domain)
+        outside = (unit < 0) | (unit > 1)
+        if policy == 'error' and torch.any(outside):
+            raise ValueError('Coordinates lie outside the physical domain')
+        return unit.clamp(0, 1) if policy == 'clip' else unit
+
+    def from_indices(self,
+                     indices: torch.Tensor,
+                     grid_size: Sequence[int],
+                     domain: Domain = None) -> torch.Tensor:
+        """Maps integer grid indices directly to physical coordinates."""
+        dtype = None
+        if isinstance(domain, torch.Tensor) and domain.is_floating_point():
+            dtype = domain.dtype
+        elif isinstance(domain, (list, tuple)) and domain and \
+                isinstance(domain[0], torch.Tensor) and \
+                domain[0].is_floating_point():
+            dtype = domain[0].dtype
+        unit = _indices_to_unit(
+            indices, grid_size, self.grid, dtype=dtype)
+        return self.forward(unit, domain)
+
+    def to_indices(self,
+                   physical_coordinates: torch.Tensor,
+                   grid_size: Sequence[int],
+                   domain: Domain = None,
+                   out_of_domain: str = 'error') -> torch.Tensor:
+        """Quantizes physical coordinates to their nearest grid indices."""
+        unit = self.inverse(
+            physical_coordinates,
+            domain,
+            out_of_domain=out_of_domain)
+        return _unit_to_indices(
+            unit, grid_size, self.grid, out_of_domain=out_of_domain)
+
+
+@dataclass(frozen=True)
+class WarpedCoordinateMap:
+    """User-defined separable or coupled computational-coordinate map.
+
+    Callables receive ``(coordinates, domain)`` and should preserve the input
+    shape. ``domain`` may be ``None`` when the callable already contains the
+    complete physical geometry.
+    """
+
+    forward_function: Callable
+    inverse_function: Optional[Callable] = None
+
+    def __post_init__(self) -> None:
+        if not callable(self.forward_function):
+            raise TypeError('`forward_function` should be callable')
+        if self.inverse_function is not None and not callable(
+                self.inverse_function):
+            raise TypeError('`inverse_function` should be callable or None')
+
+    @staticmethod
+    def _validate_result(result: torch.Tensor,
+                         reference: torch.Tensor,
+                         name: str) -> torch.Tensor:
+        if not isinstance(result, torch.Tensor):
+            raise TypeError(f'`{name}` should return a torch.Tensor')
+        if result.shape != reference.shape:
+            raise ValueError(f'`{name}` should preserve coordinate shape')
+        if not result.is_floating_point() or not torch.isfinite(result).all():
+            raise ValueError(f'`{name}` should return finite floating values')
+        return result
+
+    def forward(self,
+                unit_coordinates: torch.Tensor,
+                domain: Domain = None) -> torch.Tensor:
+        """Applies the user-defined forward warp."""
+        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
+        return self._validate_result(
+            self.forward_function(unit, domain), unit, 'forward_function')
+
+    def inverse(self,
+                physical_coordinates: torch.Tensor,
+                domain: Domain = None,
+                out_of_domain: str = 'error') -> torch.Tensor:
+        """Applies the optional inverse warp and validates the unit result."""
+        if self.inverse_function is None:
+            raise NotImplementedError(
+                'This warped coordinate map does not define an inverse')
+        physical = _coordinate_tensor(
+            physical_coordinates, 'physical_coordinates')
+        unit = self._validate_result(
+            self.inverse_function(physical, domain),
+            physical,
+            'inverse_function')
+        policy = _out_of_domain(out_of_domain)
+        outside = (unit < 0) | (unit > 1)
+        if policy == 'error' and torch.any(outside):
+            raise ValueError('Inverse warp lies outside the unit domain')
+        return unit.clamp(0, 1) if policy == 'clip' else unit
+
+
+class ExplicitGridMap:
+    """Maps unit coordinates through arbitrary monotonic point grids."""
+
+    def __init__(self,
+                 points: Union[torch.Tensor, Sequence[torch.Tensor]]) -> None:
+        if isinstance(points, torch.Tensor):
+            grids = (points,)
+            self.shared = True
+        else:
+            if isinstance(points, (str, bytes)):
+                raise TypeError('`points` should contain grid tensors')
+            try:
+                grids = tuple(points)
+            except TypeError as exc:
+                raise TypeError('`points` should contain grid tensors') from exc
+            self.shared = False
+        if not grids or not all(
+                isinstance(grid, torch.Tensor) and grid.ndim == 1 and
+                grid.shape[0] >= 2 and grid.is_floating_point() and
+                torch.isfinite(grid).all()
+                for grid in grids):
+            raise ValueError(
+                '`points` should contain finite floating vectors of size >= 2')
+        for grid in grids:
+            differences = grid[1:] - grid[:-1]
+            if not (torch.all(differences > 0) or
+                    torch.all(differences < 0)):
+                raise ValueError('Every explicit grid should be monotonic')
+        self.points = grids
+
+    def _grids(self, n_variables: int) -> Tuple[torch.Tensor, ...]:
+        """Broadcasts one shared grid or validates per-variable grids."""
+        if self.shared:
+            return self.points * n_variables
+        if len(self.points) != n_variables:
+            raise ValueError('`points` should contain one grid per variable')
+        return self.points
+
+    @property
+    def grid_size(self) -> Tuple[int, ...]:
+        """Stored point count per explicit grid before shared broadcasting."""
+        return tuple(grid.shape[0] for grid in self.points)
+
+    def forward(self,
+                unit_coordinates: torch.Tensor,
+                domain: Domain = None) -> torch.Tensor:
+        """Linearly interpolates each explicit grid at unit coordinates."""
+        if domain is not None:
+            raise ValueError('`domain` is not used by ExplicitGridMap')
+        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
+        if torch.any(unit < 0) or torch.any(unit > 1):
+            raise ValueError('Unit coordinates should lie in [0, 1]')
+        values = []
+        for variable, grid in enumerate(self._grids(unit.shape[-1])):
+            grid = grid.to(device=unit.device, dtype=unit.dtype)
+            scaled = unit[..., variable] * (grid.shape[0] - 1)
+            lower = scaled.floor().to(torch.long)
+            upper = (lower + 1).clamp_max(grid.shape[0] - 1)
+            fraction = scaled - lower
+            values.append(
+                grid[lower] * (1 - fraction) + grid[upper] * fraction)
+        return torch.stack(values, dim=-1)
+
+    def inverse(self,
+                physical_coordinates: torch.Tensor,
+                domain: Domain = None,
+                out_of_domain: str = 'error') -> torch.Tensor:
+        """Maps to the nearest explicit point with lower-index tie breaking."""
+        if domain is not None:
+            raise ValueError('`domain` is not used by ExplicitGridMap')
+        physical = _coordinate_tensor(
+            physical_coordinates, 'physical_coordinates')
+        policy = _out_of_domain(out_of_domain)
+        values = []
+        for variable, grid in enumerate(self._grids(physical.shape[-1])):
+            grid = grid.to(device=physical.device, dtype=physical.dtype)
+            coordinate = physical[..., variable]
+            lower_bound = grid.min()
+            upper_bound = grid.max()
+            outside = (coordinate < lower_bound) | (coordinate > upper_bound)
+            if policy == 'error' and torch.any(outside):
+                raise ValueError('Coordinate lies outside an explicit grid')
+            coordinate = coordinate.clamp(lower_bound, upper_bound)
+            distances = (coordinate.unsqueeze(-1) - grid).abs()
+            index = distances.argmin(dim=-1)
+            values.append(index.to(physical.dtype) / (grid.shape[0] - 1))
+        return torch.stack(values, dim=-1)
+
+    def from_indices(self, indices: torch.Tensor) -> torch.Tensor:
+        """Selects explicit point values at integer grid indices."""
+        if not isinstance(indices, torch.Tensor) or indices.ndim < 1 or \
+                indices.dtype not in (
+                    torch.uint8, torch.int8, torch.int16, torch.int32,
+                    torch.int64):
+            raise TypeError('`indices` should be an integer tensor')
+        values = []
+        for variable, grid in enumerate(self._grids(indices.shape[-1])):
+            index = indices[..., variable].to(torch.long)
+            if torch.any(index < 0) or torch.any(index >= grid.shape[0]):
+                raise ValueError('`indices` is out of bounds for explicit grid')
+            values.append(grid.to(indices.device)[index])
+        return torch.stack(values, dim=-1)
+
+    def to_indices(self,
+                   physical_coordinates: torch.Tensor,
+                   out_of_domain: str = 'error') -> torch.Tensor:
+        """Selects nearest explicit point indices."""
+        unit = self.inverse(
+            physical_coordinates, out_of_domain=out_of_domain)
+        sizes = unit.new_tensor([
+            grid.shape[0] for grid in self._grids(unit.shape[-1])])
+        return torch.round(unit * (sizes - 1)).to(torch.long)
+
+
+__all__ = [
+    'QuantizedLayout',
+    'CoordinateMap',
+    'UniformCoordinateMap',
+    'WarpedCoordinateMap',
+    'ExplicitGridMap',
+]

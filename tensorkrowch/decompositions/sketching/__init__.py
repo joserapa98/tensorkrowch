@@ -13,7 +13,13 @@ from tensorkrowch.decompositions.sketching.projections import (
     RandomizedRangeProjector,
     RangeProjector,
 )
-from tensorkrowch.decompositions.sketching.quantization import QuantizedLayout
+from tensorkrowch.decompositions.sketching.quantization import (
+    CoordinateMap,
+    ExplicitGridMap,
+    QuantizedLayout,
+    UniformCoordinateMap,
+    WarpedCoordinateMap,
+)
 from tensorkrowch.decompositions.sketching.sketches import (
     CoreDeterminingSystem,
     MarginalSketch,
@@ -51,6 +57,10 @@ __all__ = [
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
     'QuantizedLayout',
+    'CoordinateMap',
+    'UniformCoordinateMap',
+    'WarpedCoordinateMap',
+    'ExplicitGridMap',
     'SketchOperator',
     'SketchSystemBuilder',
     'CoreDeterminingSystem',

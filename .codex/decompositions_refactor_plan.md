@@ -4711,7 +4711,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Evidencia ampliada: `555 passed, 3 skipped` en ALS+sketching+ring y Ruff
   limpio.
 
-- [ ] **RSS-18 — Añadir fitting entrenable y Phi funcional**
+- [x] **RSS-18 — Añadir fitting entrenable y Phi funcional**
+
+  Estado: implementación commiteada en `1aba507`; pendiente de revisión
+  detallada del usuario.
 
   Implementar `TrainableEmbeddingFitter`:
 
@@ -4728,6 +4731,17 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Verificar que `SampledInputFitter` no es un nombre necesario:
   `SampledSketch` describe el sketch; el fitter describe la representación del
   eje físico.
+
+  Implementación: `PhiOperator.with_axis_values` y `.fiber_at` crean un Phi
+  lazy para nuevos valores del input; una consulta posterior al freeze abre una
+  sesión independiente y no muta el plan anterior. Los fitters declaran todas
+  sus selecciones antes de preparar transforms/freeze. `TrainableEmbeddingFitter`
+  consume fibras batched, aísla grad/RNG, controla optimizer, stopping,
+  patience y seed, y termina con un least-squares compartido. El modelo y un
+  state CPU detached solo se adjuntan con `return_info=True`; el camino rápido
+  devuelve únicamente coeficientes. No se añade `SampledInputFitter`.
+  Evidencia: `238 passed, 2 skipped` en sketching y `934 passed, 13 skipped` en
+  toda la suite de decompositions, con Ruff y diff-check limpios.
 
 - [ ] **QTT-01 — Implementar layouts cuantizados multivariables**
 

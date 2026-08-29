@@ -157,6 +157,205 @@ class TTTensorSource(_SourceEvaluationTracker):
             for site, core in enumerate(self.cores)
         ]
 
+    def left_environments(self,
+                          configurations: torch.Tensor) -> torch.Tensor:
+        """Contracts exact prefixes into their outgoing TT environments.
+
+        ``configurations`` has shape ``(rows, prefix_sites)``. An empty
+        prefix returns one unit boundary row. This kernel records no source
+        evaluations because it contracts the stored representation directly.
+        """
+        indices = self._partial_indices(
+            configurations, start=0, name='configurations')
+        environment = self.cores[0].new_ones((indices.shape[0], 1))
+        for site in range(indices.shape[1]):
+            matrices = self.cores[site][
+                :, indices[:, site], :].permute(1, 0, 2)
+            environment = torch.einsum(
+                'ba,bar->br', environment, matrices)
+        return environment
+
+    def right_environments(self,
+                           configurations: torch.Tensor) -> torch.Tensor:
+        """Contracts exact suffixes into their incoming TT environments.
+
+        ``configurations`` has shape ``(rows, suffix_sites)`` and is aligned
+        with the final source sites. An empty suffix returns the unit boundary.
+        """
+        start = len(self.cores) - configurations.shape[1] \
+            if isinstance(configurations, torch.Tensor) and \
+            configurations.ndim == 2 else 0
+        indices = self._partial_indices(
+            configurations, start=start, name='configurations')
+        environment = self.cores[0].new_ones((indices.shape[0], 1))
+        for offset in range(indices.shape[1] - 1, -1, -1):
+            site = start + offset
+            matrices = self.cores[site][
+                :, indices[:, offset], :].permute(1, 0, 2)
+            environment = torch.einsum(
+                'bar,br->ba', matrices, environment)
+        return environment
+
+    def _partial_indices(self,
+                         configurations: torch.Tensor,
+                         *,
+                         start: int,
+                         name: str) -> torch.Tensor:
+        """Validates a consecutive partial discrete configuration batch."""
+        if not isinstance(configurations, torch.Tensor):
+            raise TypeError(f'`{name}` should be torch.Tensor type')
+        if configurations.ndim != 2 or configurations.dtype not in (
+                torch.uint8, torch.int8, torch.int16, torch.int32,
+                torch.int64):
+            raise TypeError(
+                f'`{name}` should be a two-dimensional integer tensor')
+        stop = start + configurations.shape[1]
+        if start < 0 or stop > len(self.cores):
+            raise ValueError(f'`{name}` contains too many sites')
+        indices = configurations.to(device=self.device, dtype=torch.long)
+        for offset, dimension in enumerate(self.input_dim[start:stop]):
+            values = indices[:, offset]
+            if torch.any(values < 0) or torch.any(values >= dimension):
+                raise ValueError(
+                    f'`{name}` is out of bounds at partial site {offset}')
+        return indices
+
+    def local_phi(self,
+                  site: int,
+                  left: torch.Tensor,
+                  right: torch.Tensor,
+                  factor: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Contracts one source core between external sketch environments."""
+        if isinstance(site, bool) or not isinstance(site, int):
+            raise TypeError('`site` should be int type')
+        if site < 0 or site >= len(self.cores):
+            raise ValueError('`site` should identify one source site')
+        if not isinstance(left, torch.Tensor) or left.ndim != 2:
+            raise TypeError('`left` should be a matrix')
+        if not isinstance(right, torch.Tensor) or right.ndim != 2:
+            raise TypeError('`right` should be a matrix')
+        core = self.cores[site]
+        if left.shape[1] != core.shape[0]:
+            raise ValueError('`left` does not match the source left rank')
+        if right.shape[1] != core.shape[-1]:
+            raise ValueError('`right` does not match the source right rank')
+        dtype = torch.promote_types(
+            core.dtype, torch.promote_types(left.dtype, right.dtype))
+        core = core.to(dtype=dtype)
+        if factor is not None:
+            if not isinstance(factor, torch.Tensor) or \
+                    factor.shape != (core.shape[1],):
+                raise ValueError('`factor` should match the site input dimension')
+            core = core * factor.to(device=self.device, dtype=dtype)[None, :, None]
+        return torch.einsum(
+            'la,aib,rb->lir',
+            left.to(device=self.device, dtype=dtype),
+            core,
+            right.to(device=self.device, dtype=dtype))
+
+    def marginal_phi(self,
+                     site: int,
+                     order: int = 1,
+                     factor: Optional[Sequence[torch.Tensor]] = None
+                     ) -> torch.Tensor:
+        """Contracts a local Markov marginal without densifying the source."""
+        if isinstance(order, bool) or not isinstance(order, int):
+            raise TypeError('`order` should be int type')
+        if order < 1:
+            raise ValueError('`order` should be positive')
+        if factor is None:
+            factors = [core.new_ones(core.shape[1]) for core in self.cores]
+        else:
+            factors = list(factor)
+            if len(factors) != len(self.cores):
+                raise ValueError('`factor` should contain one vector per site')
+            for position, (value, dimension) in enumerate(zip(
+                    factors, self.input_dim)):
+                if not isinstance(value, torch.Tensor) or \
+                        value.shape != (dimension,):
+                    raise ValueError(
+                        f'`factor` at site {position} has an invalid shape')
+                factors[position] = value.to(
+                    device=self.device, dtype=self.dtype)
+
+        left_start = max(0, site - order)
+        left = self.cores[0].new_ones((1, 1))
+        for position in range(left_start):
+            matrix = torch.einsum(
+                'aib,i->ab', self.cores[position], factors[position])
+            left = left @ matrix
+        for position in range(left_start, site):
+            core = self.cores[position] * \
+                factors[position][None, :, None]
+            left = torch.einsum('la,aib->lib', left, core).reshape(
+                -1, core.shape[-1])
+
+        right_stop = min(len(self.cores), site + 1 + order)
+        right = self.cores[0].new_ones((1, 1))
+        for position in range(len(self.cores) - 1, right_stop - 1, -1):
+            matrix = torch.einsum(
+                'aib,i->ab', self.cores[position], factors[position])
+            right = torch.einsum('ab,rb->ra', matrix, right)
+        for position in range(right_stop - 1, site, -1):
+            core = self.cores[position] * \
+                factors[position][None, :, None]
+            right = torch.einsum('aib,rb->ira', core, right).reshape(
+                -1, core.shape[0])
+        return self.local_phi(site, left, right, factor=factors[site])
+
+    def tt_sketch_phis(
+            self,
+            left_cores: Sequence[Sequence[torch.Tensor]],
+            right_cores: Sequence[Sequence[torch.Tensor]],
+            boundary_scale: float = 1.0) -> Tuple[torch.Tensor, ...]:
+        """Contracts stacked TT sketch networks into every local Phi."""
+        left_cores = tuple(tuple(stack) for stack in left_cores)
+        right_cores = tuple(tuple(stack) for stack in right_cores)
+        if not left_cores or len(left_cores) != len(right_cores):
+            raise ValueError('Left and right sketches should have equal stacks')
+        if any(len(stack) != len(self.cores)
+               for stack in (*left_cores, *right_cores)):
+            raise ValueError('Every sketch stack should contain one core per site')
+
+        left = [self.cores[0].new_ones((1, 1))]
+        stack_left = self.cores[0].new_ones(
+            (len(left_cores), 1, 1))
+        for site in range(len(self.cores) - 1):
+            next_stack = []
+            for stack, cores in enumerate(left_cores):
+                environment = torch.einsum(
+                    'ac,aib,cid->bd',
+                    stack_left[stack],
+                    self.cores[site],
+                    cores[site].to(self.dtype))
+                if site == 0:
+                    environment = environment * boundary_scale
+                next_stack.append(environment)
+            stack_left = torch.stack(next_stack)
+            left.append(stack_left.permute(0, 2, 1).reshape(
+                -1, stack_left.shape[1]))
+
+        right = [None] * len(self.cores)
+        right[-1] = self.cores[0].new_ones((1, 1))
+        stack_right = self.cores[0].new_ones(
+            (len(right_cores), 1, 1))
+        for site in range(len(self.cores) - 1, 0, -1):
+            next_stack = []
+            for stack, cores in enumerate(right_cores):
+                environment = torch.einsum(
+                    'aib,cid,bd->ac',
+                    self.cores[site],
+                    cores[site].to(self.dtype),
+                    stack_right[stack])
+                if site == len(self.cores) - 1:
+                    environment = environment * boundary_scale
+                next_stack.append(environment)
+            stack_right = torch.stack(next_stack)
+            right[site - 1] = stack_right.permute(0, 2, 1).reshape(
+                -1, stack_right.shape[1])
+        return tuple(self.local_phi(site, left[site], right[site])
+                     for site in range(len(self.cores)))
+
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates discrete configurations by batched TT contraction."""
         indices = _discrete_indices(

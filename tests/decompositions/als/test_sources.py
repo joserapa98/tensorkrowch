@@ -225,3 +225,49 @@ class TestSparseAndTTSources:  # MARK: TestSparseAndTTSources
 
         assert isinstance(source, tk.decompositions.TTTensorSource)
         assert source.input_dim == decomposition.input_dim
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_tt_structured_prefix_suffix_and_phi_match_dense(self, dtype):
+        cores = make_tt_cores(
+            dtype=dtype, generator=torch.Generator().manual_seed(13))
+        source = tk.decompositions.TTTensorSource(cores)
+        dense = contract_tt_dense(cores)
+        prefixes = torch.arange(dense.shape[0]).reshape(-1, 1)
+        suffixes = torch.arange(dense.shape[2]).reshape(-1, 1)
+
+        left = source.left_environments(prefixes)
+        right = source.right_environments(suffixes)
+        phi = source.local_phi(1, left, right)
+
+        assert torch.allclose(phi, dense)
+        assert source.evaluation_stats.requested_points == 0
+
+    @pytest.mark.parametrize('order', [1, 2])
+    def test_tt_structured_marginal_phi_matches_dense(self, order):
+        cores = make_tt_cores(generator=torch.Generator().manual_seed(14))
+        source = tk.decompositions.TTTensorSource(cores)
+        dense = contract_tt_dense(cores)
+        factor = (
+            torch.tensor([1., 2.]),
+            torch.tensor([1., 3., 2.]),
+            torch.tensor([2., 1.]),
+        )
+        weighted = torch.einsum('ijk,i,j,k->ijk', dense, *factor)
+
+        for site in range(3):
+            phi = source.marginal_phi(site, order=order, factor=factor)
+            if order == 1:
+                expected = (
+                    weighted.sum(dim=2).unsqueeze(0) if site == 0 else
+                    weighted if site == 1 else
+                    weighted.sum(dim=0).unsqueeze(-1))
+            else:
+                left_size = 1
+                for dimension in dense.shape[:site]:
+                    left_size *= dimension
+                right_size = 1
+                for dimension in dense.shape[site + 1:]:
+                    right_size *= dimension
+                expected = weighted.reshape(
+                    left_size, dense.shape[site], right_size)
+            assert torch.allclose(phi, expected)

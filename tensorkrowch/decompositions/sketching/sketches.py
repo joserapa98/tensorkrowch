@@ -95,6 +95,36 @@ def _sample_states(values: torch.Tensor,
     return states.index_select(0, permutation).sort().values
 
 
+def _unravel_ids(ids: torch.Tensor,
+                 dimensions: Sequence[int]) -> torch.Tensor:
+    """Unravels flat consecutive-site indices in row-major order."""
+    if not dimensions:
+        return ids.new_empty((ids.shape[0], 0))
+    result = []
+    remainder = ids
+    for site, dimension in enumerate(dimensions):
+        stride = prod(dimensions[site + 1:])
+        result.append(torch.div(
+            remainder, stride, rounding_mode='floor'))
+        remainder = torch.remainder(remainder, stride)
+    return torch.stack(result, dim=1)
+
+
+def _structured_capability(source: TensorSource, name: str):
+    """Returns one optional structured source kernel by capability."""
+    capability = getattr(source, name, None)
+    return capability if callable(capability) else None
+
+
+def _validate_structured_batch_size(batch_size: Optional[int]) -> None:
+    """Validates a generic batch option unused by direct contractions."""
+    if batch_size is not None and (
+            isinstance(batch_size, bool) or not isinstance(batch_size, int)):
+        raise TypeError('`batch_size` should be int type or None')
+    if batch_size is not None and batch_size < 1:
+        raise ValueError('`batch_size` should be positive')
+
+
 @dataclass(frozen=True)
 class _SketchWeights:
     """Evaluated left/right sketches and recursive left local blocks."""
@@ -361,6 +391,195 @@ class _SupportSketchSystemBuilder:
             })
 
 
+class _SampledStructuredSystemBuilder:
+    """Builds sampled equations from exact TT prefix/suffix kernels."""
+
+    def __init__(self, source: TensorSource, operator: 'SampledSketch') -> None:
+        self.source = source
+        self.operator = operator
+
+    def build(self,
+              *,
+              batch_size: Optional[int] = None,
+              generator: Optional[torch.Generator] = None
+              ) -> CoreDeterminingSystem:
+        _validate_structured_batch_size(batch_size)
+        dimensions = self.source.input_dim
+        device = self.source.device
+        if self.operator.samples is None:
+            reference = None
+        else:
+            reference = self.operator.samples.to(
+                device=device, dtype=torch.long)
+            if reference.shape[1] != len(dimensions):
+                raise ValueError('`samples` should contain one index per site')
+            for site, dimension in enumerate(dimensions):
+                if torch.any(reference[:, site] < 0) or \
+                        torch.any(reference[:, site] >= dimension):
+                    raise ValueError(
+                        f'`samples` are out of bounds at site {site}')
+
+        prefix_states = []
+        suffix_states = []
+        blocks = []
+        for site in range(len(dimensions) - 1):
+            if reference is None:
+                prefix_ids = torch.arange(
+                    prod(dimensions[:site + 1]), device=device)
+                suffix_ids = torch.arange(
+                    prod(dimensions[site + 1:]), device=device)
+            else:
+                prefix_ids = _ravel_subset(
+                    reference[:, :site + 1], dimensions[:site + 1])
+                suffix_ids = _ravel_subset(
+                    reference[:, site + 1:], dimensions[site + 1:])
+            states = _sample_states(
+                prefix_ids, self.operator.sketch_size, generator)
+            suffix = _sample_states(
+                suffix_ids, self.operator.sketch_size, generator)
+            prefix_states.append(states)
+            suffix_states.append(suffix)
+
+            old_states = states.new_tensor([0]) if site == 0 \
+                else prefix_states[site - 1]
+            block = torch.zeros(
+                states.numel(), dimensions[site], old_states.numel(),
+                dtype=self.source.dtype, device=device)
+            for new_position, state in enumerate(states):
+                current = torch.remainder(state, dimensions[site])
+                previous = torch.div(
+                    state, dimensions[site], rounding_mode='floor')
+                old_position = 0 if site == 0 else int(
+                    _selected_ids(previous.reshape(1), old_states)[0].item())
+                if old_position >= 0:
+                    block[new_position, current, old_position] = 1
+            blocks.append(block)
+
+        left_kernel = _structured_capability(
+            self.source, 'left_environments')
+        right_kernel = _structured_capability(
+            self.source, 'right_environments')
+        phi_kernel = _structured_capability(self.source, 'local_phi')
+        phis = []
+        for site in range(len(dimensions)):
+            left = torch.ones(
+                1, 1, dtype=self.source.dtype, device=device) if site == 0 \
+                else left_kernel(_unravel_ids(
+                    prefix_states[site - 1], dimensions[:site]))
+            right = torch.ones(
+                1, 1, dtype=self.source.dtype, device=device) \
+                if site == len(dimensions) - 1 else right_kernel(
+                    _unravel_ids(
+                        suffix_states[site], dimensions[site + 1:]))
+            phis.append(phi_kernel(site, left, right))
+        return CoreDeterminingSystem(
+            phi=phis,
+            left_blocks=blocks,
+            input_dim=dimensions,
+            operator=type(self.operator).__name__,
+            diagnostics={
+                'source_path': 'structured_tt',
+                'structured_kernel': 'sampled_prefix_suffix',
+                'support_size': None,
+                'sampled_states': tuple(
+                    states.numel() for states in prefix_states),
+                'left_dimensions': tuple(
+                    states.numel() for states in prefix_states),
+                'right_dimensions': tuple(
+                    states.numel() for states in suffix_states),
+            })
+
+
+class _MarginalStructuredSystemBuilder:
+    """Builds Markov marginal equations from direct TT contractions."""
+
+    def __init__(self, source: TensorSource, operator: 'MarginalSketch') -> None:
+        self.source = source
+        self.operator = operator
+
+    def build(self,
+              *,
+              batch_size: Optional[int] = None,
+              generator: Optional[torch.Generator] = None
+              ) -> CoreDeterminingSystem:
+        _validate_structured_batch_size(batch_size)
+        del generator
+        dimensions = self.source.input_dim
+        blocks = self.operator._left_blocks(
+            dimensions, self.source.dtype, self.source.device)
+        phi_kernel = _structured_capability(self.source, 'marginal_phi')
+        phis = [
+            phi_kernel(site, self.operator.order, self.operator.factor)
+            for site in range(len(dimensions))
+        ]
+        return CoreDeterminingSystem(
+            phi=phis,
+            left_blocks=blocks,
+            input_dim=dimensions,
+            operator=type(self.operator).__name__,
+            diagnostics={
+                'source_path': 'structured_tt',
+                'structured_kernel': 'markov_marginal',
+                'support_size': None,
+                'marginal_order': self.operator.order,
+                'weighted_marginal': self.operator.factor is not None,
+                'left_dimensions': tuple(
+                    block.shape[0] for block in blocks),
+                'right_dimensions': tuple(
+                    prod(dimensions[site + 1:min(
+                        len(dimensions), site + 1 + self.operator.order)])
+                    for site in range(len(dimensions) - 1)),
+            })
+
+
+class _TTStackStructuredSystemBuilder:
+    """Builds Gaussian TT-stack equations by double-layer contraction."""
+
+    def __init__(self, source: TensorSource, operator: 'TTStackSketch') -> None:
+        self.source = source
+        self.operator = operator
+
+    def build(self,
+              *,
+              batch_size: Optional[int] = None,
+              generator: Optional[torch.Generator] = None
+              ) -> CoreDeterminingSystem:
+        _validate_structured_batch_size(batch_size)
+        left_cores, right_cores, blocks = self.operator._components(
+            self.source.input_dim,
+            self.source.dtype,
+            self.source.device,
+            generator)
+        phi_kernel = _structured_capability(self.source, 'tt_sketch_phis')
+        phis = phi_kernel(
+            left_cores, right_cores,
+            boundary_scale=1 / sqrt(self.operator.n_stacks))
+        feature_dim = self.operator.tt_rank * self.operator.n_stacks
+        return CoreDeterminingSystem(
+            phi=phis,
+            left_blocks=blocks,
+            input_dim=self.source.input_dim,
+            operator=type(self.operator).__name__,
+            diagnostics={
+                'source_path': 'structured_tt',
+                'structured_kernel': 'tt_stack_double_layer',
+                'support_size': None,
+                'tt_rank': self.operator.tt_rank,
+                'n_stacks': self.operator.n_stacks,
+                'sketch_dimension': feature_dim,
+                'orthogonal': self.operator.orthogonal,
+                'distribution': (
+                    'orthogonal_variant' if self.operator.orthogonal
+                    else 'gaussian_tt_stack'),
+                'core_determining_gate': (
+                    'recursive_left_and_suffix_right'),
+                'left_dimensions': (feature_dim,) * (
+                    len(self.source.input_dim) - 1),
+                'right_dimensions': (feature_dim,) * (
+                    len(self.source.input_dim) - 1),
+            })
+
+
 class SampledSketch:
     """Recursive one-hot sketches induced by correlated configurations.
 
@@ -388,6 +607,9 @@ class SampledSketch:
 
     def builder(self, source: TensorSource) -> SketchSystemBuilder:
         """Returns a finite-support sampled-system builder."""
+        if all(_structured_capability(source, name) is not None for name in (
+                'left_environments', 'right_environments', 'local_phi')):
+            return _SampledStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
     def _weights(self, indices, input_dim, dtype, generator):
@@ -479,7 +701,35 @@ class MarginalSketch:
 
     def builder(self, source: TensorSource) -> SketchSystemBuilder:
         """Returns a finite-support marginal-system builder."""
+        if _structured_capability(source, 'marginal_phi') is not None:
+            return _MarginalStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
+
+    def _left_blocks(self, input_dim, dtype, device):
+        """Constructs recursive Markov blocks independently of source rows."""
+        blocks = []
+        for site in range(len(input_dim) - 1):
+            left_start = max(0, site + 1 - self.order)
+            left_dim = input_dim[left_start:site + 1]
+            old_start = max(0, site - self.order)
+            old_dim = input_dim[old_start:site]
+            old_size = prod(old_dim) if old_dim else 1
+            new_size = prod(left_dim)
+            block = torch.zeros(
+                new_size, input_dim[site], old_size,
+                dtype=dtype, device=device)
+            old_ids = torch.arange(old_size, device=device)
+            for value in range(input_dim[site]):
+                if self.order == 1:
+                    new_ids = torch.full_like(old_ids, value)
+                else:
+                    tail_modulus = prod(old_dim[-(self.order - 1):]) \
+                        if old_dim else 1
+                    tail = torch.remainder(old_ids, tail_modulus)
+                    new_ids = tail * input_dim[site] + value
+                block[new_ids, value, old_ids] = 1
+            blocks.append(block)
+        return blocks
 
     def _weights(self, indices, input_dim, dtype, generator):
         del generator
@@ -498,7 +748,7 @@ class MarginalSketch:
 
         left = []
         right = []
-        blocks = []
+        blocks = self._left_blocks(input_dim, dtype, indices.device)
         for site in range(len(input_dim) - 1):
             left_start = max(0, site + 1 - self.order)
             left_dim = input_dim[left_start:site + 1]
@@ -512,24 +762,6 @@ class MarginalSketch:
                 indices[:, site + 1:right_stop], right_dim)
             right.append(_one_hot_ids(right_ids, prod(right_dim), dtype))
 
-            old_start = max(0, site - self.order)
-            old_dim = input_dim[old_start:site]
-            old_size = prod(old_dim) if old_dim else 1
-            new_size = prod(left_dim)
-            block = torch.zeros(
-                new_size, input_dim[site], old_size,
-                dtype=dtype, device=indices.device)
-            old_ids = torch.arange(old_size, device=indices.device)
-            for value in range(input_dim[site]):
-                if self.order == 1:
-                    new_ids = torch.full_like(old_ids, value)
-                else:
-                    tail_modulus = prod(old_dim[-(self.order - 1):]) \
-                        if old_dim else 1
-                    tail = torch.remainder(old_ids, tail_modulus)
-                    new_ids = tail * input_dim[site] + value
-                block[new_ids, value, old_ids] = 1
-            blocks.append(block)
         return _SketchWeights(
             left, right, blocks, scale,
             diagnostics={
@@ -599,11 +831,13 @@ class TTStackSketch:
 
     def builder(self, source: TensorSource) -> SketchSystemBuilder:
         """Returns a finite-support Gaussian-TT-system builder."""
+        if _structured_capability(source, 'tt_sketch_phis') is not None:
+            return _TTStackStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _weights(self, indices, input_dim, dtype, generator):
+    def _components(self, input_dim, dtype, device, generator):
+        """Draws TT stacks and constructs their recursive left blocks."""
         feature_dim = self.tt_rank * self.n_stacks
-        device = indices.device
         scale = 1 / sqrt(self.tt_rank)
         stack_scale = 1 / sqrt(self.n_stacks)
 
@@ -631,15 +865,35 @@ class TTStackSketch:
             right_cores.append(tuple(stack_right))
 
         blocks = []
-        left = []
-        state = torch.ones(
-            indices.shape[0], self.n_stacks, 1,
-            dtype=dtype, device=device)
         for site in range(len(input_dim) - 1):
             block = torch.zeros(
                 feature_dim, input_dim[site],
                 1 if site == 0 else feature_dim,
                 dtype=dtype, device=device)
+            for stack in range(self.n_stacks):
+                core = left_cores[stack][site]
+                start = stack * self.tt_rank
+                if site == 0:
+                    block[start:start + self.tt_rank, :, 0] = \
+                        core[0].T * stack_scale
+                else:
+                    block[start:start + self.tt_rank, :,
+                          start:start + self.tt_rank] = core.permute(2, 1, 0)
+            blocks.append(block)
+        return tuple(left_cores), tuple(right_cores), tuple(blocks)
+
+    def _weights(self, indices, input_dim, dtype, generator):
+        feature_dim = self.tt_rank * self.n_stacks
+        device = indices.device
+        stack_scale = 1 / sqrt(self.n_stacks)
+        left_cores, right_cores, blocks = self._components(
+            input_dim, dtype, device, generator)
+
+        left = []
+        state = torch.ones(
+            indices.shape[0], self.n_stacks, 1,
+            dtype=dtype, device=device)
+        for site in range(len(input_dim) - 1):
             next_state = []
             for stack in range(self.n_stacks):
                 core = left_cores[stack][site]
@@ -648,19 +902,9 @@ class TTStackSketch:
                     'nba,nb->na', selected, state[:, stack])
                 if site == 0:
                     value = value * stack_scale
-                    block[
-                        stack * self.tt_rank:(stack + 1) * self.tt_rank,
-                        :,
-                        0,
-                    ] = core[0].T * stack_scale
-                else:
-                    start = stack * self.tt_rank
-                    block[start:start + self.tt_rank, :,
-                          start:start + self.tt_rank] = core.permute(2, 1, 0)
                 next_state.append(value)
             state = torch.stack(next_state, dim=1)
             left.append(state.reshape(indices.shape[0], feature_dim))
-            blocks.append(block)
 
         right = [None] * (len(input_dim) - 1)
         state = torch.ones(

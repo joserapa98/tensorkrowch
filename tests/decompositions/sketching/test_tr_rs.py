@@ -63,7 +63,7 @@ class TestTRRS:  # MARK: TestTRRS
         assert info['metadata']['source_type'] == 'EmpiricalDistribution'
         assert info['metrics']['fidelities'][0]['fidelity'] > 1 - 1e-5
 
-    def test_tt_source_uses_current_generic_oracle(self):
+    def test_tt_source_uses_structured_contractions(self):
         _, dense = _rank_one_sparse()
         tt = tk.decompositions.TTSVD(
             dense, output_device=None).fit(rank=1)
@@ -74,7 +74,7 @@ class TestTRRS:  # MARK: TestTRRS
 
         assert torch.allclose(result.contract_dense(), dense)
         assert result.metrics.fidelities[0].fidelity > 1 - 1e-10
-        assert source.evaluation_stats.requested_points == dense.numel()
+        assert source.evaluation_stats.requested_points == 0
 
     def test_history_observer_receives_one_tr_rs_hierarchy(self):
         source, _ = _rank_one_sparse()

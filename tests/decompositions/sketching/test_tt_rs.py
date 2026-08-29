@@ -60,7 +60,7 @@ class TestTTRS:  # MARK: TestTTRS
         assert info['metadata']['source_type'] == 'EmpiricalDistribution'
         assert info['metrics']['errors'][0]['kind'] == 'source_support'
 
-    def test_tt_source_uses_correct_enumerated_oracle_before_optimization(self):
+    def test_tt_source_uses_structured_contractions(self):
         source, dense = _rank_one_sparse()
         tt = tk.decompositions.TTSVD(
             dense, output_device=None).fit(rank=1)
@@ -71,8 +71,10 @@ class TestTTRS:  # MARK: TestTTRS
             output_device=None).fit(rank=1, batch_size=3)
 
         assert torch.allclose(result.contract_dense(), dense)
-        assert result.metadata['system']['source_path'] == 'enumerated_grid'
-        assert tt_source.evaluation_stats.requested_points == dense.numel()
+        assert result.metadata['system']['source_path'] == 'structured_tt'
+        assert result.metadata['system']['structured_kernel'] == \
+            'markov_marginal'
+        assert tt_source.evaluation_stats.requested_points == 0
 
     def test_repeated_random_fits_are_independent_and_reproducible(self):
         source, _ = _rank_one_sparse()

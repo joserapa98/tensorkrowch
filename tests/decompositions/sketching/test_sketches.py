@@ -146,4 +146,44 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
         assert len(measured.metrics.local_solves) == 2
 
 
+class TestStructuredTTBackend:  # MARK: TestStructuredTTBackend
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('operator', [
+        tk.decompositions.SampledSketch(
+            samples=torch.tensor([[0, 0, 0], [1, 1, 1]])),
+        tk.decompositions.MarginalSketch.markov(),
+        tk.decompositions.TTStackSketch(tt_rank=2, n_stacks=2),
+    ])
+    def test_structured_system_matches_sparse_dense_oracle(
+            self, dtype, operator):
+        generator = torch.Generator().manual_seed(205)
+        cores = [
+            torch.randn(1, 2, 2, dtype=dtype, generator=generator),
+            torch.randn(2, 2, 2, dtype=dtype, generator=generator),
+            torch.randn(2, 2, 1, dtype=dtype, generator=generator),
+        ]
+        tt_source = tk.decompositions.TTTensorSource(cores)
+        dense = tk.decompositions.TTDecomposition([
+            cores[0].squeeze(0), cores[1], cores[2].squeeze(-1)
+        ]).contract_dense()
+        indices = torch.cartesian_prod(*(
+            torch.arange(dimension) for dimension in dense.shape))
+        oracle_source = tk.decompositions.SparseTensorSource(
+            indices, dense.reshape(-1), dense.shape)
+
+        structured = operator.builder(tt_source).build(
+            generator=torch.Generator().manual_seed(206))
+        oracle = operator.builder(oracle_source).build(
+            generator=torch.Generator().manual_seed(206))
+
+        assert structured.diagnostics['source_path'] == 'structured_tt'
+        assert tt_source.evaluation_stats.requested_points == 0
+        assert all(torch.allclose(left, right)
+                   for left, right in zip(structured.phi, oracle.phi))
+        assert all(torch.allclose(left, right)
+                   for left, right in zip(
+                       structured.left_blocks, oracle.left_blocks))
+
+
 __all__ = []

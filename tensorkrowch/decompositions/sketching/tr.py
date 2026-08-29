@@ -40,7 +40,15 @@ from tensorkrowch.decompositions.sketching.phi import (
     PhiOperator,
     _MaterializedPhi,
 )
+from tensorkrowch.decompositions.sketching.fitting import InputFitter
+from tensorkrowch.decompositions.sketching.projections import RangeProjector
+from tensorkrowch.decompositions.sketching.quantization import (
+    CoordinateMap,
+    QuantizedLayout,
+)
 from tensorkrowch.decompositions.sketching.transforms import (
+    GlobalValueTransform,
+    LocalValueTransform,
     _apply_local_transform,
     _collect_local_queries,
     _prepare_global_transform,
@@ -49,7 +57,10 @@ from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sketching.sketches import SketchOperator
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
 from tensorkrowch.decompositions.sketching.tt import (Device, Samples, TTRS,
-                                                      TTRSS)
+                                                      TTRSS,
+                                                      _quantized_source,
+                                                      _QuantizedRSSMixin)
+from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.utils import truncated_svd
 
 
@@ -403,6 +414,79 @@ class TRRSS(TTRSS):
     >>> result.rank
     [1, 1, 1, 1]
     """
+
+    @classmethod
+    def quantized(
+            cls,
+            function=None,
+            *,
+            source=None,
+            layout: Optional[QuantizedLayout] = None,
+            n_variables: Optional[int] = None,
+            base: Union[int, Sequence[int]] = 2,
+            level: Union[int, Sequence[int]] = 1,
+            ordering: str = 'grouped',
+            digit_order: str = 'coarse_to_fine',
+            permutation=None,
+            coordinate_map: Optional[
+                Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+            domain=None,
+            source_space: str = 'physical',
+            source_layout: Optional[QuantizedLayout] = None,
+            sample_space: str = 'physical',
+            computational_grid: str = 'endpoints',
+            out_of_domain: str = 'error',
+            out_position=None,
+            device: Device = None,
+            dtype: Optional[torch.dtype] = None,
+            output_device: Device = 'cpu',
+            input_fitters: Optional[Sequence[InputFitter]] = None,
+            range_projector: Optional[RangeProjector] = None,
+            global_transform: Optional[GlobalValueTransform] = None,
+            local_transform: Optional[LocalValueTransform] = None,
+            local_solver: Optional[LeastSquaresSolver] = None,
+            synchronize_timers: bool = True) -> 'TRRSS':
+        """Creates a QTR-RSS problem with basis-embedded digit sites."""
+        adapter, layout = _quantized_source(
+            function=function,
+            source=source,
+            layout=layout,
+            n_variables=n_variables,
+            base=base,
+            level=level,
+            ordering=ordering,
+            digit_order=digit_order,
+            permutation=permutation,
+            coordinate_map=coordinate_map,
+            domain=domain,
+            source_space=source_space,
+            source_layout=source_layout,
+            computational_grid=computational_grid,
+            out_of_domain=out_of_domain,
+            device=device,
+            dtype=dtype)
+        embeddings = tuple(
+            torch.eye(dimension) for dimension in layout.input_dim)
+        digit_domains = tuple(
+            torch.arange(dimension) for dimension in layout.input_dim)
+        return _QuantizedTRRSS(
+            source=adapter,
+            embedding=embeddings,
+            input_dim=layout.input_dim,
+            domain=digit_domains,
+            out_position=out_position,
+            device=device,
+            dtype=dtype,
+            output_device=output_device,
+            input_fitters=input_fitters,
+            range_projector=range_projector,
+            global_transform=global_transform,
+            local_transform=local_transform,
+            local_solver=local_solver,
+            synchronize_timers=synchronize_timers,
+            quantized_layout=layout,
+            quantized_adapter=adapter,
+            sample_space=sample_space)
 
     def fit(
             self,
@@ -982,6 +1066,12 @@ class TRRSS(TTRSS):
             raise ValueError('The result input dimensions are inconsistent')
 
 
+class _QuantizedTRRSS(_QuantizedRSSMixin, TRRSS):
+    """Internal TRRSS specialization that normalizes physical QTR samples."""
+
+    _quantized_algorithm = 'qtr_rss'
+
+
 def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
                       tr_metrics: DecompositionMetrics
                       ) -> DecompositionMetrics:
@@ -1340,6 +1430,113 @@ def tr_rs(
 
 
 @torch.no_grad()
+def qtr_rss(
+        function=None,
+        sketch_samples: Samples = None,
+        *,
+        source=None,
+        layout: Optional[QuantizedLayout] = None,
+        n_variables: Optional[int] = None,
+        base: Union[int, Sequence[int]] = 2,
+        level: Union[int, Sequence[int]] = 1,
+        ordering: str = 'grouped',
+        digit_order: str = 'coarse_to_fine',
+        permutation=None,
+        coordinate_map: Optional[
+            Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+        domain=None,
+        source_space: str = 'physical',
+        source_layout: Optional[QuantizedLayout] = None,
+        sample_space: str = 'physical',
+        computational_grid: str = 'endpoints',
+        out_of_domain: str = 'error',
+        labels: Optional[torch.Tensor] = None,
+        out_position=None,
+        rank: _Rank = 1,
+        center: Optional[int] = None,
+        loop_opener: Union[str, LoopOpener] = 'als',
+        schedule: str = 'center_out',
+        schedule_block_size: int = 1,
+        adaptive: bool = False,
+        pad_to_rank: bool = False,
+        cutoff: Optional[float] = None,
+        atol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None,
+        batch_size: int = 64,
+        device: Device = None,
+        dtype: Optional[torch.dtype] = None,
+        generator: Optional[torch.Generator] = None,
+        output_device: Device = 'cpu',
+        verbose: Union[bool, int] = 0,
+        return_info: bool = False):
+    """Decomposes a multivariable physical function into QTR cores.
+
+    This is the cyclic counterpart of :func:`qtt_rss`; it uses basis digit
+    sites and the ordinary TR-RSS ring driver after quantizing physical sketch
+    samples. At least three final digit/output sites are required.
+    """
+    if sketch_samples is None:
+        raise TypeError('`sketch_samples` should be provided')
+    if layout is None and n_variables is None:
+        if sample_space != 'physical':
+            raise ValueError(
+                '`n_variables` is required for digit-space samples')
+        values = sketch_samples.values \
+            if isinstance(sketch_samples, ConfigurationBatch) \
+            else sketch_samples
+        if not isinstance(values, torch.Tensor) or values.ndim != 2:
+            raise ValueError(
+                '`n_variables` could not be inferred from sketch samples')
+        n_variables = values.shape[1]
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+    decomposer = TRRSS.quantized(
+        function=function,
+        source=source,
+        layout=layout,
+        n_variables=n_variables,
+        base=base,
+        level=level,
+        ordering=ordering,
+        digit_order=digit_order,
+        permutation=permutation,
+        coordinate_map=coordinate_map,
+        domain=domain,
+        source_space=source_space,
+        source_layout=source_layout,
+        sample_space=sample_space,
+        computational_grid=computational_grid,
+        out_of_domain=out_of_domain,
+        out_position=out_position,
+        device=device,
+        dtype=dtype,
+        output_device=output_device)
+    result = decomposer.fit(
+        sketch_samples,
+        labels=labels,
+        rank=rank,
+        center=center,
+        loop_opener=loop_opener,
+        schedule=schedule,
+        schedule_block_size=schedule_block_size,
+        adaptive=adaptive,
+        pad_to_rank=pad_to_rank,
+        cutoff=cutoff,
+        atol=atol,
+        rtol=rtol,
+        cum_percentage=cum_percentage,
+        batch_size=batch_size,
+        generator=generator,
+        sample_space=sample_space,
+        verbose=verbose,
+        collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
+
+
+@torch.no_grad()
 def tr_rss(function,
            embedding,
            sketch_samples: Samples,
@@ -1496,4 +1693,11 @@ def tr_rss(function,
     return result.cores
 
 
-__all__ = ['SketchGaugeRecursion', 'TRRSS', 'tr_rss']
+__all__ = [
+    'SketchGaugeRecursion',
+    'TRRSS',
+    'tr_rss',
+    'TRRS',
+    'tr_rs',
+    'qtr_rss',
+]

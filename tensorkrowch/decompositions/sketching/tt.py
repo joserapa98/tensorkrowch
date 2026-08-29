@@ -32,6 +32,11 @@ from tensorkrowch.decompositions.sketching.projections import (
     ProjectedRange,
     RangeProjector,
 )
+from tensorkrowch.decompositions.sketching.quantization import (
+    CoordinateMap,
+    QuantizedLayout,
+    QuantizedSourceAdapter,
+)
 from tensorkrowch.decompositions.sketching.regions import (
     SiteRegion,
     _SamplePool,
@@ -259,6 +264,86 @@ class TTRSS(RecursiveSketching):
             if local_solver is None else local_solver
         self._synchronize_timers = synchronize_timers
         self._input_kind = 'coordinates'
+
+    @classmethod
+    def quantized(
+            cls,
+            function=None,
+            *,
+            source: Optional[TensorSource] = None,
+            layout: Optional[QuantizedLayout] = None,
+            n_variables: Optional[int] = None,
+            base: Union[int, Sequence[int]] = 2,
+            level: Union[int, Sequence[int]] = 1,
+            ordering: str = 'grouped',
+            digit_order: str = 'coarse_to_fine',
+            permutation=None,
+            coordinate_map: Optional[
+                Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+            domain: Domain = None,
+            source_space: str = 'physical',
+            source_layout: Optional[QuantizedLayout] = None,
+            sample_space: str = 'physical',
+            computational_grid: str = 'endpoints',
+            out_of_domain: str = 'error',
+            out_position: Optional[Union[int, Sequence[int]]] = None,
+            device: Device = None,
+            dtype: Optional[torch.dtype] = None,
+            output_device: Device = 'cpu',
+            input_fitters: Optional[Sequence[InputFitter]] = None,
+            range_projector: Optional[RangeProjector] = None,
+            global_transform: Optional[GlobalValueTransform] = None,
+            local_transform: Optional[LocalValueTransform] = None,
+            local_solver: Optional[LeastSquaresSolver] = None,
+            synchronize_timers: bool = True) -> 'TTRSS':
+        """Creates a QTT-RSS problem with basis-embedded digit sites.
+
+        ``domain`` describes one physical interval per original variable; it
+        is not the finite domain passed to ordinary RSS sites. The returned
+        object accepts physical sketch samples by default and quantizes them
+        before every fit. ``sample_space="digits"`` is available when a map
+        has no inverse or samples are already encoded.
+        """
+        adapter, layout = _quantized_source(
+            function=function,
+            source=source,
+            layout=layout,
+            n_variables=n_variables,
+            base=base,
+            level=level,
+            ordering=ordering,
+            digit_order=digit_order,
+            permutation=permutation,
+            coordinate_map=coordinate_map,
+            domain=domain,
+            source_space=source_space,
+            source_layout=source_layout,
+            computational_grid=computational_grid,
+            out_of_domain=out_of_domain,
+            device=device,
+            dtype=dtype)
+        embeddings = tuple(
+            torch.eye(dimension) for dimension in layout.input_dim)
+        digit_domains = tuple(
+            torch.arange(dimension) for dimension in layout.input_dim)
+        return _QuantizedTTRSS(
+            source=adapter,
+            embedding=embeddings,
+            input_dim=layout.input_dim,
+            domain=digit_domains,
+            out_position=out_position,
+            device=device,
+            dtype=dtype,
+            output_device=output_device,
+            input_fitters=input_fitters,
+            range_projector=range_projector,
+            global_transform=global_transform,
+            local_transform=local_transform,
+            local_solver=local_solver,
+            synchronize_timers=synchronize_timers,
+            quantized_layout=layout,
+            quantized_adapter=adapter,
+            sample_space=sample_space)
 
     def _normalize_samples(self, sketch_samples: Samples) -> ConfigurationBatch:
         """Normalizes packed or heterogeneous samples for the fixed source."""
@@ -981,6 +1066,169 @@ class TTRSS(RecursiveSketching):
             raise ValueError('The result input dimensions are inconsistent')
 
 
+def _quantized_source(
+        *,
+        function,
+        source,
+        layout,
+        n_variables,
+        base,
+        level,
+        ordering,
+        digit_order,
+        permutation,
+        coordinate_map,
+        domain,
+        source_space,
+        source_layout,
+        computational_grid,
+        out_of_domain,
+        device,
+        dtype):
+    """Builds the common digit-source adapter used by TT and TR QTT-RSS."""
+    if (function is None) == (source is None):
+        raise ValueError(
+            'Exactly one of `function` and `source` should be provided')
+    source_like = function if source is None else source
+    if layout is None:
+        if isinstance(n_variables, bool) or not isinstance(n_variables, int):
+            raise TypeError(
+                '`n_variables` should be int type when `layout` is omitted')
+        layout = QuantizedLayout(
+            n_variables=n_variables,
+            base=base,
+            level=level,
+            ordering=ordering,
+            digit_order=digit_order,
+            permutation=permutation)
+    elif not isinstance(layout, QuantizedLayout):
+        raise TypeError('`layout` should be QuantizedLayout type or None')
+    elif n_variables is not None and n_variables != layout.n_variables:
+        raise ValueError('`n_variables` should match `layout`')
+
+    if isinstance(source_like, QuantizedSourceAdapter):
+        if source_like.layout != layout:
+            raise ValueError('Quantized source and requested layout should match')
+        return source_like, layout
+    adapter = QuantizedSourceAdapter(
+        source_like,
+        layout,
+        coordinate_map,
+        domain,
+        source_space=source_space,
+        source_layout=source_layout,
+        output_shape=None,
+        dtype=dtype,
+        device=device,
+        computational_grid=computational_grid,
+        out_of_domain=out_of_domain)
+    return adapter, layout
+
+
+class _QuantizedRSSMixin:
+    """Converts physical RSS samples to digits before the ordinary workflow."""
+
+    def __init__(self,
+                 *args,
+                 quantized_layout: QuantizedLayout,
+                 quantized_adapter: QuantizedSourceAdapter,
+                 sample_space: str = 'physical',
+                 **kwargs) -> None:
+        if not isinstance(quantized_layout, QuantizedLayout):
+            raise TypeError('`quantized_layout` should be QuantizedLayout type')
+        if not isinstance(quantized_adapter, QuantizedSourceAdapter):
+            raise TypeError(
+                '`quantized_adapter` should be QuantizedSourceAdapter type')
+        if sample_space not in ('physical', 'digits'):
+            raise ValueError(
+                "`sample_space` should be 'physical' or 'digits'")
+        self.quantized_layout = quantized_layout
+        self.quantized_adapter = quantized_adapter
+        self.sample_space = sample_space
+        self._fit_sample_space = sample_space
+        super().__init__(*args, **kwargs)
+
+    def _normalize_samples(self, sketch_samples: Samples) -> ConfigurationBatch:
+        """Normalizes already encoded digits or quantizes physical samples."""
+        if self._fit_sample_space == 'digits':
+            if isinstance(sketch_samples, ConfigurationBatch) and \
+                    sketch_samples.kind != 'indices':
+                raise ValueError(
+                    'Digit sketch samples should use `kind="indices"`')
+            return super()._normalize_samples(sketch_samples)
+
+        if isinstance(sketch_samples, ConfigurationBatch):
+            # TTRSS normalizes once before `_initialize_fit`, which validates
+            # the resulting batch a second time. An index batch here is that
+            # already-quantized internal representation.
+            if sketch_samples.kind == 'indices':
+                return super()._normalize_samples(sketch_samples)
+            if sketch_samples.kind != 'coordinates' or \
+                    not sketch_samples.packed:
+                raise ValueError(
+                    'Physical sketch samples should be packed coordinates')
+            physical = sketch_samples.values
+        else:
+            physical = sketch_samples
+        if not isinstance(physical, torch.Tensor) or physical.ndim != 2 or \
+                physical.shape[1] != self.quantized_layout.n_variables:
+            raise ValueError(
+                'Physical sketch samples should have shape '
+                '(samples, n_variables)')
+        digits = self.quantized_adapter.physical_to_digits(
+            physical.to(self.quantized_adapter.device))
+        return super()._normalize_samples(ConfigurationBatch(
+            digits, kind='indices'))
+
+    def fit(self,
+            sketch_samples: Samples,
+            *args,
+            sample_space: Optional[str] = None,
+            **kwargs):
+        """Fits QTT/QTR cores from physical coordinates or encoded digits."""
+        active_space = self.sample_space if sample_space is None else sample_space
+        if active_space not in ('physical', 'digits'):
+            raise ValueError(
+                "`sample_space` should be 'physical' or 'digits'")
+        self._fit_sample_space = active_space
+        try:
+            result = super().fit(sketch_samples, *args, **kwargs)
+        finally:
+            self._fit_sample_space = self.sample_space
+        physical_domain = self.quantized_adapter.domain
+        if isinstance(physical_domain, torch.Tensor):
+            physical_domain = physical_domain.detach().cpu()
+        elif physical_domain is not None:
+            physical_domain = tuple(
+                value.detach().cpu() if isinstance(value, torch.Tensor)
+                else value
+                for value in physical_domain)
+        result.metadata['quantization'] = {
+            'n_variables': self.quantized_layout.n_variables,
+            'base': self.quantized_layout.base,
+            'level': self.quantized_layout.level,
+            'ordering': self.quantized_layout.ordering,
+            'digit_order': self.quantized_layout.digit_order,
+            'sites': self.quantized_layout.sites(),
+            'grid_size': self.quantized_layout.grid_size,
+            'coordinate_map': type(
+                self.quantized_adapter.coordinate_map).__name__,
+            'domain': physical_domain,
+            'computational_grid': (
+                self.quantized_adapter.computational_grid),
+            'out_of_domain': self.quantized_adapter.out_of_domain,
+            'sample_space': active_space,
+        }
+        result.metadata['algorithm'] = self._quantized_algorithm
+        return result
+
+
+class _QuantizedTTRSS(_QuantizedRSSMixin, TTRSS):
+    """Internal TTRSS specialization that normalizes physical QTT samples."""
+
+    _quantized_algorithm = 'qtt_rss'
+
+
 class TTRS:
     r"""Reusable Tensor Train Recursive Sketching problem.
 
@@ -1332,6 +1580,128 @@ def tt_rs(
 
 
 @torch.no_grad()
+def qtt_rss(
+        function=None,
+        sketch_samples: Samples = None,
+        *,
+        source: Optional[TensorSource] = None,
+        layout: Optional[QuantizedLayout] = None,
+        n_variables: Optional[int] = None,
+        base: Union[int, Sequence[int]] = 2,
+        level: Union[int, Sequence[int]] = 1,
+        ordering: str = 'grouped',
+        digit_order: str = 'coarse_to_fine',
+        permutation=None,
+        coordinate_map: Optional[
+            Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+        domain: Domain = None,
+        source_space: str = 'physical',
+        source_layout: Optional[QuantizedLayout] = None,
+        sample_space: str = 'physical',
+        computational_grid: str = 'endpoints',
+        out_of_domain: str = 'error',
+        labels: Optional[torch.Tensor] = None,
+        out_position: Optional[Union[int, Sequence[int]]] = None,
+        rank: Optional[int] = None,
+        cutoff: Optional[float] = None,
+        atol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None,
+        batch_size: int = 64,
+        device: Device = None,
+        dtype: Optional[torch.dtype] = None,
+        generator: Optional[torch.Generator] = None,
+        random_projection: Optional[bool] = None,
+        projection_dim: Optional[int] = None,
+        projection_oversampling: int = 0,
+        n_power_iter: int = 0,
+        legacy_projection: bool = True,
+        output_device: Device = 'cpu',
+        verbose: Union[bool, int] = 0,
+        return_info: bool = False):
+    """Decomposes a multivariable physical function into QTT cores.
+
+    Digit sites always use the corresponding basis embedding, so this API has
+    no ``embedding`` argument. Physical samples with shape
+    ``(samples, n_variables)`` are quantized by default; advanced callers can
+    pass already encoded rows with ``sample_space="digits"``. Grouped and
+    interleaved layouts each fit the physical function directly and are not
+    interpreted as permutations of existing cores.
+
+    Examples
+    --------
+    >>> samples = torch.tensor([[0.], [1 / 3], [2 / 3], [1.]])
+    >>> cores = qtt_rss(
+    ...     lambda x: 1 + x[:, 0],
+    ...     samples,
+    ...     n_variables=1,
+    ...     base=2,
+    ...     level=2,
+    ...     domain=torch.tensor([0., 1.]),
+    ...     rank=2)
+    >>> len(cores)
+    2
+    """
+    if sketch_samples is None:
+        raise TypeError('`sketch_samples` should be provided')
+    if layout is None and n_variables is None:
+        if sample_space != 'physical':
+            raise ValueError(
+                '`n_variables` is required for digit-space samples')
+        values = sketch_samples.values \
+            if isinstance(sketch_samples, ConfigurationBatch) \
+            else sketch_samples
+        if not isinstance(values, torch.Tensor) or values.ndim != 2:
+            raise ValueError(
+                '`n_variables` could not be inferred from sketch samples')
+        n_variables = values.shape[1]
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+    decomposer = TTRSS.quantized(
+        function=function,
+        source=source,
+        layout=layout,
+        n_variables=n_variables,
+        base=base,
+        level=level,
+        ordering=ordering,
+        digit_order=digit_order,
+        permutation=permutation,
+        coordinate_map=coordinate_map,
+        domain=domain,
+        source_space=source_space,
+        source_layout=source_layout,
+        sample_space=sample_space,
+        computational_grid=computational_grid,
+        out_of_domain=out_of_domain,
+        out_position=out_position,
+        device=device,
+        dtype=dtype,
+        output_device=output_device)
+    result = decomposer.fit(
+        sketch_samples,
+        labels=labels,
+        rank=rank,
+        cutoff=cutoff,
+        atol=atol,
+        rtol=rtol,
+        cum_percentage=cum_percentage,
+        batch_size=batch_size,
+        generator=generator,
+        random_projection=random_projection,
+        projection_dim=projection_dim,
+        projection_oversampling=projection_oversampling,
+        n_power_iter=n_power_iter,
+        legacy_projection=legacy_projection,
+        sample_space=sample_space,
+        verbose=verbose,
+        collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
+
+
+@torch.no_grad()
 def tt_rss(
         function: Callable,
         embedding: Embedding,
@@ -1507,4 +1877,4 @@ def tt_rss(
     return result.cores, info
 
 
-__all__ = ['TTRSS', 'tt_rss', 'TTRS', 'tt_rs']
+__all__ = ['TTRSS', 'tt_rss', 'TTRS', 'tt_rs', 'qtt_rss']

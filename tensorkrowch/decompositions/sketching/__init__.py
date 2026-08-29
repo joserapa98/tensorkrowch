@@ -17,6 +17,7 @@ from tensorkrowch.decompositions.sketching.quantization import (
     CoordinateMap,
     ExplicitGridMap,
     QuantizedLayout,
+    QuantizedSourceAdapter,
     UniformCoordinateMap,
     WarpedCoordinateMap,
 )
@@ -39,11 +40,11 @@ from tensorkrowch.decompositions.sketching.transforms import (
     LocalTransformContext,
     LocalValueTransform,
 )
-from tensorkrowch.decompositions.sketching.tt import (TTRS, TTRSS, tt_rs,
-                                                      tt_rss)
+from tensorkrowch.decompositions.sketching.tt import (TTRS, TTRSS, qtt_rss,
+                                                      tt_rs, tt_rss)
 from tensorkrowch.decompositions.sketching.tr import (SketchGaugeRecursion,
-                                                      TRRS, TRRSS, tr_rs,
-                                                      tr_rss)
+                                                      TRRS, TRRSS, qtr_rss,
+                                                      tr_rs, tr_rss)
 
 
 __all__ = [
@@ -61,6 +62,7 @@ __all__ = [
     'UniformCoordinateMap',
     'WarpedCoordinateMap',
     'ExplicitGridMap',
+    'QuantizedSourceAdapter',
     'SketchOperator',
     'SketchSystemBuilder',
     'CoreDeterminingSystem',
@@ -80,9 +82,11 @@ __all__ = [
     'tt_rss',
     'TTRS',
     'tt_rs',
+    'qtt_rss',
     'SketchGaugeRecursion',
     'TRRS',
     'tr_rs',
+    'qtr_rss',
     'TRRSS',
     'tr_rss',
 ]

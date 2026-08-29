@@ -4743,7 +4743,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Evidencia: `238 passed, 2 skipped` en sketching y `934 passed, 13 skipped` en
   toda la suite de decompositions, con Ruff y diff-check limpios.
 
-- [ ] **QTT-01 — Implementar layouts cuantizados multivariables**
+- [x] **QTT-01 — Implementar layouts cuantizados multivariables**
+
+  Estado: implementación commiteada en `464b37f`; pendiente de revisión
+  detallada del usuario.
 
   Crear `QuantizedLayout` con:
 
@@ -4756,6 +4759,15 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - shapes y overflow validados.
 
   Tests concretos para `f(x,y,z)` en las dos ordenaciones estándar.
+
+  Implementación: `QuantizedLayout` normaliza base/level por variable, expone
+  `sites`, `grid_size` e `input_dim`, y codifica/decodifica índices `int64`
+  exactamente. Grouped, interleaved con levels desiguales, coarse/fine y
+  permutation custom comparten identificadores canónicos `(variable, digit)`.
+  `reorder_configurations` transforma columnas de muestras mediante
+  decode/encode; no presenta esa operación como permutación válida de cores.
+  Evidencia: `57 passed` en quantization+specs y `253 passed, 2 skipped` en
+  sketching completo, Ruff y diff-check limpios.
 
 - [ ] **QTT-02 — Implementar mapas de coordenadas**
 

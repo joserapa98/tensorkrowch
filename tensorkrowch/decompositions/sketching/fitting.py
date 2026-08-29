@@ -9,7 +9,14 @@ import torch
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import InputFitRecord
+from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sketching.phi import PhiView
+from tensorkrowch.decompositions.sketching.quantization import (
+    CoordinateMap,
+    QuantizedLayout,
+    QuantizedSourceAdapter,
+    UniformCoordinateMap,
+)
 
 
 Embedding = Union[torch.Tensor, Callable[[torch.Tensor], torch.Tensor]]
@@ -147,6 +154,7 @@ class FittedInputAxis:
     model: Optional[torch.nn.Module] = None
     model_state: Optional[Mapping[str, torch.Tensor]] = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    factor: Optional[TTDecomposition] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.tensor, torch.Tensor):
@@ -182,6 +190,9 @@ class FittedInputAxis:
         if not isinstance(self.metadata, Mapping):
             raise TypeError('`metadata` should be a mapping')
         object.__setattr__(self, 'metadata', dict(self.metadata))
+        if self.factor is not None and not isinstance(
+                self.factor, TTDecomposition):
+            raise TypeError('`factor` should be TTDecomposition type or None')
 
 
 @runtime_checkable
@@ -649,9 +660,205 @@ class TrainableEmbeddingFitter:
             })
 
 
+class QTTInputFitter:
+    """Represents one functional Phi input axis by a local QTT factor.
+
+    The fitter creates an independent one-variable QTT-RSS problem. Every
+    remaining Phi axis is treated as a tensor-output axis and placed
+    consecutively after all digits. The returned :class:`FittedInputAxis`
+    contains both a dense-grid axis, which preserves the ordinary
+    ``InputFitter`` contract, and ``factor``, the lightweight local TT used by
+    native QTT-Tucker assembly.
+
+    The local problem owns its generator, observer-free execution and source
+    sessions. It never extends a frozen outer evaluation plan. One fitter can
+    be configured per original variable to use different base, level, map and
+    domain.
+    """
+
+    requires_functional_phi = True
+
+    def __init__(
+            self,
+            base: int = 2,
+            level: int = 4,
+            *,
+            digit_order: str = 'coarse_to_fine',
+            coordinate_map: Optional[CoordinateMap] = None,
+            domain=None,
+            rank: Optional[int] = None,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            batch_size: int = 64,
+            seed: int = 0) -> None:
+        self.layout = QuantizedLayout(
+            n_variables=1,
+            base=base,
+            level=level,
+            digit_order=digit_order)
+        if coordinate_map is None:
+            coordinate_map = UniformCoordinateMap()
+        if not isinstance(coordinate_map, CoordinateMap):
+            raise TypeError('`coordinate_map` should implement CoordinateMap')
+        if rank is not None and (
+                isinstance(rank, bool) or not isinstance(rank, int)):
+            raise TypeError('`rank` should be int type or None')
+        if rank is not None and rank < 1:
+            raise ValueError('`rank` should be positive')
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+            raise TypeError('`batch_size` should be int type')
+        if batch_size < 1:
+            raise ValueError('`batch_size` should be positive')
+        if isinstance(seed, bool) or not isinstance(seed, int):
+            raise TypeError('`seed` should be int type')
+        if seed < 0:
+            raise ValueError('`seed` should be non-negative')
+        self.coordinate_map = coordinate_map
+        self.domain = domain
+        self.rank = rank
+        self.cutoff = cutoff
+        self.atol = atol
+        self.rtol = rtol
+        self.cum_percentage = cum_percentage
+        self.batch_size = batch_size
+        self.seed = seed
+
+    def required_queries(
+            self,
+            phi_view: PhiView,
+            axis: int,
+            domain: torch.Tensor,
+            context: Any = None) -> Sequence[torch.Tensor]:
+        """Declares an independent local session instead of outer-plan rows."""
+        shape = _phi_shape(phi_view)
+        _normalize_axis(axis, shape)
+        if not callable(getattr(phi_view, 'with_axis_values', None)):
+            raise TypeError(
+                'QTTInputFitter requires a functional PhiOperator input axis')
+        return ()
+
+    def fit(
+            self,
+            phi_view: PhiView,
+            axis: int,
+            domain: torch.Tensor,
+            context: Any = None,
+            return_info: bool = False) -> FittedInputAxis:
+        """Runs local QTT-RSS and restores the quantized axis position."""
+        if not isinstance(return_info, bool):
+            raise TypeError('`return_info` should be bool type')
+        shape = _phi_shape(phi_view)
+        axis = _normalize_axis(axis, shape)
+        if not callable(getattr(phi_view, 'with_axis_values', None)):
+            raise TypeError(
+                'QTTInputFitter requires a functional PhiOperator input axis')
+
+        adapter = QuantizedSourceAdapter(
+            lambda values: values[:, 0],
+            self.layout,
+            self.coordinate_map,
+            self.domain,
+            dtype=torch.get_default_dtype(),
+            device=_phi_device(phi_view, domain))
+        indices = torch.arange(
+            self.layout.grid_size[0], device=adapter.device).reshape(-1, 1)
+        digits = self.layout.encode_indices(indices)
+        physical = adapter.indices_to_physical(indices)
+        fixed_shape = shape[:axis] + shape[axis + 1:]
+
+        def local_function(values):
+            local_values = values[:, 0]
+            functional = phi_view.with_axis_values(axis, local_values)
+            tensor = functional.materialize(batch_size=self.batch_size)
+            return tensor.movedim(axis, 0)
+
+        n_outputs = prod(fixed_shape) if fixed_shape else 1
+        if fixed_shape:
+            sketch_digits = digits.repeat_interleave(n_outputs, dim=0)
+            labels = torch.arange(
+                n_outputs, device=digits.device).repeat(digits.shape[0])
+            out_position = tuple(range(
+                self.layout.n_sites,
+                self.layout.n_sites + len(fixed_shape)))
+        else:
+            sketch_digits = digits
+            labels = None
+            out_position = None
+
+        from tensorkrowch.decompositions.sketching.tt import qtt_rss
+
+        cores = qtt_rss(
+            local_function,
+            sketch_digits,
+            layout=self.layout,
+            coordinate_map=self.coordinate_map,
+            domain=self.domain,
+            sample_space='digits',
+            labels=labels,
+            out_position=out_position,
+            rank=self.rank,
+            cutoff=self.cutoff,
+            atol=self.atol,
+            rtol=self.rtol,
+            cum_percentage=self.cum_percentage,
+            batch_size=self.batch_size,
+            generator=torch.Generator().manual_seed(self.seed),
+            legacy_projection=False,
+            output_device=None,
+            verbose=0)
+        factor = TTDecomposition(cores)
+        dense = factor.contract_dense()
+        schedule = self.layout.sites()
+        canonical = [
+            schedule.index((0, digit))
+            for digit in range(self.layout.level[0])
+        ]
+        permutation = canonical + list(range(
+            self.layout.n_sites, dense.ndim))
+        dense = dense.permute(permutation).reshape(
+            self.layout.grid_size[0], *fixed_shape)
+        target = local_function(physical).to(
+            device=dense.device, dtype=dense.dtype)
+        absolute = torch.linalg.vector_norm(dense - target)
+        denominator = torch.linalg.vector_norm(target)
+        if denominator > 0:
+            relative = absolute / denominator
+        elif absolute == 0:
+            relative = torch.zeros_like(absolute)
+        else:
+            relative = torch.full_like(absolute, torch.inf)
+        tensor = dense.movedim(0, axis)
+        record = InputFitRecord(
+            method='qtt',
+            axis=axis,
+            domain_size=self.layout.grid_size[0],
+            input_dim=self.layout.grid_size[0],
+            residual_absolute=absolute,
+            residual_relative=relative,
+            condition_number=1.,
+            used_fibers=True) if return_info else None
+        return FittedInputAxis(
+            tensor=tensor,
+            axis=axis,
+            domain_size=self.layout.grid_size[0],
+            input_dim=self.layout.grid_size[0],
+            record=record,
+            factor=factor,
+            metadata={
+                'algorithm': 'qtt_input_fit',
+                'layout': self.layout,
+                'output_shape': fixed_shape,
+                'out_position': out_position,
+                'final_relative_residual': float(relative.detach().cpu()),
+            })
+
+
 __all__ = [
     'InputFitter',
     'FixedEmbeddingFitter',
     'BasisFitter',
     'TrainableEmbeddingFitter',
+    'QTTInputFitter',
 ]

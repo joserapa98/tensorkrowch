@@ -891,6 +891,14 @@ class TTRSS(RecursiveSketching):
                     evaluation=evaluation_view,
                     query_results=tuple(
                         results[handle] for handle in local_handles[site]))
+            fitter = context.input_fitters[site]
+            if getattr(fitter, 'requires_functional_phi', False):
+                if not context.global_transform.is_identity or \
+                        not context.local_transform.is_identity:
+                    raise ValueError(
+                        'A functional input fitter currently requires '
+                        'identity value transforms')
+                local_view = phi
             fitted = self._fit_input_axis(
                 site,
                 local_view,

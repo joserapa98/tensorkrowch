@@ -7,11 +7,13 @@ import pytest
 import torch
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.phi import _MaterializedPhi
+from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
+                                                       _MaterializedPhi)
 from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
 from tensorkrowch.decompositions.sketching.specs import (
     _DomainSpec,
     _EmbeddingSpec,
+    _OutputSpec,
 )
 
 
@@ -360,3 +362,98 @@ class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
         with pytest.raises(ValueError, match='match'):
             fitter.required_queries(
                 phi, axis=0, domain=torch.arange(2.))
+
+
+class TestQTTInputFitter:  # MARK: TestQTTInputFitter
+
+    def test_tt_rss_driver_keeps_functional_phi_for_qtt_fitting(self):
+        domain = torch.linspace(0, 1, 4, dtype=torch.float64)
+        samples = torch.cartesian_prod(domain, domain)
+
+        def function(values):
+            x, y = values.unbind(dim=1)
+            return (1 + x + 2 * y + x * y).unsqueeze(1)
+
+        fitters = tuple(
+            tk.decompositions.QTTInputFitter(
+                base=2,
+                level=2,
+                domain=torch.tensor([0., 1.], dtype=torch.float64),
+                rank=4,
+                batch_size=16,
+                seed=31 + site)
+            for site in range(2))
+        result = tk.decompositions.TTRSS(
+            function,
+            embedding=torch.eye(4, dtype=torch.float64),
+            domain=domain,
+            input_fitters=fitters,
+            output_device=None).fit(
+                samples,
+                rank=4,
+                legacy_projection=False)
+        expected = function(samples).reshape(4, 4)
+
+        assert torch.allclose(result.contract_dense(), expected)
+        assert result.input_dim == (4, 4)
+
+    def test_tensor_environment_is_kept_at_factor_endpoint(self):
+        physical_domain = torch.tensor([0., 1.], dtype=torch.float64)
+
+        def function(values):
+            base = 1 + values[:, 0]
+            return base[:, None, None] + torch.arange(
+                6, dtype=values.dtype).reshape(1, 2, 3)
+
+        source = tk.decompositions.CallableTensorSource(
+            function,
+            input_dim=(4,),
+            output_shape=(2, 3),
+            dtype=torch.float64)
+        output_spec = _OutputSpec.normalize(
+            torch.ones(1, 2, 3),
+            n_input_sites=1,
+            out_position=(1, 2))
+        initial_domain = torch.linspace(0, 1, 4, dtype=torch.float64)
+        phi = PhiOperator(
+            source,
+            ((0, initial_domain),
+             (1, torch.arange(2)),
+             (2, torch.arange(3))),
+            output_spec,
+            input_kind='coordinates')
+        fitter = tk.decompositions.QTTInputFitter(
+            base=2,
+            level=2,
+            digit_order='fine_to_coarse',
+            domain=physical_domain,
+            rank=4,
+            batch_size=8,
+            seed=23)
+
+        fitted = fitter.fit(
+            phi,
+            axis=0,
+            domain=initial_domain,
+            return_info=True)
+        expected = function(initial_domain.reshape(-1, 1))
+        oracle = tk.decompositions.TTSVD(
+            expected, output_device=None).fit(rank=4)
+
+        assert fitted.tensor.shape == (4, 2, 3)
+        assert torch.allclose(fitted.tensor, expected)
+        assert torch.allclose(fitted.tensor, oracle.contract_dense())
+        assert fitted.factor is not None
+        assert fitted.factor.input_dim == (2, 2, 2, 3)
+        assert fitted.metadata['out_position'] == (2, 3)
+        assert fitted.record.method == 'qtt'
+        assert fitted.record.residual_relative < 1e-10
+
+    def test_requires_functional_phi_and_declares_independent_session(self):
+        fitter = tk.decompositions.QTTInputFitter(
+            base=2, level=2, domain=torch.tensor([0., 1.]))
+        materialized = _materialized(torch.ones(4, 2))
+
+        with pytest.raises(TypeError, match='functional'):
+            fitter.required_queries(
+                materialized, axis=0, domain=torch.arange(4.))

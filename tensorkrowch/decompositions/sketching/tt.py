@@ -768,6 +768,13 @@ class TTRSS(RecursiveSketching):
                 builder, phi, context.local_transform, context)
             for phi in phis
         ]
+        input_handles = []
+        for site, phi in enumerate(phis):
+            axis = self._current_axis(phi, site)
+            queries = self._required_input_queries(
+                site, phi, axis, context)
+            input_handles.append(tuple(
+                phi.collect(builder, query) for query in queries))
         _prepare_global_transform(
             builder, context.global_transform, context)
         session = _EvaluationSession(
@@ -781,6 +788,10 @@ class TTRSS(RecursiveSketching):
         if context.collect_metrics:
             context.metrics.evaluations.append(session.stats)
         evaluation_view = session.view()
+        context.state['input_query_results'] = {
+            site: tuple(results[handle] for handle in handles)
+            for site, handles in enumerate(input_handles)
+        }
 
         # Fit every sampled current axis before topology-dependent recursion.
         fitted_tensors = {}

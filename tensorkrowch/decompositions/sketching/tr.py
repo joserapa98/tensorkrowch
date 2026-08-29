@@ -787,6 +787,16 @@ class TRRSS(TTRSS):
             _collect_local_queries(
                 builder, phi, context.local_transform, context)
             for phi in phis]
+        input_handles = []
+        for sites, phi in zip(target_sites, phis):
+            site_handles = {}
+            for site in sites:
+                axis = phi.layout.index(site)
+                queries = self._required_input_queries(
+                    site, phi, axis, context)
+                site_handles[site] = tuple(
+                    phi.collect(builder, query) for query in queries)
+            input_handles.append(site_handles)
         _prepare_global_transform(
             builder, context.global_transform, context)
         session = _EvaluationSession(
@@ -800,6 +810,11 @@ class TRRSS(TTRSS):
         if context.collect_metrics:
             context.metrics.evaluations.append(session.stats)
         evaluation_view = session.view()
+        context.state['input_query_results'] = {
+            (sites, site): tuple(results[handle] for handle in handles)
+            for sites, site_handles in zip(target_sites, input_handles)
+            for site, handles in site_handles.items()
+        }
 
         targets = {}
         for sites, phi, handle, query_handles in zip(

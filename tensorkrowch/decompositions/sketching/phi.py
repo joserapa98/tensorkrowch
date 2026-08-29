@@ -111,6 +111,10 @@ def _fiber_selection(
 class PhiView(Protocol):
     """Minimal lazy/materialized Phi interface consumed by later fitters."""
 
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        """Complete represented Phi shape."""
+
     def evaluate(self, index_selection: torch.Tensor) -> torch.Tensor:
         """Evaluates selected Phi entries."""
 
@@ -175,6 +179,7 @@ class _SelectedPhiView:
                  index_selection: torch.Tensor) -> None:
         self.phi = phi
         self.index_selection = index_selection
+        self.shape = tuple(index_selection.shape[:-1])
 
     def materialize(self, batch_size: Optional[int] = None) -> torch.Tensor:
         """Evaluates only the rows represented by this view."""
@@ -419,6 +424,66 @@ class PhiOperator:
         """Returns a lazy view over explicitly selected Phi entries."""
         _normalize_selection(self.shape, index_selection, self.source.device)
         return _SelectedPhiView(self, index_selection)
+
+    def with_axis_values(self,
+                         axis: int,
+                         values: torch.Tensor) -> 'PhiOperator':
+        """Returns a lazy Phi with new values on one explicit input axis.
+
+        Regional and output axes cannot be replaced. The returned operator
+        owns no evaluated values and can therefore be collected into a new
+        evaluation plan before that plan is frozen.
+        """
+        if isinstance(axis, bool) or not isinstance(axis, int):
+            raise TypeError('`axis` should be int type')
+        if axis < 0:
+            axis += len(self.shape)
+        if axis < 0 or axis >= len(self.shape):
+            raise ValueError('`axis` is out of bounds for Phi')
+        if not isinstance(values, torch.Tensor):
+            raise TypeError('`values` should be torch.Tensor type')
+        if values.ndim < 1 or values.shape[0] < 1:
+            raise ValueError('`values` should contain a non-empty first axis')
+        component = self.components[axis]
+        if isinstance(component, RegionSketch) or \
+                component[0] not in self.input_sites:
+            raise ValueError('Only explicit input axes can receive new values')
+        components = list(self.components)
+        components[axis] = (component[0], values)
+        return PhiOperator(
+            self.source,
+            components,
+            self.output_spec,
+            input_sites=self.input_sites,
+            output_sites=self.output_sites,
+            input_kind=self.input_kind)
+
+    def fiber_at(self,
+                 axis: int,
+                 values: torch.Tensor,
+                 fixed_indices: Optional[torch.Tensor] = None
+                 ) -> torch.Tensor:
+        """Evaluates one functional input fiber at user-supplied values."""
+        return self.with_axis_values(axis, values).fiber(
+            axis, fixed_indices=fixed_indices)
+
+    def fit(self,
+            axis: int,
+            fitter,
+            domain: torch.Tensor,
+            context=None,
+            return_info: bool = False):
+        """Delegates one lazy input axis to an ``InputFitter`` strategy."""
+        from tensorkrowch.decompositions.sketching.fitting import InputFitter
+
+        if not isinstance(fitter, InputFitter):
+            raise TypeError('`fitter` should implement InputFitter')
+        return fitter.fit(
+            self,
+            axis=axis,
+            domain=domain,
+            context=context,
+            return_info=return_info)
 
     def fiber(self,
               axis: int,

@@ -6,6 +6,7 @@ from tensorkrowch.decompositions.sketching.fitting import (
     BasisFitter,
     FixedEmbeddingFitter,
     InputFitter,
+    TrainableEmbeddingFitter,
 )
 from tensorkrowch.decompositions.sketching.projections import (
     IdentityRangeProjector,
@@ -44,6 +45,7 @@ __all__ = [
     'InputFitter',
     'FixedEmbeddingFitter',
     'BasisFitter',
+    'TrainableEmbeddingFitter',
     'RangeProjector',
     'IdentityRangeProjector',
     'RandomizedRangeProjector',

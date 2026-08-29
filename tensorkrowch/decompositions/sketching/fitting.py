@@ -1,9 +1,9 @@
 """Input-axis fitting strategies for recursive-sketching decompositions."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import prod
-from typing import (Any, Callable, Optional, Protocol, Sequence, Tuple, Union,
-                    runtime_checkable)
+from typing import (Any, Callable, Mapping, Optional, Protocol, Sequence, Tuple,
+                    Union, runtime_checkable)
 
 import torch
 
@@ -144,6 +144,9 @@ class FittedInputAxis:
     domain_size: int
     input_dim: int
     record: Optional[InputFitRecord] = None
+    model: Optional[torch.nn.Module] = None
+    model_state: Optional[Mapping[str, torch.Tensor]] = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.tensor, torch.Tensor):
@@ -166,6 +169,19 @@ class FittedInputAxis:
         if self.record is not None and \
                 not isinstance(self.record, InputFitRecord):
             raise TypeError('`record` should be InputFitRecord type or None')
+        if self.model is not None and not isinstance(
+                self.model, torch.nn.Module):
+            raise TypeError('`model` should be torch.nn.Module type or None')
+        if self.model_state is not None:
+            if not isinstance(self.model_state, Mapping) or not all(
+                    isinstance(name, str) and isinstance(value, torch.Tensor)
+                    for name, value in self.model_state.items()):
+                raise TypeError(
+                    '`model_state` should map strings to tensors or be None')
+            object.__setattr__(self, 'model_state', dict(self.model_state))
+        if not isinstance(self.metadata, Mapping):
+            raise TypeError('`metadata` should be a mapping')
+        object.__setattr__(self, 'metadata', dict(self.metadata))
 
 
 @runtime_checkable
@@ -387,8 +403,255 @@ class BasisFitter:
             record=record)
 
 
+class TrainableEmbeddingFitter:
+    """Fits a Phi axis with a locally trained embedding model.
+
+    ``model(domain)`` must return a matrix with shape
+    ``(domain_size, input_dim)``. Training jointly optimizes the model and one
+    temporary coefficient table against functional Phi fibers. A final shared
+    least-squares solve removes optimizer error from the returned coefficients.
+    Gradients and random state are confined to this fitter; the surrounding
+    decomposition remains an ordinary numerical routine.
+
+    The trained model and a detached CPU state dictionary are attached to
+    :class:`FittedInputAxis` only when ``return_info=True``. Otherwise the
+    result contains only the fitted tensor and the model remains accessible as
+    ``fitter.model``.
+    """
+
+    def __init__(
+            self,
+            model: torch.nn.Module,
+            input_dim: Optional[int] = None,
+            optimizer_factory: Optional[Callable] = None,
+            optimizer_kwargs: Optional[Mapping[str, Any]] = None,
+            solver: Optional[LeastSquaresSolver] = None,
+            max_steps: int = 500,
+            tolerance: float = 1e-6,
+            patience: int = 50,
+            fiber_batch_size: Optional[int] = 64,
+            seed: int = 0) -> None:
+        if not isinstance(model, torch.nn.Module):
+            raise TypeError('`model` should be torch.nn.Module type')
+        if input_dim is not None and (
+                isinstance(input_dim, bool) or not isinstance(input_dim, int)):
+            raise TypeError('`input_dim` should be int type or None')
+        if input_dim is not None and input_dim < 1:
+            raise ValueError('`input_dim` should be positive')
+        if optimizer_factory is not None and not callable(optimizer_factory):
+            raise TypeError('`optimizer_factory` should be callable or None')
+        if optimizer_kwargs is not None and not isinstance(
+                optimizer_kwargs, Mapping):
+            raise TypeError('`optimizer_kwargs` should be a mapping or None')
+        if solver is not None and not isinstance(solver, LeastSquaresSolver):
+            raise TypeError('`solver` should be LeastSquaresSolver type or None')
+        for name, value, minimum in (
+                ('max_steps', max_steps, 1),
+                ('patience', patience, 1),
+                ('seed', seed, 0)):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+            if value < minimum:
+                qualifier = 'positive' if minimum else 'non-negative'
+                raise ValueError(f'`{name}` should be {qualifier}')
+        if isinstance(tolerance, bool) or not isinstance(
+                tolerance, (int, float)):
+            raise TypeError('`tolerance` should be a real scalar')
+        if tolerance < 0:
+            raise ValueError('`tolerance` should be non-negative')
+        if fiber_batch_size is not None and (
+                isinstance(fiber_batch_size, bool) or
+                not isinstance(fiber_batch_size, int)):
+            raise TypeError(
+                '`fiber_batch_size` should be int type or None')
+        if fiber_batch_size is not None and fiber_batch_size < 1:
+            raise ValueError('`fiber_batch_size` should be positive')
+
+        self.model = model
+        self.input_dim = input_dim
+        self.optimizer_factory = torch.optim.Adam \
+            if optimizer_factory is None else optimizer_factory
+        self.optimizer_kwargs = {'lr': 1e-2} \
+            if optimizer_kwargs is None else dict(optimizer_kwargs)
+        self.solver = LeastSquaresSolver() if solver is None else solver
+        self.max_steps = max_steps
+        self.tolerance = float(tolerance)
+        self.patience = patience
+        self.fiber_batch_size = fiber_batch_size
+        self.seed = seed
+
+    def required_queries(
+            self,
+            phi_view: PhiView,
+            axis: int,
+            domain: torch.Tensor,
+            context: Any = None) -> Sequence[torch.Tensor]:
+        """Declares no points beyond the complete selected training domain."""
+        shape = _phi_shape(phi_view)
+        axis = _normalize_axis(axis, shape)
+        if not isinstance(domain, torch.Tensor):
+            raise TypeError('`domain` should be torch.Tensor type')
+        if domain.ndim < 1 or domain.shape[0] != shape[axis]:
+            raise ValueError(
+                '`domain` should match the selected Phi-axis size')
+        return ()
+
+    def _embedding_matrix(self,
+                          domain: torch.Tensor,
+                          device: torch.device) -> torch.Tensor:
+        """Evaluates and validates the current trainable embedding."""
+        matrix = self.model(domain.to(device=device))
+        if not isinstance(matrix, torch.Tensor):
+            raise TypeError('`model` should return a torch.Tensor')
+        if matrix.ndim != 2 or matrix.shape[0] != domain.shape[0] or \
+                matrix.shape[1] < 1:
+            raise ValueError(
+                '`model` should return shape (domain_size, input_dim)')
+        if self.input_dim is not None and matrix.shape[1] != self.input_dim:
+            raise ValueError('`model` output does not match `input_dim`')
+        if not (matrix.is_floating_point() or matrix.is_complex()):
+            raise TypeError('`model` output should be floating or complex')
+        if not torch.isfinite(matrix).all():
+            raise ValueError('`model` output should contain finite values')
+        return matrix
+
+    def fit(
+            self,
+            phi_view: PhiView,
+            axis: int,
+            domain: torch.Tensor,
+            context: Any = None,
+            return_info: bool = False) -> FittedInputAxis:
+        """Trains the embedding on batched Phi fibers and returns coefficients."""
+        if not isinstance(return_info, bool):
+            raise TypeError('`return_info` should be bool type')
+        target, shape, used_fibers = _collect_phi_target(
+            phi_view, axis, domain, self.fiber_batch_size)
+        axis = _normalize_axis(axis, shape)
+        parameters = [
+            parameter for parameter in self.model.parameters()
+            if parameter.requires_grad
+        ]
+        if not parameters:
+            raise ValueError(
+                '`model` should expose at least one trainable parameter')
+        model_device = parameters[0].device
+        if any(parameter.device != model_device for parameter in parameters):
+            raise ValueError('All model parameters should share a device')
+        if model_device != target.device:
+            self.model.to(device=target.device)
+            model_device = target.device
+
+        cuda_devices = [model_device] if model_device.type == 'cuda' else []
+        best_loss = float('inf')
+        stale_steps = 0
+        converged = False
+        step = 0
+        with torch.random.fork_rng(devices=cuda_devices), torch.enable_grad():
+            torch.manual_seed(self.seed)
+            matrix = self._embedding_matrix(domain, model_device)
+            input_dim = matrix.shape[1]
+            dtype = torch.promote_types(matrix.dtype, target.dtype)
+            coefficient = torch.nn.Parameter(torch.randn(
+                input_dim,
+                target.shape[1],
+                device=model_device,
+                dtype=dtype) / max(input_dim, 1) ** 0.5)
+            optimizer = self.optimizer_factory(
+                [*parameters, coefficient], **self.optimizer_kwargs)
+            denominator = torch.linalg.vector_norm(
+                target.to(device=model_device, dtype=dtype)).clamp_min(
+                    torch.finfo(target.real.dtype).tiny)
+            for step in range(1, self.max_steps + 1):
+                optimizer.zero_grad(set_to_none=True)
+                matrix = self._embedding_matrix(domain, model_device).to(
+                    dtype=dtype)
+                promoted_target = target.to(device=model_device, dtype=dtype)
+                residual = matrix @ coefficient - promoted_target
+                loss = residual.abs().square().mean()
+                loss.backward()
+                optimizer.step()
+
+                relative = torch.linalg.vector_norm(residual) / denominator
+                loss_value = float(loss.detach().cpu())
+                relative_value = float(relative.detach().cpu())
+                if relative_value <= self.tolerance:
+                    converged = True
+                    break
+                improvement = best_loss - loss_value
+                threshold = max(abs(best_loss), 1.0) * 1e-12
+                if best_loss == float('inf') or improvement > threshold:
+                    best_loss = loss_value
+                    stale_steps = 0
+                else:
+                    stale_steps += 1
+                    if stale_steps >= self.patience:
+                        break
+
+        with torch.no_grad():
+            matrix = self._embedding_matrix(domain, model_device)
+            dtype = torch.promote_types(matrix.dtype, target.dtype)
+            matrix = matrix.to(dtype=dtype)
+            target = target.to(device=model_device, dtype=dtype)
+            solution, local_record = self.solver.solve(
+                matrix,
+                target,
+                site=axis,
+                return_record=return_info)
+            prediction = matrix @ solution
+            absolute = torch.linalg.vector_norm(prediction - target)
+            denominator = torch.linalg.vector_norm(target)
+            if denominator > 0:
+                relative = absolute / denominator
+            elif absolute == 0:
+                relative = torch.zeros_like(absolute)
+            else:
+                relative = torch.full_like(absolute, torch.inf)
+
+            record = None
+            model_state = None
+            model = None
+            if return_info:
+                singular_values = torch.linalg.svdvals(matrix)
+                smallest = singular_values[-1]
+                condition = torch.where(
+                    smallest > 0,
+                    singular_values[0] / smallest,
+                    torch.full_like(smallest, torch.inf))
+                record = InputFitRecord(
+                    method='trainable_embedding',
+                    axis=axis,
+                    domain_size=matrix.shape[0],
+                    input_dim=matrix.shape[1],
+                    residual_absolute=absolute,
+                    residual_relative=relative,
+                    condition_number=condition,
+                    used_fibers=used_fibers,
+                    local_solve=local_record)
+                model = self.model
+                model_state = {
+                    name: value.detach().cpu().clone()
+                    for name, value in self.model.state_dict().items()
+                }
+        tensor = _restore_fitted_axis(solution, shape, axis)
+        return FittedInputAxis(
+            tensor=tensor,
+            axis=axis,
+            domain_size=domain.shape[0],
+            input_dim=matrix.shape[1],
+            record=record,
+            model=model,
+            model_state=model_state,
+            metadata={
+                'steps': step,
+                'converged': converged,
+                'final_relative_residual': float(relative.detach().cpu()),
+            })
+
+
 __all__ = [
     'InputFitter',
     'FixedEmbeddingFitter',
     'BasisFitter',
+    'TrainableEmbeddingFitter',
 ]

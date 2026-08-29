@@ -38,6 +38,19 @@ def _materialized(tensor):
     return _MaterializedPhi(tensor, range(tensor.ndim))
 
 
+class _AffineEmbedding(torch.nn.Module):
+    """Small trainable map whose columns span affine scalar functions."""
+
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.tensor([
+            [1.0, 0.1], [0.1, 1.0]], dtype=torch.float64))
+
+    def forward(self, values):
+        basis = torch.stack((torch.ones_like(values), values), dim=1)
+        return basis @ self.weight
+
+
 class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
 
     def test_exact_deembedding_preserves_phi_axis_order(self):
@@ -282,3 +295,68 @@ class TestBasisFitter:  # MARK: TestBasisFitter
 
         with pytest.raises(ValueError, match=match):
             fitter.fit(_materialized(torch.ones(2)), 0, domain)
+
+
+class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
+
+    def test_trains_from_functional_fibers_and_returns_optional_state(self):
+        domain = torch.linspace(-1, 1, 7, dtype=torch.float64)
+        coefficients = torch.tensor([
+            [1., -2., 0.5], [3., 4., -1.]], dtype=torch.float64)
+        target = torch.stack((torch.ones_like(domain), domain), dim=1) @ \
+            coefficients
+        phi = _FiberOnlyPhi(target)
+        fitter = tk.decompositions.TrainableEmbeddingFitter(
+            _AffineEmbedding(),
+            input_dim=2,
+            max_steps=20,
+            tolerance=1e-10,
+            patience=10,
+            fiber_batch_size=2,
+            seed=17)
+        random_state = torch.random.get_rng_state().clone()
+
+        fitted = fitter.fit(
+            phi,
+            axis=0,
+            domain=domain,
+            return_info=True)
+
+        matrix = fitter.model(domain)
+        assert torch.allclose(
+            matrix @ fitted.tensor, target, rtol=1e-9, atol=1e-10)
+        assert phi.fiber_calls == 2
+        assert fitted.record.method == 'trainable_embedding'
+        assert fitted.record.used_fibers
+        assert fitted.model is fitter.model
+        assert fitted.model_state is not None
+        assert fitted.metadata['steps'] <= 20
+        assert torch.equal(torch.random.get_rng_state(), random_state)
+
+    def test_fast_result_does_not_attach_model_or_state(self):
+        domain = torch.linspace(-1, 1, 5, dtype=torch.float64)
+        target = torch.stack((torch.ones_like(domain), domain), dim=1)
+        fitter = tk.decompositions.TrainableEmbeddingFitter(
+            _AffineEmbedding(), max_steps=1, fiber_batch_size=2)
+
+        fitted = fitter.fit(
+            _FiberOnlyPhi(target),
+            axis=0,
+            domain=domain,
+            return_info=False)
+
+        assert fitted.record is None
+        assert fitted.model is None
+        assert fitted.model_state is None
+        assert torch.allclose(fitter.model(domain) @ fitted.tensor, target)
+
+    def test_query_declaration_validates_domain_before_freeze(self):
+        phi = _materialized(torch.ones(3, 2))
+        fitter = tk.decompositions.TrainableEmbeddingFitter(
+            _AffineEmbedding(), max_steps=1)
+
+        assert fitter.required_queries(
+            phi, axis=0, domain=torch.arange(3.)) == ()
+        with pytest.raises(ValueError, match='match'):
+            fitter.required_queries(
+                phi, axis=0, domain=torch.arange(2.))

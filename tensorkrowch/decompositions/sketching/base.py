@@ -370,11 +370,7 @@ class RecursiveSketching(ABC):
                         axis: int,
                         context: _SketchingFitContext) -> FittedInputAxis:
         """Fits one final-chain site's sampled axis using its strategy."""
-        kind, source_axis = self.outputs.layout[site]
-        domain = self.domains.for_site(source_axis) if kind == 'input' \
-            else torch.arange(
-                self.outputs.output_shape[source_axis],
-                device=self.source.device)
+        domain = self._input_domain(site)
         fitter = context.input_fitters[site]
         with context.phase('input.fit', site=site):
             fitted = fitter.fit(
@@ -394,6 +390,32 @@ class RecursiveSketching(ABC):
                         f'(condition number '
                         f'{fitted.record.condition_number:.3e})')
         return fitted
+
+    def _input_domain(self, site: int) -> torch.Tensor:
+        """Returns the domain represented by one final-chain site."""
+        kind, source_axis = self.outputs.layout[site]
+        if kind == 'input':
+            return self.domains.for_site(source_axis)
+        return torch.arange(
+            self.outputs.output_shape[source_axis],
+            device=self.source.device)
+
+    def _required_input_queries(
+            self,
+            site: int,
+            phi: PhiOperator,
+            axis: int,
+            context: _SketchingFitContext) -> Tuple[torch.Tensor, ...]:
+        """Collects a fitter's complete query declaration before freeze."""
+        queries = tuple(context.input_fitters[site].required_queries(
+            phi,
+            axis,
+            self._input_domain(site),
+            context=context))
+        if not all(isinstance(query, torch.Tensor) for query in queries):
+            raise TypeError(
+                'Input fitter queries should be index-selection tensors')
+        return queries
 
     def _project_range(self,
                        site: int,

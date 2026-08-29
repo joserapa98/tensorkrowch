@@ -186,6 +186,73 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         assert phi.layout == (left.region, 1, right.region)
         assert phi.configuration_batch().batch_size == 8
 
+    def test_functional_fiber_accepts_new_axis_values(self):
+        source = tk.decompositions.CallableTensorSource(
+            lambda values: (
+                values[:, 0] + 10 * values[:, 1] + 100 * values[:, 2]
+            ).to(torch.float64),
+            input_dim=(2, 2, 2),
+            dtype=torch.float64)
+        phi = PhiOperator(
+            source,
+            tuple((site, torch.tensor([0., 1.])) for site in range(3)),
+            _scalar_output_spec(3),
+            input_kind='coordinates')
+        values = torch.tensor([-1., 0.5, 2.])
+
+        fiber = phi.fiber_at(
+            axis=1,
+            values=values,
+            fixed_indices=torch.tensor([1, 0]))
+        replaced = phi.with_axis_values(1, values)
+
+        assert replaced.shape == (2, 3, 2)
+        assert torch.equal(fiber, 1 + 10 * values)
+        assert torch.equal(
+            replaced.fiber(1, torch.tensor([1, 0])), fiber)
+
+    def test_functional_fiber_after_freeze_uses_an_independent_session(self):
+        source = tk.decompositions.CallableTensorSource(
+            lambda values: values.sum(dim=1).to(torch.float64),
+            input_dim=(2, 2),
+            dtype=torch.float64)
+        phi = PhiOperator(
+            source,
+            ((0, torch.tensor([0., 1.])),
+             (1, torch.tensor([0., 1.]))),
+            _scalar_output_spec(2),
+            input_kind='coordinates')
+        builder = _EvaluationPlanBuilder(source)
+        phi.collect(builder)
+        builder.freeze()
+
+        with pytest.raises(RuntimeError, match='before expand'):
+            phi.collect(builder)
+        fiber = phi.fiber_at(
+            0, torch.tensor([-1., 2.]), fixed_indices=torch.tensor([1]))
+
+        assert torch.equal(fiber, torch.tensor([0., 3.]))
+        assert source.evaluation_stats.source_calls == 1
+
+    def test_phi_fit_delegates_without_materializing_operator(self):
+        source = tk.decompositions.DenseTensorSource(
+            torch.tensor([[1., 2.], [3., 4.], [4., 6.]]))
+        phi = PhiOperator(
+            source,
+            ((0, torch.arange(3)), (1, torch.arange(2))),
+            _scalar_output_spec(2))
+        embedding = torch.tensor([
+            [1., 0.], [0., 1.], [1., 1.]])
+
+        fitted = phi.fit(
+            axis=0,
+            fitter=tk.decompositions.FixedEmbeddingFitter(
+                embedding, fiber_batch_size=2),
+            domain=torch.arange(3))
+
+        assert torch.allclose(
+            fitted.tensor, torch.tensor([[1., 2.], [3., 4.]]))
+
     def test_evaluate_select_and_materialized_views_are_consistent(self):
         source = tk.decompositions.DenseTensorSource(
             torch.arange(8.).reshape(2, 2, 2))

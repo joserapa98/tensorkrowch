@@ -4804,7 +4804,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   contracción/expansión entra en el driver. Evidencia: `67 passed` en
   quantization+specs y `263 passed, 2 skipped` en sketching, Ruff limpio.
 
-- [ ] **QTT-03 — Implementar `.quantized`, `qtt_rss` y `qtr_rss`**
+- [x] **QTT-03 — Implementar `.quantized`, `qtt_rss` y `qtr_rss`**
+
+  Estado: implementación commiteada en `c4c38f4`; pendiente de revisión
+  detallada del usuario.
 
   Crear `QuantizedSourceAdapter`.
 
@@ -4833,6 +4836,19 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
     decodificar cada layout;
   - no se afirma equivalencia por permutar una lista de cores;
   - error comparado en coordenadas físicas.
+
+  Implementación: `QuantizedSourceAdapter` expone los digits como
+  `TensorSource` y distingue explícitamente source physical, variable indices
+  y digits ya cuantizados. El bypass TT requiere `source_layout` compatible y
+  reordena configuraciones, nunca cores. Los constructores de soporte/dataset
+  físico cuantizan y dejan que sparse/empirical coaleszcan colisiones.
+  `TTRSS.quantized`/`TRRSS.quantized` fijan basis embeddings y aceptan fits
+  repetidos en sample space físico o digits; `qtt_rss`/`qtr_rss` conservan una
+  API simple sin embedding. Metadata registra layout, mapa, dominio, grid y
+  clipping. Tests cubren callable y output tensorial, source dense/TT,
+  sparse/empírica, maps por variable, grouped/interleaved y QTR. Evidencia:
+  `39 passed` dirigidos y `973 passed, 13 skipped` en decompositions, Ruff y
+  diff-check limpios.
 
 - [ ] **QTT-04 — Implementar `QTTInputFitter`**
 

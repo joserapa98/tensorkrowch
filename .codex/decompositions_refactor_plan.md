@@ -4572,7 +4572,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   mayores, fallback/rechazo, TT→TR y TR-RSS rank-one; `123 passed` en las
   suites dirigidas de ring más TR-RSS, Ruff y `git diff --check` limpios.
 
-- [ ] **RSS-14 — Implementar sources sparse/empíricas en RS**
+- [x] **RSS-14 — Implementar sources sparse/empíricas en RS**
+
+  Estado: foundation commiteado en `86bae31` y APIs públicas integradas en
+  `3af061f`; pendiente de revisión detallada del usuario.
 
   Añadir wrappers para:
 
@@ -4591,7 +4594,15 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - coste proporcional al soporte y sketch, no al grid completo;
   - distribución empírica no se confunde con samples RSS de una función densa.
 
-- [ ] **RSS-15 — Implementar operadores y sistemas Sampled/Marginal/TTStack**
+  Implementación: `SupportTensorSource` normaliza el contrato de soporte;
+  `_resolve_rs_source` exige exactamente una entrada, mueve dataset/weights al
+  device de cálculo y construye `EmpiricalDistribution`. Los builders recorren
+  solo los valores no nulos declarados y registran `source_path="support"`.
+
+- [x] **RSS-15 — Implementar operadores y sistemas Sampled/Marginal/TTStack**
+
+  Estado: implementación y gate matemático commiteados en `97a5eea`;
+  pendiente de revisión detallada del usuario.
 
   Crear también `CoreDeterminingSystem` y `SketchSystemBuilder`; cada operador
   debe aportar un builder validado, no entrar por un branch ambiguo del driver.
@@ -4629,7 +4640,17 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   proyección lineal global no basta por sí solo para ser un sketch válido del
   sistema TT-RS.
 
-- [ ] **RSS-16 — Implementar `TTRS` y `TRRS`**
+  Implementación: `SketchOperator` selecciona un `SketchSystemBuilder` por
+  contrato; `CoreDeterminingSystem` recorta los left singular vectors, forma
+  las matrices recursivas `A_k` y resuelve `A_{k-1} G_k = B_k`. Los tests
+  verifican dimensiones, recursión, recuperación exacta y los límites
+  `tt_rank=1`/`n_stacks=1` de `TTStackSketch` sin extender indebidamente sus
+  garantías.
+
+- [x] **RSS-16 — Implementar `TTRS` y `TRRS`**
+
+  Estado: implementación commiteada en `3af061f`; pendiente de revisión
+  detallada del usuario.
 
   Reutilizar:
 
@@ -4649,6 +4670,15 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   garantías del paper TT abierto no se transfieren automáticamente.
 
   Tests con fuente sparse exacta, distribución empírica y TT source.
+
+  Implementación: `TTRS` fija source/operador y permite fits independientes
+  con distintas truncaciones; `tt_rs` conserva la API funcional simple.
+  `TRRS` construye el TT-RS y delega la apertura cíclica en `TT2TR`, por lo que
+  reutiliza loop openers, gauges, schedules y fidelity. Solo expone `rank`; el
+  cyclic rank se deriva internamente. La extensión emite
+  `ExperimentalWarning` y documenta que las garantías TT abiertas no se
+  transfieren automáticamente. Evidencia conjunta: `343 passed, 2 skipped` en
+  sketching+ring, Ruff y `git diff --check` limpios.
 
 - [ ] **RSS-17 — Optimizar `TTTensorSource`**
 

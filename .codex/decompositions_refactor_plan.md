@@ -4680,7 +4680,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   transfieren automáticamente. Evidencia conjunta: `343 passed, 2 skipped` en
   sketching+ring, Ruff y `git diff --check` limpios.
 
-- [ ] **RSS-17 — Optimizar `TTTensorSource`**
+- [x] **RSS-17 — Optimizar `TTTensorSource`**
+
+  Estado: implementación commiteada en `266e42b`; pendiente de revisión
+  detallada del usuario.
 
   Portar como kernels, no como nombres MPS:
 
@@ -4697,6 +4700,16 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
 
   Elegir siempre el backend por capacidad de source, no por `isinstance` en el
   driver principal.
+
+  Implementación: `TTTensorSource` aporta kernels de entornos exactos
+  izquierdos/derechos, Phi local y marginal, y double layers TTStack. Cada
+  operador selecciona su builder estructurado mediante capacidades callable y
+  conserva el builder genérico como fallback. No se construye un grafo MPS ni
+  se enumera el grid. Los sistemas estructurados se comparan con un oracle
+  sparse/denso en dtype real y complejo para Sampled, Marginal y TTStack;
+  además se verifica que las evaluaciones puntuales permanecen en cero.
+  Evidencia ampliada: `555 passed, 3 skipped` en ALS+sketching+ring y Ruff
+  limpio.
 
 - [ ] **RSS-18 — Añadir fitting entrenable y Phi funcional**
 

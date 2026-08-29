@@ -4769,7 +4769,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Evidencia: `57 passed` en quantization+specs y `253 passed, 2 skipped` en
   sketching completo, Ruff y diff-check limpios.
 
-- [ ] **QTT-02 — Implementar mapas de coordenadas**
+- [x] **QTT-02 — Implementar mapas de coordenadas**
+
+  Estado: implementación commiteada en `4ae256e`; pendiente de revisión
+  detallada del usuario.
 
   Crear `CoordinateMap`, `UniformCoordinateMap`, `WarpedCoordinateMap` y
   `ExplicitGridMap`.
@@ -4791,6 +4794,15 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - grid computacional uniforme y mapa físico/curvilíneo;
   - celdas variables y remapeo de dominio;
   - ningún mapeo de un paper queda hardcodeado en el driver.
+
+  Implementación: `CoordinateMap` define solo forward; la inverse se detecta
+  como capacidad opcional. `UniformCoordinateMap` separa índice→u→dominio y
+  soporta endpoints/cell centers, nearest con empate al índice inferior y
+  error/clip explícito. `WarpedCoordinateMap` acepta callables separables o
+  acoplados con dominio opcional. `ExplicitGridMap` interpola grids monótonas
+  arbitrarias y cuantiza por el punto más cercano. Ninguna ley particular de
+  contracción/expansión entra en el driver. Evidencia: `67 passed` en
+  quantization+specs y `263 passed, 2 skipped` en sketching, Ruff limpio.
 
 - [ ] **QTT-03 — Implementar `.quantized`, `qtt_rss` y `qtr_rss`**
 

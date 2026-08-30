@@ -389,6 +389,8 @@ class RecursiveSketching(ABC):
                         f'Input fit at site {site} is ill-conditioned '
                         f'(condition number '
                         f'{fitted.record.condition_number:.3e})')
+            if context.collect_metrics and fitted.truncation is not None:
+                context.metrics.truncations.append(fitted.truncation)
         return fitted
 
     def _input_domain(self, site: int) -> torch.Tensor:

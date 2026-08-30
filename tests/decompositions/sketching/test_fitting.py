@@ -428,6 +428,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
             digit_order='fine_to_coarse',
             domain=physical_domain,
             rank=4,
+            connector_rank=2,
             batch_size=8,
             seed=23)
 
@@ -444,10 +445,64 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
         assert torch.allclose(fitted.tensor, expected)
         assert torch.allclose(fitted.tensor, oracle.contract_dense())
         assert fitted.factor is not None
-        assert fitted.factor.input_dim == (2, 2, 2, 3)
+        assert fitted.factor.input_dim == (2, 2, 2)
+        assert fitted.reduced_tensor.shape == (2, 2, 3)
+        factor_values = fitter.factor_values(fitted, initial_domain)
+        assert torch.allclose(
+            torch.einsum(
+                'ig,gab->iab', factor_values, fitted.reduced_tensor),
+            fitted.tensor)
+        assert fitted.truncation.selected_rank == 2
         assert fitted.metadata['out_position'] == (2, 3)
+        assert fitted.metadata['connector_rank'] == 2
         assert fitted.record.method == 'qtt'
         assert fitted.record.residual_relative < 1e-10
+
+    def test_reduced_mode_avoids_materializing_the_grid_axis(self):
+        physical_domain = torch.tensor([0., 1.], dtype=torch.float64)
+
+        def function(values):
+            base = 1 + values[:, 0]
+            return base[:, None, None] + torch.arange(
+                6, dtype=values.dtype).reshape(1, 2, 3)
+
+        source = tk.decompositions.CallableTensorSource(
+            function,
+            input_dim=(4,),
+            output_shape=(2, 3),
+            dtype=torch.float64)
+        output_spec = _OutputSpec.normalize(
+            torch.ones(1, 2, 3),
+            n_input_sites=1,
+            out_position=(1, 2))
+        initial_domain = torch.linspace(0, 1, 4, dtype=torch.float64)
+        phi = PhiOperator(
+            source,
+            ((0, initial_domain),
+             (1, torch.arange(2)),
+             (2, torch.arange(3))),
+            output_spec,
+            input_kind='coordinates')
+        expected = function(initial_domain.reshape(-1, 1))
+        fitter = tk.decompositions.QTTInputFitter(
+            base=2,
+            level=2,
+            domain=physical_domain,
+            rank=4,
+            connector_rank=2,
+            batch_size=8,
+            seed=24,
+            materialize_tensor=False)
+
+        fitted = fitter.fit(phi, axis=0, domain=initial_domain)
+
+        assert fitted.tensor is fitted.reduced_tensor
+        assert fitted.tensor.shape == (2, 2, 3)
+        assert fitted.metadata['materialized_tensor'] is False
+        factor_values = fitter.factor_values(fitted, initial_domain)
+        reconstructed = torch.einsum(
+            'ig,gab->iab', factor_values, fitted.reduced_tensor)
+        assert torch.allclose(reconstructed, expected)
 
     def test_requires_functional_phi_and_declares_independent_session(self):
         fitter = tk.decompositions.QTTInputFitter(

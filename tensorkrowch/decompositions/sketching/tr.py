@@ -15,7 +15,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import (QTRTuckerDecomposition,
+                                                 TRDecomposition)
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
                                                      PrescribedCentralBlockSelector,
@@ -40,7 +41,9 @@ from tensorkrowch.decompositions.sketching.phi import (
     PhiOperator,
     _MaterializedPhi,
 )
-from tensorkrowch.decompositions.sketching.fitting import InputFitter
+from tensorkrowch.decompositions.sketching.fitting import (BasisFitter,
+                                                           InputFitter,
+                                                           QTTInputFitter)
 from tensorkrowch.decompositions.sketching.projections import RangeProjector
 from tensorkrowch.decompositions.sketching.quantization import (
     CoordinateMap,
@@ -56,8 +59,9 @@ from tensorkrowch.decompositions.sketching.transforms import (
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sketching.sketches import SketchOperator
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
-from tensorkrowch.decompositions.sketching.tt import (Device, Samples, TTRS,
-                                                      TTRSS,
+from tensorkrowch.decompositions.sketching.tt import (Device, QTTTuckerRSS,
+                                                      Samples, TTRS, TTRSS,
+                                                      _QTTTuckerFitMixin,
                                                       _quantized_source,
                                                       _QuantizedRSSMixin)
 from tensorkrowch.decompositions.sources import ConfigurationBatch
@@ -272,6 +276,7 @@ class _SketchTargetProvider:
     outputs: _OutputSpec
     embeddings: Any
     boundary_records: list
+    embedding_function: Optional[Any] = None
 
     boundary_mode = 'open'
 
@@ -301,6 +306,8 @@ class _SketchTargetProvider:
         }
 
     def _embed(self, site: int, values: torch.Tensor, dtype) -> torch.Tensor:
+        if self.embedding_function is not None:
+            return self.embedding_function(site, values, dtype)
         return self.outputs.embed_site(
             site, values, self.embeddings, dtype=dtype)
 
@@ -915,11 +922,22 @@ class TRRSS(TTRSS):
             tensor = view.materialize()
             for site in sites:
                 axis = phi.layout.index(site)
-                tensor = self._fit_input_axis(
-                    site,
-                    _MaterializedPhi(tensor, phi.layout),
-                    axis,
-                    context).tensor
+                fitter = context.input_fitters[site]
+                fit_view = _MaterializedPhi(tensor, phi.layout)
+                if getattr(fitter, 'requires_functional_phi', False):
+                    if len(sites) != 1:
+                        raise ValueError(
+                            'Functional input fitting requires one-site TR '
+                            'targets')
+                    if not context.global_transform.is_identity or \
+                            not context.local_transform.is_identity:
+                        raise ValueError(
+                            'A functional input fitter currently requires '
+                            'identity value transforms')
+                    fit_view = phi
+                fitted = self._fit_input_axis(
+                    site, fit_view, axis, context)
+                tensor = self._select_fitted_tensor(site, fitted)
             if not len(context.regions['prefixes'][sites[0]].region):
                 tensor = tensor.unsqueeze(0)
             if not len(context.regions['suffixes'][sites[-1] + 1].region):
@@ -929,6 +947,13 @@ class TRRSS(TTRSS):
                 sites=sites,
                 truncation=context.spec.truncation.as_kwargs(),
                 collect_metrics=context.collect_metrics)
+
+        site_dim = tuple(
+            self._select_fitted_tensor(
+                site, context.fitted_axes[site]
+            ).shape[context.fitted_axes[site].axis]
+            for site in range(self.outputs.n_sites))
+        context.state['fitted_site_dim'] = site_dim
 
         rank_spec = context.state['rank_spec']
         adaptive_info = None
@@ -941,13 +966,16 @@ class TRRSS(TTRSS):
             context.state['rank_spec'] = rank_spec
         provider = _SketchTargetProvider(
             targets=targets,
-            input_dim=self.outputs.site_dim(self.embeddings),
+            input_dim=site_dim,
             rank=rank_spec,
             prefixes=context.regions['prefixes'],
             suffixes=context.regions['suffixes'],
             outputs=self.outputs,
             embeddings=self.embeddings,
-            boundary_records=[])
+            boundary_records=[],
+            embedding_function=lambda site, values, dtype:
+                self._embed_fitted_site(
+                    site, values, context, dtype))
         truncation_records = []
         opener = _SketchLoopOpener(
             resolve_loop_opener(context.state['loop_opener']),
@@ -988,12 +1016,12 @@ class TRRSS(TTRSS):
         context.state['adaptive_info'] = adaptive_info
         return self._assemble_result(context)
 
-    def _evaluate_extended_cores(self, cores, samples):
+    def _evaluate_extended_cores(self, cores, samples, context):
         vectors = [
-            self.outputs.embed_site(
+            self._embed_fitted_site(
                 site,
                 values,
-                self.embeddings,
+                context,
                 dtype=cores[0].dtype).to(cores[0].device)
             for site, values in enumerate(samples)]
         matrices = [
@@ -1030,7 +1058,7 @@ class TRRSS(TTRSS):
         selected = context.state['selected_values']
         if context.collect_metrics and selected is not None:
             approximation = self._evaluate_extended_cores(
-                context.cores, context.state['extended_samples'])
+                context.cores, context.state['extended_samples'], context)
             selected = selected.to(
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - selected)
@@ -1062,7 +1090,9 @@ class TRRSS(TTRSS):
     def _validate_result(self, result, context):
         if not isinstance(result, TRDecomposition):
             raise TypeError('`result` should be TRDecomposition type')
-        if result.input_dim != self.outputs.site_dim(self.embeddings):
+        expected = context.state.get(
+            'fitted_site_dim', self.outputs.site_dim(self.embeddings))
+        if result.input_dim != expected:
             raise ValueError('The result input dimensions are inconsistent')
 
 
@@ -1070,6 +1100,179 @@ class _QuantizedTRRSS(_QuantizedRSSMixin, TRRSS):
     """Internal TRRSS specialization that normalizes physical QTR samples."""
 
     _quantized_algorithm = 'qtr_rss'
+
+
+class _QTTTuckerTRRSS(_QTTTuckerFitMixin, TRRSS):
+    """Internal TR-RSS driver operating directly on fitted gamma axes."""
+
+    def _assemble_result(
+            self, context: _SketchingFitContext) -> TRDecomposition:
+        result = super()._assemble_result(context)
+        result.metadata['algorithm'] = 'qtr_tucker_rss_upper'
+        return result
+
+
+class QTRTuckerRSS(QTTTuckerRSS):
+    r"""Experimental QTT factors connected through an upper Tensor Ring.
+
+    Local factors use the same functional-Phi split as
+    :class:`~tensorkrowch.decompositions.QTTTuckerRSS`; only the upper
+    connector network is cyclic. The ring construction and the RSS extension
+    are experimental, and no open-TT recovery guarantee is implied.
+
+    The local hierarchy follows the QTT-Tucker format of Dolgov and
+    Khoromskij (2013),
+    `paper <https://doi.org/10.1137/120882597>`_, while respecting the rounding
+    caveat of Etter, Dolgov and Khoromskij (2016),
+    `paper <https://doi.org/10.1137/15M104089X>`_. The cyclic upper network is
+    a TensorKrowch extension not covered by either paper.
+    """
+
+    @torch.no_grad()
+    def fit(
+            self,
+            sketch_samples: Samples,
+            labels: Optional[torch.Tensor] = None,
+            rank: _Rank = 1,
+            connector_rank: Optional[int] = None,
+            factor_rank: Optional[int] = None,
+            center: Optional[int] = None,
+            loop_opener: Union[str, LoopOpener] = 'als',
+            schedule: str = 'center_out',
+            schedule_block_size: int = 1,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            batch_size: int = 64,
+            generator: Optional[torch.Generator] = None,
+            sample_space: str = 'physical',
+            verbose: Union[bool, int] = 0,
+            collect_metrics: bool = False,
+            observer: Optional[DecompositionObserver] = None
+            ) -> QTRTuckerDecomposition:
+        """Fits local QTT factors and their cyclic upper TR connectors.
+
+        ``rank`` follows the TR right-link convention, including the final
+        cyclic link. ``connector_rank`` is a shared upper bound for every
+        Tucker index and ``factor_rank`` bounds the internal ranks of each
+        local QTT factor. The current functional route deliberately uses
+        one-site center targets and therefore does not expose adaptive
+        multi-site rank discovery.
+        """
+        indices = self._sample_indices(sketch_samples, sample_space)
+        probe = self._evaluate_indices(indices[:1])
+        outputs = _OutputSpec.normalize(
+            probe, self.layout.n_variables, self.out_position)
+        if outputs.n_sites < 3:
+            raise ValueError(
+                'QTR-Tucker RSS requires at least three upper sites')
+        maximum_rank = rank if isinstance(rank, int) else max(tuple(rank))
+        if factor_rank is None:
+            factor_rank = maximum_rank
+        if connector_rank is None:
+            connector_rank = maximum_rank
+        seed = 0 if generator is None else generator.initial_seed()
+        fitters = []
+        for kind, axis in outputs.layout:
+            if kind == 'output':
+                fitters.append(BasisFitter(outputs.output_shape[axis]))
+                continue
+            size = self.layout.grid_size[axis]
+            interval = torch.tensor(
+                [0., float(size - 1)],
+                device=self.adapter.device,
+                dtype=probe.real.dtype)
+            fitters.append(QTTInputFitter(
+                base=self.layout.base[axis],
+                level=self.layout.level[axis],
+                digit_order=self.layout.digit_order,
+                domain=interval,
+                rank=factor_rank,
+                connector_rank=connector_rank,
+                cutoff=cutoff,
+                atol=atol,
+                rtol=rtol,
+                cum_percentage=cum_percentage,
+                batch_size=batch_size,
+                seed=int((seed + axis) % (2 ** 63 - 1)),
+                materialize_tensor=False))
+
+        index_domains = tuple(
+            torch.arange(
+                size,
+                device=self.adapter.device,
+                dtype=probe.real.dtype)
+            for size in self.layout.grid_size)
+        embeddings = tuple(
+            torch.eye(size, device=self.adapter.device, dtype=probe.dtype)
+            for size in self.layout.grid_size)
+
+        def indexed_function(values):
+            return self._evaluate_indices(values.to(torch.long))
+
+        decomposer = _QTTTuckerTRRSS(
+            indexed_function,
+            embedding=embeddings,
+            input_dim=self.layout.grid_size,
+            domain=index_domains,
+            out_position=self.out_position,
+            device=self.adapter.device,
+            dtype=probe.dtype,
+            output_device=None,
+            input_fitters=fitters,
+            synchronize_timers=self.synchronize_timers)
+        upper = decomposer.fit(
+            indices.to(dtype=probe.real.dtype),
+            labels=labels,
+            rank=rank,
+            center=center,
+            loop_opener=loop_opener,
+            schedule=schedule,
+            schedule_block_size=schedule_block_size,
+            adaptive=False,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            batch_size=batch_size,
+            generator=generator,
+            verbose=verbose,
+            collect_metrics=collect_metrics,
+            observer=observer)
+        if collect_metrics:
+            self._merge_factor_metrics(upper, decomposer.factors)
+        metadata = dict(upper.metadata)
+        metadata.update({
+            'algorithm': 'qtr_tucker_rss',
+            'experimental': True,
+            'rss_recovery_guarantee': False,
+            'variable_positions': tuple(decomposer.variable_positions),
+            'connector_rank': [
+                factor.input_dim[-1] for factor in decomposer.factors],
+            'quantization': {
+                'base': self.layout.base,
+                'level': self.layout.level,
+                'ordering': self.layout.ordering,
+                'digit_order': self.layout.digit_order,
+                'grid_size': self.layout.grid_size,
+                'computational_grid': self.adapter.computational_grid,
+                'out_of_domain': self.adapter.out_of_domain,
+            },
+        })
+        result = QTRTuckerDecomposition(
+            upper,
+            decomposer.factors,
+            self.layout,
+            self.adapter.coordinate_map,
+            self.adapter.domain,
+            variable_positions=decomposer.variable_positions,
+            computational_grid=self.adapter.computational_grid,
+            out_of_domain=self.adapter.out_of_domain,
+            metrics=upper.metrics,
+            metadata=metadata)
+        return result if self.output_device is None else result.to(
+            device=self.output_device)
 
 
 def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
@@ -1430,6 +1633,113 @@ def tr_rs(
 
 
 @torch.no_grad()
+def qtr_tucker_rss(
+        function=None,
+        sketch_samples: Samples = None,
+        *,
+        source=None,
+        layout: Optional[QuantizedLayout] = None,
+        n_variables: Optional[int] = None,
+        base: Union[int, Sequence[int]] = 2,
+        level: Union[int, Sequence[int]] = 1,
+        ordering: str = 'grouped',
+        digit_order: str = 'coarse_to_fine',
+        permutation=None,
+        coordinate_map: Optional[
+            Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+        domain=None,
+        source_space: str = 'physical',
+        source_layout: Optional[QuantizedLayout] = None,
+        sample_space: str = 'physical',
+        computational_grid: str = 'endpoints',
+        out_of_domain: str = 'error',
+        labels: Optional[torch.Tensor] = None,
+        out_position=None,
+        rank: _Rank = 1,
+        connector_rank: Optional[int] = None,
+        factor_rank: Optional[int] = None,
+        center: Optional[int] = None,
+        loop_opener: Union[str, LoopOpener] = 'als',
+        schedule: str = 'center_out',
+        schedule_block_size: int = 1,
+        cutoff: Optional[float] = None,
+        atol: Optional[float] = None,
+        rtol: Optional[float] = None,
+        cum_percentage: Optional[float] = None,
+        batch_size: int = 64,
+        device: Device = None,
+        dtype: Optional[torch.dtype] = None,
+        generator: Optional[torch.Generator] = None,
+        output_device: Device = 'cpu',
+        verbose: Union[bool, int] = 0,
+        return_info: bool = False):
+    """Builds local QTT factors connected through an upper Tensor Ring.
+
+    This is the experimental cyclic counterpart of :func:`qtt_tucker_rss`.
+    It returns the complete
+    :class:`~tensorkrowch.decompositions.QTRTuckerDecomposition`, not only the
+    upper cores, and does not transfer TT/QTT-Tucker recovery guarantees to
+    the ring topology.
+    """
+    if sketch_samples is None:
+        raise TypeError('`sketch_samples` should be provided')
+    if layout is None and n_variables is None:
+        if sample_space != 'physical':
+            raise ValueError(
+                '`n_variables` is required for non-physical samples')
+        values = sketch_samples.values \
+            if isinstance(sketch_samples, ConfigurationBatch) \
+            else sketch_samples
+        if not isinstance(values, torch.Tensor) or values.ndim != 2:
+            raise ValueError(
+                '`n_variables` could not be inferred from sketch samples')
+        n_variables = values.shape[1]
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+    result = QTRTuckerRSS(
+        function=function,
+        source=source,
+        layout=layout,
+        n_variables=n_variables,
+        base=base,
+        level=level,
+        ordering=ordering,
+        digit_order=digit_order,
+        permutation=permutation,
+        coordinate_map=coordinate_map,
+        domain=domain,
+        source_space=source_space,
+        source_layout=source_layout,
+        computational_grid=computational_grid,
+        out_of_domain=out_of_domain,
+        out_position=out_position,
+        device=device,
+        dtype=dtype,
+        output_device=output_device).fit(
+            sketch_samples,
+            labels=labels,
+            rank=rank,
+            connector_rank=connector_rank,
+            factor_rank=factor_rank,
+            center=center,
+            loop_opener=loop_opener,
+            schedule=schedule,
+            schedule_block_size=schedule_block_size,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            batch_size=batch_size,
+            generator=generator,
+            sample_space=sample_space,
+            verbose=verbose,
+            collect_metrics=return_info)
+    if return_info:
+        return result, result.as_info()
+    return result
+
+
+@torch.no_grad()
 def qtr_rss(
         function=None,
         sketch_samples: Samples = None,
@@ -1700,4 +2010,6 @@ __all__ = [
     'TRRS',
     'tr_rs',
     'qtr_rss',
+    'QTRTuckerRSS',
+    'qtr_tucker_rss',
 ]

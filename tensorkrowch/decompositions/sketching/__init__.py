@@ -41,11 +41,15 @@ from tensorkrowch.decompositions.sketching.transforms import (
     LocalTransformContext,
     LocalValueTransform,
 )
-from tensorkrowch.decompositions.sketching.tt import (TTRS, TTRSS, qtt_rss,
-                                                      tt_rs, tt_rss)
-from tensorkrowch.decompositions.sketching.tr import (SketchGaugeRecursion,
+from tensorkrowch.decompositions.sketching.tt import (QTTTuckerRSS, TTRS,
+                                                      TTRSS, qtt_rss,
+                                                      qtt_tucker_rss, tt_rs,
+                                                      tt_rss)
+from tensorkrowch.decompositions.sketching.tr import (QTRTuckerRSS,
+                                                      SketchGaugeRecursion,
                                                       TRRS, TRRSS, qtr_rss,
-                                                      tr_rs, tr_rss)
+                                                      qtr_tucker_rss, tr_rs,
+                                                      tr_rss)
 
 
 __all__ = [
@@ -85,10 +89,14 @@ __all__ = [
     'TTRS',
     'tt_rs',
     'qtt_rss',
+    'QTTTuckerRSS',
+    'qtt_tucker_rss',
     'SketchGaugeRecursion',
     'TRRS',
     'tr_rs',
     'qtr_rss',
+    'QTRTuckerRSS',
+    'qtr_tucker_rss',
     'TRRSS',
     'tr_rss',
 ]

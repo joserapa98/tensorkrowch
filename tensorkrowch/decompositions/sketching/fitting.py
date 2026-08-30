@@ -1,6 +1,6 @@
 """Input-axis fitting strategies for recursive-sketching decompositions."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from math import prod
 from typing import (Any, Callable, Mapping, Optional, Protocol, Sequence, Tuple,
                     Union, runtime_checkable)
@@ -8,7 +8,8 @@ from typing import (Any, Callable, Mapping, Optional, Protocol, Sequence, Tuple,
 import torch
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
-from tensorkrowch.decompositions.metrics import InputFitRecord
+from tensorkrowch.decompositions.metrics import (InputFitRecord,
+                                                 TruncationRecord)
 from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sketching.phi import PhiView
 from tensorkrowch.decompositions.sketching.quantization import (
@@ -17,6 +18,7 @@ from tensorkrowch.decompositions.sketching.quantization import (
     QuantizedSourceAdapter,
     UniformCoordinateMap,
 )
+from tensorkrowch.utils import truncated_svd
 
 
 Embedding = Union[torch.Tensor, Callable[[torch.Tensor], torch.Tensor]]
@@ -155,6 +157,8 @@ class FittedInputAxis:
     model_state: Optional[Mapping[str, torch.Tensor]] = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
     factor: Optional[TTDecomposition] = None
+    reduced_tensor: Optional[torch.Tensor] = None
+    truncation: Optional[TruncationRecord] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.tensor, torch.Tensor):
@@ -193,6 +197,24 @@ class FittedInputAxis:
         if self.factor is not None and not isinstance(
                 self.factor, TTDecomposition):
             raise TypeError('`factor` should be TTDecomposition type or None')
+        if self.reduced_tensor is not None:
+            if not isinstance(self.reduced_tensor, torch.Tensor):
+                raise TypeError(
+                    '`reduced_tensor` should be torch.Tensor type or None')
+            if self.reduced_tensor.ndim != self.tensor.ndim:
+                raise ValueError(
+                    '`reduced_tensor` should preserve the fitted tensor order')
+            if any(
+                    reduced != original
+                    for item, (reduced, original) in enumerate(zip(
+                        self.reduced_tensor.shape, self.tensor.shape))
+                    if item != self.axis):
+                raise ValueError(
+                    '`reduced_tensor` should only replace the fitted axis')
+        if self.truncation is not None and not isinstance(
+                self.truncation, TruncationRecord):
+            raise TypeError(
+                '`truncation` should be TruncationRecord type or None')
 
 
 @runtime_checkable
@@ -668,7 +690,14 @@ class QTTInputFitter:
     consecutively after all digits. The returned :class:`FittedInputAxis`
     contains both a dense-grid axis, which preserves the ordinary
     ``InputFitter`` contract, and ``factor``, the lightweight local TT used by
-    native QTT-Tucker assembly.
+    native QTT-Tucker assembly. With ``materialize_tensor=False``, the dense
+    axis is not reconstructed: ``tensor`` and ``reduced_tensor`` contain only
+    the small connector axis required by the upper decomposition.
+
+    The digit block is orthogonalized with a QR sweep before an SVD separates
+    it from the remaining Phi axes. Consequently, the native hierarchical
+    path applies the SVD only to the reduced environment matrix and never
+    densifies the complete local Phi unless metrics are requested.
 
     The local problem owns its generator, observer-free execution and source
     sessions. It never extends a frozen outer evaluation plan. One fitter can
@@ -687,12 +716,14 @@ class QTTInputFitter:
             coordinate_map: Optional[CoordinateMap] = None,
             domain=None,
             rank: Optional[int] = None,
+            connector_rank: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
             cum_percentage: Optional[float] = None,
             batch_size: int = 64,
-            seed: int = 0) -> None:
+            seed: int = 0,
+            materialize_tensor: bool = True) -> None:
         self.layout = QuantizedLayout(
             n_variables=1,
             base=base,
@@ -707,6 +738,12 @@ class QTTInputFitter:
             raise TypeError('`rank` should be int type or None')
         if rank is not None and rank < 1:
             raise ValueError('`rank` should be positive')
+        if connector_rank is not None and (
+                isinstance(connector_rank, bool) or
+                not isinstance(connector_rank, int)):
+            raise TypeError('`connector_rank` should be int type or None')
+        if connector_rank is not None and connector_rank < 1:
+            raise ValueError('`connector_rank` should be positive')
         if isinstance(batch_size, bool) or not isinstance(batch_size, int):
             raise TypeError('`batch_size` should be int type')
         if batch_size < 1:
@@ -715,15 +752,19 @@ class QTTInputFitter:
             raise TypeError('`seed` should be int type')
         if seed < 0:
             raise ValueError('`seed` should be non-negative')
+        if not isinstance(materialize_tensor, bool):
+            raise TypeError('`materialize_tensor` should be bool type')
         self.coordinate_map = coordinate_map
         self.domain = domain
         self.rank = rank
+        self.connector_rank = connector_rank
         self.cutoff = cutoff
         self.atol = atol
         self.rtol = rtol
         self.cum_percentage = cum_percentage
         self.batch_size = batch_size
         self.seed = seed
+        self.materialize_tensor = materialize_tensor
 
     def required_queries(
             self,
@@ -738,6 +779,88 @@ class QTTInputFitter:
             raise TypeError(
                 'QTTInputFitter requires a functional PhiOperator input axis')
         return ()
+
+    @staticmethod
+    def _contract_factor_digits(
+            factor: TTDecomposition,
+            digits: torch.Tensor) -> torch.Tensor:
+        """Contracts digit sites while leaving the final gamma axis open."""
+        state = None
+        for site, core in enumerate(factor._standard_cores()[:-1]):
+            vector = torch.nn.functional.one_hot(
+                digits[:, site], num_classes=core.shape[-2]).to(factor.dtype)
+            local = torch.einsum('bp,lpr->blr', vector, core)
+            state = local if state is None else state @ local
+        connector = factor._standard_cores()[-1].squeeze(-1)
+        return (state @ connector).squeeze(-2)
+
+    def _split_local_factor(
+            self,
+            full_factor: TTDecomposition,
+            fixed_shape: Tuple[int, ...],
+            axis: int,
+            return_info: bool
+            ) -> Tuple[TTDecomposition, torch.Tensor,
+                       Optional[TruncationRecord]]:
+        """Separates digit and environment blocks through a small interface."""
+        standard = full_factor._standard_cores()
+        digit_cores = []
+        carry = None
+        for site in range(self.layout.n_sites):
+            core = standard[site]
+            if carry is not None:
+                core = torch.einsum('ab,bpr->apr', carry, core)
+            matrix = core.reshape(-1, core.shape[-1])
+            q, carry = torch.linalg.qr(matrix, mode='reduced')
+            digit_cores.append(q.reshape(
+                core.shape[0], core.shape[1], q.shape[-1]))
+
+        if fixed_shape:
+            environment = torch.einsum(
+                'ab,bpr->apr', carry, standard[self.layout.n_sites])
+            for core in standard[self.layout.n_sites + 1:]:
+                environment = torch.tensordot(
+                    environment, core, dims=([-1], [0]))
+            environment = environment.squeeze(-1)
+        else:
+            environment = carry.squeeze(-1)
+        matrix = environment.reshape(environment.shape[0], -1)
+        options = {
+            'rank': self.connector_rank,
+            'cutoff': self.cutoff,
+            'atol': self.atol,
+            'rtol': self.rtol,
+            'cum_percentage': self.cum_percentage,
+        }
+        if return_info:
+            u, s, vh, split_info = truncated_svd(
+                matrix, return_info=True, **options)
+            truncation = replace(
+                TruncationRecord.from_svd_info(split_info, site=axis),
+                phase='qtt_connector')
+        else:
+            u, s, vh = truncated_svd(matrix, **options)
+            truncation = None
+        digit_cores[-1] = torch.einsum(
+            'lpr,rg->lpg', digit_cores[-1], u)
+        gamma = u.shape[-1]
+        connector = torch.eye(
+            gamma, device=u.device, dtype=u.dtype).unsqueeze(-1)
+        standard_factor = [*digit_cores, connector]
+        factor_cores = [
+            standard_factor[0].squeeze(0),
+            *standard_factor[1:-1],
+            standard_factor[-1].squeeze(-1),
+        ]
+        factor = TTDecomposition(
+            factor_cores,
+            metrics=full_factor.metrics,
+            metadata={
+                'algorithm': 'qtt_input_factor',
+                'connector_rank': gamma,
+            })
+        reduced = (s.unsqueeze(1) * vh).reshape(gamma, *fixed_shape)
+        return factor, reduced, truncation
 
     def fit(
             self,
@@ -765,7 +888,6 @@ class QTTInputFitter:
         indices = torch.arange(
             self.layout.grid_size[0], device=adapter.device).reshape(-1, 1)
         digits = self.layout.encode_indices(indices)
-        physical = adapter.indices_to_physical(indices)
         fixed_shape = shape[:axis] + shape[axis + 1:]
 
         def local_function(values):
@@ -787,72 +909,120 @@ class QTTInputFitter:
             labels = None
             out_position = None
 
-        from tensorkrowch.decompositions.sketching.tt import qtt_rss
+        from tensorkrowch.decompositions.sketching.tt import TTRSS
 
-        cores = qtt_rss(
+        full_factor = TTRSS.quantized(
             local_function,
-            sketch_digits,
             layout=self.layout,
             coordinate_map=self.coordinate_map,
             domain=self.domain,
             sample_space='digits',
-            labels=labels,
             out_position=out_position,
-            rank=self.rank,
-            cutoff=self.cutoff,
-            atol=self.atol,
-            rtol=self.rtol,
-            cum_percentage=self.cum_percentage,
-            batch_size=self.batch_size,
-            generator=torch.Generator().manual_seed(self.seed),
-            legacy_projection=False,
-            output_device=None,
-            verbose=0)
-        factor = TTDecomposition(cores)
-        dense = factor.contract_dense()
-        schedule = self.layout.sites()
-        canonical = [
-            schedule.index((0, digit))
-            for digit in range(self.layout.level[0])
-        ]
-        permutation = canonical + list(range(
-            self.layout.n_sites, dense.ndim))
-        dense = dense.permute(permutation).reshape(
-            self.layout.grid_size[0], *fixed_shape)
-        target = local_function(physical).to(
-            device=dense.device, dtype=dense.dtype)
-        absolute = torch.linalg.vector_norm(dense - target)
-        denominator = torch.linalg.vector_norm(target)
-        if denominator > 0:
-            relative = absolute / denominator
-        elif absolute == 0:
-            relative = torch.zeros_like(absolute)
-        else:
-            relative = torch.full_like(absolute, torch.inf)
-        tensor = dense.movedim(0, axis)
-        record = InputFitRecord(
-            method='qtt',
-            axis=axis,
-            domain_size=self.layout.grid_size[0],
-            input_dim=self.layout.grid_size[0],
-            residual_absolute=absolute,
-            residual_relative=relative,
-            condition_number=1.,
-            used_fibers=True) if return_info else None
+            output_device=None).fit(
+                sketch_digits,
+                labels=labels,
+                rank=self.rank,
+                cutoff=self.cutoff,
+                atol=self.atol,
+                rtol=self.rtol,
+                cum_percentage=self.cum_percentage,
+                batch_size=self.batch_size,
+                generator=torch.Generator().manual_seed(self.seed),
+                legacy_projection=False,
+                verbose=0,
+                collect_metrics=return_info)
+        factor, reduced, truncation = self._split_local_factor(
+            full_factor, fixed_shape, axis, return_info)
+        target = None
+        if return_info:
+            physical = adapter.indices_to_physical(indices)
+            target = local_function(physical).to(
+                device=factor.device, dtype=factor.dtype)
+        reconstructed = None
+        if self.materialize_tensor or return_info:
+            factor_matrix = self._contract_factor_digits(factor, digits)
+            reconstructed = (factor_matrix @ reduced.reshape(
+                reduced.shape[0], -1)).reshape(
+                    self.layout.grid_size[0], *fixed_shape)
+        reduced_tensor = reduced.movedim(0, axis)
+        tensor = reduced_tensor if not self.materialize_tensor \
+            else reconstructed.movedim(0, axis)
+        record = None
+        relative = None
+        if return_info:
+            absolute = torch.linalg.vector_norm(reconstructed - target)
+            denominator = torch.linalg.vector_norm(target)
+            if denominator > 0:
+                relative = absolute / denominator
+            elif absolute == 0:
+                relative = torch.zeros_like(absolute)
+            else:
+                relative = torch.full_like(absolute, torch.inf)
+            record = InputFitRecord(
+                method='qtt',
+                axis=axis,
+                domain_size=self.layout.grid_size[0],
+                input_dim=self.layout.grid_size[0],
+                residual_absolute=absolute,
+                residual_relative=relative,
+                condition_number=1.,
+                used_fibers=True)
+        metadata = {
+            'algorithm': 'qtt_input_fit',
+            'layout': self.layout,
+            'output_shape': fixed_shape,
+            'out_position': out_position,
+            'connector_rank': reduced.shape[0],
+            'materialized_tensor': self.materialize_tensor,
+        }
+        if return_info:
+            metadata.update({
+                'split_relative_residual': (
+                    truncation.local_relative_error),
+                'final_relative_residual': float(relative.detach().cpu()),
+            })
         return FittedInputAxis(
             tensor=tensor,
             axis=axis,
             domain_size=self.layout.grid_size[0],
-            input_dim=self.layout.grid_size[0],
+            input_dim=tensor.shape[axis],
             record=record,
             factor=factor,
-            metadata={
-                'algorithm': 'qtt_input_fit',
-                'layout': self.layout,
-                'output_shape': fixed_shape,
-                'out_position': out_position,
-                'final_relative_residual': float(relative.detach().cpu()),
-            })
+            reduced_tensor=reduced_tensor,
+            truncation=truncation,
+            metadata=metadata)
+
+    def factor_values(
+            self,
+            fitted: FittedInputAxis,
+            values: torch.Tensor,
+            dtype: Optional[torch.dtype] = None) -> torch.Tensor:
+        """Evaluates the fitted QTT factor while leaving gamma uncontracted."""
+        if not isinstance(fitted, FittedInputAxis) or fitted.factor is None:
+            raise TypeError('`fitted` should contain a QTT factor')
+        if not isinstance(values, torch.Tensor):
+            raise TypeError('`values` should be torch.Tensor type')
+        factor = fitted.factor
+        real_dtype = factor.cores[0].real.dtype
+        flat = values.to(device=factor.device, dtype=real_dtype).reshape(-1, 1)
+        adapter = QuantizedSourceAdapter(
+            lambda data: data[:, 0],
+            self.layout,
+            self.coordinate_map,
+            self.domain,
+            dtype=real_dtype,
+            device=factor.device)
+        digits = adapter.physical_to_digits(flat)
+        state = None
+        for site, core in enumerate(factor._standard_cores()[:-1]):
+            vector = torch.nn.functional.one_hot(
+                digits[:, site], num_classes=core.shape[-2]).to(factor.dtype)
+            local = torch.einsum('bp,lpr->blr', vector, core)
+            state = local if state is None else state @ local
+        connector = factor._standard_cores()[-1].squeeze(-1)
+        result = (state @ connector).squeeze(-2)
+        result = result.reshape(*values.shape, result.shape[-1])
+        return result if dtype is None else result.to(dtype=dtype)
 
 
 __all__ = [

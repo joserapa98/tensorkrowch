@@ -28,6 +28,13 @@ def _outer(vectors):
     return result
 
 
+def _qtt_factor(values):
+    """Returns a two-digit TT factor with its connector at the endpoint."""
+    tensor = values.reshape(2, 2, values.shape[-1])
+    return tk.decompositions.TTSVD(
+        tensor, output_device=None).fit(rank=4)
+
+
 class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
 
     def test_tt_validation_rank_and_dense_contraction(self):
@@ -172,6 +179,90 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert all(torch.allclose(model_core, result_core)
                    for model_core, result_core
                    in zip(mpo.tensors, result.cores))
+
+    @pytest.mark.parametrize(
+        'result_type, upper_type',
+        [
+            (tk.decompositions.QTTTuckerDecomposition,
+             tk.decompositions.TTDecomposition),
+            (tk.decompositions.QTRTuckerDecomposition,
+             tk.decompositions.TRDecomposition),
+        ],
+    )
+    def test_quantized_tucker_evaluation_and_flatten(
+            self, result_type, upper_type):
+        dtype = torch.float64
+        first = torch.tensor(
+            [[1., 0.], [0., 1.], [1., 1.], [2., -1.]], dtype=dtype)
+        second = torch.tensor(
+            [[1., 2.], [2., 1.], [0., 1.], [1., -1.]], dtype=dtype)
+        connector = torch.tensor(
+            [[2., -1.], [0.5, 3.]], dtype=dtype)
+        factors = (_qtt_factor(first), _qtt_factor(second))
+        if upper_type is tk.decompositions.TTDecomposition:
+            upper = tk.decompositions.TTSVD(
+                connector, output_device=None).fit(rank=2)
+        else:
+            upper = upper_type([
+                torch.eye(2, dtype=dtype).reshape(1, 2, 2),
+                connector.reshape(2, 2, 1),
+            ])
+        layout = tk.decompositions.QuantizedLayout(
+            n_variables=2, base=2, level=2)
+        result = result_type(
+            upper,
+            factors,
+            layout,
+            tk.decompositions.UniformCoordinateMap(),
+            torch.tensor([[0., 1.], [0., 1.]], dtype=dtype))
+        indices = torch.tensor([[0, 0], [1, 2], [3, 1]])
+        points = indices.to(dtype) / 3
+        expected = torch.einsum(
+            'bi,ij,bj->b', first[indices[:, 0]], connector,
+            second[indices[:, 1]])
+
+        assert torch.allclose(result.evaluate(points), expected)
+        assert torch.allclose(result.evaluate_indices(indices), expected)
+        assert result.input_dim == (2, 2, 2, 2)
+        assert result.output_shape == ()
+        assert result.flatten().topology == (
+            'tt' if upper_type is tk.decompositions.TTDecomposition else 'tr')
+        assert torch.allclose(
+            result.flatten().contract_dense().reshape(4, 4),
+            torch.einsum('ai,ij,bj->ab', first, connector, second))
+        assert result.to(dtype=torch.float32).dtype == torch.float32
+
+    def test_quantized_tucker_retains_upper_output_axes(self):
+        dtype = torch.float64
+        first = torch.tensor(
+            [[1., 0.], [0., 1.], [1., 1.], [2., -1.]], dtype=dtype)
+        second = torch.tensor(
+            [[1., 2.], [2., 1.], [0., 1.], [1., -1.]], dtype=dtype)
+        output_core = torch.arange(12., dtype=dtype).reshape(2, 3, 2)
+        upper = tk.decompositions.TTDecomposition([
+            torch.eye(2, dtype=dtype),
+            output_core,
+            torch.eye(2, dtype=dtype),
+        ])
+        result = tk.decompositions.QTTTuckerDecomposition(
+            upper,
+            (_qtt_factor(first), _qtt_factor(second)),
+            tk.decompositions.QuantizedLayout(
+                n_variables=2, base=2, level=2),
+            tk.decompositions.UniformCoordinateMap(),
+            torch.tensor([[0., 1.], [0., 1.]], dtype=dtype),
+            variable_positions=(0, 2))
+        indices = torch.tensor([[1, 3], [2, 0]])
+        expected = torch.einsum(
+            'bi,ioj,bj->bo', first[indices[:, 0]], output_core,
+            second[indices[:, 1]])
+
+        assert result.output_shape == (3,)
+        assert result.input_dim == (2, 2, 3, 2, 2)
+        assert torch.allclose(result.evaluate_indices(indices), expected)
+        assert torch.allclose(
+            result.flatten().contract_dense().reshape(4, 3, 4),
+            torch.einsum('ai,ioj,bj->aob', first, output_core, second))
 
     def test_norm_overlap_fidelity_and_phase(self):
         vectors = [

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, replace
 from typing import (Any, Callable, ClassVar, Dict, List, Optional, Sequence,
-                    Tuple, Union)
+                    Tuple, Type, Union)
 
 import torch
 import torch.nn.functional as nnf
@@ -626,6 +626,431 @@ class TRDecomposition(TensorDecomposition):
         return result.diagonal(dim1=-2, dim2=-1).sum(-1)
 
 
+class _QuantizedTuckerDecomposition(TensorDecomposition):
+    """Common two-level contraction for quantized Tucker results."""
+
+    _upper_type: ClassVar[Type[TensorDecomposition]]
+    _family: ClassVar[str] = 'quantized_tucker'
+
+    def __init__(
+            self,
+            upper: TensorDecomposition,
+            factors: Sequence[TTDecomposition],
+            layout,
+            coordinate_map,
+            domain=None,
+            *,
+            variable_positions: Optional[Sequence[int]] = None,
+            computational_grid: str = 'endpoints',
+            out_of_domain: str = 'error',
+            metrics: Optional[DecompositionMetrics] = None,
+            metadata: Optional[Dict[str, Any]] = None) -> None:
+        from tensorkrowch.decompositions.sketching.quantization import (
+            CoordinateMap,
+            QuantizedLayout,
+        )
+
+        if not isinstance(upper, self._upper_type):
+            raise TypeError(
+                f'`upper` should be {self._upper_type.__name__} type')
+        if not isinstance(layout, QuantizedLayout):
+            raise TypeError('`layout` should be QuantizedLayout type')
+        if not isinstance(coordinate_map, CoordinateMap):
+            raise TypeError('`coordinate_map` should implement CoordinateMap')
+        if computational_grid not in ('endpoints', 'cell_centers'):
+            raise ValueError(
+                "`computational_grid` should be 'endpoints' or "
+                "'cell_centers'")
+        if out_of_domain not in ('error', 'clip'):
+            raise ValueError("`out_of_domain` should be 'error' or 'clip'")
+        if isinstance(factors, torch.Tensor):
+            raise TypeError(
+                '`factors` should be a sequence of TTDecomposition objects')
+        try:
+            factors = tuple(factors)
+        except TypeError as exc:
+            raise TypeError(
+                '`factors` should be a sequence of TTDecomposition objects') \
+                from exc
+        if len(factors) != layout.n_variables or not all(
+                isinstance(factor, TTDecomposition) for factor in factors):
+            raise ValueError(
+                '`factors` should contain one TTDecomposition per variable')
+
+        if variable_positions is None:
+            if len(upper.cores) != layout.n_variables:
+                raise ValueError(
+                    '`variable_positions` is required when upper output sites '
+                    'are present')
+            variable_positions = tuple(range(layout.n_variables))
+        else:
+            try:
+                variable_positions = tuple(variable_positions)
+            except TypeError as exc:
+                raise TypeError(
+                    '`variable_positions` should be a sequence of integers') \
+                    from exc
+        if len(variable_positions) != layout.n_variables or any(
+                isinstance(position, bool) or not isinstance(position, int)
+                for position in variable_positions):
+            raise ValueError(
+                '`variable_positions` should contain one integer per variable')
+        if any(position < 0 or position >= len(upper.cores)
+               for position in variable_positions):
+            raise ValueError('`variable_positions` contains an invalid site')
+        if any(left >= right for left, right in zip(
+                variable_positions, variable_positions[1:])):
+            raise ValueError(
+                '`variable_positions` should be strictly increasing')
+
+        self.factors = factors
+        self.layout = layout
+        self.coordinate_map = coordinate_map
+        self.domain = domain
+        self.variable_positions = variable_positions
+        self.computational_grid = computational_grid
+        self.out_of_domain = out_of_domain
+        self._source_upper_metadata = dict(upper.metadata)
+        super().__init__(
+            cores=upper.cores,
+            metrics=upper.metrics if metrics is None else metrics,
+            metadata={} if metadata is None else metadata)
+        self.upper = self._upper_type(
+            self.cores,
+            metrics=self.metrics,
+            metadata=self._source_upper_metadata)
+        self._hierarchical_input_dim = self._flattened_input_dim()
+
+    @property
+    def input_dim(self) -> Tuple[int, ...]:
+        """Input dimensions of the explicitly flattened digit-site network."""
+        return self._hierarchical_input_dim
+
+    @property
+    def output_shape(self) -> Tuple[int, ...]:
+        """Tensor-output dimensions retained as open upper-network sites."""
+        variable_positions = set(self.variable_positions)
+        return tuple(
+            dimension
+            for site, dimension in enumerate(self.upper.input_dim)
+            if site not in variable_positions)
+
+    @property
+    def factor_rank(self) -> Tuple[Tuple[int, ...], ...]:
+        """TT ranks internal to every local quantized factor."""
+        return tuple(tuple(factor.rank) for factor in self.factors)
+
+    def _validate_cores(
+            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
+                           Optional[Tuple[int, ...]]]:
+        upper = self._upper_type(self.cores)
+        if upper.n_batches:
+            raise ValueError(
+                'Quantized Tucker upper decompositions cannot be batched')
+        if any(factor.n_batches for factor in self.factors):
+            raise ValueError('Quantized Tucker factors cannot be batched')
+        for variable, (factor, position) in enumerate(zip(
+                self.factors, self.variable_positions)):
+            expected = (
+                (self.layout.base[variable],) * self.layout.level[variable])
+            if factor.input_dim[:-1] != expected:
+                raise ValueError(
+                    'Factor digit dimensions should match the quantized layout')
+            if factor.input_dim[-1] != upper.input_dim[position]:
+                raise ValueError(
+                    'Factor connector dimension should match its upper site')
+            if factor.device != upper.device or factor.dtype != upper.dtype:
+                raise ValueError(
+                    'Upper cores and factors should share device and dtype')
+        return upper.rank, (), upper.input_dim, None
+
+    def _flattened_input_dim(self) -> Tuple[int, ...]:
+        """Expands each upper connector into its factor digit dimensions."""
+        variable_by_position = {
+            position: variable
+            for variable, position in enumerate(self.variable_positions)}
+        dimensions = []
+        for site, dimension in enumerate(self.upper.input_dim):
+            variable = variable_by_position.get(site)
+            if variable is None:
+                dimensions.append(dimension)
+            else:
+                dimensions.extend(self.factors[variable].input_dim[:-1])
+        return tuple(dimensions)
+
+    def _standard_cores(self) -> List[torch.Tensor]:
+        return self.flatten()._standard_cores()
+
+    def _physical_to_indices(self, points: torch.Tensor) -> torch.Tensor:
+        """Maps physical points to grid indices without retaining the source."""
+        from tensorkrowch.decompositions.sketching.quantization import (
+            _unit_to_indices,
+        )
+
+        if not isinstance(points, torch.Tensor):
+            raise TypeError('`points` should be torch.Tensor type')
+        if points.ndim < 1 or points.shape[-1] != self.layout.n_variables:
+            raise ValueError(
+                'The last `points` dimension should match layout variables')
+        points = points.to(device=self.device)
+        direct = getattr(self.coordinate_map, 'to_indices', None)
+        if callable(direct):
+            return direct(
+                points,
+                self.layout.grid_size,
+                self.domain,
+                out_of_domain=self.out_of_domain)
+        inverse = getattr(self.coordinate_map, 'inverse', None)
+        if not callable(inverse):
+            raise NotImplementedError(
+                'Physical evaluation requires a coordinate-map inverse')
+        unit = inverse(
+            points,
+            self.domain,
+            out_of_domain=self.out_of_domain)
+        return _unit_to_indices(
+            unit,
+            self.layout.grid_size,
+            self.computational_grid,
+            self.out_of_domain)
+
+    def _factor_vectors(self, digits: torch.Tensor) -> List[torch.Tensor]:
+        """Contracts every local factor while leaving gamma open."""
+        schedule = self.layout.sites()
+        vectors = []
+        for variable, factor in enumerate(self.factors):
+            columns = [
+                column
+                for column, site in enumerate(schedule)
+                if site[0] == variable]
+            variable_digits = digits.index_select(
+                -1,
+                torch.tensor(columns, device=digits.device))
+            state = None
+            for site, core in enumerate(factor._standard_cores()[:-1]):
+                values = nnf.one_hot(
+                    variable_digits[..., site],
+                    num_classes=core.shape[-2]).to(factor.dtype)
+                local = torch.einsum('...p,lpr->...lr', values, core)
+                state = local if state is None else state @ local
+            connector = factor._standard_cores()[-1].squeeze(-1)
+            vectors.append((state @ connector).squeeze(-2))
+        return vectors
+
+    def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
+        """Evaluates scheduled digit configurations through both levels."""
+        digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
+        if digits.ndim != 2 or digits.shape[-1] != self.layout.n_sites:
+            raise ValueError(
+                '`digits` should have shape (batch_size, layout.n_sites)')
+        factor_vectors = self._factor_vectors(digits)
+        vectors_by_position = {
+            position: factor_vectors[variable]
+            for variable, position in enumerate(self.variable_positions)}
+        return self._contract_upper(vectors_by_position, digits.shape[0])
+
+    def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
+        """Evaluates one integer grid index per original variable."""
+        indices = self.layout._integer_tensor(indices, 'indices')
+        if indices.ndim != 2 or indices.shape[-1] != self.layout.n_variables:
+            raise ValueError(
+                '`indices` should have shape (batch_size, n_variables)')
+        return self.evaluate_digits(self.layout.encode_indices(indices))
+
+    def evaluate(self, points: torch.Tensor) -> torch.Tensor:
+        """Quantizes physical points and contracts factors with the upper TN."""
+        return self.evaluate_indices(self._physical_to_indices(points))
+
+    def _evaluate_samples(self,
+                          samples: torch.Tensor,
+                          embedding: Embedding = None) -> torch.Tensor:
+        if embedding is not None:
+            raise ValueError(
+                '`embedding` is fixed by the quantized Tucker decomposition')
+        return self.evaluate(samples)
+
+    def _contract_upper(self,
+                        vectors: Dict[int, torch.Tensor],
+                        batch_size: int) -> torch.Tensor:
+        raise NotImplementedError
+
+    @staticmethod
+    def _carry_upper_rank(core: torch.Tensor,
+                          upper_rank: int) -> torch.Tensor:
+        """Carries an upper rank unchanged through one factor digit core."""
+        identity = torch.eye(
+            upper_rank, device=core.device, dtype=core.dtype)
+        combined = torch.einsum('ab,lpr->alpbr', identity, core)
+        return combined.reshape(
+            upper_rank * core.shape[0],
+            core.shape[1],
+            upper_rank * core.shape[2])
+
+    def _flat_standard_cores(self) -> List[torch.Tensor]:
+        """Substitutes every gamma site by its local factor TT block."""
+        variable_by_position = {
+            position: variable
+            for variable, position in enumerate(self.variable_positions)}
+        flat = []
+        for site, upper_core in enumerate(self.upper._standard_cores()):
+            variable = variable_by_position.get(site)
+            if variable is None:
+                flat.append(upper_core)
+                continue
+
+            factor_cores = self.factors[variable]._standard_cores()
+            digit_cores = factor_cores[:-1]
+            connector = factor_cores[-1].squeeze(-1)
+            upper_left = upper_core.shape[0]
+            for digit_core in digit_cores[:-1]:
+                flat.append(self._carry_upper_rank(
+                    digit_core, upper_left))
+            last = torch.einsum(
+                'lpr,rg,agb->alpb',
+                digit_cores[-1],
+                connector,
+                upper_core)
+            flat.append(last.reshape(
+                upper_left * digit_cores[-1].shape[0],
+                digit_cores[-1].shape[1],
+                upper_core.shape[-1]))
+        return flat
+
+    def flatten(self) -> TensorDecomposition:
+        """Returns an explicit flat TT/TR over grouped local digit blocks."""
+        standard = self._flat_standard_cores()
+        if self._upper_type is TTDecomposition:
+            if len(standard) == 1:
+                cores = [standard[0].squeeze(0).squeeze(-1)]
+            else:
+                cores = [standard[0].squeeze(0),
+                         *standard[1:-1],
+                         standard[-1].squeeze(-1)]
+            result_type = TTDecomposition
+        else:
+            cores = standard
+            result_type = TRDecomposition
+        metadata = dict(self.metadata)
+        metadata.update({
+            'algorithm': f'{self.topology}_flatten',
+            'hierarchical_topology': self.topology,
+            'variable_positions': tuple(self.variable_positions),
+        })
+        return result_type(cores, metrics=self.metrics, metadata=metadata)
+
+    def contract_dense(self) -> torch.Tensor:
+        """Contracts the explicit flattened network for small-grid oracles."""
+        return self.flatten().contract_dense()
+
+    def norm(self) -> torch.Tensor:
+        return self.flatten().norm()
+
+    def normalized_overlap(
+            self, other: TensorDecomposition) -> torch.Tensor:
+        if not isinstance(other, _QuantizedTuckerDecomposition):
+            raise TypeError(
+                '`other` should be a quantized Tucker decomposition')
+        return self.flatten().normalized_overlap(other.flatten())
+
+    def fidelity(self, other: TensorDecomposition) -> torch.Tensor:
+        return self.normalized_overlap(other).abs().square()
+
+    def to(self,
+           device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None,
+           copy: bool = False) -> '_QuantizedTuckerDecomposition':
+        if dtype is not None and not isinstance(dtype, torch.dtype):
+            raise TypeError('`dtype` should be torch.dtype type')
+        if not isinstance(copy, bool):
+            raise TypeError('`copy` should be bool type')
+        upper = self.upper.to(device=device, dtype=dtype, copy=copy)
+        factors = tuple(
+            factor.to(device=device, dtype=dtype, copy=copy)
+            for factor in self.factors)
+        if not copy and upper is self.upper and all(
+                new is old for new, old in zip(factors, self.factors)):
+            return self
+        return type(self)(
+            upper,
+            factors,
+            self.layout,
+            self.coordinate_map,
+            self.domain,
+            variable_positions=self.variable_positions,
+            computational_grid=self.computational_grid,
+            out_of_domain=self.out_of_domain,
+            metrics=self.metrics,
+            metadata=self.metadata)
+
+    def cpu(self) -> '_QuantizedTuckerDecomposition':
+        return self.to(device='cpu')
+
+    def as_info(self) -> Dict[str, Any]:
+        info = super().as_info()
+        info.update({
+            'upper_rank': list(self.upper.rank),
+            'factor_rank': [list(rank) for rank in self.factor_rank],
+            'grid_size': list(self.layout.grid_size),
+            'variable_positions': list(self.variable_positions),
+            'output_shape': list(self.output_shape),
+        })
+        return info
+
+
+class QTTTuckerDecomposition(_QuantizedTuckerDecomposition):
+    """Experimental QTT factors connected to an open upper TT.
+
+    ``cores`` and :attr:`upper` refer only to the small upper TT over the
+    connector indices. Each entry of :attr:`factors` is a local TT whose last
+    input axis is the matching connector ``gamma``. Use :meth:`evaluate` to
+    contract both levels at physical points, or :meth:`flatten` to construct
+    an explicit ordinary :class:`TTDecomposition` over grouped digit blocks.
+    """
+
+    _upper_type = TTDecomposition
+    _topology = 'qtt_tucker'
+
+    def _contract_upper(self,
+                        vectors: Dict[int, torch.Tensor],
+                        batch_size: int) -> torch.Tensor:
+        state = self.cores[0].new_ones(batch_size, 1)
+        for site, core in enumerate(self.upper._standard_cores()):
+            if site in vectors:
+                local = torch.einsum(
+                    'bp,lpr->blr', vectors[site], core)
+                state = torch.einsum('b...l,blr->b...r', state, local)
+            else:
+                state = torch.einsum(
+                    'b...l,lpr->b...pr', state, core)
+        return state.squeeze(-1)
+
+
+class QTRTuckerDecomposition(_QuantizedTuckerDecomposition):
+    """Experimental QTT factors connected to a cyclic upper TR."""
+
+    _upper_type = TRDecomposition
+    _topology = 'qtr_tucker'
+
+    def _contract_upper(self,
+                        vectors: Dict[int, torch.Tensor],
+                        batch_size: int) -> torch.Tensor:
+        cyclic_rank = self.upper.cores[0].shape[0]
+        state = torch.eye(
+            cyclic_rank,
+            device=self.device,
+            dtype=self.dtype).expand(batch_size, -1, -1)
+        for site, core in enumerate(self.upper.cores):
+            if site in vectors:
+                local = torch.einsum(
+                    'bp,lpr->blr', vectors[site], core)
+                state = torch.einsum(
+                    'ba...l,blr->ba...r', state, local)
+            else:
+                state = torch.einsum(
+                    'ba...l,lpr->ba...pr', state, core)
+        return state.diagonal(dim1=1, dim2=-1).sum(-1)
+
+
 @dataclass
 class TTMDecomposition(TensorDecomposition):
     """Lightweight tensor-train matrix decomposition with open boundaries.
@@ -776,4 +1201,6 @@ __all__ = [
     'TTDecomposition',
     'TRDecomposition',
     'TTMDecomposition',
+    'QTTTuckerDecomposition',
+    'QTRTuckerDecomposition',
 ]

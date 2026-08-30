@@ -6,7 +6,6 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.tt_decompositions import tt_rss as legacy_tt_rss
 
 
 def _problem():
@@ -48,16 +47,8 @@ class TestTTRSS:
         assert all(torch.equal(left, right)
                    for left, right in zip(first.cores, second.cores))
 
-    def test_refactored_math_matches_legacy_dense_tensor(self):
+    def test_refactored_math_matches_dense_tensor(self):
         function, embedding, samples, domain = _problem()
-        legacy_cores = legacy_tt_rss(
-            function=function,
-            embedding=embedding,
-            sketch_samples=samples,
-            domain=domain,
-            rank=2,
-            generator=torch.Generator().manual_seed(92),
-            verbose=False)
         result = tk.decompositions.TTRSS(
             function=function,
             embedding=embedding,
@@ -66,10 +57,9 @@ class TestTTRSS:
                 rank=2,
                 generator=torch.Generator().manual_seed(92))
 
-        legacy = TTDecomposition(legacy_cores)
         assert torch.allclose(
             result.contract_dense(),
-            legacy.contract_dense(),
+            function(samples).reshape(2, 2, 2),
             rtol=1e-10,
             atol=1e-12)
 

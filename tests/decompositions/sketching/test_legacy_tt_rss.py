@@ -1,16 +1,9 @@
-"""Characterization tests for the legacy TT-RSS implementation."""
+"""Compatibility tests for the public TT-RSS functional API."""
 
 import pytest
 
 import torch
 import tensorkrowch as tk
-
-from tensorkrowch.decompositions.tt_decompositions import (
-    create_projector,
-    extend_with_output,
-    sketching,
-)
-
 
 _DEVICE_CASES = [
     torch.device('cpu'),
@@ -66,7 +59,7 @@ def _input_dim(cores):
         core.shape[1] for core in cores[1:])]
 
 
-class TestLegacyTTRSSWorkflow:  # MARK: TestLegacyTTRSSWorkflow
+class TestTTRSSPublicWorkflow:  # MARK: TestTTRSSPublicWorkflow
 
     def test_scalar_function_returns_mps_compatible_cores_and_info(self):
         function, embedding, samples, domain = _binary_problem()
@@ -255,77 +248,6 @@ class TestLegacyTTRSSWorkflow:  # MARK: TestLegacyTTRSSWorkflow
         assert torch.equal(torch.random.get_rng_state(), initial_state)
         assert all(torch.equal(first, second)
                    for first, second in zip(*results))
-
-
-class TestLegacySketchKernels:  # MARK: TestLegacySketchKernels
-
-    def test_sketching_matches_explicit_cartesian_product(self):
-        left = torch.tensor([[0.], [1.]], dtype=torch.float64)
-        right = torch.tensor([[10.], [20.], [30.]], dtype=torch.float64)
-
-        def function(data):
-            return data.sum(dim=1, keepdim=True)
-
-        result = sketching(
-            function=function,
-            tensors_list=[left, right],
-            out_position=-1,
-            batch_size=2,
-            device=torch.device('cpu'),
-            dtype=torch.float64)
-
-        assert torch.equal(result, left + right.mT)
-
-    def test_create_projector_matches_prefix_lookup_oracle(self):
-        parent = torch.tensor([
-            [0, 0], [0, 1], [1, 0], [1, 1]])
-        child = torch.tensor([
-            [0, 0, 2], [0, 0, 3], [0, 1, 4],
-            [1, 0, 5], [1, 1, 6], [1, 1, 7]])
-
-        prefix_ids, new_values = create_projector(parent, child)
-
-        assert torch.equal(prefix_ids, torch.tensor([0, 0, 1, 2, 3, 3]))
-        assert torch.equal(new_values, child[:, -1:])
-        assert torch.equal(
-            torch.cat((parent.index_select(0, prefix_ids), new_values), dim=1),
-            child)
-
-    def test_explicit_and_sampled_labels_extend_the_requested_position(self):
-        samples = torch.tensor([[0., 1.], [1., 0.], [1., 1.]])
-
-        def function(data):
-            return torch.tensor(
-                [[1., 0.], [0., 1.], [1., 1.]], dtype=data.dtype)[:len(data)]
-
-        explicit, explicit_values = extend_with_output(
-            function,
-            samples,
-            labels=torch.tensor([1, 0, 1]),
-            out_position=1,
-            batch_size=2,
-            device=torch.device('cpu'))
-        sampled_first = extend_with_output(
-            function,
-            samples,
-            labels=None,
-            out_position=1,
-            batch_size=3,
-            device=torch.device('cpu'),
-            generator=torch.Generator().manual_seed(709))
-        sampled_second = extend_with_output(
-            function,
-            samples,
-            labels=None,
-            out_position=1,
-            batch_size=3,
-            device=torch.device('cpu'),
-            generator=torch.Generator().manual_seed(709))
-
-        assert torch.equal(explicit[:, 1], torch.tensor([1., 0., 1.]))
-        assert torch.equal(explicit_values, torch.ones(3, 1))
-        assert torch.equal(sampled_first[0], sampled_second[0])
-        assert torch.equal(sampled_first[1], sampled_second[1])
 
 
 class TestGeneralizedTTRSS:  # MARK: TestGeneralizedTTRSS

@@ -10,7 +10,6 @@ from tensorkrowch.decompositions.sketching.regions import (
     SketchRecursion,
     _SamplePool,
 )
-from tensorkrowch.decompositions.tt_decompositions import create_projector
 
 
 def _packed_values(sketch):
@@ -205,7 +204,7 @@ class TestRegionSketch:  # MARK: TestRegionSketch
 class TestSketchRecursion:  # MARK: TestSketchRecursion
 
     @pytest.mark.parametrize('in_dim', [None, 2])
-    def test_left_recursion_matches_legacy_create_projector(self, in_dim):
+    def test_left_recursion_matches_direct_prefix_lookup(self, in_dim):
         scalar_samples = torch.tensor([
             [0, 0, 0],
             [0, 0, 1],
@@ -222,13 +221,14 @@ class TestSketchRecursion:  # MARK: TestSketchRecursion
         parent = pool.restrict(SiteRegion((0, 1)))
 
         recursion = child.recursive_projector(parent)
-        legacy_ids, legacy_values = create_projector(
-            _packed_values(child), _packed_values(parent))
+        parent_rows = parent.representative_row_ids
+        expected_gather = child.inverse_ids.index_select(0, parent_rows)
+        expected_values = samples.index_select(0, parent_rows)[:, 1]
 
         assert isinstance(recursion, SketchRecursion)
         assert recursion.new_region == SiteRegion((1,))
-        assert torch.equal(recursion.gather, legacy_ids)
-        assert torch.equal(recursion.new_values[0], legacy_values.squeeze(1))
+        assert torch.equal(recursion.gather, expected_gather)
+        assert torch.equal(recursion.new_values[0], expected_values)
         assert not hasattr(recursion, 'matrix')
 
     def test_right_recursion_uses_the_same_containment_operation(self):

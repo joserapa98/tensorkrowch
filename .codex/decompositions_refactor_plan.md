@@ -1,10 +1,11 @@
 # Plan maestro de refactorización y ampliación de `decompositions`
 
-> Estado del documento: implementación en curso; fase 2 en TT→TR.
+> Estado del documento: fases 1--3 implementadas; fase 3 pendiente de revisión
+> detallada del usuario.
 >
 > Rama de referencia inicial: `tt_rss`.
 >
-> Última actualización: 2026-08-28.
+> Última actualización: 2026-08-30.
 >
 > Nota de versionado: esta guía se mantiene versionada explícitamente aunque
 > `.codex/` esté ignorada por el `.gitignore` general.
@@ -78,7 +79,7 @@ el mensaje y, cuando resulte útil, en el commit correspondiente.
 |---|---|---|
 | 1 | Infraestructura común y SVD | 10/10 implementadas; 3 pendientes de revisión |
 | 2 | ALS, apertura de loops y TT→TR | 20/20 implementadas; 20 pendientes de revisión |
-| 3 | Sketching (RS/RSS), transforms y QTT | 9/26 implementadas; 9 pendientes de revisión |
+| 3 | Sketching (RS/RSS), transforms y QTT | 26/26 implementadas; 26 pendientes de revisión |
 | 4 | Ejecución paralela TT/TR | 0/12 tareas |
 | 5 | Port y refactorización PEPS en `peps_rss` | 0/20 tareas |
 
@@ -584,8 +585,6 @@ tensorkrowch/decompositions/
 ├── metrics.py                          [A/I] registros de error, tiempo y fit
 ├── observers.py                        [A/I] eventos y verbosity estructurada
 ├── _runtime.py                         [I] device, dtype, RNG y contexto de fit
-├── svd_decompositions.py               [C/TEMP] fachada legacy; eliminar tras Fase 1
-├── tt_decompositions.py                [C/TEMP] fachada legacy; eliminar tras Fase 3
 │
 ├── svd/
 │   ├── __init__.py                     [P/A] funciones y clases SVD
@@ -4291,9 +4290,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
     fuente;
   - todos los Phi se registran antes del freeze en un único
     `_EvaluationPlanBuilder`; `_EvaluationSession` evalúa una tabla global de
-    configuraciones únicas y dispersa después los valores a cada layout. Se
-    conservan los incidence maps para transforms y se registra un solo
-    `EvaluationStats` global;
+    configuraciones únicas y dispersa después los valores bajo demanda a cada
+    layout. Cada scatter se libera tras su fitting local; se conservan los
+    incidence maps para transforms y se registra un solo `EvaluationStats`
+    global;
   - el current axis de cada Phi pasa por `FixedEmbeddingFitter` o
     `BasisFitter`. La ruta `legacy_projection=True` mantiene la rotación Haar
     cuadrada en el axis derecho y la representa como `ProjectedRange`; la otra
@@ -4949,7 +4949,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   imports públicos y diff-check limpios. El build Sphinx no pudo ejecutarse
   porque los entornos disponibles no incluyen `sphinx_copybutton`.
 
-- [ ] **RSS-20 — Gate final de fase**
+- [x] **RSS-20 — Gate final de fase**
+
+  Estado: materialización secuencial de Phi commiteada en `a6bb2b0` y gate
+  ejecutado; pendiente de revisión detallada del usuario.
 
   Ejecutar suites:
 
@@ -4967,6 +4970,32 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - precisión y tiempo projection on/off;
   - coste callable vs sparse vs TT source;
   - overhead de metrics/verbosity 0.
+
+  Resultado:
+
+  - `_EvaluationSession` separa ahora la tabla global de valores únicos de
+    cada scatter Phi. TT-RSS y TR-RSS materializan una incidencia cada vez,
+    la liberan tras el fitting local y conservan `evaluate()` como comodidad
+    para materializar explícitamente todas;
+  - `284 passed, 2 skipped` en sketching, `983 passed, 13 skipped` en
+    decompositions y `15467 passed, 201 skipped` en la suite oficial completa
+    `tests/`; Ruff y `git diff --check` limpios;
+  - microbenchmark CPU orientativo, mediana de 7 repeticiones y sin umbrales
+    de tests: 2048 puntos Phi solicitados se deduplican a 256, con 1792 cache
+    hits y 4 llamadas batched a la fuente;
+  - en ese caso de ocho sites, el pico estimado de tensores de valores pasa de
+    16 KiB manteniendo todos los Phi explícitos a 4 KiB con tabla única más un
+    Phi secuencial (`4.0x`); los incidence maps ocupan otros 16 KiB y se
+    contabilizan por separado;
+  - projection off/on tarda respectivamente `28.68/28.87 ms` y obtiene error
+    relativo `2.89e-16/4.76e-16` en el problema rank uno;
+  - sobre el mismo tensor discreto pequeño, callable/sparse/TT tarda
+    `0.766/0.667/0.981 ms`, con error relativo `8.03e-16` en los tres casos;
+    el tamaño es demasiado pequeño para convertir el orden temporal en una
+    recomendación de backend;
+  - activar `collect_metrics` con `verbose=0` pasa de `28.18` a `29.71 ms`
+    (`1.05x`) en ese caso. Son cifras orientativas dependientes del hardware,
+    no assertions de rendimiento.
 
 #### Entregable de la fase
 

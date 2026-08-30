@@ -897,20 +897,16 @@ class TRRSS(TTRSS):
         with context.phase('source.evaluate'):
             session.evaluate_source(batch_size=context.spec.batch_size)
         with context.phase('values.global_transform'):
-            results = session.evaluate()
+            session.prepare_values()
         if context.collect_metrics:
             context.metrics.evaluations.append(session.stats)
         evaluation_view = session.view()
-        context.state['input_query_results'] = {
-            (sites, site): tuple(results[handle] for handle in handles)
-            for sites, site_handles in zip(target_sites, input_handles)
-            for site, handles in site_handles.items()
-        }
+        context.state['input_query_results'] = {}
 
         targets = {}
-        for sites, phi, handle, query_handles in zip(
-                target_sites, phis, handles, local_handles):
-            view = _MaterializedPhi(results[handle], phi.layout)
+        for sites, phi, handle, query_handles, site_handles in zip(
+                target_sites, phis, handles, local_handles, input_handles):
+            view = _MaterializedPhi(session.result(handle), phi.layout)
             with context.phase('values.local_transform', site=sites[0]):
                 view = _apply_local_transform(
                     context.local_transform,
@@ -918,9 +914,12 @@ class TRRSS(TTRSS):
                     data=context,
                     evaluation=evaluation_view,
                     query_results=tuple(
-                        results[item] for item in query_handles))
+                        session.result(item) for item in query_handles))
             tensor = view.materialize()
             for site in sites:
+                key = (sites, site)
+                context.state['input_query_results'][key] = tuple(
+                    session.result(item) for item in site_handles[site])
                 axis = phi.layout.index(site)
                 fitter = context.input_fitters[site]
                 fit_view = _MaterializedPhi(tensor, phi.layout)
@@ -938,6 +937,12 @@ class TRRSS(TTRSS):
                 fitted = self._fit_input_axis(
                     site, fit_view, axis, context)
                 tensor = self._select_fitted_tensor(site, fitted)
+                context.state['input_query_results'].pop(key)
+                for item in site_handles[site]:
+                    session.release(item)
+            session.release(handle)
+            for item in query_handles:
+                session.release(item)
             if not len(context.regions['prefixes'][sites[0]].region):
                 tensor = tensor.unsqueeze(0)
             if not len(context.regions['suffixes'][sites[-1] + 1].region):

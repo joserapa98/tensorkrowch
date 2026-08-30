@@ -346,7 +346,7 @@ class _EvaluationSession:
                 'The global transform should be prepared before freeze')
         self._values = None
         self._raw_values = None
-        self._results = None
+        self._results = [None] * len(plan.incidences)
         self._stats = None
 
     @property
@@ -414,11 +414,11 @@ class _EvaluationSession:
             1, labels.unsqueeze(1)).squeeze(1)
         return selected.reshape(incidence.result_shape)
 
-    def evaluate(self, batch_size: Optional[int] = None) -> Tuple[torch.Tensor,
-                                                                  ...]:
-        """Evaluates and scatters the plan, reusing results on repeated calls."""
-        if self._results is not None:
-            return self._results
+    def prepare_values(
+            self, batch_size: Optional[int] = None) -> torch.Tensor:
+        """Evaluates and transforms the shared unique-value table once."""
+        if self._values is not None:
+            return self._values
         self.evaluate_source(batch_size=batch_size)
         if self.global_transform is None:
             self._values = self._raw_values
@@ -438,10 +438,14 @@ class _EvaluationSession:
             if self._values.device != self._raw_values.device:
                 raise ValueError(
                     'A global value transform should preserve value device')
-        self._results = tuple(
-            self._scatter(self._values, incidence)
-            for incidence in self.plan.incidences)
-        return self._results
+        return self._values
+
+    def evaluate(self, batch_size: Optional[int] = None) -> Tuple[torch.Tensor,
+                                                                  ...]:
+        """Evaluates and scatters every request, caching convenience results."""
+        return tuple(
+            self.result(handle, batch_size=batch_size)
+            for handle in range(len(self.plan.incidences)))
 
     def evaluate_source(
             self,
@@ -459,11 +463,24 @@ class _EvaluationSession:
             raise TypeError('`handle` should be int type')
         if handle < 0 or handle >= len(self.plan.incidences):
             raise ValueError('`handle` is outside the evaluation plan')
-        return self.evaluate(batch_size=batch_size)[handle]
+        result = self._results[handle]
+        if result is None:
+            values = self.prepare_values(batch_size=batch_size)
+            result = self._scatter(values, self.plan.incidences[handle])
+            self._results[handle] = result
+        return result
+
+    def release(self, handle: int) -> None:
+        """Drops one scattered request while retaining shared source values."""
+        if isinstance(handle, bool) or not isinstance(handle, int):
+            raise TypeError('`handle` should be int type')
+        if handle < 0 or handle >= len(self.plan.incidences):
+            raise ValueError('`handle` is outside the evaluation plan')
+        self._results[handle] = None
 
     def view(self, batch_size: Optional[int] = None) -> EvaluationView:
         """Returns the evaluated global table and immutable incidence maps."""
-        self.evaluate(batch_size=batch_size)
+        self.prepare_values(batch_size=batch_size)
         return EvaluationView(
             configurations=self.plan.configurations,
             values=self._values,

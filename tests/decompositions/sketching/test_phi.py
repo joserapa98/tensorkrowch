@@ -87,6 +87,34 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
             source_calls=1)
         assert session.view().phase == 'evaluated'
 
+    def test_session_can_release_scattered_phi_but_keep_unique_values(self):
+        calls = []
+
+        def function(indices):
+            calls.append(indices.clone())
+            return (indices[:, 0] + 10 * indices[:, 1]).to(torch.float64)
+
+        source = tk.decompositions.CallableTensorSource(
+            function,
+            input_dim=(2, 2),
+            dtype=torch.float64)
+        builder = _EvaluationPlanBuilder(source)
+        first = _discrete_phi(source).collect(builder)
+        second = _discrete_phi(source, reverse=True).collect(builder)
+        session = _EvaluationSession(builder.freeze())
+
+        session.prepare_values()
+
+        assert session._results == [None, None]
+        expected = torch.tensor([[0., 10.], [1., 11.]])
+        assert torch.equal(session.result(first), expected)
+        assert session._results[first] is not None
+        assert session._results[second] is None
+        session.release(first)
+        assert session._results[first] is None
+        assert torch.equal(session.result(first), expected)
+        assert len(calls) == 1
+
     def test_session_batching_is_deterministic_and_counted_at_source_level(self):
         calls = []
 

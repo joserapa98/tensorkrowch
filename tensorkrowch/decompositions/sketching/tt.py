@@ -889,20 +889,19 @@ class TTRSS(RecursiveSketching):
         with context.phase('source.evaluate'):
             session.evaluate_source(batch_size=context.spec.batch_size)
         with context.phase('values.global_transform'):
-            results = session.evaluate()
+            session.prepare_values()
         if context.collect_metrics:
             context.metrics.evaluations.append(session.stats)
         evaluation_view = session.view()
-        context.state['input_query_results'] = {
-            site: tuple(results[handle] for handle in handles)
-            for site, handles in enumerate(input_handles)
-        }
+        context.state['input_query_results'] = {}
 
         # Fit every sampled current axis before topology-dependent recursion.
         fitted_tensors = {}
         for site, phi in enumerate(phis):
             materialized = _MaterializedPhi(
-                results[main_handles[site]], phi.layout)
+                session.result(main_handles[site]), phi.layout)
+            context.state['input_query_results'][site] = tuple(
+                session.result(handle) for handle in input_handles[site])
             with context.phase('values.local_transform', site=site):
                 local_view = _apply_local_transform(
                     context.local_transform,
@@ -910,7 +909,8 @@ class TTRSS(RecursiveSketching):
                     data=context,
                     evaluation=evaluation_view,
                     query_results=tuple(
-                        results[handle] for handle in local_handles[site]))
+                        session.result(handle)
+                        for handle in local_handles[site]))
             fitter = context.input_fitters[site]
             if getattr(fitter, 'requires_functional_phi', False):
                 if not context.global_transform.is_identity or \
@@ -925,6 +925,10 @@ class TTRSS(RecursiveSketching):
                 self._current_axis(phi, site),
                 context)
             fitted_tensors[site] = self._select_fitted_tensor(site, fitted)
+            context.state['input_query_results'].pop(site)
+            session.release(main_handles[site])
+            for handle in (*input_handles[site], *local_handles[site]):
+                session.release(handle)
 
         # Trim the left ranges in site order so theoretical rank caps include
         # the rank actually selected at the preceding cut.

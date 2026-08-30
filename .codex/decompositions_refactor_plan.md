@@ -4876,7 +4876,11 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   `20 passed` en fitting, `280 passed, 2 skipped` en sketching, Ruff y
   diff-check limpios.
 
-- [ ] **QTT-05 — Implementar QTT-Tucker y QTR-Tucker nativos**
+- [x] **QTT-05 — Implementar QTT-Tucker y QTR-Tucker nativos**
+
+  Estado: resultados ligeros commiteados en `16c1955` e implementación
+  algorítmica commiteada en `70a9e90`; pendiente de revisión detallada del
+  usuario.
 
   Crear `QTTTuckerRSS`, `QTRTuckerRSS`, sus resultados ligeros y los wrappers
   `qtt_tucker_rss`/`qtr_tucker_rss`, ubicados en `sketching/tt.py` y
@@ -4904,6 +4908,20 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   `.flatten()` en casos pequeños cuando proceda; contrastar el bound con la
   errata/corrección del algoritmo QTT-Tucker; etiquetar la construcción RSS
   como adaptación sin garantía de recovery heredada.
+
+  Implementación: cada `QTTInputFitter` aplica un sweep QR al bloque de digits
+  y una SVD únicamente al entorno reducido, conserva el índice `gamma` como
+  site final de su factor local y entrega el residuo `S @ Vh` directamente al
+  driver superior. La ruta Tucker no materializa el eje discreto completo si
+  no se solicitan métricas. `QTTTuckerRSS` ensambla los residuos como TT y
+  `QTRTuckerRSS` como TR, manteniendo los output sites en el nivel superior;
+  los resultados jerárquicos evalúan puntos físicos/digits y permiten
+  `.flatten()` en problemas pequeños. Los records distinguen truncación del
+  conector (`qtt_connector`) y del factor (`qtt_factor`). La documentación
+  enlaza el artículo original y su errata, y marca la variante RSS como
+  experimental sin trasladar el bound de rounding a una garantía de recovery.
+  Evidencia: `286 passed, 2 skipped` en sketching y `985 passed, 13 skipped`
+  en decompositions, Ruff y diff-check limpios.
 
 - [ ] **RSS-19 — Limpieza de compatibilidad y docs**
 

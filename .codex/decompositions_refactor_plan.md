@@ -4923,7 +4923,10 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   Evidencia: `286 passed, 2 skipped` en sketching y `985 passed, 13 skipped`
   en decompositions, Ruff y diff-check limpios.
 
-- [ ] **RSS-19 — Limpieza de compatibilidad y docs**
+- [x] **RSS-19 — Limpieza de compatibilidad y docs**
+
+  Estado: implementación commiteada en `569d13a`; pendiente de revisión
+  detallada del usuario.
 
   Cuando TT-RSS y TR-RSS nuevos estén validados:
 
@@ -4934,6 +4937,17 @@ principio para 1D, N-D, lazy fibers, sparse y ejecución paralela.
   - actualizar `docs/decompositions.rst`;
   - ejemplos de función escalar, tensorial, sources sparse/TT y QTT;
   - tabla de madurez estable/experimental.
+
+  Implementación: se elimina `tt_decompositions.py` después de comprobar que
+  no quedaban callers de producción. `tt_rss` continúa en la API pública como
+  wrapper de `TTRSS`; las pruebas que usaban helpers legacy emplean ahora
+  oracles densos o mapas directos de prefijos. La documentación organiza RSS,
+  RS, TR, QTT/QTR, Tucker cuantizado, sources y fitters, explica cuándo usar
+  clases reutilizables frente a funciones simples, añade la tabla de madurez y
+  ejemplos escalar, tensorial, sparse, TT y QTT. Evidencia: `283 passed,
+  2 skipped` en sketching y `982 passed, 13 skipped` en decompositions, Ruff,
+  imports públicos y diff-check limpios. El build Sphinx no pudo ejecutarse
+  porque los entornos disponibles no incluyen `sphinx_copybutton`.
 
 - [ ] **RSS-20 — Gate final de fase**
 

@@ -318,7 +318,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
         dense = torch.empty(grouped.input_dim, dtype=torch.float64)
         dense[tuple(grouped_digits.T)] = values
         tt = tk.decompositions.TTSVD(
-            dense, output_device=None).fit(rank=4)
+            dense, out_device=None).fit(rank=4)
         source = tk.decompositions.TTTensorSource(tt)
 
         with pytest.raises(ValueError, match='source_layout'):

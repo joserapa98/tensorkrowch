@@ -439,7 +439,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
             return_info=True)
         expected = function(initial_domain.reshape(-1, 1))
         oracle = tk.decompositions.TTSVD(
-            expected, output_device=None).fit(rank=4)
+            expected, out_device=None).fit(rank=4)
 
         assert fitted.tensor.shape == (4, 2, 3)
         assert torch.allclose(fitted.tensor, expected)

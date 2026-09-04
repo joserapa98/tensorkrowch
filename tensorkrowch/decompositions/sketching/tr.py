@@ -1,4 +1,4 @@
-"""Tensor-ring decompositions based on recursive sketching."""
+"""Tensor ring decompositions based on recursive sketching."""
 
 import warnings
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-"""Strategies and contracts for opening local tensor-network loops."""
+"""Strategies and contracts for opening local tensor network loops."""
 
 from dataclasses import dataclass, field
 from typing import (Any, Callable, Mapping, Optional, Protocol, Sequence, Tuple,

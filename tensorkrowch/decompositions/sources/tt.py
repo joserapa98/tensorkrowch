@@ -1,4 +1,4 @@
-"""Tensor-train backed tensor sources."""
+"""Tensor train backed tensor sources."""
 
 from typing import (Optional, Protocol, Sequence, Tuple, Union)
 

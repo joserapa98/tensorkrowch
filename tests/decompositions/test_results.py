@@ -32,7 +32,7 @@ def _qtt_factor(values):
     """Returns a two-digit TT factor with its connector at the endpoint."""
     tensor = values.reshape(2, 2, values.shape[-1])
     return tk.decompositions.TTSVD(
-        tensor, output_device=None).fit(rank=4)
+        tensor, out_device=None).fit(rank=4)
 
 
 class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
@@ -167,7 +167,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
 
     def test_ttm_result_initializes_mpo(self):
         result = tk.decompositions.TTMSVD(
-            torch.randn(2, 3, 4, 5), output_device=None).fit(rank=2)
+            torch.randn(2, 3, 4, 5), out_device=None).fit(rank=2)
         mpo = tk.models.MPO(
             tensors=result.cores,
             parameterized=False)
@@ -201,7 +201,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         factors = (_qtt_factor(first), _qtt_factor(second))
         if upper_type is tk.decompositions.TTDecomposition:
             upper = tk.decompositions.TTSVD(
-                connector, output_device=None).fit(rank=2)
+                connector, out_device=None).fit(rank=2)
         else:
             upper = upper_type([
                 torch.eye(2, dtype=dtype).reshape(1, 2, 2),
@@ -477,7 +477,7 @@ class TestRuntimePolicy:  # MARK: TestRuntimePolicy
             _ = prepared.square()
 
         assert runtime.device == tensor.device
-        assert runtime.output_device == torch.device('cpu')
+        assert runtime.out_device == torch.device('cpu')
         assert runtime.dtype == torch.float64
         assert prepared.dtype == torch.float64
         assert finalized.device.type == 'cpu'
@@ -486,7 +486,7 @@ class TestRuntimePolicy:  # MARK: TestRuntimePolicy
 
     def test_output_device_none_keeps_tensor(self):
         tensor = torch.ones(2)
-        runtime = _RuntimePolicy.from_tensor(tensor, output_device=None)
+        runtime = _RuntimePolicy.from_tensor(tensor, out_device=None)
 
         assert runtime.finalize(tensor) is tensor
 

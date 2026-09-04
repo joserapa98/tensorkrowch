@@ -1,10 +1,11 @@
-"""Tests for exact tensor-train alternating least squares."""
+"""Tests for exact tensor train alternating least squares."""
 
 import pytest
 
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 
 def _exact_tt(dtype=torch.float64):
     """Returns a small heterogeneous TT and its dense contraction."""
@@ -240,7 +241,7 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
     def test_absolute_regularization_respects_environment_normalization(self):
         _, tensor = _exact_tt()
         initial = tk.decompositions.TTSVD(
-            tensor, output_device=None).fit(rank=2)
+            tensor, out_device=None).fit(rank=2)
         solver = tk.decompositions.LeastSquaresSolver(
             l2_reg=1e-4,
             l2_reg_mode='absolute')
@@ -310,7 +311,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
             values=values,
             input_dim=tensor.shape,
             weights=weights)
-        history = tk.decompositions.HistoryObserver()
+        history = HistoryObserver()
 
         result = tk.decompositions.TTALS.completion(
             observations, output_device=None).fit(
@@ -353,7 +354,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
             return tensor[tuple(indices[:, site]
                                 for site in range(indices.shape[1]))]
 
-        history = tk.decompositions.HistoryObserver()
+        history = HistoryObserver()
         result = tk.decompositions.TTALS(
             function,
             input_dim=tensor.shape,

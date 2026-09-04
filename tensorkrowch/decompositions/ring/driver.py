@@ -1,4 +1,4 @@
-"""Bidirectional orchestration shared by tensor-ring constructions."""
+"""Bidirectional orchestration shared by tensor ring constructions."""
 
 from dataclasses import dataclass, field
 from typing import (Any, Dict, Mapping, Optional, Protocol, Sequence, Tuple,

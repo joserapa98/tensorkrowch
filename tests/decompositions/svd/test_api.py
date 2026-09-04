@@ -20,6 +20,26 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
         assert tk.decompositions.tt_svd is tt_module.tt_svd
         assert tk.decompositions.ttm_svd is ttm_module.ttm_svd
 
+    def test_canonical_names_keep_observers_internal(self):
+        tt_init = inspect.signature(tk.decompositions.TTSVD).parameters
+        tt_function = inspect.signature(
+            tk.decompositions.tt_svd).parameters
+        ttm_init = inspect.signature(tk.decompositions.TTMSVD).parameters
+        ttm_function = inspect.signature(
+            tk.decompositions.ttm_svd).parameters
+
+        assert 'out_device' in tt_init
+        assert 'out_device' in tt_function
+        assert {'in_dim', 'out_dim', 'out_device'} <= set(ttm_init)
+        assert {'in_dim', 'out_dim', 'out_device'} <= set(ttm_function)
+        assert 'observer' not in inspect.signature(
+            tk.decompositions.TTSVD.fit).parameters
+        assert 'observer' not in inspect.signature(
+            tk.decompositions.TTMSVD.fit).parameters
+        for name in ('DecompositionEvent', 'DecompositionObserver',
+                     'ConsoleObserver', 'HistoryObserver'):
+            assert not hasattr(tk.decompositions, name)
+
     def test_public_aliases_export_canonical_wrappers(self):
         assert tk.decompositions.vec_to_mps is tt_module.vec_to_mps
         assert tk.decompositions.mat_to_mpo is ttm_module.mat_to_mpo
@@ -79,7 +99,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
             'rtol': 0.3,
             'cum_percentage': 0.8,
             'renormalize': True,
-            'output_device': None,
+            'out_device': None,
             'verbose': 2,
             'return_info': True,
         }]
@@ -115,7 +135,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
             'rtol': 0.3,
             'cum_percentage': 0.8,
             'renormalize': True,
-            'output_device': None,
+            'out_device': None,
             'verbose': 2,
             'return_info': True,
         }]

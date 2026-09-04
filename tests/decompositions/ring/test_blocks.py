@@ -1,4 +1,4 @@
-"""Tests for tensor-ring block selection, rank estimates and splitting."""
+"""Tests for tensor ring block selection, rank estimates and splitting."""
 
 import pytest
 
@@ -150,7 +150,7 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
         split = split_block_ttsvd(block, input_dim=(3, 4, 5), rank=2)
         fused = block.reshape(6, 4, 10)
         reference = tk.decompositions.TTSVD(
-            fused, output_device=None).fit(rank=2).contract_dense()
+            fused, out_device=None).fit(rank=2).contract_dense()
 
         assert split.rank == (2, 2)
         assert torch.allclose(

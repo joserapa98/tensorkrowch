@@ -1,1 +1,1 @@
-"""Tests for reusable tensor-ring decomposition infrastructure."""
+"""Tests for reusable tensor ring decomposition infrastructure."""

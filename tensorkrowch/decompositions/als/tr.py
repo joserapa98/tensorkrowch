@@ -1,4 +1,4 @@
-"""Exact, sampled and completion tensor-ring ALS decompositions."""
+"""Exact, sampled and completion tensor ring ALS decompositions."""
 
 from dataclasses import replace
 from math import prod

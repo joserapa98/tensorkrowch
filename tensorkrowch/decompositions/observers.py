@@ -100,8 +100,13 @@ class ConsoleObserver:
             raise TypeError('`stream` should be a text stream')
 
     def _print_values(self, values: Dict[str, Any]) -> None:
+        labels = {
+            'in_dim': 'input dim',
+            'out_dim': 'output dim',
+            'out_device': 'output device',
+        }
         for name, value in values.items():
-            label = name.replace('_', ' ')
+            label = labels.get(name, name.replace('_', ' '))
             print(f'  {label}: {value}', file=self.stream)
 
     def emit(self, event: DecompositionEvent) -> None:

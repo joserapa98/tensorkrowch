@@ -1,4 +1,4 @@
-"""Tensor-ring decomposition through an interior SVD bipartition."""
+"""Tensor ring decomposition through an interior SVD bipartition."""
 
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
@@ -17,7 +17,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition)
-from tensorkrowch.decompositions.svd.common import _TruncationSpec
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd.tt import TTSVD
 
 
@@ -44,13 +44,13 @@ class _RankCappedTTSVD(TTSVD):
                  tensor: torch.Tensor,
                  rank_caps: Sequence[int],
                  *,
-                 output_device: Optional[
+                 out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
         self._rank_caps = tuple(rank_caps)
         if len(self._rank_caps) != (tensor.ndim - 1):
             raise ValueError(
                 '`rank_caps` should contain one value per TT cut')
-        super().__init__(tensor, output_device=output_device)
+        super().__init__(tensor, out_device=out_device)
 
     def _split_site(self, residual, site, previous_rank, context):
         base_truncation = context.truncation
@@ -116,7 +116,7 @@ class TRSVD:
         self._center = center
         self._runtime = _RuntimePolicy.from_tensor(
             tensor,
-            output_device=output_device)
+            out_device=output_device)
 
     @staticmethod
     def _validate_center(center: int, n_sites: int) -> None:
@@ -250,16 +250,16 @@ class TRSVD:
             if any(value is None for value in rank_caps):
                 engine = TTSVD(
                     fused,
-                    output_device=self._runtime.output_device)
+                    out_device=self._runtime.out_device)
             else:
                 engine = _RankCappedTTSVD(
                     fused,
                     rank_caps=rank_caps,
-                    output_device=self._runtime.output_device)
+                    out_device=self._runtime.out_device)
         else:
             engine = TTSVD(
                 fused,
-                output_device=self._runtime.output_device)
+                out_device=self._runtime.out_device)
         result = engine.fit(
             rank=None,
             cutoff=truncation.cutoff,
@@ -463,7 +463,7 @@ class TRSVD:
             matrix = tensor.reshape(left_size, right_size)
             initial_result = TTSVD(
                 matrix,
-                output_device=None).fit(
+                out_device=None).fit(
                     rank=rank_policy.initial_cap,
                     cutoff=cutoff,
                     atol=atol,

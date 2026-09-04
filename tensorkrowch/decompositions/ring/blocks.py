@@ -531,7 +531,7 @@ def split_block_ttsvd(
         *input_dim[1:-1],
         input_dim[-1] * right_rank)
     tensor = block.reshape(fused_input_dim)
-    result = TTSVD(tensor, output_device=output_device).fit(
+    result = TTSVD(tensor, out_device=output_device).fit(
         rank=rank,
         cutoff=cutoff,
         atol=atol,

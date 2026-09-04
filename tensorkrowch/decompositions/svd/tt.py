@@ -1,4 +1,4 @@
-"""Tensor-train decomposition by consecutive singular value decompositions."""
+"""Tensor train decomposition by consecutive singular value decompositions."""
 
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -8,18 +8,17 @@ import warnings
 import torch
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.svd.common import (_log_vector_norm,
-                                                    _normalize_vector,
-                                                    _TruncationSpec)
+                                                    _normalize_vector)
 from tensorkrowch.utils import truncated_svd
 
 
@@ -40,7 +39,7 @@ class _TTSVDFitContext:
     """Holds numerical state local to one TT-SVD fit."""
 
     batch_shape: Tuple[int, ...]
-    input_dim: Tuple[int, ...]
+    in_dim: Tuple[int, ...]
     truncation: _TruncationSpec
     renormalize: bool
     running_log_scale: torch.Tensor
@@ -72,7 +71,7 @@ class TTSVD:
     n_batches : int
         Number of leading batch dimensions. At least one non-batch dimension
         must remain.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the tensor's device.
     """
@@ -81,7 +80,7 @@ class TTSVD:
                  tensor: torch.Tensor,
                  n_batches: int = 0,
                  *,
-                 output_device: Optional[
+                 out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
@@ -94,7 +93,7 @@ class TTSVD:
         self._tensor = tensor
         self._n_batches = n_batches
         self._runtime = _RuntimePolicy.from_tensor(
-            tensor, output_device=output_device)
+            tensor, out_device=out_device)
 
     @property
     def tensor(self) -> torch.Tensor:
@@ -114,7 +113,7 @@ class TTSVD:
         """Splits one site and updates its error and normalization state."""
         residual = residual.reshape(
             *context.batch_shape,
-            previous_rank * context.input_dim[site],
+            previous_rank * context.in_dim[site],
             -1)
         if context.renormalize:
             residual_shape = residual.shape
@@ -149,7 +148,7 @@ class TTSVD:
             u = u.reshape(
                 *context.batch_shape,
                 previous_rank,
-                context.input_dim[site],
+                context.in_dim[site],
                 selected_rank)
 
         record = None
@@ -241,9 +240,7 @@ class TTSVD:
             cum_percentage: Optional[float] = None,
             renormalize: bool = False,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            observer: Optional[
-                DecompositionObserver] = None) -> TTDecomposition:
+            verbose: Union[bool, int] = 0) -> TTDecomposition:
         r"""Runs TT-SVD with a shared truncation policy at every cut.
 
         The active exact SVD backend is selected through
@@ -308,7 +305,7 @@ class TTSVD:
             and synchronized timings in ``result.metrics``. The default is
             ``False`` to avoid diagnostic norm reductions, records and device
             synchronizations. Metrics are always collected when console output
-            or an ``observer`` is requested.
+            is requested.
         verbose : bool or int
             Console verbosity level:
 
@@ -318,16 +315,12 @@ class TTSVD:
               timing information;
             - ``3``: level 2 output followed by every final core.
 
-        observer : DecompositionObserver, optional
-            Additional consumer of structured decomposition events. It
-            receives events independently of the selected console verbosity.
-
         Returns
         -------
         TTDecomposition
             Lightweight result containing cores and ranks. Its structured
-            metrics are empty unless ``collect_metrics=True``, ``verbose>0``
-            or an ``observer`` is provided.
+            metrics are empty unless ``collect_metrics=True`` or
+            ``verbose>0``.
 
         Examples
         --------
@@ -356,15 +349,15 @@ class TTSVD:
             rtol=rtol,
             cum_percentage=cum_percentage)
         verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity) or (observer is not None)
+        emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
         fit_observer = (
-            _resolve_observer(verbosity, observer) if emit_events else None)
+            _resolve_observer(verbosity, None) if emit_events else None)
 
         tensor = self._runtime.prepare(self._tensor)
         batch_shape = tuple(tensor.shape[:self._n_batches])
-        input_dim = tuple(tensor.shape[self._n_batches:])
-        n_sites = len(input_dim)
+        in_dim = tuple(tensor.shape[self._n_batches:])
+        n_sites = len(in_dim)
 
         error_state = None
         if collect_metrics:
@@ -385,7 +378,7 @@ class TTSVD:
                     input_norm_per_batch))
         context = _TTSVDFitContext(
             batch_shape=batch_shape,
-            input_dim=input_dim,
+            in_dim=in_dim,
             truncation=truncation,
             renormalize=renormalize,
             running_log_scale=tensor.real.new_zeros(()),
@@ -401,7 +394,7 @@ class TTSVD:
                 values={
                     'sites': n_sites,
                     'batch_shape': batch_shape,
-                    'input_dim': input_dim,
+                    'in_dim': in_dim,
                     'renormalize': renormalize,
                 }))
 
@@ -527,7 +520,7 @@ def tt_svd(tensor: torch.Tensor,
            rtol: Optional[float] = None,
            cum_percentage: Optional[float] = None,
            renormalize: bool = False,
-           output_device: Optional[Union[str, torch.device]] = 'cpu',
+           out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False):
     r"""Decomposes a dense tensor into TT cores by consecutive SVDs.
@@ -586,7 +579,7 @@ def tt_svd(tensor: torch.Tensor,
         scale logarithmically and evenly redistributes the complete scale over
         the final cores. Absolute criteria and reported errors preserve the
         scale of the original tensor.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. If ``None``, they remain on
         the input device. The default is ``"cpu"``.
     verbose : bool or int
@@ -633,7 +626,7 @@ def tt_svd(tensor: torch.Tensor,
     result = TTSVD(
         tensor=tensor,
         n_batches=n_batches,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
@@ -742,7 +735,7 @@ def vec_to_mps(vec: torch.Tensor,
         rtol=rtol,
         cum_percentage=cum_percentage,
         renormalize=renormalize,
-        output_device=None,
+        out_device=None,
         verbose=verbose,
         return_info=return_info)
 

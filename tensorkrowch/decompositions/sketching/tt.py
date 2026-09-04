@@ -1,4 +1,4 @@
-"""Tensor-train decompositions based on recursive sketching from samples."""
+"""Tensor train decompositions based on recursive sketching from samples."""
 
 from dataclasses import replace
 from math import prod
@@ -1876,7 +1876,7 @@ class TTRS:
 
         runtime = _RuntimePolicy(
             device=active.device,
-            output_device=self.output_device,
+            out_device=self.output_device,
             dtype=active.dtype,
             synchronize_timers=self.synchronize_timers)
         return TTDecomposition(

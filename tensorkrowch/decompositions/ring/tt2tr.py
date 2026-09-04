@@ -226,7 +226,7 @@ class TT2TR:
                  output_device: _Device = 'cpu') -> None:
         self._tt = _as_tt_decomposition(tt)
         self._runtime = _RuntimePolicy.from_tensor(
-            self._tt.cores[0], output_device=output_device)
+            self._tt.cores[0], out_device=output_device)
 
     @property
     def tt(self) -> TTDecomposition:
@@ -480,7 +480,7 @@ def tt2tr(tt,
           output_device: _Device = 'cpu',
           verbose: Union[bool, int] = 0,
           return_info: bool = False):
-    """Converts open-boundary TT cores into prescribed tensor-ring cores.
+    """Converts open-boundary TT cores into prescribed tensor ring cores.
 
     This is the simple functional interface. Use :class:`TT2TR` for repeated
     conversions of the same TT or direct access to the lightweight result.

@@ -1,4 +1,4 @@
-"""Exact tensor-train alternating least-squares decompositions."""
+"""Exact tensor train alternating least-squares decompositions."""
 
 from dataclasses import replace
 from math import prod
@@ -893,7 +893,7 @@ class TTALS:
             else:
                 decomposition = TTSVD(
                     target,
-                    output_device=None).fit(
+                    out_device=None).fit(
                         rank=rank,
                         collect_metrics=False)
                 cores = _standard_tt_cores(

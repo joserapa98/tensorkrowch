@@ -1,4 +1,4 @@
-"""Experimental serial schedules for independent tensor-ring openings."""
+"""Experimental serial schedules for independent tensor ring openings."""
 
 from dataclasses import replace
 from math import prod

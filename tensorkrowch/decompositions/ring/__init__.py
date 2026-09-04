@@ -1,4 +1,4 @@
-"""Reusable loop-opening and tensor-ring conversion infrastructure."""
+"""Reusable loop-opening and tensor ring conversion infrastructure."""
 
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeMap)

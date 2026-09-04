@@ -5,6 +5,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 
 def _rank_one_tt(dtype=torch.float64, phase=1):
     generator = torch.Generator().manual_seed(150)
@@ -66,7 +67,7 @@ class TestTT2TR:  # MARK: TestTT2TR
             dtype=torch.float64,
             generator=torch.Generator().manual_seed(151))
         tt = tk.decompositions.TTSVD(
-            dense, output_device=None).fit()
+            dense, out_device=None).fit()
         result = tk.decompositions.TT2TR(
             tt, output_device=None).fit(
                 rank=2,
@@ -84,7 +85,7 @@ class TestTT2TR:  # MARK: TestTT2TR
             dtype=torch.complex128,
             generator=torch.Generator().manual_seed(152))
         tt = tk.decompositions.TTSVD(
-            dense, output_device=None).fit()
+            dense, out_device=None).fit()
         result = tk.decompositions.TT2TR(
             tt, output_device=None).fit(
                 rank=2,
@@ -174,7 +175,7 @@ class TestTT2TR:  # MARK: TestTT2TR
             rtol=2e-9, atol=2e-9)
 
     def test_history_observer_receives_structured_steps_and_summary(self):
-        observer = tk.decompositions.HistoryObserver()
+        observer = HistoryObserver()
         result = tk.decompositions.TT2TR(
             _rank_one_tt(), output_device=None).fit(
                 rank=1, verbose=0, observer=observer)

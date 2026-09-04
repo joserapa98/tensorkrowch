@@ -1,4 +1,4 @@
-"""Experimental blockwise spectral tensor-ring decomposition."""
+"""Experimental blockwise spectral tensor ring decomposition."""
 
 import time
 import warnings

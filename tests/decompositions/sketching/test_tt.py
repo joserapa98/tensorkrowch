@@ -5,6 +5,7 @@ import torch
 
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 from tensorkrowch.decompositions.results import TTDecomposition
 
 
@@ -65,7 +66,7 @@ class TestTTRSS:
 
     def test_one_global_evaluation_plan_and_structured_records(self):
         function, embedding, samples, domain = _problem()
-        observer = tk.decompositions.HistoryObserver()
+        observer = HistoryObserver()
         result = tk.decompositions.TTRSS(
             function=function,
             embedding=embedding,

@@ -5,6 +5,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 from tensorkrowch.decompositions.sketching import base as base_module
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.phi import (
@@ -82,7 +83,7 @@ def _toy():
 class TestRecursiveSketchingBase:  # MARK: TestRecursiveSketchingBase
 
     def test_complete_shared_phase_order_and_metrics(self):
-        history = tk.decompositions.HistoryObserver()
+        history = HistoryObserver()
 
         result = _toy().fit(
             rank=2,

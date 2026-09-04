@@ -7,6 +7,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import DecompositionEvent
 
 def _full_rank_core(orientation, dtype=torch.float64):
     matrix = torch.randn(
@@ -141,7 +142,7 @@ class TestGaugeMapDiagnostics:  # MARK: TestGaugeMapDiagnostics
             site=1).inverse_or_pinv('pinv')
         event = dual.as_event('TT to TR')
 
-        assert isinstance(event, tk.decompositions.DecompositionEvent)
+        assert isinstance(event, DecompositionEvent)
         assert event.name == 'gauge'
         assert event.phase == 'TT to TR'
         assert event.site == 1

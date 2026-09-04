@@ -5,6 +5,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 
 def _rank_one_sparse(dtype=torch.float64):
     left = torch.tensor([1., 2.], dtype=dtype)
@@ -63,7 +64,7 @@ class TestTTRS:  # MARK: TestTTRS
     def test_tt_source_uses_structured_contractions(self):
         source, dense = _rank_one_sparse()
         tt = tk.decompositions.TTSVD(
-            dense, output_device=None).fit(rank=1)
+            dense, out_device=None).fit(rank=1)
         tt_source = tk.decompositions.TTTensorSource(tt)
         result = tk.decompositions.TTRS(
             tt_source,
@@ -103,7 +104,7 @@ class TestTTRS:  # MARK: TestTTRS
 
     def test_history_observer_receives_clean_hierarchy(self):
         source, _ = _rank_one_sparse()
-        observer = tk.decompositions.HistoryObserver()
+        observer = HistoryObserver()
         result = tk.decompositions.TTRS(source).fit(
             rank=1, observer=observer)
 

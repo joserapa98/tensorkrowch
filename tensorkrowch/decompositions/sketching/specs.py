@@ -8,7 +8,7 @@ import torch
 
 from tensorkrowch.decompositions.observers import _normalize_verbosity
 from tensorkrowch.decompositions.sources import ConfigurationBatch
-from tensorkrowch.decompositions.svd.common import _TruncationSpec
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.embeddings import basis
 
 

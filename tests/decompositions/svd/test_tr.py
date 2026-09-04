@@ -5,6 +5,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 import tensorkrowch.decompositions.svd.tr as tr_module
 
 
@@ -268,7 +269,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         }
 
     def test_history_and_console_observers(self, capsys):
-        history = tk.decompositions.HistoryObserver()
+        history = HistoryObserver()
 
         result = tk.decompositions.TRSVD(
             torch.randn(2, 3, 4, 2),

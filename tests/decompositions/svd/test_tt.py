@@ -23,7 +23,51 @@ def _device(name):
     return torch.device(name)
 
 
+def _exact_tt():
+    """Builds a rank-two TT and its dense contraction."""
+    generator = torch.Generator().manual_seed(70)
+    cores = [
+        torch.randn(3, 2, dtype=torch.float64, generator=generator),
+        torch.randn(2, 4, 2, dtype=torch.float64, generator=generator),
+        torch.randn(2, 5, dtype=torch.float64, generator=generator),
+    ]
+    result = tk.decompositions.TTDecomposition(cores)
+    return result, result.contract_dense()
+
+
 class TestTTSVD:  # MARK: TestTTSVD
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    def test_recovers_exact_tt(self, svd_method):
+        expected, tensor = _exact_tt()
+
+        with tk.svd_method(svd_method):
+            result = tk.decompositions.TTSVD(
+                tensor, out_device=None).fit(rank=2)
+
+        assert result.rank == expected.rank
+        assert torch.allclose(
+            result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    def test_low_rank_error_has_gaussian_noise_scale(self, svd_method):
+        _, tensor = _exact_tt()
+        generator = torch.Generator().manual_seed(71)
+        noise = 1e-4 * torch.randn(
+            tensor.shape, dtype=tensor.dtype, generator=generator)
+        noisy_tensor = tensor + noise
+
+        with tk.svd_method(svd_method):
+            approximation = tk.decompositions.TTSVD(
+                noisy_tensor, out_device=None).fit(
+                    rank=2).contract_dense()
+
+        noise_norm = torch.linalg.vector_norm(noise)
+        residual_norm = torch.linalg.vector_norm(noisy_tensor - approximation)
+        clean_error = torch.linalg.vector_norm(tensor - approximation)
+        assert residual_norm <= 1.01 * noise_norm
+        assert residual_norm >= 0.25 * noise_norm
+        assert clean_error <= 1.5 * noise_norm
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('renormalize', [False, True])
@@ -36,7 +80,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         tensor = torch.randn(
             2, 3, 4, dtype=dtype, generator=generator) * 1e3
         decomposer = tk.decompositions.TTSVD(
-            tensor, output_device=None)
+            tensor, out_device=None)
 
         with tk.svd_method(svd_method):
             result = decomposer.fit(
@@ -73,7 +117,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         tensor[0] = 0
 
         result = tk.decompositions.TTSVD(
-            tensor, n_batches=1, output_device=None).fit(
+            tensor, n_batches=1, out_device=None).fit(
                 rank=2,
                 renormalize=renormalize,
                 collect_metrics=True)
@@ -107,7 +151,7 @@ class TestTTSVD:  # MARK: TestTTSVD
     def test_repeated_fits_have_independent_state(self):
         tensor = torch.randn(3, 4, 5, dtype=torch.float64)
         decomposer = tk.decompositions.TTSVD(
-            tensor, output_device=None)
+            tensor, out_device=None)
 
         rank_one = decomposer.fit(rank=1)
         rank_three = decomposer.fit(rank=3)
@@ -128,7 +172,7 @@ class TestTTSVD:  # MARK: TestTTSVD
                                                 renormalize):
         tensor = torch.randn(2, 3, 4, dtype=torch.float64)
         decomposer = tk.decompositions.TTSVD(
-            tensor, output_device=None)
+            tensor, out_device=None)
         return_info_calls = []
         original_truncated_svd = tt_module.truncated_svd
 
@@ -184,7 +228,7 @@ class TestTTSVD:  # MARK: TestTTSVD
             tt_module._RuntimePolicy, 'timer', unexpected_timer)
         monkeypatch.setattr(tt_module, 'DecompositionEvent', unexpected_event)
         result = tk.decompositions.TTSVD(
-            torch.randn(2, 3, 4), output_device=None).fit(
+            torch.randn(2, 3, 4), out_device=None).fit(
                 rank=2,
                 renormalize=renormalize)
 
@@ -199,12 +243,12 @@ class TestTTSVD:  # MARK: TestTTSVD
         tensor = torch.randn(
             2, 3, 4, dtype=torch.float64, generator=generator)
         reference = tk.decompositions.TTSVD(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=1,
                 renormalize=True,
                 collect_metrics=True)
         scaled = tk.decompositions.TTSVD(
-            tensor * scale, output_device=None).fit(
+            tensor * scale, out_device=None).fit(
                 rank=1,
                 renormalize=True,
                 collect_metrics=True)
@@ -227,7 +271,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         tensor = 3 * torch.randn(
             3, 4, 5, dtype=torch.float64, generator=generator)
         result = tk.decompositions.TTSVD(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 renormalize=True,
                 collect_metrics=True)
@@ -235,9 +279,9 @@ class TestTTSVD:  # MARK: TestTTSVD
         residual = tensor
         previous_rank = 1
         local_errors = []
-        for site, input_dim in enumerate(tensor.shape[:-1]):
+        for site, in_dim in enumerate(tensor.shape[:-1]):
             residual = residual.reshape(
-                previous_rank * input_dim, -1)
+                previous_rank * in_dim, -1)
             _, singular_values, vh = torch.linalg.svd(
                 residual, full_matrices=False)
             local_errors.append(singular_values[2:].square().sum().sqrt())
@@ -277,7 +321,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         result = tk.decompositions.TTSVD(
             tensor,
             n_batches=n_batches,
-            output_device=None).fit(
+            out_device=None).fit(
                 renormalize=True,
                 **kwargs)
 
@@ -286,7 +330,7 @@ class TestTTSVD:  # MARK: TestTTSVD
     def test_one_site_and_zero_tensor(self):
         tensor = torch.zeros(5)
         result = tk.decompositions.TTSVD(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=1,
                 renormalize=True,
                 collect_metrics=True)
@@ -300,13 +344,13 @@ class TestTTSVD:  # MARK: TestTTSVD
         assert result.metrics.timings[0].children == ()
 
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
-    def test_output_device_policy(self, device_name):
+    def test_out_device_policy(self, device_name):
         device = _device(device_name)
         tensor = torch.randn(2, 3, 4, device=device)
 
         cpu_result = tk.decompositions.TTSVD(tensor).fit(rank=2)
         active_result = tk.decompositions.TTSVD(
-            tensor, output_device=None).fit(rank=2)
+            tensor, out_device=None).fit(rank=2)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
         assert all(core.device == device for core in active_result.cores)
@@ -316,34 +360,22 @@ class TestTTSVD:  # MARK: TestTTSVD
             rtol=1e-5,
             atol=1e-6)
 
-    def test_history_and_console_observers(self, capsys):
-        history = tk.decompositions.HistoryObserver()
+    def test_console_observer(self, capsys):
         tensor = torch.randn(2, 3, 4)
 
         result = tk.decompositions.TTSVD(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
-                verbose=2,
-                observer=history)
+                verbose=2)
 
         output = capsys.readouterr().out
         assert 'TT-SVD\n======' in output
         assert 'Site 1 / 2' in output
         assert 'selected rank: 2' in output
         assert 'Summary\n-------' in output
-        assert history.metrics is result.metrics
         assert len(result.metrics.errors) == 1
         assert len(result.metrics.truncations) == 2
         assert len(result.metrics.timings) == 1
-        assert [event.name for event in history.events] == [
-            'start',
-            'site_complete',
-            'site_complete',
-            'summary',
-            'core',
-            'core',
-            'core',
-        ]
 
     @pytest.mark.parametrize(
         'constructor, error_type, match',
@@ -370,8 +402,6 @@ class TestTTSVD:  # MARK: TestTTSVD
              '`verbose` should be between 0 and 3'),
             ({'verbose': 4}, ValueError,
              '`verbose` should be between 0 and 3'),
-            ({'observer': object()}, TypeError,
-             '`observer` should implement'),
         ],
     )
     def test_fit_errors(self, kwargs, error_type, match):
@@ -386,7 +416,7 @@ class TestTTSVD:  # MARK: TestTTSVD
 
         def reconstruct(value):
             return tk.decompositions.TTSVD(
-                value, output_device=None).fit().contract_dense()
+                value, out_device=None).fit().contract_dense()
 
         with tk.svd_method(svd_method):
             assert torch.autograd.gradcheck(
@@ -407,7 +437,7 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
             cores, info = tk.decompositions.tt_svd(
                 tensor,
                 rank=2,
-                output_device=None,
+                out_device=None,
                 return_info=True)
             with pytest.warns(
                     FutureWarning, match='`vec_to_mps` is deprecated'):

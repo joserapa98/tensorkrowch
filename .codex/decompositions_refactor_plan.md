@@ -171,30 +171,40 @@ Se usará de forma sistemática:
 - `embedding`, `domain`, `base`, `level`, etc. en singular aunque acepten un
   valor compartido o una secuencia por variable;
 - los argumentos y propiedades públicas que acepten un escalar o una
-  secuencia se nombran en singular: `rank`, `input_dim`, `output_dim`,
+  secuencia se nombran en singular: `rank`, `in_dim`, `out_dim`,
   `embedding`, `domain`, etc.;
 - dentro de `decompositions`, las dimensiones locales de TT/TR se denominan
-  `input_dim`; TTM usa `input_dim` y `output_dim`. No se expondrá
+  `in_dim`; TTM usa `in_dim` y `out_dim`. No se expondrá
   `physical_dim`/`physical_shapes`; “físico” se reserva para coordenadas o
   geometría física real, por ejemplo en mapas QTT;
+- se prefieren los prefijos `in_`/`out_` para conceptos emparejados análogos,
+  por ejemplo `out_position` y `out_device`; no se acortan palabras completas
+  cuando la abreviatura reduzca claridad;
+- los nombres de familias tensoriales se escriben sin guion: **tensor train**,
+  **tensor ring** y **tensor train matrix**;
 - los docstrings y explicaciones de `decompositions` usan siempre **input
   dimension** y **rank**. Nombres legacy como `mps.phys_dim` o
   `mps.bond_dim` solo aparecen cuando se cita literalmente un atributo de la
   API de `models`;
 - todo método que exponga `rank`, `cutoff`, `atol`, `rtol` y
-  `cum_percentage` reutiliza literalmente la sección canónica documentada en
-  `truncated_svd`, incluida la fórmula de `cum_percentage`; las clases y
-  funciones de una misma familia mantienen además introducciones, niveles de
-  verbosity, retornos y ejemplos con estructura paralela;
-- toda mención en docstrings a los modelos MPS, MPSData o MPO se escribe como
-  enlace Sphinx a `tensorkrowch.models.MPS`, `MPSData` o `MPO`; los snippets de
-  código conservan naturalmente sus constructores Python;
+  `cum_percentage` mantiene la explicación canónica de `truncated_svd` cuando
+  sus semánticas coincidan; esta homogeneidad es una regla de revisión de
+  estilo, no un contrato comprobado mediante tests de igualdad textual;
+- la primera referencia explícita y relevante a MPS, MPSData o MPO en un
+  docstring se enlaza con Sphinx; no se repite el enlace innecesariamente ni
+  se enlazan menciones puramente conceptuales;
 - se mantienen plurales únicamente para colecciones inequívocas como
   `cores`, `samples`, `metrics` o registros internos locales;
 - `SampledSketch`, no `CoordinateSketch`;
 - `GlobalValueTransform` y `LocalValueTransform`;
 - `SketchRecursion`, `SketchGaugeRecursion` y `TTCoreGaugeRecursion` para
   destacar la recursión, no “transport”.
+
+> **Migración durante la revisión:** algunas descripciones históricas de fases
+> posteriores conservan todavía `input_dim`, `output_dim`, `output_device` o
+> un argumento público `observer`. Al revisar cada commit se migrarán a
+> `in_dim`, `out_dim`, `out_device` y observers exclusivamente internos. Los
+> nombres antiguos no forman parte de la API final objetivo.
 
 Una lista interna de ranks efectivos o caps sigue siendo válida. El uso
 público normal continúa siendo un entero compartido; la secuencia es la ruta
@@ -264,11 +274,11 @@ basados en `sum(s)` de los proyectos externos.
 Se separan dos conceptos:
 
 - `device`: dispositivo de evaluación y álgebra activa;
-- `output_device`: dispositivo donde se almacenan los cores finalizados.
+- `out_device`: dispositivo donde se almacenan los cores finalizados.
 
-La nueva API tendrá `output_device="cpu"` por defecto para liberar memoria de
+La nueva API tendrá `out_device="cpu"` por defecto para liberar memoria de
 GPU a medida que los cores dejan de participar en el cálculo. El usuario podrá
-usar `output_device=None` para conservar el device activo o pasar un device
+usar `out_device=None` para conservar el device activo o pasar un device
 explícito. Un core solo se offloadeará cuando no sea necesario para pasos
 posteriores y después de absorber toda escala pendiente; no se introducirán
 copias CPU/GPU ocultas dentro de un kernel.
@@ -281,7 +291,7 @@ tensoriales pequeños a ese device, pero nunca devuelven implícitamente todos
 los cores a GPU. Para una comparación grande o diferenciable, el usuario debe
 hacer antes `.to(device)`. La copia a CPU conserva el grafo de autograd de
 PyTorch, pero quien necesite backward y rendimiento en GPU deberá usar
-`output_device=None` para evitar el enlace de copia.
+`out_device=None` para evitar el enlace de copia.
 
 Los aliases legacy preservarán inicialmente su comportamiento histórico cuando
 sea necesario para no romper autograd o device. Esta diferencia se documentará
@@ -367,14 +377,14 @@ métricas inaccesibles cuando solo se devuelven cores. La política efectiva es:
 fit silencioso + collect_metrics=False  -> fast path sin instrumentación
 collect_metrics=True                    -> records, errores y timings
 return_info=True                        -> instrumentación en función directa
-verbose>0 u observer                    -> instrumentación automática
+verbose>0                               -> instrumentación automática
 ```
 
 El fast path no calculará normas exclusivamente diagnósticas, no pedirá
 `_TruncatedSVDInfo`, no creará records/eventos y sustituirá timers por contextos
 nulos. Las sincronizaciones necesarias para seleccionar shapes/ranks
 adaptativos, comprobar invariantes numéricos, ejecutar kernels o mover un
-resultado a `output_device` pertenecen al algoritmo/runtime y no se ocultarán
+resultado a `out_device` pertenecen al algoritmo/runtime y no se ocultarán
 como “coste de métricas”. En particular, con métricas desactivadas no se
 llamará explícitamente a `torch.cuda.synchronize`/`torch.mps.synchronize` para
 medir tiempo.
@@ -402,9 +412,12 @@ será quien los convierta en texto. Esto permite:
 - agregar eventos de workers paralelos en orden;
 - sustituir consola por notebooks o profiling sin cambiar el algoritmo.
 
-Los eventos solo se construirán si existe un consumidor real (`verbose>0` u
-observer); un `NullObserver` no justifica crear objetos o calcular valores que
-después se descartan.
+Los observers y eventos son detalles internos de instrumentación: la API
+pública solo expone `verbose` y los controles de métricas. Se conserva una
+frontera interna clara para poder exponer observers en el futuro sin modificar
+los drivers numéricos. Los eventos solo se construirán con `verbose>0`; un
+`NullObserver` no justifica crear objetos o calcular valores que después se
+descartan.
 
 ### 2.8 Estado, repetición y aleatoriedad
 
@@ -751,7 +764,7 @@ los nombres `COMPAT`.
 
 #### `TensorDecomposition` `[A, dataclass base]`
 
-Almacena `cores`, `rank`, `input_dim`, `output_dim`, `metrics` y metadatos
+Almacena `cores`, `rank`, `in_dim`, `out_dim`, `metrics` y metadatos
 pequeños. No representa un
 grafo TensorKrowch.
 
@@ -769,7 +782,7 @@ grafo TensorKrowch.
 
 - `.evaluate(samples, embedding=None)`: contracción batched directa de cores.
 - `.contract_dense()`: oracle explícito solo para tensores pequeños.
-- Valida shapes OBC y deriva `rank` e `input_dim` efectivos.
+- Valida shapes OBC y deriva `rank` e `in_dim` efectivos.
 
 #### `TRDecomposition(TensorDecomposition)` `[A]`
 
@@ -824,12 +837,12 @@ contracciones PEPS explícitamente seleccionadas.
 Las singular values completas solo se guardarán si un nivel de diagnóstico lo
 solicita; por defecto se guardan escalares y ranks.
 
-#### `DecompositionEvent` `[A, dataclass]`
+#### `DecompositionEvent` `[I, dataclass]`
 
 Campos principales: `name`, `phase`, `level`, `site`, `sweep`, `elapsed`,
 `values` y `worker`. Es información estructurada, no texto de consola.
 
-#### `DecompositionObserver` `[A, Protocol]`
+#### `DecompositionObserver` `[I, Protocol]`
 
 - `.emit(event)`: recibe un evento.
 - `.close(metrics)`: recibe el resumen final.
@@ -837,13 +850,13 @@ Campos principales: `name`, `phase`, `level`, `site`, `sweep`, `elapsed`,
 Implementaciones:
 
 - `NullObserver` `[I]`: coste mínimo;
-- `ConsoleObserver` `[A]`: formato jerárquico según verbosity;
-- `HistoryObserver` `[A]`: conserva eventos para tests/notebooks;
+- `ConsoleObserver` `[I]`: formato jerárquico según verbosity;
+- `HistoryObserver` `[I]`: conserva eventos para tests internos;
 - `_CompositeObserver` `[I]`: reenvía a varios observers.
 
 #### `_RuntimePolicy` `[I, dataclass]`
 
-Normaliza `device`, `output_device`, `dtype`, batch size, generator, offloading
+Normaliza `device`, `out_device`, `dtype`, batch size, generator, offloading
 y sincronización de timers CUDA. No se exige al usuario instanciarla.
 
 #### `_FitContext` `[I, dataclass]`
@@ -853,10 +866,12 @@ llamada a `.fit`. Nunca se comparte implícitamente entre fits.
 
 ### 5.4 SVD (`decompositions/svd/`)
 
-#### `_TruncationSpec` `[I, frozen dataclass]`
+#### `_TruncationSpec` (`decompositions/_truncation.py`) `[I, frozen dataclass]`
 
 Agrupa `rank`, `cutoff`, `atol`, `rtol` y `cum_percentage`, valida una vez y
-pasa exactamente esos valores a `truncated_svd`.
+pasa exactamente esos valores a `truncated_svd`. Vive por encima de las
+familias algorítmicas porque también lo reutilizan ring y sketching; los
+helpers de norma y error exclusivos del sweep permanecen en `svd/common.py`.
 
 #### `_compact_svd` y selección de backend (`utils.py`) `[I]`
 
@@ -882,7 +897,7 @@ convierte ese registro numérico en la métrica de alto nivel.
 
 #### `TTSVD` `[A]`
 
-- `__init__(tensor, n_batches=0, *, output_device="cpu")`: fija tensor,
+- `__init__(tensor, n_batches=0, *, out_device="cpu")`: fija tensor,
   batches y política de salida.
 - `.fit(rank=None, cutoff=None, atol=None, rtol=None,
   cum_percentage=None, renormalize=False, verbose=0)`: ejecuta el sweep y
@@ -893,13 +908,13 @@ convierte ese registro numérico en la métrica de alto nivel.
 
 #### `TTMSVD` `[A]`
 
-- `__init__(tensor, input_dim=None, output_dim=None, ...)`: acepta tensor con
+- `__init__(tensor, in_dim=None, out_dim=None, ...)`: acepta tensor con
   ejes ya intercalados o matriz más dimensions explícitas.
 - `.fit(...)`: reordena a
   `(in_0, out_0, in_1, out_1, ...)`, fusiona cada pareja, llama al motor
   TT-SVD y reabre cada eje input/output en el layout TTM.
 - `._interleave_axes(...)` `[I helper]`: transformación de layout validada.
-- `._unfuse_input_output_axes(...)` `[I helper]`: forma cores TTM.
+- `._unfuse_in_out_axes(...)` `[I helper]`: forma cores TTM.
 
 No habrá un segundo algoritmo de truncación para TTM.
 
@@ -1945,9 +1960,9 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
     `TRDecomposition`;
   - `ErrorRecord`, `TruncationRecord`, `TimingRecord`,
     `FidelityRecord` y `DecompositionMetrics`;
-  - `_RuntimePolicy` con `device`, `output_device`, `dtype` y timer;
+  - `_RuntimePolicy` con `device`, `out_device`, `dtype` y timer;
   - `.to`, `.cpu`, `.as_info`, validación de cores y derivación de `rank`,
-    `input_dim` y `output_dim`;
+    `in_dim` y `out_dim`;
   - contracciones TT/TR estables para `.norm`, `.normalized_overlap`,
     `.fidelity` y `.error`.
 
@@ -2016,15 +2031,15 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
 
   Evidencia local:
 
-  - `TTSVD` fija tensor, batches y `output_device`; cada `.fit` crea estado,
+  - `TTSVD` fija tensor, batches y `out_device`; cada `.fit` crea estado,
     cores y métricas independientes;
   - `tt_svd` devuelve cores y admite `return_info`; `vec_to_mps` delega en la
     clase preservando el device histórico;
   - `.fit(collect_metrics=False)` y
     `tt_svd(return_info=False, verbose=0)` usan un fast path sin norma global
     diagnóstica, `_TruncatedSVDInfo`, records, timers sincronizados ni eventos;
-    `collect_metrics=True`, `return_info=True`, verbosity positiva u observer
-    activan automáticamente la instrumentación completa;
+    `collect_metrics=True`, `return_info=True` o verbosity positiva activan
+    automáticamente la instrumentación completa;
   - `_TruncationSpec`, `_split_site` y `_finalize_norm` centralizan criterios,
     cortes, errores, renormalización y offload;
   - `truncated_svd` conserva la implementación general y sencilla cerrada en
@@ -2044,8 +2059,9 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
     reales/complejos y ambos backends;
   - en un tensor moderado, normas, errores locales y errores acumulados en
     log-escala coinciden con un cálculo TT-SVD directo fuera de log-escala;
-  - observers estructurados y verbosity 0–3 implementados en
-    `decompositions/observers.py`;
+  - observers estructurados implementados internamente en
+    `decompositions/observers.py`; la API pública conserva únicamente
+    verbosity 0–3;
   - suite dirigida transversal: `496 passed, 10 skipped`;
   - tres ejecuciones oficiales completas alcanzan
     `14687 passed, 194 skipped` con un único fallo estocástico distinto y no
@@ -2063,15 +2079,15 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
   - mismo `rank` escalar y criterios de truncación en cada corte;
   - backend SVD activo delegado al kernel común, sin configuración local;
   - `renormalize=False/True`;
-  - offload de cores finalizados a `output_device`; con `renormalize=True` se
+  - offload de cores finalizados a `out_device`; con `renormalize=True` se
     retrasa hasta absorber la escala final correspondiente;
   - errores locales y acumulados absolutos/relativos;
   - total y tiempo por corte;
   - `collect_metrics=False` público y por defecto en `.fit`, con métricas
-    vacías y sin trabajo diagnóstico; `verbose>0` u observer prevalecen porque
-    consumen esa información;
+    vacías y sin trabajo diagnóstico; `verbose>0` prevalece porque consume esa
+    información;
   - soporte real/complejo y autograd;
-  - verbosity limpia mediante observer.
+  - verbosity limpia mediante observer interno.
 
   Invariantes de error con renormalización:
 
@@ -2118,7 +2134,9 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
 
 - [x] **SVD-04 — Implementar `TTMSVD` y `ttm_svd` como layout + TT-SVD**
 
-  Estado: implementado, validado y cerrado en `b88756d`.
+  Estado: implementación original en `b88756d`; corrección de revisión
+  aplicada, validada y preparada como commit correctivo independiente,
+  pendiente de confirmación final del usuario.
 
   Funcionalidad:
 
@@ -2129,7 +2147,7 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
   - `layout="grouped"`: tensor
     `(in_1, ..., in_n, out_1, ..., out_n)`, intercalado internamente antes del
     sweep;
-  - ruta matriz `(prod(input_dim), prod(output_dim))` con dims explícitas;
+  - ruta matriz `(prod(in_dim), prod(out_dim))` con dims explícitas;
   - dimensiones input/output distintas por site;
   - fusión local `(in_k, out_k)` antes de TT-SVD;
   - reapertura al layout compatible con `tk.models.MPO`;
@@ -2141,12 +2159,12 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
   Implementación local:
 
   - `svd/ttm.py` normaliza una sola vez la entrada tensorizada o matricial,
-    fusiona cada pareja `(input_k, output_k)` y conserva un motor `TTSVD` para
+    fusiona cada pareja `(in_k, out_k)` y conserva un motor `TTSVD` para
     repetir fits con distintos criterios;
   - `_interleave_axes` es la única frontera entre layouts y
-    `_unfuse_input_output_axes` reabre los cores sin una segunda
+    `_unfuse_in_out_axes` reabre los cores sin una segunda
     factorización;
-  - la ruta matriz requiere `input_dim` y `output_dim`, valida sus productos y
+  - la ruta matriz requiere `in_dim` y `out_dim`, valida sus productos y
     admite dimensiones heterogéneas; las entradas tensorizadas pueden inferir
     ambas secuencias o validarlas explícitamente;
   - `TTMSVD.fit` conserva el fast path de `TTSVD` y hereda truncación,
@@ -2161,18 +2179,38 @@ posterior puede estabilizarse antes de completar al menos `SVD-KERNEL-00` y
     alcance;
   - `TTMSVD` y `ttm_svd` ya se exportan desde `decompositions.svd` y
     `decompositions`; el wrapper legacy `mat_to_mpo` se migrará en SVD-06.
-  - los docstrings de TT/TTM siguen la misma estructura y todos los métodos de
-    `decompositions` que exponen truncación reutilizan literalmente el bloque
-    canónico de `truncated_svd`; un test documental evita divergencias futuras.
+  - los docstrings de TT/TTM siguen la misma estructura y reutilizan la
+    explicación canónica de truncación cuando sus semánticas coinciden; esto
+    se revisa como estilo y no mediante igualdad textual automatizada.
+
+  Correcciones acordadas durante la revisión:
+
+  - API SVD canónica con `in_dim`, `out_dim` y `out_device`; los aliases
+    internos temporales de resultados solo mantienen operativos los commits
+    posteriores hasta que se revisen y se eliminarán al terminar la migración;
+  - `observer` desaparece de `TTSVD.fit` y `TTMSVD.fit`, pero se conserva la
+    implementación interna que materializa la verbosity;
+  - `_TruncationSpec` se mueve a `decompositions/_truncation.py` para que SVD,
+    ring y sketching compartan el mismo contrato sin depender de `svd`;
+  - se elimina `tests/decompositions/test_docstrings.py`; la homogeneidad de
+    argumentos comunes queda registrada en la guía de estilo;
+  - los nombres tensor train/tensor ring se escriben sin guion y los enlaces a
+    APIs TensorKrowch se incluyen solo en la primera referencia relevante;
+  - se añaden reconstrucciones de TT y TTM generados desde cores con ranks
+    conocidos, tanto exactas como perturbadas con ruido gaussiano, para
+    `svd` y `qr_svd`.
 
   Tests: equivalencia entre `"interleaved"` y `"grouped"`, layouts permutados,
-  una posición, complejo, truncación combinada y equivalencia exacta con
-  TT-SVD sobre ejes fusionados.
+  una posición, complejo, truncación combinada, equivalencia exacta con TT-SVD
+  sobre ejes fusionados y reconstrucción de TT/TTM exactos y ruidosos.
 
   Evidencia local:
 
   - `41 passed, 2 skipped` en la suite canónica nueva de TTM-SVD;
-  - `93 passed, 4 skipped` en TT-SVD, TTM-SVD y el contrato documental común;
+  - la corrección de revisión obtiene `103 passed, 4 skipped` en TT-SVD,
+    TTM-SVD y compatibilidad SVD;
+  - suite transversal `tests/decompositions`: `940 passed, 13 skipped`;
+  - suite oficial completa tras la corrección: `15424 passed, 201 skipped`;
   - `1739 passed, 8 skipped` en SVD, resultados, métricas, legacy SVD y MPO;
   - ejemplos de `TTMSVD.fit` y `ttm_svd` ejecutados con `doctest`;
   - `ruff` y `git diff --check` sin incidencias;

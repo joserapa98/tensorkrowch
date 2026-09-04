@@ -5,6 +5,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 from tensorkrowch.decompositions.als.solvers import (
     NonFiniteLocalSystemError,
     NonFiniteSolutionError,
@@ -233,7 +234,7 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
 
     def test_refresh_events_do_not_reset_fixed_objective_history(self):
         backend = _FakeALSBackend([1., 0.8, 0.7])
-        history = tk.decompositions.HistoryObserver()
+        history = HistoryObserver()
 
         result = tk.decompositions.ALSSweepDriver().fit(
             _fixed_problem(),

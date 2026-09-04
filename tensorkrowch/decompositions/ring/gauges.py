@@ -1,4 +1,4 @@
-"""Oriented virtual-basis maps used by tensor-ring recursions."""
+"""Oriented virtual-basis maps used by tensor ring recursions."""
 
 import warnings
 from dataclasses import dataclass, field
@@ -61,7 +61,7 @@ class GaugeMap:
     changes its core orientation while preserving the represented matrix.
 
     Calling :meth:`inverse_or_pinv` returns the directional dual ``F`` that
-    aims to satisfy ``G.T @ F = I``. Tensor-network links use a bilinear index
+    aims to satisfy ``G.T @ F = I``. Tensor network links use a bilinear index
     contraction, so this directional transpose deliberately does not conjugate
     complex gauges.
     """

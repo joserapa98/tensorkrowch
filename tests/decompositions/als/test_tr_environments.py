@@ -1,4 +1,4 @@
-"""Tests for segmented tensor-ring ALS environment caches."""
+"""Tests for segmented tensor ring ALS environment caches."""
 
 import pytest
 

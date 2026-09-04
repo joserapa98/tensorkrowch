@@ -190,7 +190,7 @@ class TestTTCoreGaugeRecursionIntegration:  # MARK: Integration
             dtype=torch.complex128,
             generator=torch.Generator().manual_seed(166))
         tt = tk.decompositions.TTSVD(
-            dense, output_device=None).fit()
+            dense, out_device=None).fit()
         opener = tk.decompositions.ALSLoopOpener({
             'gauge': 'none',
             'normalize': False,

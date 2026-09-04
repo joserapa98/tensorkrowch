@@ -43,19 +43,19 @@ class _RuntimeTimer:
 
 @dataclass(frozen=True)
 class _RuntimePolicy:
-    """Normalizes active/output devices, dtype and synchronized timers."""
+    """Normalizes active and final devices, dtype and synchronized timers."""
 
     device: Device = None
-    output_device: Device = 'cpu'
+    out_device: Device = 'cpu'
     dtype: Optional[torch.dtype] = None
     synchronize_timers: bool = True
 
     def __post_init__(self) -> None:
         if self.device is not None:
             object.__setattr__(self, 'device', torch.device(self.device))
-        if self.output_device is not None:
+        if self.out_device is not None:
             object.__setattr__(
-                self, 'output_device', torch.device(self.output_device))
+                self, 'out_device', torch.device(self.out_device))
         if (self.dtype is not None) and \
                 (not isinstance(self.dtype, torch.dtype)):
             raise TypeError('`dtype` should be torch.dtype type')
@@ -66,7 +66,7 @@ class _RuntimePolicy:
     def from_tensor(cls,
                     tensor: torch.Tensor,
                     device: Device = None,
-                    output_device: Device = 'cpu',
+                    out_device: Device = 'cpu',
                     dtype: Optional[torch.dtype] = None,
                     synchronize_timers: bool = True) -> '_RuntimePolicy':
         """Infers unspecified active runtime properties from a tensor."""
@@ -74,7 +74,7 @@ class _RuntimePolicy:
             raise TypeError('`tensor` should be torch.Tensor type')
         return cls(
             device=tensor.device if device is None else device,
-            output_device=output_device,
+            out_device=out_device,
             dtype=tensor.dtype if dtype is None else dtype,
             synchronize_timers=synchronize_timers)
 
@@ -90,9 +90,9 @@ class _RuntimePolicy:
         """Moves a finalized tensor to the configured output device."""
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
-        if self.output_device is None:
+        if self.out_device is None:
             return tensor
-        return tensor.to(device=self.output_device)
+        return tensor.to(device=self.out_device)
 
     def timer(self, device: Device = None) -> _RuntimeTimer:
         """Returns a synchronized wall-clock timer for the active device."""

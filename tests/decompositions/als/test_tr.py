@@ -1,10 +1,11 @@
-"""Tests for tensor-ring alternating least squares."""
+"""Tests for tensor ring alternating least squares."""
 
 import pytest
 
 import torch
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.observers import HistoryObserver
 from tests.decompositions.als._oracles import (contract_tr_dense,
                                                make_tr_cores,
                                                reference_tr_sweep)
@@ -135,7 +136,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             return tensor[tuple(indices[:, site]
                                 for site in range(indices.shape[1]))]
 
-        history = tk.decompositions.HistoryObserver()
+        history = HistoryObserver()
         result = tk.decompositions.TRALS(
             function,
             input_dim=tensor.shape,

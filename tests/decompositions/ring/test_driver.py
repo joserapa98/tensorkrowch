@@ -1,4 +1,4 @@
-"""Tests for the isolated bidirectional tensor-ring driver."""
+"""Tests for the isolated bidirectional tensor ring driver."""
 
 from dataclasses import dataclass
 

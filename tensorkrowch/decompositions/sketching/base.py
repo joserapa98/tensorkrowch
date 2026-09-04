@@ -211,7 +211,7 @@ class RecursiveSketching(ABC):
         self.outputs = outputs
         self._runtime = _RuntimePolicy(
             device=source.device,
-            output_device=output_device,
+            out_device=output_device,
             dtype=source.dtype,
             synchronize_timers=synchronize_timers)
         self._range_projector = range_projector

@@ -28,7 +28,53 @@ def _interleave(grouped, n_sites):
     return grouped.permute(axes)
 
 
+def _exact_ttm():
+    """Builds a rank-two TTM and its dense contraction."""
+    generator = torch.Generator().manual_seed(80)
+    cores = [
+        torch.randn(2, 2, 3, dtype=torch.float64, generator=generator),
+        torch.randn(2, 3, 2, 2, dtype=torch.float64, generator=generator),
+        torch.randn(2, 4, 3, dtype=torch.float64, generator=generator),
+    ]
+    result = tk.decompositions.TTMDecomposition(cores)
+    return result, result.contract_dense()
+
+
 class TestTTMSVD:  # MARK: TestTTMSVD
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    def test_recovers_exact_ttm(self, svd_method):
+        expected, tensor = _exact_ttm()
+
+        with tk.svd_method(svd_method):
+            result = tk.decompositions.TTMSVD(
+                tensor, out_device=None).fit(rank=2)
+
+        assert result.rank == expected.rank
+        assert result.in_dim == expected.in_dim
+        assert result.out_dim == expected.out_dim
+        assert torch.allclose(
+            result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    def test_low_rank_error_has_gaussian_noise_scale(self, svd_method):
+        _, tensor = _exact_ttm()
+        generator = torch.Generator().manual_seed(81)
+        noise = 1e-4 * torch.randn(
+            tensor.shape, dtype=tensor.dtype, generator=generator)
+        noisy_tensor = tensor + noise
+
+        with tk.svd_method(svd_method):
+            approximation = tk.decompositions.TTMSVD(
+                noisy_tensor, out_device=None).fit(
+                    rank=2).contract_dense()
+
+        noise_norm = torch.linalg.vector_norm(noise)
+        residual_norm = torch.linalg.vector_norm(noisy_tensor - approximation)
+        clean_error = torch.linalg.vector_norm(tensor - approximation)
+        assert residual_norm <= 1.01 * noise_norm
+        assert residual_norm >= 0.25 * noise_norm
+        assert clean_error <= 1.5 * noise_norm
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('renormalize', [False, True])
@@ -36,30 +82,30 @@ class TestTTMSVD:  # MARK: TestTTMSVD
     def test_interleaved_and_grouped_layouts_are_equivalent(
             self, svd_method, renormalize, dtype):
         generator = torch.Generator().manual_seed(0)
-        input_dim = (2, 3, 2)
-        output_dim = (3, 2, 2)
+        in_dim = (2, 3, 2)
+        out_dim = (3, 2, 2)
         grouped = torch.randn(
-            *input_dim, *output_dim,
+            *in_dim, *out_dim,
             dtype=dtype,
             generator=generator) * 1e2
-        interleaved = _interleave(grouped, len(input_dim))
+        interleaved = _interleave(grouped, len(in_dim))
 
         with tk.svd_method(svd_method):
             grouped_result = tk.decompositions.TTMSVD(
                 grouped,
                 layout='grouped',
-                output_device=None).fit(
+                out_device=None).fit(
                     renormalize=renormalize,
                     collect_metrics=True)
             interleaved_result = tk.decompositions.TTMSVD(
                 interleaved,
                 layout='interleaved',
-                output_device=None).fit(
+                out_device=None).fit(
                     renormalize=renormalize,
                     collect_metrics=True)
 
-        assert grouped_result.input_dim == input_dim
-        assert grouped_result.output_dim == output_dim
+        assert grouped_result.in_dim == in_dim
+        assert grouped_result.out_dim == out_dim
         assert grouped_result.rank == interleaved_result.rank
         assert torch.allclose(
             grouped_result.contract_dense(),
@@ -78,44 +124,44 @@ class TestTTMSVD:  # MARK: TestTTMSVD
 
     def test_matrix_route_with_heterogeneous_dimensions(self):
         generator = torch.Generator().manual_seed(1)
-        input_dim = (2, 2, 3)
-        output_dim = (3, 2, 2)
+        in_dim = (2, 2, 3)
+        out_dim = (3, 2, 2)
         matrix = torch.randn(
             12, 12, dtype=torch.float64, generator=generator)
         expected = _interleave(
-            matrix.reshape(*input_dim, *output_dim), len(input_dim))
+            matrix.reshape(*in_dim, *out_dim), len(in_dim))
 
         result = tk.decompositions.TTMSVD(
             matrix,
-            input_dim=input_dim,
-            output_dim=output_dim,
-            output_device=None).fit()
+            in_dim=in_dim,
+            out_dim=out_dim,
+            out_device=None).fit()
 
-        assert result.input_dim == input_dim
-        assert result.output_dim == output_dim
+        assert result.in_dim == in_dim
+        assert result.out_dim == out_dim
         assert result.metadata['matrix_input'] is True
         assert torch.allclose(
             result.contract_dense(), expected, rtol=1e-10, atol=1e-12)
 
     def test_explicit_dimensions_validate_tensorized_layout(self):
-        input_dim = (2, 3)
-        output_dim = (4, 5)
+        in_dim = (2, 3)
+        out_dim = (4, 5)
         grouped = torch.randn(
-            *input_dim, *output_dim, dtype=torch.float64)
-        interleaved = _interleave(grouped, len(input_dim))
+            *in_dim, *out_dim, dtype=torch.float64)
+        interleaved = _interleave(grouped, len(in_dim))
 
         grouped_result = tk.decompositions.TTMSVD(
             grouped,
-            input_dim=input_dim,
-            output_dim=output_dim,
+            in_dim=in_dim,
+            out_dim=out_dim,
             layout='grouped').fit()
         interleaved_result = tk.decompositions.TTMSVD(
             interleaved,
-            input_dim=input_dim,
-            output_dim=output_dim).fit()
+            in_dim=in_dim,
+            out_dim=out_dim).fit()
 
-        assert grouped_result.input_dim == interleaved_result.input_dim
-        assert grouped_result.output_dim == interleaved_result.output_dim
+        assert grouped_result.in_dim == interleaved_result.in_dim
+        assert grouped_result.out_dim == interleaved_result.out_dim
         assert torch.allclose(
             grouped_result.contract_dense(), interleaved,
             rtol=1e-10, atol=1e-12)
@@ -130,14 +176,14 @@ class TestTTMSVD:  # MARK: TestTTMSVD
 
         with tk.svd_method(svd_method):
             result = tk.decompositions.TTMSVD(
-                tensor, output_device=None).fit(
+                tensor, out_device=None).fit(
                     rank=1,
                     renormalize=renormalize,
                     collect_metrics=True)
 
         assert result.rank == []
-        assert result.input_dim == (3,)
-        assert result.output_dim == (4,)
+        assert result.in_dim == (3,)
+        assert result.out_dim == (4,)
         assert torch.allclose(result.cores[0], tensor)
         assert result.metrics.truncations == []
         assert result.metrics.errors[0].absolute == 0
@@ -161,9 +207,9 @@ class TestTTMSVD:  # MARK: TestTTMSVD
 
         with tk.svd_method(svd_method):
             ttm_result = tk.decompositions.TTMSVD(
-                tensor, output_device=None).fit(**kwargs)
+                tensor, out_device=None).fit(**kwargs)
             tt_result = tk.decompositions.TTSVD(
-                fused, output_device=None).fit(**kwargs)
+                fused, out_device=None).fit(**kwargs)
 
         assert ttm_result.rank == tt_result.rank
         assert torch.allclose(
@@ -184,7 +230,7 @@ class TestTTMSVD:  # MARK: TestTTMSVD
     def test_repeated_fits_have_independent_results(self):
         tensor = torch.randn(2, 3, 4, 5, dtype=torch.float64)
         decomposer = tk.decompositions.TTMSVD(
-            tensor, output_device=None)
+            tensor, out_device=None)
 
         rank_one = decomposer.fit(rank=1)
         rank_four = decomposer.fit(rank=4)
@@ -199,13 +245,13 @@ class TestTTMSVD:  # MARK: TestTTMSVD
                 tensor - rank_one.contract_dense())
 
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
-    def test_output_device_policy(self, device_name):
+    def test_out_device_policy(self, device_name):
         device = _device(device_name)
         tensor = torch.randn(2, 3, 4, 5, device=device)
 
         cpu_result = tk.decompositions.TTMSVD(tensor).fit(rank=2)
         active_result = tk.decompositions.TTMSVD(
-            tensor, output_device=None).fit(rank=2)
+            tensor, out_device=None).fit(rank=2)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
         assert all(core.device == device for core in active_result.cores)
@@ -215,22 +261,19 @@ class TestTTMSVD:  # MARK: TestTTMSVD
             rtol=1e-5,
             atol=1e-6)
 
-    def test_history_and_console_observers_use_ttm_shapes(self, capsys):
-        history = tk.decompositions.HistoryObserver()
+    def test_console_observer_uses_ttm_shapes(self, capsys):
         result = tk.decompositions.TTMSVD(
-            torch.randn(2, 3, 4, 5), output_device=None).fit(
+            torch.randn(2, 3, 4, 5), out_device=None).fit(
                 rank=2,
-                verbose=3,
-                observer=history)
+                verbose=3)
 
         output = capsys.readouterr().out
         assert 'TTM-SVD\n=======' in output
         assert 'input dim: (2, 4)' in output
         assert 'output dim: (3, 5)' in output
         assert tuple(result.cores[0].shape) == (2, 2, 3)
-        assert history.events[-2].values['shape'] == (2, 2, 3)
-        assert history.events[-1].values['shape'] == (2, 4, 5)
-        assert history.metrics is result.metrics
+        assert 'shape: (2, 2, 3)' in output
+        assert 'shape: (2, 4, 5)' in output
 
     @pytest.mark.parametrize(
         'constructor, kwargs, error_type, match',
@@ -241,27 +284,27 @@ class TestTTMSVD:  # MARK: TestTTMSVD
              '`layout` should be str type'),
             ((torch.ones(2, 3),), {'layout': 'other'}, ValueError,
              '`layout` should be either'),
-            ((torch.ones(2, 3),), {'input_dim': (2,)}, ValueError,
-             '`input_dim` and `output_dim` should be provided together'),
+            ((torch.ones(2, 3),), {'in_dim': (2,)}, ValueError,
+             '`in_dim` and `out_dim` should be provided together'),
             ((torch.ones(2, 3),),
-             {'input_dim': object(), 'output_dim': (3,)}, TypeError,
-             '`input_dim` should be int or a sequence of ints'),
+             {'in_dim': object(), 'out_dim': (3,)}, TypeError,
+             '`in_dim` should be int or a sequence of ints'),
             ((torch.ones(2, 3),),
-             {'input_dim': (2.0,), 'output_dim': (3,)}, TypeError,
-             '`input_dim` should contain only ints'),
+             {'in_dim': (2.0,), 'out_dim': (3,)}, TypeError,
+             '`in_dim` should contain only ints'),
             ((torch.ones(2, 3),),
-             {'input_dim': (0,), 'output_dim': (3,)}, ValueError,
-             '`input_dim` should contain only positive dimensions'),
+             {'in_dim': (0,), 'out_dim': (3,)}, ValueError,
+             '`in_dim` should contain only positive dimensions'),
             ((torch.ones(2, 3),),
-             {'input_dim': (2, 1), 'output_dim': (3,)}, ValueError,
-             '`input_dim` and `output_dim` should have the same length'),
+             {'in_dim': (2, 1), 'out_dim': (3,)}, ValueError,
+             '`in_dim` and `out_dim` should have the same length'),
             ((torch.ones(4, 5),),
-             {'input_dim': (2, 2), 'output_dim': (3, 2)}, ValueError,
+             {'in_dim': (2, 2), 'out_dim': (3, 2)}, ValueError,
              'The matrix shape should equal'),
             ((torch.ones(2, 3, 4),), {}, ValueError,
              'positive even number of dimensions'),
             ((torch.ones(2, 3, 4, 5),),
-             {'input_dim': (2, 3), 'output_dim': (4, 5)}, ValueError,
+             {'in_dim': (2, 3), 'out_dim': (4, 5)}, ValueError,
              'tensor shape is incompatible'),
         ],
     )
@@ -284,8 +327,6 @@ class TestTTMSVD:  # MARK: TestTTMSVD
              '`collect_metrics` should be bool type'),
             ({'verbose': 4}, ValueError,
              '`verbose` should be between 0 and 3'),
-            ({'observer': object()}, TypeError,
-             '`observer` should implement'),
         ],
     )
     def test_fit_errors(self, kwargs, error_type, match):
@@ -303,7 +344,7 @@ class TestTTMSVD:  # MARK: TestTTMSVD
             return tk.decompositions.TTMSVD(
                 value,
                 layout='grouped',
-                output_device=None).fit().contract_dense()
+                out_device=None).fit().contract_dense()
 
         with tk.svd_method('qr_svd'):
             assert torch.autograd.gradcheck(
@@ -333,8 +374,8 @@ class TestTTMSVDFunction:  # MARK: TestTTMSVDFunction
         assert collect_metrics_calls == [False, True]
         assert info['topology'] == 'ttm'
         assert info['rank'] == [2]
-        assert info['input_dim'] == [2, 4]
-        assert info['output_dim'] == [3, 5]
+        assert info['in_dim'] == [2, 4]
+        assert info['out_dim'] == [3, 5]
         assert info['metadata']['algorithm'] == 'ttm_svd'
         assert len(info['metrics']['truncations']) == 1
         assert len(cores) == len(info_cores) == 2

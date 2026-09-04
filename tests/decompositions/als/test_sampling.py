@@ -15,7 +15,7 @@ from tests.decompositions.als._oracles import (dense_local_design,
 def _mixed_canonical_cores(tensor, site, rank=2):
     """Builds standard TT cores mixed-canonical around ``site``."""
     result = tk.decompositions.TTSVD(
-        tensor, output_device=None).fit(rank=rank)
+        tensor, out_device=None).fit(rank=rank)
     cores = [result.cores[0].unsqueeze(0),
              *result.cores[1:-1],
              result.cores[-1].unsqueeze(-1)]

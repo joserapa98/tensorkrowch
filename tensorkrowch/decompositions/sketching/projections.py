@@ -203,7 +203,7 @@ class IdentityRangeProjector:
         matrix_view, normalized_axis = _normalize_matrix_axis(matrix, axis)
         runtime = _RuntimePolicy.from_tensor(
             matrix_view,
-            output_device=None,
+            out_device=None,
             synchronize_timers=self.synchronize_timers)
         timer_context = runtime.timer() if return_info else nullcontext()
         with timer_context as timer:
@@ -324,7 +324,7 @@ class RandomizedRangeProjector:
             matrix_view.shape[1], rank)
         runtime = _RuntimePolicy.from_tensor(
             matrix_view,
-            output_device=None,
+            out_device=None,
             synchronize_timers=self.synchronize_timers)
         timer_context = runtime.timer() if return_info else nullcontext()
         with timer_context as timer:

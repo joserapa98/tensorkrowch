@@ -1,4 +1,4 @@
-"""Tensor-train matrix decomposition through the TT-SVD engine."""
+"""Tensor train matrix decomposition through the TT-SVD engine."""
 
 from math import prod
 from typing import List, Optional, Sequence, Tuple, Union
@@ -8,12 +8,11 @@ import torch
 
 from tensorkrowch.decompositions.observers import (
     DecompositionEvent,
-    DecompositionObserver,
     _normalize_verbosity,
     _resolve_observer,
 )
 from tensorkrowch.decompositions.results import TTMDecomposition
-from tensorkrowch.decompositions.svd.common import _TruncationSpec
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd.tt import TTSVD
 
 
@@ -42,7 +41,7 @@ def _normalize_dim(dim: _Dimension, name: str) -> Tuple[int, ...]:
 
 
 class TTMSVD:
-    """Decomposes a fixed dense tensor into a tensor-train matrix.
+    """Decomposes a fixed dense tensor into a tensor train matrix.
 
     The tensor, its input/output dimensions and its axis layout are fixed when
     this object is created. :meth:`fit` can then be called repeatedly with
@@ -53,39 +52,37 @@ class TTMSVD:
 
     A tensorized input can use either ``layout="interleaved"`` with shape
     ``(in_1, out_1, ..., in_n, out_n)`` or ``layout="grouped"`` with shape
-    ``(in_1, ..., in_n, out_1, ..., out_n)``. When ``input_dim`` and
-    ``output_dim`` are provided, a two-dimensional tensor is instead treated
-    as a matrix with shape ``(prod(input_dim), prod(output_dim))`` and is
+    ``(in_1, ..., in_n, out_1, ..., out_n)``. When ``in_dim`` and
+    ``out_dim`` are provided, a two-dimensional tensor is instead treated
+    as a matrix with shape ``(prod(in_dim), prod(out_dim))`` and is
     tensorized internally. TTM batch dimensions are not supported.
 
     Parameters
     ----------
     tensor : torch.Tensor
         Dense tensor or matrix fixed for repeated fits.
-    input_dim : int or sequence[int], optional
+    in_dim : int or sequence[int], optional
         Input dimension of each site. It is required together with
-        ``output_dim`` for the matrix input route and otherwise can be omitted
+        ``out_dim`` for the matrix input route and otherwise can be omitted
         because dimensions are inferred from ``tensor``.
-    output_dim : int or sequence[int], optional
+    out_dim : int or sequence[int], optional
         Output dimension of each site. It should contain the same number of
-        sites as ``input_dim``.
+        sites as ``in_dim``.
     layout : {"interleaved", "grouped"}
-        Axis layout of a tensorized input. The default is ``"interleaved"``,
-        matching the historical
-        :func:`~tensorkrowch.decompositions.mat_to_mpo` convention. It does
-        not alter the two matrix axes in the explicit-dimension route.
-    output_device : str or torch.device, optional
+        Axis layout of a tensorized input. The default is ``"interleaved"``.
+        It does not alter the two matrix axes in the explicit-dimension route.
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the input device.
     """
 
     def __init__(self,
                  tensor: torch.Tensor,
-                 input_dim: _Dimension = None,
-                 output_dim: _Dimension = None,
+                 in_dim: _Dimension = None,
+                 out_dim: _Dimension = None,
                  *,
                  layout: str = 'interleaved',
-                 output_device: Optional[
+                 out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
@@ -94,47 +91,47 @@ class TTMSVD:
         if layout not in ('interleaved', 'grouped'):
             raise ValueError(
                 '`layout` should be either "interleaved" or "grouped"')
-        if (input_dim is None) != (output_dim is None):
+        if (in_dim is None) != (out_dim is None):
             raise ValueError(
-                '`input_dim` and `output_dim` should be provided together')
+                '`in_dim` and `out_dim` should be provided together')
 
         matrix_input = False
-        if input_dim is None:
+        if in_dim is None:
             if (tensor.ndim < 2) or (tensor.ndim % 2):
                 raise ValueError(
                     'A tensorized TTM input should have a positive even '
                     'number of dimensions')
             n_sites = tensor.ndim // 2
             if layout == 'interleaved':
-                normalized_input_dim = tuple(tensor.shape[::2])
-                normalized_output_dim = tuple(tensor.shape[1::2])
+                normalized_in_dim = tuple(tensor.shape[::2])
+                normalized_out_dim = tuple(tensor.shape[1::2])
             else:
-                normalized_input_dim = tuple(tensor.shape[:n_sites])
-                normalized_output_dim = tuple(tensor.shape[n_sites:])
+                normalized_in_dim = tuple(tensor.shape[:n_sites])
+                normalized_out_dim = tuple(tensor.shape[n_sites:])
             if any(value < 1
-                   for value in normalized_input_dim + normalized_output_dim):
+                   for value in normalized_in_dim + normalized_out_dim):
                 raise ValueError(
                     'TTM input and output dimensions should be positive')
             tensorized = tensor
         else:
-            normalized_input_dim = _normalize_dim(input_dim, 'input_dim')
-            normalized_output_dim = _normalize_dim(output_dim, 'output_dim')
-            if len(normalized_input_dim) != len(normalized_output_dim):
+            normalized_in_dim = _normalize_dim(in_dim, 'in_dim')
+            normalized_out_dim = _normalize_dim(out_dim, 'out_dim')
+            if len(normalized_in_dim) != len(normalized_out_dim):
                 raise ValueError(
-                    '`input_dim` and `output_dim` should have the same length')
-            n_sites = len(normalized_input_dim)
+                    '`in_dim` and `out_dim` should have the same length')
+            n_sites = len(normalized_in_dim)
 
             if tensor.ndim == 2:
                 expected_shape = (
-                    prod(normalized_input_dim),
-                    prod(normalized_output_dim),
+                    prod(normalized_in_dim),
+                    prod(normalized_out_dim),
                 )
                 if tuple(tensor.shape) != expected_shape:
                     raise ValueError(
                         'The matrix shape should equal '
-                        '(prod(input_dim), prod(output_dim))')
+                        '(prod(in_dim), prod(out_dim))')
                 tensorized = tensor.reshape(
-                    *normalized_input_dim, *normalized_output_dim)
+                    *normalized_in_dim, *normalized_out_dim)
                 matrix_input = True
             else:
                 if tensor.ndim != (2 * n_sites):
@@ -143,16 +140,16 @@ class TTMSVD:
                         'per site')
                 expected_shape = (
                     tuple(value
-                          for pair in zip(normalized_input_dim,
-                                          normalized_output_dim)
+                          for pair in zip(normalized_in_dim,
+                                          normalized_out_dim)
                           for value in pair)
                     if layout == 'interleaved'
-                    else normalized_input_dim + normalized_output_dim
+                    else normalized_in_dim + normalized_out_dim
                 )
                 if tuple(tensor.shape) != expected_shape:
                     raise ValueError(
-                        'The tensor shape is incompatible with `input_dim`, '
-                        '`output_dim` and `layout`')
+                        'The tensor shape is incompatible with `in_dim`, '
+                        '`out_dim` and `layout`')
                 tensorized = tensor
 
         interleaved = self._interleave_axes(
@@ -160,19 +157,19 @@ class TTMSVD:
             n_sites=n_sites,
             layout=('grouped' if matrix_input else layout))
         fused_dim = tuple(
-            input_value * output_value
-            for input_value, output_value
-            in zip(normalized_input_dim, normalized_output_dim))
+            in_value * out_value
+            for in_value, out_value
+            in zip(normalized_in_dim, normalized_out_dim))
         fused_tensor = interleaved.reshape(*fused_dim)
 
         self._tensor = tensor
-        self._input_dim = normalized_input_dim
-        self._output_dim = normalized_output_dim
+        self._in_dim = normalized_in_dim
+        self._out_dim = normalized_out_dim
         self._layout = layout
         self._matrix_input = matrix_input
         self._engine = TTSVD(
             fused_tensor,
-            output_device=output_device)
+            out_device=out_device)
 
     @property
     def tensor(self) -> torch.Tensor:
@@ -180,14 +177,14 @@ class TTMSVD:
         return self._tensor
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Input dimension associated with every TTM site."""
-        return self._input_dim
+        return self._in_dim
 
     @property
-    def output_dim(self) -> Tuple[int, ...]:
+    def out_dim(self) -> Tuple[int, ...]:
         """Output dimension associated with every TTM site."""
-        return self._output_dim
+        return self._out_dim
 
     @property
     def layout(self) -> str:
@@ -207,29 +204,29 @@ class TTMSVD:
             for axis in (site, n_sites + site))
         return tensor.permute(axes)
 
-    def _unfuse_input_output_axes(
+    def _unfuse_in_out_axes(
             self, cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
         """Reopens fused TT input axes into TTM input/output axes."""
         if len(cores) == 1:
-            return [cores[0].reshape(self.input_dim[0], self.output_dim[0])]
+            return [cores[0].reshape(self.in_dim[0], self.out_dim[0])]
 
         ttm_cores = []
         first = cores[0].reshape(
-            self.input_dim[0], self.output_dim[0], cores[0].shape[-1])
+            self.in_dim[0], self.out_dim[0], cores[0].shape[-1])
         ttm_cores.append(first.permute(0, 2, 1))
 
         for site, core in enumerate(cores[1:-1], 1):
             core = core.reshape(
                 core.shape[0],
-                self.input_dim[site],
-                self.output_dim[site],
+                self.in_dim[site],
+                self.out_dim[site],
                 core.shape[-1])
             ttm_cores.append(core.permute(0, 1, 3, 2))
 
         last = cores[-1].reshape(
             cores[-1].shape[0],
-            self.input_dim[-1],
-            self.output_dim[-1])
+            self.in_dim[-1],
+            self.out_dim[-1])
         ttm_cores.append(last)
         return ttm_cores
 
@@ -241,9 +238,7 @@ class TTMSVD:
             cum_percentage: Optional[float] = None,
             renormalize: bool = False,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            observer: Optional[
-                DecompositionObserver] = None) -> TTMDecomposition:
+            verbose: Union[bool, int] = 0) -> TTMDecomposition:
         r"""Runs TTM-SVD with a shared truncation policy at every cut.
 
         The active exact SVD backend is selected through
@@ -260,7 +255,7 @@ class TTMSVD:
         The fixed tensor is normalized to interleaved shape
         ``(in_1, out_1, ..., in_n, out_n)``. A grouped tensor has initial shape
         ``(in_1, ..., in_n, out_1, ..., out_n)`` and is interleaved internally.
-        A matrix has shape ``(prod(input_dim), prod(output_dim))`` and requires
+        A matrix has shape ``(prod(in_dim), prod(out_dim))`` and requires
         explicit input/output dimensions. Each local pair is then fused and
         decomposed through TT-SVD without an additional factorization.
 
@@ -307,7 +302,7 @@ class TTMSVD:
             and synchronized timings in ``result.metrics``. The default is
             ``False`` to avoid diagnostic norm reductions, records and device
             synchronizations. Metrics are always collected when console output
-            or an ``observer`` is requested.
+            is requested.
         verbose : bool or int
             Console verbosity level:
 
@@ -317,16 +312,12 @@ class TTMSVD:
               timing information;
             - ``3``: level 2 output followed by every final core.
 
-        observer : DecompositionObserver, optional
-            Additional consumer of structured decomposition events. It
-            receives events independently of the selected console verbosity.
-
         Returns
         -------
         TTMDecomposition
             Lightweight result containing cores and ranks. Its structured
-            metrics are empty unless ``collect_metrics=True``, ``verbose>0``
-            or an ``observer`` is provided.
+            metrics are empty unless ``collect_metrics=True`` or
+            ``verbose>0``.
 
         Examples
         --------
@@ -352,9 +343,9 @@ class TTMSVD:
             rtol=rtol,
             cum_percentage=cum_percentage)
         verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity) or (observer is not None)
+        emit_events = bool(verbosity)
         fit_observer = (
-            _resolve_observer(verbosity, observer) if emit_events else None)
+            _resolve_observer(verbosity, None) if emit_events else None)
         collect_metrics = collect_metrics or emit_events
 
         if fit_observer is not None:
@@ -362,9 +353,9 @@ class TTMSVD:
                 name='start',
                 phase='TTM-SVD',
                 values={
-                    'sites': len(self.input_dim),
-                    'input_dim': self.input_dim,
-                    'output_dim': self.output_dim,
+                    'sites': len(self.in_dim),
+                    'in_dim': self.in_dim,
+                    'out_dim': self.out_dim,
                     'layout': self.layout,
                     'matrix_input': self._matrix_input,
                     'renormalize': renormalize,
@@ -378,7 +369,7 @@ class TTMSVD:
             cum_percentage=cum_percentage,
             renormalize=renormalize,
             collect_metrics=collect_metrics)
-        cores = self._unfuse_input_output_axes(tt_result.cores)
+        cores = self._unfuse_in_out_axes(tt_result.cores)
         result = TTMDecomposition(
             cores=cores,
             metrics=tt_result.metrics,
@@ -399,7 +390,7 @@ class TTMSVD:
                     site=site,
                     elapsed=cut_timing.elapsed,
                     values={
-                        'total_sites': len(self.input_dim) - 1,
+                        'total_sites': len(self.in_dim) - 1,
                         'full_rank': record.full_rank,
                         'selected_rank': record.selected_rank,
                         'absolute_error': record.local_absolute_error,
@@ -427,8 +418,8 @@ class TTMSVD:
 
 
 def ttm_svd(tensor: torch.Tensor,
-            input_dim: _Dimension = None,
-            output_dim: _Dimension = None,
+            in_dim: _Dimension = None,
+            out_dim: _Dimension = None,
             *,
             layout: str = 'interleaved',
             rank: Optional[int] = None,
@@ -437,7 +428,7 @@ def ttm_svd(tensor: torch.Tensor,
             rtol: Optional[float] = None,
             cum_percentage: Optional[float] = None,
             renormalize: bool = False,
-            output_device: Optional[Union[str, torch.device]] = 'cpu',
+            out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
             return_info: bool = False):
     r"""Decomposes a dense tensor or matrix into TTM cores.
@@ -452,7 +443,7 @@ def ttm_svd(tensor: torch.Tensor,
     ``(in_1, out_1, ..., in_n, out_n)`` or grouped shape
     ``(in_1, ..., in_n, out_1, ..., out_n)``, selected through ``layout``. A
     two-dimensional matrix can be split into several sites by supplying
-    ``input_dim`` and ``output_dim``; their products should match its two axes.
+    ``in_dim`` and ``out_dim``; their products should match its two axes.
     All routes are normalized internally to the same interleaved order.
 
     For multiple sites, the first core has shape
@@ -466,10 +457,10 @@ def ttm_svd(tensor: torch.Tensor,
     ----------
     tensor : torch.Tensor
         Dense tensor or matrix to decompose.
-    input_dim : int or sequence[int], optional
-        Input dimension per site. Provide it together with ``output_dim`` to
+    in_dim : int or sequence[int], optional
+        Input dimension per site. Provide it together with ``out_dim`` to
         tensorize a matrix, or omit both arguments to infer dimensions.
-    output_dim : int or sequence[int], optional
+    out_dim : int or sequence[int], optional
         Output dimension per site.
     layout : {"interleaved", "grouped"}
         Axis layout of a tensorized input. The default is ``"interleaved"``.
@@ -501,7 +492,7 @@ def ttm_svd(tensor: torch.Tensor,
         scale logarithmically and evenly redistributes the complete scale over
         the final cores. Absolute criteria and reported errors preserve the
         scale of the original tensor.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. If ``None``, they remain on
         the input device. The default is ``"cpu"``.
     verbose : bool or int
@@ -538,7 +529,7 @@ def ttm_svd(tensor: torch.Tensor,
 
     >>> matrix = torch.arange(144.).reshape(12, 12)
     >>> cores = ttm_svd(
-    ...     matrix, input_dim=(3, 4), output_dim=(2, 6))
+    ...     matrix, in_dim=(3, 4), out_dim=(2, 6))
     >>> [tuple(core.shape) for core in cores]
     [(3, 6, 2), (6, 4, 6)]
     """
@@ -546,10 +537,10 @@ def ttm_svd(tensor: torch.Tensor,
         raise TypeError('`return_info` should be bool type')
     result = TTMSVD(
         tensor=tensor,
-        input_dim=input_dim,
-        output_dim=output_dim,
+        in_dim=in_dim,
+        out_dim=out_dim,
         layout=layout,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
@@ -652,7 +643,7 @@ def mat_to_mpo(mat: torch.Tensor,
         rtol=rtol,
         cum_percentage=cum_percentage,
         renormalize=renormalize,
-        output_device=None,
+        out_device=None,
         verbose=verbose,
         return_info=return_info)
 

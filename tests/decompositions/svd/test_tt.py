@@ -59,6 +59,33 @@ class TestTTSVD:  # MARK: TestTTSVD
             result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    @pytest.mark.parametrize('renormalize', [False, True])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.complex64])
+    @pytest.mark.parametrize('n_batches', [0, 1, 2])
+    def test_exact_dense_oracle_with_batches(
+            self, svd_method, renormalize, dtype, n_batches):
+        generator = torch.Generator().manual_seed(72)
+        batch_shape = (2, 3)[:n_batches]
+        in_dim = (2, 3, 4)
+        tensor = torch.randn(
+            *batch_shape,
+            *in_dim,
+            dtype=dtype,
+            generator=generator) * 1e-2
+
+        with tk.svd_method(svd_method):
+            result = tk.decompositions.TTSVD(
+                tensor,
+                n_batches=n_batches,
+                out_device=None).fit(renormalize=renormalize)
+
+        assert result.batch_shape == batch_shape
+        assert result.in_dim == in_dim
+        assert result.dtype == dtype
+        assert torch.allclose(
+            result.contract_dense(), tensor, rtol=5e-5, atol=1e-7)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
     def test_low_rank_error_has_gaussian_noise_scale(self, svd_method):
         _, tensor = _exact_tt()
         generator = torch.Generator().manual_seed(71)
@@ -379,14 +406,16 @@ class TestTTSVD:  # MARK: TestTTSVD
         assert result.metrics.errors[0].relative == 0
         assert result.metrics.timings[0].children == ()
 
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
-    def test_out_device_policy(self, device_name):
+    def test_out_device_policy(self, device_name, svd_method):
         device = _device(device_name)
         tensor = torch.randn(2, 3, 4, device=device)
 
-        cpu_result = tk.decompositions.TTSVD(tensor).fit(rank=2)
-        active_result = tk.decompositions.TTSVD(
-            tensor, out_device=None).fit(rank=2)
+        with tk.svd_method(svd_method):
+            cpu_result = tk.decompositions.TTSVD(tensor).fit(rank=2)
+            active_result = tk.decompositions.TTSVD(
+                tensor, out_device=None).fit(rank=2)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
         assert all(core.device == device for core in active_result.cores)

@@ -348,15 +348,17 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert torch.allclose(
             result.contract_dense(), tensor, rtol=1e-10, atol=1e-12)
 
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
-    def test_out_device_policy(self, device_name):
+    def test_out_device_policy(self, device_name, svd_method):
         device = _device(device_name)
         tensor = torch.randn(2, 3, 4, 2, device=device)
 
-        cpu_result = tk.decompositions.TRSVD(tensor).fit(rank=2)
-        active_result = tk.decompositions.TRSVD(
-            tensor,
-            out_device=None).fit(rank=2)
+        with tk.svd_method(svd_method):
+            cpu_result = tk.decompositions.TRSVD(tensor).fit(rank=2)
+            active_result = tk.decompositions.TRSVD(
+                tensor,
+                out_device=None).fit(rank=2)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
         assert all(core.device == device for core in active_result.cores)

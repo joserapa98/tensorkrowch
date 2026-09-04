@@ -2709,6 +2709,48 @@ class TestSplitRQ:  # MARK: TestSplitRQ
 
 class TestSVD:  # MARK: TestSVD
 
+    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('operation', ['split', 'svd', 'svdr'])
+    def test_configured_svd_backend(self, operation, svd_method):
+        generator = torch.Generator().manual_seed(1)
+        if operation == 'split':
+            tensor = torch.randn(
+                5, 7, dtype=torch.float64, generator=generator)
+            node = tk.Node(
+                tensor=tensor,
+                axes_names=('left', 'right'))
+            with tk.svd_method(svd_method):
+                node1, node2 = node.split(
+                    node1_axes=['left'],
+                    node2_axes=['right'])
+        else:
+            tensor1 = torch.randn(
+                5, 3, dtype=torch.float64, generator=generator)
+            tensor2 = torch.randn(
+                3, 7, dtype=torch.float64, generator=generator)
+            tensor = tensor1 @ tensor2
+            node1 = tk.Node(
+                tensor=tensor1,
+                axes_names=('left', 'rank'))
+            node2 = tk.Node(
+                tensor=tensor2,
+                axes_names=('rank', 'right'),
+                network=node1.network)
+            edge = node1['rank'] ^ node2['rank']
+            with tk.svd_method(svd_method):
+                if operation == 'svd':
+                    node1, node2 = tk.svd(edge)
+                else:
+                    with torch.random.fork_rng():
+                        torch.manual_seed(2)
+                        node1, node2 = tk.svdr(edge)
+
+        assert torch.allclose(
+            node1.tensor @ node2.tensor,
+            tensor,
+            rtol=1e-10,
+            atol=1e-12)
+
     @pytest.fixture
     def setup(self):
         net = tk.TensorNetwork()

@@ -177,17 +177,20 @@ class TestTTRSSPublicWorkflow:  # MARK: TestTTRSSPublicWorkflow
             {'rtol': 0.0},
             {'cum_percentage': 1.0},
         ])
-    def test_modern_truncation_options_reach_truncated_svd(self, truncation):
+    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    def test_modern_truncation_options_reach_truncated_svd(
+            self, truncation, svd_method):
         function, embedding, samples, domain = _binary_problem()
-        cores = tk.decompositions.tt_rss(
-            function=function,
-            embedding=embedding,
-            sketch_samples=samples,
-            domain=domain,
-            rank=2,
-            generator=torch.Generator().manual_seed(705),
-            verbose=False,
-            **truncation)
+        with tk.svd_method(svd_method):
+            cores = tk.decompositions.tt_rss(
+                function=function,
+                embedding=embedding,
+                sketch_samples=samples,
+                domain=domain,
+                rank=2,
+                generator=torch.Generator().manual_seed(705),
+                verbose=False,
+                **truncation)
 
         assert all(torch.isfinite(core).all() for core in cores)
         assert all(max(core.shape) <= 2 for core in cores)

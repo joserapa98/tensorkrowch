@@ -117,7 +117,7 @@ class TRSVD:
 
     @staticmethod
     def _resolve_rank_policy(rank: _Rank) -> _TRRankPolicy:
-        """Normalizes the shared or discovery rank policy."""
+        """Builds the TR rank policy from a validated shared rank."""
 
         if rank is None:
             return _TRRankPolicy(
@@ -126,10 +126,6 @@ class TRSVD:
                 initial_cap=None,
                 rank_cap=None)
 
-        if isinstance(rank, bool) or not isinstance(rank, int):
-            raise TypeError('`rank` should be int type')
-        if rank < 1:
-            raise ValueError('`rank` should be a positive integer')
         return _TRRankPolicy(
             mode='shared',
             requested=rank,
@@ -162,7 +158,6 @@ class TRSVD:
             self,
             subchain: torch.Tensor,
             in_dim: Tuple[int, ...],
-            rank: Optional[int],
             truncation: _TruncationSpec,
             renormalize: bool,
             collect_metrics: bool) -> Tuple[List[torch.Tensor],
@@ -182,11 +177,7 @@ class TRSVD:
             fused,
             out_device=self._runtime.out_device)
         result = engine.fit(
-            rank=rank,
-            cutoff=truncation.cutoff,
-            atol=truncation.atol,
-            rtol=truncation.rtol,
-            cum_percentage=truncation.cum_percentage,
+            **truncation.as_kwargs(),
             renormalize=renormalize,
             collect_metrics=collect_metrics)
 
@@ -333,6 +324,7 @@ class TRSVD:
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
         truncation = _TruncationSpec(
+            rank=rank,
             cutoff=cutoff,
             atol=atol,
             rtol=rtol,
@@ -341,7 +333,7 @@ class TRSVD:
             center = self.center
         else:
             self._validate_center(center, self.tensor.ndim)
-        rank_policy = self._resolve_rank_policy(rank=rank)
+        rank_policy = self._resolve_rank_policy(rank=truncation.rank)
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
@@ -407,14 +399,12 @@ class TRSVD:
             left_cores, left_result = self._decompose_subchain(
                 subchain=left_subchain,
                 in_dim=in_dim[:center],
-                rank=rank_policy.rank_cap,
                 truncation=truncation,
                 renormalize=renormalize,
                 collect_metrics=collect_metrics)
             right_cores, right_result = self._decompose_subchain(
                 subchain=right_subchain,
                 in_dim=in_dim[center:],
-                rank=rank_policy.rank_cap,
                 truncation=truncation,
                 renormalize=renormalize,
                 collect_metrics=collect_metrics)

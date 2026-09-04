@@ -35,7 +35,9 @@ class _TruncationSpec:
 
     def __post_init__(self) -> None:
         if self.rank is not None:
-            if (not isinstance(self.rank, int)) or (self.rank < 1):
+            if isinstance(self.rank, bool) or not isinstance(self.rank, int):
+                raise TypeError('`rank` should be int type')
+            if self.rank < 1:
                 raise ValueError('`rank` should be a positive integer')
         for name in ('cutoff', 'atol'):
             value = getattr(self, name)

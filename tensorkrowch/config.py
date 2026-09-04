@@ -1,5 +1,10 @@
 """
-Runtime configuration for TensorKrowch numerical backends.
+This script contains:
+
+    SVD backend configuration:
+        * get_svd_method
+        * set_svd_method
+        * svd_method
 
 The initial SVD backend can be selected with the environment variable
 ``TENSORKROWCH_SVD_METHOD``. Runtime configuration takes precedence over that

@@ -1,4 +1,10 @@
-"""Internal truncation policies shared by tensor decompositions."""
+"""
+This script contains:
+
+    Internal truncation tools:
+        * _rescale_absolute_tolerance
+        * _TruncationSpec
+"""
 
 from dataclasses import dataclass
 from math import exp, log

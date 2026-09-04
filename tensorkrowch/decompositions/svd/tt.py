@@ -1,4 +1,17 @@
-"""Tensor train decomposition by consecutive singular value decompositions."""
+"""
+This script contains:
+
+    Internal TT-SVD state classes:
+        * _TTSVDErrorState
+        * _TTSVDFitContext
+        * _TTSVDSplit
+
+    Class for TT-SVD decompositions:
+        * TTSVD
+
+    TT-SVD function:
+        * tt_svd
+"""
 
 from contextlib import nullcontext
 from dataclasses import dataclass

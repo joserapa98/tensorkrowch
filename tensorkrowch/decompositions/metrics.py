@@ -1,4 +1,15 @@
-"""Structured metrics returned by tensor decomposition algorithms."""
+"""
+This script contains:
+
+    Metric records:
+        * ErrorRecord
+        * TruncationRecord
+        * TimingRecord
+        * FidelityRecord
+
+    Class for decomposition metrics:
+        * DecompositionMetrics
+"""
 
 from dataclasses import dataclass, field, fields, is_dataclass
 from math import isfinite

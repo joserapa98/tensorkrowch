@@ -1,4 +1,12 @@
-"""Lightweight result objects for tensor decompositions."""
+"""
+This script contains:
+
+    Class for tensor decomposition results:
+        * TensorDecomposition:
+            + TTDecomposition
+            + TRDecomposition
+            + TTMDecomposition
+"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, replace

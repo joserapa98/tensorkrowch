@@ -1,4 +1,12 @@
-"""Tensor train matrix decomposition through the TT-SVD engine."""
+"""
+This script contains:
+
+    Class for TTM-SVD decompositions:
+        * TTMSVD
+
+    TTM-SVD function:
+        * ttm_svd
+"""
 
 from math import prod
 from typing import List, Optional, Sequence, Tuple, Union

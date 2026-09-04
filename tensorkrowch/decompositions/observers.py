@@ -1,4 +1,20 @@
-"""Structured events and observers for tensor decompositions."""
+"""
+This script contains:
+
+    Class for decomposition events:
+        * DecompositionEvent
+
+    Classes for decomposition observers:
+        * DecompositionObserver
+        * NullObserver
+        * HistoryObserver
+        * ConsoleObserver
+        * _CompositeObserver
+
+    Observer utilities:
+        * _normalize_verbosity
+        * _resolve_observer
+"""
 
 from dataclasses import dataclass, field
 import sys

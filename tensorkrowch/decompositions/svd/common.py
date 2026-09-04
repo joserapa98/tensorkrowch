@@ -1,4 +1,10 @@
-"""Common numerical helpers used by SVD decomposition drivers."""
+"""
+This script contains:
+
+    Internal SVD numerical helpers:
+        * _log_vector_norm
+        * _normalize_vector
+"""
 
 from typing import Optional
 

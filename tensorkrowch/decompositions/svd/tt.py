@@ -30,8 +30,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.svd.common import (_log_vector_norm,
-                                                    _normalize_vector)
+from tensorkrowch.decompositions.svd.utils import (_log_vector_norm,
+                                                   _normalize_vector)
 from tensorkrowch.utils import truncated_svd
 
 

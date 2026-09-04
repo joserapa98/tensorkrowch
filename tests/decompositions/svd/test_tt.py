@@ -8,7 +8,7 @@ import torch
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tt as tt_module
-from tensorkrowch.decompositions.svd.common import _log_vector_norm
+from tensorkrowch.decompositions.svd.utils import _log_vector_norm
 
 
 SVD_METHODS = ['svd', 'qr_svd']

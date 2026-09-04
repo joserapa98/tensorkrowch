@@ -1,9 +1,20 @@
-"""Tensor ring decomposition through an interior SVD bipartition."""
+"""
+This script contains:
+
+    Internal TR-SVD rank policy:
+        * _TRRankPolicy
+
+    Class for TR-SVD decompositions:
+        * TRSVD
+
+    TR-SVD function:
+        * tr_svd
+"""
 
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from math import prod
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -12,7 +23,6 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TimingRecord,
                                                  TruncationRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
@@ -21,50 +31,17 @@ from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd.tt import TTSVD
 
 
-_Rank = Optional[Union[int, Sequence[int]]]
+_Rank = Optional[int]
 
 
 @dataclass(frozen=True)
 class _TRRankPolicy:
-    """Stores the combined and per-subchain rank constraints."""
+    """Stores the shared rank constraints for one TR-SVD fit."""
 
     mode: str
-    requested: Optional[Union[int, Tuple[int, ...]]]
+    requested: Optional[int]
     initial_cap: Optional[int]
-    cycle_cap: Optional[int]
-    center_cap: Optional[int]
-    left_caps: Tuple[Optional[int], ...]
-    right_caps: Tuple[Optional[int], ...]
-
-
-class _RankCappedTTSVD(TTSVD):
-    """Applies private per-cut rank caps through the shared TT-SVD sweep."""
-
-    def __init__(self,
-                 tensor: torch.Tensor,
-                 rank_caps: Sequence[int],
-                 *,
-                 out_device: Optional[
-                     Union[str, torch.device]] = 'cpu') -> None:
-        self._rank_caps = tuple(rank_caps)
-        if len(self._rank_caps) != (tensor.ndim - 1):
-            raise ValueError(
-                '`rank_caps` should contain one value per TT cut')
-        super().__init__(tensor, out_device=out_device)
-
-    def _split_site(self, residual, site, previous_rank, context):
-        base_truncation = context.truncation
-        context.truncation = replace(
-            base_truncation,
-            rank=self._rank_caps[site])
-        try:
-            return super()._split_site(
-                residual=residual,
-                site=site,
-                previous_rank=previous_rank,
-                context=context)
-        finally:
-            context.truncation = base_truncation
+    rank_cap: Optional[int]
 
 
 class TRSVD:
@@ -90,7 +67,7 @@ class TRSVD:
     center : int, optional
         Interior cut between sites ``center - 1`` and ``center``. It should
         satisfy ``1 <= center < tensor.ndim``. The default is the middle cut.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the tensor's device.
     """
@@ -99,7 +76,7 @@ class TRSVD:
                  tensor: torch.Tensor,
                  center: Optional[int] = None,
                  *,
-                 output_device: Optional[
+                 out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
@@ -110,13 +87,14 @@ class TRSVD:
 
         if center is None:
             center = tensor.ndim // 2
-        self._validate_center(center, tensor.ndim)
+        else:
+            self._validate_center(center, tensor.ndim)
 
         self._tensor = tensor
         self._center = center
         self._runtime = _RuntimePolicy.from_tensor(
             tensor,
-            out_device=output_device)
+            out_device=out_device)
 
     @staticmethod
     def _validate_center(center: int, n_sites: int) -> None:
@@ -138,81 +116,38 @@ class TRSVD:
         return self._center
 
     @staticmethod
-    def _resolve_rank_policy(rank: _Rank,
-                             n_sites: int,
-                             center: int) -> _TRRankPolicy:
-        """Normalizes shared, explicit and discovery rank policies."""
-        left_count = max(0, center - 1)
-        right_count = max(0, n_sites - center - 1)
+    def _resolve_rank_policy(rank: _Rank) -> _TRRankPolicy:
+        """Normalizes the shared or discovery rank policy."""
 
         if rank is None:
             return _TRRankPolicy(
                 mode='discovery',
                 requested=None,
                 initial_cap=None,
-                cycle_cap=None,
-                center_cap=None,
-                left_caps=(None,) * left_count,
-                right_caps=(None,) * right_count)
+                rank_cap=None)
 
-        if isinstance(rank, bool):
-            raise TypeError('`rank` should be int or a sequence of ints')
-        if isinstance(rank, int):
-            if rank < 1:
-                raise ValueError('`rank` should be a positive integer')
-            return _TRRankPolicy(
-                mode='shared',
-                requested=rank,
-                initial_cap=rank * rank,
-                cycle_cap=rank,
-                center_cap=rank,
-                left_caps=(rank,) * left_count,
-                right_caps=(rank,) * right_count)
-
-        if isinstance(rank, Sequence) and not isinstance(rank, (str, bytes)):
-            values = tuple(rank)
-            if len(values) != n_sites:
-                raise ValueError(
-                    'A TR `rank` sequence should contain one value per site')
-            if any(isinstance(value, bool) or not isinstance(value, int)
-                   for value in values):
-                raise TypeError('A TR `rank` sequence should contain only ints')
-            if any(value < 1 for value in values):
-                raise ValueError(
-                    'A TR `rank` sequence should contain positive values')
-            cycle_rank = values[-1]
-            center_rank = values[center - 1]
-            return _TRRankPolicy(
-                mode='sequence',
-                requested=values,
-                initial_cap=cycle_rank * center_rank,
-                cycle_cap=cycle_rank,
-                center_cap=center_rank,
-                left_caps=values[:(center - 1)],
-                right_caps=values[center:(n_sites - 1)])
-
-        raise TypeError('`rank` should be int or a sequence of ints')
+        if isinstance(rank, bool) or not isinstance(rank, int):
+            raise TypeError('`rank` should be int type')
+        if rank < 1:
+            raise ValueError('`rank` should be a positive integer')
+        return _TRRankPolicy(
+            mode='shared',
+            requested=rank,
+            initial_cap=rank * rank,
+            rank_cap=rank)
 
     @staticmethod
     def _split_cycle_rank(selected_rank: int,
-                          cycle_cap: Optional[int],
-                          center_cap: Optional[int]) -> Tuple[int, int]:
+                          rank_cap: Optional[int]) -> Tuple[int, int]:
         """Finds the smallest admissible cyclic/interior rank capacity."""
-        if selected_rank < 1:
-            raise ValueError('`selected_rank` should be positive')
-        if cycle_cap is None:
-            cycle_cap = selected_rank
-        if center_cap is None:
-            center_cap = selected_rank
-        if (cycle_cap * center_cap) < selected_rank:
-            raise ValueError(
-                'The cyclic and center rank caps cannot hold the selected rank')
+        if rank_cap is None:
+            rank_cap = selected_rank
 
         candidates = []
-        for cycle_rank in range(1, cycle_cap + 1):
+        for cycle_rank in range(1, rank_cap + 1):
             center_rank = (
                 selected_rank + cycle_rank - 1) // cycle_rank
-            if center_rank <= center_cap:
+            if center_rank <= rank_cap:
                 capacity = cycle_rank * center_rank
                 candidates.append((
                     capacity,
@@ -220,48 +155,34 @@ class TRSVD:
                     cycle_rank,
                     center_rank))
 
-        if not candidates:
-            raise ValueError(
-                'The cyclic and center rank caps cannot hold the selected rank')
         _, _, cycle_rank, center_rank = min(candidates)
         return cycle_rank, center_rank
 
     def _decompose_subchain(
             self,
-            block: torch.Tensor,
-            input_dim: Tuple[int, ...],
-            rank_caps: Tuple[Optional[int], ...],
+            subchain: torch.Tensor,
+            in_dim: Tuple[int, ...],
+            rank: Optional[int],
             truncation: _TruncationSpec,
             renormalize: bool,
             collect_metrics: bool) -> Tuple[List[torch.Tensor],
-                                             TTDecomposition]:
-        """Applies TT-SVD while preserving a block's two boundary ranks."""
-        left_rank = block.shape[0]
-        right_rank = block.shape[-1]
-        if len(input_dim) == 1:
-            fused = block.reshape(left_rank * input_dim[0] * right_rank)
-        else:
-            fused = block.reshape(
-                left_rank * input_dim[0],
-                *input_dim[1:-1],
-                input_dim[-1] * right_rank)
+                                             Optional[TTDecomposition]]:
+        """Applies TT-SVD while preserving a subchain's boundary ranks."""
+        left_rank = subchain.shape[0]
+        right_rank = subchain.shape[-1]
+        if len(in_dim) == 1:
+            core = subchain.reshape(left_rank, in_dim[0], right_rank)
+            return [self._runtime.finalize(core)], None
 
-        if rank_caps:
-            if any(value is None for value in rank_caps):
-                engine = TTSVD(
-                    fused,
-                    out_device=self._runtime.out_device)
-            else:
-                engine = _RankCappedTTSVD(
-                    fused,
-                    rank_caps=rank_caps,
-                    out_device=self._runtime.out_device)
-        else:
-            engine = TTSVD(
-                fused,
-                out_device=self._runtime.out_device)
+        fused = subchain.reshape(
+            left_rank * in_dim[0],
+            *in_dim[1:-1],
+            in_dim[-1] * right_rank)
+        engine = TTSVD(
+            fused,
+            out_device=self._runtime.out_device)
         result = engine.fit(
-            rank=None,
+            rank=rank,
             cutoff=truncation.cutoff,
             atol=truncation.atol,
             rtol=truncation.rtol,
@@ -269,16 +190,11 @@ class TRSVD:
             renormalize=renormalize,
             collect_metrics=collect_metrics)
 
-        if len(input_dim) == 1:
-            cores = [result.cores[0].reshape(
-                left_rank, input_dim[0], right_rank)]
-            return cores, result
-
         cores = list(result.cores)
         cores[0] = cores[0].reshape(
-            left_rank, input_dim[0], cores[0].shape[-1])
+            left_rank, in_dim[0], cores[0].shape[-1])
         cores[-1] = cores[-1].reshape(
-            cores[-1].shape[0], input_dim[-1], right_rank)
+            cores[-1].shape[0], in_dim[-1], right_rank)
         return cores, result
 
     @staticmethod
@@ -312,17 +228,15 @@ class TRSVD:
         return replace(timing, name=name, children=children)
 
     def fit(self,
-            rank: _Rank = None,
             center: Optional[int] = None,
+            rank: _Rank = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
             rtol: Optional[float] = None,
             cum_percentage: Optional[float] = None,
             renormalize: bool = False,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            observer: Optional[
-                DecompositionObserver] = None) -> TRDecomposition:
+            verbose: Union[bool, int] = 0) -> TRDecomposition:
         r"""Runs TR-SVD from an interior bipartition of the fixed tensor.
 
         The active exact SVD backend is selected through
@@ -333,14 +247,13 @@ class TRSVD:
         TR-SVD truncations are not all orthogonal in one common scale.
 
         If ``rank`` is an integer, it is a shared upper bound for every TR
-        rank and its square bounds the initial bipartition. A sequence should
-        contain one upper bound for the right rank of each site:
-        ``rank[-1]`` caps the cyclic rank and ``rank[center - 1]`` caps the
-        selected interior cut. With ``None``, ranks are discovered from the
-        selected SVD dimensions. The selected rank is split with the smallest
-        admissible product and the most balanced pair breaks ties. Any extra
-        capacity required by the caps is padded only with structural zeros and
-        recorded in ``result.metadata``.
+        rank and its square bounds the initial bipartition. Local truncation
+        criteria may therefore select a different effective rank at each
+        site. With ``None``, ranks are discovered from the selected SVD
+        dimensions. The selected rank is split with the smallest admissible
+        product and the most balanced pair breaks ties. Any extra capacity
+        required by the cap is padded only with structural zeros and recorded
+        in ``result.metadata``.
 
         The fixed tensor should have shape ``(d_1, ..., d_n)``, with one input
         dimension per TR site. The returned cores all have shape
@@ -350,11 +263,11 @@ class TRSVD:
 
         Parameters
         ----------
-        rank : int, optional
-            Number of singular values to keep.
         center : int, optional
             Interior cut used for this fit. If omitted, the center fixed at
             construction is used.
+        rank : int, optional
+            Number of singular values to keep.
         cutoff : float, optional
             Minimum singular value to keep. It must be non-negative. Singular
             values ``<= cutoff`` are removed.
@@ -385,7 +298,7 @@ class TRSVD:
             synchronized timings in ``result.metrics``. The default is
             ``False`` to avoid diagnostic norm reductions, records and device
             synchronizations. Metrics are always collected when console output
-            or an ``observer`` is requested.
+            is requested.
         verbose : bool or int
             Console verbosity level:
 
@@ -395,16 +308,12 @@ class TRSVD:
               timing information;
             - ``3``: level 2 output followed by every final core.
 
-        observer : DecompositionObserver, optional
-            Additional consumer of structured decomposition events. It
-            receives events independently of the selected console verbosity.
-
         Returns
         -------
         TRDecomposition
             Lightweight result containing cores and ranks. Its structured
-            metrics are empty unless ``collect_metrics=True``, ``verbose>0``
-            or an ``observer`` is provided.
+            metrics are empty unless ``collect_metrics=True`` or
+            ``verbose>0``.
 
         Examples
         --------
@@ -430,25 +339,23 @@ class TRSVD:
             cum_percentage=cum_percentage)
         if center is None:
             center = self.center
-        self._validate_center(center, self.tensor.ndim)
-        rank_policy = self._resolve_rank_policy(
-            rank=rank,
-            n_sites=self.tensor.ndim,
-            center=center)
+        else:
+            self._validate_center(center, self.tensor.ndim)
+        rank_policy = self._resolve_rank_policy(rank=rank)
         verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity) or (observer is not None)
+        emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
         fit_observer = (
-            _resolve_observer(verbosity, observer) if emit_events else None)
+            _resolve_observer(verbosity, None) if emit_events else None)
 
-        input_dim = tuple(self.tensor.shape)
+        in_dim = tuple(self.tensor.shape)
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
                 name='start',
                 phase='TR-SVD',
                 values={
-                    'sites': len(input_dim),
-                    'input_dim': input_dim,
+                    'sites': len(in_dim),
+                    'in_dim': in_dim,
                     'center': center,
                     'rank_mode': rank_policy.mode,
                     'renormalize': renormalize,
@@ -458,8 +365,8 @@ class TRSVD:
             self._runtime.timer() if collect_metrics else nullcontext())
         with total_timer_context as total_timer:
             tensor = self._runtime.prepare(self.tensor)
-            left_size = prod(input_dim[:center])
-            right_size = prod(input_dim[center:])
+            left_size = prod(in_dim[:center])
+            right_size = prod(in_dim[center:])
             matrix = tensor.reshape(left_size, right_size)
             initial_result = TTSVD(
                 matrix,
@@ -475,13 +382,9 @@ class TRSVD:
 
             cycle_rank, center_rank = self._split_cycle_rank(
                 selected_rank=selected_rank,
-                cycle_cap=rank_policy.cycle_cap,
-                center_cap=rank_policy.center_cap)
+                rank_cap=rank_policy.rank_cap)
             initial_capacity = cycle_rank * center_rank
             padding = initial_capacity - selected_rank
-            if padding < 0:
-                raise RuntimeError(
-                    'The initial TR rank capacity should cover the SVD rank')
 
             left_factor, right_factor = initial_result.cores
             if padding:
@@ -494,24 +397,24 @@ class TRSVD:
                     right_factor.new_zeros(padding, right_factor.shape[1]),
                 ], dim=0)
 
-            left_block = left_factor.reshape(
-                *input_dim[:center], cycle_rank, center_rank)
-            left_block = left_block.movedim(-2, 0)
-            right_block = right_factor.reshape(
-                cycle_rank, center_rank, *input_dim[center:])
-            right_block = right_block.movedim(0, -1)
+            left_subchain = left_factor.reshape(
+                *in_dim[:center], cycle_rank, center_rank)
+            left_subchain = left_subchain.movedim(-2, 0)
+            right_subchain = right_factor.reshape(
+                cycle_rank, center_rank, *in_dim[center:])
+            right_subchain = right_subchain.movedim(0, -1)
 
             left_cores, left_result = self._decompose_subchain(
-                block=left_block,
-                input_dim=input_dim[:center],
-                rank_caps=rank_policy.left_caps,
+                subchain=left_subchain,
+                in_dim=in_dim[:center],
+                rank=rank_policy.rank_cap,
                 truncation=truncation,
                 renormalize=renormalize,
                 collect_metrics=collect_metrics)
             right_cores, right_result = self._decompose_subchain(
-                block=right_block,
-                input_dim=input_dim[center:],
-                rank_caps=rank_policy.right_caps,
+                subchain=right_subchain,
+                in_dim=in_dim[center:],
+                rank=rank_policy.rank_cap,
                 truncation=truncation,
                 renormalize=renormalize,
                 collect_metrics=collect_metrics)
@@ -522,23 +425,29 @@ class TRSVD:
                 initial_result,
                 phase='initial_bipartition',
                 site_offset=center - 1)
-            left_records = self._local_records(
-                left_result,
-                phase='left_subchain',
-                site_offset=0)
-            right_records = self._local_records(
-                right_result,
-                phase='right_subchain',
-                site_offset=center)
+            left_records = (
+                [] if left_result is None else self._local_records(
+                    left_result,
+                    phase='left_subchain',
+                    site_offset=0))
+            right_records = (
+                [] if right_result is None else self._local_records(
+                    right_result,
+                    phase='right_subchain',
+                    site_offset=center))
             metrics.truncations.extend(
                 left_records + initial_records + right_records)
 
             phase_timings = [
                 self._phase_timing(
                     initial_result, 'initial_bipartition', center - 1),
-                self._phase_timing(left_result, 'left_subchain', 0),
-                self._phase_timing(right_result, 'right_subchain', center),
             ]
+            if left_result is not None:
+                phase_timings.append(self._phase_timing(
+                    left_result, 'left_subchain', 0))
+            if right_result is not None:
+                phase_timings.append(self._phase_timing(
+                    right_result, 'right_subchain', center))
             metrics.timings.append(TimingRecord(
                 name='fit',
                 elapsed=total_timer.elapsed,
@@ -614,7 +523,7 @@ def tr_svd(tensor: torch.Tensor,
            rtol: Optional[float] = None,
            cum_percentage: Optional[float] = None,
            renormalize: bool = False,
-           output_device: Optional[Union[str, torch.device]] = 'cpu',
+           out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False):
     r"""Decomposes a dense tensor into TR cores through an interior SVD.
@@ -629,12 +538,11 @@ def tr_svd(tensor: torch.Tensor,
     ``(rank_{k-1}, d_k, rank_k)`` and the last right rank matches the first
     left rank, closing the TR.
 
-    An integer ``rank`` is a shared upper bound. A sequence gives one upper
-    bound for the right rank of every site, including the cyclic
-    ``rank[-1]``. With ``None``, the initial SVD rank is split using the
-    smallest admissible product and the most balanced pair breaks ties. Any
-    extra capacity required by the caps contains structural zeros and is
-    reported in ``info['metadata']``.
+    An integer ``rank`` is a shared upper bound, while local truncation may
+    select different effective ranks across the chain. With ``None``, the
+    initial SVD rank is split using the smallest admissible product and the
+    most balanced pair breaks ties. Any extra capacity required by the cap
+    contains structural zeros and is reported in ``info['metadata']``.
 
     Parameters
     ----------
@@ -669,7 +577,7 @@ def tr_svd(tensor: torch.Tensor,
     renormalize : bool
         If ``True``, normalizes residuals before SVDs and accumulates their
         scales logarithmically before redistributing them over final cores.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. If ``None``, they remain on
         the input device. The default is ``"cpu"``.
     verbose : bool or int
@@ -702,11 +610,13 @@ def tr_svd(tensor: torch.Tensor,
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2), (2, 2, 2), (2, 2, 2)]
 
-    Inspect an explicit asymmetric rank split and its structural padding:
+    Inspect the structural padding required by a shared rank cap:
 
-    >>> _, info = tr_svd(torch.eye(5), rank=(2, 3), return_info=True)
+    >>> singular_values = torch.tensor([5., 3., 1., 0.])
+    >>> _, info = tr_svd(torch.diag(singular_values),
+    ...                  rank=2, return_info=True)
     >>> info['rank']
-    [2, 3]
+    [2, 2]
     >>> info['metadata']['structural_padding']
     1
     """
@@ -715,7 +625,7 @@ def tr_svd(tensor: torch.Tensor,
     result = TRSVD(
         tensor=tensor,
         center=center,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,

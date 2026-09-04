@@ -35,6 +35,15 @@ def _exact_tt():
     return result, result.contract_dense()
 
 
+def _near_exact_tt():
+    """Builds a TT tensor with one controlled small component."""
+    tensor = torch.zeros(3, 3, 3, dtype=torch.float64)
+    tensor[0, 0, 0] = 5
+    tensor[1, 1, 1] = 1
+    tensor[2, 2, 2] = 1e-4
+    return tensor
+
+
 class TestTTSVD:  # MARK: TestTTSVD
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
@@ -68,6 +77,33 @@ class TestTTSVD:  # MARK: TestTTSVD
         assert residual_norm <= 1.01 * noise_norm
         assert residual_norm >= 0.25 * noise_norm
         assert clean_error <= 1.5 * noise_norm
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    @pytest.mark.parametrize('criterion', ['atol', 'rtol'])
+    def test_truncation_criteria_bound_global_error(
+            self, svd_method, criterion):
+        tensor = _near_exact_tt()
+        small_value = tensor[-1, -1, -1].item()
+        tensor_norm = torch.linalg.vector_norm(tensor).item()
+        n_cuts = tensor.ndim - 1
+
+        if criterion == 'atol':
+            tolerance = 1.01 * small_value ** 2
+            kwargs = {'atol': tolerance}
+            bound = math.sqrt(n_cuts * tolerance)
+        else:
+            tolerance = 1.01 * small_value ** 2 / tensor_norm ** 2
+            kwargs = {'rtol': tolerance}
+            bound = tensor_norm * math.sqrt(n_cuts * tolerance)
+
+        with tk.svd_method(svd_method):
+            result = tk.decompositions.TTSVD(
+                tensor, out_device=None).fit(**kwargs)
+
+        error = torch.linalg.vector_norm(
+            tensor - result.contract_dense()).item()
+        assert error > 0
+        assert error <= bound * (1 + 1e-10)
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('renormalize', [False, True])

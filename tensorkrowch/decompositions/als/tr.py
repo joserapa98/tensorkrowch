@@ -663,8 +663,8 @@ class TRALS(TTALS):
                     rank_caps, target.dtype, target.device, generator)
             else:
                 decomposition = TRSVD(
-                    target, output_device=None).fit(
-                        rank=rank_caps,
+                    target, out_device=None).fit(
+                        rank=max(rank_caps),
                         collect_metrics=False)
                 cores = _standard_tr_cores(decomposition, self.input_dim)
         else:

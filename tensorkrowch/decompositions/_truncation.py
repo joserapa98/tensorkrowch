@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from math import exp, log
 from typing import Dict, Optional, Union
 
+from tensorkrowch.utils import _validate_truncation
+
 
 def _rescale_absolute_tolerance(value: Optional[float],
                                 log_scale: float,
@@ -34,23 +36,12 @@ class _TruncationSpec:
     cum_percentage: Optional[float] = None
 
     def __post_init__(self) -> None:
-        if self.rank is not None:
-            if isinstance(self.rank, bool) or not isinstance(self.rank, int):
-                raise TypeError('`rank` should be int type')
-            if self.rank < 1:
-                raise ValueError('`rank` should be a positive integer')
-        for name in ('cutoff', 'atol'):
-            value = getattr(self, name)
-            if (value is not None) and \
-                    ((not isinstance(value, (int, float))) or (value < 0)):
-                raise ValueError(f'`{name}` should be a non-negative number')
-        for name in ('rtol', 'cum_percentage'):
-            value = getattr(self, name)
-            if (value is not None) and \
-                    ((not isinstance(value, (int, float))) or
-                     (value < 0) or (value > 1)):
-                raise ValueError(
-                    f'`{name}` should be a number between 0 and 1')
+        _validate_truncation(
+            rank=self.rank,
+            cutoff=self.cutoff,
+            atol=self.atol,
+            rtol=self.rtol,
+            cum_percentage=self.cum_percentage)
 
     def as_kwargs(self) -> Dict[str, Union[int, float, None]]:
         """Returns keyword arguments accepted by ``truncated_svd``."""

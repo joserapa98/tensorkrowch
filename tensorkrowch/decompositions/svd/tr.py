@@ -25,8 +25,7 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TRDecomposition,
-                                                 TTDecomposition)
+from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd.tt import TTSVD
 
@@ -58,6 +57,12 @@ class TRSVD:
     cyclic rank and the rank crossing the interior cut. The two resulting
     blocks are then decomposed by the shared TT-SVD engine while preserving
     those boundary ranks. No batch dimensions are supported.
+
+    This construction is based on TR-SVD by Q. Zhao et al. in *Tensor Ring
+    Decomposition* (2016), `paper <https://arxiv.org/abs/1606.05535>`_. The
+    implementation uses an interior bipartition followed by two TT-SVD
+    subchains, rather than the one-direction sequence in the original
+    algorithm.
 
     Parameters
     ----------
@@ -161,7 +166,7 @@ class TRSVD:
             truncation: _TruncationSpec,
             renormalize: bool,
             collect_metrics: bool) -> Tuple[List[torch.Tensor],
-                                             Optional[TTDecomposition]]:
+                                             Optional[DecompositionMetrics]]:
         """Applies TT-SVD while preserving a subchain's boundary ranks."""
         left_rank = subchain.shape[0]
         right_rank = subchain.shape[-1]
@@ -176,20 +181,21 @@ class TRSVD:
         engine = TTSVD(
             fused,
             out_device=self._runtime.out_device)
-        result = engine.fit(
-            **truncation.as_kwargs(),
+        result = engine._fit_validated(
+            truncation=truncation,
             renormalize=renormalize,
             collect_metrics=collect_metrics)
 
         cores = list(result.cores)
+        metrics = result.metrics if collect_metrics else None
         cores[0] = cores[0].reshape(
             left_rank, in_dim[0], cores[0].shape[-1])
         cores[-1] = cores[-1].reshape(
             cores[-1].shape[0], in_dim[-1], right_rank)
-        return cores, result
+        return cores, metrics
 
     @staticmethod
-    def _local_records(result: TTDecomposition,
+    def _local_records(metrics: DecompositionMetrics,
                        phase: str,
                        site_offset: int) -> List[TruncationRecord]:
         """Labels TT-SVD records as local TR-SVD diagnostics."""
@@ -200,15 +206,15 @@ class TRSVD:
                 phase=phase,
                 global_relative_contribution=None,
                 global_relative_contribution_per_batch=None)
-            for record in result.metrics.truncations
+            for record in metrics.truncations
         ]
 
     @staticmethod
-    def _phase_timing(result: TTDecomposition,
+    def _phase_timing(metrics: DecompositionMetrics,
                       name: str,
                       site_offset: int) -> TimingRecord:
         """Relabels one nested TT-SVD timing phase with global sites."""
-        timing = result.metrics.timings[0]
+        timing = metrics.timings[0]
         children = [
             replace(
                 child,
@@ -258,22 +264,27 @@ class TRSVD:
             Interior cut used for this fit. If omitted, the center fixed at
             construction is used.
         rank : int, optional
-            Number of singular values to keep.
+            Maximum rank allowed at every link. At each subchain SVD cut, at
+            most this many singular values are retained. The initial
+            bipartition retains at most ``rank ** 2`` singular values before
+            its selected rank is factorized into two TR ranks.
         cutoff : float, optional
-            Minimum singular value to keep. It must be non-negative. Singular
-            values ``<= cutoff`` are removed.
+            Minimum singular value to keep. It must be finite and
+            non-negative. Singular values ``<= cutoff`` are removed.
         atol : float, optional
             Absolute tolerance over the tail sum of squared singular values.
             Starting from the smallest singular value, values are discarded while
-            the accumulated sum of squares is ``<= atol``. It must be non-negative.
+            the accumulated sum of squares is ``<= atol``. It must be finite
+            and non-negative.
         rtol : float, optional
             Relative tolerance over the tail sum of squared singular values.
             Starting from the smallest singular value, values are discarded while
             the tail sum of squares divided by the total sum of squares is
-            ``<= rtol``. It must be in ``[0, 1]``.
+            ``<= rtol``. It must be finite and in ``[0, 1]``.
         cum_percentage : float, optional
             Minimum fraction of squared singular-value mass to keep. Equivalent to
-            setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+            setting ``rtol = 1 - cum_percentage``. It must be finite and in
+            ``[0, 1]``.
 
             .. math::
 
@@ -334,6 +345,9 @@ class TRSVD:
         else:
             self._validate_center(center, self.tensor.ndim)
         rank_policy = self._resolve_rank_policy(rank=truncation.rank)
+        initial_truncation = (
+            truncation if rank_policy.initial_cap == truncation.rank else
+            replace(truncation, rank=rank_policy.initial_cap))
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
@@ -362,12 +376,8 @@ class TRSVD:
             matrix = tensor.reshape(left_size, right_size)
             initial_result = TTSVD(
                 matrix,
-                out_device=None).fit(
-                    rank=rank_policy.initial_cap,
-                    cutoff=cutoff,
-                    atol=atol,
-                    rtol=rtol,
-                    cum_percentage=cum_percentage,
+                out_device=None)._fit_validated(
+                    truncation=initial_truncation,
                     renormalize=renormalize,
                     collect_metrics=collect_metrics)
             selected_rank = initial_result.rank[0]
@@ -379,6 +389,9 @@ class TRSVD:
             padding = initial_capacity - selected_rank
 
             left_factor, right_factor = initial_result.cores
+            initial_metrics = (
+                initial_result.metrics if collect_metrics else None)
+            del initial_result
             if padding:
                 left_factor = torch.cat([
                     left_factor,
@@ -396,13 +409,13 @@ class TRSVD:
                 cycle_rank, center_rank, *in_dim[center:])
             right_subchain = right_subchain.movedim(0, -1)
 
-            left_cores, left_result = self._decompose_subchain(
+            left_cores, left_metrics = self._decompose_subchain(
                 subchain=left_subchain,
                 in_dim=in_dim[:center],
                 truncation=truncation,
                 renormalize=renormalize,
                 collect_metrics=collect_metrics)
-            right_cores, right_result = self._decompose_subchain(
+            right_cores, right_metrics = self._decompose_subchain(
                 subchain=right_subchain,
                 in_dim=in_dim[center:],
                 truncation=truncation,
@@ -412,17 +425,17 @@ class TRSVD:
         metrics = DecompositionMetrics()
         if collect_metrics:
             initial_records = self._local_records(
-                initial_result,
+                initial_metrics,
                 phase='initial_bipartition',
                 site_offset=center - 1)
             left_records = (
-                [] if left_result is None else self._local_records(
-                    left_result,
+                [] if left_metrics is None else self._local_records(
+                    left_metrics,
                     phase='left_subchain',
                     site_offset=0))
             right_records = (
-                [] if right_result is None else self._local_records(
-                    right_result,
+                [] if right_metrics is None else self._local_records(
+                    right_metrics,
                     phase='right_subchain',
                     site_offset=center))
             metrics.truncations.extend(
@@ -430,14 +443,14 @@ class TRSVD:
 
             phase_timings = [
                 self._phase_timing(
-                    initial_result, 'initial_bipartition', center - 1),
+                    initial_metrics, 'initial_bipartition', center - 1),
             ]
-            if left_result is not None:
+            if left_metrics is not None:
                 phase_timings.append(self._phase_timing(
-                    left_result, 'left_subchain', 0))
-            if right_result is not None:
+                    left_metrics, 'left_subchain', 0))
+            if right_metrics is not None:
                 phase_timings.append(self._phase_timing(
-                    right_result, 'right_subchain', center))
+                    right_metrics, 'right_subchain', center))
             metrics.timings.append(TimingRecord(
                 name='fit',
                 elapsed=total_timer.elapsed,
@@ -542,22 +555,27 @@ def tr_svd(tensor: torch.Tensor,
         Interior cut satisfying ``1 <= center < tensor.ndim``. The default is
         the middle cut.
     rank : int, optional
-        Number of singular values to keep.
+        Maximum rank allowed at every link. At each subchain SVD cut, at most
+        this many singular values are retained. The initial bipartition
+        retains at most ``rank ** 2`` singular values before its selected rank
+        is factorized into two TR ranks.
     cutoff : float, optional
-        Minimum singular value to keep. It must be non-negative. Singular
-        values ``<= cutoff`` are removed.
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
     atol : float, optional
         Absolute tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
     rtol : float, optional
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
 
         .. math::
 

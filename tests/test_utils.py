@@ -203,22 +203,49 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
         assert len(result) == 3
 
     @pytest.mark.parametrize(
-        'kwargs',
+        'kwargs, error_type',
         [
-            {'rank': 0},
-            {'rank': 1.5},
-            {'cutoff': -1.0},
-            {'cutoff': '1'},
-            {'atol': -0.1},
-            {'rtol': -0.1},
-            {'rtol': 1.1},
-            {'cum_percentage': -0.1},
-            {'cum_percentage': 1.1},
+            ({'rank': 0}, ValueError),
+            ({'rank': True}, TypeError),
+            ({'rank': 1.5}, TypeError),
+            ({'cutoff': -1.0}, ValueError),
+            ({'cutoff': '1'}, TypeError),
+            ({'cutoff': True}, TypeError),
+            ({'atol': -0.1}, ValueError),
+            ({'atol': float('nan')}, ValueError),
+            ({'rtol': -0.1}, ValueError),
+            ({'rtol': 1.1}, ValueError),
+            ({'rtol': float('inf')}, ValueError),
+            ({'cum_percentage': -0.1}, ValueError),
+            ({'cum_percentage': 1.1}, ValueError),
+            ({'cum_percentage': True}, TypeError),
         ],
     )
-    def test_truncated_svd_invalid_arguments(self, diag_tensor, kwargs):
-        with pytest.raises(ValueError):
+    def test_truncated_svd_invalid_arguments(
+            self, diag_tensor, kwargs, error_type):
+        with pytest.raises(error_type):
             tk.utils.truncated_svd(diag_tensor, **kwargs)
+
+    @pytest.mark.parametrize('criterion', ['rtol', 'cum_percentage'])
+    def test_zero_spectrum_keeps_only_minimum_rank(self, criterion):
+        kwargs = ({'rtol': 0.1} if criterion == 'rtol'
+                  else {'cum_percentage': 0.9})
+
+        _, s, _ = tk.utils.truncated_svd(
+            torch.zeros(5, 5), **kwargs)
+
+        assert s.shape == (1,)
+        assert s.item() == 0
+
+    def test_zero_batch_does_not_inflate_shared_relative_rank(self):
+        tensor = torch.stack([
+            torch.zeros(4, 4),
+            torch.diag(torch.tensor([3.0, 1.0, 0.0, 0.0])),
+        ])
+
+        _, s, _ = tk.utils.truncated_svd(tensor, rtol=0.05)
+
+        assert s.shape == (2, 2)
 
     @pytest.mark.parametrize(
         'shape',

@@ -408,14 +408,18 @@ class TestTTSVD:  # MARK: TestTTSVD
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
-    def test_out_device_policy(self, device_name, svd_method):
+    @pytest.mark.parametrize('renormalize', [False, True])
+    def test_out_device_policy(
+            self, device_name, svd_method, renormalize):
         device = _device(device_name)
         tensor = torch.randn(2, 3, 4, device=device)
 
         with tk.svd_method(svd_method):
-            cpu_result = tk.decompositions.TTSVD(tensor).fit(rank=2)
+            cpu_result = tk.decompositions.TTSVD(tensor).fit(
+                rank=2, renormalize=renormalize)
             active_result = tk.decompositions.TTSVD(
-                tensor, out_device=None).fit(rank=2)
+                tensor, out_device=None).fit(
+                    rank=2, renormalize=renormalize)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
         assert all(core.device == device for core in active_result.cores)
@@ -446,8 +450,12 @@ class TestTTSVD:  # MARK: TestTTSVD
         'constructor, error_type, match',
         [
             (([1, 2],), TypeError, '`tensor` should be torch.Tensor type'),
+            ((torch.ones(2), True), TypeError,
+             '`n_batches` should be int type'),
             ((torch.ones(2), 1), ValueError, 'leave at least one'),
             ((torch.ones(2), -1), ValueError, 'leave at least one'),
+            ((torch.empty(2, 0),), ValueError,
+             'TT input and batch dimensions should be positive'),
         ],
     )
     def test_constructor_errors(self, constructor, error_type, match):
@@ -458,7 +466,15 @@ class TestTTSVD:  # MARK: TestTTSVD
         'kwargs, error_type, match',
         [
             ({'rank': 0}, ValueError, '`rank` should be a positive integer'),
-            ({'rtol': 2}, ValueError, '`rtol` should be a number between'),
+            ({'rank': True}, TypeError, '`rank` should be int type'),
+            ({'cutoff': True}, TypeError,
+             '`cutoff` should be a real number'),
+            ({'atol': float('nan')}, ValueError,
+             '`atol` should be a finite non-negative number'),
+            ({'rtol': float('inf')}, ValueError,
+             '`rtol` should be a finite number between'),
+            ({'rtol': 2}, ValueError,
+             '`rtol` should be a finite number between'),
             ({'renormalize': 1}, TypeError,
              '`renormalize` should be bool type'),
             ({'collect_metrics': 1}, TypeError,

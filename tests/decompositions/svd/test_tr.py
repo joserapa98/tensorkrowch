@@ -23,8 +23,8 @@ def _device(name):
     return torch.device(name)
 
 
-def _exact_tr():
-    """Builds an exact four-site TR with every rank equal to two."""
+def _recoverable_rank_two_tr():
+    """Builds a structured TR recoverable with every rank equal to two."""
     cores = [
         torch.zeros(2, 2, 2, dtype=torch.float64)
         for _ in range(4)
@@ -41,6 +41,17 @@ def _exact_tr():
             cores[3][left_rank, right_rank, right_rank] = weights[
                 left_rank, right_rank]
 
+    result = tk.decompositions.TRDecomposition(cores)
+    return result, result.contract_dense()
+
+
+def _random_rank_two_tr():
+    """Builds a generic random TR with every rank equal to two."""
+    generator = torch.Generator().manual_seed(7)
+    cores = [
+        torch.randn(2, 3, 2, dtype=torch.float64, generator=generator)
+        for _ in range(4)
+    ]
     result = tk.decompositions.TRDecomposition(cores)
     return result, result.contract_dense()
 
@@ -69,8 +80,8 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert 'out_device' in function_parameters
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
-    def test_recovers_exact_tr(self, svd_method):
-        _, tensor = _exact_tr()
+    def test_recovers_structured_tr_with_original_rank(self, svd_method):
+        _, tensor = _recoverable_rank_two_tr()
 
         with tk.svd_method(svd_method):
             result = tk.decompositions.TRSVD(
@@ -82,7 +93,7 @@ class TestTRSVD:  # MARK: TestTRSVD
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     def test_low_rank_error_has_gaussian_noise_scale(self, svd_method):
-        _, tensor = _exact_tr()
+        _, tensor = _recoverable_rank_two_tr()
         generator = torch.Generator().manual_seed(91)
         noise = 1e-4 * torch.randn(
             tensor.shape, dtype=tensor.dtype, generator=generator)
@@ -99,6 +110,29 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert residual_norm <= 1.01 * noise_norm
         assert residual_norm >= 0.2 * noise_norm
         assert clean_error <= 1.5 * noise_norm
+
+    @pytest.mark.parametrize('svd_method', SVD_METHODS)
+    def test_random_tr_needs_discovered_ranks_for_exact_recovery(
+            self, svd_method):
+        expected, tensor = _random_rank_two_tr()
+
+        with tk.svd_method(svd_method):
+            discovered = tk.decompositions.TRSVD(
+                tensor, out_device=None).fit()
+            capped = tk.decompositions.TRSVD(
+                tensor, out_device=None).fit(rank=2)
+
+        discovered_error = torch.linalg.vector_norm(
+            tensor - discovered.contract_dense())
+        capped_error = torch.linalg.vector_norm(
+            tensor - capped.contract_dense())
+        assert expected.rank == [2, 2, 2, 2]
+        assert max(discovered.rank) > max(expected.rank)
+        assert torch.allclose(
+            discovered.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
+        assert capped.rank == expected.rank
+        assert capped_error > 1e-2
+        assert discovered_error < 1e-10
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('criterion', ['atol', 'rtol'])
@@ -311,13 +345,15 @@ class TestTRSVD:  # MARK: TestTRSVD
             self, monkeypatch):
         tensor = torch.randn(2, 3, 4, 5, dtype=torch.float64)
         fit_shapes = []
-        original_fit = tr_module.TTSVD.fit
+        truncation_ids = []
+        original_fit = tr_module.TTSVD._fit_validated
 
         def tracked_fit(self, *args, **kwargs):
             fit_shapes.append(tuple(self.tensor.shape))
+            truncation_ids.append(id(kwargs['truncation']))
             return original_fit(self, *args, **kwargs)
 
-        monkeypatch.setattr(tr_module.TTSVD, 'fit', tracked_fit)
+        monkeypatch.setattr(tr_module.TTSVD, '_fit_validated', tracked_fit)
         tk.decompositions.TRSVD(
             tensor,
             center=2,
@@ -325,17 +361,18 @@ class TestTRSVD:  # MARK: TestTRSVD
 
         assert len(fit_shapes) == 3
         assert fit_shapes[0] == (6, 20)
+        assert len(set(truncation_ids)) == 1
 
     def test_one_site_subchains_skip_empty_tt_svd(self, monkeypatch):
         tensor = torch.randn(2, 3, dtype=torch.float64)
         fit_shapes = []
-        original_fit = tr_module.TTSVD.fit
+        original_fit = tr_module.TTSVD._fit_validated
 
         def tracked_fit(self, *args, **kwargs):
             fit_shapes.append(tuple(self.tensor.shape))
             return original_fit(self, *args, **kwargs)
 
-        monkeypatch.setattr(tr_module.TTSVD, 'fit', tracked_fit)
+        monkeypatch.setattr(tr_module.TTSVD, '_fit_validated', tracked_fit)
         result = tk.decompositions.TRSVD(
             tensor, center=1, out_device=None).fit(
                 collect_metrics=True)
@@ -350,15 +387,19 @@ class TestTRSVD:  # MARK: TestTRSVD
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
-    def test_out_device_policy(self, device_name, svd_method):
+    @pytest.mark.parametrize('renormalize', [False, True])
+    def test_out_device_policy(
+            self, device_name, svd_method, renormalize):
         device = _device(device_name)
         tensor = torch.randn(2, 3, 4, 2, device=device)
 
         with tk.svd_method(svd_method):
-            cpu_result = tk.decompositions.TRSVD(tensor).fit(rank=2)
+            cpu_result = tk.decompositions.TRSVD(tensor).fit(
+                rank=2, renormalize=renormalize)
             active_result = tk.decompositions.TRSVD(
                 tensor,
-                out_device=None).fit(rank=2)
+                out_device=None).fit(
+                    rank=2, renormalize=renormalize)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
         assert all(core.device == device for core in active_result.cores)
@@ -432,8 +473,13 @@ class TestTRSVD:  # MARK: TestTRSVD
             ({'rank': 0}, ValueError, '`rank` should be a positive integer'),
             ({'rank': True}, TypeError, '`rank` should be int type'),
             ({'rank': (1, 2, 3)}, TypeError, '`rank` should be int type'),
+            ({'cutoff': True}, TypeError,
+             '`cutoff` should be a real number'),
+            ({'atol': float('nan')}, ValueError,
+             '`atol` should be a finite non-negative number'),
             ({'center': 0}, ValueError, '1 <= center < tensor.ndim'),
-            ({'rtol': 2}, ValueError, '`rtol` should be a number between'),
+            ({'rtol': 2}, ValueError,
+             '`rtol` should be a finite number between'),
             ({'renormalize': 1}, TypeError,
              '`renormalize` should be bool type'),
             ({'collect_metrics': 1}, TypeError,

@@ -277,22 +277,25 @@ class TTMSVD:
         Parameters
         ----------
         rank : int, optional
-            Number of singular values to keep.
+            Maximum rank allowed at every link. At each SVD cut, at most this
+            many singular values are retained.
         cutoff : float, optional
-            Minimum singular value to keep. It must be non-negative. Singular
-            values ``<= cutoff`` are removed.
+            Minimum singular value to keep. It must be finite and
+            non-negative. Singular values ``<= cutoff`` are removed.
         atol : float, optional
             Absolute tolerance over the tail sum of squared singular values.
             Starting from the smallest singular value, values are discarded while
-            the accumulated sum of squares is ``<= atol``. It must be non-negative.
+            the accumulated sum of squares is ``<= atol``. It must be finite
+            and non-negative.
         rtol : float, optional
             Relative tolerance over the tail sum of squared singular values.
             Starting from the smallest singular value, values are discarded while
             the tail sum of squares divided by the total sum of squares is
-            ``<= rtol``. It must be in ``[0, 1]``.
+            ``<= rtol``. It must be finite and in ``[0, 1]``.
         cum_percentage : float, optional
             Minimum fraction of squared singular-value mass to keep. Equivalent to
-            setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+            setting ``rtol = 1 - cum_percentage``. It must be finite and in
+            ``[0, 1]``.
 
             .. math::
 
@@ -344,7 +347,7 @@ class TTMSVD:
             raise TypeError('`renormalize` should be bool type')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
-        _TruncationSpec(
+        truncation = _TruncationSpec(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
@@ -369,12 +372,8 @@ class TTMSVD:
                     'renormalize': renormalize,
                 }))
 
-        tt_result = self._engine.fit(
-            rank=rank,
-            cutoff=cutoff,
-            atol=atol,
-            rtol=rtol,
-            cum_percentage=cum_percentage,
+        tt_result = self._engine._fit_validated(
+            truncation=truncation,
             renormalize=renormalize,
             collect_metrics=collect_metrics)
         cores = self._unfuse_in_out_axes(tt_result.cores)
@@ -473,22 +472,25 @@ def ttm_svd(tensor: torch.Tensor,
     layout : {"interleaved", "grouped"}
         Axis layout of a tensorized input. The default is ``"interleaved"``.
     rank : int, optional
-        Number of singular values to keep.
+        Maximum rank allowed at every link. At each SVD cut, at most this many
+        singular values are retained.
     cutoff : float, optional
-        Minimum singular value to keep. It must be non-negative. Singular
-        values ``<= cutoff`` are removed.
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
     atol : float, optional
         Absolute tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
     rtol : float, optional
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
 
         .. math::
 
@@ -588,22 +590,25 @@ def mat_to_mpo(mat: torch.Tensor,
     mat : torch.Tensor
         Dense tensor with interleaved input/output dimensions.
     rank : int, optional
-        Number of singular values to keep.
+        Maximum rank allowed at every link. At each SVD cut, at most this many
+        singular values are retained.
     cutoff : float, optional
-        Minimum singular value to keep. It must be non-negative. Singular
-        values ``<= cutoff`` are removed.
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
     atol : float, optional
         Absolute tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
     rtol : float, optional
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
 
         .. math::
 

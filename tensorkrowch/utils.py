@@ -18,6 +18,7 @@ This script contains:
     * truncated_svd
 """
 
+from math import isfinite
 from typing import NamedTuple, Optional, Tuple, List, Sequence, Text, Union
 
 import torch
@@ -373,6 +374,38 @@ class _TruncatedSVDInfo(NamedTuple):
     svd_method: Text
 
 
+def _validate_truncation(rank: Optional[int] = None,
+                         cutoff: Optional[float] = None,
+                         atol: Optional[float] = None,
+                         rtol: Optional[float] = None,
+                         cum_percentage: Optional[float] = None) -> None:
+    """Validates the truncation contract shared by SVD-based methods."""
+    if rank is not None:
+        if isinstance(rank, bool) or not isinstance(rank, int):
+            raise TypeError('`rank` should be int type')
+        if rank < 1:
+            raise ValueError('`rank` should be a positive integer')
+
+    for name, value in (('cutoff', cutoff), ('atol', atol)):
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f'`{name}` should be a real number')
+        if (value < 0) or not isfinite(value):
+            raise ValueError(
+                f'`{name}` should be a finite non-negative number')
+
+    for name, value in (('rtol', rtol),
+                        ('cum_percentage', cum_percentage)):
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f'`{name}` should be a real number')
+        if (value < 0) or (value > 1) or not isfinite(value):
+            raise ValueError(
+                f'`{name}` should be a finite number between 0 and 1')
+
+
 def truncated_svd(tensor: Tensor,
                   rank: Optional[int] = None,
                   cutoff: Optional[float] = None,
@@ -395,22 +428,24 @@ def truncated_svd(tensor: Tensor,
         Tensor to be decomposed, with shape (*, m, n) where * is zero or more
         batch dimensions.
     rank : int, optional
-        Number of singular values to keep.
+        Maximum number of singular values to keep.
     cutoff : float, optional
-        Minimum singular value to keep. It must be non-negative. Singular
-        values ``<= cutoff`` are removed.
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
     atol : float, optional
         Absolute tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
     rtol : float, optional
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
 
         .. math::
 
@@ -452,10 +487,11 @@ def truncated_svd(tensor: Tensor,
     ------
     TypeError
         If ``tensor`` is not a :class:`torch.Tensor` or ``svd_method`` is not
-        a string, or if ``return_info`` is not boolean.
+        a string, if ``rank`` is not an integer, if a tolerance is not a real
+        number, or if ``return_info`` is not boolean.
     ValueError
-        If a truncation criterion is invalid, or ``svd_method`` is not one of
-        the accepted values.
+        If ``rank`` is not positive, a tolerance is not finite or lies outside
+        its accepted interval, or ``svd_method`` is not accepted.
     RuntimeError
         If ``tensor`` has fewer than two dimensions, as raised by
         :func:`torch.linalg.svd`.
@@ -469,22 +505,12 @@ def truncated_svd(tensor: Tensor,
     """
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
-    if rank is not None:
-        if (not isinstance(rank, int)) or (rank < 1):
-            raise ValueError('`rank` should be a positive integer')
-    if cutoff is not None:
-        if (not isinstance(cutoff, (int, float))) or (cutoff < 0):
-            raise ValueError('`cutoff` should be a non-negative number')
-    if atol is not None:
-        if (not isinstance(atol, (int, float))) or (atol < 0):
-            raise ValueError('`atol` should be a non-negative number')
-    if rtol is not None:
-        if ((not isinstance(rtol, (int, float))) or (rtol < 0) or (rtol > 1)):
-            raise ValueError('`rtol` should be a number between 0 and 1')
-    if cum_percentage is not None:
-        if ((not isinstance(cum_percentage, (int, float)))
-            or (cum_percentage < 0) or (cum_percentage > 1)):
-            raise ValueError('`cum_percentage` should be a number between 0 and 1')
+    _validate_truncation(
+        rank=rank,
+        cutoff=cutoff,
+        atol=atol,
+        rtol=rtol,
+        cum_percentage=cum_percentage)
     
     if cum_percentage is not None:
         if rtol is None:
@@ -492,9 +518,6 @@ def truncated_svd(tensor: Tensor,
         else:
             rtol = max(rtol, 1 - cum_percentage)
 
-    if not isinstance(tensor, Tensor):
-        raise TypeError('`tensor` should be torch.Tensor type')
-    
     if svd_method is None:
         effective_svd_method = get_svd_method()
     else:
@@ -506,33 +529,41 @@ def truncated_svd(tensor: Tensor,
     final_rank = s.shape[-1]
     
     if rank is not None:
-        final_rank = min(final_rank, max(1, int(rank)))
+        final_rank = min(final_rank, rank)
     
     if cutoff is not None:
-        cutoff_tensor = cutoff * torch.ones_like(s)
-        co_rank = torch.gt(s, cutoff_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
+        co_rank = (s > cutoff).reshape(-1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, co_rank.item()))
-    
+
+    squared_s = None
+    tail_squared_norm = None
+    if (atol is not None) or (rtol is not None) or return_info:
+        squared_s = s.square()
+    if (atol is not None) or (rtol is not None):
+        tail_squared_norm = squared_s.flip(dims=[-1]).cumsum(-1)
+
     if atol is not None:
-        s2 = s.pow(2)
-        s2_sum = s2.flip(dims=[-1]).cumsum(-1)
-        atol_tensor = atol * torch.ones_like(s)
-        atol_rank = torch.gt(s2_sum, atol_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
+        atol_rank = (tail_squared_norm > atol).reshape(
+            -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, atol_rank.item()))
-    
+
     if rtol is not None:
-        eps = torch.finfo(s.dtype).eps
-        safe_s = torch.clamp(s, min=eps) # To avoid having all 0's
-        safe_s2 = safe_s.pow(2)
-        
-        s2_sum = safe_s2.flip(dims=[-1]).cumsum(-1)
-        s_ratios = s2_sum / (safe_s2.sum(-1, keepdim=True).expand(s.shape))
-        rtol_tensor = rtol * torch.ones_like(s)
-        rtol_rank = torch.gt(s_ratios, rtol_tensor).view(-1, s.shape[-1]).any(dim=0).sum()
+        total_squared_norm = squared_s.sum(-1, keepdim=True)
+        positive_norm = total_squared_norm > 0
+        safe_squared_norm = torch.where(
+            positive_norm,
+            total_squared_norm,
+            torch.ones_like(total_squared_norm))
+        tail_ratios = tail_squared_norm / safe_squared_norm
+        tail_ratios = torch.where(
+            positive_norm,
+            tail_ratios,
+            torch.zeros_like(tail_ratios))
+        rtol_rank = (tail_ratios > rtol).reshape(
+            -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, rtol_rank.item()))
     
     if return_info:
-        squared_s = s.square()
         total_squared_norm_per_batch = squared_s.sum(dim=-1)
         discarded_squared_norm_per_batch = squared_s[..., final_rank:].sum(
             dim=-1)

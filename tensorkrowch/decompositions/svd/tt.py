@@ -22,7 +22,8 @@ import torch
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+from tensorkrowch.decompositions.metrics import (_aggregate_log_norm,
+                                                 DecompositionMetrics,
                                                  ErrorRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
@@ -77,6 +78,10 @@ class TTSVD:
     criteria. Each fit is independent and returns a lightweight
     :class:`~tensorkrowch.decompositions.TTDecomposition`.
 
+    The numerical sweep follows the TT-SVD algorithm introduced by
+    I. V. Oseledets in *Tensor-Train Decomposition* (2011), `paper
+    <https://doi.org/10.1137/090752286>`_.
+
     Parameters
     ----------
     tensor : torch.Tensor
@@ -97,11 +102,14 @@ class TTSVD:
                      Union[str, torch.device]] = 'cpu') -> None:
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
-        if not isinstance(n_batches, int):
+        if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if (n_batches < 0) or (n_batches >= tensor.ndim):
             raise ValueError(
                 '`n_batches` should leave at least one tensor dimension')
+        if any(dim < 1 for dim in tensor.shape):
+            raise ValueError(
+                'TT input and batch dimensions should be positive')
 
         self._tensor = tensor
         self._n_batches = n_batches
@@ -207,9 +215,7 @@ class TTSVD:
                 global_input_norm_per_batch=(
                     error_state.input_norm_per_batch
                     if self._n_batches else None))
-        core = u.clone()
-        if not context.renormalize:
-            core = self._runtime.finalize(core)
+        core = self._runtime.finalize(u)
         residual = s.to(vh.dtype).unsqueeze(-1) * vh
         return _TTSVDSplit(
             core=core,
@@ -236,14 +242,12 @@ class TTSVD:
         context.running_log_scale = (
             context.running_log_scale + final_log_norm)
 
+        cores[-1] = self._runtime.finalize(cores[-1])
         rescale = (context.running_log_scale / len(cores)).exp()
         if not torch.isfinite(rescale).all():
             raise ValueError('The final TT-SVD scale should be finite')
-        scaled_cores = []
-        for core in cores:
-            core = core * rescale
-            scaled_cores.append(self._runtime.finalize(core))
-        return scaled_cores
+        rescale = self._runtime.finalize(rescale)
+        return [core * rescale for core in cores]
 
     def fit(self,
             rank: Optional[int] = None,
@@ -285,22 +289,25 @@ class TTSVD:
         Parameters
         ----------
         rank : int, optional
-            Number of singular values to keep.
+            Maximum rank allowed at every link. At each SVD cut, at most this
+            many singular values are retained.
         cutoff : float, optional
-            Minimum singular value to keep. It must be non-negative. Singular
-            values ``<= cutoff`` are removed.
+            Minimum singular value to keep. It must be finite and
+            non-negative. Singular values ``<= cutoff`` are removed.
         atol : float, optional
             Absolute tolerance over the tail sum of squared singular values.
             Starting from the smallest singular value, values are discarded while
-            the accumulated sum of squares is ``<= atol``. It must be non-negative.
+            the accumulated sum of squares is ``<= atol``. It must be finite
+            and non-negative.
         rtol : float, optional
             Relative tolerance over the tail sum of squared singular values.
             Starting from the smallest singular value, values are discarded while
             the tail sum of squares divided by the total sum of squares is
-            ``<= rtol``. It must be in ``[0, 1]``.
+            ``<= rtol``. It must be finite and in ``[0, 1]``.
         cum_percentage : float, optional
             Minimum fraction of squared singular-value mass to keep. Equivalent to
-            setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+            setting ``rtol = 1 - cum_percentage``. It must be finite and in
+            ``[0, 1]``.
 
             .. math::
 
@@ -361,6 +368,19 @@ class TTSVD:
             atol=atol,
             rtol=rtol,
             cum_percentage=cum_percentage)
+        return self._fit_validated(
+            truncation=truncation,
+            renormalize=renormalize,
+            collect_metrics=collect_metrics,
+            verbose=verbose)
+
+    def _fit_validated(
+            self,
+            truncation: _TruncationSpec,
+            renormalize: bool,
+            collect_metrics: bool,
+            verbose: Union[bool, int] = 0) -> TTDecomposition:
+        """Runs TT-SVD from already validated fit options."""
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
@@ -376,7 +396,7 @@ class TTSVD:
         if collect_metrics:
             input_log_norm_per_batch = _log_vector_norm(
                 tensor.reshape(*batch_shape, -1), dim=-1)
-            input_log_norm = _log_vector_norm(tensor)
+            input_log_norm = _aggregate_log_norm(input_log_norm_per_batch)
             input_norm_per_batch = input_log_norm_per_batch.exp()
             input_norm = input_log_norm.exp()
             if not torch.isfinite(input_norm):
@@ -430,9 +450,6 @@ class TTSVD:
                 residual = split.residual
                 previous_rank = split.selected_rank
                 if collect_metrics:
-                    if (split.record is None) or (cut_timer is None):
-                        raise RuntimeError(
-                            'TT-SVD diagnostics were not initialized')
                     metrics.truncations.append(split.record)
                     cut_timing = TimingRecord(
                         name='svd_cut',
@@ -440,9 +457,6 @@ class TTSVD:
                         site=site)
                     cut_timings.append(cut_timing)
                 if fit_observer is not None:
-                    if split.record is None:
-                        raise RuntimeError(
-                            'TT-SVD diagnostics were not initialized')
                     fit_observer.emit(DecompositionEvent(
                         name='site_complete',
                         phase='TT-SVD',
@@ -565,22 +579,25 @@ def tt_svd(tensor: torch.Tensor,
         Number of leading tensor axes interpreted as batch dimensions. At
         least one non-batch input dimension should remain.
     rank : int, optional
-        Number of singular values to keep.
+        Maximum rank allowed at every link. At each SVD cut, at most this many
+        singular values are retained.
     cutoff : float, optional
-        Minimum singular value to keep. It must be non-negative. Singular
-        values ``<= cutoff`` are removed.
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
     atol : float, optional
         Absolute tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
     rtol : float, optional
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
 
         .. math::
 
@@ -681,22 +698,25 @@ def vec_to_mps(vec: torch.Tensor,
     n_batches : int
         Number of leading tensor axes interpreted as batch dimensions.
     rank : int, optional
-        Number of singular values to keep.
+        Maximum rank allowed at every link. At each SVD cut, at most this many
+        singular values are retained.
     cutoff : float, optional
-        Minimum singular value to keep. It must be non-negative. Singular
-        values ``<= cutoff`` are removed.
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
     atol : float, optional
         Absolute tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be non-negative.
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
     rtol : float, optional
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is
-        ``<= rtol``. It must be in ``[0, 1]``.
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be in ``[0, 1]``.
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
 
         .. math::
 

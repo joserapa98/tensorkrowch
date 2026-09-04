@@ -109,7 +109,8 @@ class TensorDecomposition(ABC):
     _topology: ClassVar[str] = 'tensor'
 
     def __post_init__(self) -> None:
-        if not isinstance(self.n_batches, int):
+        if isinstance(self.n_batches, bool) or \
+                not isinstance(self.n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if self.n_batches < 0:
             raise ValueError('`n_batches` should be non-negative')

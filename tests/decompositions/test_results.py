@@ -37,6 +37,12 @@ def _qtt_factor(values):
 
 class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
 
+    def test_boolean_n_batches_is_rejected(self):
+        with pytest.raises(TypeError, match='`n_batches` should be int type'):
+            tk.decompositions.TTDecomposition(
+                [torch.ones(2, 1), torch.ones(1, 3)],
+                n_batches=True)
+
     def test_tt_validation_rank_and_dense_contraction(self):
         cores = [
             torch.randn(2, 3),

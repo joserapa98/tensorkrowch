@@ -5,7 +5,7 @@
 >
 > Rama de referencia inicial: `tt_rss`.
 >
-> Última actualización: 2026-08-30.
+> Última actualización: 2026-09-04.
 >
 > Nota de versionado: esta guía se mantiene versionada explícitamente aunque
 > `.codex/` esté ignorada por el `.gitignore` general.
@@ -1756,7 +1756,7 @@ Toda tarea debe respetar los siguientes requisitos cuando apliquen:
 - No usar `assert` en validación pública ni `except:` general.
 - Documentar ejes input/output, ranks, batches, outputs y orden de cores.
 - Probar primer, último y sitio interior; TT OBC y TR cíclico.
-- Aceptar `input_dim`/`output_dim` heterogéneos donde el algoritmo lo permita.
+- Aceptar `in_dim`/`out_dim` heterogéneos donde el algoritmo lo permita.
 - Un valor compartido de `embedding`/`domain`/`base`/`level` se broadcast;
   una secuencia debe tener la longitud correcta.
 
@@ -1783,7 +1783,7 @@ Toda tarea debe respetar los siguientes requisitos cuando apliquen:
 - No repetir SVD para calcular error.
 - Deduplicar evaluaciones antes de llamar a la función.
 - Procesar productos grandes por batch/fibra.
-- Mover a `output_device` únicamente objetos finalizados.
+- Mover a `out_device` únicamente objetos finalizados.
 - Instrumentar llamadas, puntos únicos, tiempos y, opcionalmente, memoria pico.
 - Añadir benchmarks antes/después de reemplazar una ruta madura.
 - Mantener una ruta silenciosa sin records, eventos, normas diagnósticas ni
@@ -1808,6 +1808,44 @@ Toda tarea debe respetar los siguientes requisitos cuando apliquen:
 - `docs/decompositions.rst` y exports se actualizan en el mismo commit que una
   API pública.
 - Código compatible con Python `>=3.8`, según `pyproject.toml`.
+
+### 6.6 Protocolo de revisión incremental de commits
+
+La revisión del usuario se realiza commit por commit y debe producir cambios
+pequeños y localizados. Para cada revisión:
+
+1. inspeccionar el commit concreto, los comentarios del usuario y esta lista
+   de decisiones transversales;
+2. modificar solo los ficheros afectados por ese commit;
+3. tocar componentes de commits anteriores únicamente cuando sea
+   imprescindible para conservar compatibilidad, corregir una dependencia o
+   mantener el comportamiento ya validado;
+4. no propagar en ese momento cambios de estilo o API por todos los commits
+   posteriores;
+5. registrar aquí cualquier consecuencia futura para aplicarla cuando se
+   revise el commit al que corresponda;
+6. validar el alcance afectado y crear un commit correctivo independiente, sin
+   rebase, amend ni squash.
+
+Los ficheros de commits posteriores solo se revisan cuando llegue su turno,
+combinando su diff original, los comentarios nuevos del usuario y las
+decisiones futuras acumuladas a continuación. La corrección amplia realizada
+durante la revisión de SVD-04 se conserva y no se revierte.
+
+#### Decisiones pendientes de aplicar en revisiones futuras
+
+- Migrar nombres públicos y variables análogas a `in_dim`, `out_dim` y
+  `out_device`, manteniendo palabras completas cuando sean más explicativas.
+- Escribir **tensor train**, **tensor ring** y nombres análogos sin guion.
+- Mantener observers y eventos como infraestructura interna; las APIs públicas
+  exponen `verbose` y los controles de métricas.
+- Enlazar clases o métodos TensorKrowch solo en su primera aparición explícita
+  y relevante dentro de un docstring.
+- Homogeneizar la documentación de argumentos compartidos cuando sus
+  semánticas coincidan, usando los argumentos de `truncated_svd` como ejemplo,
+  sin tests de igualdad textual.
+- Revisar estas decisiones solo en los ficheros propios de cada commit futuro;
+  no hacer barridos globales preventivos.
 
 ---
 

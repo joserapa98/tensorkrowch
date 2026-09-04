@@ -24,17 +24,23 @@ def _device(name):
 
 
 def _exact_tr():
-    """Builds a rank-two diagonal TR with cyclic rank one."""
-    first = torch.zeros(1, 3, 2, dtype=torch.float64)
-    first[0, 0, 0] = 5
-    first[0, 1, 1] = 1
-    middle = torch.zeros(2, 3, 2, dtype=torch.float64)
-    middle[0, 0, 0] = 1
-    middle[1, 1, 1] = 1
-    last = torch.zeros(2, 3, 1, dtype=torch.float64)
-    last[0, 0, 0] = 1
-    last[1, 1, 0] = 1
-    cores = [first, middle.clone(), middle.clone(), last]
+    """Builds an exact four-site TR with every rank equal to two."""
+    cores = [
+        torch.zeros(2, 2, 2, dtype=torch.float64)
+        for _ in range(4)
+    ]
+    weights = torch.tensor([[4., 2.], [3., 1.]], dtype=torch.float64)
+    for left_rank in range(2):
+        cores[0][left_rank, left_rank, left_rank] = 1
+        cores[2][left_rank, left_rank, left_rank] = 1
+        for right_rank in range(2):
+            cores[1][
+                left_rank,
+                right_rank ^ left_rank,
+                right_rank] = 1
+            cores[3][left_rank, right_rank, right_rank] = weights[
+                left_rank, right_rank]
+
     result = tk.decompositions.TRDecomposition(cores)
     return result, result.contract_dense()
 
@@ -70,7 +76,7 @@ class TestTRSVD:  # MARK: TestTRSVD
             result = tk.decompositions.TRSVD(
                 tensor, out_device=None).fit(rank=2, cutoff=0)
 
-        assert max(result.rank) <= 2
+        assert result.rank == [2, 2, 2, 2]
         assert torch.allclose(
             result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
 

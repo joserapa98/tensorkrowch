@@ -555,10 +555,6 @@ def truncated_svd(tensor: Tensor,
             total_squared_norm,
             torch.ones_like(total_squared_norm))
         tail_ratios = tail_squared_norm / safe_squared_norm
-        tail_ratios = torch.where(
-            positive_norm,
-            tail_ratios,
-            torch.zeros_like(tail_ratios))
         rtol_rank = (tail_ratios > rtol).reshape(
             -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, rtol_rank.item()))

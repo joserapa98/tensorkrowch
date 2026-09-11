@@ -260,6 +260,7 @@ def list2slice(lst: List) -> Union[List, slice]:
         return slice(*aux_slice)
     return lst
 
+
 def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
     """
     Splits a sequence of integers into regions where each region contains
@@ -312,6 +313,7 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
     regions.append(current_region)
     return regions
 
+
 def random_unitary(n,
                    device: Optional[torch.device] = None,
                    dtype: Optional[torch.dtype] = None,
@@ -332,34 +334,6 @@ def random_unitary(n,
     ph = d / d.abs()
     q = q @ torch.diag(ph)
     return q
-
-
-def _compact_svd(tensor: Tensor,
-                 svd_method: Text) -> Tuple[Tensor, Tensor, Tensor]:
-    """Computes an exact economy-size SVD with an already-resolved backend."""
-    if not isinstance(tensor, Tensor):
-        raise TypeError('`tensor` should be torch.Tensor type')
-    if tensor.ndim < 2:
-        # Preserve the exception type and message of the historical direct
-        # SVD path instead of defining a second dimensionality contract here.
-        return torch.linalg.svd(tensor, full_matrices=False)
-
-    if svd_method == 'svd':
-        return torch.linalg.svd(tensor, full_matrices=False)
-
-    if tensor.shape[-2] >= tensor.shape[-1]:
-        q, r = torch.linalg.qr(tensor, mode='reduced')
-        u_r, s, vh = torch.linalg.svd(r, full_matrices=False)
-        u = q @ u_r
-        return u, s, vh
-
-    tensor_h = tensor.transpose(-2, -1).conj()
-    q, r = torch.linalg.qr(tensor_h, mode='reduced')
-    r_h = r.transpose(-2, -1).conj()
-    u, s, vh_r = torch.linalg.svd(r_h, full_matrices=False)
-    q_h = q.transpose(-2, -1).conj()
-    vh = vh_r @ q_h
-    return u, s, vh
 
 
 class _TruncatedSVDInfo(NamedTuple):
@@ -404,6 +378,34 @@ def _validate_truncation(rank: Optional[int] = None,
         if (value < 0) or (value > 1) or not isfinite(value):
             raise ValueError(
                 f'`{name}` should be a finite number between 0 and 1')
+
+
+def _compact_svd(tensor: Tensor,
+                 svd_method: Text) -> Tuple[Tensor, Tensor, Tensor]:
+    """Computes an exact economy-size SVD with an already-resolved backend."""
+    if not isinstance(tensor, Tensor):
+        raise TypeError('`tensor` should be torch.Tensor type')
+    if tensor.ndim < 2:
+        # Preserve the exception type and message of the historical direct
+        # SVD path instead of defining a second dimensionality contract here.
+        return torch.linalg.svd(tensor, full_matrices=False)
+
+    if svd_method == 'svd':
+        return torch.linalg.svd(tensor, full_matrices=False)
+
+    if tensor.shape[-2] >= tensor.shape[-1]:
+        q, r = torch.linalg.qr(tensor, mode='reduced')
+        u_r, s, vh = torch.linalg.svd(r, full_matrices=False)
+        u = q @ u_r
+        return u, s, vh
+
+    tensor_h = tensor.transpose(-2, -1).conj()
+    q, r = torch.linalg.qr(tensor_h, mode='reduced')
+    r_h = r.transpose(-2, -1).conj()
+    u, s, vh_r = torch.linalg.svd(r_h, full_matrices=False)
+    q_h = q.transpose(-2, -1).conj()
+    vh = vh_r @ q_h
+    return u, s, vh
 
 
 def truncated_svd(tensor: Tensor,

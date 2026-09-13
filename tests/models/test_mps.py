@@ -16,6 +16,15 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+
+@pytest.fixture
+def mps_seed(request):
+    """Isolates seeded MPS cases from the suite's CPU and CUDA RNG state."""
+    with torch.random.fork_rng():
+        torch.manual_seed(request.param)
+        yield
+
+
 AUTO_BOOL_CASES = [True, False]
 N_FEATURES_CASES = [1, 2, 3, 4, 10]
 DIFF_N_FEATURES_CASES = [1, 2, 3, 4, 6]
@@ -1840,11 +1849,12 @@ class TestMPS:  # MARK: TestMPS
         expected = torch.tensor([0.5, 1.5, 1.]) / 3
         assert torch.allclose(captured[0][0].cpu(), expected)
 
+    @pytest.mark.parametrize('mps_seed', [4], indirect=True)
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
     @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)
     def test_entropy(self, runtime, svd_method, n_features, boundary,
-                     middle_site):
+                     middle_site, mps_seed):
         # Compare the renormalized entropy output with the non-renormalized one.
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
@@ -1859,11 +1869,14 @@ class TestMPS:  # MARK: TestMPS
                             init_method='canonical',
                             **runtime_kwargs)
 
+        renormalized_mps = mps.copy()
         self._trace_mps_for_canonicalize(mps, n_features, runtime)
+        self._trace_mps_for_canonicalize(
+            renormalized_mps, n_features, runtime)
 
         with tk.svd_method(svd_method):
-            renormalized_entropy = mps.entropy(middle_site=middle_site,
-                                               renormalize=True)
+            renormalized_entropy = renormalized_mps.entropy(
+                middle_site=middle_site, renormalize=True)
             entropy = mps.entropy(middle_site=middle_site,
                                   renormalize=False)
 
@@ -1874,6 +1887,24 @@ class TestMPS:  # MARK: TestMPS
                              atol=1e-05)
 
         self._finalize_mps_canonicalize(mps, n_features)
+        self._finalize_mps_canonicalize(renormalized_mps, n_features)
+
+    @pytest.mark.parametrize('svd_method', SVD_METHOD_CASES)
+    @pytest.mark.parametrize('renormalize', [False, True])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.complex64])
+    def test_entropy_underflowed_probabilities(
+            self, svd_method, renormalize, dtype):
+        # The second Schmidt value is positive, but its square underflows.
+        mps = tk.models.MPS(tensors=[
+            torch.diag(torch.tensor([1., 1e-30], dtype=dtype)),
+            torch.eye(2, dtype=dtype),
+        ], in_features=[])
+
+        with tk.svd_method(svd_method):
+            entropy = mps.entropy(0, renormalize=renormalize)
+
+        assert torch.isfinite(entropy)
+        assert entropy.item() == pytest.approx(0., abs=1e-7)
 
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)
@@ -2031,20 +2062,38 @@ class TestMPS:  # MARK: TestMPS
         with pytest.raises(TypeError):
             _ = mps.tensors
     
+    @pytest.mark.parametrize('mps_seed', [0], indirect=True)
     @pytest.mark.parametrize('runtime', UNIVOCAL_RUNTIME_CASES)
     @pytest.mark.parametrize('n_features', UNIVOCAL_N_FEATURES_CASES)
-    def test_canonicalize_univocal(self, runtime, n_features):
+    def test_canonicalize_univocal(self, runtime, n_features, mps_seed):
         atol = 1e-3 if runtime == 'default' else 1e-4
         self._run_univocal_case(n_features, runtime, 2, 10, atol)
 
+    @pytest.mark.parametrize('mps_seed', [0], indirect=True)
     @pytest.mark.parametrize('n_features', UNIVOCAL_N_FEATURES_CASES)
-    def test_canonicalize_univocal_diff_dims(self, n_features):
+    def test_canonicalize_univocal_diff_dims(self, n_features, mps_seed):
         phys_dim = torch.arange(2, 2 + n_features).int().tolist()
         bond_dim = torch.arange(2, 1 + n_features).int().tolist()
         self._run_univocal_case(n_features, 'default', phys_dim, bond_dim, 1e-4)
 
+    @pytest.mark.parametrize('mps_seed', [23], indirect=True)
+    def test_canonicalize_univocal_ill_conditioned_double(self, mps_seed):
+        # Preserve the float32-generated case with an ill-conditioned cross,
+        # then use double precision for its reconstruction check.
+        mps = tk.models.MPS(
+            phys_dim=[2, 3, 4, 5, 6], bond_dim=[2, 3, 4, 5],
+            n_features=5, boundary='obc', in_features=[],
+            init_method='unit').to(dtype=torch.float64)
+        expected = mps().detach().clone()
+
+        mps.canonicalize_univocal()
+
+        assert torch.allclose(mps(), expected, rtol=1e-8, atol=1e-10)
+
+    @pytest.mark.parametrize('mps_seed', [0], indirect=True)
     @pytest.mark.parametrize('n_features', UNIVOCAL_N_FEATURES_CASES)
-    def test_canonicalize_univocal_bond_greater_than_phys(self, n_features):
+    def test_canonicalize_univocal_bond_greater_than_phys(
+            self, n_features, mps_seed):
         self._run_univocal_case(n_features, 'default', 2, 100, 1e-4)
     
     def test_save_load_model(self):

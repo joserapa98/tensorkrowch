@@ -1743,7 +1743,9 @@ class MPS(TensorNetwork):  # MARK: MPS
                                   middle_tensor.shape[-1]))         # right
         
         s /= s.norm()
-        s2 = s[s > 0].pow(2)
+        s2 = s.pow(2)
+        # Squaring a positive Schmidt value may underflow to zero.
+        s2 = s2[s2 > 0]
         entropy = -(s2 * s2.log()).sum()
         
         # Rescale
@@ -3087,16 +3089,15 @@ class MPS(TensorNetwork):  # MARK: MPS
                                                    side='right')  # bond_dim x left
 
             C = left_nodeC @ right_node  # bond_dim x bond_dim
-            C = torch.linalg.inv(C.tensor)
 
             if idx == 0:
                 L @= right_node.tensor.t()  # input x bond_dim
-                L @= C
+                L = torch.linalg.solve(C.tensor.t(), L.t()).t()
             else:
                 shape_L = L.shape
                 # (bond_dim[-1] * input) x bond_dim
                 L = (L.view(-1, L.shape[-1]) @ right_node.tensor.t())
-                L @= C
+                L = torch.linalg.solve(C.tensor.t(), L.t()).t()
                 L = L.view(*shape_L[:-1], right_node.shape[0])
 
         return L, left_nodeC

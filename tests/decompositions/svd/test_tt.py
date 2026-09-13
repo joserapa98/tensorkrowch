@@ -459,12 +459,39 @@ class TestTTSVD:  # MARK: TestTTSVD
 
         output = capsys.readouterr().out
         assert 'TT-SVD\n======' in output
-        assert 'Site 1 / 2' in output
+        assert 'Cut 1-2' in output
+        assert 'Cut 2-3' in output
         assert 'selected rank: 2' in output
+        assert 'absolute error: 0.00e+00' in output
+        assert any(
+            line.startswith('  elapsed: ') and
+            line.endswith(' s') and
+            'e' in line
+            for line in output.splitlines())
         assert 'Summary\n-------' in output
         assert len(result.metrics.errors) == 1
         assert len(result.metrics.truncations) == 2
         assert len(result.metrics.timings) == 1
+
+    def test_console_events_are_emitted_during_fit(
+            self, capsys, monkeypatch):
+        truncated_svd = tt_module.truncated_svd
+        calls = 0
+
+        def tracked_truncated_svd(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                assert 'Cut 1-2' in capsys.readouterr().out
+            return truncated_svd(*args, **kwargs)
+
+        monkeypatch.setattr(
+            tt_module, 'truncated_svd', tracked_truncated_svd)
+        tk.decompositions.TTSVD(torch.randn(2, 3, 4)).fit(
+            rank=2,
+            verbose=1)
+
+        assert calls == 2
 
     @pytest.mark.parametrize(
         'constructor, error_type, match',

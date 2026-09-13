@@ -21,6 +21,8 @@ import sys
 from typing import (Any, Dict, List, Optional, Protocol, Sequence, TextIO,
                     Union)
 
+import torch
+
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
 
 
@@ -123,7 +125,23 @@ class ConsoleObserver:
         }
         for name, value in values.items():
             label = labels.get(name, name.replace('_', ' '))
-            print(f'  {label}: {value}', file=self.stream)
+            print(
+                f'  {label}: {self._format_value(name, value)}',
+                file=self.stream)
+
+    @staticmethod
+    def _format_value(name: str, value: Any) -> Any:
+        """Formats floating-point console values consistently."""
+        if (name == 'blocks') and isinstance(value, tuple):
+            return ' | '.join(str(list(block)) for block in value)
+        if isinstance(value, float):
+            formatted = f'{value:.2e}'
+        elif isinstance(value, torch.Tensor) and (value.ndim == 0) and \
+                value.is_floating_point():
+            formatted = f'{value.item():.2e}'
+        else:
+            return value
+        return f'{formatted} s' if name == 'elapsed' else formatted
 
     def emit(self, event: DecompositionEvent) -> None:
         if not isinstance(event, DecompositionEvent):
@@ -136,6 +154,24 @@ class ConsoleObserver:
             print('=' * len(event.phase), file=self.stream)
             if self.verbose >= 2:
                 self._print_values(event.values)
+        elif event.name == 'cut_complete':
+            left_site = event.site + 1 if event.site is not None else '?'
+            right_site = event.site + 2 if event.site is not None else '?'
+            print(f'\nCut {left_site}-{right_site}', file=self.stream)
+            if self.verbose >= 2:
+                details = dict(event.values)
+                if event.elapsed is not None:
+                    details['elapsed'] = event.elapsed
+                self._print_values(details)
+        elif event.name == 'bipartition_complete':
+            label = 'Initial bipartition'
+            print(f'\n{label}', file=self.stream)
+            print('-' * len(label), file=self.stream)
+            if self.verbose >= 2:
+                details = dict(event.values)
+                if event.elapsed is not None:
+                    details['elapsed'] = event.elapsed
+                self._print_values(details)
         elif event.name == 'site_complete':
             total = event.values.get('total_sites')
             position = event.site + 1 if event.site is not None else '?'
@@ -148,7 +184,7 @@ class ConsoleObserver:
                     if name != 'total_sites'
                 }
                 if event.elapsed is not None:
-                    details['elapsed'] = f'{event.elapsed:.6f} s'
+                    details['elapsed'] = event.elapsed
                 self._print_values(details)
         elif event.name == 'summary':
             print('\nSummary', file=self.stream)
@@ -160,7 +196,7 @@ class ConsoleObserver:
             print(f'\n{label} {position}', file=self.stream)
             if event.elapsed is not None:
                 values = dict(event.values)
-                values['elapsed'] = f'{event.elapsed:.6f} s'
+                values['elapsed'] = event.elapsed
             else:
                 values = event.values
             self._print_values(values)
@@ -177,7 +213,7 @@ class ConsoleObserver:
             if self.verbose >= 2:
                 values = dict(event.values)
                 if event.elapsed is not None:
-                    values['elapsed'] = f'{event.elapsed:.6f} s'
+                    values['elapsed'] = event.elapsed
                 self._print_values(values)
 
     def close(self, metrics: DecompositionMetrics) -> None:

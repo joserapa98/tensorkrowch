@@ -9,6 +9,7 @@ import torch
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tr as tr_module
+import tensorkrowch.decompositions.svd.tt as tt_module
 
 
 SVD_METHODS = ['svd', 'qr_svd']
@@ -440,9 +441,38 @@ class TestTRSVD:  # MARK: TestTRSVD
 
         output = capsys.readouterr().out
         assert 'TR-SVD\n======' in output
+        assert '\nTT-SVD\n' not in output
+        assert 'Initial bipartition\n-------------------' in output
+        assert 'Cut 1-2' in output
+        assert 'Cut 3-4' in output
+        assert 'step:' not in output
         assert 'Summary\n-------' in output
         assert len(result.metrics.truncations) == 3
         assert output.count('shape:') == 4
+
+    def test_console_events_are_emitted_in_execution_order(
+            self, capsys, monkeypatch):
+        truncated_svd = tt_module.truncated_svd
+        calls = 0
+
+        def tracked_truncated_svd(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                assert 'Initial bipartition' in capsys.readouterr().out
+            elif calls == 3:
+                assert 'Cut 1-2' in capsys.readouterr().out
+            return truncated_svd(*args, **kwargs)
+
+        monkeypatch.setattr(
+            tt_module, 'truncated_svd', tracked_truncated_svd)
+        tk.decompositions.TRSVD(
+            torch.randn(2, 2, 2, 2), out_device=None).fit(
+                center=2,
+                rank=2,
+                verbose=1)
+
+        assert calls == 3
 
     @pytest.mark.parametrize(
         'constructor, kwargs, error_type, match',

@@ -27,7 +27,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.svd.tt import TTSVD
+from tensorkrowch.decompositions.svd.tt import TTSVD, _SVDProgress
 
 
 _Rank = Optional[int]
@@ -165,8 +165,9 @@ class TRSVD:
             in_dim: Tuple[int, ...],
             truncation: _TruncationSpec,
             renormalize: bool,
-            collect_metrics: bool) -> Tuple[List[torch.Tensor],
-                                             Optional[DecompositionMetrics]]:
+            collect_metrics: bool,
+            progress: Optional[_SVDProgress] = None) -> Tuple[
+                List[torch.Tensor], Optional[DecompositionMetrics]]:
         """Applies TT-SVD while preserving a subchain's boundary ranks."""
         left_rank = subchain.shape[0]
         right_rank = subchain.shape[-1]
@@ -184,7 +185,8 @@ class TRSVD:
         result = engine._fit_validated(
             truncation=truncation,
             renormalize=renormalize,
-            collect_metrics=collect_metrics)
+            collect_metrics=collect_metrics,
+            progress=progress)
 
         cores = list(result.cores)
         metrics = result.metrics if collect_metrics else None
@@ -305,8 +307,8 @@ class TRSVD:
             Console verbosity level:
 
             - ``0`` or ``False``: no console output;
-            - ``1`` or ``True``: phase title, site progress and final summary;
-            - ``2``: input configuration and detailed per-site rank, error and
+            - ``1`` or ``True``: phase title, cut progress and final summary;
+            - ``2``: input configuration and detailed per-cut rank, error and
               timing information;
             - ``3``: level 2 output followed by every final core.
 
@@ -392,6 +394,27 @@ class TRSVD:
             initial_metrics = (
                 initial_result.metrics if collect_metrics else None)
             del initial_result
+
+            if fit_observer is not None:
+                initial_record = initial_metrics.truncations[0]
+                initial_timing = initial_metrics.timings[0]
+                fit_observer.emit(DecompositionEvent(
+                    name='bipartition_complete',
+                    phase='TR-SVD',
+                    elapsed=initial_timing.elapsed,
+                    values={
+                        'blocks': (
+                            tuple(range(1, center + 1)),
+                            tuple(range(center + 1, len(in_dim) + 1))),
+                        'full_rank': initial_record.full_rank,
+                        'selected_rank': selected_rank,
+                        'cycle_rank': cycle_rank,
+                        'center_rank': center_rank,
+                        'absolute_error': (
+                            initial_record.local_absolute_error),
+                        'relative_error': (
+                            initial_record.local_relative_error),
+                    }))
             if padding:
                 left_factor = torch.cat([
                     left_factor,
@@ -414,13 +437,26 @@ class TRSVD:
                 in_dim=in_dim[:center],
                 truncation=truncation,
                 renormalize=renormalize,
-                collect_metrics=collect_metrics)
+                collect_metrics=collect_metrics,
+                progress=(
+                    _SVDProgress(
+                        observer=fit_observer,
+                        phase='TR-SVD',
+                        subphase='left_subchain')
+                    if fit_observer is not None else None))
             right_cores, right_metrics = self._decompose_subchain(
                 subchain=right_subchain,
                 in_dim=in_dim[center:],
                 truncation=truncation,
                 renormalize=renormalize,
-                collect_metrics=collect_metrics)
+                collect_metrics=collect_metrics,
+                progress=(
+                    _SVDProgress(
+                        observer=fit_observer,
+                        phase='TR-SVD',
+                        site_offset=center,
+                        subphase='right_subchain')
+                    if fit_observer is not None else None))
 
         metrics = DecompositionMetrics()
         if collect_metrics:
@@ -482,20 +518,6 @@ class TRSVD:
             })
 
         if fit_observer is not None:
-            for position, record in enumerate(result.metrics.truncations):
-                fit_observer.emit(DecompositionEvent(
-                    name='site_complete',
-                    phase='TR-SVD',
-                    site=record.site,
-                    values={
-                        'total_sites': len(result.metrics.truncations),
-                        'step': position + 1,
-                        'subphase': record.phase,
-                        'full_rank': record.full_rank,
-                        'selected_rank': record.selected_rank,
-                        'absolute_error': record.local_absolute_error,
-                        'relative_error': record.local_relative_error,
-                    }))
             fit_observer.emit(DecompositionEvent(
                 name='summary',
                 phase='TR-SVD',
@@ -505,7 +527,7 @@ class TRSVD:
                     'initial_rank': selected_rank,
                     'initial_capacity': initial_capacity,
                     'structural_padding': padding,
-                    'elapsed': f'{total_timer.elapsed:.6f} s',
+                    'elapsed': total_timer.elapsed,
                 }))
             for site, core in enumerate(result.cores):
                 fit_observer.emit(DecompositionEvent(
@@ -592,8 +614,8 @@ def tr_svd(tensor: torch.Tensor,
         Console verbosity level:
 
         - ``0`` or ``False``: no console output;
-        - ``1`` or ``True``: phase title, site progress and final summary;
-        - ``2``: input configuration and detailed per-site rank, error and
+        - ``1`` or ``True``: phase title, cut progress and final summary;
+        - ``2``: input configuration and detailed per-cut rank, error and
           timing information;
         - ``3``: level 2 output followed by every final core.
 

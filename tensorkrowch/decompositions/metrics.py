@@ -188,8 +188,8 @@ class TruncationRecord:
                       site: int,
                       log_scale: Optional[float] = None,
                       log_scale_per_batch: Optional[torch.Tensor] = None,
-                      global_input_norm: Optional[float] = None,
-                      global_input_norm_per_batch: Optional[
+                      reference_norm: Optional[float] = None,
+                      reference_norm_per_batch: Optional[
                           torch.Tensor] = None,
                       singular_values: Optional[torch.Tensor] = None
                       ) -> 'TruncationRecord':
@@ -198,7 +198,7 @@ class TruncationRecord:
             raise ValueError(
                 'Only one of `log_scale` and `log_scale_per_batch` may be set')
 
-        total_log_norm_per_batch = \
+        input_log_norm_per_batch = \
             info.total_squared_norm_per_batch.log() / 2
         discarded_log_norm_per_batch = \
             info.discarded_squared_norm_per_batch.log() / 2
@@ -207,126 +207,131 @@ class TruncationRecord:
                 raise TypeError(
                     '`log_scale_per_batch` should be torch.Tensor type')
             log_scale_per_batch = log_scale_per_batch.to(
-                device=total_log_norm_per_batch.device,
-                dtype=total_log_norm_per_batch.dtype)
-            if log_scale_per_batch.shape != total_log_norm_per_batch.shape:
+                device=input_log_norm_per_batch.device,
+                dtype=input_log_norm_per_batch.dtype)
+            if log_scale_per_batch.shape != input_log_norm_per_batch.shape:
                 raise ValueError(
                     '`log_scale_per_batch` should match the SVD batch shape')
             if not torch.isfinite(log_scale_per_batch).all():
                 raise ValueError('`log_scale_per_batch` should be finite')
-            scale_log = log_scale_per_batch
+            log_scale_tensor = log_scale_per_batch
         elif log_scale is not None:
             log_scale = _scalar_float(log_scale, 'log_scale')
             if not isfinite(log_scale):
                 raise ValueError('`log_scale` should be finite')
-            scale_log = total_log_norm_per_batch.new_tensor(log_scale)
+            log_scale_tensor = input_log_norm_per_batch.new_tensor(log_scale)
         else:
-            scale_log = torch.zeros_like(total_log_norm_per_batch)
+            log_scale_tensor = torch.zeros_like(input_log_norm_per_batch)
 
-        total_log_norm_per_batch = total_log_norm_per_batch + scale_log
+        input_log_norm_per_batch = (
+            input_log_norm_per_batch + log_scale_tensor)
         discarded_log_norm_per_batch = (
-            discarded_log_norm_per_batch + scale_log)
+            discarded_log_norm_per_batch + log_scale_tensor)
 
-        global_norm = None
-        if global_input_norm is not None:
-            global_input_norm = _scalar_float(
-                global_input_norm, 'global_input_norm')
-            if (global_input_norm < 0) or \
-                    (not isfinite(global_input_norm)):
+        reference_norm_tensor = None
+        if reference_norm is not None:
+            reference_norm = _scalar_float(reference_norm, 'reference_norm')
+            if (reference_norm < 0) or (not isfinite(reference_norm)):
                 raise ValueError(
-                    '`global_input_norm` should be finite and non-negative')
-            global_norm = total_log_norm_per_batch.new_tensor(
-                global_input_norm)
+                    '`reference_norm` should be finite and non-negative')
+            reference_norm_tensor = input_log_norm_per_batch.new_tensor(
+                reference_norm)
 
-        global_norms = None
-        if global_input_norm_per_batch is not None:
-            if not isinstance(global_input_norm_per_batch, torch.Tensor):
+        if reference_norm_per_batch is not None:
+            if not isinstance(reference_norm_per_batch, torch.Tensor):
                 raise TypeError(
-                    '`global_input_norm_per_batch` should be torch.Tensor type')
-            global_norms = global_input_norm_per_batch.to(
-                device=total_log_norm_per_batch.device,
-                dtype=total_log_norm_per_batch.dtype)
-            if global_norms.shape != total_log_norm_per_batch.shape:
+                    '`reference_norm_per_batch` should be torch.Tensor type')
+            reference_norm_per_batch = reference_norm_per_batch.to(
+                device=input_log_norm_per_batch.device,
+                dtype=input_log_norm_per_batch.dtype)
+            if reference_norm_per_batch.shape != \
+                    input_log_norm_per_batch.shape:
                 raise ValueError(
-                    '`global_input_norm_per_batch` should match the SVD batch '
+                    '`reference_norm_per_batch` should match the SVD batch '
                     'shape')
-            if torch.any(global_norms < 0) or \
-                    (not torch.isfinite(global_norms).all()):
+            if torch.any(reference_norm_per_batch < 0) or \
+                    (not torch.isfinite(reference_norm_per_batch).all()):
                 raise ValueError(
-                    '`global_input_norm_per_batch` should be finite and '
+                    '`reference_norm_per_batch` should be finite and '
                     'non-negative')
 
-        reference_norm = global_norms
-        if (reference_norm is None) and (global_norm is not None):
-            reference_norm = global_norm.expand(
-                total_log_norm_per_batch.shape)
+        batch_reference_norm = reference_norm_per_batch
+        if (batch_reference_norm is None) and \
+                (reference_norm_tensor is not None):
+            batch_reference_norm = reference_norm_tensor.expand(
+                input_log_norm_per_batch.shape)
         input_norm_per_batch = _norm_from_log(
-            total_log_norm_per_batch, reference_norm)
-        absolute_per_batch = _norm_from_log(
-            discarded_log_norm_per_batch, reference_norm)
-        relative_per_batch = _ratio_from_log_norms(
-            discarded_log_norm_per_batch, total_log_norm_per_batch)
+            input_log_norm_per_batch, batch_reference_norm)
+        local_absolute_error_per_batch = _norm_from_log(
+            discarded_log_norm_per_batch, batch_reference_norm)
+        local_relative_error_per_batch = _ratio_from_log_norms(
+            discarded_log_norm_per_batch, input_log_norm_per_batch)
 
         if singular_values is not None:
             if not isinstance(singular_values, torch.Tensor):
                 raise TypeError('`singular_values` should be torch.Tensor type')
-            if singular_values.shape[:-1] != total_log_norm_per_batch.shape:
+            if singular_values.shape[:-1] != input_log_norm_per_batch.shape:
                 raise ValueError(
                     '`singular_values` should match the SVD batch shape')
             singular_values = singular_values.to(
-                device=total_log_norm_per_batch.device,
-                dtype=total_log_norm_per_batch.dtype)
-            singular_log = singular_values.log() + scale_log.unsqueeze(-1)
-            singular_reference = None if reference_norm is None \
-                else reference_norm.unsqueeze(-1)
+                device=input_log_norm_per_batch.device,
+                dtype=input_log_norm_per_batch.dtype)
+            singular_log = (
+                singular_values.log() + log_scale_tensor.unsqueeze(-1))
+            singular_reference = None if batch_reference_norm is None \
+                else batch_reference_norm.unsqueeze(-1)
             singular_values = _norm_from_log(
                 singular_log, singular_reference)
 
-        input_log_norm = _aggregate_log_norm(total_log_norm_per_batch)
-        absolute_log_norm = _aggregate_log_norm(
+        input_log_norm = _aggregate_log_norm(input_log_norm_per_batch)
+        discarded_log_norm = _aggregate_log_norm(
             discarded_log_norm_per_batch)
-        aggregate_reference = global_norm
-        if (aggregate_reference is None) and (global_norms is not None):
-            global_log_norm = _aggregate_log_norm(global_norms.log())
-            aggregate_reference = global_log_norm.exp()
+        aggregate_reference = reference_norm_tensor
+        if (aggregate_reference is None) and \
+                (reference_norm_per_batch is not None):
+            reference_log_norm = _aggregate_log_norm(
+                reference_norm_per_batch.log())
+            aggregate_reference = reference_log_norm.exp()
         input_norm = _norm_from_log(input_log_norm, aggregate_reference)
-        absolute = _norm_from_log(
-            absolute_log_norm, aggregate_reference)
-        relative = _ratio_from_log_norms(
-            absolute_log_norm, input_log_norm)
+        local_absolute_error = _norm_from_log(
+            discarded_log_norm, aggregate_reference)
+        local_relative_error = _ratio_from_log_norms(
+            discarded_log_norm, input_log_norm)
 
-        global_contribution = None
-        global_contribution_per_batch = None
-        if global_norm is not None:
-            global_contribution = _ratio_from_log_norms(
-                absolute_log_norm, global_norm.log())
-        if global_norms is not None:
-            global_contribution_per_batch = _ratio_from_log_norms(
-                discarded_log_norm_per_batch, global_norms.log())
+        global_relative_contribution = None
+        global_relative_contribution_per_batch = None
+        if reference_norm_tensor is not None:
+            global_relative_contribution = _ratio_from_log_norms(
+                discarded_log_norm, reference_norm_tensor.log())
+        if reference_norm_per_batch is not None:
+            global_relative_contribution_per_batch = _ratio_from_log_norms(
+                discarded_log_norm_per_batch, reference_norm_per_batch.log())
 
-        discarded_per_batch = absolute_per_batch.square()
-        has_batches = total_log_norm_per_batch.ndim > 0
+        discarded_squared_norm_per_batch = \
+            local_absolute_error_per_batch.square()
+        has_batches = input_log_norm_per_batch.ndim > 0
         return cls(
             site=site,
             full_rank=info.full_rank,
             selected_rank=info.selected_rank,
-            discarded_squared_norm=absolute.square(),
-            local_absolute_error=absolute,
+            discarded_squared_norm=local_absolute_error.square(),
+            local_absolute_error=local_absolute_error,
             input_norm=input_norm,
-            local_relative_error=relative,
-            global_relative_contribution=global_contribution,
+            local_relative_error=local_relative_error,
+            global_relative_contribution=global_relative_contribution,
             log_scale=log_scale,
             svd_method=info.svd_method,
             discarded_squared_norm_per_batch=(
-                discarded_per_batch if has_batches else None),
+                discarded_squared_norm_per_batch if has_batches else None),
             local_absolute_error_per_batch=(
-                absolute_per_batch if has_batches else None),
+                local_absolute_error_per_batch if has_batches else None),
             input_norm_per_batch=(
                 input_norm_per_batch if has_batches else None),
             local_relative_error_per_batch=(
-                relative_per_batch if has_batches else None),
+                local_relative_error_per_batch if has_batches else None),
             global_relative_contribution_per_batch=(
-                global_contribution_per_batch if has_batches else None),
+                global_relative_contribution_per_batch
+                if has_batches else None),
             log_scale_per_batch=(
                 log_scale_per_batch if has_batches else None),
             singular_values=singular_values)

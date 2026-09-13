@@ -5,6 +5,7 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+import tensorkrowch.decompositions.svd.tt as tt_module
 import tensorkrowch.decompositions.svd.ttm as ttm_module
 
 
@@ -337,11 +338,34 @@ class TestTTMSVD:  # MARK: TestTTMSVD
 
         output = capsys.readouterr().out
         assert 'TTM-SVD\n=======' in output
+        assert '\nTT-SVD\n' not in output
         assert 'input dim: (2, 4)' in output
         assert 'output dim: (3, 5)' in output
+        assert 'Cut 1-2' in output
         assert tuple(result.cores[0].shape) == (2, 2, 3)
         assert 'shape: (2, 2, 3)' in output
         assert 'shape: (2, 4, 5)' in output
+
+    def test_console_events_are_emitted_during_fit(
+            self, capsys, monkeypatch):
+        truncated_svd = tt_module.truncated_svd
+        calls = 0
+
+        def tracked_truncated_svd(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                assert 'Cut 1-2' in capsys.readouterr().out
+            return truncated_svd(*args, **kwargs)
+
+        monkeypatch.setattr(
+            tt_module, 'truncated_svd', tracked_truncated_svd)
+        tk.decompositions.TTMSVD(
+            torch.randn(2, 2, 2, 2, 2, 2)).fit(
+                rank=2,
+                verbose=1)
+
+        assert calls == 2
 
     @pytest.mark.parametrize(
         'constructor, kwargs, error_type, match',

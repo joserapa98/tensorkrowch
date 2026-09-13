@@ -21,7 +21,7 @@ from tensorkrowch.decompositions.observers import (
 )
 from tensorkrowch.decompositions.results import TTMDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.svd.tt import TTSVD
+from tensorkrowch.decompositions.svd.tt import TTSVD, _SVDProgress
 
 
 _Dimension = Optional[Union[int, Sequence[int]]]
@@ -318,8 +318,8 @@ class TTMSVD:
             Console verbosity level:
 
             - ``0`` or ``False``: no console output;
-            - ``1`` or ``True``: phase title, site progress and final summary;
-            - ``2``: input configuration and detailed per-site rank, error and
+            - ``1`` or ``True``: phase title, cut progress and final summary;
+            - ``2``: input configuration and detailed per-cut rank, error and
               timing information;
             - ``3``: level 2 output followed by every final core.
 
@@ -375,7 +375,12 @@ class TTMSVD:
         tt_result = self._engine._fit_validated(
             truncation=truncation,
             renormalize=renormalize,
-            collect_metrics=collect_metrics)
+            collect_metrics=collect_metrics,
+            progress=(
+                _SVDProgress(
+                    observer=fit_observer,
+                    phase='TTM-SVD')
+                if fit_observer is not None else None))
         cores = self._unfuse_in_out_axes(tt_result.cores)
         result = TTMDecomposition(
             cores=cores,
@@ -389,20 +394,6 @@ class TTMSVD:
 
         if fit_observer is not None:
             timing = result.metrics.timings[0]
-            for site, (record, cut_timing) in enumerate(zip(
-                    result.metrics.truncations, timing.children)):
-                fit_observer.emit(DecompositionEvent(
-                    name='site_complete',
-                    phase='TTM-SVD',
-                    site=site,
-                    elapsed=cut_timing.elapsed,
-                    values={
-                        'total_sites': len(self.in_dim) - 1,
-                        'full_rank': record.full_rank,
-                        'selected_rank': record.selected_rank,
-                        'absolute_error': record.local_absolute_error,
-                        'relative_error': record.local_relative_error,
-                    }))
             error = result.metrics.errors[0]
             fit_observer.emit(DecompositionEvent(
                 name='summary',
@@ -411,7 +402,7 @@ class TTMSVD:
                     'rank': result.rank,
                     'absolute_error': error.absolute,
                     'relative_error': error.relative,
-                    'elapsed': f'{timing.elapsed:.6f} s',
+                    'elapsed': timing.elapsed,
                 }))
             for site, core in enumerate(result.cores):
                 fit_observer.emit(DecompositionEvent(
@@ -509,8 +500,8 @@ def ttm_svd(tensor: torch.Tensor,
         Console verbosity level:
 
         - ``0`` or ``False``: no console output;
-        - ``1`` or ``True``: phase title, site progress and final summary;
-        - ``2``: input configuration and detailed per-site rank, error and
+        - ``1`` or ``True``: phase title, cut progress and final summary;
+        - ``2``: input configuration and detailed per-cut rank, error and
           timing information;
         - ``3``: level 2 output followed by every final core.
 

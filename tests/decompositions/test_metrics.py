@@ -72,8 +72,8 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
             info,
             site=2,
             log_scale_per_batch=torch.tensor([0.0, math.log(2.0)]),
-            global_input_norm=10.0,
-            global_input_norm_per_batch=torch.tensor([5.0, 4.0]))
+            reference_norm=10.0,
+            reference_norm_per_batch=torch.tensor([5.0, 4.0]))
 
         # Discarded energies are 3**2 and (2 * 1)**2 after rescaling.
         assert record.discarded_squared_norm == pytest.approx(13.0)
@@ -94,7 +94,7 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
             torch.zeros(3, 3), rank=1, return_info=True)
 
         record = tk.decompositions.TruncationRecord.from_svd_info(
-            info, site=0, global_input_norm=0.0)
+            info, site=0, reference_norm=0.0)
 
         assert record.local_absolute_error == 0.0
         assert record.local_relative_error == 0.0

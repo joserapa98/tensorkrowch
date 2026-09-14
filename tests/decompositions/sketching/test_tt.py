@@ -106,7 +106,7 @@ class TestTTRSS:
                 legacy_projection=False,
                 collect_metrics=True)
 
-        approximation = result.evaluate(samples, embedding=embedding)
+        approximation = result.evaluate(embedding(samples))
         assert torch.allclose(
             approximation,
             function(samples).squeeze(1),
@@ -132,7 +132,7 @@ class TestTTRSS:
                 generator=torch.Generator().manual_seed(96))
 
         assert torch.allclose(
-            result.evaluate(samples, embedding=embedding),
+            result.evaluate(embedding(samples)),
             function(samples).squeeze(1),
             rtol=1e-10,
             atol=1e-12)

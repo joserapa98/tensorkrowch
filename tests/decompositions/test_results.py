@@ -73,10 +73,14 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert torch.allclose(result.contract_dense(), expected)
 
     def test_tr_validation_rank_and_dense_contraction(self):
+        generator = torch.Generator().manual_seed(0)
         cores = [
-            torch.randn(2, 3, 4),
-            torch.randn(4, 5, 3),
-            torch.randn(3, 2, 2),
+            torch.randn(2, 3, 4, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(4, 5, 3, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(3, 2, 2, dtype=torch.float64,
+                        generator=generator),
         ]
         result = tk.decompositions.TRDecomposition(cores)
 
@@ -176,7 +180,99 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             torch.einsum('i,j->ij', first[0], second[1]),
             torch.einsum('i,j->ij', first[1], second[0]),
         ])
-        assert torch.allclose(result.apply(inputs), expected_apply)
+        applied = result.apply(inputs)
+        assert isinstance(applied, tk.decompositions.TTDecomposition)
+        assert applied.n_batches == 1
+        assert torch.allclose(applied.contract_dense(), expected_apply)
+        assert torch.allclose(
+            result(inputs).contract_dense(), expected_apply)
+
+        out_samples = torch.tensor([[1, 2], [0, 1]])
+        expected_evaluate = expected_dense[
+            inputs[:, 0], out_samples[:, 0],
+            inputs[:, 1], out_samples[:, 1]]
+        assert torch.allclose(
+            result.evaluate(inputs, out_samples), expected_evaluate)
+        assert torch.allclose(
+            result(inputs, out_samples), expected_evaluate)
+
+    def test_ttm_evaluate_and_apply_with_nontrivial_ranks(self):
+        generator = torch.Generator().manual_seed(2)
+        cores = [
+            torch.randn(2, 3, 3, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(3, 2, 4, 2, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(4, 3, 2, dtype=torch.float64,
+                        generator=generator),
+        ]
+        result = tk.decompositions.TTMDecomposition(cores)
+        dense = result.contract_dense()
+        in_samples = torch.stack([
+            torch.randint(0, dim, (2, 3), generator=generator)
+            for dim in result.in_dim
+        ], dim=-1)
+        out_samples = torch.stack([
+            torch.randint(0, dim, (2, 3), generator=generator)
+            for dim in result.out_dim
+        ], dim=-1)
+        expected_evaluate = dense[
+            in_samples[..., 0], out_samples[..., 0],
+            in_samples[..., 1], out_samples[..., 1],
+            in_samples[..., 2], out_samples[..., 2]]
+
+        assert torch.allclose(
+            result.evaluate(in_samples, out_samples, n_batches=2),
+            expected_evaluate)
+
+        in_vectors = [
+            torch.nn.functional.one_hot(
+                in_samples[..., site], num_classes=site_in_dim).to(torch.float64)
+            for site, site_in_dim in enumerate(result.in_dim)
+        ]
+        assert torch.allclose(
+            result.evaluate(in_vectors, out_samples, n_batches=2),
+            expected_evaluate)
+        out_vectors = [
+            torch.nn.functional.one_hot(
+                out_samples[..., site], num_classes=site_out_dim).to(torch.float64)
+            for site, site_out_dim in enumerate(result.out_dim)
+        ]
+        assert torch.allclose(
+            result.evaluate(in_samples, out_vectors, n_batches=2),
+            expected_evaluate)
+        assert torch.allclose(
+            result.evaluate(in_vectors, out_vectors, n_batches=2),
+            expected_evaluate)
+
+        applied = result.apply(in_samples, n_batches=2)
+        expected_apply = torch.stack([
+            dense[tuple(
+                index
+                for site, sample in enumerate(configuration)
+                for index in (sample, slice(None)))]
+            for configuration in in_samples.reshape(-1, 3)
+        ]).reshape(2, 3, *result.out_dim)
+        assert applied.n_batches == 2
+        assert torch.allclose(applied.contract_dense(), expected_apply)
+
+    def test_one_site_ttm_evaluate_and_apply(self):
+        core = torch.arange(6., dtype=torch.float64).reshape(2, 3)
+        result = tk.decompositions.TTMDecomposition([core])
+        in_samples = torch.tensor([[0], [1]])
+        out_samples = torch.tensor([[2], [0]])
+
+        assert torch.equal(
+            result.evaluate(in_samples, out_samples),
+            core[in_samples[:, 0], out_samples[:, 0]])
+
+        applied = result.apply(in_samples)
+        assert applied.n_batches == 1
+        assert torch.equal(applied.contract_dense(), core[in_samples[:, 0]])
+
+        single = result.apply(torch.tensor([1]), n_batches=0)
+        assert single.n_batches == 0
+        assert torch.equal(single.contract_dense(), core[1])
 
     def test_ttm_result_initializes_mpo(self):
         result = tk.decompositions.TTMSVD(
@@ -407,6 +503,11 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         expected = dense[tuple(samples.t())]
 
         assert torch.allclose(result.evaluate(samples), expected)
+        assert torch.allclose(
+            result(torch.tensor([1, 0]), n_batches=0), dense[1, 0])
+        assert torch.allclose(
+            result([torch.tensor(1), torch.tensor(0)], n_batches=0),
+            dense[1, 0])
 
         record = result.error(
             lambda values: dense[tuple(values.t())], samples)
@@ -423,7 +524,53 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         expected = dense[tuple(samples.t())]
         assert torch.allclose(result.evaluate(samples), expected)
 
-    def test_evaluate_with_shared_and_site_embeddings(self):
+    @pytest.mark.parametrize('topology', ['tt', 'tr'])
+    def test_evaluate_keeps_core_and_data_batches(self, topology):
+        generator = torch.Generator().manual_seed(1)
+        if topology == 'tt':
+            cores = [
+                torch.randn(2, 3, 2, 2, dtype=torch.float64,
+                            generator=generator),
+                torch.randn(2, 3, 2, 3, dtype=torch.float64,
+                            generator=generator),
+            ]
+            result = tk.decompositions.TTDecomposition(cores, n_batches=2)
+        else:
+            cores = [
+                torch.randn(2, 3, 2, 2, 2, dtype=torch.float64,
+                            generator=generator),
+                torch.randn(2, 3, 2, 3, 2, dtype=torch.float64,
+                            generator=generator),
+            ]
+            result = tk.decompositions.TRDecomposition(cores, n_batches=2)
+
+        indices = torch.randint(
+            0, 2, (4, 5, 2), generator=generator)
+        indices[..., 1] = torch.randint(
+            0, 3, (4, 5), generator=generator)
+        dense = result.contract_dense()
+        expected = torch.stack([
+            torch.stack([
+                dense[i, j][indices[..., 0], indices[..., 1]]
+                for j in range(dense.shape[1])
+            ])
+            for i in range(dense.shape[0])
+        ])
+
+        assert torch.allclose(
+            result.evaluate(indices, n_batches=2), expected)
+        assert torch.allclose(
+            result([indices[..., 0], indices[..., 1]], n_batches=2),
+            expected)
+
+        vectors = [
+            torch.nn.functional.one_hot(
+                indices[..., site], num_classes=site_in_dim).to(torch.float64)
+            for site, site_in_dim in enumerate(result.in_dim)
+        ]
+        assert torch.allclose(result(vectors, n_batches=2), expected)
+
+    def test_evaluate_with_tensor_and_site_vectors(self):
         generator = torch.Generator().manual_seed(0)
         cores = [
             torch.randn(2, 3, dtype=torch.float64, generator=generator),
@@ -446,13 +593,11 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         expected = torch.einsum(
             'xi,ia,aj,xj->x', vectors[0], cores[0], cores[1], vectors[1])
 
-        assert torch.allclose(result.evaluate(samples, embedding), expected)
+        embedded = embedding(samples)
+        assert torch.allclose(result.evaluate(embedded), expected)
         assert calls == [samples.shape]
 
-        calls.clear()
-        assert torch.allclose(
-            result.evaluate(samples, [embedding, embedding]), expected)
-        assert calls == [samples[:, 0].shape, samples[:, 1].shape]
+        assert torch.allclose(result.evaluate(vectors), expected)
 
     def test_to_cpu_and_as_info(self):
         result = tk.decompositions.TTDecomposition(

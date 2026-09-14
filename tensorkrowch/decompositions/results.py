@@ -3,9 +3,10 @@ This script contains:
 
     Class for tensor decomposition results:
         * TensorDecomposition:
-            + TTDecomposition
+            + _StateDecomposition:
+                - TTDecomposition
+                - TRDecomposition
             + TTMDecomposition
-            + TRDecomposition
 """
 
 from abc import ABC, abstractmethod
@@ -20,89 +21,7 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord)
 
 
-Embedding = Optional[Union[Callable[[torch.Tensor], torch.Tensor],
-                           Sequence[Callable[[torch.Tensor], torch.Tensor]]]]
-
-
-def _site_vectors(samples: torch.Tensor,
-                  embedding: Embedding,
-                  in_dim: Sequence[int],
-                  same_in_dim: bool,
-                  device: torch.device,
-                  dtype: torch.dtype) -> List[torch.Tensor]:
-    """Builds one input vector per site from samples or embeddings."""
-    if not isinstance(samples, torch.Tensor):
-        raise TypeError('`samples` should be torch.Tensor type')
-    if (samples.ndim < 1) or (samples.shape[-1] != len(in_dim)):
-        raise ValueError(
-            'The last dimension of `samples` should equal the number of sites')
-    samples = samples.to(device=device)
-
-    if embedding is None:
-        integer_dtypes = (
-            torch.uint8,
-            torch.int8,
-            torch.int16,
-            torch.int32,
-            torch.int64,
-        )
-        if samples.dtype not in integer_dtypes:
-            raise TypeError(
-                '`samples` should have an integer dtype when `embedding` is '
-                'not provided')
-
-        if same_in_dim:
-            if torch.any(samples < 0) or torch.any(samples >= in_dim[0]):
-                raise ValueError('Sample indices should lie in the input '
-                                 'dimension of each site')
-            vectors = nnf.one_hot(samples.to(torch.long), in_dim[0])
-            return list(vectors.to(dtype=dtype).unbind(-2))
-
-        vectors = []
-        for site, site_in_dim in enumerate(in_dim):
-            indices = samples[..., site]
-            if torch.any(indices < 0) or \
-                    torch.any(indices >= site_in_dim):
-                raise ValueError('Sample indices should lie in the input '
-                                 'dimension of each site')
-            vector = nnf.one_hot(indices.to(torch.long), site_in_dim)
-            vectors.append(vector.to(dtype=dtype))
-        return vectors
-
-    if isinstance(embedding, (list, tuple)):
-        if len(embedding) != len(in_dim):
-            raise ValueError(
-                '`embedding` should contain one callable per site')
-        embeddings = list(embedding)
-    elif callable(embedding):
-        if same_in_dim:
-            vectors = embedding(samples)
-            if not isinstance(vectors, torch.Tensor):
-                raise TypeError(
-                    '`embedding` should return a torch.Tensor object')
-            if vectors.shape != (*samples.shape, in_dim[0]):
-                raise ValueError('The last dimension returned by `embedding` '
-                                 'should match the input dimension')
-            vectors = vectors.to(device=device, dtype=dtype)
-            return list(vectors.unbind(-2))
-        embeddings = [embedding] * len(in_dim)
-    else:
-        raise TypeError('`embedding` should be callable or a sequence of '
-                        'callables')
-
-    vectors = []
-    for site, (site_embedding, site_in_dim) in enumerate(
-            zip(embeddings, in_dim)):
-        if not callable(site_embedding):
-            raise TypeError('Each element of `embedding` should be callable')
-        vector = site_embedding(samples[..., site])
-        if not isinstance(vector, torch.Tensor):
-            raise TypeError('`embedding` should return torch.Tensor objects')
-        if vector.shape != (*samples.shape[:-1], site_in_dim):
-            raise ValueError('The last dimension returned by `embedding` '
-                             'should match the input dimension')
-        vectors.append(vector.to(device=device, dtype=dtype))
-    return vectors
+StateInput = Union[torch.Tensor, Sequence[torch.Tensor]]
 
 
 @dataclass
@@ -122,12 +41,19 @@ class TensorDecomposition(ABC):
     rank: List[int] = field(init=False)  # Rank inferred from adjacent cores
     _batch_shape: Tuple[int, ...] = field(init=False, repr=False)  # Shared batch shape
     _in_dim: Tuple[int, ...] = field(init=False, repr=False)  # Input dimensions
-    _same_in_dim: bool = field(init=False, repr=False)  # Whether all input dimensions coincide
+    _same_in_dim: bool = field(init=False, repr=False)  # Uniform input dims
     # Optional output dimensions represented by dedicated sites
     _out_dim: Optional[Tuple[int, ...]] = field(init=False, repr=False)
 
     _family: ClassVar[str] = 'tensor'
     _topology: ClassVar[str] = 'tensor'
+    _integer_dtypes: ClassVar[Tuple[torch.dtype, ...]] = (
+        torch.uint8,
+        torch.int8,
+        torch.int16,
+        torch.int32,
+        torch.int64,
+    )
 
     def __post_init__(self) -> None:
         if isinstance(self.n_batches, bool) or \
@@ -224,11 +150,105 @@ class TensorDecomposition(ABC):
     def contract_dense(self) -> torch.Tensor:
         """Contracts all cores into a dense tensor."""
 
-    @abstractmethod
-    def _evaluate_samples(self,
-                          samples: torch.Tensor,
-                          embedding: Embedding = None) -> torch.Tensor:
-        """Evaluates the represented tensor on user-provided samples."""
+    def _normalize_inputs(
+            self,
+            inputs: StateInput,
+            dimensions: Sequence[int],
+            same_dim: bool,
+            n_batches: int
+            ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
+        """Normalizes discrete indices or embedded vectors by site."""
+        if isinstance(n_batches, bool) or not isinstance(n_batches, int):
+            raise TypeError('`n_batches` should be int type')
+        if n_batches < 0:
+            raise ValueError('`n_batches` should be non-negative')
+
+        n_sites = len(dimensions)
+        if isinstance(inputs, torch.Tensor):
+            if inputs.ndim == (n_batches + 1):
+                if inputs.shape[-1] != n_sites:
+                    raise ValueError(
+                        'The last dimension of discrete inputs should equal '
+                        'the number of sites')
+                if inputs.dtype not in self._integer_dtypes:
+                    raise TypeError(
+                        'Discrete inputs should have an integer dtype')
+                site_inputs = list(inputs.to(device=self.device).unbind(-1))
+                discrete = True
+            elif inputs.ndim == (n_batches + 2):
+                if not same_dim:
+                    raise ValueError(
+                        'Embedded inputs should be provided as a sequence when '
+                        'site dimensions differ')
+                if inputs.shape[-2:] != (n_sites, dimensions[0]):
+                    raise ValueError(
+                        'Embedded inputs should end in `(n_sites, site_dim)`')
+                site_inputs = list(
+                    inputs.to(device=self.device, dtype=self.dtype).unbind(-2))
+                discrete = False
+            else:
+                raise ValueError(
+                    '`inputs` has an incompatible number of batch dimensions')
+        else:
+            try:
+                site_inputs = list(inputs)
+            except TypeError as exc:
+                raise TypeError(
+                    '`inputs` should be a tensor or a sequence of tensors') \
+                    from exc
+            if len(site_inputs) != n_sites:
+                raise ValueError(
+                    '`inputs` should contain one tensor per site')
+            if not all(isinstance(item, torch.Tensor)
+                       for item in site_inputs):
+                raise TypeError('Every site input should be a torch.Tensor')
+
+            if all(item.ndim == n_batches for item in site_inputs):
+                if not all(item.dtype in self._integer_dtypes
+                           for item in site_inputs):
+                    raise TypeError(
+                        'Discrete inputs should have an integer dtype')
+                discrete = True
+            elif all(item.ndim == (n_batches + 1)
+                     for item in site_inputs):
+                for item, site_dim in zip(site_inputs, dimensions):
+                    if item.shape[-1] != site_dim:
+                        raise ValueError(
+                            'The last dimension of each embedded input should '
+                            'match its site dimension')
+                discrete = False
+            else:
+                raise ValueError(
+                    'Site inputs should all be discrete indices or embedded '
+                    'vectors')
+
+            target_dtype = None if discrete else self.dtype
+            site_inputs = [
+                item.to(device=self.device, dtype=target_dtype)
+                for item in site_inputs
+            ]
+
+        batch_shape = tuple(site_inputs[0].shape[:n_batches])
+        if any(tuple(item.shape[:n_batches]) != batch_shape
+               for item in site_inputs[1:]):
+            raise ValueError('All site inputs should have the same batch shape')
+
+        if discrete:
+            for indices, site_dim in zip(site_inputs, dimensions):
+                if torch.any(indices < 0) or torch.any(indices >= site_dim):
+                    raise ValueError(
+                        'Discrete indices should lie in each site dimension')
+
+        return site_inputs, discrete, batch_shape
+
+    @staticmethod
+    def _contract_open_chain(
+            matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts an open chain of matrices along adjacent ranks."""
+        result = matrices[0]
+        for matrix in matrices[1:]:
+            result = result @ matrix
+        return result
 
     def to(self,
            device: Optional[Union[str, torch.device]] = None,
@@ -358,48 +378,6 @@ class TensorDecomposition(ABC):
         """Returns ``abs(normalized_overlap(other)) ** 2``."""
         return self.normalized_overlap(other).abs().square()
 
-    def error(self,
-              function: Callable[..., torch.Tensor],
-              samples: torch.Tensor,
-              embedding: Embedding = None,
-              **kwargs: Any) -> ErrorRecord:
-        """Measures absolute and relative errors on user-provided samples."""
-        if not callable(function):
-            raise TypeError('`function` should be callable')
-
-        if not isinstance(samples, torch.Tensor):
-            raise TypeError('`samples` should be torch.Tensor type')
-        samples = samples.to(device=self.device)
-        approximation = self._evaluate_samples(samples, embedding=embedding)
-        target = function(samples, **kwargs)
-        if not isinstance(target, torch.Tensor):
-            raise TypeError('`function` should return a torch.Tensor')
-        target = target.to(device=approximation.device,
-                           dtype=approximation.dtype)
-        if target.shape != approximation.shape:
-            if target.numel() != approximation.numel():
-                raise ValueError(
-                    'Function values should match the decomposition output shape')
-            target = target.reshape(approximation.shape)
-
-        absolute = torch.linalg.vector_norm(approximation - target)
-        denominator = torch.linalg.vector_norm(target)
-        if denominator > 0:
-            relative = absolute / denominator
-        elif absolute == 0:
-            relative = torch.zeros_like(absolute)
-        else:
-            relative = torch.full_like(absolute, torch.inf)
-
-        sample_shape = samples.shape[:-1]
-        size = int(torch.Size(sample_shape).numel()) if sample_shape else 1
-        return ErrorRecord(
-            kind='samples',
-            absolute=absolute,
-            relative=relative,
-            size=size,
-            denominator=denominator)
-
     def as_info(self) -> Dict[str, Any]:
         """Returns rank, dimensions, metrics and metadata for functional APIs."""
         return {
@@ -419,7 +397,124 @@ class TensorDecomposition(ABC):
 
 
 @dataclass
-class TTDecomposition(TensorDecomposition):
+class _StateDecomposition(TensorDecomposition):
+    """Common input evaluation for TT and TR results."""
+
+    _family: ClassVar[str] = 'state'
+
+    def __call__(self,
+                 inputs: StateInput,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Calls :meth:`evaluate`."""
+        return self.evaluate(inputs, n_batches=n_batches)
+
+    def evaluate(self,
+                 inputs: StateInput,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Evaluates the decomposition on indices or embedded input vectors.
+
+        A tensor of discrete indices has shape ``(*batch, n_sites)``. A tensor
+        of embedded inputs requires uniform input dimensions and has shape
+        ``(*batch, n_sites, in_dim)``. A sequence may instead contain one
+        index tensor of shape ``(*batch,)`` or one embedded tensor of shape
+        ``(*batch, in_dim[site])`` per site.
+
+        ``n_batches`` describes the leading batch dimensions of ``inputs``;
+        :attr:`n_batches` describes independent batch dimensions stored in the
+        cores. Both groups are preserved in the returned tensor, with core
+        batches followed by input batches.
+        """
+        site_inputs, discrete, data_batch_shape = self._normalize_inputs(
+            inputs, self.in_dim, self._same_in_dim, n_batches)
+        matrices = self._local_matrices(
+            site_inputs, discrete, data_batch_shape)
+        return self._contract_local_matrices(matrices)
+
+    def _local_matrices(
+            self,
+            site_inputs: Sequence[torch.Tensor],
+            discrete: bool,
+            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
+        """Contracts TT/TR cores with one input at each site."""
+        core_batch_size = int(torch.Size(self.batch_shape).numel())
+        data_batch_size = int(torch.Size(data_batch_shape).numel())
+        matrices = []
+
+        for core, site_input in zip(self._standard_cores(), site_inputs):
+            left_rank, site_in_dim, right_rank = core.shape[-3:]
+            core = core.reshape(
+                core_batch_size, left_rank, site_in_dim, right_rank)
+
+            if discrete:
+                indices = site_input.reshape(data_batch_size).to(torch.long)
+                matrix = core[:, :, indices, :].permute(0, 2, 1, 3)
+            else:
+                vectors = site_input.reshape(data_batch_size, site_in_dim)
+                matrix = torch.einsum('dp,clpr->cdlr', vectors, core)
+
+            matrices.append(matrix.reshape(
+                *self.batch_shape,
+                *data_batch_shape,
+                left_rank,
+                right_rank))
+
+        return matrices
+
+    def error(self,
+              function: Callable[..., torch.Tensor],
+              samples: torch.Tensor,
+              inputs: Optional[StateInput] = None,
+              n_batches: int = 1,
+              **kwargs: Any) -> ErrorRecord:
+        """Measures errors on samples, optionally using embedded inputs."""
+        if not callable(function):
+            raise TypeError('`function` should be callable')
+        if not isinstance(samples, torch.Tensor):
+            raise TypeError('`samples` should be torch.Tensor type')
+        if samples.ndim != (n_batches + 1):
+            raise ValueError(
+                '`samples` has an incompatible number of batch dimensions')
+
+        samples = samples.to(device=self.device)
+        approximation = self.evaluate(
+            samples if inputs is None else inputs,
+            n_batches=n_batches)
+        target = function(samples, **kwargs)
+        if not isinstance(target, torch.Tensor):
+            raise TypeError('`function` should return a torch.Tensor')
+        target = target.to(device=approximation.device,
+                           dtype=approximation.dtype)
+        target = target.reshape(*samples.shape[:n_batches])
+        if self.n_batches:
+            target = target.reshape(
+                *((1,) * self.n_batches), *target.shape)
+            target = target.expand(*self.batch_shape, *target.shape[self.n_batches:])
+
+        absolute = torch.linalg.vector_norm(approximation - target)
+        denominator = torch.linalg.vector_norm(target)
+        if denominator > 0:
+            relative = absolute / denominator
+        elif absolute == 0:
+            relative = torch.zeros_like(absolute)
+        else:
+            relative = torch.full_like(absolute, torch.inf)
+
+        size = int(torch.Size(samples.shape[:n_batches]).numel())
+        return ErrorRecord(
+            kind='samples',
+            absolute=absolute,
+            relative=relative,
+            size=size,
+            denominator=denominator)
+
+    @abstractmethod
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts input-selected local matrices along the ranks."""
+
+
+@dataclass
+class TTDecomposition(_StateDecomposition):
     """Lightweight tensor train decomposition with open boundaries.
 
     This result stores the TT cores, ranks, metrics and metadata without
@@ -457,7 +552,6 @@ class TTDecomposition(TensorDecomposition):
     dimensions; ordinary non-batched decompositions use MPS as above.
     """
 
-    _family: ClassVar[str] = 'state'
     _topology: ClassVar[str] = 'tt'
 
     def _validate_cores(
@@ -544,29 +638,9 @@ class TTDecomposition(TensorDecomposition):
                     site_in_dim)
         return result
 
-    def evaluate(self,
-                 samples: torch.Tensor,
-                 embedding: Embedding = None) -> torch.Tensor:
-        """Evaluates the TT at discrete or embedded sample coordinates."""
-        return self._evaluate_samples(samples, embedding=embedding)
-
-    def _evaluate_samples(self,
-                          samples: torch.Tensor,
-                          embedding: Embedding = None) -> torch.Tensor:
-        if self.n_batches:
-            raise ValueError(
-                '`evaluate` is not defined for decomposition batch dimensions')
-        vectors = _site_vectors(samples, embedding, self.in_dim,
-                                self._same_in_dim,
-                                self.device, self.dtype)
-
-        matrices = [
-            torch.einsum('...p,lpr->...lr', vector, core)
-            for vector, core in zip(vectors, self._standard_cores())
-        ]
-        result = matrices[0]
-        for matrix in matrices[1:]:
-            result = result @ matrix
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        result = self._contract_open_chain(matrices)
         return result.squeeze(-1).squeeze(-1)
 
 
@@ -597,6 +671,12 @@ class TTMDecomposition(TensorDecomposition):
 
     _family: ClassVar[str] = 'ttm'
     _topology: ClassVar[str] = 'ttm'
+    _same_out_dim: bool = field(init=False, repr=False)  # Uniform output dims
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._same_out_dim = all(
+            dim == self.out_dim[0] for dim in self.out_dim[1:])
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -676,48 +756,149 @@ class TTMDecomposition(TensorDecomposition):
             result = torch.tensordot(result, core, dims=([-1], [0]))
         return torch.tensordot(result, self.cores[-1], dims=([-1], [0]))
 
+    def _operator_cores(self) -> List[torch.Tensor]:
+        """Returns cores with separate left, input, right and output axes."""
+        if len(self.cores) == 1:
+            return [self.cores[0].unsqueeze(0).unsqueeze(2)]
+
+        cores = [self.cores[0].unsqueeze(0)]
+        cores.extend(self.cores[1:-1])
+        cores.append(self.cores[-1].unsqueeze(2))
+        return cores
+
+    def __call__(
+            self,
+            inputs: StateInput,
+            out_samples: Optional[StateInput] = None,
+            n_batches: int = 1
+            ) -> Union[torch.Tensor, TTDecomposition]:
+        """Applies the TTM or evaluates it when output samples are provided."""
+        if out_samples is None:
+            return self.apply(inputs, n_batches=n_batches)
+        return self.evaluate(inputs, out_samples, n_batches=n_batches)
+
+    def evaluate(self,
+                 in_samples: StateInput,
+                 out_samples: StateInput,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Evaluates TTM entries at paired input and output configurations.
+
+        Both sample groups follow the discrete/embedded conventions of
+        :meth:`TTDecomposition.evaluate` and must share the same batch shape.
+        This is equivalent to evaluating the fused TTM cores as a TT on local
+        tensor products of input and output vectors, without materializing
+        those products.
+        """
+        in_inputs, in_discrete, data_batch_shape = self._normalize_inputs(
+            in_samples, self.in_dim, self._same_in_dim, n_batches)
+        out_inputs, out_discrete, out_batch_shape = self._normalize_inputs(
+            out_samples, self.out_dim, self._same_out_dim, n_batches)
+        if out_batch_shape != data_batch_shape:
+            raise ValueError(
+                'Input and output samples should have the same batch shape')
+
+        matrices = self._entry_matrices(
+            in_inputs,
+            out_inputs,
+            in_discrete,
+            out_discrete,
+            data_batch_shape)
+        return self._contract_open_chain(matrices).squeeze(-1).squeeze(-1)
+
+    def _entry_matrices(
+            self,
+            in_inputs: Sequence[torch.Tensor],
+            out_inputs: Sequence[torch.Tensor],
+            in_discrete: bool,
+            out_discrete: bool,
+            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
+        """Builds local matrices for paired TTM entry evaluation."""
+        core_batch_size = int(torch.Size(self.batch_shape).numel())
+        data_batch_size = int(torch.Size(data_batch_shape).numel())
+        matrices = []
+
+        for core, in_input, out_input in zip(
+                self._operator_cores(), in_inputs, out_inputs):
+            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
+            core = core.reshape(
+                core_batch_size, left_rank, in_dim, right_rank, out_dim)
+
+            if in_discrete and out_discrete:
+                in_indices = in_input.reshape(data_batch_size).to(torch.long)
+                out_indices = out_input.reshape(data_batch_size).to(torch.long)
+                fused = in_indices * out_dim + out_indices
+                matrix = core.permute(0, 1, 3, 2, 4).reshape(
+                    core_batch_size, left_rank, right_rank, in_dim * out_dim)
+                matrix = matrix[..., fused].permute(0, 3, 1, 2)
+            elif in_discrete:
+                indices = in_input.reshape(data_batch_size).to(torch.long)
+                vectors = out_input.reshape(data_batch_size, out_dim)
+                selected = core.index_select(2, indices)
+                matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
+            elif out_discrete:
+                indices = out_input.reshape(data_batch_size).to(torch.long)
+                vectors = in_input.reshape(data_batch_size, in_dim)
+                selected = core.index_select(4, indices)
+                matrix = torch.einsum('clird,di->cdlr', selected, vectors)
+            else:
+                in_vectors = in_input.reshape(data_batch_size, in_dim)
+                out_vectors = out_input.reshape(data_batch_size, out_dim)
+                matrix = torch.einsum(
+                    'di,do,cliro->cdlr', in_vectors, out_vectors, core)
+
+            matrices.append(matrix.reshape(
+                *self.batch_shape,
+                *data_batch_shape,
+                left_rank,
+                right_rank))
+
+        return matrices
+
     def apply(self,
-              inputs: torch.Tensor,
-              embedding: Embedding = None) -> torch.Tensor:
-        """Applies the TTM to discrete or embedded product inputs."""
-        vectors = _site_vectors(inputs, embedding, self.in_dim,
-                                self._same_in_dim,
-                                self.device, self.dtype)
+              inputs: StateInput,
+              n_batches: int = 1) -> TTDecomposition:
+        """Applies the TTM to product inputs and returns the resulting TT."""
+        site_inputs, discrete, data_batch_shape = self._normalize_inputs(
+            inputs, self.in_dim, self._same_in_dim, n_batches)
+        core_batch_size = int(torch.Size(self.batch_shape).numel())
+        data_batch_size = int(torch.Size(data_batch_shape).numel())
+        output_cores = []
 
-        if len(self.cores) == 1:
-            core = self.cores[0].unsqueeze(0).unsqueeze(2)
+        for core, site_input in zip(self._operator_cores(), site_inputs):
+            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
+            core = core.reshape(
+                core_batch_size, left_rank, in_dim, right_rank, out_dim)
+            if discrete:
+                indices = site_input.reshape(data_batch_size).to(torch.long)
+                output_core = core.index_select(2, indices)
+                output_core = output_core.permute(0, 2, 1, 4, 3)
+            else:
+                vectors = site_input.reshape(data_batch_size, in_dim)
+                output_core = torch.einsum(
+                    'di,cliro->cdlor', vectors, core)
+            output_cores.append(output_core.reshape(
+                *self.batch_shape,
+                *data_batch_shape,
+                left_rank,
+                out_dim,
+                right_rank))
+
+        batch_shape = (*self.batch_shape, *data_batch_shape)
+        if len(output_cores) == 1:
+            output_cores[0] = output_cores[0].squeeze(-1).squeeze(-2)
         else:
-            cores = [self.cores[0].unsqueeze(0)]
-            cores.extend(self.cores[1:-1])
-            cores.append(self.cores[-1].unsqueeze(2))
+            output_cores[0] = output_cores[0].squeeze(len(batch_shape))
+            output_cores[-1] = output_cores[-1].squeeze(-1)
 
-        if len(self.cores) == 1:
-            cores = [core]
-
-        local_tensors = [
-            torch.einsum('...i,liro->...lor', vector, core)
-            for vector, core in zip(vectors, cores)
-        ]
-        result = local_tensors[0].squeeze(-3)
-        out_dim = [self.out_dim[0]]
-        for local, site_out_dim in zip(local_tensors[1:],
-                                       self.out_dim[1:]):
-            previous_rank = result.shape[-1]
-            result = result.reshape(*inputs.shape[:-1], -1, previous_rank)
-            result = torch.einsum('...ar,...rob->...aob', result, local)
-            out_dim.append(site_out_dim)
-            result = result.reshape(*inputs.shape[:-1], *out_dim,
-                                    local.shape[-1])
-        return result.squeeze(-1)
-
-    def _evaluate_samples(self,
-                          samples: torch.Tensor,
-                          embedding: Embedding = None) -> torch.Tensor:
-        return self.apply(samples, embedding=embedding)
+        # NOTE: A future `apply_tt` could apply the TTM to a general TT state
+        return TTDecomposition(
+            cores=output_cores,
+            n_batches=self.n_batches + n_batches,
+            metadata={'operation': 'ttm_apply'})
 
 
 @dataclass
-class TRDecomposition(TensorDecomposition):
+class TRDecomposition(_StateDecomposition):
     """Lightweight tensor ring decomposition with cyclic boundaries.
 
     This result stores raw TR cores, ranks, metrics and metadata, but it is not
@@ -752,7 +933,6 @@ class TRDecomposition(TensorDecomposition):
     The MPSData form applies only when :attr:`n_batches` is positive.
     """
 
-    _family: ClassVar[str] = 'state'
     _topology: ClassVar[str] = 'tr'
 
     def _validate_cores(
@@ -801,28 +981,9 @@ class TRDecomposition(TensorDecomposition):
 
         return result.diagonal(dim1=self.n_batches, dim2=-1).sum(-1)
 
-    def evaluate(self,
-                 samples: torch.Tensor,
-                 embedding: Embedding = None) -> torch.Tensor:
-        """Evaluates the TR at discrete or embedded sample coordinates."""
-        return self._evaluate_samples(samples, embedding=embedding)
-
-    def _evaluate_samples(self,
-                          samples: torch.Tensor,
-                          embedding: Embedding = None) -> torch.Tensor:
-        if self.n_batches:
-            raise ValueError(
-                '`evaluate` is not defined for decomposition batch dimensions')
-        vectors = _site_vectors(samples, embedding, self.in_dim,
-                                self._same_in_dim,
-                                self.device, self.dtype)
-        matrices = [
-            torch.einsum('...p,lpr->...lr', vector, core)
-            for vector, core in zip(vectors, self.cores)
-        ]
-        result = matrices[0]
-        for matrix in matrices[1:]:
-            result = result @ matrix
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        result = self._contract_open_chain(matrices)
         return result.diagonal(dim1=-2, dim2=-1).sum(-1)
 
 
@@ -1060,14 +1221,6 @@ class _QuantizedTuckerDecomposition(TensorDecomposition):
     def evaluate(self, points: torch.Tensor) -> torch.Tensor:
         """Quantizes physical points and contracts factors with the upper TN."""
         return self.evaluate_indices(self._physical_to_indices(points))
-
-    def _evaluate_samples(self,
-                          samples: torch.Tensor,
-                          embedding: Embedding = None) -> torch.Tensor:
-        if embedding is not None:
-            raise ValueError(
-                '`embedding` is fixed by the quantized Tucker decomposition')
-        return self.evaluate(samples)
 
     def _contract_upper(self,
                         vectors: Dict[int, torch.Tensor],

@@ -4,8 +4,8 @@ This script contains:
     Class for tensor decomposition results:
         * TensorDecomposition:
             + TTDecomposition
-            + TRDecomposition
             + TTMDecomposition
+            + TRDecomposition
 """
 
 from abc import ABC, abstractmethod
@@ -27,6 +27,7 @@ Embedding = Optional[Union[Callable[[torch.Tensor], torch.Tensor],
 def _site_vectors(samples: torch.Tensor,
                   embedding: Embedding,
                   in_dim: Sequence[int],
+                  same_in_dim: bool,
                   device: torch.device,
                   dtype: torch.dtype) -> List[torch.Tensor]:
     """Builds one input vector per site from samples or embeddings."""
@@ -50,6 +51,13 @@ def _site_vectors(samples: torch.Tensor,
                 '`samples` should have an integer dtype when `embedding` is '
                 'not provided')
 
+        if same_in_dim:
+            if torch.any(samples < 0) or torch.any(samples >= in_dim[0]):
+                raise ValueError('Sample indices should lie in the input '
+                                 'dimension of each site')
+            vectors = nnf.one_hot(samples.to(torch.long), in_dim[0])
+            return list(vectors.to(dtype=dtype).unbind(-2))
+
         vectors = []
         for site, site_in_dim in enumerate(in_dim):
             indices = samples[..., site]
@@ -67,6 +75,16 @@ def _site_vectors(samples: torch.Tensor,
                 '`embedding` should contain one callable per site')
         embeddings = list(embedding)
     elif callable(embedding):
+        if same_in_dim:
+            vectors = embedding(samples)
+            if not isinstance(vectors, torch.Tensor):
+                raise TypeError(
+                    '`embedding` should return a torch.Tensor object')
+            if vectors.shape != (*samples.shape, in_dim[0]):
+                raise ValueError('The last dimension returned by `embedding` '
+                                 'should match the input dimension')
+            vectors = vectors.to(device=device, dtype=dtype)
+            return list(vectors.unbind(-2))
         embeddings = [embedding] * len(in_dim)
     else:
         raise TypeError('`embedding` should be callable or a sequence of '
@@ -104,6 +122,7 @@ class TensorDecomposition(ABC):
     rank: List[int] = field(init=False)  # Rank inferred from adjacent cores
     _batch_shape: Tuple[int, ...] = field(init=False, repr=False)  # Shared batch shape
     _in_dim: Tuple[int, ...] = field(init=False, repr=False)  # Input dimensions
+    _same_in_dim: bool = field(init=False, repr=False)  # Whether all input dimensions coincide
     # Optional output dimensions represented by dedicated sites
     _out_dim: Optional[Tuple[int, ...]] = field(init=False, repr=False)
 
@@ -148,6 +167,7 @@ class TensorDecomposition(ABC):
         self.rank = rank
         self._batch_shape = batch_shape
         self._in_dim = in_dim
+        self._same_in_dim = all(dim == in_dim[0] for dim in in_dim[1:])
         self._out_dim = out_dim
 
     @property
@@ -507,21 +527,21 @@ class TTDecomposition(TensorDecomposition):
             result = result.reshape(*self.batch_shape, -1, previous_rank)
 
             if site < (len(self.cores) - 1):
-                site_in_dim = core.shape[(self.n_batches + 1):-1]
+                site_in_dim = core.shape[-2]
                 rank = core.shape[-1]
                 core = core.reshape(*self.batch_shape, previous_rank, -1)
                 result = (result @ core).reshape(
                     *self.batch_shape,
                     *previous_in_dim,
-                    *site_in_dim,
+                    site_in_dim,
                     rank)
             else:
-                site_in_dim = core.shape[(self.n_batches + 1):]
+                site_in_dim = core.shape[-1]
                 core = core.reshape(*self.batch_shape, previous_rank, -1)
                 result = (result @ core).reshape(
                     *self.batch_shape,
                     *previous_in_dim,
-                    *site_in_dim)
+                    site_in_dim)
         return result
 
     def evaluate(self,
@@ -537,6 +557,7 @@ class TTDecomposition(TensorDecomposition):
             raise ValueError(
                 '`evaluate` is not defined for decomposition batch dimensions')
         vectors = _site_vectors(samples, embedding, self.in_dim,
+                                self._same_in_dim,
                                 self.device, self.dtype)
 
         matrices = [
@@ -547,6 +568,152 @@ class TTDecomposition(TensorDecomposition):
         for matrix in matrices[1:]:
             result = result @ matrix
         return result.squeeze(-1).squeeze(-1)
+
+
+@dataclass
+class TTMDecomposition(TensorDecomposition):
+    """Lightweight tensor train matrix decomposition with open boundaries.
+
+    This result stores TTM cores, ranks, input/output dimensions, metrics and
+    metadata without constructing a TensorKrowch graph. Dense contraction and
+    application to product inputs operate directly on its PyTorch tensors.
+
+    TensorKrowch models call this structure an
+    :class:`~tensorkrowch.models.MPO`. A model can be initialized directly from
+    the TTM cores when graph contractions or training are required:
+
+    >>> tensor = torch.randn(2, 3, 4, 5)
+    >>> result = tk.decompositions.TTMSVD(tensor).fit(rank=2)
+    >>> mpo = tk.models.MPO(tensors=result.cores)
+    >>> mpo.boundary
+    'obc'
+
+    The model infers dimensions and open boundaries from the core shapes.
+    Metrics and metadata remain attached to ``result`` and are not transferred
+    to the model. Pass ``parameterized=False`` when trainable parameter nodes
+    are not required, and clone the cores first if independent tensor storage
+    is required. TTM decomposition batches are currently unsupported.
+    """
+
+    _family: ClassVar[str] = 'ttm'
+    _topology: ClassVar[str] = 'ttm'
+
+    def _validate_cores(
+            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
+                           Optional[Tuple[int, ...]]]:
+        if self.n_batches:
+            raise ValueError('TTM decomposition batches are not supported')
+
+        n_sites = len(self.cores)
+        in_dim = []
+        out_dim = []
+        if n_sites == 1:
+            if self.cores[0].ndim != 2:
+                raise ValueError(
+                    'A one-site TTM core should have input and output dimensions')
+            in_dim.append(self.cores[0].shape[0])
+            out_dim.append(self.cores[0].shape[1])
+            return [], (), tuple(in_dim), tuple(out_dim)
+
+        rank = []
+        for site, core in enumerate(self.cores):
+            if site == 0:
+                if core.ndim != 3:
+                    raise ValueError(
+                        'The first TTM core should have input, right rank and '
+                        'output dimensions')
+                in_dim.append(core.shape[0])
+                out_dim.append(core.shape[2])
+                rank.append(core.shape[1])
+            elif site == (n_sites - 1):
+                if core.ndim != 3:
+                    raise ValueError(
+                        'The last TTM core should have left rank, input and '
+                        'output dimensions')
+                if core.shape[0] != rank[-1]:
+                    raise ValueError('Adjacent TTM ranks should match')
+                in_dim.append(core.shape[1])
+                out_dim.append(core.shape[2])
+            else:
+                if core.ndim != 4:
+                    raise ValueError(
+                        'Interior TTM cores should have left, input, right and '
+                        'output dimensions')
+                if core.shape[0] != rank[-1]:
+                    raise ValueError('Adjacent TTM ranks should match')
+                in_dim.append(core.shape[1])
+                out_dim.append(core.shape[3])
+                rank.append(core.shape[2])
+
+        return rank, (), tuple(in_dim), tuple(out_dim)
+
+    def _standard_cores(self) -> List[torch.Tensor]:
+        if len(self.cores) == 1:
+            core = self.cores[0]
+            return [core.reshape(1, core.numel(), 1)]
+
+        cores = []
+        first = self.cores[0].permute(0, 2, 1)
+        cores.append(first.reshape(1, first.shape[0] * first.shape[1],
+                                   first.shape[2]))
+        for core in self.cores[1:-1]:
+            core = core.permute(0, 1, 3, 2)
+            cores.append(core.reshape(core.shape[0],
+                                      core.shape[1] * core.shape[2],
+                                      core.shape[3]))
+        last = self.cores[-1]
+        cores.append(last.reshape(last.shape[0], -1, 1))
+        return cores
+
+    def contract_dense(self) -> torch.Tensor:
+        """Contracts the TTM into interleaved input/output dimensions."""
+        if len(self.cores) == 1:
+            return self.cores[0]
+
+        result = self.cores[0].permute(0, 2, 1)
+        for core in self.cores[1:-1]:
+            core = core.permute(0, 1, 3, 2)
+            result = torch.tensordot(result, core, dims=([-1], [0]))
+        return torch.tensordot(result, self.cores[-1], dims=([-1], [0]))
+
+    def apply(self,
+              inputs: torch.Tensor,
+              embedding: Embedding = None) -> torch.Tensor:
+        """Applies the TTM to discrete or embedded product inputs."""
+        vectors = _site_vectors(inputs, embedding, self.in_dim,
+                                self._same_in_dim,
+                                self.device, self.dtype)
+
+        if len(self.cores) == 1:
+            core = self.cores[0].unsqueeze(0).unsqueeze(2)
+        else:
+            cores = [self.cores[0].unsqueeze(0)]
+            cores.extend(self.cores[1:-1])
+            cores.append(self.cores[-1].unsqueeze(2))
+
+        if len(self.cores) == 1:
+            cores = [core]
+
+        local_tensors = [
+            torch.einsum('...i,liro->...lor', vector, core)
+            for vector, core in zip(vectors, cores)
+        ]
+        result = local_tensors[0].squeeze(-3)
+        out_dim = [self.out_dim[0]]
+        for local, site_out_dim in zip(local_tensors[1:],
+                                       self.out_dim[1:]):
+            previous_rank = result.shape[-1]
+            result = result.reshape(*inputs.shape[:-1], -1, previous_rank)
+            result = torch.einsum('...ar,...rob->...aob', result, local)
+            out_dim.append(site_out_dim)
+            result = result.reshape(*inputs.shape[:-1], *out_dim,
+                                    local.shape[-1])
+        return result.squeeze(-1)
+
+    def _evaluate_samples(self,
+                          samples: torch.Tensor,
+                          embedding: Embedding = None) -> torch.Tensor:
+        return self.apply(samples, embedding=embedding)
 
 
 @dataclass
@@ -647,6 +814,7 @@ class TRDecomposition(TensorDecomposition):
             raise ValueError(
                 '`evaluate` is not defined for decomposition batch dimensions')
         vectors = _site_vectors(samples, embedding, self.in_dim,
+                                self._same_in_dim,
                                 self.device, self.dtype)
         matrices = [
             torch.einsum('...p,lpr->...lr', vector, core)
@@ -1083,156 +1251,11 @@ class QTRTuckerDecomposition(_QuantizedTuckerDecomposition):
         return state.diagonal(dim1=1, dim2=-1).sum(-1)
 
 
-@dataclass
-class TTMDecomposition(TensorDecomposition):
-    """Lightweight tensor train matrix decomposition with open boundaries.
-
-    This result stores TTM cores, ranks, input/output dimensions, metrics and
-    metadata without constructing a TensorKrowch graph. Dense contraction and
-    application to product inputs operate directly on its PyTorch tensors.
-
-    TensorKrowch models call this structure an
-    :class:`~tensorkrowch.models.MPO`. A model can be initialized directly from
-    the TTM cores when graph contractions or training are required:
-
-    >>> tensor = torch.randn(2, 3, 4, 5)
-    >>> result = tk.decompositions.TTMSVD(tensor).fit(rank=2)
-    >>> mpo = tk.models.MPO(tensors=result.cores)
-    >>> mpo.boundary
-    'obc'
-
-    The model infers dimensions and open boundaries from the core shapes.
-    Metrics and metadata remain attached to ``result`` and are not transferred
-    to the model. Pass ``parameterized=False`` when trainable parameter nodes
-    are not required, and clone the cores first if independent tensor storage
-    is required. TTM decomposition batches are currently unsupported.
-    """
-
-    _family: ClassVar[str] = 'ttm'
-    _topology: ClassVar[str] = 'ttm'
-
-    def _validate_cores(
-            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
-                           Optional[Tuple[int, ...]]]:
-        if self.n_batches:
-            raise ValueError('TTM decomposition batches are not supported')
-
-        n_sites = len(self.cores)
-        in_dim = []
-        out_dim = []
-        if n_sites == 1:
-            if self.cores[0].ndim != 2:
-                raise ValueError(
-                    'A one-site TTM core should have input and output dimensions')
-            in_dim.append(self.cores[0].shape[0])
-            out_dim.append(self.cores[0].shape[1])
-            return [], (), tuple(in_dim), tuple(out_dim)
-
-        rank = []
-        for site, core in enumerate(self.cores):
-            if site == 0:
-                if core.ndim != 3:
-                    raise ValueError(
-                        'The first TTM core should have input, right rank and '
-                        'output dimensions')
-                in_dim.append(core.shape[0])
-                out_dim.append(core.shape[2])
-                rank.append(core.shape[1])
-            elif site == (n_sites - 1):
-                if core.ndim != 3:
-                    raise ValueError(
-                        'The last TTM core should have left rank, input and '
-                        'output dimensions')
-                if core.shape[0] != rank[-1]:
-                    raise ValueError('Adjacent TTM ranks should match')
-                in_dim.append(core.shape[1])
-                out_dim.append(core.shape[2])
-            else:
-                if core.ndim != 4:
-                    raise ValueError(
-                        'Interior TTM cores should have left, input, right and '
-                        'output dimensions')
-                if core.shape[0] != rank[-1]:
-                    raise ValueError('Adjacent TTM ranks should match')
-                in_dim.append(core.shape[1])
-                out_dim.append(core.shape[3])
-                rank.append(core.shape[2])
-
-        return rank, (), tuple(in_dim), tuple(out_dim)
-
-    def _standard_cores(self) -> List[torch.Tensor]:
-        if len(self.cores) == 1:
-            core = self.cores[0]
-            return [core.reshape(1, core.numel(), 1)]
-
-        cores = []
-        first = self.cores[0].permute(0, 2, 1)
-        cores.append(first.reshape(1, first.shape[0] * first.shape[1],
-                                   first.shape[2]))
-        for core in self.cores[1:-1]:
-            core = core.permute(0, 1, 3, 2)
-            cores.append(core.reshape(core.shape[0],
-                                      core.shape[1] * core.shape[2],
-                                      core.shape[3]))
-        last = self.cores[-1]
-        cores.append(last.reshape(last.shape[0], -1, 1))
-        return cores
-
-    def contract_dense(self) -> torch.Tensor:
-        """Contracts the TTM into interleaved input/output dimensions."""
-        if len(self.cores) == 1:
-            return self.cores[0]
-
-        result = self.cores[0].permute(0, 2, 1)
-        for core in self.cores[1:-1]:
-            core = core.permute(0, 1, 3, 2)
-            result = torch.tensordot(result, core, dims=([-1], [0]))
-        return torch.tensordot(result, self.cores[-1], dims=([-1], [0]))
-
-    def apply(self,
-              inputs: torch.Tensor,
-              embedding: Embedding = None) -> torch.Tensor:
-        """Applies the TTM to discrete or embedded product inputs."""
-        vectors = _site_vectors(inputs, embedding, self.in_dim,
-                                self.device, self.dtype)
-
-        if len(self.cores) == 1:
-            core = self.cores[0].unsqueeze(0).unsqueeze(2)
-        else:
-            cores = [self.cores[0].unsqueeze(0)]
-            cores.extend(self.cores[1:-1])
-            cores.append(self.cores[-1].unsqueeze(2))
-
-        if len(self.cores) == 1:
-            cores = [core]
-
-        local_tensors = [
-            torch.einsum('...i,liro->...lor', vector, core)
-            for vector, core in zip(vectors, cores)
-        ]
-        result = local_tensors[0].squeeze(-3)
-        out_dim = [self.out_dim[0]]
-        for local, site_out_dim in zip(local_tensors[1:],
-                                       self.out_dim[1:]):
-            previous_rank = result.shape[-1]
-            result = result.reshape(*inputs.shape[:-1], -1, previous_rank)
-            result = torch.einsum('...ar,...rob->...aob', result, local)
-            out_dim.append(site_out_dim)
-            result = result.reshape(*inputs.shape[:-1], *out_dim,
-                                    local.shape[-1])
-        return result.squeeze(-1)
-
-    def _evaluate_samples(self,
-                          samples: torch.Tensor,
-                          embedding: Embedding = None) -> torch.Tensor:
-        return self.apply(samples, embedding=embedding)
-
-
 __all__ = [
     'TensorDecomposition',
     'TTDecomposition',
-    'TRDecomposition',
     'TTMDecomposition',
+    'TRDecomposition',
     'QTTTuckerDecomposition',
     'QTRTuckerDecomposition',
 ]

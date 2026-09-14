@@ -44,10 +44,12 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
                 n_batches=True)
 
     def test_tt_validation_rank_and_dense_contraction(self):
+        generator = torch.Generator().manual_seed(0)
         cores = [
-            torch.randn(2, 3),
-            torch.randn(3, 4, 5),
-            torch.randn(5, 2),
+            torch.randn(2, 3, dtype=torch.float64, generator=generator),
+            torch.randn(3, 4, 5, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(5, 2, dtype=torch.float64, generator=generator),
         ]
         result = tk.decompositions.TTDecomposition(cores)
 
@@ -422,20 +424,35 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert torch.allclose(result.evaluate(samples), expected)
 
     def test_evaluate_with_shared_and_site_embeddings(self):
-        cores = [torch.randn(2, 3), torch.randn(3, 2)]
+        generator = torch.Generator().manual_seed(0)
+        cores = [
+            torch.randn(2, 3, dtype=torch.float64, generator=generator),
+            torch.randn(3, 2, dtype=torch.float64, generator=generator),
+        ]
         result = tk.decompositions.TTDecomposition(cores)
-        samples = torch.tensor([[0.2, 0.4], [0.5, 0.7]])
+        samples = torch.tensor(
+            [[0.2, 0.4], [0.5, 0.7]], dtype=torch.float64)
+        calls = []
 
         def embedding(values):
+            calls.append(values.shape)
             return torch.stack([torch.ones_like(values), values], dim=-1)
 
-        vectors = [embedding(samples[:, site]) for site in range(2)]
+        vectors = [
+            torch.stack([torch.ones_like(samples[:, site]),
+                         samples[:, site]], dim=-1)
+            for site in range(2)
+        ]
         expected = torch.einsum(
             'xi,ia,aj,xj->x', vectors[0], cores[0], cores[1], vectors[1])
 
         assert torch.allclose(result.evaluate(samples, embedding), expected)
+        assert calls == [samples.shape]
+
+        calls.clear()
         assert torch.allclose(
             result.evaluate(samples, [embedding, embedding]), expected)
+        assert calls == [samples[:, 0].shape, samples[:, 1].shape]
 
     def test_to_cpu_and_as_info(self):
         result = tk.decompositions.TTDecomposition(

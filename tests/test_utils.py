@@ -130,16 +130,16 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
         assert info.full_rank == 4
         assert info.selected_rank == 2
         assert info.svd_method == svd_method
-        assert torch.allclose(info.total_squared_norm,
+        assert torch.allclose(info.total_sq_norm,
                               torch.tensor(35.01))
-        assert torch.allclose(info.discarded_squared_norm,
+        assert torch.allclose(info.discarded_sq_norm,
                               torch.tensor(1.01))
-        assert info.total_squared_norm.device == diag_tensor.device
-        assert info.discarded_squared_norm.device == diag_tensor.device
-        assert info.total_squared_norm.dtype == s.dtype
-        assert info.discarded_squared_norm.dtype == s.dtype
-        assert info.total_squared_norm_per_batch.shape == ()
-        assert info.discarded_squared_norm_per_batch.shape == ()
+        assert info.total_sq_norm.device == diag_tensor.device
+        assert info.discarded_sq_norm.device == diag_tensor.device
+        assert info.total_sq_norm.dtype == s.dtype
+        assert info.discarded_sq_norm.dtype == s.dtype
+        assert info.total_sq_norm.shape == ()
+        assert info.discarded_sq_norm.shape == ()
         assert 'singular_values' not in info._fields
 
     @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
@@ -158,14 +158,8 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
         expected_total = torch.tensor([35.01, 20.2525])
         expected_discarded = torch.tensor([0.01, 0.0025])
         assert info.selected_rank == 3
-        assert torch.allclose(info.total_squared_norm_per_batch,
-                              expected_total)
-        assert torch.allclose(info.discarded_squared_norm_per_batch,
-                              expected_discarded)
-        assert torch.allclose(info.total_squared_norm,
-                              expected_total.sum())
-        assert torch.allclose(info.discarded_squared_norm,
-                              expected_discarded.sum())
+        assert torch.allclose(info.total_sq_norm, expected_total)
+        assert torch.allclose(info.discarded_sq_norm, expected_discarded)
 
     def test_truncated_svd_info_records_active_backend(self, diag_tensor):
         with tk.svd_method('qr_svd'):
@@ -430,8 +424,8 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
 
         assert torch.allclose(
             _reconstruct_svd(u, s, vh), tensor, rtol=2e-4, atol=2e-5)
-        assert info.total_squared_norm.device.type == 'cuda'
-        assert info.discarded_squared_norm.device.type == 'cuda'
+        assert info.total_sq_norm.device.type == 'cuda'
+        assert info.discarded_sq_norm.device.type == 'cuda'
 
     @pytest.mark.parametrize(
         'svd_method, error_type',

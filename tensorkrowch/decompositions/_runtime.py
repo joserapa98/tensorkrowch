@@ -51,10 +51,10 @@ class _RuntimeTimer:
 class _RuntimePolicy:
     """Normalizes active and final devices, dtype and synchronized timers."""
 
-    device: Device = None
-    out_device: Device = 'cpu'
-    dtype: Optional[torch.dtype] = None
-    synchronize_timers: bool = True
+    device: Device = None  # Device used for numerical operations.
+    out_device: Device = 'cpu'  # Device used for finalized tensors.
+    dtype: Optional[torch.dtype] = None  # Dtype used for numerical operations.
+    synchronize_timers: bool = True  # Whether accelerator timings synchronize.
 
     def __post_init__(self) -> None:
         if self.device is not None:

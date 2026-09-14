@@ -339,13 +339,11 @@ def random_unitary(n,
 class _TruncatedSVDInfo(NamedTuple):
     """Numerical diagnostics from one call to :func:`truncated_svd`."""
 
-    full_rank: int
-    selected_rank: int
-    total_squared_norm: Tensor
-    discarded_squared_norm: Tensor
-    total_squared_norm_per_batch: Tensor
-    discarded_squared_norm_per_batch: Tensor
-    svd_method: Text
+    full_rank: int  # Rank available before truncation.
+    selected_rank: int  # Rank retained after truncation.
+    total_sq_norm: Tensor  # Total singular-value energy, optionally batched.
+    discarded_sq_norm: Tensor  # Discarded energy, optionally batched.
+    svd_method: Text  # Compact SVD implementation used.
 
 
 def _validate_truncation(rank: Optional[int] = None,
@@ -550,29 +548,25 @@ def truncated_svd(tensor: Tensor,
         final_rank = min(final_rank, max(1, atol_rank.item()))
 
     if rtol is not None:
-        total_squared_norm = squared_s.sum(-1, keepdim=True)
-        positive_norm = total_squared_norm > 0
-        safe_squared_norm = torch.where(
+        total_sq_norm = squared_s.sum(-1, keepdim=True)
+        positive_norm = total_sq_norm > 0
+        safe_sq_norm = torch.where(
             positive_norm,
-            total_squared_norm,
-            torch.ones_like(total_squared_norm))
-        tail_ratios = tail_squared_norm / safe_squared_norm
+            total_sq_norm,
+            torch.ones_like(total_sq_norm))
+        tail_ratios = tail_squared_norm / safe_sq_norm
         rtol_rank = (tail_ratios > rtol).reshape(
             -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, rtol_rank.item()))
     
     if return_info:
-        total_squared_norm_per_batch = squared_s.sum(dim=-1)
-        discarded_squared_norm_per_batch = squared_s[..., final_rank:].sum(
-            dim=-1)
+        total_sq_norm = squared_s.sum(dim=-1)
+        discarded_sq_norm = squared_s[..., final_rank:].sum(dim=-1)
         info = _TruncatedSVDInfo(
             full_rank=s.shape[-1],
             selected_rank=final_rank,
-            total_squared_norm=total_squared_norm_per_batch.sum(),
-            discarded_squared_norm=discarded_squared_norm_per_batch.sum(),
-            total_squared_norm_per_batch=total_squared_norm_per_batch,
-            discarded_squared_norm_per_batch=(
-                discarded_squared_norm_per_batch),
+            total_sq_norm=total_sq_norm,
+            discarded_sq_norm=discarded_sq_norm,
             svd_method=effective_svd_method)
 
     u = u[..., :final_rank]

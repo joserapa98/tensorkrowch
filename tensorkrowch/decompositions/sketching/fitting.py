@@ -978,7 +978,7 @@ class QTTInputFitter:
         if return_info:
             metadata.update({
                 'split_relative_residual': (
-                    truncation.local_relative_error),
+                    truncation.local_rel_error),
                 'final_relative_residual': float(relative.detach().cpu()),
             })
         return FittedInputAxis(

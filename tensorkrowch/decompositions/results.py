@@ -96,13 +96,15 @@ class TensorDecomposition(ABC):
     function used during fitting.
     """
 
-    cores: Sequence[torch.Tensor]
+    cores: Sequence[torch.Tensor]  # Raw tensors forming the decomposition.
+    # Structured diagnostics collected during the fit.
     metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    n_batches: int = 0
-    rank: List[int] = field(init=False)
-    _batch_shape: Tuple[int, ...] = field(init=False, repr=False)
-    _in_dim: Tuple[int, ...] = field(init=False, repr=False)
+    metadata: Dict[str, Any] = field(default_factory=dict)  # Algorithm metadata.
+    n_batches: int = 0  # Number of leading batch dimensions in every core.
+    rank: List[int] = field(init=False)  # Rank inferred from adjacent cores.
+    _batch_shape: Tuple[int, ...] = field(init=False, repr=False)  # Shared batch shape.
+    _in_dim: Tuple[int, ...] = field(init=False, repr=False)  # Input dimensions.
+    # Optional output dimensions represented by dedicated sites.
     _out_dim: Optional[Tuple[int, ...]] = field(init=False, repr=False)
 
     _family: ClassVar[str] = 'tensor'

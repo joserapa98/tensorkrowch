@@ -1067,7 +1067,7 @@ class TTRSS(RecursiveSketching):
 
         if context.collect_metrics and context.metrics.truncations:
             local_squared = sum(
-                record.discarded_squared_norm
+                record.discarded_sq_norm
                 for record in context.metrics.truncations)
             local_aggregate = local_squared ** 0.5
             context.metrics.errors.append(ErrorRecord(

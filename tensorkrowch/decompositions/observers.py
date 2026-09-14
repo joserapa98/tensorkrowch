@@ -30,14 +30,14 @@ from tensorkrowch.decompositions.metrics import DecompositionMetrics
 class DecompositionEvent:
     """Describes one structured event emitted by a decomposition driver."""
 
-    name: str
-    phase: str
-    level: int = 1
-    site: Optional[int] = None
-    elapsed: Optional[float] = None
-    values: Dict[str, Any] = field(default_factory=dict)
-    worker: Optional[int] = None
-    sweep: Optional[int] = None
+    name: str  # Event type consumed by observers.
+    phase: str  # Algorithmic phase that emitted the event.
+    level: int = 1  # Minimum verbosity needed to display the event.
+    site: Optional[int] = None  # Optional zero-based site or cut position.
+    elapsed: Optional[float] = None  # Optional elapsed time in seconds.
+    values: Dict[str, Any] = field(default_factory=dict)  # Event payload.
+    worker: Optional[int] = None  # Optional distributed worker index.
+    sweep: Optional[int] = None  # Optional zero-based sweep index.
 
     def __post_init__(self) -> None:
         for name in ('name', 'phase'):

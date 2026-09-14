@@ -11,43 +11,41 @@ import tensorkrowch as tk
 class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
 
     def test_error_record_stores_batch_values_on_cpu(self):
-        per_batch = torch.tensor([1.0, 2.0], requires_grad=True)
+        absolute = torch.tensor([1.0, 2.0], requires_grad=True)
         record = tk.decompositions.ErrorRecord(
             kind='reconstruction',
-            absolute=torch.tensor(3.0),
-            relative=0.5,
+            absolute=absolute,
+            relative=torch.tensor([0.5, 0.25]),
             size=2,
-            denominator=6.0,
-            absolute_per_batch=per_batch)
+            denominator=torch.tensor([2.0, 8.0]))
 
-        assert record.absolute == 3.0
-        assert record.relative == 0.5
-        assert record.absolute_per_batch.device.type == 'cpu'
-        assert not record.absolute_per_batch.requires_grad
+        assert record.absolute.device.type == 'cpu'
+        assert not record.absolute.requires_grad
+        assert torch.allclose(record.absolute, torch.tensor([1.0, 2.0]))
+        assert torch.allclose(record.relative, torch.tensor([0.5, 0.25]))
 
     def test_truncation_record(self):
         record = tk.decompositions.TruncationRecord(
             site=1,
             full_rank=5,
             selected_rank=3,
-            discarded_squared_norm=4.0,
-            local_absolute_error=2.0,
-            input_norm=5.0,
-            local_relative_error=0.4,
-            global_relative_contribution=0.2,
-            svd_method='qr_svd',
-            discarded_squared_norm_per_batch=torch.tensor([1.0, 3.0]))
+            local_abs_error=torch.tensor([1.0, 2.0], requires_grad=True),
+            local_rel_error=torch.tensor([0.2, 0.4]),
+            local_norm=torch.tensor([5.0, 5.0]),
+            discarded_sq_norm=torch.tensor([1.0, 4.0]),
+            global_rel_contribution=torch.tensor([0.1, 0.2]),
+            svd_method='qr_svd')
 
         assert record.selected_rank == 3
-        assert record.discarded_squared_norm_per_batch.device.type == 'cpu'
+        assert record.local_abs_error.device.type == 'cpu'
+        assert not record.local_abs_error.requires_grad
 
     def test_truncation_record_optional_phase(self):
         record = tk.decompositions.TruncationRecord(
             site=0,
             full_rank=2,
             selected_rank=1,
-            discarded_squared_norm=1.0,
-            local_absolute_error=1.0,
+            local_abs_error=torch.tensor(1.0),
             phase='initial_bipartition')
 
         assert record.phase == 'initial_bipartition'
@@ -56,8 +54,7 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
                 site=0,
                 full_rank=2,
                 selected_rank=1,
-                discarded_squared_norm=1.0,
-                local_absolute_error=1.0,
+                local_abs_error=torch.tensor(1.0),
                 phase=1)
 
     def test_truncation_record_from_svd_info(self):
@@ -71,34 +68,32 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
         record = tk.decompositions.TruncationRecord.from_svd_info(
             info,
             site=2,
-            log_scale_per_batch=torch.tensor([0.0, math.log(2.0)]),
-            reference_norm=10.0,
-            reference_norm_per_batch=torch.tensor([5.0, 4.0]))
+            log_scale=torch.tensor([0.0, math.log(2.0)]),
+            global_norm=torch.tensor([5.0, 4.0]))
 
         # Discarded energies are 3**2 and (2 * 1)**2 after rescaling.
-        assert record.discarded_squared_norm == pytest.approx(13.0)
-        assert record.local_absolute_error == pytest.approx(math.sqrt(13.0))
-        assert record.input_norm == pytest.approx(math.sqrt(45.0))
-        assert record.local_relative_error == pytest.approx(
-            math.sqrt(13.0 / 45.0))
-        assert record.global_relative_contribution == pytest.approx(
-            math.sqrt(13.0) / 10.0)
-        assert torch.allclose(record.local_absolute_error_per_batch,
+        assert torch.allclose(record.discarded_sq_norm,
+                              torch.tensor([9.0, 4.0]))
+        assert torch.allclose(record.local_abs_error,
                               torch.tensor([3.0, 2.0]))
-        assert torch.allclose(
-            record.global_relative_contribution_per_batch,
-            torch.tensor([0.6, 0.5]))
+        assert torch.allclose(record.local_norm,
+                              torch.tensor([5.0, math.sqrt(20.0)]))
+        assert torch.allclose(record.local_rel_error,
+                              torch.tensor([3.0 / 5.0,
+                                            1.0 / math.sqrt(5.0)]))
+        assert torch.allclose(record.global_rel_contribution,
+                              torch.tensor([0.6, 0.5]))
 
     def test_truncation_record_zero_norm_policy(self):
         *_, info = tk.utils.truncated_svd(
             torch.zeros(3, 3), rank=1, return_info=True)
 
         record = tk.decompositions.TruncationRecord.from_svd_info(
-            info, site=0, reference_norm=0.0)
+            info, site=0, global_norm=torch.tensor(0.0))
 
-        assert record.local_absolute_error == 0.0
-        assert record.local_relative_error == 0.0
-        assert record.global_relative_contribution == 0.0
+        assert record.local_abs_error == 0.0
+        assert record.local_rel_error == 0.0
+        assert record.global_rel_contribution == 0.0
 
     def test_timing_record_children(self):
         child = tk.decompositions.TimingRecord(name='svd', elapsed=0.1)

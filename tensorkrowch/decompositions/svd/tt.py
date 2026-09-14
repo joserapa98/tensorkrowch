@@ -23,8 +23,7 @@ import torch
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.metrics import (_aggregate_log_norm,
-                                                 DecompositionMetrics,
+from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
@@ -42,55 +41,61 @@ from tensorkrowch.utils import truncated_svd
 class _TTSVDErrorState:
     """Holds error quantities that are only needed for diagnostics."""
 
-    norm: torch.Tensor
-    norm_per_batch: torch.Tensor
-    log_norm: torch.Tensor
-    log_norm_per_batch: torch.Tensor
-    norm_value: float
-    relative_error_sq_per_batch: torch.Tensor
+    norm: torch.Tensor  # Input norm, optionally resolved by batch.
+    log_norm: torch.Tensor  # Stable logarithm of the input norm.
+    relative_sq_error: torch.Tensor  # Accumulated squared relative error.
 
 
 @dataclass
 class _TTSVDFitContext:
     """Holds numerical state local to one TT-SVD fit."""
 
-    batch_shape: Tuple[int, ...]
-    in_dim: Tuple[int, ...]
-    truncation: _TruncationSpec
-    renormalize: bool
-    log_scale: torch.Tensor
-    error_state: Optional[_TTSVDErrorState]
+    batch_shape: Tuple[int, ...]  # Leading dimensions treated as batches.
+    in_dim: Tuple[int, ...]  # Input dimensions represented by TT sites.
+    truncation: _TruncationSpec  # Shared truncation criteria for every cut.
+    renormalize: bool  # Whether residual norms are extracted before SVDs.
+    log_scale: torch.Tensor  # Accumulated logarithmic residual scale.
+    error_state: Optional[_TTSVDErrorState]  # Optional metric state.
 
 
 @dataclass
 class _TTSVDSplit:
     """Contains the outputs and diagnostics of one TT-SVD cut."""
 
-    core: torch.Tensor
-    residual: torch.Tensor
-    selected_rank: int
-    record: Optional[TruncationRecord]
+    core: torch.Tensor  # Finalized TT core produced at this cut.
+    residual: torch.Tensor  # Tensor passed to the next cut.
+    selected_rank: int  # Rank retained at this cut.
+    record: Optional[TruncationRecord]  # Optional truncation diagnostics.
 
 
 @dataclass(frozen=True)
 class _SVDProgress:
     """Emits one live event for each completed SVD cut."""
 
-    observer: DecompositionObserver
-    phase: str
-    site_offset: int = 0
-    subphase: Optional[str] = None
+    observer: DecompositionObserver  # Consumer of live SVD events.
+    phase: str  # Public algorithm name shown by the observer.
+    site_offset: int = 0  # Offset mapping local cuts to global sites.
+    subphase: Optional[str] = None  # Optional nested algorithmic phase.
 
     def cut_complete(self,
                      site: int,
                      record: TruncationRecord,
                      elapsed: float) -> None:
         """Emits a completed cut using its global site position."""
+        abs_error = record.local_abs_error
+        rel_error = record.local_rel_error
+        if abs_error.ndim:
+            abs_error = torch.linalg.vector_norm(abs_error)
+            local_norm = torch.linalg.vector_norm(record.local_norm)
+            rel_error = torch.where(
+                local_norm > 0,
+                abs_error / local_norm,
+                torch.zeros_like(abs_error))
         values = {
             'full_rank': record.full_rank,
             'selected_rank': record.selected_rank,
-            'absolute_error': record.local_absolute_error,
-            'relative_error': record.local_relative_error,
+            'absolute_error': abs_error,
+            'relative_error': rel_error,
         }
         if self.subphase is not None:
             values['subphase'] = self.subphase
@@ -207,44 +212,38 @@ class TTSVD:
         if context.error_state is not None:
             error_state = context.error_state
             discarded_log_norm = \
-                info.discarded_squared_norm_per_batch.log() / 2
+                info.discarded_sq_norm.log() / 2
             if context.renormalize:
                 discarded_log_norm = discarded_log_norm + cut_log_scale
-            positive_input = error_state.norm_per_batch > 0
+            positive_input = error_state.norm > 0
             safe_log_norm = torch.where(
                 positive_input,
-                error_state.log_norm_per_batch,
-                torch.zeros_like(error_state.log_norm_per_batch))
-            relative_contribution = (
+                error_state.log_norm,
+                torch.zeros_like(error_state.log_norm))
+            rel_contribution = (
                 discarded_log_norm - safe_log_norm).exp()
             zero_input_contribution = torch.where(
                 torch.isneginf(discarded_log_norm),
                 torch.zeros_like(discarded_log_norm),
                 torch.full_like(discarded_log_norm, torch.inf))
-            relative_contribution = torch.where(
+            rel_contribution = torch.where(
                 positive_input,
-                relative_contribution,
+                rel_contribution,
                 zero_input_contribution)
-            if not torch.isfinite(relative_contribution).all():
+            if not torch.isfinite(rel_contribution).all():
                 raise ValueError(
                     'The relative TT-SVD truncation error should be finite')
-            error_state.relative_error_sq_per_batch = (
-                error_state.relative_error_sq_per_batch +
-                relative_contribution.square())
+            error_state.relative_sq_error = (
+                error_state.relative_sq_error + rel_contribution.square())
 
             record = TruncationRecord.from_svd_info(
                 info,
                 site=site,
-                log_scale_per_batch=(
-                    cut_log_scale.expand(context.batch_shape)
-                    if self._n_batches and context.renormalize else None),
                 log_scale=(
-                    cut_log_scale
-                    if not self._n_batches and context.renormalize else None),
-                reference_norm=error_state.norm_value,
-                reference_norm_per_batch=(
-                    error_state.norm_per_batch
-                    if self._n_batches else None))
+                    cut_log_scale.expand(context.batch_shape)
+                    if self._n_batches and context.renormalize
+                    else cut_log_scale if context.renormalize else None),
+                global_norm=error_state.norm)
         core = self._runtime.finalize(u)
         residual = s.to(vh.dtype).unsqueeze(-1) * vh
         return _TTSVDSplit(
@@ -430,13 +429,22 @@ class TTSVD:
         if fit_observer is not None:
             error = result.metrics.errors[0]
             timing = result.metrics.timings[0]
+            abs_error = error.absolute
+            rel_error = error.relative
+            if abs_error.ndim:
+                abs_error = torch.linalg.vector_norm(abs_error)
+                global_norm = torch.linalg.vector_norm(error.denominator)
+                rel_error = torch.where(
+                    global_norm > 0,
+                    abs_error / global_norm,
+                    torch.zeros_like(abs_error))
             fit_observer.emit(DecompositionEvent(
                 name='summary',
                 phase='TT-SVD',
                 values={
                     'rank': result.rank,
-                    'absolute_error': error.absolute,
-                    'relative_error': error.relative,
+                    'absolute_error': abs_error,
+                    'relative_error': rel_error,
                     'elapsed': timing.elapsed,
                 }))
             for site, core in enumerate(result.cores):
@@ -463,20 +471,15 @@ class TTSVD:
 
         error_state = None
         if collect_metrics:
-            log_norm_per_batch = _log_vector_norm(
+            log_norm = _log_vector_norm(
                 tensor.reshape(*batch_shape, -1), dim=-1)
-            log_norm = _aggregate_log_norm(log_norm_per_batch)
-            norm_per_batch = log_norm_per_batch.exp()
             norm = log_norm.exp()
-            if not torch.isfinite(norm):
+            if not torch.isfinite(norm).all():
                 raise ValueError('The input tensor norm should be finite')
             error_state = _TTSVDErrorState(
                 norm=norm,
-                norm_per_batch=norm_per_batch,
                 log_norm=log_norm,
-                log_norm_per_batch=log_norm_per_batch,
-                norm_value=norm.detach().cpu().item(),
-                relative_error_sq_per_batch=torch.zeros_like(norm_per_batch))
+                relative_sq_error=torch.zeros_like(norm))
         context = _TTSVDFitContext(
             batch_shape=batch_shape,
             in_dim=in_dim,
@@ -524,35 +527,14 @@ class TTSVD:
             cores = self._redistribute_scale(cores, context)
 
         if error_state is not None:
-            relative_per_batch = \
-                error_state.relative_error_sq_per_batch.sqrt()
-            absolute_per_batch = (
-                relative_per_batch * error_state.norm_per_batch)
-            if error_state.norm > 0:
-                batch_weights = (
-                    error_state.log_norm_per_batch -
-                    error_state.log_norm).exp()
-                relative = torch.linalg.vector_norm(
-                    relative_per_batch * batch_weights)
-                absolute = relative * error_state.norm
-            elif torch.all(relative_per_batch == 0):
-                relative = torch.zeros_like(error_state.norm)
-                absolute = torch.zeros_like(error_state.norm)
-            else:
-                relative = torch.full_like(
-                    error_state.norm, torch.inf)
-                absolute = torch.full_like(
-                    error_state.norm, torch.inf)
+            rel_error = error_state.relative_sq_error.sqrt()
+            abs_error = rel_error * error_state.norm
             metrics.errors.append(ErrorRecord(
                 kind='truncation',
-                absolute=absolute,
-                relative=relative,
+                absolute=abs_error,
+                relative=rel_error,
                 size=n_sites - 1,
-                denominator=error_state.norm,
-                absolute_per_batch=(
-                    absolute_per_batch if self._n_batches else None),
-                relative_per_batch=(
-                    relative_per_batch if self._n_batches else None)))
+                denominator=error_state.norm))
             metrics.timings.append(TimingRecord(
                 name='fit',
                 elapsed=total_timer.elapsed,

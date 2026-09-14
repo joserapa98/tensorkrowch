@@ -193,7 +193,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         assert len(result.metrics.timings[0].children) == 2
 
     @pytest.mark.parametrize('renormalize', [False, True])
-    def test_batched_errors_are_per_batch_and_frobenius(self, renormalize):
+    def test_batched_errors_are_stored_per_batch(self, renormalize):
         generator = torch.Generator().manual_seed(1)
         tensor = torch.randn(
             3, 2, 3, 4, dtype=torch.float64, generator=generator)
@@ -206,29 +206,23 @@ class TestTTSVD:  # MARK: TestTTSVD
                 collect_metrics=True)
 
         difference = (tensor - result.contract_dense()).flatten(1)
-        absolute_per_batch = difference.norm(dim=-1)
-        input_norm_per_batch = tensor.flatten(1).norm(dim=-1)
-        relative_per_batch = torch.where(
-            input_norm_per_batch > 0,
-            absolute_per_batch / input_norm_per_batch,
-            torch.zeros_like(absolute_per_batch))
+        abs_error = difference.norm(dim=-1)
+        input_norm = tensor.flatten(1).norm(dim=-1)
+        rel_error = torch.where(
+            input_norm > 0,
+            abs_error / input_norm,
+            torch.zeros_like(abs_error))
         record = result.metrics.errors[0]
 
-        assert torch.allclose(record.absolute_per_batch,
-                              absolute_per_batch,
+        assert torch.allclose(record.absolute,
+                              abs_error,
                               rtol=1e-10,
                               atol=1e-10)
-        assert torch.allclose(record.relative_per_batch,
-                              relative_per_batch,
+        assert torch.allclose(record.relative,
+                              rel_error,
                               rtol=1e-10,
                               atol=1e-10)
-        assert record.absolute == pytest.approx(
-            absolute_per_batch.norm().item(), rel=1e-10, abs=1e-10)
-        assert record.relative == pytest.approx(
-            (absolute_per_batch.norm() /
-             input_norm_per_batch.norm()).item(),
-            rel=1e-10,
-            abs=1e-10)
+        assert torch.allclose(record.denominator, input_norm)
         assert all(torch.isfinite(core).all() for core in result.cores)
 
     def test_repeated_fits_have_independent_state(self):
@@ -345,7 +339,7 @@ class TestTTSVD:  # MARK: TestTTSVD
             rel=1e-12)
         assert math.isfinite(error.absolute)
         assert math.isfinite(error.relative)
-        assert all(math.isfinite(record.local_absolute_error)
+        assert all(torch.isfinite(record.local_abs_error).all()
                    for record in scaled.metrics.truncations)
         assert all(torch.isfinite(core).all() for core in scaled.cores)
 
@@ -377,9 +371,11 @@ class TestTTSVD:  # MARK: TestTTSVD
 
         assert log_input_norm.exp() == pytest.approx(
             torch.linalg.vector_norm(tensor).item(), rel=1e-12)
-        assert [record.local_absolute_error
-                for record in result.metrics.truncations] == pytest.approx(
-                    [error.item() for error in local_errors], rel=1e-12)
+        assert torch.allclose(
+            torch.stack([record.local_abs_error
+                         for record in result.metrics.truncations]),
+            torch.stack(local_errors),
+            rtol=1e-12)
         assert result.metrics.errors[0].absolute == pytest.approx(
             direct_absolute.item(), rel=1e-12)
         assert result.metrics.errors[0].relative == pytest.approx(
@@ -472,6 +468,18 @@ class TestTTSVD:  # MARK: TestTTSVD
         assert len(result.metrics.errors) == 1
         assert len(result.metrics.truncations) == 2
         assert len(result.metrics.timings) == 1
+
+    def test_console_observer_aggregates_batch_metrics(self, capsys):
+        tensor = torch.arange(48.).reshape(2, 2, 3, 4)
+
+        tk.decompositions.TTSVD(
+            tensor, n_batches=1, out_device=None).fit(
+                rank=2,
+                verbose=2)
+
+        output = capsys.readouterr().out
+        assert 'absolute error: tensor(' not in output
+        assert 'relative error: tensor(' not in output
 
     def test_console_events_are_emitted_during_fit(
             self, capsys, monkeypatch):

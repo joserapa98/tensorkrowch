@@ -205,7 +205,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert result.metrics.errors == []
         assert [record.site for record in result.metrics.truncations] == [
             0, 1, 2]
-        assert all(record.global_relative_contribution is None
+        assert all(record.global_rel_contribution is None
                    for record in result.metrics.truncations)
         assert torch.allclose(
             result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
@@ -322,7 +322,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert all(torch.isfinite(core).all() for core in result.cores)
         assert torch.equal(result.contract_dense(), tensor)
         assert result.metrics.errors == []
-        assert all(record.local_absolute_error == 0
+        assert all(record.local_abs_error == 0
                    for record in result.metrics.truncations)
 
     def test_repeated_fits_have_independent_results(self):

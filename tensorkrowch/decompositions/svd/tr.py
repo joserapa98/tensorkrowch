@@ -37,10 +37,10 @@ _Rank = Optional[int]
 class _TRRankPolicy:
     """Stores the shared rank constraints for one TR-SVD fit."""
 
-    mode: str
-    requested: Optional[int]
-    initial_cap: Optional[int]
-    rank_cap: Optional[int]
+    mode: str  # Rank discovery or shared-cap policy.
+    requested: Optional[int]  # Rank requested through the public API.
+    initial_cap: Optional[int]  # Cap for the initial bipartition rank.
+    rank_cap: Optional[int]  # Cap for every final TR link.
 
 
 class TRSVD:
@@ -206,8 +206,7 @@ class TRSVD:
                 record,
                 site=site_offset + record.site,
                 phase=phase,
-                global_relative_contribution=None,
-                global_relative_contribution_per_batch=None)
+                global_rel_contribution=None)
             for record in metrics.truncations
         ]
 
@@ -411,9 +410,9 @@ class TRSVD:
                         'cycle_rank': cycle_rank,
                         'center_rank': center_rank,
                         'absolute_error': (
-                            initial_record.local_absolute_error),
+                            initial_record.local_abs_error),
                         'relative_error': (
-                            initial_record.local_relative_error),
+                            initial_record.local_rel_error),
                     }))
             if padding:
                 left_factor = torch.cat([

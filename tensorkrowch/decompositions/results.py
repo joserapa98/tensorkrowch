@@ -259,13 +259,23 @@ class TensorDecomposition(ABC):
     def _log_overlap(
             self, other: 'TensorDecomposition') -> Tuple[torch.Tensor,
                                                          torch.Tensor]:
-        """Returns overlap phase and log-magnitude using scaled transfers."""
+        """Returns overlap phase and log-magnitude using scaled environments."""
         self._check_overlap_compatibility(other)
         dtype = torch.promote_types(self.dtype, other.dtype)
         self_cores = self._standard_cores()
         other_cores = other._standard_cores()
 
-        environment = None
+        self_eye = torch.eye(
+            self_cores[0].shape[-3], device=self.device, dtype=dtype)
+        other_eye = torch.eye(
+            other_cores[0].shape[-3], device=self.device, dtype=dtype)
+        environment = torch.einsum('ai,bj->abij', self_eye, other_eye)
+        if self.n_batches:
+            environment = environment.reshape(
+                *((1,) * self.n_batches), *environment.shape)
+            environment = environment.expand(
+                *self.batch_shape, *environment.shape[self.n_batches:])
+
         real_dtype = torch.empty((), dtype=dtype).real.dtype
         log_scale = torch.zeros(
             self.batch_shape, device=self.device, dtype=real_dtype)
@@ -273,25 +283,24 @@ class TensorDecomposition(ABC):
         for self_core, other_core in zip(self_cores, other_cores):
             self_core = self_core.to(dtype=dtype)
             other_core = other_core.to(dtype=dtype)
-            transfer = torch.einsum(
-                '...apr,...bps->...abrs',
-                self_core.conj(),
+            environment = torch.einsum(
+                '...xyab,...apr->...xybpr',
+                environment,
+                self_core.conj())
+            environment = torch.einsum(
+                '...xybpr,...bps->...xyrs',
+                environment,
                 other_core)
-            transfer = transfer.flatten(-4, -3).flatten(-2, -1)
 
-            if environment is None:
-                environment = transfer
-            else:
-                environment = environment @ transfer
-
-            scale = torch.linalg.vector_norm(environment, dim=(-2, -1))
+            scale = torch.linalg.vector_norm(
+                environment, dim=(-4, -3, -2, -1))
             nonzero = scale > 0
             safe_scale = torch.where(nonzero, scale, torch.ones_like(scale))
-            environment = environment / safe_scale[..., None, None]
+            environment = environment / safe_scale[..., None, None, None, None]
             log_scale = log_scale + torch.where(
                 nonzero, safe_scale.log(), torch.zeros_like(safe_scale))
 
-        overlap = environment.diagonal(dim1=-2, dim2=-1).sum(-1)
+        overlap = torch.einsum('...ijij->...', environment)
         magnitude = overlap.abs()
         nonzero = magnitude > 0
         safe_magnitude = torch.where(

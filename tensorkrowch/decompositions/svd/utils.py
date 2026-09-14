@@ -2,35 +2,40 @@
 This script contains:
 
     Internal SVD numerical helpers:
-        * _vector_norm_components
-        * _log_vector_norm
-        * _normalize_vector
+        * _tensor_norm_components
+        * _log_tensor_norm
+        * _normalize_tensor
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
 
-def _vector_norm_components(tensor: torch.Tensor,
-                            dim: Optional[int] = None) -> Tuple[
+_Dimension = Optional[Union[int, Sequence[int]]]
+
+
+def _tensor_norm_components(tensor: torch.Tensor,
+                            dim: _Dimension = None) -> Tuple[
                                 torch.Tensor,
                                 torch.Tensor,
                                 torch.Tensor]:
-    """Returns stable scale factors and the log-norm of vectors."""
+    """Returns stable scale factors and the log-norm of tensors."""
     absolute = tensor.abs()
     if dim is None:
         scale = absolute.amax()
     else:
+        if not isinstance(dim, int):
+            dim = tuple(dim)
         scale = absolute.amax(dim=dim, keepdim=True)
 
     positive = scale > 0
     safe_scale = torch.where(positive, scale, torch.ones_like(scale))
     if dim is None:
-        scaled_norm = (absolute / safe_scale).square().sum().sqrt()
+        scaled_norm = torch.linalg.vector_norm(absolute / safe_scale)
     else:
-        scaled_norm = (absolute / safe_scale).square().sum(
-            dim=dim, keepdim=True).sqrt()
+        scaled_norm = torch.linalg.vector_norm(
+            absolute / safe_scale, dim=dim, keepdim=True)
 
     safe_scaled_norm = torch.where(
         positive, scaled_norm, torch.ones_like(scaled_norm))
@@ -41,34 +46,50 @@ def _vector_norm_components(tensor: torch.Tensor,
     return safe_scale, safe_scaled_norm, log_norm
 
 
-def _log_vector_norm(tensor: torch.Tensor,
-                     dim: Optional[int] = None,
+def _log_tensor_norm(tensor: torch.Tensor,
+                     dim: _Dimension = None,
                      keepdim: bool = False) -> torch.Tensor:
-    """Computes a vector log-norm without squaring the original scale."""
+    """Computes a tensor log-norm without squaring the original scale."""
     if dim is None:
         if not tensor.numel():
             return tensor.real.new_tensor(-torch.inf)
-        return _vector_norm_components(tensor)[-1]
+        return _tensor_norm_components(tensor)[-1]
 
-    if not tensor.shape[dim]:
+    dims = (dim,) if isinstance(dim, int) else dim
+    dims = tuple(axis % tensor.ndim for axis in dims)
+    if any(not tensor.shape[axis] for axis in dims):
         shape = list(tensor.shape)
         if keepdim:
-            shape[dim] = 1
+            for axis in dims:
+                shape[axis] = 1
         else:
-            shape.pop(dim % tensor.ndim)
+            shape = [size for axis, size in enumerate(shape)
+                     if axis not in dims]
         return tensor.real.new_full(shape, -torch.inf)
 
-    log_norm = _vector_norm_components(tensor, dim)[-1]
-    return log_norm if keepdim else log_norm.squeeze(dim)
+    log_norm = _tensor_norm_components(tensor, dim)[-1]
+    if keepdim:
+        return log_norm
+    for axis in sorted(dims, reverse=True):
+        log_norm = log_norm.squeeze(axis)
+    return log_norm
 
 
-def _normalize_vector(tensor: torch.Tensor,
-                      dim: int = -1):
-    """Normalizes vectors and returns their log-norms without overflow."""
-    safe_scale, safe_scaled_norm, log_norm = _vector_norm_components(
+def _normalize_tensor(tensor: torch.Tensor,
+                      dim: _Dimension = None):
+    """Normalizes tensors and returns their log-norms without overflow."""
+    safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(
         tensor, dim)
-    normalized = tensor / safe_scale / safe_scaled_norm
-    return normalized, log_norm.squeeze(dim)
+    scaled = tensor / safe_scale
+    normalized = scaled / safe_scaled_norm
+    if dim is None:
+        return normalized, log_norm
+
+    dims = (dim,) if isinstance(dim, int) else dim
+    dims = tuple(axis % tensor.ndim for axis in dims)
+    for axis in sorted(dims, reverse=True):
+        log_norm = log_norm.squeeze(axis)
+    return normalized, log_norm
 
 
-__all__ = ['_log_vector_norm', '_normalize_vector']
+__all__ = ['_log_tensor_norm', '_normalize_tensor']

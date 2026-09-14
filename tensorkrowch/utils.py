@@ -339,11 +339,11 @@ def random_unitary(n,
 class _TruncatedSVDInfo(NamedTuple):
     """Numerical diagnostics from one call to :func:`truncated_svd`."""
 
-    full_rank: int  # Rank available before truncation.
-    selected_rank: int  # Rank retained after truncation.
-    total_sq_norm: Tensor  # Total singular-value energy, optionally batched.
-    discarded_sq_norm: Tensor  # Discarded energy, optionally batched.
-    svd_method: Text  # Compact SVD implementation used.
+    full_rank: int  # Rank available before truncation
+    selected_rank: int  # Rank retained after truncation
+    total_sq_norm: Tensor  # Total singular-value energy, optionally batched
+    discarded_sq_norm: Tensor  # Discarded energy, optionally batched
+    svd_method: Text  # Compact SVD implementation used
 
 
 def _validate_truncation(rank: Optional[int] = None,
@@ -519,13 +519,13 @@ def truncated_svd(tensor: Tensor,
             rtol = max(rtol, 1 - cum_percentage)
 
     if svd_method is None:
-        effective_svd_method = get_svd_method()
+        svd_method = get_svd_method()
     else:
-        effective_svd_method = _validate_svd_method(svd_method)
+        svd_method = _validate_svd_method(svd_method)
 
     u, s, vh = _compact_svd(
         tensor=tensor,
-        svd_method=effective_svd_method)
+        svd_method=svd_method)
     final_rank = s.shape[-1]
     
     if rank is not None:
@@ -536,14 +536,14 @@ def truncated_svd(tensor: Tensor,
         final_rank = min(final_rank, max(1, co_rank.item()))
 
     squared_s = None
-    tail_squared_norm = None
+    tail_sq_norm = None
     if (atol is not None) or (rtol is not None) or return_info:
         squared_s = s.square()
     if (atol is not None) or (rtol is not None):
-        tail_squared_norm = squared_s.flip(dims=[-1]).cumsum(-1)
+        tail_sq_norm = squared_s.flip(dims=[-1]).cumsum(-1)
 
     if atol is not None:
-        atol_rank = (tail_squared_norm > atol).reshape(
+        atol_rank = (tail_sq_norm > atol).reshape(
             -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, atol_rank.item()))
 
@@ -554,7 +554,7 @@ def truncated_svd(tensor: Tensor,
             positive_norm,
             total_sq_norm,
             torch.ones_like(total_sq_norm))
-        tail_ratios = tail_squared_norm / safe_sq_norm
+        tail_ratios = tail_sq_norm / safe_sq_norm
         rtol_rank = (tail_ratios > rtol).reshape(
             -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, rtol_rank.item()))
@@ -567,7 +567,7 @@ def truncated_svd(tensor: Tensor,
             selected_rank=final_rank,
             total_sq_norm=total_sq_norm,
             discarded_sq_norm=discarded_sq_norm,
-            svd_method=effective_svd_method)
+            svd_method=svd_method)
 
     u = u[..., :final_rank]
     s = s[..., :final_rank]

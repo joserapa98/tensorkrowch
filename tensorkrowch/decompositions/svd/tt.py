@@ -32,8 +32,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.svd.utils import (_log_vector_norm,
-                                                   _normalize_vector)
+from tensorkrowch.decompositions.svd.utils import (_log_tensor_norm,
+                                                   _normalize_tensor)
 from tensorkrowch.utils import truncated_svd
 
 
@@ -41,41 +41,41 @@ from tensorkrowch.utils import truncated_svd
 class _TTSVDErrorState:
     """Holds error quantities that are only needed for diagnostics."""
 
-    norm: torch.Tensor  # Input norm, optionally resolved by batch.
-    log_norm: torch.Tensor  # Stable logarithm of the input norm.
-    relative_sq_error: torch.Tensor  # Accumulated squared relative error.
+    norm: torch.Tensor  # Input norm, optionally resolved by batch
+    log_norm: torch.Tensor  # Stable logarithm of the input norm
+    relative_sq_error: torch.Tensor  # Accumulated squared relative error
 
 
 @dataclass
 class _TTSVDFitContext:
     """Holds numerical state local to one TT-SVD fit."""
 
-    batch_shape: Tuple[int, ...]  # Leading dimensions treated as batches.
-    in_dim: Tuple[int, ...]  # Input dimensions represented by TT sites.
-    truncation: _TruncationSpec  # Shared truncation criteria for every cut.
-    renormalize: bool  # Whether residual norms are extracted before SVDs.
-    log_scale: torch.Tensor  # Accumulated logarithmic residual scale.
-    error_state: Optional[_TTSVDErrorState]  # Optional metric state.
+    batch_shape: Tuple[int, ...]  # Leading dimensions treated as batches
+    in_dim: Tuple[int, ...]  # Input dimensions represented by TT sites
+    truncation: _TruncationSpec  # Shared truncation criteria for every cut
+    renormalize: bool  # Whether residual norms are extracted before SVDs
+    log_scale: torch.Tensor  # Accumulated logarithmic residual scale
+    error_state: Optional[_TTSVDErrorState]  # Optional metric state
 
 
 @dataclass
 class _TTSVDSplit:
     """Contains the outputs and diagnostics of one TT-SVD cut."""
 
-    core: torch.Tensor  # Finalized TT core produced at this cut.
-    residual: torch.Tensor  # Tensor passed to the next cut.
-    selected_rank: int  # Rank retained at this cut.
-    record: Optional[TruncationRecord]  # Optional truncation diagnostics.
+    core: torch.Tensor  # Finalized TT core produced at this cut
+    residual: torch.Tensor  # Tensor passed to the next cut
+    selected_rank: int  # Rank retained at this cut
+    record: Optional[TruncationRecord]  # Optional truncation diagnostics
 
 
 @dataclass(frozen=True)
 class _SVDProgress:
     """Emits one live event for each completed SVD cut."""
 
-    observer: DecompositionObserver  # Consumer of live SVD events.
-    phase: str  # Public algorithm name shown by the observer.
-    site_offset: int = 0  # Offset mapping local cuts to global sites.
-    subphase: Optional[str] = None  # Optional nested algorithmic phase.
+    observer: DecompositionObserver  # Consumer of live SVD events
+    phase: str  # Public algorithm name shown by the observer
+    site_offset: int = 0  # Offset mapping local cuts to global sites
+    subphase: Optional[str] = None  # Optional nested algorithmic phase
 
     def cut_complete(self,
                      site: int,
@@ -174,10 +174,7 @@ class TTSVD:
             previous_rank * context.in_dim[site],
             -1)
         if context.renormalize:
-            residual_shape = residual.shape
-            residual, log_norm = _normalize_vector(
-                residual.reshape(-1), dim=-1)
-            residual = residual.reshape(residual_shape)
+            residual, log_norm = _normalize_tensor(residual)
             log_norm = torch.where(
                 torch.isneginf(log_norm),
                 torch.zeros_like(log_norm),
@@ -261,10 +258,7 @@ class TTSVD:
             cores[-1] = self._runtime.finalize(cores[-1])
             return cores
 
-        final_shape = cores[-1].shape
-        final_core, log_norm = _normalize_vector(
-            cores[-1].reshape(-1), dim=-1)
-        cores[-1] = final_core.reshape(final_shape)
+        cores[-1], log_norm = _normalize_tensor(cores[-1])
         log_norm = torch.where(
             torch.isneginf(log_norm),
             torch.zeros_like(log_norm),
@@ -471,8 +465,8 @@ class TTSVD:
 
         error_state = None
         if collect_metrics:
-            log_norm = _log_vector_norm(
-                tensor.reshape(*batch_shape, -1), dim=-1)
+            input_axes = tuple(range(self._n_batches, tensor.ndim))
+            log_norm = _log_tensor_norm(tensor, dim=input_axes)
             norm = log_norm.exp()
             if not torch.isfinite(norm).all():
                 raise ValueError('The input tensor norm should be finite')

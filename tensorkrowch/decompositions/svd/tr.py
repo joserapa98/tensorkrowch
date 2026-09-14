@@ -29,7 +29,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd.tt import TTSVD, _SVDProgress
-from tensorkrowch.decompositions.svd.utils import _log_vector_norm
+from tensorkrowch.decompositions.svd.utils import _log_tensor_norm
 
 
 _Rank = Optional[int]
@@ -39,10 +39,9 @@ _Rank = Optional[int]
 class _TRRankPolicy:
     """Stores the shared rank constraints for one TR-SVD fit."""
 
-    mode: str  # Rank discovery or shared-cap policy.
-    requested: Optional[int]  # Rank requested through the public API.
-    initial_cap: Optional[int]  # Cap for the initial bipartition rank.
-    rank_cap: Optional[int]  # Cap for every final TR link.
+    mode: str  # Rank discovery or shared-cap policy
+    initial_cap: Optional[int]  # Cap for the initial bipartition rank
+    rank_cap: Optional[int]  # Cap for every final TR link
 
 
 class TRSVD:
@@ -129,13 +128,11 @@ class TRSVD:
         if rank is None:
             return _TRRankPolicy(
                 mode='discovery',
-                requested=None,
                 initial_cap=None,
                 rank_cap=None)
 
         return _TRRankPolicy(
             mode='shared',
-            requested=rank,
             initial_cap=rank * rank,
             rank_cap=rank)
 
@@ -199,9 +196,9 @@ class TRSVD:
         return cores, metrics
 
     @staticmethod
-    def _local_records(metrics: DecompositionMetrics,
-                       phase: str,
-                       site_offset: int) -> List[TruncationRecord]:
+    def _phase_truncations(metrics: DecompositionMetrics,
+                           phase: str,
+                           site_offset: int) -> List[TruncationRecord]:
         """Labels TT-SVD records as local TR-SVD diagnostics."""
         return [
             replace(
@@ -257,9 +254,9 @@ class TRSVD:
 
         Here, ``initial_rank`` is the rank actually selected by the initial
         SVD, whereas ``initial_capacity`` is the product of the two TR ranks
-        used to represent it. Their difference is ``structural_padding``. For
+        used to represent it. Their difference is ``initial_padding``. For
         example, an ``initial_rank`` of 7 may use ranks 2 and 4, giving an
-        ``initial_capacity`` of 8 and a ``structural_padding`` of 1.
+        ``initial_capacity`` of 8 and an ``initial_padding`` of 1.
 
         The fixed tensor should have shape ``(d_1, ..., d_n)``, with one input
         dimension per TR site. The returned cores all have shape
@@ -395,7 +392,7 @@ class TRSVD:
                 selected_rank=selected_rank,
                 rank_cap=rank_policy.rank_cap)
             initial_capacity = cycle_rank * center_rank
-            padding = initial_capacity - selected_rank
+            initial_padding = initial_capacity - selected_rank
 
             left_factor, right_factor = initial_result.cores
             initial_metrics = (
@@ -422,14 +419,16 @@ class TRSVD:
                         'relative_error': (
                             initial_record.local_rel_error),
                     }))
-            if padding:
+            if initial_padding:
                 left_factor = torch.cat([
                     left_factor,
-                    left_factor.new_zeros(left_factor.shape[0], padding),
+                    left_factor.new_zeros(
+                        left_factor.shape[0], initial_padding),
                 ], dim=-1)
                 right_factor = torch.cat([
                     right_factor,
-                    right_factor.new_zeros(padding, right_factor.shape[1]),
+                    right_factor.new_zeros(
+                        initial_padding, right_factor.shape[1]),
                 ], dim=0)
 
             left_subchain = left_factor.reshape(
@@ -467,17 +466,17 @@ class TRSVD:
 
         metrics = DecompositionMetrics()
         if collect_metrics:
-            initial_records = self._local_records(
+            initial_records = self._phase_truncations(
                 initial_metrics,
                 phase='initial_bipartition',
                 site_offset=center - 1)
             left_records = (
-                [] if left_metrics is None else self._local_records(
+                [] if left_metrics is None else self._phase_truncations(
                     left_metrics,
                     phase='left_subchain',
                     site_offset=0))
             right_records = (
-                [] if right_metrics is None else self._local_records(
+                [] if right_metrics is None else self._phase_truncations(
                     right_metrics,
                     phase='right_subchain',
                     site_offset=center))
@@ -498,10 +497,11 @@ class TRSVD:
                 name='fit',
                 elapsed=total_timer.elapsed,
                 children=phase_timings))
-            if padding:
+            if initial_padding:
                 metrics.warnings.append(
                     f'Initial SVD rank {selected_rank} uses capacity '
-                    f'{initial_capacity} with {padding} structural zero '
+                    f'{initial_capacity} with {initial_padding} structural '
+                    'zero '
                     'dimensions')
             metrics.warnings.append(
                 'TR-SVD truncation records are local diagnostics and are not '
@@ -514,22 +514,16 @@ class TRSVD:
                 'algorithm': 'tr_svd',
                 'center': center,
                 'rank_mode': rank_policy.mode,
-                'requested_rank': rank_policy.requested,
                 'renormalize': renormalize,
-                'initial_selected_rank': selected_rank,
-                'initial_capacity': initial_capacity,
-                'cycle_rank': cycle_rank,
-                'center_rank': center_rank,
-                'structural_padding': padding,
-                'truncation_errors': 'local_diagnostics',
+                'initial_padding': initial_padding,
             })
 
         if fit_observer is not None:
             approximation = result.contract_dense()
             target = self.tensor.to(
                 device=approximation.device, dtype=approximation.dtype)
-            abs_log_error = _log_vector_norm(approximation - target)
-            target_log_norm = _log_vector_norm(target)
+            abs_log_error = _log_tensor_norm(approximation - target)
+            target_log_norm = _log_tensor_norm(target)
             abs_error = abs_log_error.exp()
             rel_error = _ratio_from_log_norms(
                 abs_log_error, target_log_norm)
@@ -541,7 +535,7 @@ class TRSVD:
                     'center': center,
                     'initial_rank': selected_rank,
                     'initial_capacity': initial_capacity,
-                    'structural_padding': padding,
+                    'initial_padding': initial_padding,
                     'absolute_error': abs_error,
                     'relative_error': rel_error,
                     'elapsed': total_timer.elapsed,
@@ -589,7 +583,7 @@ def tr_svd(tensor: torch.Tensor,
     Here, ``initial_rank`` is the rank selected by the initial SVD, while
     ``initial_capacity`` is the product of the two TR ranks used to represent
     it. For example, rank 7 may be stored with ranks 2 and 4, so the capacity
-    is 8 and ``structural_padding`` is 1.
+    is 8 and ``initial_padding`` is 1.
 
     Parameters
     ----------
@@ -662,14 +656,14 @@ def tr_svd(tensor: torch.Tensor,
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2), (2, 2, 2), (2, 2, 2)]
 
-    Inspect the structural padding required by a shared rank cap:
+    Inspect the initial padding required by a shared rank cap:
 
     >>> singular_values = torch.tensor([5., 3., 1., 0.])
     >>> _, info = tr_svd(torch.diag(singular_values),
     ...                  rank=2, return_info=True)
     >>> info['rank']
     [2, 2]
-    >>> info['metadata']['structural_padding']
+    >>> info['metadata']['initial_padding']
     1
     """
     if not isinstance(return_info, bool):

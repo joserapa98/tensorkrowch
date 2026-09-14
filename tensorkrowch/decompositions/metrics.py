@@ -100,11 +100,11 @@ def _record_as_dict(record: Any) -> Dict[str, Any]:
 class ErrorRecord:
     """Stores an absolute/relative error measured on a specified target."""
 
-    kind: str  # Target or mechanism on which the error was measured.
-    absolute: torch.Tensor  # Absolute error, optionally resolved by batch.
-    relative: Optional[torch.Tensor] = None  # Relative error with same shape.
-    size: Optional[int] = None  # Number of contributions represented.
-    denominator: Optional[torch.Tensor] = None  # Norm used for relative error.
+    kind: str  # Target or mechanism on which the error was measured
+    absolute: torch.Tensor  # Absolute error, optionally resolved by batch
+    relative: Optional[torch.Tensor] = None  # Relative error with same shape
+    size: Optional[int] = None  # Number of contributions represented
+    denominator: Optional[torch.Tensor] = None  # Norm used for relative error
 
     def __post_init__(self) -> None:
         if not isinstance(self.kind, str):
@@ -144,18 +144,18 @@ class ErrorRecord:
 class TruncationRecord:
     """Stores ranks and discarded energy for one truncation cut."""
 
-    site: int  # Site immediately to the left of the truncation cut.
-    full_rank: int  # Rank available before truncation.
-    selected_rank: int  # Rank retained after truncation.
-    local_abs_error: torch.Tensor  # Discarded norm at the local cut.
-    local_rel_error: Optional[torch.Tensor] = None  # Error over local norm.
-    singular_values: Optional[torch.Tensor] = None  # Optional retained spectrum.
-    local_norm: Optional[torch.Tensor] = None  # Norm entering the local SVD.
-    discarded_sq_norm: Optional[torch.Tensor] = None  # Discarded SVD energy.
-    log_scale: Optional[torch.Tensor] = None  # Restored logarithmic scale.
-    global_rel_contribution: Optional[torch.Tensor] = None  # Global error term.
-    svd_method: Optional[str] = None  # Compact SVD implementation used.
-    phase: Optional[str] = None  # Algorithmic phase containing this cut.
+    site: int  # Site immediately to the left of the truncation cut
+    full_rank: int  # Rank available before truncation
+    selected_rank: int  # Rank retained after truncation
+    local_abs_error: torch.Tensor  # Discarded norm at the local cut
+    local_rel_error: Optional[torch.Tensor] = None  # Error over local norm
+    singular_values: Optional[torch.Tensor] = None  # Optional retained spectrum
+    local_norm: Optional[torch.Tensor] = None  # Norm entering the local SVD
+    discarded_sq_norm: Optional[torch.Tensor] = None  # Discarded SVD energy
+    log_scale: Optional[torch.Tensor] = None  # Restored logarithmic scale
+    global_rel_contribution: Optional[torch.Tensor] = None  # Global error term
+    svd_method: Optional[str] = None  # Compact SVD implementation used
+    phase: Optional[str] = None  # Algorithmic phase containing this cut
 
     @classmethod
     def from_svd_info(cls,
@@ -576,11 +576,11 @@ class SweepRecord:
 class TimingRecord:
     """Stores elapsed time for a decomposition phase or site."""
 
-    name: str  # Timed phase or operation.
-    elapsed: float  # Elapsed wall-clock time in seconds.
-    site: Optional[int] = None  # Optional zero-based site or cut position.
-    worker: Optional[int] = None  # Optional distributed worker index.
-    children: Sequence['TimingRecord'] = field(default_factory=tuple)  # Nested timings.
+    name: str  # Timed phase or operation
+    elapsed: float  # Elapsed wall-clock time in seconds
+    site: Optional[int] = None  # Optional zero-based site or cut position
+    worker: Optional[int] = None  # Optional distributed worker index
+    children: Sequence['TimingRecord'] = field(default_factory=tuple)  # Nested timings
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str):
@@ -669,24 +669,24 @@ class FidelityRecord:
 class DecompositionMetrics:
     """Collects structured records produced during a decomposition fit."""
 
-    errors: List[ErrorRecord] = field(default_factory=list)  # Global errors.
-    # Local SVD truncations.
+    errors: List[ErrorRecord] = field(default_factory=list)  # Global errors
+    # Local SVD truncations
     truncations: List[TruncationRecord] = field(default_factory=list)
-    timings: List[TimingRecord] = field(default_factory=list)  # Runtime data.
-    # Tensor-source evaluations.
+    timings: List[TimingRecord] = field(default_factory=list)  # Runtime data
+    # Tensor-source evaluations
     evaluations: List[EvaluationStats] = field(default_factory=list)
-    # Normalized overlaps and fidelities.
+    # Normalized overlaps and fidelities
     fidelities: List[FidelityRecord] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)  # Diagnostic warnings.
-    # Local ALS solve diagnostics.
+    warnings: List[str] = field(default_factory=list)  # Diagnostic warnings
+    # Local ALS solve diagnostics
     local_solves: List[LocalSolveRecord] = field(default_factory=list)
-    # Input-axis fitting diagnostics.
+    # Input-axis fitting diagnostics
     input_fits: List[InputFitRecord] = field(default_factory=list)
-    # Recursive range-projection diagnostics.
+    # Recursive range-projection diagnostics
     range_projections: List[RangeProjectionRecord] = field(
         default_factory=list)
-    gauges: List[GaugeRecord] = field(default_factory=list)  # Gauge data.
-    sweeps: List[SweepRecord] = field(default_factory=list)  # ALS sweeps.
+    gauges: List[GaugeRecord] = field(default_factory=list)  # Gauge data
+    sweeps: List[SweepRecord] = field(default_factory=list)  # ALS sweeps
 
     def __post_init__(self) -> None:
         self.errors = list(self.errors)

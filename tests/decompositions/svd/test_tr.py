@@ -161,7 +161,9 @@ class TestTRSVD:  # MARK: TestTRSVD
             right_error = left_error
         else:
             initial_error = sqrt(tolerance) * tensor_norm
-            selected_rank = result.metadata['initial_selected_rank']
+            initial_capacity = result.rank[-1] * result.rank[1]
+            selected_rank = (
+                initial_capacity - result.metadata['initial_padding'])
             left_error = sqrt(
                 n_subchain_cuts * tolerance * selected_rank)
             right_error = sqrt(
@@ -201,7 +203,6 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert result.dtype == dtype
         assert result.metadata['center'] == center
         assert result.metadata['rank_mode'] == 'discovery'
-        assert result.metadata['truncation_errors'] == 'local_diagnostics'
         assert result.metrics.errors == []
         assert [record.site for record in result.metrics.truncations] == [
             0, 1, 2]
@@ -263,7 +264,6 @@ class TestTRSVD:  # MARK: TestTRSVD
 
         assert max(result.rank) <= 2
         assert result.metadata['rank_mode'] == 'shared'
-        assert result.metadata['requested_rank'] == 2
         assert result.metrics.errors == []
         assert {record.phase for record in result.metrics.truncations} == {
             'left_subchain',
@@ -278,11 +278,7 @@ class TestTRSVD:  # MARK: TestTRSVD
             out_device=None).fit(collect_metrics=True)
 
         assert result.rank == [5, 1]
-        assert result.metadata['initial_selected_rank'] == 5
-        assert result.metadata['cycle_rank'] == 1
-        assert result.metadata['center_rank'] == 5
-        assert result.metadata['initial_capacity'] == 5
-        assert result.metadata['structural_padding'] == 0
+        assert result.metadata['initial_padding'] == 0
         assert not any('structural zero' in warning
                        for warning in result.metrics.warnings)
         assert torch.allclose(
@@ -300,9 +296,7 @@ class TestTRSVD:  # MARK: TestTRSVD
             out_device=None).fit(rank=2, cutoff=0)
 
         assert result.rank == [2, 2]
-        assert result.metadata['initial_selected_rank'] == 3
-        assert result.metadata['initial_capacity'] == 4
-        assert result.metadata['structural_padding'] == 1
+        assert result.metadata['initial_padding'] == 1
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])

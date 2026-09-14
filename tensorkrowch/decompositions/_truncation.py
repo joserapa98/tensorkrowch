@@ -29,11 +29,11 @@ def _rescale_absolute_tolerance(value: Optional[float],
 class _TruncationSpec:
     """Groups truncation criteria shared by consecutive SVD cuts."""
 
-    rank: Optional[int] = None  # Maximum rank retained by each SVD.
-    cutoff: Optional[float] = None  # Minimum singular value retained.
-    atol: Optional[float] = None  # Absolute discarded-energy tolerance.
-    rtol: Optional[float] = None  # Relative discarded-energy tolerance.
-    cum_percentage: Optional[float] = None  # Retained spectral-energy fraction.
+    rank: Optional[int] = None  # Maximum rank retained by each SVD
+    cutoff: Optional[float] = None  # Minimum singular value retained
+    atol: Optional[float] = None  # Absolute discarded-energy tolerance
+    rtol: Optional[float] = None  # Relative discarded-energy tolerance
+    cum_percentage: Optional[float] = None  # Retained spectral-energy fraction
 
     def __post_init__(self) -> None:
         _validate_truncation(

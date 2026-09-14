@@ -434,7 +434,7 @@ class TestTRSVD:  # MARK: TestTRSVD
 
     def test_console_observer(self, capsys):
         result = tk.decompositions.TRSVD(
-            torch.randn(2, 3, 4, 2),
+            torch.arange(48., dtype=torch.float64).reshape(2, 3, 4, 2),
             out_device=None).fit(
                 rank=2,
                 verbose=3)
@@ -447,6 +447,8 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert 'Cut 3-4' in output
         assert 'step:' not in output
         assert 'Summary\n-------' in output
+        assert 'absolute error:' in output
+        assert 'relative error:' in output
         assert len(result.metrics.truncations) == 3
         assert output.count('shape:') == 4
 

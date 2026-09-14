@@ -19,7 +19,8 @@ from typing import List, Optional, Tuple, Union
 import torch
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
-from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+from tensorkrowch.decompositions.metrics import (_ratio_from_log_norms,
+                                                 DecompositionMetrics,
                                                  TimingRecord,
                                                  TruncationRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
@@ -28,6 +29,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd.tt import TTSVD, _SVDProgress
+from tensorkrowch.decompositions.svd.utils import _log_vector_norm
 
 
 _Rank = Optional[int]
@@ -517,6 +519,14 @@ class TRSVD:
             })
 
         if fit_observer is not None:
+            approximation = result.contract_dense()
+            target = self.tensor.to(
+                device=approximation.device, dtype=approximation.dtype)
+            abs_log_error = _log_vector_norm(approximation - target)
+            target_log_norm = _log_vector_norm(target)
+            abs_error = abs_log_error.exp()
+            rel_error = _ratio_from_log_norms(
+                abs_log_error, target_log_norm)
             fit_observer.emit(DecompositionEvent(
                 name='summary',
                 phase='TR-SVD',
@@ -526,6 +536,8 @@ class TRSVD:
                     'initial_rank': selected_rank,
                     'initial_capacity': initial_capacity,
                     'structural_padding': padding,
+                    'absolute_error': abs_error,
+                    'relative_error': rel_error,
                     'elapsed': total_timer.elapsed,
                 }))
             for site, core in enumerate(result.cores):

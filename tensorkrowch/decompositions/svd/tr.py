@@ -255,6 +255,12 @@ class TRSVD:
         required by the cap is padded only with structural zeros and recorded
         in ``result.metadata``.
 
+        Here, ``initial_rank`` is the rank actually selected by the initial
+        SVD, whereas ``initial_capacity`` is the product of the two TR ranks
+        used to represent it. Their difference is ``structural_padding``. For
+        example, an ``initial_rank`` of 7 may use ranks 2 and 4, giving an
+        ``initial_capacity`` of 8 and a ``structural_padding`` of 1.
+
         The fixed tensor should have shape ``(d_1, ..., d_n)``, with one input
         dimension per TR site. The returned cores all have shape
         ``(rank_{k-1}, d_k, rank_k)``, where the left rank of the first core
@@ -579,6 +585,11 @@ def tr_svd(tensor: torch.Tensor,
     initial SVD rank is split using the smallest admissible product and the
     most balanced pair breaks ties. Any extra capacity required by the cap
     contains structural zeros and is reported in ``info['metadata']``.
+
+    Here, ``initial_rank`` is the rank selected by the initial SVD, while
+    ``initial_capacity`` is the product of the two TR ranks used to represent
+    it. For example, rank 7 may be stored with ranks 2 and 4, so the capacity
+    is 8 and ``structural_padding`` is 1.
 
     Parameters
     ----------

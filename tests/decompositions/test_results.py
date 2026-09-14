@@ -85,9 +85,14 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert torch.allclose(result.contract_dense(), expected)
 
     def test_batched_tr_dense_contraction(self):
+        generator = torch.Generator().manual_seed(0)
         cores = [
-            torch.randn(3, 2, 3, 4),
-            torch.randn(3, 4, 5, 2),
+            torch.randn(3, 2, 3, 4,
+                        dtype=torch.float64,
+                        generator=generator),
+            torch.randn(3, 4, 5, 2,
+                        dtype=torch.float64,
+                        generator=generator),
         ]
         result = tk.decompositions.TRDecomposition(cores, n_batches=1)
 

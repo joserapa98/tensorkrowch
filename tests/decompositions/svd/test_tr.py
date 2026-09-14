@@ -397,7 +397,8 @@ class TestTRSVD:  # MARK: TestTRSVD
                     rank=2, renormalize=renormalize)
 
         assert all(core.device.type == 'cpu' for core in cpu_result.cores)
-        assert all(core.device == device for core in active_result.cores)
+        assert all(
+            core.device == tensor.device for core in active_result.cores)
         assert torch.allclose(
             active_result.contract_dense(),
             cpu_result.contract_dense().to(device),

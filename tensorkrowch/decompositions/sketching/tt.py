@@ -453,7 +453,7 @@ class TTRSS(RecursiveSketching):
                 '`function` failed on a sketch-sample batch') from exc
         if not isinstance(probe, torch.Tensor):
             raise TypeError('`function` should return a torch.Tensor')
-        if probe.device != device:
+        if probe.device != configurations.device:
             raise ValueError(
                 '`function` should return values on the compute device')
         return probe, None

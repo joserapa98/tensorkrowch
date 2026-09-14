@@ -1746,7 +1746,8 @@ class TestMPS:  # MARK: TestMPS
          'full_list',
          'restricted_list_batch',
          'full_list_batch'])
-    def test_condition_accepts_data_layouts(self, layout):
+    @pytest.mark.parametrize('mps_seed', [0], indirect=True)
+    def test_condition_accepts_data_layouts(self, layout, mps_seed):
         mps = tk.models.MPS(n_features=4,
                             phys_dim=2,
                             bond_dim=2,

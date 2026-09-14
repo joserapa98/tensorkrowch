@@ -24,8 +24,8 @@ class _RuntimeTimer:
                  synchronize: bool) -> None:
         self._device = device
         self._synchronize = synchronize
-        self.elapsed: Optional[float] = None
         self._start: Optional[float] = None
+        self.elapsed: Optional[float] = None
 
     def _sync(self) -> None:
         if not self._synchronize or (self._device is None):

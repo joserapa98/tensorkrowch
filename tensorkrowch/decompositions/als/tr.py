@@ -27,9 +27,10 @@ from tensorkrowch.decompositions.als.sampling import (
     UniformRows,
     _RowSamplingState,
 )
-from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
-from tensorkrowch.decompositions.als.tt import (TTALS, _relative_error,
-                                                _solve_local_proposal)
+from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
+                                                     _relative_error,
+                                                     _solve_local_proposal)
+from tensorkrowch.decompositions.als.tt import TTALS
 from tensorkrowch.decompositions.observers import (DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)

@@ -45,15 +45,15 @@ class UpdatePolicy:
         return current + self.damping * (proposal - current)
 
     def accepts(self,
-                previous_local_error: Optional[float],
-                proposed_local_error: Optional[float]) -> bool:
+                previous_local_error: Optional[torch.Tensor],
+                proposed_local_error: Optional[torch.Tensor]) -> bool:
         """Whether a local proposal satisfies the acceptance strategy."""
         if self.acceptance == 'always':
             return True
         if (previous_local_error is None) or (proposed_local_error is None):
             raise ValueError(
                 'Non-increasing acceptance requires both local errors')
-        return proposed_local_error <= previous_local_error
+        return bool(proposed_local_error <= previous_local_error)
 
 
 @dataclass(frozen=True)
@@ -114,17 +114,17 @@ class ConvergencePolicy:
                         stable_sweeps: int) -> tuple:
         """Returns a normalized reason and updated stability count."""
         if (self.error_atol is not None) and \
-                (record.absolute_error is not None) and \
-                (record.absolute_error <= self.error_atol):
+                (record.abs_error is not None) and \
+                (record.abs_error <= self.error_atol):
             return 'error_atol', stable_sweeps
         if (self.error_rtol is not None) and \
-                (record.relative_error is not None) and \
-                (record.relative_error <= self.error_rtol):
+                (record.rel_error is not None) and \
+                (record.rel_error <= self.error_rtol):
             return 'error_rtol', stable_sweeps
 
         if self.change_rtol is not None:
-            if (record.relative_change is not None) and \
-                    (record.relative_change <= self.change_rtol):
+            if (record.rel_change is not None) and \
+                    (record.rel_change <= self.change_rtol):
                 stable_sweeps += 1
             else:
                 stable_sweeps = 0

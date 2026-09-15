@@ -26,7 +26,9 @@ from tensorkrowch.decompositions.als.sampling import (
     UniformRows,
     _RowSamplingState,
 )
-from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
+from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
+                                                     _relative_error,
+                                                     _solve_local_proposal)
 from tensorkrowch.decompositions.observers import (DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
@@ -132,67 +134,6 @@ def _evaluate_standard_tt(cores: Sequence[torch.Tensor],
         selected = core[:, indices[:, site], :].permute(1, 0, 2)
         environment = torch.einsum('ja,jab->jb', environment, selected)
     return environment.squeeze(-1)
-
-
-def _relative_error(absolute: torch.Tensor,
-                    target_norm: torch.Tensor) -> torch.Tensor:
-    """Applies the decomposition-wide zero-target relative-error policy."""
-    if target_norm > 0:
-        return absolute / target_norm
-    if absolute == 0:
-        return torch.zeros_like(absolute)
-    return torch.full_like(absolute, torch.inf)
-
-
-def _solve_local_proposal(
-        solver: LeastSquaresSolver,
-        environment: torch.Tensor,
-        target: torch.Tensor,
-        current: torch.Tensor,
-        site: int,
-        sweep: int,
-        update_policy: UpdatePolicy,
-        return_record: bool,
-        regularization_scale: Optional[torch.Tensor] = None,
-        sampling_exact: Optional[bool] = None,
-        sample_generation: Optional[int] = None
-        ) -> Tuple[torch.Tensor, object]:
-    """Solves, damps and optionally accepts one TT local proposal."""
-    solution, record = solver.solve(
-        environment,
-        target,
-        site=site,
-        sweep=sweep,
-        return_record=return_record,
-        regularization_scale=regularization_scale)
-    proposal = update_policy.apply(current, solution.reshape(current.shape))
-    record_needs_update = return_record and (update_policy.damping != 1)
-    if update_policy.acceptance == 'non_increasing':
-        current_error = torch.linalg.vector_norm(
-            environment @ current.reshape(-1) - target)
-        proposal_error = torch.linalg.vector_norm(
-            environment @ proposal.reshape(-1) - target)
-        if not update_policy.accepts(
-                float(current_error.detach().cpu().item()),
-                float(proposal_error.detach().cpu().item())):
-            proposal = current
-        record_needs_update = return_record
-    if record_needs_update:
-        residual = environment @ proposal.reshape(-1) - target
-        residual_absolute = torch.linalg.vector_norm(residual)
-        target_norm = torch.linalg.vector_norm(target)
-        record = replace(
-            record,
-            residual_absolute=residual_absolute,
-            residual_relative=_relative_error(
-                residual_absolute, target_norm),
-            target_norm=target_norm)
-    if record is not None and sampling_exact is not None:
-        record = replace(
-            record,
-            sampling_exact=sampling_exact,
-            sample_generation=sample_generation)
-    return proposal, record
 
 
 def _gauge_core_update(

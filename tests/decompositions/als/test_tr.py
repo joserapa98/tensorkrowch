@@ -63,7 +63,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
                     max_sweeps=4),
                 collect_metrics=True)
 
-        errors = [record.absolute_error for record in result.metrics.sweeps]
+        errors = [record.abs_error for record in result.metrics.sweeps]
         for previous, current in zip(errors, errors[1:]):
             assert current <= previous + 2e-10 * max(1., previous)
         assert errors[-1] <= errors[0] + 2e-10
@@ -157,7 +157,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                 if event.name == 'sample_refresh'] == [0, 2]
         assert [record.sample_generation
                 for record in result.metrics.sweeps] == [0, 0, 1]
-        assert all(record.absolute_error is None
+        assert all(record.abs_error is None
                    for record in result.metrics.sweeps)
 
     def test_completion_measures_only_permanent_observations(self):
@@ -184,9 +184,9 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         approximation = result.evaluate(indices)
         absolute = torch.linalg.vector_norm(approximation - values)
         relative = absolute / torch.linalg.vector_norm(values)
-        assert result.metrics.sweeps[-1].absolute_error == pytest.approx(
+        assert result.metrics.sweeps[-1].abs_error == pytest.approx(
             absolute.item())
-        assert result.metrics.sweeps[-1].relative_error == pytest.approx(
+        assert result.metrics.sweeps[-1].rel_error == pytest.approx(
             relative.item())
         assert result.metadata['sampling'] == 'observed'
 
@@ -227,7 +227,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                    for record in result.metrics.local_solves)
         assert result.metadata['sampling_exact'] is False
         assert result.metadata['leverage_uniform_mix'] == pytest.approx(0.2)
-        assert all(record.absolute_error is None
+        assert all(record.abs_error is None
                    for record in result.metrics.sweeps)
 
     def test_product_leverage_requires_sitewise_refresh(self):

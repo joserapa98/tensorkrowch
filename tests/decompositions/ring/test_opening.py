@@ -150,7 +150,7 @@ class TestFixedGaugeCoreOpener:  # MARK: TestFixedGaugeCoreOpener
         assert torch.equal(opening.right_gauge, right)
         assert torch.allclose(
             opening.contract_dense(), target, rtol=2e-10, atol=2e-10)
-        assert opening.local_records[0].residual_relative < 1e-10
+        assert opening.local_records[0].rel_residual < 1e-10
 
     def test_requires_both_gauges_and_one_physical_site(self):
         left = torch.randn(1, 2, 1)

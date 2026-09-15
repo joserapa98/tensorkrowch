@@ -475,8 +475,8 @@ class FixedGaugeCoreOpener:
             local_records=(record,),
             diagnostics={
                 'algorithm': 'fixed_gauge_core_solve',
-                'residual_absolute': record.residual_absolute,
-                'residual_relative': record.residual_relative,
+                'abs_residual': record.abs_residual,
+                'rel_residual': record.rel_residual,
             })
 
 

@@ -100,8 +100,8 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
 
         assert torch.allclose(fitted.tensor, coefficients)
         assert fitted.record.method == 'fixed_embedding'
-        assert fitted.record.residual_absolute < 1e-12
-        assert fitted.record.residual_relative < 1e-12
+        assert fitted.record.abs_residual < 1e-12
+        assert fitted.record.rel_residual < 1e-12
         assert math.isfinite(fitted.record.condition_number)
         assert fitted.record.local_solve is not None
         info = tk.decompositions.DecompositionMetrics(
@@ -456,7 +456,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
         assert fitted.metadata['out_position'] == (2, 3)
         assert fitted.metadata['connector_rank'] == 2
         assert fitted.record.method == 'qtt'
-        assert fitted.record.residual_relative < 1e-10
+        assert fitted.record.rel_residual < 1e-10
 
     def test_reduced_mode_avoids_materializing_the_grid_axis(self):
         physical_domain = torch.tensor([0., 1.], dtype=torch.float64)

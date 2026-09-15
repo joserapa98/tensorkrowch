@@ -389,7 +389,7 @@ class _SketchTargetProvider:
             core=core,
             diagnostics={
                 'algorithm': 'sketch_boundary_solve',
-                'residual_relative': record.residual_relative,
+                'rel_residual': record.rel_residual,
             })
 
 

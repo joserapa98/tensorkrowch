@@ -130,9 +130,14 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
             previous.delta(current)
 
     def test_fidelity_record_preserves_phase(self):
-        overlap = torch.tensor(0.0 + 0.5j)
+        overlap = torch.tensor(
+            0.0 + 0.5j, dtype=torch.complex128, requires_grad=True)
         record = tk.decompositions.FidelityRecord(overlap)
 
+        assert record.normalized_overlap.dtype == torch.complex128
+        assert record.fidelity.dtype == torch.float64
+        assert not record.normalized_overlap.requires_grad
+        assert not record.fidelity.requires_grad
         assert record.normalized_overlap == 0.5j
         assert record.fidelity == 0.25
 

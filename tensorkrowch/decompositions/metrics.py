@@ -294,15 +294,15 @@ class LocalSolveRecord:
     environment_shape: Tuple[int, int]
     target_shape: Tuple[int, ...]
     driver: str
-    residual_absolute: float
-    residual_relative: float
-    target_norm: float
+    abs_residual: torch.Tensor
+    rel_residual: torch.Tensor
+    target_norm: torch.Tensor
     l2_reg: float = 0.0
-    effective_l2_reg: float = 0.0
+    effective_l2_reg: torch.Tensor = 0.0
     l2_reg_mode: str = 'absolute'
     column_scaling: bool = False
     system_scaling: bool = False
-    system_scale: float = 1.0
+    system_scale: torch.Tensor = 1.0
     site: Optional[Any] = None
     sweep: Optional[int] = None
     sampling_exact: Optional[bool] = None
@@ -327,20 +327,25 @@ class LocalSolveRecord:
         if not isinstance(self.driver, str):
             raise TypeError('`driver` should be str type')
         for name in (
-                'residual_absolute',
-                'residual_relative',
+                'abs_residual',
+                'rel_residual',
                 'target_norm',
-                'l2_reg',
                 'effective_l2_reg',
                 'system_scale'):
-            value = _scalar_float(getattr(self, name), name)
+            value = _cpu_tensor(getattr(self, name), name)
+            if value.ndim or value.is_complex():
+                raise ValueError(f'`{name}` should be a real scalar tensor')
             if value < 0:
                 raise ValueError(f'`{name}` should be non-negative')
-            if (name == 'residual_relative') and (value != value):
-                raise ValueError('`residual_relative` should not be NaN')
-            if (name != 'residual_relative') and (not isfinite(value)):
+            if (name == 'rel_residual') and (value != value):
+                raise ValueError('`rel_residual` should not be NaN')
+            if (name != 'rel_residual') and (not torch.isfinite(value)):
                 raise ValueError(f'`{name}` should be finite')
             object.__setattr__(self, name, value)
+        l2_reg = _scalar_float(self.l2_reg, 'l2_reg')
+        if l2_reg < 0 or not isfinite(l2_reg):
+            raise ValueError('`l2_reg` should be finite and non-negative')
+        object.__setattr__(self, 'l2_reg', l2_reg)
         if self.l2_reg_mode not in ('absolute', 'relative'):
             raise ValueError(
                 "`l2_reg_mode` should be 'absolute' or 'relative'")
@@ -382,8 +387,8 @@ class InputFitRecord:
     axis: int
     domain_size: int
     in_dim: int
-    residual_absolute: float
-    residual_relative: float
+    abs_residual: float
+    rel_residual: float
     condition_number: float
     used_fibers: bool = False
     local_solve: Optional[LocalSolveRecord] = None
@@ -399,14 +404,14 @@ class InputFitRecord:
                 qualifier = 'non-negative' if name == 'axis' else 'positive'
                 raise ValueError(f'`{name}` should be {qualifier}')
         for name in (
-                'residual_absolute',
-                'residual_relative',
+                'abs_residual',
+                'rel_residual',
                 'condition_number'):
             value = _scalar_float(getattr(self, name), name)
             if (value < 0) or (value != value):
                 raise ValueError(f'`{name}` should be non-negative and not NaN')
-            if (name == 'residual_absolute') and (not isfinite(value)):
-                raise ValueError('`residual_absolute` should be finite')
+            if (name == 'abs_residual') and (not isfinite(value)):
+                raise ValueError('`abs_residual` should be finite')
             object.__setattr__(self, name, value)
         if not isinstance(self.used_fibers, bool):
             raise TypeError('`used_fibers` should be bool type')
@@ -476,12 +481,12 @@ class GaugeRecord:
     shape: Tuple[int, int]
     numerical_rank: int
     cancellable_rank: int
-    condition_number: float
-    cancellation_error: float
+    condition_number: torch.Tensor
+    cancellation_error: torch.Tensor
     projective: bool
     inverse_method: str
     tolerance: float
-    rank_tolerance: float
+    rank_tolerance: torch.Tensor
     site: Optional[int] = None
 
     def __post_init__(self) -> None:
@@ -507,14 +512,19 @@ class GaugeRecord:
         for name in (
                 'condition_number',
                 'cancellation_error',
-                'tolerance',
                 'rank_tolerance'):
-            value = _scalar_float(getattr(self, name), name)
+            value = _cpu_tensor(getattr(self, name), name)
+            if value.ndim or value.is_complex():
+                raise ValueError(f'`{name}` should be a real scalar tensor')
             if (value < 0) or (value != value):
                 raise ValueError(f'`{name}` should be non-negative and not NaN')
-            if name != 'condition_number' and not isfinite(value):
+            if name != 'condition_number' and not torch.isfinite(value):
                 raise ValueError(f'`{name}` should be finite')
             object.__setattr__(self, name, value)
+        tolerance = _scalar_float(self.tolerance, 'tolerance')
+        if tolerance < 0 or not isfinite(tolerance):
+            raise ValueError('`tolerance` should be finite and non-negative')
+        object.__setattr__(self, 'tolerance', tolerance)
         if not isinstance(self.projective, bool):
             raise TypeError('`projective` should be bool type')
         if self.inverse_method not in ('solve', 'inverse', 'pinv'):
@@ -529,7 +539,7 @@ class GaugeRecord:
     @property
     def cancellable(self) -> bool:
         """Whether the measured cancellation lies within its tolerance."""
-        return self.cancellation_error <= self.tolerance
+        return bool(self.cancellation_error <= self.tolerance)
 
 
 @dataclass(frozen=True)
@@ -537,9 +547,9 @@ class SweepRecord:
     """Stores objective metrics measured once at the end of an ALS sweep."""
 
     sweep: int
-    absolute_error: Optional[float] = None
-    relative_error: Optional[float] = None
-    relative_change: Optional[float] = None
+    abs_error: Optional[torch.Tensor] = None
+    rel_error: Optional[torch.Tensor] = None
+    rel_change: Optional[torch.Tensor] = None
     elapsed: Optional[float] = None
     sample_generation: Optional[int] = None
     stop_reason: Optional[str] = None
@@ -549,18 +559,24 @@ class SweepRecord:
                 (not isinstance(self.sweep, int)) or (self.sweep < 0):
             raise ValueError('`sweep` should be a non-negative integer')
         for name in (
-                'absolute_error', 'relative_error', 'relative_change',
-                'elapsed'):
+                'abs_error', 'rel_error', 'rel_change'):
             value = getattr(self, name)
             if value is None:
                 continue
-            value = _scalar_float(value, name)
+            value = _cpu_tensor(value, name)
+            if value.ndim or value.is_complex():
+                raise ValueError(f'`{name}` should be a real scalar tensor')
             if (value < 0) or (value != value):
                 raise ValueError(f'`{name}` should be non-negative and not NaN')
-            if (name in ('relative_change', 'elapsed')) and \
-                    (not isfinite(value)):
+            if (name == 'rel_change') and \
+                    (not torch.isfinite(value)):
                 raise ValueError(f'`{name}` should be finite')
             object.__setattr__(self, name, value)
+        if self.elapsed is not None:
+            elapsed = _scalar_float(self.elapsed, 'elapsed')
+            if elapsed < 0 or not isfinite(elapsed):
+                raise ValueError('`elapsed` should be finite and non-negative')
+            object.__setattr__(self, 'elapsed', elapsed)
         if self.sample_generation is not None:
             if isinstance(self.sample_generation, bool) or \
                     (not isinstance(self.sample_generation, int)) or \
@@ -643,22 +659,23 @@ class EvaluationStats:
 class FidelityRecord:
     """Stores a phase-aware normalized overlap and its fidelity."""
 
-    normalized_overlap: complex
+    normalized_overlap: torch.Tensor
     error: Optional[ErrorRecord] = None
-    fidelity: float = field(init=False)
+    fidelity: torch.Tensor = field(init=False)
 
     def __post_init__(self) -> None:
         overlap = self.normalized_overlap
-        if isinstance(overlap, torch.Tensor):
-            if overlap.numel() != 1:
-                raise ValueError('`normalized_overlap` should be a scalar')
-            overlap = overlap.detach().cpu().item()
-        if not isinstance(overlap, (int, float, complex)):
-            raise TypeError(
-                '`normalized_overlap` should be a numeric scalar')
-        overlap = complex(overlap)
+        if not isinstance(overlap, torch.Tensor):
+            if not isinstance(overlap, (int, float, complex)):
+                raise TypeError('`normalized_overlap` should be a numeric tensor')
+            overlap = torch.tensor(overlap, dtype=torch.complex128)
+        overlap = overlap.detach().cpu()
+        if overlap.ndim:
+            raise ValueError('`normalized_overlap` should be a scalar tensor')
+        if not torch.isfinite(overlap):
+            raise ValueError('`normalized_overlap` should be finite')
         object.__setattr__(self, 'normalized_overlap', overlap)
-        object.__setattr__(self, 'fidelity', float(abs(overlap) ** 2))
+        object.__setattr__(self, 'fidelity', overlap.abs().square())
 
         if (self.error is not None) and \
                 (not isinstance(self.error, ErrorRecord)):

@@ -11,6 +11,25 @@ import tensorkrowch.decompositions.als.solvers as solver_module
 class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_records_detach_without_detaching_solution(self, dtype):
+        generator = torch.Generator().manual_seed(23)
+        environment = torch.randn(
+            8, 3, dtype=dtype, generator=generator, requires_grad=True)
+        target = torch.randn(8, dtype=dtype, generator=generator)
+        solution, record = tk.decompositions.LeastSquaresSolver(
+            l2_reg=0.1).solve(environment, target)
+
+        for value in (record.abs_residual, record.rel_residual,
+                      record.target_norm, record.effective_l2_reg,
+                      record.system_scale):
+            assert value.shape == ()
+            assert value.dtype == torch.float64
+            assert value.device.type == 'cpu'
+            assert not value.requires_grad
+        solution.abs().square().sum().backward()
+        assert torch.isfinite(environment.grad).all()
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('n_targets', [1, 3])
     def test_matches_dense_full_rank_solution(self, dtype, n_targets):
         generator = torch.Generator().manual_seed(20)
@@ -177,8 +196,8 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
         solution, record = solver.solve(environment, target)
 
         assert torch.isfinite(solution).all()
-        assert record.residual_absolute >= 0
-        assert record.residual_relative >= 0
+        assert record.abs_residual >= 0
+        assert record.rel_residual >= 0
 
     def test_cpu_fallback_driver_is_reported(self, monkeypatch):
         environment = torch.randn(8, 3, dtype=torch.float64)

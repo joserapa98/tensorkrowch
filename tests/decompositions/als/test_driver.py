@@ -68,8 +68,8 @@ class _FakeALSBackend:
                 environment_shape=(4, 1),
                 target_shape=(4,),
                 driver='fake',
-                residual_absolute=100,
-                residual_relative=100,
+                abs_residual=100,
+                rel_residual=100,
                 target_norm=1,
                 site=site,
                 sweep=sweep)
@@ -119,9 +119,9 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         assert result.stop_reason == 'error_rtol'
         assert result.converged
         assert result.n_sweeps == 3
-        assert [record.relative_error for record in result.metrics.sweeps] == [
+        assert [record.rel_error for record in result.metrics.sweeps] == [
             1., pytest.approx(0.2), pytest.approx(0.01)]
-        assert all(record.residual_relative == 100
+        assert all(record.rel_residual == 100
                    for record in result.metrics.local_solves)
 
     def test_relative_stability_counts_complete_sweeps(self):
@@ -136,8 +136,8 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
 
         assert result.stop_reason == 'relative_stability'
         assert result.n_sweeps == 4
-        assert result.metrics.sweeps[0].relative_change is None
-        assert result.metrics.sweeps[-1].relative_change < 1e-3
+        assert result.metrics.sweeps[0].rel_change is None
+        assert result.metrics.sweeps[-1].rel_change < 1e-3
 
     def test_renewable_sampling_rejects_incomparable_error_criteria(self):
         problem = tk.decompositions.ALSProblem(
@@ -246,7 +246,7 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
         refresh_sweeps = [event.sweep for event in history.events
                           if event.name == 'sample_refresh']
         assert refresh_sweeps == [0, 2]
-        assert result.metrics.sweeps[2].relative_change == pytest.approx(0.125)
+        assert result.metrics.sweeps[2].rel_change == pytest.approx(0.125)
         assert history.metrics is result.metrics
 
     @pytest.mark.parametrize(

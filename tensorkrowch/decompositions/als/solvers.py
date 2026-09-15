@@ -1,11 +1,13 @@
 """Stable local least-squares solvers used by ALS drivers."""
 
+from dataclasses import replace
 from math import isfinite, sqrt
 from typing import Optional, Tuple, Union
 
 import torch
 
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
+from tensorkrowch.decompositions.als.convergence import UpdatePolicy
 
 
 ColumnScaling = Union[bool, str]
@@ -312,24 +314,24 @@ class LeastSquaresSolver:
             return returned_solution, None
 
         residual = environment @ solution - target_matrix
-        residual_absolute = torch.linalg.vector_norm(residual)
+        abs_residual = torch.linalg.vector_norm(residual)
         target_norm = torch.linalg.vector_norm(target_matrix)
         safe_target_norm = torch.where(
             target_norm > 0, target_norm, torch.ones_like(target_norm))
-        residual_relative = residual_absolute / safe_target_norm
-        residual_relative = torch.where(
+        rel_residual = abs_residual / safe_target_norm
+        rel_residual = torch.where(
             target_norm > 0,
-            residual_relative,
+            rel_residual,
             torch.where(
-                residual_absolute == 0,
-                torch.zeros_like(residual_absolute),
-                torch.full_like(residual_absolute, torch.inf)))
+                abs_residual == 0,
+                torch.zeros_like(abs_residual),
+                torch.full_like(abs_residual, torch.inf)))
         record = LocalSolveRecord(
             environment_shape=tuple(environment.shape),
             target_shape=tuple(target.shape),
             driver=effective_driver,
-            residual_absolute=residual_absolute,
-            residual_relative=residual_relative,
+            abs_residual=abs_residual,
+            rel_residual=rel_residual,
             target_norm=target_norm,
             l2_reg=self.l2_reg,
             effective_l2_reg=effective_l2_reg,
@@ -340,6 +342,67 @@ class LeastSquaresSolver:
             site=site,
             sweep=sweep)
         return returned_solution, record
+
+
+def _relative_error(absolute: torch.Tensor,
+                    target_norm: torch.Tensor) -> torch.Tensor:
+    """Applies the decomposition-wide zero-target relative-error policy."""
+    if target_norm > 0:
+        return absolute / target_norm
+    if absolute == 0:
+        return torch.zeros_like(absolute)
+    return torch.full_like(absolute, torch.inf)
+
+
+def _solve_local_proposal(
+        solver: LeastSquaresSolver,
+        environment: torch.Tensor,
+        target: torch.Tensor,
+        current: torch.Tensor,
+        site: int,
+        sweep: int,
+        update_policy: UpdatePolicy,
+        return_record: bool,
+        regularization_scale: Optional[torch.Tensor] = None,
+        sampling_exact: Optional[bool] = None,
+        sample_generation: Optional[int] = None
+        ) -> Tuple[torch.Tensor, Optional[LocalSolveRecord]]:
+    """Solves, damps and optionally accepts one local ALS proposal."""
+    solution, record = solver.solve(
+        environment,
+        target,
+        site=site,
+        sweep=sweep,
+        return_record=return_record,
+        regularization_scale=regularization_scale)
+    proposal = update_policy.apply(current, solution.reshape(current.shape))
+    record_needs_update = return_record and (update_policy.damping != 1)
+    if update_policy.acceptance == 'non_increasing':
+        current_error = torch.linalg.vector_norm(
+            environment @ current.reshape(-1) - target)
+        proposal_error = torch.linalg.vector_norm(
+            environment @ proposal.reshape(-1) - target)
+        if not update_policy.accepts(
+                current_error,
+                proposal_error):
+            proposal = current
+        record_needs_update = return_record
+    if record_needs_update:
+        residual = environment @ proposal.reshape(-1) - target
+        abs_residual = torch.linalg.vector_norm(residual)
+        target_norm = torch.linalg.vector_norm(target)
+        record = replace(
+            record,
+            abs_residual=abs_residual,
+            rel_residual=_relative_error(
+                abs_residual, target_norm),
+            target_norm=target_norm)
+    if record is not None and sampling_exact is not None:
+        record = replace(
+            record,
+            sampling_exact=sampling_exact,
+            sample_generation=sample_generation)
+    return proposal, record
 
 
 __all__ = [

@@ -1,7 +1,6 @@
 """Topology-independent ALS sweep orchestration."""
 
 from dataclasses import dataclass, replace
-from math import isfinite
 from time import perf_counter
 from typing import Optional, Protocol, Sequence, Tuple
 
@@ -79,20 +78,20 @@ class _ALSDriverResult:
 
 
 def _relative_objective_change(previous: SweepRecord,
-                               current_absolute: float,
-                               current_relative: Optional[float]
-                               ) -> Optional[float]:
+                               current_absolute: torch.Tensor,
+                               current_relative: Optional[torch.Tensor]
+                               ) -> Optional[torch.Tensor]:
     """Computes relative change between complete comparable objectives."""
-    if (previous.relative_error is not None) and \
+    if (previous.rel_error is not None) and \
             (current_relative is not None):
-        old = previous.relative_error
+        old = previous.rel_error
         new = current_relative
-    elif previous.absolute_error is not None:
-        old = previous.absolute_error
+    elif previous.abs_error is not None:
+        old = previous.abs_error
         new = current_absolute
     else:
         return None
-    scale = max(abs(old), abs(new), 1e-16)
+    scale = torch.maximum(old.abs(), new.abs()).clamp_min(1e-16)
     return abs(old - new) / scale
 
 
@@ -233,10 +232,10 @@ class ALSSweepDriver:
                     values = {'total_sites': backend.n_sites}
                     if local_record is not None:
                         values.update({
-                            'residual_absolute':
-                                local_record.residual_absolute,
-                            'residual_relative':
-                                local_record.residual_relative,
+                            'abs_residual':
+                                local_record.abs_residual,
+                            'rel_residual':
+                                local_record.rel_residual,
                         })
                     observer.emit(DecompositionEvent(
                         name='site_complete',
@@ -258,8 +257,8 @@ class ALSSweepDriver:
                 break
 
             completed_sweeps = sweep + 1
-            absolute_error = None
-            relative_error = None
+            abs_error = None
+            rel_error = None
             if need_objective:
                 absolute_tensor, relative_tensor = backend.measure_objective(
                     problem)
@@ -273,23 +272,23 @@ class ALSSweepDriver:
                     raise TypeError(
                         'Backend objective relative error should be a scalar '
                         'tensor')
-                absolute_error = float(absolute_tensor.detach().cpu().item())
-                relative_error = float(relative_tensor.detach().cpu().item())
-                if (not isfinite(absolute_error)) or \
-                        (not isfinite(relative_error)):
+                abs_error = absolute_tensor.detach().cpu()
+                rel_error = relative_tensor.detach().cpu()
+                if (not torch.isfinite(abs_error)) or \
+                        (not torch.isfinite(rel_error)):
                     stop_reason = 'nonfinite_solution'
 
-            relative_change = None
+            rel_change = None
             if (previous_record is not None) and \
-                    (absolute_error is not None):
-                relative_change = _relative_objective_change(
-                    previous_record, absolute_error, relative_error)
+                    (abs_error is not None):
+                rel_change = _relative_objective_change(
+                    previous_record, abs_error, rel_error)
             elapsed = None if start is None else perf_counter() - start
             record = SweepRecord(
                 sweep=sweep,
-                absolute_error=absolute_error,
-                relative_error=relative_error,
-                relative_change=relative_change,
+                abs_error=abs_error,
+                rel_error=rel_error,
+                rel_change=rel_change,
                 elapsed=elapsed,
                 sample_generation=generation)
 
@@ -302,9 +301,9 @@ class ALSSweepDriver:
             if stop_reason is not None:
                 record = replace(record, stop_reason=stop_reason)
 
-            if convergence.keep_best and (absolute_error is not None):
-                score = relative_error if relative_error is not None \
-                    else absolute_error
+            if convergence.keep_best and (abs_error is not None):
+                score = rel_error if rel_error is not None \
+                    else abs_error
                 if (best_score is None) or (score < best_score):
                     best_score = score
                     best_cores = tuple(core.clone() for core in backend.snapshot())
@@ -318,9 +317,9 @@ class ALSSweepDriver:
                     sweep=sweep,
                     elapsed=elapsed,
                     values={
-                        'absolute_error': absolute_error,
-                        'relative_error': relative_error,
-                        'relative_change': relative_change,
+                        'absolute_error': abs_error,
+                        'relative_error': rel_error,
+                        'relative_change': rel_change,
                         'sample_generation': generation,
                         'stop_reason': stop_reason,
                     }))

@@ -39,7 +39,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
         assert torch.allclose(
             result.contract_dense(), tensor, atol=1e-10, rtol=1e-10)
         assert len(result.metrics.sweeps) == 2
-        assert result.metrics.sweeps[-1].absolute_error < 1e-10
+        assert result.metrics.sweeps[-1].abs_error < 1e-10
 
     def test_exact_objective_is_monotone_up_to_roundoff(self):
         generator = torch.Generator().manual_seed(11)
@@ -53,7 +53,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
                     max_sweeps=4),
                 collect_metrics=True)
 
-        errors = [record.absolute_error for record in result.metrics.sweeps]
+        errors = [record.abs_error for record in result.metrics.sweeps]
         for previous, current in zip(errors, errors[1:]):
             tolerance = 1e-12 * max(1., previous)
             assert current <= previous + tolerance
@@ -127,7 +127,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
 
         assert result.rank == []
         assert torch.allclose(result.cores[0], tensor)
-        assert result.metrics.sweeps[0].absolute_error == pytest.approx(0.)
+        assert result.metrics.sweeps[0].abs_error == pytest.approx(0.)
 
     def test_fixed_core_remains_bitwise_equal_and_blocks_absorption(self):
         initial, tensor = _exact_tt()
@@ -290,7 +290,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=20),
             collect_metrics=True)
 
-        errors = [record.relative_error for record in result.metrics.sweeps]
+        errors = [record.rel_error for record in result.metrics.sweeps]
         assert all(current <= previous + 1e-12
                    for previous, current in zip(errors, errors[1:]))
         assert errors[-1] < 1e-4
@@ -324,9 +324,9 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
 
         approximation = result.evaluate(observations.indices)
         absolute, relative = observations.error(approximation)
-        assert result.metrics.sweeps[-1].absolute_error == pytest.approx(
+        assert result.metrics.sweeps[-1].abs_error == pytest.approx(
             absolute.item())
-        assert result.metrics.sweeps[-1].relative_error == pytest.approx(
+        assert result.metrics.sweeps[-1].rel_error == pytest.approx(
             relative.item())
         assert [event.sweep for event in history.events
                 if event.name == 'sample_refresh'] == [0]
@@ -375,7 +375,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
                 if event.name == 'sample_refresh'] == [0, 2]
         assert [record.sample_generation
                 for record in result.metrics.sweeps] == [0, 0, 1]
-        assert all(record.absolute_error is None
+        assert all(record.abs_error is None
                    for record in result.metrics.sweeps)
         assert result.metadata['exact_configurations'] is None
 
@@ -453,7 +453,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
                    for record in result.metrics.local_solves)
         assert [record.sample_generation
                 for record in result.metrics.sweeps] == [0, 1]
-        assert all(record.absolute_error is None
+        assert all(record.abs_error is None
                    for record in result.metrics.sweeps)
 
     def test_frozen_mode_preserves_original_probabilities_and_marks_staleness(

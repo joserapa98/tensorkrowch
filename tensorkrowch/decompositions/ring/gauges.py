@@ -222,10 +222,9 @@ class GaugeMap:
         numerical_rank = int(
             (singular_values > rank_tolerance).sum().detach().cpu().item())
         if numerical_rank < min(reference.shape):
-            condition_number = float('inf')
+            condition_number = singular_values.new_tensor(torch.inf)
         else:
-            condition_number = float(
-                (singular_values[0] / singular_values[-1]).detach().cpu().item())
+            condition_number = singular_values[0] / singular_values[-1]
 
         product = reference.T @ self.matrix
         identity = torch.eye(
@@ -233,8 +232,6 @@ class GaugeMap:
         cancellation_error = (
             torch.linalg.vector_norm(product - identity) /
             torch.linalg.vector_norm(identity))
-        cancellation_error = float(
-            cancellation_error.detach().cpu().item())
 
         return GaugeRecord(
             orientation=self.orientation,
@@ -246,7 +243,7 @@ class GaugeMap:
             projective=numerical_rank < reference.shape[1],
             inverse_method=self.inverse_method,
             tolerance=tolerance,
-            rank_tolerance=float(rank_tolerance.detach().cpu().item()),
+            rank_tolerance=rank_tolerance,
             site=self.site)
 
     def require_cancellable(
@@ -502,11 +499,9 @@ class TTCoreGaugeRecursion:
         numerical_rank = int(
             (singular_values > rank_tolerance).sum().detach().cpu().item())
         if numerical_rank < min(matrix.shape):
-            condition_number = float('inf')
+            condition_number = singular_values.new_tensor(torch.inf)
         else:
-            condition_number = float(
-                (singular_values[0] / singular_values[-1])
-                .detach().cpu().item())
+            condition_number = singular_values[0] / singular_values[-1]
 
         residual = matrix @ coordinates - basis
         residual_norm = torch.linalg.vector_norm(residual)
@@ -515,11 +510,9 @@ class TTCoreGaugeRecursion:
             projection_error = residual_norm / denominator
         else:
             projection_error = residual_norm
-        projection_error = float(
-            projection_error.detach().cpu().item())
         projective = (
             numerical_rank < matrix.shape[1] or
-            projection_error > self.tolerance)
+            bool(projection_error > self.tolerance))
         record = GaugeRecord(
             orientation=orientation,
             shape=tuple(matrix.shape),
@@ -530,7 +523,7 @@ class TTCoreGaugeRecursion:
             projective=projective,
             inverse_method=method,
             tolerance=self.tolerance,
-            rank_tolerance=float(rank_tolerance.detach().cpu().item()),
+            rank_tolerance=rank_tolerance,
             site=site)
         if not self.allow_projective and (
                 record.projective or not record.cancellable):

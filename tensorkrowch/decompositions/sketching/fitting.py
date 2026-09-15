@@ -331,8 +331,8 @@ class FixedEmbeddingFitter:
                 axis=axis,
                 domain_size=matrix.shape[0],
                 in_dim=matrix.shape[1],
-                residual_absolute=local_record.residual_absolute,
-                residual_relative=local_record.residual_relative,
+                abs_residual=local_record.abs_residual,
+                rel_residual=local_record.rel_residual,
                 condition_number=condition,
                 used_fibers=used_fibers,
                 local_solve=local_record)
@@ -423,8 +423,8 @@ class BasisFitter:
             axis=axis,
             domain_size=domain.shape[0],
             in_dim=in_dim,
-            residual_absolute=0.,
-            residual_relative=0.,
+            abs_residual=0.,
+            rel_residual=0.,
             condition_number=1.,
             used_fibers=used_fibers) if return_info else None
         tensor = _restore_fitted_axis(solution, shape, axis)
@@ -656,8 +656,8 @@ class TrainableEmbeddingFitter:
                     axis=axis,
                     domain_size=matrix.shape[0],
                     in_dim=matrix.shape[1],
-                    residual_absolute=absolute,
-                    residual_relative=relative,
+                    abs_residual=absolute,
+                    rel_residual=relative,
                     condition_number=condition,
                     used_fibers=used_fibers,
                     local_solve=local_record)
@@ -963,8 +963,8 @@ class QTTInputFitter:
                 axis=axis,
                 domain_size=self.layout.grid_size[0],
                 in_dim=self.layout.grid_size[0],
-                residual_absolute=absolute,
-                residual_relative=relative,
+                abs_residual=absolute,
+                rel_residual=relative,
                 condition_number=1.,
                 used_fibers=True)
         metadata = {

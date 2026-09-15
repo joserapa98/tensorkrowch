@@ -109,7 +109,8 @@ class ALSSweepDriver:
             convergence: Optional[ConvergencePolicy] = None,
             update_policy: Optional[UpdatePolicy] = None,
             observer: Optional[DecompositionObserver] = None,
-            collect_metrics: bool = False) -> _ALSDriverResult:
+            collect_metrics: bool = False,
+            phase: str = 'ALS') -> _ALSDriverResult:
         """Runs ALS until a normalized stopping reason is reached."""
         if not isinstance(problem, ALSProblem):
             raise TypeError('`problem` should be ALSProblem type')
@@ -150,25 +151,7 @@ class ALSSweepDriver:
                 converged=True,
                 stop_reason='all_cores_fixed',
                 n_sweeps=0)
-            if observer is not None:
-                observer.emit(DecompositionEvent(
-                    name='summary',
-                    phase='ALS',
-                    values={
-                        'n_sweeps': 0,
-                        'stop_reason': 'all_cores_fixed',
-                    }))
-                observer.close(metrics)
             return result
-
-        if observer is not None:
-            observer.emit(DecompositionEvent(
-                name='start',
-                phase='ALS',
-                values={
-                    'n_sites': backend.n_sites,
-                    'max_sweeps': convergence.max_sweeps,
-                }))
 
         fixed_objective = problem.has_fixed_objective
         need_objective = fixed_objective and (
@@ -196,7 +179,7 @@ class ALSSweepDriver:
             if observer is not None:
                 observer.emit(DecompositionEvent(
                     name='sweep_start',
-                    phase='ALS',
+                    phase=phase,
                     sweep=sweep,
                     values={
                         'direction': 'forward' if not sweep % 2 else 'reverse',
@@ -205,7 +188,7 @@ class ALSSweepDriver:
                 if refreshed:
                     observer.emit(DecompositionEvent(
                         name='sample_refresh',
-                        phase='ALS sampling',
+                        phase=f'{phase} sampling',
                         sweep=sweep,
                         values={'sample_generation': generation}))
 
@@ -239,7 +222,7 @@ class ALSSweepDriver:
                         })
                     observer.emit(DecompositionEvent(
                         name='site_complete',
-                        phase='ALS local solve',
+                        phase=f'{phase} local solve',
                         level=2,
                         site=site,
                         sweep=sweep,
@@ -257,6 +240,12 @@ class ALSSweepDriver:
                 break
 
             completed_sweeps = sweep + 1
+            if not need_sweep_record:
+                if completed_sweeps == convergence.max_sweeps:
+                    stop_reason = 'max_sweeps'
+                    break
+                continue
+
             abs_error = None
             rel_error = None
             if need_objective:
@@ -313,7 +302,7 @@ class ALSSweepDriver:
             if observer is not None:
                 observer.emit(DecompositionEvent(
                     name='sweep_complete',
-                    phase='ALS',
+                    phase=phase,
                     sweep=sweep,
                     elapsed=elapsed,
                     values={
@@ -343,17 +332,36 @@ class ALSSweepDriver:
             converged=converged,
             stop_reason=stop_reason,
             n_sweeps=completed_sweeps)
-        if observer is not None:
-            observer.emit(DecompositionEvent(
-                name='summary',
-                phase='ALS',
-                values={
-                    'n_sweeps': completed_sweeps,
-                    'converged': converged,
-                    'stop_reason': stop_reason,
-                }))
-            observer.close(metrics)
         return result
+
+
+def _report_als_result(result, observer: DecompositionObserver,
+                       phase: str) -> None:
+    """Reports the final approximation after its cores have been finalized."""
+    values = {
+        'rank': result.rank,
+        'n_sweeps': result.metadata['n_sweeps'],
+        'converged': result.metadata['converged'],
+        'stop_reason': result.metadata['stop_reason'],
+    }
+    if result.metrics.sweeps:
+        # A restored best state need not be the last recorded sweep
+        records = [record for record in result.metrics.sweeps
+                   if record.abs_error is not None]
+        if records:
+            record = (min(records, key=lambda item: item.abs_error)
+                      if result.metadata.get('keep_best') else records[-1])
+            values.update(absolute_error=record.abs_error,
+                          relative_error=record.rel_error)
+        values['elapsed'] = sum(record.elapsed or 0
+                                for record in result.metrics.sweeps)
+    observer.emit(DecompositionEvent(
+        name='summary', phase=phase, values=values))
+    for site, core in enumerate(result.cores):
+        observer.emit(DecompositionEvent(
+            name='core', phase=phase, level=3, site=site,
+            values={'shape': tuple(core.shape), 'tensor': core}))
+    observer.close(result.metrics)
 
 
 __all__ = ['ALSBackend', 'ALSSweepDriver']

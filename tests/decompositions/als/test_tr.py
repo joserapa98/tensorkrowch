@@ -127,7 +127,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
 
 class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
 
-    def test_uniform_samples_and_values_are_reused_by_generation(self):
+    def test_uniform_samples_and_values_are_reused_by_generation(self, monkeypatch):
         tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
         evaluations = []
 
@@ -137,6 +137,10 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                                 for site in range(indices.shape[1]))]
 
         history = HistoryObserver()
+        from importlib import import_module
+        monkeypatch.setattr(
+            import_module('tensorkrowch.decompositions.als.tr'),
+            '_resolve_observer', lambda *args: history)
         result = tk.decompositions.TRALS(
             function,
             in_dim=tensor.shape,
@@ -150,7 +154,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=3),
                 collect_metrics=True,
-                observer=history)
+                verbose=1)
 
         assert len(evaluations) == 2
         assert [event.sweep for event in history.events

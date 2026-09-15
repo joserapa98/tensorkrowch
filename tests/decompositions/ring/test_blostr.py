@@ -21,6 +21,21 @@ def _uniform_tr(dtype=torch.float64, n_sites=3):
 
 class TestTRBLOSTR:  # MARK: TestTRBLOSTR
 
+    @pytest.mark.parametrize('verbose', [1, 2, 3])
+    def test_console_reports_attempts_and_summary(self, verbose, capsys):
+        _, tensor = _uniform_tr()
+        with pytest.warns(tk.decompositions.ExperimentalWarning):
+            tk.decompositions.tr_blostr(
+                tensor, rank=2, slices=((0,), (1,), (2,), (3,)),
+                n_iters=20, n_restarts=3,
+                generator=torch.Generator().manual_seed(81), verbose=verbose)
+
+        output = capsys.readouterr().out
+        assert 'BLOSTR' in output
+        assert 'Attempt 1 / 1' in output
+        assert 'Summary' in output
+        assert ('tensor(' in output) == (verbose == 3)
+
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_explicit_slices_recover_synthetic_tr(self, dtype):
         _, tensor = _uniform_tr(dtype)
@@ -64,8 +79,8 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
         second_cores, second_info = outputs[1]
         assert first_info['metadata']['slices'] == \
             second_info['metadata']['slices']
-        assert first_info['metadata']['failed_attempts'] == \
-            second_info['metadata']['failed_attempts']
+        assert first_info['metrics']['warnings'] == \
+            second_info['metrics']['warnings']
         assert torch.allclose(
             contract_tr_dense(first_cores),
             contract_tr_dense(second_cores),

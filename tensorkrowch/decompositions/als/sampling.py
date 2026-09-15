@@ -352,8 +352,8 @@ def _region_metrics(cores: Sequence[torch.Tensor]) -> Sequence[torch.Tensor]:
         dtype=cores[-1].dtype)
     metrics = [metric]
     for core in reversed(cores):
-        metric = torch.einsum(
-            'apb,bc,dpc->ad', core, metric, core.conj())
+        paired = torch.einsum('bc,dpc->bdp', metric, core.conj())
+        metric = torch.einsum('apb,bdp->ad', core, paired)
         metrics.append(metric)
     return tuple(reversed(metrics))
 
@@ -375,11 +375,8 @@ def _sample_region(cores: Sequence[torch.Tensor],
     sampled_sites = []
     for site, core in enumerate(cores):
         candidates = torch.einsum('ja,apb->jpb', environment, core)
-        scores = torch.einsum(
-            'jpb,bc,jpc->jp',
-            candidates,
-            metrics[site + 1],
-            candidates.conj()).real.clamp_min(0)
+        paired = torch.einsum('jpb,bc->jpc', candidates, metrics[site + 1])
+        scores = (paired * candidates.conj()).sum(-1).real.clamp_min(0)
         normalization = scores.sum(dim=1, keepdim=True)
         if torch.any(normalization <= 0):
             raise ValueError(
@@ -906,8 +903,8 @@ class TRExactLeverageRows:
         metrics[-1] = metric
         for position in reversed(range(len(order))):
             core = cores[order[position]]
-            metric = torch.einsum(
-                'xiu,yiv,uavb->xayb', core, core.conj(), metric)
+            paired = torch.einsum('xiu,uavb->xiavb', core, metric)
+            metric = torch.einsum('xiavb,yiv->xayb', paired, core.conj())
             metrics[position] = metric
         return tuple(metrics)
 

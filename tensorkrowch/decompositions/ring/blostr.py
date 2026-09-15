@@ -1,13 +1,16 @@
 """Experimental blockwise spectral tensor ring decomposition."""
 
-import time
 import warnings
+from contextlib import nullcontext
 from dataclasses import dataclass
 from math import isfinite, prod
 from typing import (Any, Mapping, Optional, Sequence, Tuple, Union)
 
 import torch
 
+from tensorkrowch.decompositions._runtime import _RuntimePolicy
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+    _normalize_verbosity, _resolve_observer)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  TimingRecord,
@@ -31,8 +34,7 @@ class _FirstCoreFactorization:
 
     core: torch.Tensor
     slices: Tuple[Tuple[int, ...], ...]
-    eigenvalues: Tuple[Tuple[complex, ...], Tuple[complex, ...]]
-    eigenspace_residual: Tuple[float, float]
+    errors: Tuple[ErrorRecord, ...]
 
 
 def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
@@ -231,8 +233,9 @@ def _selected_eigenspace(matrix: torch.Tensor,
                          n_clusters: int,
                          n_iters: int,
                          n_restarts: int,
-                         generator: Optional[torch.Generator]
-                         ) -> Tuple[torch.Tensor, torch.Tensor, float]:
+                         generator: Optional[torch.Generator],
+                         collect_metrics: bool = True
+                         ) -> Tuple[torch.Tensor, torch.Tensor, Optional[ErrorRecord]]:
     """Selects, groups and interleaves one BLOSTR eigenspace."""
     eigenvalues, eigenvectors = torch.linalg.eig(matrix)
     order = torch.argsort(eigenvalues.abs(), descending=True)
@@ -260,14 +263,17 @@ def _selected_eigenspace(matrix: torch.Tensor,
     ])
     selected_values = selected_values.index_select(0, interleave)
     selected_vectors = selected_vectors.index_select(1, interleave)
-    reconstruction = (
-        selected_vectors @ torch.diag(selected_values) @
-        torch.linalg.pinv(selected_vectors))
-    denominator = torch.linalg.vector_norm(matrix)
-    residual = torch.linalg.vector_norm(reconstruction - matrix)
-    residual = residual if denominator == 0 else residual / denominator
-    return selected_vectors, selected_values, float(
-        residual.detach().cpu().item())
+    error = None
+    if collect_metrics:
+        reconstruction = (
+            selected_vectors @ torch.diag(selected_values) @
+            torch.linalg.pinv(selected_vectors))
+        denominator = torch.linalg.vector_norm(matrix)
+        absolute = torch.linalg.vector_norm(reconstruction - matrix)
+        relative = absolute if denominator == 0 else absolute / denominator
+        error = ErrorRecord(kind='eigenspace', absolute=absolute,
+                            relative=relative, denominator=denominator)
+    return selected_vectors, selected_values, error
 
 
 def _first_core(tensor: torch.Tensor,
@@ -276,7 +282,8 @@ def _first_core(tensor: torch.Tensor,
                 spectral_atol: float,
                 n_iters: int,
                 n_restarts: int,
-                generator: Optional[torch.Generator]
+                generator: Optional[torch.Generator],
+                collect_metrics: bool = True
                 ) -> _FirstCoreFactorization:
     """Recovers the first TR core by blockwise spectral alignment."""
     cyclic_rank = ranks[-1]
@@ -307,7 +314,8 @@ def _first_core(tensor: torch.Tensor,
         n_clusters=right_rank,
         n_iters=n_iters,
         n_restarts=n_restarts,
-        generator=generator)
+        generator=generator,
+        collect_metrics=collect_metrics)
     eigenspace_prime, eigenvalues_prime, residual_prime = \
         _selected_eigenspace(
             matrix_prime,
@@ -317,7 +325,8 @@ def _first_core(tensor: torch.Tensor,
             n_clusters=right_rank,
             n_iters=n_iters,
             n_restarts=n_restarts,
-            generator=generator)
+            generator=generator,
+            collect_metrics=collect_metrics)
 
     alignment = torch.linalg.pinv(eigenspace) @ eigenspace_prime
     first_block = alignment[0::right_rank, 0::right_rank]
@@ -351,11 +360,8 @@ def _first_core(tensor: torch.Tensor,
     return _FirstCoreFactorization(
         core=first_core,
         slices=tuple(tuple(configuration) for configuration in slices),
-        eigenvalues=(
-            tuple(complex(value) for value in eigenvalues.detach().cpu()),
-            tuple(complex(value)
-                  for value in eigenvalues_prime.detach().cpu())),
-        eigenspace_residual=(residual, residual_prime))
+        errors=tuple(record for record in (residual, residual_prime)
+                     if record is not None))
 
 
 def _recover_tail(first: _FirstCoreFactorization,
@@ -364,7 +370,8 @@ def _recover_tail(first: _FirstCoreFactorization,
                   cutoff: Optional[float],
                   atol: Optional[float],
                   rtol: Optional[float],
-                  cum_percentage: Optional[float]
+                  cum_percentage: Optional[float],
+                  collect_metrics: bool = True
                   ) -> Tuple[Tuple[torch.Tensor, ...],
                              Tuple[TruncationRecord, ...]]:
     """Recovers all remaining cores by removing Q1 and splitting the tail."""
@@ -379,14 +386,19 @@ def _recover_tail(first: _FirstCoreFactorization,
     remaining_input = tuple(tensor.shape[1:])
     for offset, in_dimension in enumerate(remaining_input[:-1], start=1):
         matrix = tail.reshape(left_rank * in_dimension, -1)
-        u, singular_values, vh, info = truncated_svd(
+        decomposition = truncated_svd(
             matrix,
             rank=ranks[offset],
             cutoff=cutoff,
             atol=atol,
             rtol=rtol,
             cum_percentage=cum_percentage,
-            return_info=True)
+            return_info=collect_metrics)
+        if collect_metrics:
+            u, singular_values, vh, info = decomposition
+            records.append(TruncationRecord.from_svd_info(info, site=offset))
+        else:
+            u, singular_values, vh = decomposition
         selected_rank = singular_values.shape[-1]
         cores.append(u.reshape(left_rank, in_dimension, selected_rank))
         tail = (singular_values.to(vh.dtype).unsqueeze(-1) * vh).reshape(
@@ -394,7 +406,6 @@ def _recover_tail(first: _FirstCoreFactorization,
             *remaining_input[(offset):],
             ranks[-1])
         left_rank = selected_rank
-        records.append(TruncationRecord.from_svd_info(info, site=offset))
     cores.append(tail.reshape(
         left_rank, remaining_input[-1], ranks[-1]))
     return tuple(cores), tuple(records)
@@ -413,7 +424,9 @@ def _fit_blostr(tensor: torch.Tensor,
                 atol: Optional[float] = None,
                 rtol: Optional[float] = None,
                 cum_percentage: Optional[float] = None,
-                out_device: _Device = 'cpu') -> TRDecomposition:
+                out_device: _Device = 'cpu',
+                collect_metrics: bool = True,
+                observer=None) -> TRDecomposition:
     """Runs multiple spectral slice attempts and keeps the best recovery."""
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
@@ -438,38 +451,45 @@ def _fit_blostr(tensor: torch.Tensor,
     attempts = 1 if fixed_slices is not None else n_attempts
     failures = []
     best = None
-    start = time.perf_counter()
-    for _ in range(attempts):
-        active_slices = fixed_slices
-        if active_slices is None:
-            active_slices = _draw_slices(tensor.shape, generator)
-        try:
-            first = _first_core(
-                active_tensor,
-                ranks,
-                active_slices,
-                spectral_atol,
-                n_iters,
-                n_restarts,
-                generator)
-            cores, records = _recover_tail(
-                first,
-                active_tensor,
-                ranks,
-                cutoff,
-                atol,
-                rtol,
-                cum_percentage)
-            candidate = TRDecomposition(cores)
-            approximation = candidate.contract_dense()
-            absolute = torch.linalg.vector_norm(approximation - active_tensor)
-            denominator = torch.linalg.vector_norm(active_tensor)
-            relative = absolute if denominator == 0 else absolute / denominator
-            score = float(relative.detach().cpu().item())
-            if best is None or score < best[0]:
-                best = score, candidate, first, records, absolute, denominator
-        except (RuntimeError, ValueError) as exc:
-            failures.append(str(exc))
+    runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
+    timer_context = runtime.timer() if collect_metrics else nullcontext()
+    with timer_context as timer:
+        for attempt in range(attempts):
+            active_slices = fixed_slices
+            if active_slices is None:
+                active_slices = _draw_slices(tensor.shape, generator)
+            try:
+                first = _first_core(
+                    active_tensor,
+                    ranks,
+                    active_slices,
+                    spectral_atol,
+                    n_iters,
+                    n_restarts,
+                    generator, collect_metrics)
+                cores, records = _recover_tail(
+                    first,
+                    active_tensor,
+                    ranks,
+                    cutoff,
+                    atol,
+                    rtol,
+                    cum_percentage, collect_metrics)
+                candidate = TRDecomposition(cores)
+                approximation = candidate.contract_dense()
+                absolute = torch.linalg.vector_norm(approximation - active_tensor)
+                denominator = torch.linalg.vector_norm(active_tensor)
+                relative = absolute if denominator == 0 else absolute / denominator
+                score = relative.detach()
+                if best is None or score < best[0]:
+                    best = score, candidate, first, records, absolute, denominator
+                if observer is not None:
+                    observer.emit(DecompositionEvent(
+                        name='attempt_complete', phase='BLOSTR',
+                        values={'attempt': attempt + 1, 'attempts': attempts,
+                                'relative_error': relative.detach()}))
+            except (RuntimeError, ValueError) as exc:
+                failures.append(str(exc))
 
     if best is None:
         detail = '; '.join(dict.fromkeys(failures))
@@ -477,15 +497,15 @@ def _fit_blostr(tensor: torch.Tensor,
             'Every BLOSTR spectral attempt failed. '
             f'{detail}')
     relative, candidate, first, records, absolute, denominator = best
-    elapsed = time.perf_counter() - start
-    metrics = DecompositionMetrics(
-        truncations=list(records),
-        errors=[ErrorRecord(
-            kind='reconstruction',
-            absolute=absolute,
-            relative=relative,
-            denominator=denominator)],
-        timings=[TimingRecord(name='fit', elapsed=elapsed)])
+    metrics = DecompositionMetrics()
+    if collect_metrics:
+        metrics.truncations.extend(records)
+        metrics.errors.append(ErrorRecord(
+            kind='reconstruction', absolute=absolute, relative=relative,
+            denominator=denominator))
+        metrics.errors.extend(first.errors)
+        metrics.timings.append(TimingRecord(name='fit', elapsed=timer.elapsed))
+        metrics.warnings.extend(failures)
     final_cores = [
         core if out_device is None else core.to(out_device)
         for core in candidate.cores
@@ -498,9 +518,7 @@ def _fit_blostr(tensor: torch.Tensor,
             'experimental': True,
             'requested_rank': list(ranks),
             'slices': first.slices,
-            'eigenspace_residual': first.eigenspace_residual,
             'attempts': attempts,
-            'failed_attempts': len(failures),
         })
 
 
@@ -554,7 +572,8 @@ class BLOSTRLoopOpener:
             fit_options = {}
         if not isinstance(fit_options, Mapping):
             raise TypeError('`fit_options` should be a mapping or None')
-        reserved = {'rank', 'out_device', 'return_info'}
+        reserved = {'rank', 'out_device', 'return_info', 'verbose',
+                    'collect_metrics', 'observer'}
         overlap = reserved.intersection(fit_options)
         if overlap:
             raise ValueError(
@@ -613,6 +632,7 @@ class BLOSTRLoopOpener:
             dense,
             active_ranks,
             out_device=None,
+            collect_metrics=context.get('collect_metrics', True),
             **fit_options)
         cores = tuple(result.cores)
         if orientation == 'left':
@@ -631,10 +651,8 @@ class BLOSTRLoopOpener:
             diagnostics={
                 'algorithm': 'blostr',
                 'metadata': dict(result.metadata),
-                'error': {
-                    'absolute': result.metrics.errors[0].absolute,
-                    'relative': result.metrics.errors[0].relative,
-                },
+                'errors': tuple(result.metrics.errors),
+                'warnings': tuple(result.metrics.warnings),
             })
 
 
@@ -651,7 +669,9 @@ def tr_blostr(tensor: torch.Tensor,
               rtol: Optional[float] = None,
               cum_percentage: Optional[float] = None,
               out_device: _Device = 'cpu',
-              return_info: bool = False):
+              return_info: bool = False,
+              *,
+              verbose: Union[bool, int] = 0):
     r"""Decomposes a dense tensor into a TR with experimental BLOSTR.
 
     This implements the blockwise simultaneous-diagonalization construction
@@ -721,6 +741,12 @@ def tr_blostr(tensor: torch.Tensor,
         '`tr_blostr` is experimental and its numerical behavior may change.',
         ExperimentalWarning,
         stacklevel=2)
+    verbosity = _normalize_verbosity(verbose)
+    observer = _resolve_observer(verbosity, None) if verbosity else None
+    if observer is not None:
+        observer.emit(DecompositionEvent(
+            name='start', phase='BLOSTR',
+            values={'rank': rank, 'attempts': n_attempts}))
     result = _fit_blostr(
         tensor,
         rank,
@@ -734,7 +760,21 @@ def tr_blostr(tensor: torch.Tensor,
         atol=atol,
         rtol=rtol,
         cum_percentage=cum_percentage,
-        out_device=out_device)
+        out_device=out_device,
+        collect_metrics=return_info or bool(verbosity),
+        observer=observer)
+    if observer is not None:
+        error = result.metrics.errors[0]
+        observer.emit(DecompositionEvent(
+            name='summary', phase='BLOSTR',
+            values={'rank': result.rank, 'absolute_error': error.absolute,
+                    'relative_error': error.relative,
+                    'elapsed': result.metrics.timings[0].elapsed}))
+        for site, core in enumerate(result.cores):
+            observer.emit(DecompositionEvent(
+                name='core', phase='BLOSTR', level=3, site=site,
+                values={'shape': tuple(core.shape), 'tensor': core}))
+        observer.close(result.metrics)
     if return_info:
         return result.cores, result.as_info()
     return result.cores

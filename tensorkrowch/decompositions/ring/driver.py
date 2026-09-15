@@ -8,6 +8,7 @@ import torch
 
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  GaugeRecord)
+from tensorkrowch.decompositions.observers import DecompositionEvent
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector)
@@ -157,7 +158,8 @@ class BidirectionalRingResult:
                 'central_block': self.central_block.sites,
                 'order': self.order,
                 'boundaries': tuple(self.boundaries),
-                **self.diagnostics,
+                **{name: value for name, value in self.diagnostics.items()
+               if name != 'recursions'},
             })
 
     def contract_dense(self) -> torch.Tensor:
@@ -281,15 +283,16 @@ class BidirectionalRingDriver:
 
         central_sites = selection.sites
         central_target = provider.local_target(central_sites, context)
-        central_context = provider.local_context(central_sites, context)
-        central_rank = provider.local_rank(central_sites, rank, context)
-        central_opening = opener.open(
-            central_target,
-            central_rank,
+        central_opening = self._open(
+            provider=provider,
+            rank=rank,
+            opener=opener,
+            sites=central_sites,
+            target=central_target,
             orientation='right',
-            context=central_context)
-        _validate_opening(
-            central_opening, central_sites, 'right', None, None)
+            fixed_left=None,
+            fixed_right=None,
+            context=context)
         self._store_opening(
             central_sites,
             'center',
@@ -511,7 +514,8 @@ class BidirectionalRingDriver:
                 metrics=metrics,
                 diagnostics=recursion_diagnostics))
         self._store_boundary(
-            right_closure, cores, boundaries, order, directions, metrics)
+            right_closure, cores, boundaries, order, directions, metrics,
+            observer=context.get('_observer'))
 
         left_opening = central_opening
         for site in range(selection.left - 1, 0, -1):
@@ -557,7 +561,8 @@ class BidirectionalRingDriver:
                 metrics=metrics,
                 diagnostics=recursion_diagnostics))
         self._store_boundary(
-            left_closure, cores, boundaries, order, directions, metrics)
+            left_closure, cores, boundaries, order, directions, metrics,
+            observer=context.get('_observer'))
 
         if any(core is None for core in cores):
             raise RuntimeError('The ring driver did not assemble every site')
@@ -619,6 +624,17 @@ class BidirectionalRingDriver:
         if not isinstance(step, GaugeRecursionStep):
             raise TypeError(
                 '`prepare_boundary` should return GaugeRecursionStep')
+        observer = context.get('_observer')
+        if observer is not None:
+            for record in step.records:
+                observer.emit(DecompositionEvent(
+                    name='gauge', phase='TT to TR', level=2,
+                    site=record.site,
+                    values={'orientation': record.orientation,
+                            'rank': (record.numerical_rank, record.cancellable_rank),
+                            'condition_number': record.condition_number,
+                            'cancellation_error': record.cancellation_error,
+                            'projective': record.projective}))
         metrics.gauges.extend(step.records)
         diagnostics.append({
             'direction': direction,
@@ -658,6 +674,17 @@ class BidirectionalRingDriver:
         if not isinstance(step, GaugeRecursionStep):
             raise TypeError(
                 'Gauge recursion methods should return GaugeRecursionStep')
+        observer = context.get('_observer')
+        if observer is not None:
+            for record in step.records:
+                observer.emit(DecompositionEvent(
+                    name='gauge', phase='TT to TR', level=2,
+                    site=record.site,
+                    values={'orientation': record.orientation,
+                            'rank': (record.numerical_rank, record.cancellable_rank),
+                            'condition_number': record.condition_number,
+                            'cancellation_error': record.cancellation_error,
+                            'projective': record.projective}))
         metrics.gauges.extend(step.records)
         diagnostics.append({
             'direction': direction,
@@ -679,7 +706,7 @@ class BidirectionalRingDriver:
             fixed_right: Optional[torch.Tensor],
             context: Mapping[str, Any]) -> LoopOpening:
         """Builds and validates one constrained local opening."""
-        local_context = provider.local_context(sites, context)
+        local_context = {**context, **provider.local_context(sites, context)}
         local_rank = provider.local_rank(sites, rank, context)
         opening = opener.open(
             target,
@@ -690,6 +717,12 @@ class BidirectionalRingDriver:
             context=local_context)
         _validate_opening(
             opening, sites, orientation, fixed_left, fixed_right)
+        observer = context.get('_observer')
+        if observer is not None:
+            observer.emit(DecompositionEvent(
+                name='site_complete', phase='TT to TR', site=sites[0],
+                values={'sites': sites, 'direction': orientation,
+                        'total_sites': len(provider.in_dim)}))
         return opening
 
     @staticmethod
@@ -711,6 +744,8 @@ class BidirectionalRingDriver:
         order.append(sites)
         directions.append(direction)
         metrics.local_solves.extend(opening.local_records)
+        metrics.errors.extend(opening.diagnostics.get('errors', ()))
+        metrics.warnings.extend(opening.diagnostics.get('warnings', ()))
 
     @staticmethod
     def _store_boundary(
@@ -719,7 +754,8 @@ class BidirectionalRingDriver:
             boundaries: Dict[int, BoundaryClosure],
             order: list,
             directions: list,
-            metrics: DecompositionMetrics) -> None:
+            metrics: DecompositionMetrics,
+            observer=None) -> None:
         """Stores one provider-specific open-boundary absorption."""
         if not isinstance(closure, BoundaryClosure):
             raise TypeError('`close_boundary` should return BoundaryClosure')
@@ -732,6 +768,12 @@ class BidirectionalRingDriver:
         order.append((closure.site,))
         directions.append(f'{closure.direction}_boundary')
         metrics.gauges.extend(closure.records)
+        if observer is not None:
+            observer.emit(DecompositionEvent(
+                name='site_complete', phase='TT to TR', site=closure.site,
+                values={'sites': (closure.site,),
+                        'direction': closure.direction,
+                        'total_sites': len(cores)}))
 
 
 __all__ = [

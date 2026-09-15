@@ -247,7 +247,7 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
                           if event.name == 'sample_refresh']
         assert refresh_sweeps == [0, 2]
         assert result.metrics.sweeps[2].rel_change == pytest.approx(0.125)
-        assert history.metrics is result.metrics
+        assert history.metrics is None  # The public engine closes its observer
 
     @pytest.mark.parametrize(
         'failure, reason',

@@ -366,7 +366,7 @@ class ALSLoopOpener:
             rank=ranks,
             initial_cores=initial_cores,
             fixed_cores=fixed_cores,
-            collect_metrics=True,
+            collect_metrics=context.get('collect_metrics', True),
             **fit_options)
         return _opening_from_result(result, orientation)
 
@@ -460,7 +460,7 @@ class FixedGaugeCoreOpener:
             values.reshape(-1),
             site=1,
             sweep=0,
-            return_record=True)
+            return_record=context.get('collect_metrics', True))
         core = solution.reshape(
             ranks[0], source.in_dim[1], ranks[1])
         result_cores = (fixed_left, core, fixed_right)
@@ -472,11 +472,9 @@ class FixedGaugeCoreOpener:
             right_gauge=result_cores[2],
             rank=tuple(candidate.shape[-1] for candidate in result_cores),
             orientation=orientation,
-            local_records=(record,),
+            local_records=() if record is None else (record,),
             diagnostics={
                 'algorithm': 'fixed_gauge_core_solve',
-                'abs_residual': record.abs_residual,
-                'rel_residual': record.rel_residual,
             })
 
 

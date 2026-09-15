@@ -296,7 +296,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
         assert errors[-1] < 1e-4
         assert result.metadata['sampling'] == 'observed'
 
-    def test_unsorted_weighted_tensor_observations_define_objective(self):
+    def test_unsorted_weighted_tensor_observations_define_objective(self, monkeypatch):
         tensor = torch.arange(8., dtype=torch.float64).reshape(2, 2, 2)
         indices = torch.tensor([
             [1, 1, 1],
@@ -312,6 +312,10 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
             in_dim=tensor.shape,
             weights=weights)
         history = HistoryObserver()
+        from importlib import import_module
+        monkeypatch.setattr(
+            import_module('tensorkrowch.decompositions.als.tt'),
+            '_resolve_observer', lambda *args: history)
 
         result = tk.decompositions.TTALS.completion(
             observations, out_device=None).fit(
@@ -320,7 +324,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=3),
                 collect_metrics=True,
-                observer=history)
+                verbose=1)
 
         approximation = result.evaluate(observations.indices)
         absolute, relative = observations.error(approximation)
@@ -345,7 +349,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
 
 class TestTTALSSampling:  # MARK: TestTTALSSampling
 
-    def test_uniform_samples_and_values_are_reused_by_generation(self):
+    def test_uniform_samples_and_values_are_reused_by_generation(self, monkeypatch):
         tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
         evaluations = []
 
@@ -355,6 +359,10 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
                                 for site in range(indices.shape[1]))]
 
         history = HistoryObserver()
+        from importlib import import_module
+        monkeypatch.setattr(
+            import_module('tensorkrowch.decompositions.als.tt'),
+            '_resolve_observer', lambda *args: history)
         result = tk.decompositions.TTALS(
             function,
             in_dim=tensor.shape,
@@ -368,7 +376,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=3),
                 collect_metrics=True,
-                observer=history)
+                verbose=1)
 
         assert len(evaluations) == 2
         assert [event.sweep for event in history.events

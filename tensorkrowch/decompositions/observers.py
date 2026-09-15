@@ -181,6 +181,14 @@ class ConsoleObserver:
                 if event.elapsed is not None:
                     details['elapsed'] = event.elapsed
                 self._print_values(details)
+        elif event.name == 'attempt_complete':
+            attempt = event.values['attempt']
+            total = event.values['attempts']
+            print(f'\nAttempt {attempt} / {total}', file=self.stream)
+            if self.verbose >= 2:
+                self._print_values({
+                    name: value for name, value in event.values.items()
+                    if name not in ('attempt', 'attempts')})
         elif event.name == 'site_complete':
             total = event.values.get('total_sites')
             position = event.site + 1 if event.site is not None else '?'

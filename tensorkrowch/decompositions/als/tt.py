@@ -8,7 +8,8 @@ import torch
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
-from tensorkrowch.decompositions.als.driver import ALSSweepDriver
+from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
+                                                    _report_als_result)
 from tensorkrowch.decompositions.als.environments import (CoreUpdateSet,
                                                           TTEnvironmentCache,
                                                           _environment_norm)
@@ -29,7 +30,7 @@ from tensorkrowch.decompositions.als.sampling import (
 from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
                                                      _relative_error,
                                                      _solve_local_proposal)
-from tensorkrowch.decompositions.observers import (DecompositionObserver,
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TTDecomposition
@@ -930,8 +931,7 @@ class TTALS:
             renormalize: bool = True,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            observer: Optional[DecompositionObserver] = None
+            verbose: Union[bool, int] = 0
             ) -> TTDecomposition:
         """Fits a TT by alternating one-site least-squares solves.
 
@@ -1001,8 +1001,6 @@ class TTALS:
             the driver skips those reductions and synchronization points.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (most detailed).
-        observer : DecompositionObserver, optional
-            Additional consumer of structured ALS events.
 
         Returns
         -------
@@ -1084,9 +1082,9 @@ class TTALS:
                 raise ValueError(
                     '`leverage_uniform_mix` should be in [0, 1]')
         verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity) or (observer is not None)
+        emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
-        fit_observer = _resolve_observer(verbosity, observer) \
+        fit_observer = _resolve_observer(verbosity, None) \
             if emit_events else None
 
         configurations = None
@@ -1151,19 +1149,32 @@ class TTALS:
                 n_samples=n_samples,
                 refresh_policy=refresh_policy,
                 generator=generator)
+        if fit_observer is not None:
+            fit_observer.emit(DecompositionEvent(
+                name='start',
+                phase='TT-ALS',
+                values={
+                    'sites': len(cores),
+                    'in_dim': self.in_dim,
+                    'rank': tuple(core.shape[-1] for core in cores[:-1]),
+                    'sampling': sampling,
+                    'gauge': getattr(gauge_policy, 'name', type(gauge_policy).__name__),
+                    'max_sweeps': convergence.max_sweeps,
+                }))
         driver_result = ALSSweepDriver().fit(
             problem=problem,
             backend=backend,
             convergence=convergence,
             update_policy=update_policy,
             observer=fit_observer,
-            collect_metrics=collect_metrics)
+            collect_metrics=collect_metrics,
+            phase='TT-ALS')
 
         result_cores = _result_tt_cores(driver_result.cores)
         if self.out_device is not None:
             result_cores = tuple(
                 core.to(device=self.out_device) for core in result_cores)
-        return TTDecomposition(
+        result = TTDecomposition(
             cores=result_cores,
             metrics=driver_result.metrics,
             metadata={
@@ -1172,6 +1183,7 @@ class TTALS:
                 'gauge': getattr(gauge_policy, 'name',
                                  type(gauge_policy).__name__),
                 'converged': driver_result.converged,
+                'keep_best': convergence.keep_best,
                 'stop_reason': driver_result.stop_reason,
                 'n_sweeps': driver_result.n_sweeps,
                 'fixed_sites': list(fixed_sites),
@@ -1190,6 +1202,9 @@ class TTALS:
                     None if configurations is None
                     else configurations.batch_size),
             })
+        if fit_observer is not None:
+            _report_als_result(result, fit_observer, 'TT-ALS')
+        return result
 
 
 def tt_als(source,

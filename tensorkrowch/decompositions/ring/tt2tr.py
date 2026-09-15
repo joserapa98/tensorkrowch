@@ -9,7 +9,6 @@ from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import (ErrorRecord, FidelityRecord,
                                                  TimingRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TTDecomposition,
@@ -110,6 +109,7 @@ class _TTCoreProvider:
                       context: Mapping[str, Any]) -> Mapping[str, Any]:
         target = self.local_target(sites, context)
         return {
+            **context,
             'in_dim': tuple(target.shape),
             'dtype': target.dtype,
             'device': target.device,
@@ -246,8 +246,8 @@ class TT2TR:
             inverse_policy: str = 'pinv',
             rank_rtol: Optional[float] = None,
             verbose: Union[bool, int] = 0,
-            observer: Optional[
-                DecompositionObserver] = None) -> TRDecomposition:
+            *,
+            collect_metrics: bool = False) -> TRDecomposition:
         """Converts the TT with prescribed non-cyclic and cyclic TR ranks.
 
         ``rank`` is used for every non-cyclic right link. ``tr_rank`` sets the
@@ -307,8 +307,10 @@ class TT2TR:
             gauge ranks.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (final cores included).
-        observer : DecompositionObserver, optional
-            Additional consumer of structured conversion events.
+        collect_metrics : bool
+            Whether to retain local ALS solve diagnostics. Fidelity, final
+            reconstruction error and gauge-cancellation checks remain enabled.
+            Verbosity also enables local metrics.
 
         Returns
         -------
@@ -329,6 +331,8 @@ class TT2TR:
         >>> result.metrics.fidelities[0].fidelity > 0.999
         True
         """
+        if not isinstance(collect_metrics, bool):
+            raise TypeError('`collect_metrics` should be bool type')
         if not isinstance(allow_projective_gauges, bool):
             raise TypeError('`allow_projective_gauges` should be bool type')
         if schedule not in ('center_out', 'alternating'):
@@ -343,8 +347,8 @@ class TT2TR:
         if center is None:
             center = len(self.tt.cores) // 2
         verbosity = _normalize_verbosity(verbose)
-        fit_observer = _resolve_observer(verbosity, observer) \
-            if verbosity or observer is not None else None
+        fit_observer = _resolve_observer(verbosity, None) \
+            if verbosity else None
         opener = resolve_loop_opener(loop_opener)
         recursion = _resolve_gauge_recursion(
             gauge_recursion,
@@ -373,6 +377,10 @@ class TT2TR:
                 'recursion': recursion,
                 'block_selector': PrescribedCentralBlockSelector(),
                 'center': center,
+                'context': {
+                    '_observer': fit_observer,
+                    'collect_metrics': collect_metrics or bool(verbosity),
+                },
             }
             if schedule == 'alternating':
                 driver_result = AlternatingRingDriver().fit(
@@ -385,7 +393,7 @@ class TT2TR:
             active_result = driver_result.as_decomposition()
             fidelity = _fidelity_error(self.tt, active_result)
             active_result.metrics.fidelities.append(fidelity)
-            active_result.metrics.errors.append(fidelity.error)
+            active_result.metrics.errors.insert(0, fidelity.error)
 
         active_result.metrics.timings.append(TimingRecord(
             name='fit', elapsed=timer.elapsed))
@@ -416,34 +424,6 @@ class TT2TR:
             metadata=metadata)
 
         if fit_observer is not None:
-            for step, (sites, direction) in enumerate(zip(
-                    driver_result.order, driver_result.directions)):
-                fit_observer.emit(DecompositionEvent(
-                    name='site_complete',
-                    phase='TT to TR',
-                    site=sites[0],
-                    values={
-                        'step': step + 1,
-                        'total_sites': len(driver_result.order),
-                        'sites': sites,
-                        'direction': direction,
-                    }))
-            for record in result.metrics.gauges:
-                fit_observer.emit(DecompositionEvent(
-                    name='gauge',
-                    phase='TT to TR',
-                    level=2,
-                    site=record.site,
-                    values={
-                        'orientation': record.orientation,
-                        'shape': record.shape,
-                        'rank': (
-                            f'{record.numerical_rank}/'
-                            f'{record.cancellable_rank}'),
-                        'condition_number': record.condition_number,
-                        'cancellation_error': record.cancellation_error,
-                        'projective': record.projective,
-                    }))
             fit_observer.emit(DecompositionEvent(
                 name='summary',
                 phase='TT to TR',
@@ -452,7 +432,7 @@ class TT2TR:
                     'fidelity': fidelity.fidelity,
                     'absolute_error': fidelity.error.absolute,
                     'relative_error': fidelity.error.relative,
-                    'elapsed': f'{timer.elapsed:.6f} s',
+                    'elapsed': timer.elapsed,
                 }))
             for site, core in enumerate(result.cores):
                 fit_observer.emit(DecompositionEvent(
@@ -515,7 +495,8 @@ def tt2tr(tt,
         gauge_tolerance=gauge_tolerance,
         inverse_policy=inverse_policy,
         rank_rtol=rank_rtol,
-        verbose=verbose)
+        verbose=verbose,
+        collect_metrics=return_info)
     if return_info:
         return result.cores, result.as_info()
     return result.cores

@@ -36,6 +36,20 @@ def _dense_overlap(first, second):
 
 class TestTT2TR:  # MARK: TestTT2TR
 
+    def test_optional_local_metrics_preserve_conversion(self):
+        results = []
+        for collect_metrics in (False, True):
+            with torch.random.fork_rng():
+                torch.manual_seed(155)
+                results.append(tk.decompositions.TT2TR(_rank_one_tt()).fit(
+                    rank=1, collect_metrics=collect_metrics))
+
+        fast, measured = results
+        assert not fast.metrics.local_solves
+        assert measured.metrics.local_solves
+        assert len(fast.metrics.fidelities) == 1
+        assert torch.allclose(fast.contract_dense(), measured.contract_dense())
+
     @pytest.mark.parametrize('center', [1, 2, 3])
     @pytest.mark.parametrize(
         ('dtype', 'phase'),
@@ -174,13 +188,28 @@ class TestTT2TR:  # MARK: TestTT2TR
             result.contract_dense(), tt.contract_dense(),
             rtol=2e-9, atol=2e-9)
 
-    def test_history_observer_receives_structured_steps_and_summary(self):
+    def test_history_observer_receives_structured_steps_and_summary(self, monkeypatch):
         observer = HistoryObserver()
+        from importlib import import_module
+        monkeypatch.setattr(
+            import_module('tensorkrowch.decompositions.ring.tt2tr'),
+            '_resolve_observer', lambda *args: observer)
+        completed_before_open = []
+        original_open = tk.decompositions.ALSLoopOpener.open
+
+        def open_loop(opener, *args, **kwargs):
+            completed_before_open.append(sum(
+                event.name == 'site_complete' for event in observer.events))
+            return original_open(opener, *args, **kwargs)
+
+        monkeypatch.setattr(tk.decompositions.ALSLoopOpener, 'open', open_loop)
         result = tk.decompositions.TT2TR(
             _rank_one_tt(), out_device=None).fit(
-                rank=1, verbose=0, observer=observer)
+                rank=1, verbose=1)
 
         assert observer.metrics is result.metrics
+        assert completed_before_open[0] == 0
+        assert all(count > 0 for count in completed_before_open[1:])
         assert observer.events[0].name == 'start'
         assert sum(event.name == 'site_complete'
                    for event in observer.events) == 5

@@ -422,7 +422,8 @@ class AlternatingRingDriver:
                     metrics=metrics,
                     diagnostics=recursion_diagnostics))
             BidirectionalRingDriver._store_boundary(
-                closure, cores, boundaries, order, directions, metrics)
+                closure, cores, boundaries, order, directions, metrics,
+                observer=context.get('_observer'))
 
         selection = _block_selection(provider, rank, anchors[0], context)
         return BidirectionalRingResult(

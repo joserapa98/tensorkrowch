@@ -8,7 +8,8 @@ import torch
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
-from tensorkrowch.decompositions.als.driver import ALSSweepDriver
+from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
+                                                    _report_als_result)
 from tensorkrowch.decompositions.als.environments import (
     CoreUpdateSet,
     DirectTREnvironment,
@@ -31,7 +32,7 @@ from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
                                                      _relative_error,
                                                      _solve_local_proposal)
 from tensorkrowch.decompositions.als.tt import TTALS
-from tensorkrowch.decompositions.observers import (DecompositionObserver,
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
@@ -735,8 +736,7 @@ class TRALS(TTALS):
             renormalize: bool = True,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            observer: Optional[DecompositionObserver] = None
+            verbose: Union[bool, int] = 0
             ) -> TRDecomposition:
         """Fits a TR by alternating cyclic one-site least-squares solves.
 
@@ -807,8 +807,6 @@ class TRALS(TTALS):
             Whether to retain local solves, sweep errors and timings.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (most detailed).
-        observer : DecompositionObserver, optional
-            Additional consumer of structured ALS events.
 
         Returns
         -------
@@ -887,9 +885,9 @@ class TRALS(TTALS):
                 'TR leverage sampling redraws per site and requires '
                 '`sample_reuse_sweeps=1`')
         verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity) or (observer is not None)
+        emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
-        fit_observer = _resolve_observer(verbosity, observer) \
+        fit_observer = _resolve_observer(verbosity, None) \
             if emit_events else None
 
         configurations = None
@@ -953,19 +951,32 @@ class TRALS(TTALS):
                 n_samples=n_samples,
                 refresh_policy=refresh_policy,
                 generator=generator)
+        if fit_observer is not None:
+            fit_observer.emit(DecompositionEvent(
+                name='start',
+                phase='TR-ALS',
+                values={
+                    'sites': len(cores),
+                    'in_dim': self.in_dim,
+                    'rank': tuple(core.shape[-1] for core in cores),
+                    'sampling': sampling,
+                    'gauge': getattr(gauge_policy, 'name', type(gauge_policy).__name__),
+                    'max_sweeps': convergence.max_sweeps,
+                }))
         driver_result = ALSSweepDriver().fit(
             problem=problem,
             backend=backend,
             convergence=convergence,
             update_policy=update_policy,
             observer=fit_observer,
-            collect_metrics=collect_metrics)
+            collect_metrics=collect_metrics,
+            phase='TR-ALS')
 
         result_cores = tuple(driver_result.cores)
         if self.out_device is not None:
             result_cores = tuple(
                 core.to(device=self.out_device) for core in result_cores)
-        return TRDecomposition(
+        result = TRDecomposition(
             cores=result_cores,
             metrics=driver_result.metrics,
             metadata={
@@ -974,6 +985,7 @@ class TRALS(TTALS):
                 'gauge': getattr(gauge_policy, 'name',
                                  type(gauge_policy).__name__),
                 'converged': driver_result.converged,
+                'keep_best': convergence.keep_best,
                 'stop_reason': driver_result.stop_reason,
                 'n_sweeps': driver_result.n_sweeps,
                 'fixed_sites': list(fixed_sites),
@@ -999,6 +1011,9 @@ class TRALS(TTALS):
                     None if configurations is None else
                     configurations.batch_size),
             })
+        if fit_observer is not None:
+            _report_als_result(result, fit_observer, 'TR-ALS')
+        return result
 
 
 def tr_als(source,

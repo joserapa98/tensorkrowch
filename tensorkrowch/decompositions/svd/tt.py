@@ -20,6 +20,8 @@ import warnings
 
 import torch
 
+from tensorkrowch.utils import truncated_svd
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -33,7 +35,6 @@ from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm,
                                                    _normalize_tensor)
-from tensorkrowch.utils import truncated_svd
 
 
 @dataclass
@@ -232,6 +233,99 @@ class TTSVD:
         core_scale = self._runtime.finalize(core_scale)
         return [core * core_scale for core in cores]
 
+    def _fit_validated(
+            self,
+            truncation: _TruncationSpec,
+            renormalize: bool,
+            collect_metrics: bool,
+            progress: Optional[_SVDProgress] = None) -> TTDecomposition:
+        """Runs TT-SVD from already validated fit options."""
+        tensor = self._runtime.prepare(self._tensor)
+        batch_shape = tuple(tensor.shape[:self._n_batches])
+        in_dim = tuple(tensor.shape[self._n_batches:])
+        n_sites = len(in_dim)
+
+        error_state = None
+        if collect_metrics:
+            input_axes = tuple(range(self._n_batches, tensor.ndim))
+            log_norm = _log_tensor_norm(tensor, dim=input_axes)
+            norm = log_norm.exp()
+            if not torch.isfinite(norm).all():
+                raise ValueError('The input tensor norm should be finite')
+            error_state = _TTSVDErrorState(
+                norm=norm,
+                log_norm=log_norm,
+                relative_sq_error=torch.zeros_like(norm))
+        context = _TTSVDFitContext(
+            batch_shape=batch_shape,
+            in_dim=in_dim,
+            truncation=truncation,
+            renormalize=renormalize,
+            log_scale=tensor.real.new_zeros(()),
+            error_state=error_state)
+
+        metrics = DecompositionMetrics()
+        cores = []
+        cut_timings = []
+
+        total_timer_context = (
+            self._runtime.timer() if collect_metrics else nullcontext())
+        with total_timer_context as total_timer:
+            residual = tensor
+            previous_rank = 1
+            for site in range(n_sites - 1):
+                cut_timer_context = (
+                    self._runtime.timer() if collect_metrics else nullcontext())
+                with cut_timer_context as cut_timer:
+                    split = self._split_site(
+                        residual=residual,
+                        site=site,
+                        previous_rank=previous_rank,
+                        context=context)
+
+                cores.append(split.core)
+                residual = split.residual
+                previous_rank = split.selected_rank
+                if collect_metrics:
+                    metrics.truncations.append(split.record)
+                    cut_timing = TimingRecord(
+                        name='svd_cut',
+                        elapsed=cut_timer.elapsed,
+                        site=site)
+                    cut_timings.append(cut_timing)
+                if progress is not None:
+                    progress.cut_complete(
+                        site=site,
+                        record=split.record,
+                        elapsed=cut_timer.elapsed)
+
+            cores.append(residual)
+            cores = self._redistribute_scale(cores, context)
+
+        if error_state is not None:
+            rel_error = error_state.relative_sq_error.sqrt()
+            abs_error = rel_error * error_state.norm
+            metrics.errors.append(ErrorRecord(
+                kind='truncation',
+                absolute=abs_error,
+                relative=rel_error,
+                size=n_sites - 1,
+                denominator=error_state.norm))
+            metrics.timings.append(TimingRecord(
+                name='fit',
+                elapsed=total_timer.elapsed,
+                children=cut_timings))
+
+        result = TTDecomposition(
+            cores=cores,
+            metrics=metrics,
+            metadata={
+                'algorithm': 'tt_svd',
+                'renormalize': renormalize,
+            },
+            n_batches=self._n_batches)
+        return result
+
     def fit(self,
             rank: Optional[int] = None,
             cutoff: Optional[float] = None,
@@ -409,99 +503,6 @@ class TTSVD:
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return result
-
-    def _fit_validated(
-            self,
-            truncation: _TruncationSpec,
-            renormalize: bool,
-            collect_metrics: bool,
-            progress: Optional[_SVDProgress] = None) -> TTDecomposition:
-        """Runs TT-SVD from already validated fit options."""
-        tensor = self._runtime.prepare(self._tensor)
-        batch_shape = tuple(tensor.shape[:self._n_batches])
-        in_dim = tuple(tensor.shape[self._n_batches:])
-        n_sites = len(in_dim)
-
-        error_state = None
-        if collect_metrics:
-            input_axes = tuple(range(self._n_batches, tensor.ndim))
-            log_norm = _log_tensor_norm(tensor, dim=input_axes)
-            norm = log_norm.exp()
-            if not torch.isfinite(norm).all():
-                raise ValueError('The input tensor norm should be finite')
-            error_state = _TTSVDErrorState(
-                norm=norm,
-                log_norm=log_norm,
-                relative_sq_error=torch.zeros_like(norm))
-        context = _TTSVDFitContext(
-            batch_shape=batch_shape,
-            in_dim=in_dim,
-            truncation=truncation,
-            renormalize=renormalize,
-            log_scale=tensor.real.new_zeros(()),
-            error_state=error_state)
-
-        metrics = DecompositionMetrics()
-        cores = []
-        cut_timings = []
-
-        total_timer_context = (
-            self._runtime.timer() if collect_metrics else nullcontext())
-        with total_timer_context as total_timer:
-            residual = tensor
-            previous_rank = 1
-            for site in range(n_sites - 1):
-                cut_timer_context = (
-                    self._runtime.timer() if collect_metrics else nullcontext())
-                with cut_timer_context as cut_timer:
-                    split = self._split_site(
-                        residual=residual,
-                        site=site,
-                        previous_rank=previous_rank,
-                        context=context)
-
-                cores.append(split.core)
-                residual = split.residual
-                previous_rank = split.selected_rank
-                if collect_metrics:
-                    metrics.truncations.append(split.record)
-                    cut_timing = TimingRecord(
-                        name='svd_cut',
-                        elapsed=cut_timer.elapsed,
-                        site=site)
-                    cut_timings.append(cut_timing)
-                if progress is not None:
-                    progress.cut_complete(
-                        site=site,
-                        record=split.record,
-                        elapsed=cut_timer.elapsed)
-
-            cores.append(residual)
-            cores = self._redistribute_scale(cores, context)
-
-        if error_state is not None:
-            rel_error = error_state.relative_sq_error.sqrt()
-            abs_error = rel_error * error_state.norm
-            metrics.errors.append(ErrorRecord(
-                kind='truncation',
-                absolute=abs_error,
-                relative=rel_error,
-                size=n_sites - 1,
-                denominator=error_state.norm))
-            metrics.timings.append(TimingRecord(
-                name='fit',
-                elapsed=total_timer.elapsed,
-                children=cut_timings))
-
-        result = TTDecomposition(
-            cores=cores,
-            metrics=metrics,
-            metadata={
-                'algorithm': 'tt_svd',
-                'renormalize': renormalize,
-            },
-            n_batches=self._n_batches)
         return result
 
 

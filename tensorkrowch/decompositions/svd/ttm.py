@@ -13,13 +13,11 @@ import warnings
 
 import torch
 
-from tensorkrowch.decompositions.observers import (
-    DecompositionEvent,
-    _normalize_verbosity,
-    _resolve_observer,
-)
-from tensorkrowch.decompositions.results import TTMDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   _normalize_verbosity,
+                                                   _resolve_observer)
+from tensorkrowch.decompositions.results import TTMDecomposition
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
                                                     _prepare_matrix_input)
 from tensorkrowch.decompositions.svd.tt import TTSVD

@@ -1,5 +1,7 @@
 """Tests for lightweight tensor decomposition results."""
 
+import inspect
+
 import pytest
 
 import torch
@@ -36,6 +38,39 @@ def _qtt_factor(values):
 
 
 class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
+
+    def test_result_hierarchy_and_placeholders(self):
+        result_types = tk.decompositions
+
+        assert issubclass(result_types.TensorDecomposition1D,
+                          result_types.TensorDecomposition)
+        assert issubclass(result_types.TensorDecomposition2D,
+                          result_types.TensorDecomposition)
+        assert issubclass(result_types.TTDecomposition,
+                          result_types.TensorDecomposition1D)
+        assert issubclass(result_types.TRDecomposition,
+                          result_types.TensorDecomposition1D)
+        assert issubclass(result_types.TTMDecomposition,
+                          result_types.TensorDecomposition1D)
+        assert issubclass(result_types.TRMDecomposition,
+                          result_types.TensorDecomposition1D)
+        assert issubclass(result_types.PEPSDecomposition,
+                          result_types.TensorDecomposition2D)
+        assert issubclass(result_types.PEPODecomposition,
+                          result_types.TensorDecomposition2D)
+
+        for result_type in [result_types.TensorDecomposition,
+                            result_types.TensorDecomposition1D,
+                            result_types.TensorDecomposition2D,
+                            result_types.TRMDecomposition,
+                            result_types.PEPSDecomposition,
+                            result_types.PEPODecomposition]:
+            assert inspect.isabstract(result_type)
+
+        for result_type in [result_types.TTDecomposition,
+                            result_types.TRDecomposition,
+                            result_types.TTMDecomposition]:
+            assert not inspect.isabstract(result_type)
 
     def test_boolean_n_batches_is_rejected(self):
         with pytest.raises(TypeError, match='`n_batches` should be int type'):

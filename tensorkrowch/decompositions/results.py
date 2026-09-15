@@ -3,10 +3,19 @@ This script contains:
 
     Class for tensor decomposition results:
         * TensorDecomposition:
-            + _StateDecomposition:
-                - TTDecomposition
-                - TRDecomposition
-            + TTMDecomposition
+            + TensorDecomposition1D:
+                - _VectorDecomposition1D:
+                    · TTDecomposition
+                    · TRDecomposition
+                - _MatrixDecomposition1D:
+                    · TTMDecomposition
+                    · TRMDecomposition
+                - _QuantizedTuckerDecomposition:
+                    · QTTTuckerDecomposition
+                    · QTRTuckerDecomposition
+            + TensorDecomposition2D:
+                - PEPSDecomposition
+                - PEPODecomposition
 """
 
 from abc import ABC, abstractmethod
@@ -24,8 +33,40 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 StateInput = Union[torch.Tensor, Sequence[torch.Tensor]]
 
 
-@dataclass
 class TensorDecomposition(ABC):
+    """Topology-neutral interface for lightweight decomposition results."""
+
+    metrics: DecompositionMetrics
+    metadata: Dict[str, Any]
+
+    @property
+    @abstractmethod
+    def device(self) -> torch.device:
+        """Device used by the decomposition tensors."""
+
+    @property
+    @abstractmethod
+    def dtype(self) -> torch.dtype:
+        """Data type used by the decomposition tensors."""
+
+    @abstractmethod
+    def to(self,
+           device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None,
+           copy: bool = False) -> 'TensorDecomposition':
+        """Returns the decomposition on another device or dtype."""
+
+    @abstractmethod
+    def cpu(self) -> 'TensorDecomposition':
+        """Returns the decomposition on CPU."""
+
+    @abstractmethod
+    def as_info(self) -> Dict[str, Any]:
+        """Returns structured decomposition information."""
+
+
+@dataclass
+class TensorDecomposition1D(TensorDecomposition):
     """Base class for lightweight tensor decomposition results.
 
     The object stores raw cores, derived rank, structured metrics and small
@@ -253,7 +294,7 @@ class TensorDecomposition(ABC):
     def to(self,
            device: Optional[Union[str, torch.device]] = None,
            dtype: Optional[torch.dtype] = None,
-           copy: bool = False) -> 'TensorDecomposition':
+           copy: bool = False) -> 'TensorDecomposition1D':
         """Returns this result on another device or dtype.
 
         ``copy`` has the same meaning as in :meth:`torch.Tensor.to`. If no core
@@ -274,15 +315,15 @@ class TensorDecomposition(ABC):
             return self
         return replace(self, cores=cores)
 
-    def cpu(self) -> 'TensorDecomposition':
+    def cpu(self) -> 'TensorDecomposition1D':
         """Returns this result with all cores stored on CPU."""
         return self.to(device='cpu')
 
     def _check_overlap_compatibility(
-            self, other: 'TensorDecomposition') -> None:
+            self, other: 'TensorDecomposition1D') -> None:
         """Validates topology, shapes and runtime for an overlap."""
-        if not isinstance(other, TensorDecomposition):
-            raise TypeError('`other` should be TensorDecomposition type')
+        if not isinstance(other, TensorDecomposition1D):
+            raise TypeError('`other` should be TensorDecomposition1D type')
         if self._family != other._family:
             raise ValueError('The decomposition families are incompatible')
         if len(self.cores) != len(other.cores):
@@ -297,8 +338,8 @@ class TensorDecomposition(ABC):
             raise ValueError('Decompositions should be on the same device')
 
     def _log_overlap(
-            self, other: 'TensorDecomposition') -> Tuple[torch.Tensor,
-                                                         torch.Tensor]:
+            self, other: 'TensorDecomposition1D') -> Tuple[torch.Tensor,
+                                                           torch.Tensor]:
         """Returns overlap phase and log-magnitude using scaled environments."""
         self._check_overlap_compatibility(other)
         dtype = torch.promote_types(self.dtype, other.dtype)
@@ -360,7 +401,7 @@ class TensorDecomposition(ABC):
         return torch.exp(log_squared_norm / 2)
 
     def normalized_overlap(
-            self, other: 'TensorDecomposition') -> torch.Tensor:
+            self, other: 'TensorDecomposition1D') -> torch.Tensor:
         """Returns ``<self, other> / (||self|| ||other||)`` with its phase."""
         phase, log_overlap = self._log_overlap(other)
         _, log_self = self._log_overlap(self)
@@ -374,7 +415,7 @@ class TensorDecomposition(ABC):
         log_denominator = (log_self + log_other) / 2
         return phase * torch.exp(log_overlap - log_denominator)
 
-    def fidelity(self, other: 'TensorDecomposition') -> torch.Tensor:
+    def fidelity(self, other: 'TensorDecomposition1D') -> torch.Tensor:
         """Returns ``abs(normalized_overlap(other)) ** 2``."""
         return self.normalized_overlap(other).abs().square()
 
@@ -397,8 +438,8 @@ class TensorDecomposition(ABC):
 
 
 @dataclass
-class _StateDecomposition(TensorDecomposition):
-    """Common input evaluation for TT and TR results."""
+class _VectorDecomposition1D(TensorDecomposition1D):
+    """Common input evaluation for 1D tensor-vector results."""
 
     _family: ClassVar[str] = 'state'
 
@@ -514,7 +555,7 @@ class _StateDecomposition(TensorDecomposition):
 
 
 @dataclass
-class TTDecomposition(_StateDecomposition):
+class TTDecomposition(_VectorDecomposition1D):
     """Lightweight tensor train decomposition with open boundaries.
 
     This result stores the TT cores, ranks, metrics and metadata without
@@ -645,7 +686,247 @@ class TTDecomposition(_StateDecomposition):
 
 
 @dataclass
-class TTMDecomposition(TensorDecomposition):
+class TRDecomposition(_VectorDecomposition1D):
+    """Lightweight tensor ring decomposition with cyclic boundaries.
+
+    This result stores raw TR cores, ranks, metrics and metadata, but it is not
+    itself a TensorKrowch graph. :meth:`contract_dense` and :meth:`evaluate`
+    close the cyclic trace directly with PyTorch operations.
+
+    TensorKrowch represents a TR as an :class:`~tensorkrowch.models.MPS` with
+    periodic boundaries. The model can be initialized directly from the cores;
+    their shapes identify the cyclic topology:
+
+    >>> cores = [torch.randn(2, 3, 4), torch.randn(4, 5, 2)]
+    >>> result = tk.decompositions.TRDecomposition(cores)
+    >>> mps = tk.models.MPS(tensors=result.cores)
+    >>> mps.boundary
+    'pbc'
+
+    Metrics and metadata remain attached to ``result`` and are not transferred
+    to the model. Pass ``parameterized=False`` when trainable parameter nodes
+    are not required. Clone the cores before construction if independent
+    tensor storage is required.
+
+    Batched TR cores should initialize
+    :class:`~tensorkrowch.models.MPSData` instead:
+
+    >>> batched_cores = [torch.randn(8, 2, 3, 4),
+    ...                  torch.randn(8, 4, 5, 2)]
+    >>> batched = tk.decompositions.TRDecomposition(
+    ...     batched_cores, n_batches=1)
+    >>> mps_data = tk.models.MPSData(tensors=batched.cores,
+    ...                              n_batches=batched.n_batches)
+
+    The MPSData form applies only when :attr:`n_batches` is positive.
+    """
+
+    _topology: ClassVar[str] = 'tr'
+
+    def _validate_cores(
+            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
+                           Optional[Tuple[int, ...]]]:
+        batch_shape = tuple(self.cores[0].shape[:self.n_batches])
+        rank = []
+        in_dim = []
+
+        for site, core in enumerate(self.cores):
+            if core.ndim != (self.n_batches + 3):
+                raise ValueError(
+                    'TR cores should have left rank, input and right rank '
+                    'dimensions')
+            if tuple(core.shape[:self.n_batches]) != batch_shape:
+                raise ValueError('All TR cores should have the same batch shape')
+            if site and (core.shape[-3] != rank[-1]):
+                raise ValueError('Adjacent TR ranks should match')
+            in_dim.append(core.shape[-2])
+            rank.append(core.shape[-1])
+
+        if self.cores[-1].shape[-1] != self.cores[0].shape[-3]:
+            raise ValueError('The last and first cyclic TR ranks should match')
+        return rank, batch_shape, tuple(in_dim), None
+
+    def _standard_cores(self) -> List[torch.Tensor]:
+        return list(self.cores)
+
+    def contract_dense(self) -> torch.Tensor:
+        """Contracts the TR into a dense tensor and closes the cyclic trace."""
+        result = self.cores[0]
+        in_dim = [self.cores[0].shape[-2]]
+        for core in self.cores[1:]:
+            initial_rank = result.shape[self.n_batches]
+            previous_rank = result.shape[-1]
+            result = result.reshape(
+                *self.batch_shape, initial_rank, -1, previous_rank)
+            result = torch.einsum(
+                '...apr,...rqb->...apqb', result, core)
+            in_dim.append(core.shape[-2])
+            result = result.reshape(
+                *self.batch_shape,
+                initial_rank,
+                *in_dim,
+                core.shape[-1])
+
+        return result.diagonal(dim1=self.n_batches, dim2=-1).sum(-1)
+
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        result = self._contract_open_chain(matrices)
+        return result.diagonal(dim1=-2, dim2=-1).sum(-1)
+
+
+@dataclass
+class _MatrixDecomposition1D(TensorDecomposition1D):
+    """Common evaluation and product-state application for 1D matrices."""
+
+    _family: ClassVar[str] = 'matrix'
+    _same_out_dim: bool = field(init=False, repr=False)  # Uniform output dims
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._same_out_dim = all(
+            dim == self.out_dim[0] for dim in self.out_dim[1:])
+
+    def __call__(
+            self,
+            inputs: StateInput,
+            out_samples: Optional[StateInput] = None,
+            n_batches: int = 1
+            ) -> Union[torch.Tensor, TensorDecomposition1D]:
+        """Applies the matrix or evaluates it when outputs are provided."""
+        if out_samples is None:
+            return self.apply(inputs, n_batches=n_batches)
+        return self.evaluate(inputs, out_samples, n_batches=n_batches)
+
+    def evaluate(self,
+                 in_samples: StateInput,
+                 out_samples: StateInput,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Evaluates entries at paired input and output configurations.
+
+        Both sample groups follow the discrete/embedded conventions of
+        :meth:`TTDecomposition.evaluate` and must share the same batch shape.
+        This is equivalent to evaluating fused matrix cores as a tensor-vector
+        decomposition on local tensor products of input and output vectors,
+        without materializing those products.
+        """
+        in_inputs, in_discrete, data_batch_shape = self._normalize_inputs(
+            in_samples, self.in_dim, self._same_in_dim, n_batches)
+        out_inputs, out_discrete, out_batch_shape = self._normalize_inputs(
+            out_samples, self.out_dim, self._same_out_dim, n_batches)
+        if out_batch_shape != data_batch_shape:
+            raise ValueError(
+                'Input and output samples should have the same batch shape')
+
+        matrices = self._entry_matrices(
+            in_inputs,
+            out_inputs,
+            in_discrete,
+            out_discrete,
+            data_batch_shape)
+        return self._contract_local_matrices(matrices)
+
+    def _entry_matrices(
+            self,
+            in_inputs: Sequence[torch.Tensor],
+            out_inputs: Sequence[torch.Tensor],
+            in_discrete: bool,
+            out_discrete: bool,
+            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
+        """Builds local matrices for paired matrix-entry evaluation."""
+        core_batch_size = int(torch.Size(self.batch_shape).numel())
+        data_batch_size = int(torch.Size(data_batch_shape).numel())
+        matrices = []
+
+        for core, in_input, out_input in zip(
+                self._operator_cores(), in_inputs, out_inputs):
+            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
+            core = core.reshape(
+                core_batch_size, left_rank, in_dim, right_rank, out_dim)
+
+            if in_discrete and out_discrete:
+                in_indices = in_input.reshape(data_batch_size).to(torch.long)
+                out_indices = out_input.reshape(data_batch_size).to(torch.long)
+                fused = in_indices * out_dim + out_indices
+                matrix = core.permute(0, 1, 3, 2, 4).reshape(
+                    core_batch_size, left_rank, right_rank, in_dim * out_dim)
+                matrix = matrix[..., fused].permute(0, 3, 1, 2)
+            elif in_discrete:
+                indices = in_input.reshape(data_batch_size).to(torch.long)
+                vectors = out_input.reshape(data_batch_size, out_dim)
+                selected = core.index_select(2, indices)
+                matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
+            elif out_discrete:
+                indices = out_input.reshape(data_batch_size).to(torch.long)
+                vectors = in_input.reshape(data_batch_size, in_dim)
+                selected = core.index_select(4, indices)
+                matrix = torch.einsum('clird,di->cdlr', selected, vectors)
+            else:
+                in_vectors = in_input.reshape(data_batch_size, in_dim)
+                out_vectors = out_input.reshape(data_batch_size, out_dim)
+                matrix = torch.einsum(
+                    'di,do,cliro->cdlr', in_vectors, out_vectors, core)
+
+            matrices.append(matrix.reshape(
+                *self.batch_shape,
+                *data_batch_shape,
+                left_rank,
+                right_rank))
+
+        return matrices
+
+    def apply(self,
+              inputs: StateInput,
+              n_batches: int = 1) -> TensorDecomposition1D:
+        """Applies the matrix to product inputs and returns a 1D result."""
+        site_inputs, discrete, data_batch_shape = self._normalize_inputs(
+            inputs, self.in_dim, self._same_in_dim, n_batches)
+        core_batch_size = int(torch.Size(self.batch_shape).numel())
+        data_batch_size = int(torch.Size(data_batch_shape).numel())
+        output_cores = []
+
+        for core, site_input in zip(self._operator_cores(), site_inputs):
+            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
+            core = core.reshape(
+                core_batch_size, left_rank, in_dim, right_rank, out_dim)
+            if discrete:
+                indices = site_input.reshape(data_batch_size).to(torch.long)
+                output_core = core.index_select(2, indices)
+                output_core = output_core.permute(0, 2, 1, 4, 3)
+            else:
+                vectors = site_input.reshape(data_batch_size, in_dim)
+                output_core = torch.einsum(
+                    'di,cliro->cdlor', vectors, core)
+            output_cores.append(output_core.reshape(
+                *self.batch_shape,
+                *data_batch_shape,
+                left_rank,
+                out_dim,
+                right_rank))
+
+        # NOTE: A future `apply_tt` could apply the matrix to a general TT
+        return self._build_applied_decomposition(
+            output_cores, self.n_batches + n_batches)
+
+    @abstractmethod
+    def _operator_cores(self) -> List[torch.Tensor]:
+        """Returns cores with left, input, right and output axes."""
+
+    @abstractmethod
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts entry-selected matrices with the topology closure."""
+
+    @abstractmethod
+    def _build_applied_decomposition(
+            self,
+            cores: List[torch.Tensor],
+            n_batches: int) -> TensorDecomposition1D:
+        """Builds the vector-like result produced by :meth:`apply`."""
+
+
+@dataclass
+class TTMDecomposition(_MatrixDecomposition1D):
     """Lightweight tensor train matrix decomposition with open boundaries.
 
     This result stores TTM cores, ranks, input/output dimensions, metrics and
@@ -669,14 +950,7 @@ class TTMDecomposition(TensorDecomposition):
     is required. TTM decomposition batches are currently unsupported.
     """
 
-    _family: ClassVar[str] = 'ttm'
     _topology: ClassVar[str] = 'ttm'
-    _same_out_dim: bool = field(init=False, repr=False)  # Uniform output dims
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self._same_out_dim = all(
-            dim == self.out_dim[0] for dim in self.out_dim[1:])
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -766,236 +1040,43 @@ class TTMDecomposition(TensorDecomposition):
         cores.append(self.cores[-1].unsqueeze(2))
         return cores
 
-    def __call__(
-            self,
-            inputs: StateInput,
-            out_samples: Optional[StateInput] = None,
-            n_batches: int = 1
-            ) -> Union[torch.Tensor, TTDecomposition]:
-        """Applies the TTM or evaluates it when output samples are provided."""
-        if out_samples is None:
-            return self.apply(inputs, n_batches=n_batches)
-        return self.evaluate(inputs, out_samples, n_batches=n_batches)
-
-    def evaluate(self,
-                 in_samples: StateInput,
-                 out_samples: StateInput,
-                 n_batches: int = 1) -> torch.Tensor:
-        """Evaluates TTM entries at paired input and output configurations.
-
-        Both sample groups follow the discrete/embedded conventions of
-        :meth:`TTDecomposition.evaluate` and must share the same batch shape.
-        This is equivalent to evaluating the fused TTM cores as a TT on local
-        tensor products of input and output vectors, without materializing
-        those products.
-        """
-        in_inputs, in_discrete, data_batch_shape = self._normalize_inputs(
-            in_samples, self.in_dim, self._same_in_dim, n_batches)
-        out_inputs, out_discrete, out_batch_shape = self._normalize_inputs(
-            out_samples, self.out_dim, self._same_out_dim, n_batches)
-        if out_batch_shape != data_batch_shape:
-            raise ValueError(
-                'Input and output samples should have the same batch shape')
-
-        matrices = self._entry_matrices(
-            in_inputs,
-            out_inputs,
-            in_discrete,
-            out_discrete,
-            data_batch_shape)
-        return self._contract_open_chain(matrices).squeeze(-1).squeeze(-1)
-
-    def _entry_matrices(
-            self,
-            in_inputs: Sequence[torch.Tensor],
-            out_inputs: Sequence[torch.Tensor],
-            in_discrete: bool,
-            out_discrete: bool,
-            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
-        """Builds local matrices for paired TTM entry evaluation."""
-        core_batch_size = int(torch.Size(self.batch_shape).numel())
-        data_batch_size = int(torch.Size(data_batch_shape).numel())
-        matrices = []
-
-        for core, in_input, out_input in zip(
-                self._operator_cores(), in_inputs, out_inputs):
-            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
-            core = core.reshape(
-                core_batch_size, left_rank, in_dim, right_rank, out_dim)
-
-            if in_discrete and out_discrete:
-                in_indices = in_input.reshape(data_batch_size).to(torch.long)
-                out_indices = out_input.reshape(data_batch_size).to(torch.long)
-                fused = in_indices * out_dim + out_indices
-                matrix = core.permute(0, 1, 3, 2, 4).reshape(
-                    core_batch_size, left_rank, right_rank, in_dim * out_dim)
-                matrix = matrix[..., fused].permute(0, 3, 1, 2)
-            elif in_discrete:
-                indices = in_input.reshape(data_batch_size).to(torch.long)
-                vectors = out_input.reshape(data_batch_size, out_dim)
-                selected = core.index_select(2, indices)
-                matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
-            elif out_discrete:
-                indices = out_input.reshape(data_batch_size).to(torch.long)
-                vectors = in_input.reshape(data_batch_size, in_dim)
-                selected = core.index_select(4, indices)
-                matrix = torch.einsum('clird,di->cdlr', selected, vectors)
-            else:
-                in_vectors = in_input.reshape(data_batch_size, in_dim)
-                out_vectors = out_input.reshape(data_batch_size, out_dim)
-                matrix = torch.einsum(
-                    'di,do,cliro->cdlr', in_vectors, out_vectors, core)
-
-            matrices.append(matrix.reshape(
-                *self.batch_shape,
-                *data_batch_shape,
-                left_rank,
-                right_rank))
-
-        return matrices
-
-    def apply(self,
-              inputs: StateInput,
-              n_batches: int = 1) -> TTDecomposition:
-        """Applies the TTM to product inputs and returns the resulting TT."""
-        site_inputs, discrete, data_batch_shape = self._normalize_inputs(
-            inputs, self.in_dim, self._same_in_dim, n_batches)
-        core_batch_size = int(torch.Size(self.batch_shape).numel())
-        data_batch_size = int(torch.Size(data_batch_shape).numel())
-        output_cores = []
-
-        for core, site_input in zip(self._operator_cores(), site_inputs):
-            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
-            core = core.reshape(
-                core_batch_size, left_rank, in_dim, right_rank, out_dim)
-            if discrete:
-                indices = site_input.reshape(data_batch_size).to(torch.long)
-                output_core = core.index_select(2, indices)
-                output_core = output_core.permute(0, 2, 1, 4, 3)
-            else:
-                vectors = site_input.reshape(data_batch_size, in_dim)
-                output_core = torch.einsum(
-                    'di,cliro->cdlor', vectors, core)
-            output_cores.append(output_core.reshape(
-                *self.batch_shape,
-                *data_batch_shape,
-                left_rank,
-                out_dim,
-                right_rank))
-
-        batch_shape = (*self.batch_shape, *data_batch_shape)
-        if len(output_cores) == 1:
-            output_cores[0] = output_cores[0].squeeze(-1).squeeze(-2)
-        else:
-            output_cores[0] = output_cores[0].squeeze(len(batch_shape))
-            output_cores[-1] = output_cores[-1].squeeze(-1)
-
-        # NOTE: A future `apply_tt` could apply the TTM to a general TT state
-        return TTDecomposition(
-            cores=output_cores,
-            n_batches=self.n_batches + n_batches,
-            metadata={'operation': 'ttm_apply'})
-
-
-@dataclass
-class TRDecomposition(_StateDecomposition):
-    """Lightweight tensor ring decomposition with cyclic boundaries.
-
-    This result stores raw TR cores, ranks, metrics and metadata, but it is not
-    itself a TensorKrowch graph. :meth:`contract_dense` and :meth:`evaluate`
-    close the cyclic trace directly with PyTorch operations.
-
-    TensorKrowch represents a TR as an :class:`~tensorkrowch.models.MPS` with
-    periodic boundaries. The model can be initialized directly from the cores;
-    their shapes identify the cyclic topology:
-
-    >>> cores = [torch.randn(2, 3, 4), torch.randn(4, 5, 2)]
-    >>> result = tk.decompositions.TRDecomposition(cores)
-    >>> mps = tk.models.MPS(tensors=result.cores)
-    >>> mps.boundary
-    'pbc'
-
-    Metrics and metadata remain attached to ``result`` and are not transferred
-    to the model. Pass ``parameterized=False`` when trainable parameter nodes
-    are not required. Clone the cores before construction if independent
-    tensor storage is required.
-
-    Batched TR cores should initialize
-    :class:`~tensorkrowch.models.MPSData` instead:
-
-    >>> batched_cores = [torch.randn(8, 2, 3, 4),
-    ...                  torch.randn(8, 4, 5, 2)]
-    >>> batched = tk.decompositions.TRDecomposition(
-    ...     batched_cores, n_batches=1)
-    >>> mps_data = tk.models.MPSData(tensors=batched.cores,
-    ...                              n_batches=batched.n_batches)
-
-    The MPSData form applies only when :attr:`n_batches` is positive.
-    """
-
-    _topology: ClassVar[str] = 'tr'
-
-    def _validate_cores(
-            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
-                           Optional[Tuple[int, ...]]]:
-        batch_shape = tuple(self.cores[0].shape[:self.n_batches])
-        rank = []
-        in_dim = []
-
-        for site, core in enumerate(self.cores):
-            if core.ndim != (self.n_batches + 3):
-                raise ValueError(
-                    'TR cores should have left rank, input and right rank '
-                    'dimensions')
-            if tuple(core.shape[:self.n_batches]) != batch_shape:
-                raise ValueError('All TR cores should have the same batch shape')
-            if site and (core.shape[-3] != rank[-1]):
-                raise ValueError('Adjacent TR ranks should match')
-            in_dim.append(core.shape[-2])
-            rank.append(core.shape[-1])
-
-        if self.cores[-1].shape[-1] != self.cores[0].shape[-3]:
-            raise ValueError('The last and first cyclic TR ranks should match')
-        return rank, batch_shape, tuple(in_dim), None
-
-    def _standard_cores(self) -> List[torch.Tensor]:
-        return list(self.cores)
-
-    def contract_dense(self) -> torch.Tensor:
-        """Contracts the TR into a dense tensor and closes the cyclic trace."""
-        result = self.cores[0]
-        in_dim = [self.cores[0].shape[-2]]
-        for core in self.cores[1:]:
-            initial_rank = result.shape[self.n_batches]
-            previous_rank = result.shape[-1]
-            result = result.reshape(
-                *self.batch_shape, initial_rank, -1, previous_rank)
-            result = torch.einsum(
-                '...apr,...rqb->...apqb', result, core)
-            in_dim.append(core.shape[-2])
-            result = result.reshape(
-                *self.batch_shape,
-                initial_rank,
-                *in_dim,
-                core.shape[-1])
-
-        return result.diagonal(dim1=self.n_batches, dim2=-1).sum(-1)
-
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         result = self._contract_open_chain(matrices)
-        return result.diagonal(dim1=-2, dim2=-1).sum(-1)
+        return result.squeeze(-1).squeeze(-1)
+
+    def _build_applied_decomposition(
+            self,
+            cores: List[torch.Tensor],
+            n_batches: int) -> TTDecomposition:
+        batch_shape = cores[0].shape[:n_batches]
+        if len(cores) == 1:
+            cores[0] = cores[0].squeeze(-1).squeeze(-2)
+        else:
+            cores[0] = cores[0].squeeze(len(batch_shape))
+            cores[-1] = cores[-1].squeeze(-1)
+
+        return TTDecomposition(
+            cores=cores,
+            n_batches=n_batches,
+            metadata={'operation': 'ttm_apply'})
+
+@dataclass
+class TRMDecomposition(_MatrixDecomposition1D):
+    """Placeholder for tensor ring matrix decomposition results."""
+
+    _topology: ClassVar[str] = 'trm'
 
 
-class _QuantizedTuckerDecomposition(TensorDecomposition):
+class _QuantizedTuckerDecomposition(TensorDecomposition1D):
     """Common two-level contraction for quantized Tucker results."""
 
-    _upper_type: ClassVar[Type[TensorDecomposition]]
+    _upper_type: ClassVar[Type[TensorDecomposition1D]]
     _family: ClassVar[str] = 'quantized_tucker'
 
     def __init__(
             self,
-            upper: TensorDecomposition,
+            upper: TensorDecomposition1D,
             factors: Sequence[TTDecomposition],
             layout,
             coordinate_map,
@@ -1269,7 +1350,7 @@ class _QuantizedTuckerDecomposition(TensorDecomposition):
                 upper_core.shape[-1]))
         return flat
 
-    def flatten(self) -> TensorDecomposition:
+    def flatten(self) -> TensorDecomposition1D:
         """Returns an explicit flat TT/TR over grouped local digit blocks."""
         standard = self._flat_standard_cores()
         if self._upper_type is TTDecomposition:
@@ -1299,13 +1380,13 @@ class _QuantizedTuckerDecomposition(TensorDecomposition):
         return self.flatten().norm()
 
     def normalized_overlap(
-            self, other: TensorDecomposition) -> torch.Tensor:
+            self, other: TensorDecomposition1D) -> torch.Tensor:
         if not isinstance(other, _QuantizedTuckerDecomposition):
             raise TypeError(
                 '`other` should be a quantized Tucker decomposition')
         return self.flatten().normalized_overlap(other.flatten())
 
-    def fidelity(self, other: TensorDecomposition) -> torch.Tensor:
+    def fidelity(self, other: TensorDecomposition1D) -> torch.Tensor:
         return self.normalized_overlap(other).abs().square()
 
     def to(self,
@@ -1404,11 +1485,28 @@ class QTRTuckerDecomposition(_QuantizedTuckerDecomposition):
         return state.diagonal(dim1=1, dim2=-1).sum(-1)
 
 
+class TensorDecomposition2D(TensorDecomposition, ABC):
+    """Abstract base reserved for two-dimensional decomposition results."""
+
+
+class PEPSDecomposition(TensorDecomposition2D):
+    """Placeholder for projected entangled-pair state results."""
+
+
+class PEPODecomposition(TensorDecomposition2D):
+    """Placeholder for projected entangled-pair operator results."""
+
+
 __all__ = [
     'TensorDecomposition',
+    'TensorDecomposition1D',
     'TTDecomposition',
-    'TTMDecomposition',
     'TRDecomposition',
+    'TTMDecomposition',
+    'TRMDecomposition',
     'QTTTuckerDecomposition',
     'QTRTuckerDecomposition',
+    'TensorDecomposition2D',
+    'PEPSDecomposition',
+    'PEPODecomposition',
 ]

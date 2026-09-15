@@ -10,6 +10,7 @@ import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tt as tt_module
 import tensorkrowch.decompositions.svd.ttm as ttm_module
+import tensorkrowch.decompositions.svd.trm as trm_module
 
 
 class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
@@ -17,8 +18,10 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
     def test_canonical_exports(self):
         assert tk.decompositions.TTSVD is tt_module.TTSVD
         assert tk.decompositions.TTMSVD is ttm_module.TTMSVD
+        assert tk.decompositions.TRMSVD is trm_module.TRMSVD
         assert tk.decompositions.tt_svd is tt_module.tt_svd
         assert tk.decompositions.ttm_svd is ttm_module.ttm_svd
+        assert tk.decompositions.trm_svd is trm_module.trm_svd
 
     def test_canonical_names_keep_observers_internal(self):
         tt_init = inspect.signature(tk.decompositions.TTSVD).parameters
@@ -27,15 +30,23 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
         ttm_init = inspect.signature(tk.decompositions.TTMSVD).parameters
         ttm_function = inspect.signature(
             tk.decompositions.ttm_svd).parameters
+        trm_init = inspect.signature(tk.decompositions.TRMSVD).parameters
+        trm_function = inspect.signature(
+            tk.decompositions.trm_svd).parameters
 
         assert 'out_device' in tt_init
         assert 'out_device' in tt_function
         assert {'in_dim', 'out_dim', 'out_device'} <= set(ttm_init)
         assert {'in_dim', 'out_dim', 'out_device'} <= set(ttm_function)
+        assert {'in_dim', 'out_dim', 'center', 'out_device'} <= set(trm_init)
+        assert {'in_dim', 'out_dim', 'center', 'out_device'} <= set(
+            trm_function)
         assert 'observer' not in inspect.signature(
             tk.decompositions.TTSVD.fit).parameters
         assert 'observer' not in inspect.signature(
             tk.decompositions.TTMSVD.fit).parameters
+        assert 'observer' not in inspect.signature(
+            tk.decompositions.TRMSVD.fit).parameters
         for name in ('DecompositionEvent', 'DecompositionObserver',
                      'ConsoleObserver', 'HistoryObserver'):
             assert not hasattr(tk.decompositions, name)

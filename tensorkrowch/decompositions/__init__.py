@@ -65,8 +65,9 @@ from tensorkrowch.decompositions.sources import (CallableTensorSource,
                                                  TensorSource,
                                                  TTTensorSource,
                                                  as_tensor_source)
-from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, tt_svd,
-                                             ttm_svd, tr_svd)
+from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, TRMSVD,
+                                             tt_svd, ttm_svd, tr_svd,
+                                             trm_svd)
 from tensorkrowch.decompositions.svd.tt import vec_to_mps
 from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
 from tensorkrowch.decompositions.sketching import (
@@ -202,9 +203,11 @@ __all__ = [
     'TTSVD',
     'TTMSVD',
     'TRSVD',
+    'TRMSVD',
     'tt_svd',
     'ttm_svd',
     'tr_svd',
+    'trm_svd',
     'vec_to_mps',
     'mat_to_mpo',
     'EvaluationView',

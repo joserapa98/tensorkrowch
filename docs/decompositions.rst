@@ -30,6 +30,14 @@ TR-SVD
 
 .. autofunction:: tr_svd
 
+TRM-SVD
+^^^^^^^
+
+.. autoclass:: TRMSVD
+   :members: fit
+
+.. autofunction:: trm_svd
+
 Lightweight results
 -------------------
 
@@ -40,6 +48,9 @@ Lightweight results
    :members:
 
 .. autoclass:: TRDecomposition
+   :members:
+
+.. autoclass:: TRMDecomposition
    :members:
 
 Compatibility aliases

@@ -62,14 +62,14 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         for result_type in [result_types.TensorDecomposition,
                             result_types.TensorDecomposition1D,
                             result_types.TensorDecomposition2D,
-                            result_types.TRMDecomposition,
                             result_types.PEPSDecomposition,
                             result_types.PEPODecomposition]:
             assert inspect.isabstract(result_type)
 
         for result_type in [result_types.TTDecomposition,
                             result_types.TRDecomposition,
-                            result_types.TTMDecomposition]:
+                            result_types.TTMDecomposition,
+                            result_types.TRMDecomposition]:
             assert not inspect.isabstract(result_type)
 
     def test_boolean_n_batches_is_rejected(self):
@@ -140,6 +140,187 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         expected = torch.einsum('xaib,xbja->xij', *cores)
         assert result.batch_shape == (3,)
         assert torch.allclose(result.contract_dense(), expected)
+
+    def test_trm_validation_rank_and_dense_contraction(self):
+        generator = torch.Generator().manual_seed(3)
+        cores = [
+            torch.randn(2, 3, 4, 5, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(4, 6, 2, 7, dtype=torch.float64,
+                        generator=generator),
+        ]
+        result = tk.decompositions.TRMDecomposition(cores)
+
+        expected = torch.einsum('aibo,bjap->iojp', *cores)
+        assert result.rank == [4, 2]
+        assert result.in_dim == (3, 6)
+        assert result.out_dim == (5, 7)
+        assert torch.allclose(result.contract_dense(), expected)
+        converted = result.to(dtype=torch.float32, copy=True)
+        assert converted is not result
+        assert converted.dtype == torch.float32
+        assert converted.rank == result.rank
+
+    def test_batched_trm_dense_contraction(self):
+        generator = torch.Generator().manual_seed(4)
+        cores = [
+            torch.randn(3, 2, 3, 4, 5, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(3, 4, 6, 2, 7, dtype=torch.float64,
+                        generator=generator),
+        ]
+        result = tk.decompositions.TRMDecomposition(cores, n_batches=1)
+
+        expected = torch.einsum('caibo,cbjap->ciojp', *cores)
+        assert result.batch_shape == (3,)
+        assert torch.allclose(result.contract_dense(), expected)
+
+    def test_one_site_trm_closes_cyclic_rank(self):
+        core = torch.arange(24., dtype=torch.float64).reshape(2, 3, 2, 2)
+        result = tk.decompositions.TRMDecomposition([core])
+        expected = torch.einsum('aiao->io', core)
+
+        assert result.rank == [2]
+        assert result.in_dim == (3,)
+        assert result.out_dim == (2,)
+        assert torch.equal(result.contract_dense(), expected)
+
+        in_samples = torch.tensor([[0], [2]])
+        out_samples = torch.tensor([[1], [0]])
+        assert torch.equal(
+            result.evaluate(in_samples, out_samples),
+            expected[in_samples[:, 0], out_samples[:, 0]])
+        assert torch.equal(
+            result.apply(in_samples).contract_dense(),
+            expected[in_samples[:, 0]])
+
+    def test_trm_evaluate_and_apply_match_dense_contraction(self):
+        generator = torch.Generator().manual_seed(5)
+        cores = [
+            torch.randn(2, 3, 2, 4, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(2, 5, 2, 6, dtype=torch.float64,
+                        generator=generator),
+        ]
+        result = tk.decompositions.TRMDecomposition(cores)
+        in_samples = torch.tensor([[0, 1], [2, 4]])
+        out_samples = torch.tensor([[1, 3], [3, 5]])
+        dense = result.contract_dense()
+
+        expected_entries = torch.stack([
+            dense[0, 1, 1, 3],
+            dense[2, 3, 4, 5],
+        ])
+        assert torch.allclose(
+            result.evaluate(in_samples, out_samples), expected_entries)
+
+        applied = result.apply(in_samples)
+        expected_applied = torch.stack([
+            dense[0, :, 1, :],
+            dense[2, :, 4, :],
+        ])
+        assert isinstance(applied, tk.decompositions.TRDecomposition)
+        assert applied.n_batches == 1
+        assert torch.allclose(applied.contract_dense(), expected_applied)
+
+    def test_trm_embedded_evaluate_and_apply_match_dense_contraction(self):
+        generator = torch.Generator().manual_seed(6)
+        cores = [
+            torch.randn(2, 3, 2, 4, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(2, 5, 2, 6, dtype=torch.float64,
+                        generator=generator),
+        ]
+        result = tk.decompositions.TRMDecomposition(cores)
+        in_vectors = [
+            torch.randn(7, dim, dtype=torch.float64, generator=generator)
+            for dim in result.in_dim
+        ]
+        out_vectors = [
+            torch.randn(7, dim, dtype=torch.float64, generator=generator)
+            for dim in result.out_dim
+        ]
+        dense = result.contract_dense()
+
+        expected_entries = torch.einsum(
+            'bi,bo,bj,bp,iojp->b',
+            in_vectors[0],
+            out_vectors[0],
+            in_vectors[1],
+            out_vectors[1],
+            dense)
+        assert torch.allclose(
+            result.evaluate(in_vectors, out_vectors), expected_entries)
+
+        expected_applied = torch.einsum(
+            'bi,bj,iojp->bop', in_vectors[0], in_vectors[1], dense)
+        applied = result.apply(in_vectors)
+        assert torch.allclose(applied.contract_dense(), expected_applied)
+
+    def test_trm_keeps_core_and_data_batches_separate(self):
+        generator = torch.Generator().manual_seed(7)
+        cores = [
+            torch.randn(2, 2, 3, 2, 4, dtype=torch.float64,
+                        generator=generator),
+            torch.randn(2, 2, 5, 2, 6, dtype=torch.float64,
+                        generator=generator),
+        ]
+        result = tk.decompositions.TRMDecomposition(cores, n_batches=1)
+        in_samples = torch.stack([
+            torch.randint(0, dim, (3, 4), generator=generator)
+            for dim in result.in_dim
+        ], dim=-1)
+        out_samples = torch.stack([
+            torch.randint(0, dim, (3, 4), generator=generator)
+            for dim in result.out_dim
+        ], dim=-1)
+        dense = result.contract_dense()
+
+        expected_entries = torch.stack([
+            dense[batch][
+                in_samples[..., 0], out_samples[..., 0],
+                in_samples[..., 1], out_samples[..., 1]]
+            for batch in range(dense.shape[0])
+        ])
+        assert torch.allclose(
+            result.evaluate(
+                in_samples, out_samples, n_batches=2),
+            expected_entries)
+
+        expected_applied = torch.stack([
+            torch.stack([
+                dense[batch][
+                    in_samples[i, j, 0], :, in_samples[i, j, 1], :]
+                for i in range(in_samples.shape[0])
+                for j in range(in_samples.shape[1])
+            ]).reshape(*in_samples.shape[:2], *result.out_dim)
+            for batch in range(dense.shape[0])
+        ])
+        applied = result.apply(in_samples, n_batches=2)
+        assert applied.n_batches == 3
+        assert applied.batch_shape == (2, 3, 4)
+        assert torch.allclose(applied.contract_dense(), expected_applied)
+
+    @pytest.mark.parametrize(
+        'cores, n_batches, match',
+        [
+            ([torch.ones(2, 3, 2)], 0,
+             'left rank, input, right rank and output'),
+            ([torch.ones(2, 3, 4, 5),
+              torch.ones(3, 6, 2, 7)], 0,
+             'Adjacent TRM ranks should match'),
+            ([torch.ones(2, 3, 4, 5),
+              torch.ones(4, 6, 3, 7)], 0,
+             'last and first cyclic TRM ranks should match'),
+            ([torch.ones(2, 2, 3, 4, 5),
+              torch.ones(3, 4, 6, 2, 7)], 1,
+             'same batch shape'),
+        ],
+    )
+    def test_trm_validation_errors(self, cores, n_batches, match):
+        with pytest.raises(ValueError, match=match):
+            tk.decompositions.TRMDecomposition(
+                cores, n_batches=n_batches)
 
     @pytest.mark.parametrize(
         'result_type, cores, boundary',
@@ -319,6 +500,21 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert mpo.boundary == 'obc'
         assert mpo.in_dim == list(result.input_dim)
         assert mpo.out_dim == list(result.output_dim)
+        assert mpo.bond_dim == result.rank
+        assert all(torch.allclose(model_core, result_core)
+                   for model_core, result_core
+                   in zip(mpo.tensors, result.cores))
+
+    def test_trm_result_initializes_periodic_mpo(self):
+        result = tk.decompositions.TRMSVD(
+            torch.randn(2, 3, 4, 5), out_device=None).fit(rank=2)
+        mpo = tk.models.MPO(
+            tensors=result.cores,
+            parameterized=False)
+
+        assert mpo.boundary == 'pbc'
+        assert mpo.in_dim == list(result.in_dim)
+        assert mpo.out_dim == list(result.out_dim)
         assert mpo.bond_dim == result.rank
         assert all(torch.allclose(model_core, result_core)
                    for model_core, result_core

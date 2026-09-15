@@ -224,6 +224,160 @@ class TRSVD:
         ]
         return replace(timing, name=name, children=children)
 
+    def _fit_validated(
+            self,
+            center: int,
+            truncation: _TruncationSpec,
+            renormalize: bool,
+            collect_metrics: bool,
+            progress: Optional[_SVDProgress] = None) -> TRDecomposition:
+        """Runs the cyclic SVD kernel from already validated fit options."""
+        rank_policy = self._resolve_rank_policy(rank=truncation.rank)
+        initial_truncation = (
+            truncation if rank_policy.initial_cap == truncation.rank else
+            replace(truncation, rank=rank_policy.initial_cap))
+        in_dim = tuple(self.tensor.shape)
+
+        total_timer_context = (
+            self._runtime.timer() if collect_metrics else nullcontext())
+        with total_timer_context as total_timer:
+            tensor = self._runtime.prepare(self.tensor)
+            left_size = prod(in_dim[:center])
+            right_size = prod(in_dim[center:])
+            matrix = tensor.reshape(left_size, right_size)
+            initial_result = TTSVD(
+                matrix,
+                out_device=None)._fit_validated(
+                    truncation=initial_truncation,
+                    renormalize=renormalize,
+                    collect_metrics=collect_metrics)
+            selected_rank = initial_result.rank[0]
+
+            cycle_rank, center_rank = self._split_cycle_rank(
+                selected_rank=selected_rank,
+                rank_cap=rank_policy.rank_cap)
+            initial_capacity = cycle_rank * center_rank
+            initial_padding = initial_capacity - selected_rank
+
+            left_factor, right_factor = initial_result.cores
+            initial_metrics = (
+                initial_result.metrics if collect_metrics else None)
+            del initial_result
+
+            if progress is not None:
+                initial_record = initial_metrics.truncations[0]
+                initial_timing = initial_metrics.timings[0]
+                progress.observer.emit(DecompositionEvent(
+                    name='bipartition_complete',
+                    phase=progress.phase,
+                    elapsed=initial_timing.elapsed,
+                    values={
+                        'blocks': (
+                            tuple(range(1, center + 1)),
+                            tuple(range(center + 1, len(in_dim) + 1))),
+                        'full_rank': initial_record.full_rank,
+                        'selected_rank': selected_rank,
+                        'cycle_rank': cycle_rank,
+                        'center_rank': center_rank,
+                        'absolute_error': initial_record.local_abs_error,
+                        'relative_error': initial_record.local_rel_error,
+                    }))
+            if initial_padding:
+                left_factor = torch.cat([
+                    left_factor,
+                    left_factor.new_zeros(
+                        left_factor.shape[0], initial_padding),
+                ], dim=-1)
+                right_factor = torch.cat([
+                    right_factor,
+                    right_factor.new_zeros(
+                        initial_padding, right_factor.shape[1]),
+                ], dim=0)
+
+            left_subchain = left_factor.reshape(
+                *in_dim[:center], cycle_rank, center_rank)
+            left_subchain = left_subchain.movedim(-2, 0)
+            right_subchain = right_factor.reshape(
+                cycle_rank, center_rank, *in_dim[center:])
+            right_subchain = right_subchain.movedim(0, -1)
+
+            left_progress = (
+                None if progress is None else replace(
+                    progress,
+                    subphase='left_subchain'))
+            right_progress = (
+                None if progress is None else replace(
+                    progress,
+                    site_offset=center,
+                    subphase='right_subchain'))
+            left_cores, left_metrics = self._decompose_subchain(
+                subchain=left_subchain,
+                in_dim=in_dim[:center],
+                truncation=truncation,
+                renormalize=renormalize,
+                collect_metrics=collect_metrics,
+                progress=left_progress)
+            right_cores, right_metrics = self._decompose_subchain(
+                subchain=right_subchain,
+                in_dim=in_dim[center:],
+                truncation=truncation,
+                renormalize=renormalize,
+                collect_metrics=collect_metrics,
+                progress=right_progress)
+
+        metrics = DecompositionMetrics()
+        if collect_metrics:
+            initial_records = self._phase_truncations(
+                initial_metrics,
+                phase='initial_bipartition',
+                site_offset=center - 1)
+            left_records = (
+                [] if left_metrics is None else self._phase_truncations(
+                    left_metrics,
+                    phase='left_subchain',
+                    site_offset=0))
+            right_records = (
+                [] if right_metrics is None else self._phase_truncations(
+                    right_metrics,
+                    phase='right_subchain',
+                    site_offset=center))
+            metrics.truncations.extend(
+                left_records + initial_records + right_records)
+
+            phase_timings = [
+                self._phase_timing(
+                    initial_metrics, 'initial_bipartition', center - 1),
+            ]
+            if left_metrics is not None:
+                phase_timings.append(self._phase_timing(
+                    left_metrics, 'left_subchain', 0))
+            if right_metrics is not None:
+                phase_timings.append(self._phase_timing(
+                    right_metrics, 'right_subchain', center))
+            metrics.timings.append(TimingRecord(
+                name='fit',
+                elapsed=total_timer.elapsed,
+                children=phase_timings))
+            if initial_padding:
+                metrics.warnings.append(
+                    f'Initial SVD rank {selected_rank} uses capacity '
+                    f'{initial_capacity} with {initial_padding} structural '
+                    'zero dimensions')
+            metrics.warnings.append(
+                'Cyclic SVD truncation records are local diagnostics and are '
+                'not combined into a global reconstruction bound')
+
+        return TRDecomposition(
+            cores=left_cores + right_cores,
+            metrics=metrics,
+            metadata={
+                'algorithm': 'tr_svd',
+                'center': center,
+                'rank_mode': rank_policy.mode,
+                'renormalize': renormalize,
+                'initial_padding': initial_padding,
+            })
+
     def fit(self,
             center: Optional[int] = None,
             rank: _Rank = None,
@@ -350,10 +504,6 @@ class TRSVD:
             center = self.center
         else:
             self._validate_center(center, self.tensor.ndim)
-        rank_policy = self._resolve_rank_policy(rank=truncation.rank)
-        initial_truncation = (
-            truncation if rank_policy.initial_cap == truncation.rank else
-            replace(truncation, rank=rank_policy.initial_cap))
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
@@ -369,156 +519,28 @@ class TRSVD:
                     'sites': len(in_dim),
                     'in_dim': in_dim,
                     'center': center,
-                    'rank_mode': rank_policy.mode,
+                    'rank_mode': (
+                        'discovery' if truncation.rank is None else 'shared'),
                     'renormalize': renormalize,
                 }))
-
-        total_timer_context = (
-            self._runtime.timer() if collect_metrics else nullcontext())
-        with total_timer_context as total_timer:
-            tensor = self._runtime.prepare(self.tensor)
-            left_size = prod(in_dim[:center])
-            right_size = prod(in_dim[center:])
-            matrix = tensor.reshape(left_size, right_size)
-            initial_result = TTSVD(
-                matrix,
-                out_device=None)._fit_validated(
-                    truncation=initial_truncation,
-                    renormalize=renormalize,
-                    collect_metrics=collect_metrics)
-            selected_rank = initial_result.rank[0]
-
-            cycle_rank, center_rank = self._split_cycle_rank(
-                selected_rank=selected_rank,
-                rank_cap=rank_policy.rank_cap)
-            initial_capacity = cycle_rank * center_rank
-            initial_padding = initial_capacity - selected_rank
-
-            left_factor, right_factor = initial_result.cores
-            initial_metrics = (
-                initial_result.metrics if collect_metrics else None)
-            del initial_result
-
-            if fit_observer is not None:
-                initial_record = initial_metrics.truncations[0]
-                initial_timing = initial_metrics.timings[0]
-                fit_observer.emit(DecompositionEvent(
-                    name='bipartition_complete',
-                    phase='TR-SVD',
-                    elapsed=initial_timing.elapsed,
-                    values={
-                        'blocks': (
-                            tuple(range(1, center + 1)),
-                            tuple(range(center + 1, len(in_dim) + 1))),
-                        'full_rank': initial_record.full_rank,
-                        'selected_rank': selected_rank,
-                        'cycle_rank': cycle_rank,
-                        'center_rank': center_rank,
-                        'absolute_error': (
-                            initial_record.local_abs_error),
-                        'relative_error': (
-                            initial_record.local_rel_error),
-                    }))
-            if initial_padding:
-                left_factor = torch.cat([
-                    left_factor,
-                    left_factor.new_zeros(
-                        left_factor.shape[0], initial_padding),
-                ], dim=-1)
-                right_factor = torch.cat([
-                    right_factor,
-                    right_factor.new_zeros(
-                        initial_padding, right_factor.shape[1]),
-                ], dim=0)
-
-            left_subchain = left_factor.reshape(
-                *in_dim[:center], cycle_rank, center_rank)
-            left_subchain = left_subchain.movedim(-2, 0)
-            right_subchain = right_factor.reshape(
-                cycle_rank, center_rank, *in_dim[center:])
-            right_subchain = right_subchain.movedim(0, -1)
-
-            left_cores, left_metrics = self._decompose_subchain(
-                subchain=left_subchain,
-                in_dim=in_dim[:center],
-                truncation=truncation,
-                renormalize=renormalize,
-                collect_metrics=collect_metrics,
-                progress=(
-                    _SVDProgress(
-                        observer=fit_observer,
-                        phase='TR-SVD',
-                        subphase='left_subchain')
-                    if fit_observer is not None else None))
-            right_cores, right_metrics = self._decompose_subchain(
-                subchain=right_subchain,
-                in_dim=in_dim[center:],
-                truncation=truncation,
-                renormalize=renormalize,
-                collect_metrics=collect_metrics,
-                progress=(
-                    _SVDProgress(
-                        observer=fit_observer,
-                        phase='TR-SVD',
-                        site_offset=center,
-                        subphase='right_subchain')
-                    if fit_observer is not None else None))
-
-        metrics = DecompositionMetrics()
-        if collect_metrics:
-            initial_records = self._phase_truncations(
-                initial_metrics,
-                phase='initial_bipartition',
-                site_offset=center - 1)
-            left_records = (
-                [] if left_metrics is None else self._phase_truncations(
-                    left_metrics,
-                    phase='left_subchain',
-                    site_offset=0))
-            right_records = (
-                [] if right_metrics is None else self._phase_truncations(
-                    right_metrics,
-                    phase='right_subchain',
-                    site_offset=center))
-            metrics.truncations.extend(
-                left_records + initial_records + right_records)
-
-            phase_timings = [
-                self._phase_timing(
-                    initial_metrics, 'initial_bipartition', center - 1),
-            ]
-            if left_metrics is not None:
-                phase_timings.append(self._phase_timing(
-                    left_metrics, 'left_subchain', 0))
-            if right_metrics is not None:
-                phase_timings.append(self._phase_timing(
-                    right_metrics, 'right_subchain', center))
-            metrics.timings.append(TimingRecord(
-                name='fit',
-                elapsed=total_timer.elapsed,
-                children=phase_timings))
-            if initial_padding:
-                metrics.warnings.append(
-                    f'Initial SVD rank {selected_rank} uses capacity '
-                    f'{initial_capacity} with {initial_padding} structural '
-                    'zero '
-                    'dimensions')
-            metrics.warnings.append(
-                'TR-SVD truncation records are local diagnostics and are not '
-                'combined into a global reconstruction bound')
-
-        result = TRDecomposition(
-            cores=left_cores + right_cores,
-            metrics=metrics,
-            metadata={
-                'algorithm': 'tr_svd',
-                'center': center,
-                'rank_mode': rank_policy.mode,
-                'renormalize': renormalize,
-                'initial_padding': initial_padding,
-            })
+        progress = (
+            None if fit_observer is None else _SVDProgress(
+                observer=fit_observer,
+                phase='TR-SVD'))
+        result = self._fit_validated(
+            center=center,
+            truncation=truncation,
+            renormalize=renormalize,
+            collect_metrics=collect_metrics,
+            progress=progress)
 
         if fit_observer is not None:
+            initial_padding = result.metadata['initial_padding']
+            cycle_rank = result.rank[-1]
+            center_rank = result.rank[center - 1]
+            initial_capacity = cycle_rank * center_rank
+            selected_rank = initial_capacity - initial_padding
+            timing = result.metrics.timings[0]
             approximation = result.contract_dense()
             target = self.tensor.to(
                 device=approximation.device, dtype=approximation.dtype)
@@ -538,7 +560,7 @@ class TRSVD:
                     'initial_padding': initial_padding,
                     'absolute_error': abs_error,
                     'relative_error': rel_error,
-                    'elapsed': total_timer.elapsed,
+                    'elapsed': timing.elapsed,
                 }))
             for site, core in enumerate(result.cores):
                 fit_observer.emit(DecompositionEvent(

@@ -191,6 +191,34 @@ class TensorDecomposition1D(TensorDecomposition):
     def contract_dense(self) -> torch.Tensor:
         """Contracts all cores into a dense tensor."""
 
+    def to(self,
+           device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None,
+           copy: bool = False) -> 'TensorDecomposition1D':
+        """Returns this result on another device or dtype.
+
+        ``copy`` has the same meaning as in :meth:`torch.Tensor.to`. If no core
+        needs conversion and ``copy=False``, this result is returned unchanged.
+        """
+        if (dtype is not None) and (not isinstance(dtype, torch.dtype)):
+            raise TypeError('`dtype` should be torch.dtype type')
+        if not isinstance(copy, bool):
+            raise TypeError('`copy` should be bool type')
+
+        target_device = None if device is None else torch.device(device)
+        cores = [
+            core.to(device=target_device, dtype=dtype, copy=copy)
+            for core in self.cores
+        ]
+        if not copy and all(new is old
+                            for new, old in zip(cores, self.cores)):
+            return self
+        return replace(self, cores=cores)
+
+    def cpu(self) -> 'TensorDecomposition1D':
+        """Returns this result with all cores stored on CPU."""
+        return self.to(device='cpu')
+
     def _normalize_inputs(
             self,
             inputs: StateInput,
@@ -290,34 +318,6 @@ class TensorDecomposition1D(TensorDecomposition):
         for matrix in matrices[1:]:
             result = result @ matrix
         return result
-
-    def to(self,
-           device: Optional[Union[str, torch.device]] = None,
-           dtype: Optional[torch.dtype] = None,
-           copy: bool = False) -> 'TensorDecomposition1D':
-        """Returns this result on another device or dtype.
-
-        ``copy`` has the same meaning as in :meth:`torch.Tensor.to`. If no core
-        needs conversion and ``copy=False``, this result is returned unchanged.
-        """
-        if (dtype is not None) and (not isinstance(dtype, torch.dtype)):
-            raise TypeError('`dtype` should be torch.dtype type')
-        if not isinstance(copy, bool):
-            raise TypeError('`copy` should be bool type')
-
-        target_device = None if device is None else torch.device(device)
-        cores = [
-            core.to(device=target_device, dtype=dtype, copy=copy)
-            for core in self.cores
-        ]
-        if not copy and all(new is old
-                            for new, old in zip(cores, self.cores)):
-            return self
-        return replace(self, cores=cores)
-
-    def cpu(self) -> 'TensorDecomposition1D':
-        """Returns this result with all cores stored on CPU."""
-        return self.to(device='cpu')
 
     def _check_overlap_compatibility(
             self, other: 'TensorDecomposition1D') -> None:
@@ -449,28 +449,6 @@ class _VectorDecomposition1D(TensorDecomposition1D):
         """Calls :meth:`evaluate`."""
         return self.evaluate(inputs, n_batches=n_batches)
 
-    def evaluate(self,
-                 inputs: StateInput,
-                 n_batches: int = 1) -> torch.Tensor:
-        """Evaluates the decomposition on indices or embedded input vectors.
-
-        A tensor of discrete indices has shape ``(*batch, n_sites)``. A tensor
-        of embedded inputs requires uniform input dimensions and has shape
-        ``(*batch, n_sites, in_dim)``. A sequence may instead contain one
-        index tensor of shape ``(*batch,)`` or one embedded tensor of shape
-        ``(*batch, in_dim[site])`` per site.
-
-        ``n_batches`` describes the leading batch dimensions of ``inputs``;
-        :attr:`n_batches` describes independent batch dimensions stored in the
-        cores. Both groups are preserved in the returned tensor, with core
-        batches followed by input batches.
-        """
-        site_inputs, discrete, data_batch_shape = self._normalize_inputs(
-            inputs, self.in_dim, self._same_in_dim, n_batches)
-        matrices = self._local_matrices(
-            site_inputs, discrete, data_batch_shape)
-        return self._contract_local_matrices(matrices)
-
     def _local_matrices(
             self,
             site_inputs: Sequence[torch.Tensor],
@@ -500,6 +478,28 @@ class _VectorDecomposition1D(TensorDecomposition1D):
                 right_rank))
 
         return matrices
+
+    def evaluate(self,
+                 inputs: StateInput,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Evaluates the decomposition on indices or embedded input vectors.
+
+        A tensor of discrete indices has shape ``(*batch, n_sites)``. A tensor
+        of embedded inputs requires uniform input dimensions and has shape
+        ``(*batch, n_sites, in_dim)``. A sequence may instead contain one
+        index tensor of shape ``(*batch,)`` or one embedded tensor of shape
+        ``(*batch, in_dim[site])`` per site.
+
+        ``n_batches`` describes the leading batch dimensions of ``inputs``;
+        :attr:`n_batches` describes independent batch dimensions stored in the
+        cores. Both groups are preserved in the returned tensor, with core
+        batches followed by input batches.
+        """
+        site_inputs, discrete, data_batch_shape = self._normalize_inputs(
+            inputs, self.in_dim, self._same_in_dim, n_batches)
+        matrices = self._local_matrices(
+            site_inputs, discrete, data_batch_shape)
+        return self._contract_local_matrices(matrices)
 
     def error(self,
               function: Callable[..., torch.Tensor],
@@ -798,33 +798,21 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
             return self.apply(inputs, n_batches=n_batches)
         return self.evaluate(inputs, out_samples, n_batches=n_batches)
 
-    def evaluate(self,
-                 in_samples: StateInput,
-                 out_samples: StateInput,
-                 n_batches: int = 1) -> torch.Tensor:
-        """Evaluates entries at paired input and output configurations.
+    @abstractmethod
+    def _operator_cores(self) -> List[torch.Tensor]:
+        """Returns cores with left, input, right and output axes."""
 
-        Both sample groups follow the discrete/embedded conventions of
-        :meth:`TTDecomposition.evaluate` and must share the same batch shape.
-        This is equivalent to evaluating fused matrix cores as a tensor-vector
-        decomposition on local tensor products of input and output vectors,
-        without materializing those products.
-        """
-        in_inputs, in_discrete, data_batch_shape = self._normalize_inputs(
-            in_samples, self.in_dim, self._same_in_dim, n_batches)
-        out_inputs, out_discrete, out_batch_shape = self._normalize_inputs(
-            out_samples, self.out_dim, self._same_out_dim, n_batches)
-        if out_batch_shape != data_batch_shape:
-            raise ValueError(
-                'Input and output samples should have the same batch shape')
+    @abstractmethod
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts entry-selected matrices with the topology closure."""
 
-        matrices = self._entry_matrices(
-            in_inputs,
-            out_inputs,
-            in_discrete,
-            out_discrete,
-            data_batch_shape)
-        return self._contract_local_matrices(matrices)
+    @abstractmethod
+    def _build_applied_decomposition(
+            self,
+            cores: List[torch.Tensor],
+            n_batches: int) -> TensorDecomposition1D:
+        """Builds the vector-like result produced by :meth:`apply`."""
 
     def _entry_matrices(
             self,
@@ -875,6 +863,34 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
 
         return matrices
 
+    def evaluate(self,
+                 in_samples: StateInput,
+                 out_samples: StateInput,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Evaluates entries at paired input and output configurations.
+
+        Both sample groups follow the discrete/embedded conventions of
+        :meth:`TTDecomposition.evaluate` and must share the same batch shape.
+        This is equivalent to evaluating fused matrix cores as a tensor-vector
+        decomposition on local tensor products of input and output vectors,
+        without materializing those products.
+        """
+        in_inputs, in_discrete, data_batch_shape = self._normalize_inputs(
+            in_samples, self.in_dim, self._same_in_dim, n_batches)
+        out_inputs, out_discrete, out_batch_shape = self._normalize_inputs(
+            out_samples, self.out_dim, self._same_out_dim, n_batches)
+        if out_batch_shape != data_batch_shape:
+            raise ValueError(
+                'Input and output samples should have the same batch shape')
+
+        matrices = self._entry_matrices(
+            in_inputs,
+            out_inputs,
+            in_discrete,
+            out_discrete,
+            data_batch_shape)
+        return self._contract_local_matrices(matrices)
+
     def apply(self,
               inputs: StateInput,
               n_batches: int = 1) -> TensorDecomposition1D:
@@ -907,22 +923,6 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
         # NOTE: A future `apply_tt` could apply the matrix to a general TT
         return self._build_applied_decomposition(
             output_cores, self.n_batches + n_batches)
-
-    @abstractmethod
-    def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns cores with left, input, right and output axes."""
-
-    @abstractmethod
-    def _contract_local_matrices(
-            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
-        """Contracts entry-selected matrices with the topology closure."""
-
-    @abstractmethod
-    def _build_applied_decomposition(
-            self,
-            cores: List[torch.Tensor],
-            n_batches: int) -> TensorDecomposition1D:
-        """Builds the vector-like result produced by :meth:`apply`."""
 
 
 @dataclass
@@ -1019,6 +1019,16 @@ class TTMDecomposition(_MatrixDecomposition1D):
         cores.append(last.reshape(last.shape[0], -1, 1))
         return cores
 
+    def _operator_cores(self) -> List[torch.Tensor]:
+        """Returns cores with separate left, input, right and output axes."""
+        if len(self.cores) == 1:
+            return [self.cores[0].unsqueeze(0).unsqueeze(2)]
+
+        cores = [self.cores[0].unsqueeze(0)]
+        cores.extend(self.cores[1:-1])
+        cores.append(self.cores[-1].unsqueeze(2))
+        return cores
+
     def contract_dense(self) -> torch.Tensor:
         """Contracts the TTM into interleaved input/output dimensions."""
         if len(self.cores) == 1:
@@ -1029,16 +1039,6 @@ class TTMDecomposition(_MatrixDecomposition1D):
             core = core.permute(0, 1, 3, 2)
             result = torch.tensordot(result, core, dims=([-1], [0]))
         return torch.tensordot(result, self.cores[-1], dims=([-1], [0]))
-
-    def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns cores with separate left, input, right and output axes."""
-        if len(self.cores) == 1:
-            return [self.cores[0].unsqueeze(0).unsqueeze(2)]
-
-        cores = [self.cores[0].unsqueeze(0)]
-        cores.extend(self.cores[1:-1])
-        cores.append(self.cores[-1].unsqueeze(2))
-        return cores
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
@@ -1128,6 +1128,10 @@ class TRMDecomposition(_MatrixDecomposition1D):
                 core.shape[-1]))
         return cores
 
+    def _operator_cores(self) -> List[torch.Tensor]:
+        """Returns cores with separate left, input, right and output axes."""
+        return list(self.cores)
+
     def contract_dense(self) -> torch.Tensor:
         """Contracts the TRM into interleaved input/output dimensions."""
         result = self.cores[0].movedim(-1, -2)
@@ -1148,10 +1152,6 @@ class TRMDecomposition(_MatrixDecomposition1D):
 
         return result.diagonal(
             dim1=self.n_batches, dim2=-1).sum(-1)
-
-    def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns cores with separate left, input, right and output axes."""
-        return list(self.cores)
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:

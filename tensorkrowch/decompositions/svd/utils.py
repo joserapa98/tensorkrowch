@@ -1,18 +1,65 @@
 """
 This script contains:
 
+    Internal SVD progress class:
+        * _SVDProgress
+
     Internal SVD numerical helpers:
         * _tensor_norm_components
         * _log_tensor_norm
         * _normalize_tensor
 """
 
+from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.decompositions.metrics import TruncationRecord
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   DecompositionObserver)
+
 
 _Dimension = Optional[Union[int, Sequence[int]]]
+
+
+@dataclass(frozen=True)
+class _SVDProgress:
+    """Emits one live event for each completed SVD cut."""
+
+    observer: DecompositionObserver  # Consumer of live SVD events
+    phase: str  # Public algorithm name shown by the observer
+    site_offset: int = 0  # Offset mapping local cuts to global sites
+    subphase: Optional[str] = None  # Optional nested algorithmic phase
+
+    def cut_complete(self,
+                     site: int,
+                     record: TruncationRecord,
+                     elapsed: float) -> None:
+        """Emits a completed cut using its global site position."""
+        abs_error = record.local_abs_error
+        rel_error = record.local_rel_error
+        if abs_error.ndim:
+            abs_error = torch.linalg.vector_norm(abs_error)
+            local_norm = torch.linalg.vector_norm(record.local_norm)
+            rel_error = torch.where(
+                local_norm > 0,
+                abs_error / local_norm,
+                torch.zeros_like(abs_error))
+        values = {
+            'full_rank': record.full_rank,
+            'selected_rank': record.selected_rank,
+            'absolute_error': abs_error,
+            'relative_error': rel_error,
+        }
+        if self.subphase is not None:
+            values['subphase'] = self.subphase
+        self.observer.emit(DecompositionEvent(
+            name='cut_complete',
+            phase=self.phase,
+            site=self.site_offset + site,
+            elapsed=elapsed,
+            values=values))
 
 
 def _tensor_norm_components(tensor: torch.Tensor,
@@ -92,4 +139,4 @@ def _normalize_tensor(tensor: torch.Tensor,
     return normalized, log_norm
 
 
-__all__ = ['_log_tensor_norm', '_normalize_tensor']
+__all__ = ['_SVDProgress', '_log_tensor_norm', '_normalize_tensor']

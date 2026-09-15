@@ -21,8 +21,9 @@ from tensorkrowch.decompositions.observers import (
 from tensorkrowch.decompositions.results import TTMDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
-                                                    _MatrixTensorization)
-from tensorkrowch.decompositions.svd.tt import TTSVD, _SVDProgress
+                                                    _prepare_matrix_input)
+from tensorkrowch.decompositions.svd.tt import TTSVD
+from tensorkrowch.decompositions.svd.utils import _SVDProgress
 
 
 class TTMSVD:
@@ -69,7 +70,7 @@ class TTMSVD:
                  layout: str = 'interleaved',
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
-        tensorization = _MatrixTensorization.from_tensor(
+        matrix_input = _prepare_matrix_input(
             tensor=tensor,
             in_dim=in_dim,
             out_dim=out_dim,
@@ -77,12 +78,12 @@ class TTMSVD:
             family='TTM')
 
         self._tensor = tensor
-        self._in_dim = tensorization.in_dim
-        self._out_dim = tensorization.out_dim
+        self._in_dim = matrix_input.in_dim
+        self._out_dim = matrix_input.out_dim
         self._layout = layout
-        self._matrix_input = tensorization.matrix_input
+        self._matrix_input = matrix_input.matrix_input
         self._engine = TTSVD(
-            tensorization.fused,
+            matrix_input.fused,
             out_device=out_device)
 
     @property

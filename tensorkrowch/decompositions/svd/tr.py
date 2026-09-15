@@ -28,7 +28,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.svd.tt import TTSVD, _SVDProgress
+from tensorkrowch.decompositions.svd.tt import TTSVD
+from tensorkrowch.decompositions.svd.utils import _SVDProgress
 from tensorkrowch.decompositions.svd.utils import _log_tensor_norm
 
 

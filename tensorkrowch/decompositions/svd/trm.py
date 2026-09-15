@@ -19,10 +19,10 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TRMDecomposition
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
-                                                    _MatrixTensorization)
+                                                    _prepare_matrix_input)
 from tensorkrowch.decompositions.svd.tr import TRSVD
-from tensorkrowch.decompositions.svd.tt import _SVDProgress
-from tensorkrowch.decompositions.svd.utils import _log_tensor_norm
+from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
+                                                   _log_tensor_norm)
 
 
 class TRMSVD:
@@ -74,23 +74,23 @@ class TRMSVD:
                  layout: str = 'interleaved',
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
-        tensorization = _MatrixTensorization.from_tensor(
+        matrix_input = _prepare_matrix_input(
             tensor=tensor,
             in_dim=in_dim,
             out_dim=out_dim,
             layout=layout,
             family='TRM')
-        if len(tensorization.in_dim) < 2:
+        if len(matrix_input.in_dim) < 2:
             raise ValueError('TRM-SVD requires at least two sites')
 
         self._tensor = tensor
-        self._in_dim = tensorization.in_dim
-        self._out_dim = tensorization.out_dim
-        self._interleaved = tensorization.interleaved
+        self._in_dim = matrix_input.in_dim
+        self._out_dim = matrix_input.out_dim
+        self._interleaved = matrix_input.interleaved
         self._layout = layout
-        self._matrix_input = tensorization.matrix_input
+        self._matrix_input = matrix_input.matrix_input
         self._engine = TRSVD(
-            tensorization.fused,
+            matrix_input.fused,
             center=center,
             out_device=out_device)
 

@@ -1,8 +1,11 @@
 """
 This script contains:
 
-    Internal matrix tensorization:
-        * _MatrixTensorization
+    Internal matrix input data:
+        * _MatrixInput
+
+    Internal matrix input preparation:
+        * _prepare_matrix_input
 """
 
 from dataclasses import dataclass
@@ -37,8 +40,8 @@ def _normalize_dim(dim: _Dimension, name: str) -> Tuple[int, ...]:
 
 
 @dataclass(frozen=True)
-class _MatrixTensorization:
-    """Normalizes dense matrix layouts into fused site dimensions."""
+class _MatrixInput:
+    """Contains a normalized dense matrix input."""
 
     in_dim: Tuple[int, ...]  # Input dimension of every matrix site
     out_dim: Tuple[int, ...]  # Output dimension of every matrix site
@@ -46,104 +49,103 @@ class _MatrixTensorization:
     fused: torch.Tensor  # Tensor with each local input/output pair fused
     matrix_input: bool  # Whether the original tensor had two matrix axes
 
-    @classmethod
-    def from_tensor(cls,
-                    tensor: torch.Tensor,
-                    in_dim: _Dimension,
-                    out_dim: _Dimension,
-                    layout: str,
-                    family: str) -> '_MatrixTensorization':
-        """Validates and tensorizes a dense matrix or matrix-like tensor."""
-        if not isinstance(tensor, torch.Tensor):
-            raise TypeError('`tensor` should be torch.Tensor type')
-        if not isinstance(layout, str):
-            raise TypeError('`layout` should be str type')
-        if layout not in ('interleaved', 'grouped'):
-            raise ValueError(
-                '`layout` should be either "interleaved" or "grouped"')
-        if (in_dim is None) != (out_dim is None):
-            raise ValueError(
-                '`in_dim` and `out_dim` should be provided together')
 
-        matrix_input = False
-        if in_dim is None:
-            if (tensor.ndim < 2) or (tensor.ndim % 2):
+def _prepare_matrix_input(tensor: torch.Tensor,
+                          in_dim: _Dimension,
+                          out_dim: _Dimension,
+                          layout: str,
+                          family: str) -> _MatrixInput:
+    """Validates and normalizes a dense matrix or matrix-like tensor."""
+    if not isinstance(tensor, torch.Tensor):
+        raise TypeError('`tensor` should be torch.Tensor type')
+    if not isinstance(layout, str):
+        raise TypeError('`layout` should be str type')
+    if layout not in ('interleaved', 'grouped'):
+        raise ValueError(
+            '`layout` should be either "interleaved" or "grouped"')
+    if (in_dim is None) != (out_dim is None):
+        raise ValueError(
+            '`in_dim` and `out_dim` should be provided together')
+
+    matrix_input = False
+    if in_dim is None:
+        if (tensor.ndim < 2) or (tensor.ndim % 2):
+            raise ValueError(
+                f'A tensorized {family} input should have a positive even '
+                'number of dimensions')
+        n_sites = tensor.ndim // 2
+        if layout == 'interleaved':
+            normalized_in_dim = tuple(tensor.shape[::2])
+            normalized_out_dim = tuple(tensor.shape[1::2])
+        else:
+            normalized_in_dim = tuple(tensor.shape[:n_sites])
+            normalized_out_dim = tuple(tensor.shape[n_sites:])
+        if any(value < 1
+               for value in normalized_in_dim + normalized_out_dim):
+            raise ValueError(
+                f'{family} input and output dimensions should be positive')
+        tensorized = tensor
+        tensorized_layout = layout
+    else:
+        normalized_in_dim = _normalize_dim(in_dim, 'in_dim')
+        normalized_out_dim = _normalize_dim(out_dim, 'out_dim')
+        if len(normalized_in_dim) != len(normalized_out_dim):
+            raise ValueError(
+                '`in_dim` and `out_dim` should have the same length')
+        n_sites = len(normalized_in_dim)
+
+        if tensor.ndim == 2:
+            expected_shape = (
+                prod(normalized_in_dim),
+                prod(normalized_out_dim),
+            )
+            if tuple(tensor.shape) != expected_shape:
                 raise ValueError(
-                    f'A tensorized {family} input should have a positive even '
-                    'number of dimensions')
-            n_sites = tensor.ndim // 2
-            if layout == 'interleaved':
-                normalized_in_dim = tuple(tensor.shape[::2])
-                normalized_out_dim = tuple(tensor.shape[1::2])
-            else:
-                normalized_in_dim = tuple(tensor.shape[:n_sites])
-                normalized_out_dim = tuple(tensor.shape[n_sites:])
-            if any(value < 1
-                   for value in normalized_in_dim + normalized_out_dim):
+                    'The matrix shape should equal '
+                    '(prod(in_dim), prod(out_dim))')
+            tensorized = tensor.reshape(
+                *normalized_in_dim, *normalized_out_dim)
+            tensorized_layout = 'grouped'
+            matrix_input = True
+        else:
+            if tensor.ndim != (2 * n_sites):
                 raise ValueError(
-                    f'{family} input and output dimensions should be positive')
+                    f'A tensorized {family} input should have two '
+                    'dimensions per site')
+            expected_shape = (
+                tuple(value
+                      for pair in zip(normalized_in_dim,
+                                      normalized_out_dim)
+                      for value in pair)
+                if layout == 'interleaved'
+                else normalized_in_dim + normalized_out_dim
+            )
+            if tuple(tensor.shape) != expected_shape:
+                raise ValueError(
+                    'The tensor shape is incompatible with `in_dim`, '
+                    '`out_dim` and `layout`')
             tensorized = tensor
             tensorized_layout = layout
-        else:
-            normalized_in_dim = _normalize_dim(in_dim, 'in_dim')
-            normalized_out_dim = _normalize_dim(out_dim, 'out_dim')
-            if len(normalized_in_dim) != len(normalized_out_dim):
-                raise ValueError(
-                    '`in_dim` and `out_dim` should have the same length')
-            n_sites = len(normalized_in_dim)
 
-            if tensor.ndim == 2:
-                expected_shape = (
-                    prod(normalized_in_dim),
-                    prod(normalized_out_dim),
-                )
-                if tuple(tensor.shape) != expected_shape:
-                    raise ValueError(
-                        'The matrix shape should equal '
-                        '(prod(in_dim), prod(out_dim))')
-                tensorized = tensor.reshape(
-                    *normalized_in_dim, *normalized_out_dim)
-                tensorized_layout = 'grouped'
-                matrix_input = True
-            else:
-                if tensor.ndim != (2 * n_sites):
-                    raise ValueError(
-                        f'A tensorized {family} input should have two '
-                        'dimensions per site')
-                expected_shape = (
-                    tuple(value
-                          for pair in zip(normalized_in_dim,
-                                          normalized_out_dim)
-                          for value in pair)
-                    if layout == 'interleaved'
-                    else normalized_in_dim + normalized_out_dim
-                )
-                if tuple(tensor.shape) != expected_shape:
-                    raise ValueError(
-                        'The tensor shape is incompatible with `in_dim`, '
-                        '`out_dim` and `layout`')
-                tensorized = tensor
-                tensorized_layout = layout
+    if (tensorized_layout == 'interleaved') or (n_sites == 1):
+        interleaved = tensorized
+    else:
+        axes = tuple(
+            axis
+            for site in range(n_sites)
+            for axis in (site, n_sites + site))
+        interleaved = tensorized.permute(axes)
 
-        if (tensorized_layout == 'interleaved') or (n_sites == 1):
-            interleaved = tensorized
-        else:
-            axes = tuple(
-                axis
-                for site in range(n_sites)
-                for axis in (site, n_sites + site))
-            interleaved = tensorized.permute(axes)
-
-        fused_dim = tuple(
-            in_value * out_value
-            for in_value, out_value
-            in zip(normalized_in_dim, normalized_out_dim))
-        return cls(
-            in_dim=normalized_in_dim,
-            out_dim=normalized_out_dim,
-            interleaved=interleaved,
-            fused=interleaved.reshape(*fused_dim),
-            matrix_input=matrix_input)
+    fused_dim = tuple(
+        in_value * out_value
+        for in_value, out_value
+        in zip(normalized_in_dim, normalized_out_dim))
+    return _MatrixInput(
+        in_dim=normalized_in_dim,
+        out_dim=normalized_out_dim,
+        interleaved=interleaved,
+        fused=interleaved.reshape(*fused_dim),
+        matrix_input=matrix_input)
 
 
-__all__ = ['_Dimension', '_MatrixTensorization']
+__all__ = ['_Dimension', '_MatrixInput', '_prepare_matrix_input']

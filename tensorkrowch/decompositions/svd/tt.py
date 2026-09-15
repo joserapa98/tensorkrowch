@@ -5,7 +5,6 @@ This script contains:
         * _TTSVDErrorState
         * _TTSVDFitContext
         * _TTSVDSplit
-        * _SVDProgress
 
     Class for TT-SVD decompositions:
         * TTSVD
@@ -28,11 +27,11 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TimingRecord,
                                                  TruncationRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.svd.utils import (_log_tensor_norm,
+from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
+                                                   _log_tensor_norm,
                                                    _normalize_tensor)
 from tensorkrowch.utils import truncated_svd
 
@@ -66,45 +65,6 @@ class _TTSVDSplit:
     residual: torch.Tensor  # Tensor passed to the next cut
     selected_rank: int  # Rank retained at this cut
     record: Optional[TruncationRecord]  # Optional truncation diagnostics
-
-
-@dataclass(frozen=True)
-class _SVDProgress:
-    """Emits one live event for each completed SVD cut."""
-
-    observer: DecompositionObserver  # Consumer of live SVD events
-    phase: str  # Public algorithm name shown by the observer
-    site_offset: int = 0  # Offset mapping local cuts to global sites
-    subphase: Optional[str] = None  # Optional nested algorithmic phase
-
-    def cut_complete(self,
-                     site: int,
-                     record: TruncationRecord,
-                     elapsed: float) -> None:
-        """Emits a completed cut using its global site position."""
-        abs_error = record.local_abs_error
-        rel_error = record.local_rel_error
-        if abs_error.ndim:
-            abs_error = torch.linalg.vector_norm(abs_error)
-            local_norm = torch.linalg.vector_norm(record.local_norm)
-            rel_error = torch.where(
-                local_norm > 0,
-                abs_error / local_norm,
-                torch.zeros_like(abs_error))
-        values = {
-            'full_rank': record.full_rank,
-            'selected_rank': record.selected_rank,
-            'absolute_error': abs_error,
-            'relative_error': rel_error,
-        }
-        if self.subphase is not None:
-            values['subphase'] = self.subphase
-        self.observer.emit(DecompositionEvent(
-            name='cut_complete',
-            phase=self.phase,
-            site=self.site_offset + site,
-            elapsed=elapsed,
-            values=values))
 
 
 class TTSVD:

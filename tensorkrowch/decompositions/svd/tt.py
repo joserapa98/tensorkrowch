@@ -313,9 +313,9 @@ class TTSVD:
             Console verbosity level:
 
             - ``0`` or ``False``: no console output;
-            - ``1`` or ``True``: phase title, cut progress and final summary;
-            - ``2``: input configuration and detailed per-cut rank, error and
-              timing information;
+            - ``1`` or ``True``: phase title, input configuration, cut
+              progress and final summary;
+            - ``2``: detailed per-cut rank, error and timing information;
             - ``3``: level 2 output followed by every final core.
 
         Returns
@@ -582,9 +582,9 @@ def tt_svd(tensor: torch.Tensor,
         Console verbosity level:
 
         - ``0`` or ``False``: no console output;
-        - ``1`` or ``True``: phase title, cut progress and final summary;
-        - ``2``: input configuration and detailed per-cut rank, error and
-          timing information;
+        - ``1`` or ``True``: phase title, input configuration, cut progress
+          and final summary;
+        - ``2``: detailed per-cut rank, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
     return_info : bool

@@ -460,6 +460,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         assert 'Cut 2-3' in output
         assert 'selected rank: 2' in output
         assert 'absolute error: 0.00e+00' in output
+        assert f'rank: {tuple(result.rank)}' in output
         assert any(
             line.startswith('  elapsed: ') and
             line.endswith(' s') and
@@ -490,7 +491,11 @@ class TestTTSVD:  # MARK: TestTTSVD
         def tracked_truncated_svd(*args, **kwargs):
             nonlocal calls
             calls += 1
-            if calls == 2:
+            if calls == 1:
+                output = capsys.readouterr().out
+                assert 'sites: 3' in output
+                assert 'input dim: (2, 3, 4)' in output
+            elif calls == 2:
                 assert 'Cut 1-2' in capsys.readouterr().out
             return truncated_svd(*args, **kwargs)
 

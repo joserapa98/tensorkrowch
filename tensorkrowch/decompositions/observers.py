@@ -133,7 +133,17 @@ class ConsoleObserver:
     def _format_value(name: str, value: Any) -> Any:
         """Formats floating-point console values consistently."""
         if (name == 'blocks') and isinstance(value, tuple):
-            return ' | '.join(str(list(block)) for block in value)
+            compact_blocks = []
+            for block in value:
+                if len(block) == 1:
+                    compact_blocks.append(f'[{block[0]}]')
+                elif len(block) == 2:
+                    compact_blocks.append(f'[{block[0]}, {block[1]}]')
+                else:
+                    compact_blocks.append(f'[{block[0]} ... {block[-1]}]')
+            return ' | '.join(compact_blocks)
+        if (name == 'rank') and isinstance(value, (list, tuple)):
+            return str(tuple(value))
         if isinstance(value, float):
             formatted = f'{value:.2e}'
         elif isinstance(value, torch.Tensor) and (value.ndim == 0) and \
@@ -152,8 +162,7 @@ class ConsoleObserver:
         if event.name == 'start':
             print(f'\n{event.phase}', file=self.stream)
             print('=' * len(event.phase), file=self.stream)
-            if self.verbose >= 2:
-                self._print_values(event.values)
+            self._print_values(event.values)
         elif event.name == 'cut_complete':
             left_site = event.site + 1 if event.site is not None else '?'
             right_site = event.site + 2 if event.site is not None else '?'

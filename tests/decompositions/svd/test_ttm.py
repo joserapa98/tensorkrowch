@@ -342,6 +342,7 @@ class TestTTMSVD:  # MARK: TestTTMSVD
         assert '\nTT-SVD\n' not in output
         assert 'input dim: (2, 4)' in output
         assert 'output dim: (3, 5)' in output
+        assert f'rank: {tuple(result.rank)}' in output
         assert 'Cut 1-2' in output
         assert tuple(result.cores[0].shape) == (2, 2, 3)
         assert 'shape: (2, 2, 3)' in output

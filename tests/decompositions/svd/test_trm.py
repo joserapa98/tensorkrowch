@@ -374,6 +374,8 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         assert 'input dim: (2, 2, 2)' in output
         assert 'output dim: (3, 4, 3)' in output
         assert 'Initial bipartition' in output
+        assert 'blocks: [1] | [2, 3]' in output
+        assert f'rank: {tuple(result.rank)}' in output
         assert tuple(result.cores[0].shape) == (2, 2, 2, 3)
         assert 'shape: (2, 2, 2, 3)' in output
 

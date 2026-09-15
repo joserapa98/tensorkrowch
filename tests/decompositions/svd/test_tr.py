@@ -438,12 +438,14 @@ class TestTRSVD:  # MARK: TestTRSVD
         assert 'TR-SVD\n======' in output
         assert '\nTT-SVD\n' not in output
         assert 'Initial bipartition\n-------------------' in output
+        assert 'blocks: [1, 2] | [3, 4]' in output
         assert 'Cut 1-2' in output
         assert 'Cut 3-4' in output
         assert 'step:' not in output
         assert 'Summary\n-------' in output
         assert 'absolute error:' in output
         assert 'relative error:' in output
+        assert f'rank: {tuple(result.rank)}' in output
         assert len(result.metrics.truncations) == 3
         assert output.count('shape:') == 4
 

@@ -18,13 +18,13 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
 
     def test_grows_bilaterally_from_center(self):
         selection = CentralBlockSelector().select(
-            input_dim := (2, 2, 2, 2, 2),
+            in_dim := (2, 2, 2, 2, 2),
             rank=2,
             center=2)
 
         assert isinstance(selection, BlockSelection)
         assert selection.sites == (1, 2, 3)
-        assert selection.input_dim == input_dim[1:4]
+        assert selection.in_dim == in_dim[1:4]
         assert selection.growth == ((2, 2), (2, 3), (1, 3))
         assert selection.input_capacity == 8
         assert selection.required_input_capacity == 5
@@ -44,7 +44,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
 
     def test_provider_object_and_heterogeneous_right_link_caps(self):
         class Provider:
-            input_dim = (2, 3, 2, 4)
+            in_dim = (2, 3, 2, 4)
 
         selection = CentralBlockSelector().select(
             Provider(), rank=(2, 3, 4, 5), center=1)
@@ -134,7 +134,7 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
             generator=torch.Generator().manual_seed(130))
 
         with tk.svd_method(svd_method):
-            split = split_block_ttsvd(block, input_dim=(3, 4, 5))
+            split = split_block_ttsvd(block, in_dim=(3, 4, 5))
 
         assert split.effective_rank == (6, 10)
         assert split.rank == (6, 10)
@@ -147,7 +147,7 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
             2, 3, 4, 5, 2,
             dtype=torch.float64,
             generator=torch.Generator().manual_seed(131))
-        split = split_block_ttsvd(block, input_dim=(3, 4, 5), rank=2)
+        split = split_block_ttsvd(block, in_dim=(3, 4, 5), rank=2)
         fused = block.reshape(6, 4, 10)
         reference = tk.decompositions.TTSVD(
             fused, out_device=None).fit(rank=2).contract_dense()
@@ -164,9 +164,9 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
             1, 2, 2, 1,
             dtype=torch.float64,
             generator=torch.Generator().manual_seed(132))
-        compact = split_block_ttsvd(block, input_dim=(2, 2), rank=5)
+        compact = split_block_ttsvd(block, in_dim=(2, 2), rank=5)
         padded = split_block_ttsvd(
-            block, input_dim=(2, 2), rank=5, pad_rank=True)
+            block, in_dim=(2, 2), rank=5, pad_rank=True)
 
         assert compact.effective_rank == (2,)
         assert compact.rank == (2,)
@@ -180,7 +180,7 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
 
     def test_one_site_preserves_both_external_ranks(self):
         block = torch.randn(3, 4, 2)
-        split = split_block_ttsvd(block, input_dim=(4,), rank=5)
+        split = split_block_ttsvd(block, in_dim=(4,), rank=5)
 
         assert split.cores[0].shape == (3, 4, 2)
         assert split.rank == ()
@@ -189,10 +189,10 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
 
     def test_metrics_are_collected_only_when_requested(self):
         block = torch.randn(2, 3, 4, 2)
-        fast = split_block_ttsvd(block, input_dim=(3, 4), rank=2)
+        fast = split_block_ttsvd(block, in_dim=(3, 4), rank=2)
         measured = split_block_ttsvd(
             block,
-            input_dim=(3, 4),
+            in_dim=(3, 4),
             rank=2,
             collect_metrics=True)
 
@@ -204,5 +204,5 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
         with pytest.raises(ValueError, match='required'):
             split_block_ttsvd(
                 torch.randn(1, 2, 2, 1),
-                input_dim=(2, 2),
+                in_dim=(2, 2),
                 pad_rank=True)

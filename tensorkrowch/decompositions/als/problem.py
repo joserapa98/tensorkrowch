@@ -8,7 +8,7 @@ import torch
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource)
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
-                                                      _normalize_input_dim,
+                                                      _normalize_in_dim,
                                                       _ravel_indices)
 
 
@@ -40,7 +40,7 @@ class ObservedEntries:
     values : torch.Tensor
         Observed target values with shape
         ``(observations, *output_shape)``.
-    input_dim : sequence of int
+    in_dim : sequence of int
         Complete discrete input dimension.
     weights : torch.Tensor, optional
         Non-negative multiplicative weights ``W`` in the observed objective.
@@ -48,7 +48,7 @@ class ObservedEntries:
 
     indices: torch.Tensor
     values: torch.Tensor
-    input_dim: Sequence[int]
+    in_dim: Sequence[int]
     weights: Optional[torch.Tensor] = None
     flat_ids: torch.Tensor = field(init=False, repr=False)
 
@@ -69,10 +69,10 @@ class ObservedEntries:
         if self.indices.shape[0] < 1:
             raise ValueError('At least one observed entry is required')
 
-        input_dim = _normalize_input_dim(self.input_dim)
+        in_dim = _normalize_in_dim(self.in_dim)
         indices = _discrete_indices(
             ConfigurationBatch(self.indices, kind='indices'),
-            input_dim,
+            in_dim,
             self.values.device)
 
         weights = self.weights
@@ -90,7 +90,7 @@ class ObservedEntries:
             if (not torch.isfinite(weights).all()) or torch.any(weights < 0):
                 raise ValueError('`weights` should be finite and non-negative')
 
-        flat_ids = _ravel_indices(indices, input_dim)
+        flat_ids = _ravel_indices(indices, in_dim)
         order = torch.argsort(flat_ids)
         flat_ids = flat_ids.index_select(0, order)
         indices = indices.index_select(0, order)
@@ -128,7 +128,7 @@ class ObservedEntries:
             0, selected_tensor))
         object.__setattr__(self, 'values', values.index_select(
             0, selected_tensor))
-        object.__setattr__(self, 'input_dim', input_dim)
+        object.__setattr__(self, 'in_dim', in_dim)
         object.__setattr__(self, 'flat_ids', flat_ids.index_select(
             0, selected_tensor))
         if weights is not None:
@@ -207,7 +207,7 @@ class ALSProblem:
             raise ValueError("`loss` should currently be 'l2'")
 
         if (self.source is not None) and (self.observations is not None):
-            if self.source.input_dim != self.observations.input_dim:
+            if self.source.in_dim != self.observations.in_dim:
                 raise ValueError(
                     'Source and observations should have matching input '
                     'dimensions')
@@ -227,7 +227,7 @@ class ALSProblem:
             if output_shape is None:
                 raise ValueError(
                     'Source output shape is required for global weights')
-            expected_shape = (*self.source.input_dim, *output_shape)
+            expected_shape = (*self.source.in_dim, *output_shape)
             if self.weights.shape != expected_shape:
                 raise ValueError(
                     '`weights` should match the complete source tensor shape')
@@ -241,11 +241,11 @@ class ALSProblem:
                 raise ValueError('`weights` should be finite and non-negative')
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Input dimension defined by the source or observations."""
         if self.source is not None:
-            return self.source.input_dim
-        return self.observations.input_dim
+            return self.source.in_dim
+        return self.observations.in_dim
 
     @property
     def output_shape(self) -> Optional[Tuple[int, ...]]:
@@ -291,7 +291,7 @@ class ALSProblem:
         weighted_target = target
         if self.weights is not None:
             indices = _discrete_indices(
-                configurations, self.input_dim, self.source.device)
+                configurations, self.in_dim, self.source.device)
             weights = self.weights[tuple(
                 indices[:, site] for site in range(indices.shape[1]))]
             residual = residual * weights

@@ -22,23 +22,23 @@ def _normalize_positive_int(value: int, name: str) -> int:
     return value
 
 
-def _normalize_input_dim(provider: Any) -> Tuple[int, ...]:
+def _normalize_in_dim(provider: Any) -> Tuple[int, ...]:
     """Obtains input dimensions from a provider or a direct sequence."""
-    input_dim = getattr(provider, 'input_dim', provider)
-    if isinstance(input_dim, (str, bytes)):
+    in_dim = getattr(provider, 'in_dim', provider)
+    if isinstance(in_dim, (str, bytes)):
         raise TypeError(
             '`provider` should expose input dimensions or be their sequence')
     try:
-        input_dim = tuple(input_dim)
+        in_dim = tuple(in_dim)
     except TypeError as exc:
         raise TypeError(
             '`provider` should expose input dimensions or be their sequence') \
             from exc
-    if not input_dim:
+    if not in_dim:
         raise ValueError('At least one input dimension is required')
-    for value in input_dim:
-        _normalize_positive_int(value, 'input_dim')
-    return input_dim
+    for value in in_dim:
+        _normalize_positive_int(value, 'in_dim')
+    return in_dim
 
 
 def _normalize_rank_spec(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
@@ -68,7 +68,7 @@ class BlockSelection:
     """Describes a contiguous block selected for a local ring operation."""
 
     sites: Sequence[int]
-    input_dim: Sequence[int]
+    in_dim: Sequence[int]
     left_rank_cap: int
     right_rank_cap: int
     input_capacity: int
@@ -80,7 +80,7 @@ class BlockSelection:
 
     def __post_init__(self) -> None:
         sites = tuple(self.sites)
-        input_dim = tuple(self.input_dim)
+        in_dim = tuple(self.in_dim)
         growth = tuple(tuple(interval) for interval in self.growth)
         if not sites:
             raise ValueError('`sites` should contain at least one site')
@@ -89,11 +89,11 @@ class BlockSelection:
             raise TypeError('`sites` should contain integer indices')
         if sites != tuple(range(sites[0], sites[-1] + 1)):
             raise ValueError('`sites` should describe one contiguous block')
-        if len(input_dim) != len(sites):
+        if len(in_dim) != len(sites):
             raise ValueError(
-                '`input_dim` should contain one dimension per selected site')
-        for value in input_dim:
-            _normalize_positive_int(value, 'input_dim')
+                '`in_dim` should contain one dimension per selected site')
+        for value in in_dim:
+            _normalize_positive_int(value, 'in_dim')
         for name in (
                 'left_rank_cap',
                 'right_rank_cap',
@@ -114,7 +114,7 @@ class BlockSelection:
                for interval in growth):
             raise TypeError('Growth intervals should contain integer indices')
         object.__setattr__(self, 'sites', sites)
-        object.__setattr__(self, 'input_dim', input_dim)
+        object.__setattr__(self, 'in_dim', in_dim)
         object.__setattr__(self, 'growth', growth)
 
     @property
@@ -131,7 +131,7 @@ class BlockSelection:
 class CentralBlockSelector:
     """Selects a refinable block by balanced growth around a seed site.
 
-    The provider can be any object exposing ``input_dim`` or the input-dimension
+    The provider can be any object exposing ``in_dim`` or the input-dimension
     sequence itself. ``rank`` follows the standard TR convention: a scalar is
     shared by every link and a sequence stores the right-link cap of each site.
     """
@@ -143,8 +143,8 @@ class CentralBlockSelector:
                *,
                bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
         """Grows a contiguous block until input capacity exceeds rank caps."""
-        input_dim = _normalize_input_dim(provider)
-        n_sites = len(input_dim)
+        in_dim = _normalize_in_dim(provider)
+        n_sites = len(in_dim)
         rank_spec = _normalize_rank_spec(rank, n_sites)
 
         if bounds is None:
@@ -174,7 +174,7 @@ class CentralBlockSelector:
         while True:
             left_rank_cap = rank_spec[(left - 1) % n_sites]
             right_rank_cap = rank_spec[right]
-            input_capacity = prod(input_dim[left:(right + 1)])
+            input_capacity = prod(in_dim[left:(right + 1)])
             required_input_capacity = left_rank_cap * right_rank_cap + 1
             if input_capacity >= required_input_capacity:
                 feasible = True
@@ -220,7 +220,7 @@ class CentralBlockSelector:
 
         return BlockSelection(
             sites=tuple(range(left, right + 1)),
-            input_dim=input_dim[left:(right + 1)],
+            in_dim=in_dim[left:(right + 1)],
             left_rank_cap=left_rank_cap,
             right_rank_cap=right_rank_cap,
             input_capacity=input_capacity,
@@ -241,23 +241,23 @@ class PrescribedCentralBlockSelector(CentralBlockSelector):
                *,
                bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
         """Returns one internal site with its adjacent right-link caps."""
-        input_dim = _normalize_input_dim(provider)
-        rank_spec = _normalize_rank_spec(rank, len(input_dim))
+        in_dim = _normalize_in_dim(provider)
+        rank_spec = _normalize_rank_spec(rank, len(in_dim))
         if center is None:
-            center = len(input_dim) // 2
+            center = len(in_dim) // 2
         if isinstance(center, bool) or not isinstance(center, int):
             raise TypeError('`center` should be int type or None')
-        if center <= 0 or center >= len(input_dim) - 1:
+        if center <= 0 or center >= len(in_dim) - 1:
             raise ValueError(
                 '`center` should be an internal TT site or TR site')
         if bounds is not None and not (bounds[0] <= center <= bounds[1]):
             raise ValueError('`center` should lie inside `bounds`')
         return BlockSelection(
             sites=(center,),
-            input_dim=(input_dim[center],),
+            in_dim=(in_dim[center],),
             left_rank_cap=rank_spec[center - 1],
             right_rank_cap=rank_spec[center],
-            input_capacity=input_dim[center],
+            input_capacity=in_dim[center],
             required_input_capacity=1,
             feasible=True,
             reason='prescribed_fixed_rank_center',
@@ -383,7 +383,7 @@ class BlockSplit:
     """Stores a TT-SVD split of a supercore and optional explicit padding."""
 
     cores: Sequence[torch.Tensor]
-    input_dim: Sequence[int]
+    in_dim: Sequence[int]
     effective_rank: Sequence[int]
     rank: Sequence[int]
     requested_rank: Optional[int]
@@ -393,14 +393,14 @@ class BlockSplit:
 
     def __post_init__(self) -> None:
         cores = tuple(self.cores)
-        input_dim = tuple(self.input_dim)
+        in_dim = tuple(self.in_dim)
         effective_rank = tuple(self.effective_rank)
         rank = tuple(self.rank)
         padding = tuple(self.padding)
         if not cores:
             raise ValueError('`cores` should contain at least one core')
-        if len(cores) != len(input_dim):
-            raise ValueError('`cores` and `input_dim` should have equal length')
+        if len(cores) != len(in_dim):
+            raise ValueError('`cores` and `in_dim` should have equal length')
         if any(not isinstance(core, torch.Tensor) or core.ndim != 3
                for core in cores):
             raise ValueError('Block cores should be three-dimensional tensors')
@@ -418,8 +418,8 @@ class BlockSplit:
                for value in padding):
             raise TypeError('`padding` should contain integers')
         if any(core.shape[1] != dim
-               for core, dim in zip(cores, input_dim)):
-            raise ValueError('Core input dimensions should match `input_dim`')
+               for core, dim in zip(cores, in_dim)):
+            raise ValueError('Core input dimensions should match `in_dim`')
         if any(cores[k].shape[-1] != cores[k + 1].shape[0]
                for k in range(len(cores) - 1)):
             raise ValueError('Adjacent block ranks should match')
@@ -437,7 +437,7 @@ class BlockSplit:
         if not isinstance(self.metadata, Mapping):
             raise TypeError('`metadata` should be a mapping')
         object.__setattr__(self, 'cores', cores)
-        object.__setattr__(self, 'input_dim', input_dim)
+        object.__setattr__(self, 'in_dim', in_dim)
         object.__setattr__(self, 'effective_rank', effective_rank)
         object.__setattr__(self, 'rank', rank)
         object.__setattr__(self, 'padding', padding)
@@ -471,7 +471,7 @@ def _pad_block_cores(cores: Sequence[torch.Tensor],
 
 def split_block_ttsvd(
         block: torch.Tensor,
-        input_dim: Sequence[int],
+        in_dim: Sequence[int],
         rank: Optional[int] = None,
         cutoff: Optional[float] = None,
         atol: Optional[float] = None,
@@ -480,22 +480,22 @@ def split_block_ttsvd(
         renormalize: bool = False,
         pad_rank: bool = False,
         collect_metrics: bool = False,
-        output_device: Optional[Union[str, torch.device]] = None) -> BlockSplit:
+        out_device: Optional[Union[str, torch.device]] = None) -> BlockSplit:
     """Splits a supercore while retaining its two external rank axes.
 
-    ``block`` has shape ``(left_rank, *input_dim, right_rank)``. The external
+    ``block`` has shape ``(left_rank, *in_dim, right_rank)``. The external
     ranks are fused into the first and last TT-SVD inputs and restored after
     the split. ``rank`` is one shared upper bound for all internal cuts.
     Padding to that bound is performed only when ``pad_rank=True``.
     """
     if not isinstance(block, torch.Tensor):
         raise TypeError('`block` should be torch.Tensor type')
-    input_dim = _normalize_input_dim(input_dim)
-    if block.ndim != len(input_dim) + 2:
+    in_dim = _normalize_in_dim(in_dim)
+    if block.ndim != len(in_dim) + 2:
         raise ValueError(
-            '`block` should have two external rank axes around `input_dim`')
-    if tuple(block.shape[1:-1]) != input_dim:
-        raise ValueError('The inner axes of `block` should match `input_dim`')
+            '`block` should have two external rank axes around `in_dim`')
+    if tuple(block.shape[1:-1]) != in_dim:
+        raise ValueError('The inner axes of `block` should match `in_dim`')
     if rank is not None:
         rank = _normalize_positive_int(rank, 'rank')
     if not isinstance(pad_rank, bool):
@@ -505,14 +505,14 @@ def split_block_ttsvd(
     if not isinstance(collect_metrics, bool):
         raise TypeError('`collect_metrics` should be bool type')
 
-    if len(input_dim) == 1:
-        core = block.reshape(block.shape[0], input_dim[0], block.shape[-1])
-        if output_device is not None:
-            core = core.to(device=output_device)
+    if len(in_dim) == 1:
+        core = block.reshape(block.shape[0], in_dim[0], block.shape[-1])
+        if out_device is not None:
+            core = core.to(device=out_device)
         cores = (core,)
         return BlockSplit(
             cores=cores,
-            input_dim=input_dim,
+            in_dim=in_dim,
             effective_rank=(),
             rank=(),
             requested_rank=rank,
@@ -526,12 +526,12 @@ def split_block_ttsvd(
 
     left_rank = block.shape[0]
     right_rank = block.shape[-1]
-    fused_input_dim = (
-        left_rank * input_dim[0],
-        *input_dim[1:-1],
-        input_dim[-1] * right_rank)
-    tensor = block.reshape(fused_input_dim)
-    result = TTSVD(tensor, out_device=output_device).fit(
+    fused_in_dim = (
+        left_rank * in_dim[0],
+        *in_dim[1:-1],
+        in_dim[-1] * right_rank)
+    tensor = block.reshape(fused_in_dim)
+    result = TTSVD(tensor, out_device=out_device).fit(
         rank=rank,
         cutoff=cutoff,
         atol=atol,
@@ -542,9 +542,9 @@ def split_block_ttsvd(
 
     cores = list(result.cores)
     cores[0] = cores[0].reshape(
-        left_rank, input_dim[0], cores[0].shape[-1])
+        left_rank, in_dim[0], cores[0].shape[-1])
     cores[-1] = cores[-1].reshape(
-        cores[-1].shape[0], input_dim[-1], right_rank)
+        cores[-1].shape[0], in_dim[-1], right_rank)
     effective_rank = tuple(result.rank)
     padding = tuple(0 for _ in effective_rank)
     if pad_rank:
@@ -554,7 +554,7 @@ def split_block_ttsvd(
 
     return BlockSplit(
         cores=cores,
-        input_dim=input_dim,
+        in_dim=in_dim,
         effective_rank=effective_rank,
         rank=actual_rank,
         requested_rank=rank,

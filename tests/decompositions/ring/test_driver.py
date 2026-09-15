@@ -18,8 +18,8 @@ from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 class SyntheticProvider:
     """Provides rank-one local targets without defining TT or RSS semantics."""
 
-    def __init__(self, input_dim):
-        self.input_dim = tuple(input_dim)
+    def __init__(self, in_dim):
+        self.in_dim = tuple(in_dim)
 
     def local_target(self, sites, context):
         return tuple(sites)
@@ -29,7 +29,7 @@ class SyntheticProvider:
 
     def local_context(self, sites, context):
         return {
-            'input_dim': (1, *(self.input_dim[site] for site in sites), 1),
+            'in_dim': (1, *(self.in_dim[site] for site in sites), 1),
             'sites': tuple(sites),
         }
 
@@ -43,7 +43,7 @@ class SyntheticOpenProvider(SyntheticProvider):
         return BoundaryClosure(
             site=site,
             direction=direction,
-            core=torch.full((1, self.input_dim[site], 1), float(site + 1)),
+            core=torch.full((1, self.in_dim[site], 1), float(site + 1)),
             diagnostics={'synthetic_boundary': True})
 
 
@@ -99,7 +99,7 @@ def _synthetic_opener(calls, supports_two=True, mutate_fixed=False):
         if mutate_fixed and fixed_left is not None:
             left = left + 1
         cores = tuple(
-            torch.full((1, kwargs['context']['input_dim'][offset + 1], 1),
+            torch.full((1, kwargs['context']['in_dim'][offset + 1], 1),
                        float(site + 1))
             for offset, site in enumerate(sites))
         all_cores = (left, *cores, right)

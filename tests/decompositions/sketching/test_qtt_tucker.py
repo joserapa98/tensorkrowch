@@ -27,7 +27,7 @@ class TestQTTTuckerRSS:
             base=2,
             level=2,
             domain=domain,
-            output_device=None).fit(
+            out_device=None).fit(
                 samples,
                 rank=2,
                 connector_rank=2,
@@ -42,7 +42,7 @@ class TestQTTTuckerRSS:
         assert len(result.upper.cores) == 2
         assert len(result.factors) == 2
         assert result.variable_positions == (0, 1)
-        assert result.input_dim == (2, 2, 2, 2)
+        assert result.in_dim == (2, 2, 2, 2)
         assert torch.allclose(
             result.evaluate(samples), function(samples),
             rtol=1e-9, atol=1e-11)
@@ -80,7 +80,7 @@ class TestQTTTuckerRSS:
             batch_size=32,
             legacy_projection=False,
             generator=torch.Generator().manual_seed(42),
-            output_device=None,
+            out_device=None,
             return_info=True)
 
         assert result.variable_positions == (0, 2)
@@ -114,10 +114,10 @@ class TestQTTTuckerRSS:
             connector_rank=1,
             factor_rank=2,
             batch_size=16,
-            output_device=None)
+            out_device=None)
 
         assert result.layout.ordering == 'interleaved'
-        assert result.input_dim == (2, 2, 3)
+        assert result.in_dim == (2, 2, 3)
         assert torch.allclose(result.evaluate(samples), function(samples))
         digits = layout.encode_indices(torch.cartesian_prod(
             torch.arange(4), torch.arange(3)))
@@ -140,7 +140,7 @@ class TestQTTTuckerRSS:
             connector_rank=2,
             factor_rank=4,
             batch_size=32,
-            output_device=None)
+            out_device=None)
 
         assert result.dtype == torch.complex128
         assert torch.allclose(
@@ -170,7 +170,7 @@ class TestQTRTuckerRSS:
             center=1,
             batch_size=64,
             generator=torch.Generator().manual_seed(43),
-            output_device=None)
+            out_device=None)
 
         assert isinstance(
             result, tk.decompositions.QTRTuckerDecomposition)

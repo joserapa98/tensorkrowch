@@ -86,7 +86,7 @@ class TestTRRSS:
                 rank=1,
                 collect_metrics=True)
 
-        assert result.input_dim == (2, 2, 2, 2, 2, 2)
+        assert result.in_dim == (2, 2, 2, 2, 2, 2)
         assert result.metadata['out_position'] == (1, 4)
         assert result.metrics.errors[0].relative < 1e-8
 

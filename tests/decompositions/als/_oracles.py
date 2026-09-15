@@ -7,39 +7,39 @@ import torch
 
 
 def make_tt_cores(
-        input_dim: Sequence[int] = (2, 3, 2),
+        in_dim: Sequence[int] = (2, 3, 2),
         rank: Sequence[int] = (2, 3),
         dtype: torch.dtype = torch.float64,
         generator: Optional[torch.Generator] = None
         ) -> List[torch.Tensor]:
     """Creates deterministic standard-form TT cores for tests."""
-    if len(rank) != (len(input_dim) - 1):
+    if len(rank) != (len(in_dim) - 1):
         raise ValueError('TT rank should contain one value per link')
     ranks = (1, *rank, 1)
     return [
         torch.randn(
-            ranks[site], site_input_dim, ranks[site + 1],
+            ranks[site], site_in_dim, ranks[site + 1],
             dtype=dtype,
             generator=generator)
-        for site, site_input_dim in enumerate(input_dim)
+        for site, site_in_dim in enumerate(in_dim)
     ]
 
 
 def make_tr_cores(
-        input_dim: Sequence[int] = (2, 3, 2, 2),
+        in_dim: Sequence[int] = (2, 3, 2, 2),
         rank: Sequence[int] = (2, 3, 2, 2),
         dtype: torch.dtype = torch.float64,
         generator: Optional[torch.Generator] = None
         ) -> List[torch.Tensor]:
     """Creates deterministic heterogeneous-rank TR cores for tests."""
-    if len(rank) != len(input_dim):
+    if len(rank) != len(in_dim):
         raise ValueError('TR rank should contain one value per link')
     return [
         torch.randn(
-            rank[site - 1], site_input_dim, rank[site],
+            rank[site - 1], site_in_dim, rank[site],
             dtype=dtype,
             generator=generator)
-        for site, site_input_dim in enumerate(input_dim)
+        for site, site_in_dim in enumerate(in_dim)
     ]
 
 
@@ -76,8 +76,8 @@ def direct_environment_slices(
         site: int) -> Iterable[Tuple[Tuple[int, ...], torch.Tensor]]:
     """Yields direct matrix products for all environment configurations."""
     order = list(range(site + 1, len(cores))) + list(range(site))
-    input_dim = [cores[other_site].shape[1] for other_site in order]
-    for configuration in product(*(range(dim) for dim in input_dim)):
+    in_dim = [cores[other_site].shape[1] for other_site in order]
+    for configuration in product(*(range(dim) for dim in in_dim)):
         matrices = [
             cores[other_site][:, value, :]
             for other_site, value in zip(order, configuration)

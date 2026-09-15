@@ -13,7 +13,7 @@ from tensorkrowch.decompositions.ring.opening import resolve_loop_opener
 def _local_problem(dtype=torch.float64):
     """Creates one exact three-site local TR target."""
     cores = make_tr_cores(
-        input_dim=(3, 2, 4),
+        in_dim=(3, 2, 4),
         rank=(2, 3, 2),
         dtype=dtype,
         generator=torch.Generator().manual_seed(120))
@@ -108,7 +108,7 @@ class TestALSLoopOpener:  # MARK: TestALSLoopOpener
             rank=(2, 3, 2),
             orientation='left',
             context={
-                'input_dim': tensor.shape,
+                'in_dim': tensor.shape,
                 'dtype': tensor.dtype,
                 'initial_cores': cores,
             })

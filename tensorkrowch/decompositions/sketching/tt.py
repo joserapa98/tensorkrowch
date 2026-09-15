@@ -114,13 +114,13 @@ class TTRSS(RecursiveSketching):
         Scalar- or vector-valued object to approximate. A callable receives a
         tensor with shape ``(batch_size, n_features)`` or
         ``(batch_size, n_features, in_dim)`` and returns shape
-        ``(batch_size, output_dim)``. A scalar callable uses
-        ``output_dim = 1``.
+        ``(batch_size, out_dim)``. A scalar callable uses
+        ``out_dim = 1``.
     embedding : callable, torch.Tensor or sequence
         Shared input embedding or one entry per input site. A site callable
         maps shape ``(batch_size, *coordinate_shape)`` to
-        ``(batch_size, input_dim)``; a tensor stores its finite-domain matrix.
-    input_dim : int or sequence of int, optional
+        ``(batch_size, in_dim)``; a tensor stores its finite-domain matrix.
+    in_dim : int or sequence of int, optional
         Expected embedding dimension. One integer is broadcast to every input
         site. If omitted, dimensions are inferred from the embeddings.
     domain : torch.Tensor or sequence of torch.Tensor, optional
@@ -128,7 +128,7 @@ class TTRSS(RecursiveSketching):
         every input site; a sequence supplies one domain per site. If omitted,
         each domain is inferred from the corresponding sketch samples.
     domain_multiplier : int, optional
-        Maximum inferred-domain size in multiples of ``input_dim``.
+        Maximum inferred-domain size in multiples of ``in_dim``.
     out_position : int or sequence of int, optional
         Position of each tensor-output axis. By default the output sites split
         the input chain into groups as evenly as possible.
@@ -139,7 +139,7 @@ class TTRSS(RecursiveSketching):
         Device used for source evaluations and numerical decomposition.
     dtype : torch.dtype, optional
         Dtype used for callable values, fitted tensors and resulting cores.
-    output_device : str, torch.device or None, optional
+    out_device : str, torch.device or None, optional
         Device receiving completed cores. The default is CPU; ``None`` keeps
         them on the compute device.
 
@@ -163,7 +163,7 @@ class TTRSS(RecursiveSketching):
             self,
             function=None,
             embedding: Optional[Embedding] = None,
-            input_dim: Optional[Union[int, Sequence[int]]] = None,
+            in_dim: Optional[Union[int, Sequence[int]]] = None,
             domain: Domain = None,
             domain_multiplier: int = 1,
             out_position: Optional[Union[int, Sequence[int]]] = None,
@@ -171,7 +171,7 @@ class TTRSS(RecursiveSketching):
             source: Optional[TensorSource] = None,
             device: Device = None,
             dtype: Optional[torch.dtype] = None,
-            output_device: Device = 'cpu',
+            out_device: Device = 'cpu',
             input_fitters: Optional[Sequence[InputFitter]] = None,
             range_projector: Optional[RangeProjector] = None,
             global_transform: Optional[GlobalValueTransform] = None,
@@ -203,28 +203,28 @@ class TTRSS(RecursiveSketching):
                     for entry in embedding):
                 raise TypeError(
                     'Every `embedding` entry should be callable or a tensor')
-        if input_dim is not None:
-            if isinstance(input_dim, bool):
+        if in_dim is not None:
+            if isinstance(in_dim, bool):
                 raise TypeError(
-                    '`input_dim` should be int, a sequence of ints or None')
-            if isinstance(input_dim, int):
-                if input_dim < 1:
-                    raise ValueError('`input_dim` should be positive')
+                    '`in_dim` should be int, a sequence of ints or None')
+            if isinstance(in_dim, int):
+                if in_dim < 1:
+                    raise ValueError('`in_dim` should be positive')
             else:
-                if isinstance(input_dim, (str, bytes)):
+                if isinstance(in_dim, (str, bytes)):
                     raise TypeError(
-                        '`input_dim` should be int, a sequence of ints or None')
+                        '`in_dim` should be int, a sequence of ints or None')
                 try:
-                    input_dim = tuple(input_dim)
+                    in_dim = tuple(in_dim)
                 except TypeError as exc:
                     raise TypeError(
-                        '`input_dim` should be int, a sequence of ints or None') \
+                        '`in_dim` should be int, a sequence of ints or None') \
                         from exc
-                if not input_dim or any(
+                if not in_dim or any(
                         isinstance(dim, bool) or not isinstance(dim, int)
-                        or dim < 1 for dim in input_dim):
+                        or dim < 1 for dim in in_dim):
                     raise ValueError(
-                        '`input_dim` should contain positive integers')
+                        '`in_dim` should contain positive integers')
         if domain is not None and not isinstance(domain, torch.Tensor):
             if isinstance(domain, (str, bytes)):
                 raise TypeError(
@@ -254,13 +254,13 @@ class TTRSS(RecursiveSketching):
 
         self._source_like = source_like
         self._embedding = embedding
-        self._input_dim_option = input_dim
+        self._in_dim_option = in_dim
         self._domain = domain
         self._domain_multiplier = domain_multiplier
         self._out_position = out_position
         self._device = None if device is None else torch.device(device)
         self._dtype = dtype
-        self._output_device = output_device
+        self._out_device = out_device
         self._input_fitters_option = input_fitters
         self._range_projector_option = range_projector
         self._global_transform_option = global_transform
@@ -294,7 +294,7 @@ class TTRSS(RecursiveSketching):
             out_position: Optional[Union[int, Sequence[int]]] = None,
             device: Device = None,
             dtype: Optional[torch.dtype] = None,
-            output_device: Device = 'cpu',
+            out_device: Device = 'cpu',
             input_fitters: Optional[Sequence[InputFitter]] = None,
             range_projector: Optional[RangeProjector] = None,
             global_transform: Optional[GlobalValueTransform] = None,
@@ -328,18 +328,18 @@ class TTRSS(RecursiveSketching):
             device=device,
             dtype=dtype)
         embeddings = tuple(
-            torch.eye(dimension) for dimension in layout.input_dim)
+            torch.eye(dimension) for dimension in layout.in_dim)
         digit_domains = tuple(
-            torch.arange(dimension) for dimension in layout.input_dim)
+            torch.arange(dimension) for dimension in layout.in_dim)
         return _QuantizedTTRSS(
             source=adapter,
             embedding=embeddings,
-            input_dim=layout.input_dim,
+            in_dim=layout.in_dim,
             domain=digit_domains,
             out_position=out_position,
             device=device,
             dtype=dtype,
-            output_device=output_device,
+            out_device=out_device,
             input_fitters=input_fitters,
             range_projector=range_projector,
             global_transform=global_transform,
@@ -366,7 +366,7 @@ class TTRSS(RecursiveSketching):
         if samples.batch_size < 1:
             raise ValueError('`sketch_samples` should contain samples')
         if isinstance(self._source_like, TensorSource) and \
-                samples.n_sites != len(self._source_like.input_dim):
+                samples.n_sites != len(self._source_like.in_dim):
             raise ValueError(
                 '`source` and `sketch_samples` should share input sites')
         return samples
@@ -407,19 +407,19 @@ class TTRSS(RecursiveSketching):
             normalized.append(site_embedding)
         return tuple(normalized)
 
-    def _validate_input_dim(self, input_dim: Sequence[int]) -> None:
+    def _validate_in_dim(self, in_dim: Sequence[int]) -> None:
         """Checks an optional public input-dimension declaration."""
-        expected = self._input_dim_option
+        expected = self._in_dim_option
         if expected is None:
             return
-        expected = (expected,) * len(input_dim) \
+        expected = (expected,) * len(in_dim) \
             if isinstance(expected, int) else tuple(expected)
-        if len(expected) != len(input_dim):
+        if len(expected) != len(in_dim):
             raise ValueError(
-                '`input_dim` should contain one value per input site')
-        if tuple(input_dim) != expected:
+                '`in_dim` should contain one value per input site')
+        if tuple(in_dim) != expected:
             raise ValueError(
-                '`input_dim` should match the dimensions returned by '
+                '`in_dim` should match the dimensions returned by '
                 '`embedding`')
 
     def _source_probe(
@@ -429,7 +429,7 @@ class TTRSS(RecursiveSketching):
         """Evaluates one row and returns any already-constructed source."""
         if isinstance(self._source_like, TensorSource):
             source = self._source_like
-            if len(source.input_dim) != n_input_sites:
+            if len(source.in_dim) != n_input_sites:
                 raise ValueError(
                     '`source` and `sketch_samples` should share input sites')
             if self._device is not None and source.device != self._device:
@@ -483,13 +483,13 @@ class TTRSS(RecursiveSketching):
         site_embeddings = self._embeddings_on_device(
             n_input_sites, device, dtype)
         embeddings = _EmbeddingSpec.normalize(site_embeddings, domains)
-        self._validate_input_dim(embeddings.input_dim)
+        self._validate_in_dim(embeddings.in_dim)
 
         if domains.inferred:
             inferred_values = []
-            for values, input_dim in zip(
-                    domains.values, embeddings.input_dim):
-                maximum = self._domain_multiplier * input_dim
+            for values, in_dim in zip(
+                    domains.values, embeddings.in_dim):
+                maximum = self._domain_multiplier * in_dim
                 if values.shape[0] >= maximum:
                     random_device = torch.device('cpu') \
                         if generator is None else generator.device
@@ -518,7 +518,7 @@ class TTRSS(RecursiveSketching):
 
             source = as_tensor_source(
                 typed_function,
-                input_dim=domains.n_values,
+                in_dim=domains.n_values,
                 output_shape=tuple(probe.shape[1:]),
                 dtype=dtype,
                 device=device)
@@ -533,7 +533,7 @@ class TTRSS(RecursiveSketching):
             range_projector=self._range_projector_option,
             global_transform=self._global_transform_option,
             local_transform=self._local_transform_option,
-            output_device=self._output_device,
+            out_device=self._out_device,
             synchronize_timers=self._synchronize_timers)
         return samples
 
@@ -703,7 +703,7 @@ class TTRSS(RecursiveSketching):
         -------
         TTDecomposition
             Lightweight OBC TT result. Completed cores are moved to
-            ``output_device`` (CPU by default).
+            ``out_device`` (CPU by default).
 
         Examples
         --------
@@ -714,7 +714,7 @@ class TTRSS(RecursiveSketching):
         >>> samples = torch.rand(24, 4)
         >>> result = tk.decompositions.TTRSS(function, embedding).fit(
         ...     samples, rank=3)
-        >>> result.input_dim
+        >>> result.in_dim
         (2, 2, 2, 2)
         """
         sample_batch = self._normalize_samples(sketch_samples)
@@ -1100,7 +1100,7 @@ class TTRSS(RecursiveSketching):
             raise ValueError('The result should contain one core per TT site')
         expected = context.state.get(
             'fitted_site_dim', self.outputs.site_dim(self.embeddings))
-        if result.input_dim != expected:
+        if result.in_dim != expected:
             raise ValueError('The result input dimensions are inconsistent')
 
 
@@ -1373,7 +1373,7 @@ class QTTTuckerRSS:
             out_position: Optional[Union[int, Sequence[int]]] = None,
             device: Device = None,
             dtype: Optional[torch.dtype] = None,
-            output_device: Device = 'cpu',
+            out_device: Device = 'cpu',
             synchronize_timers: bool = True) -> None:
         adapter, layout = _quantized_source(
             function=function,
@@ -1398,7 +1398,7 @@ class QTTTuckerRSS:
         self.adapter = adapter
         self.layout = layout
         self.out_position = out_position
-        self.output_device = output_device
+        self.out_device = out_device
         self.synchronize_timers = synchronize_timers
 
     def _sample_indices(
@@ -1535,12 +1535,12 @@ class QTTTuckerRSS:
         decomposer = _QTTTuckerTTRSS(
             indexed_function,
             embedding=embeddings,
-            input_dim=self.layout.grid_size,
+            in_dim=self.layout.grid_size,
             domain=index_domains,
             out_position=self.out_position,
             device=self.adapter.device,
             dtype=probe.dtype,
-            output_device=None,
+            out_device=None,
             input_fitters=fitters,
             synchronize_timers=self.synchronize_timers)
         upper = decomposer.fit(
@@ -1570,7 +1570,7 @@ class QTTTuckerRSS:
             'rss_recovery_guarantee': False,
             'variable_positions': tuple(decomposer.variable_positions),
             'connector_rank': [
-                factor.input_dim[-1] for factor in decomposer.factors],
+                factor.in_dim[-1] for factor in decomposer.factors],
             'quantization': {
                 'base': self.layout.base,
                 'level': self.layout.level,
@@ -1592,8 +1592,8 @@ class QTTTuckerRSS:
             out_of_domain=self.adapter.out_of_domain,
             metrics=upper.metrics,
             metadata=metadata)
-        return result if self.output_device is None else result.to(
-            device=self.output_device)
+        return result if self.out_device is None else result.to(
+            device=self.out_device)
 
 
 class TTRS:
@@ -1626,7 +1626,7 @@ class TTRS:
     dataset : torch.Tensor, optional
         Integer observations with shape ``(samples, sites)``. Duplicates are
         coalesced into an empirical distribution.
-    input_dim : sequence of int, optional
+    in_dim : sequence of int, optional
         Complete dimensions. Required for callable sources and optional for a
         dataset, where it otherwise follows the largest observed indices.
     weights : torch.Tensor, optional
@@ -1637,16 +1637,16 @@ class TTRS:
         Empirical/callable value dtype.
     device : str or torch.device, optional
         Device for a dataset or callable source.
-    output_device : str, torch.device or None, optional
+    out_device : str, torch.device or None, optional
         Device receiving completed cores. The default is CPU; ``None`` keeps
         the source device.
 
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> decomposer = TTRS(dataset=dataset, input_dim=(2, 2))
+    >>> decomposer = TTRS(dataset=dataset, in_dim=(2, 2))
     >>> result = decomposer.fit(rank=2)
-    >>> result.input_dim
+    >>> result.in_dim
     (2, 2)
     >>> len(result.cores)
     2
@@ -1657,17 +1657,17 @@ class TTRS:
             source=None,
             *,
             dataset: Optional[torch.Tensor] = None,
-            input_dim: Optional[Sequence[int]] = None,
+            in_dim: Optional[Sequence[int]] = None,
             weights: Optional[torch.Tensor] = None,
             sketch_operator: Optional[SketchOperator] = None,
             dtype: Optional[torch.dtype] = None,
             device: Device = None,
-            output_device: Device = 'cpu',
+            out_device: Device = 'cpu',
             synchronize_timers: bool = True) -> None:
         self._source = _resolve_rs_source(
             source=source,
             dataset=dataset,
-            input_dim=input_dim,
+            in_dim=in_dim,
             weights=weights,
             dtype=dtype,
             device=device)
@@ -1676,8 +1676,8 @@ class TTRS:
         elif not isinstance(sketch_operator, SketchOperator):
             raise TypeError('`sketch_operator` should implement SketchOperator')
         self.sketch_operator = sketch_operator
-        self.output_device = None if output_device is None \
-            else torch.device(output_device)
+        self.out_device = None if out_device is None \
+            else torch.device(out_device)
         if not isinstance(synchronize_timers, bool):
             raise TypeError('`synchronize_timers` should be bool type')
         self.synchronize_timers = synchronize_timers
@@ -1761,14 +1761,14 @@ class TTRS:
         Returns
         -------
         TTDecomposition
-            Lightweight TT result stored on ``output_device``.
+            Lightweight TT result stored on ``out_device``.
 
         Examples
         --------
         >>> indices = torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]])
         >>> values = torch.tensor([1., 2., 2., 4.])
         >>> source = tk.decompositions.SparseTensorSource(
-        ...     indices, values, input_dim=(2, 2))
+        ...     indices, values, in_dim=(2, 2))
         >>> result = TTRS(
         ...     source,
         ...     sketch_operator=tk.decompositions.SampledSketch()).fit(rank=1)
@@ -1797,8 +1797,8 @@ class TTRS:
                 name='start',
                 phase='TT-RS',
                 values={
-                    'sites': len(self.source.input_dim),
-                    'input_dim': self.source.input_dim,
+                    'sites': len(self.source.in_dim),
+                    'in_dim': self.source.in_dim,
                     'operator': type(self.sketch_operator).__name__,
                 }))
         timer = None
@@ -1825,7 +1825,7 @@ class TTRS:
         metadata = dict(result.metadata)
         metadata.update({
             'algorithm': 'tt_rs',
-            'input_dim': tuple(self.source.input_dim),
+            'in_dim': tuple(self.source.in_dim),
             'source_type': type(self.source).__name__,
         })
         active = TTDecomposition(
@@ -1876,7 +1876,7 @@ class TTRS:
 
         runtime = _RuntimePolicy(
             device=active.device,
-            out_device=self.output_device,
+            out_device=self.out_device,
             dtype=active.dtype,
             synchronize_timers=self.synchronize_timers)
         return TTDecomposition(
@@ -1890,7 +1890,7 @@ def tt_rs(
         source=None,
         *,
         dataset: Optional[torch.Tensor] = None,
-        input_dim: Optional[Sequence[int]] = None,
+        in_dim: Optional[Sequence[int]] = None,
         weights: Optional[torch.Tensor] = None,
         sketch_operator: Optional[SketchOperator] = None,
         rank: _Rank = 1,
@@ -1903,7 +1903,7 @@ def tt_rs(
         device: Device = None,
         generator: Optional[torch.Generator] = None,
         strict_system: bool = False,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
         return_info: bool = False):
     """Projects a complete discrete source into TT cores with TT-RS.
@@ -1916,7 +1916,7 @@ def tt_rs(
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> cores = tt_rs(dataset=dataset, input_dim=(2, 2), rank=2)
+    >>> cores = tt_rs(dataset=dataset, in_dim=(2, 2), rank=2)
     >>> len(cores)
     2
     """
@@ -1925,12 +1925,12 @@ def tt_rs(
     result = TTRS(
         source=source,
         dataset=dataset,
-        input_dim=input_dim,
+        in_dim=in_dim,
         weights=weights,
         sketch_operator=sketch_operator,
         dtype=dtype,
         device=device,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
@@ -1985,7 +1985,7 @@ def qtt_tucker_rss(
         projection_oversampling: int = 0,
         n_power_iter: int = 0,
         legacy_projection: bool = False,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
         return_info: bool = False):
     """Builds local QTT factors connected through an upper TT.
@@ -2036,7 +2036,7 @@ def qtt_tucker_rss(
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             sketch_samples,
             labels=labels,
             rank=rank,
@@ -2098,7 +2098,7 @@ def qtt_rss(
         projection_oversampling: int = 0,
         n_power_iter: int = 0,
         legacy_projection: bool = True,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
         return_info: bool = False):
     """Decomposes a multivariable physical function into QTT cores.
@@ -2159,7 +2159,7 @@ def qtt_rss(
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device=output_device)
+        out_device=out_device)
     result = decomposer.fit(
         sketch_samples,
         labels=labels,
@@ -2189,7 +2189,7 @@ def tt_rss(
         embedding: Embedding,
         sketch_samples: Samples,
         labels: Optional[torch.Tensor] = None,
-        input_dim: Optional[Union[int, Sequence[int]]] = None,
+        in_dim: Optional[Union[int, Sequence[int]]] = None,
         domain: Domain = None,
         domain_multiplier: int = 1,
         out_position: Optional[Union[int, Sequence[int]]] = None,
@@ -2207,7 +2207,7 @@ def tt_rss(
         projection_oversampling: int = 0,
         n_power_iter: int = 0,
         legacy_projection: bool = True,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 1,
         return_info: bool = False
         ) -> Union[List[torch.Tensor], Tuple[List[torch.Tensor], dict]]:
@@ -2237,12 +2237,12 @@ def tt_rss(
     labels : torch.Tensor, optional
         Flattened tensor-output labels with shape ``(batch_size,)``. If absent,
         labels are sampled proportionally to ``abs(function(samples)) ** 2``.
-    input_dim : int or sequence of int, optional
+    in_dim : int or sequence of int, optional
         Expected embedding dimension, shared or specified per input site.
     domain : torch.Tensor or sequence of torch.Tensor, optional
         Shared domain or one finite domain per input site.
     domain_multiplier : int, optional
-        Maximum inferred-domain size in multiples of ``input_dim``.
+        Maximum inferred-domain size in multiples of ``in_dim``.
     out_position : int or sequence of int, optional
         Positions of the output sites. Defaults to an evenly spaced layout.
     rank : int, optional
@@ -2287,7 +2287,7 @@ def tt_rss(
     legacy_projection : bool, optional
         Preserves the former square Haar rotation unless
         ``random_projection`` is explicitly supplied.
-    output_device : str, torch.device or None, optional
+    out_device : str, torch.device or None, optional
         Device receiving final cores. The default is CPU; ``None`` keeps the
         compute device.
     verbose : bool or int, optional
@@ -2299,7 +2299,7 @@ def tt_rss(
     Returns
     -------
     list[torch.Tensor]
-        TT cores stored on ``output_device``.
+        TT cores stored on ``out_device``.
     tuple[list[torch.Tensor], dict]
         Cores and diagnostic information when ``return_info=True``.
 
@@ -2326,13 +2326,13 @@ def tt_rss(
     decomposer = TTRSS(
         function=function,
         embedding=embedding,
-        input_dim=input_dim,
+        in_dim=in_dim,
         domain=domain,
         domain_multiplier=domain_multiplier,
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device=output_device)
+        out_device=out_device)
     result = decomposer.fit(
         sketch_samples=sketch_samples,
         labels=labels,

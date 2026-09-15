@@ -21,7 +21,7 @@ SourceLike = Union[TensorSource, TTDecomposition, torch.Tensor, Callable]
 
 def as_tensor_source(
         source: SourceLike,
-        input_dim: Optional[Sequence[int]] = None,
+        in_dim: Optional[Sequence[int]] = None,
         output_shape: Optional[Sequence[int]] = (),
         dtype: Optional[torch.dtype] = None,
         device: Union[str, torch.device] = 'cpu',
@@ -43,14 +43,14 @@ def as_tensor_source(
     if hasattr(source, 'boundary') and hasattr(type(source), 'tensors'):
         return TTTensorSource(source)
     if isinstance(source, torch.Tensor):
-        return DenseTensorSource(source, input_dim=input_dim)
+        return DenseTensorSource(source, in_dim=in_dim)
     if builtins.callable(source):
-        if input_dim is None:
+        if in_dim is None:
             raise ValueError(
-                '`input_dim` is required for a callable tensor source')
+                '`in_dim` is required for a callable tensor source')
         return CallableTensorSource(
             source,
-            input_dim=input_dim,
+            in_dim=in_dim,
             output_shape=output_shape,
             dtype=dtype,
             device=device,

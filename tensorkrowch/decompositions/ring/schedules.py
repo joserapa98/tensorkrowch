@@ -30,13 +30,13 @@ def _block_selection(provider: RingTargetProvider,
                      context: Mapping[str, Any]) -> BlockSelection:
     """Builds the result descriptor for the first independent anchor."""
     local_rank = tuple(provider.local_rank(sites, rank, context))
-    input_dim = tuple(provider.input_dim[site] for site in sites)
+    in_dim = tuple(provider.in_dim[site] for site in sites)
     return BlockSelection(
         sites=sites,
-        input_dim=input_dim,
+        in_dim=in_dim,
         left_rank_cap=local_rank[0],
         right_rank_cap=local_rank[-2],
-        input_capacity=prod(input_dim),
+        input_capacity=prod(in_dim),
         required_input_capacity=1,
         feasible=True,
         reason='alternating_anchor',
@@ -106,7 +106,7 @@ class AlternatingRingDriver:
             context: Optional[Mapping[str, Any]] = None
             ) -> BidirectionalRingResult:
         """Executes the experimental alternating schedule serially."""
-        input_dim = _validate_provider(provider)
+        in_dim = _validate_provider(provider)
         if not isinstance(opener, LoopOpener):
             raise TypeError('`opener` should implement LoopOpener')
         if not isinstance(recursion, GaugeRecursion):
@@ -143,7 +143,7 @@ class AlternatingRingDriver:
             stacklevel=2)
 
         unsupported = self._unsupported_reason(
-            len(input_dim), boundary_mode, block_size, anchor_offset)
+            len(in_dim), boundary_mode, block_size, anchor_offset)
         if unsupported is not None:
             return self._fallback(
                 unsupported,
@@ -317,7 +317,7 @@ class AlternatingRingDriver:
                     stability_diagnostics,
                     context):
         """Runs alternating free/fixed blocks around a cyclic provider."""
-        n_sites = len(provider.input_dim)
+        n_sites = len(provider.in_dim)
         offset = anchor_offset * block_size
         ordered = tuple(range(offset, n_sites)) + tuple(range(offset))
         blocks = tuple(
@@ -375,7 +375,7 @@ class AlternatingRingDriver:
                   stability_diagnostics,
                   context):
         """Runs odd internal anchors and closes both open target boundaries."""
-        n_sites = len(provider.input_dim)
+        n_sites = len(provider.in_dim)
         anchors = tuple((site,) for site in range(1, n_sites - 1, 2))
         fixed_blocks = tuple((site,) for site in range(2, n_sites - 1, 2))
         cores = [None] * n_sites

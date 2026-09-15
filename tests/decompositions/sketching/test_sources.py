@@ -22,7 +22,7 @@ def _compact_tt(cores):
     return [cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1)]
 
 
-def _random_ttm(input_dim, output_dim, rank, dtype, generator):
+def _random_ttm(in_dim, out_dim, rank, dtype, generator):
     """Creates a deterministic TTM decomposition for contraction tests."""
     ranks = (1, *rank, 1)
     standard = [
@@ -31,10 +31,10 @@ def _random_ttm(input_dim, output_dim, rank, dtype, generator):
             dtype=dtype,
             generator=generator)
         for site, (input_value, output_value) in enumerate(
-            zip(input_dim, output_dim))
+            zip(in_dim, out_dim))
     ]
     if len(standard) == 1:
-        compact = [standard[0].reshape(input_dim[0], output_dim[0])]
+        compact = [standard[0].reshape(in_dim[0], out_dim[0])]
     else:
         compact = [standard[0].squeeze(0).permute(0, 2, 1)]
         compact.extend(core.permute(0, 1, 3, 2)
@@ -64,7 +64,7 @@ class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
     def test_callable_stats_distinguish_source_calls_and_runtime_batches(self):
         source = tk.decompositions.CallableTensorSource(
             lambda indices: indices.sum(dim=1).to(torch.float64),
-            input_dim=(2, 3),
+            in_dim=(2, 3),
             dtype=torch.float64,
             batch_size=2)
         configurations = tk.decompositions.ConfigurationBatch(
@@ -84,7 +84,7 @@ class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
     def test_sparse_and_empirical_sources_keep_sparse_lookup_semantics(self):
         distribution = tk.decompositions.EmpiricalDistribution(
             dataset=torch.tensor([[0, 1], [0, 1], [1, 0]]),
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             weights=torch.tensor([1., 2., 3.], dtype=torch.float64),
             dtype=torch.float64)
         configurations = tk.decompositions.ConfigurationBatch(
@@ -140,16 +140,16 @@ class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_ttm_sketch_returns_output_tt_without_dense_source(self, dtype):
-        input_dim = (2, 3, 2)
-        output_dim = (2, 2, 3)
+        in_dim = (2, 3, 2)
+        out_dim = (2, 2, 3)
         source_cores = make_tt_cores(
-            input_dim=input_dim,
+            in_dim=in_dim,
             dtype=dtype,
             generator=torch.Generator().manual_seed(35))
         source = tk.decompositions.TTTensorSource(source_cores)
         sketch = _random_ttm(
-            input_dim,
-            output_dim,
+            in_dim,
+            out_dim,
             rank=(2, 2),
             dtype=dtype,
             generator=torch.Generator().manual_seed(36))
@@ -161,14 +161,14 @@ class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
         expected = torch.einsum(
             'abc,apbqcr->pqr', dense_source, dense_sketch.conj())
         assert isinstance(result, tk.decompositions.TTDecomposition)
-        assert result.input_dim == output_dim
+        assert result.in_dim == out_dim
         assert torch.allclose(result.contract_dense(), expected)
 
-    def test_structured_sketch_validates_input_dimensions(self):
+    def test_structured_sketch_validates_in_dimensions(self):
         source = tk.decompositions.TTTensorSource(
-            make_tt_cores(input_dim=(2, 3), rank=(2,)))
+            make_tt_cores(in_dim=(2, 3), rank=(2,)))
         sketch = tk.decompositions.TTDecomposition(
-            _compact_tt(make_tt_cores(input_dim=(2, 4), rank=(2,))))
+            _compact_tt(make_tt_cores(in_dim=(2, 4), rank=(2,))))
 
         with pytest.raises(ValueError, match='input dimensions'):
             source.contract_sketch(sketch)
@@ -211,7 +211,7 @@ class TestRSInputSources:  # MARK: TestRSInputSources
         dataset = torch.tensor([[0, 1], [0, 1], [1, 0]])
         source = _resolve_rs_source(
             dataset=dataset,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             weights=torch.tensor([1., 2., 3.], dtype=torch.float64))
 
         assert isinstance(source, tk.decompositions.EmpiricalDistribution)
@@ -236,7 +236,7 @@ class TestRSInputSources:  # MARK: TestRSInputSources
         source = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[1, 1], [0, 1], [1, 1], [0, 0]]),
             values=torch.tensor([1., 2., 3., 4.]),
-            input_dim=(3, 3))
+            in_dim=(3, 3))
 
         batches = list(_iter_support(source, batch_size=2))
         indices = torch.cat([batch.as_tensor() for batch, _ in batches])

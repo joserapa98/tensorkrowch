@@ -51,7 +51,7 @@ def _vector_problem():
     return function, embedding, samples, domain, labels
 
 
-def _input_dim(cores):
+def _in_dim(cores):
     """Extracts standard TT input dimensions from raw open-boundary cores."""
     if len(cores) == 1:
         return [cores[0].shape[0]]
@@ -101,7 +101,7 @@ class TestTTRSSPublicWorkflow:  # MARK: TestTTRSSPublicWorkflow
 
         expected = [3, 3, 3]
         expected.insert(out_position, 2)
-        assert _input_dim(cores) == expected
+        assert _in_dim(cores) == expected
         assert model.phys_dim == expected
         assert model.out_position == out_position
 
@@ -117,7 +117,7 @@ class TestTTRSSPublicWorkflow:  # MARK: TestTTRSSPublicWorkflow
             generator=torch.Generator().manual_seed(702),
             verbose=False)
 
-        assert _input_dim(cores) == [3, 3, 2, 3]
+        assert _in_dim(cores) == [3, 3, 2, 3]
 
     @pytest.mark.parametrize('domain_kind', ['shared', 'per_site', 'inferred'])
     def test_shared_per_site_and_inferred_domains(self, domain_kind):

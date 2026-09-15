@@ -36,7 +36,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
     @pytest.mark.parametrize('direction', ['forward', 'reverse'])
     def test_exact_design_matches_dense_oracle(self, dtype, direction):
         cores = make_tt_cores(
-            input_dim=(2, 3, 2, 2),
+            in_dim=(2, 3, 2, 2),
             rank=(2, 3, 2),
             dtype=dtype,
             generator=torch.Generator().manual_seed(40))
@@ -59,7 +59,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
     @pytest.mark.parametrize('direction', ['forward', 'reverse'])
     def test_sampled_slices_match_selected_dense_rows(self, direction):
         cores = make_tt_cores(
-            input_dim=(2, 3, 2),
+            in_dim=(2, 3, 2),
             rank=(2, 3),
             generator=torch.Generator().manual_seed(41))
         flat_ids = torch.tensor([0, 3, 7, 7, 11])
@@ -103,7 +103,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
 
     def test_qr_update_of_current_and_neighbour_is_atomic(self):
         cores = make_tt_cores(
-            input_dim=(2, 3, 2),
+            in_dim=(2, 3, 2),
             rank=(4, 3),
             generator=torch.Generator().manual_seed(43))
         gauged, applied = absorb_right_qr(cores, site=0)
@@ -128,7 +128,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
 
     def test_forward_far_normalization_rebuilds_affected_suffixes(self):
         cores = make_tt_cores(
-            input_dim=(2, 2, 2, 2),
+            in_dim=(2, 2, 2, 2),
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(44))
         updated = list(cores)
@@ -154,7 +154,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
 
     def test_reverse_far_normalization_rebuilds_affected_prefixes(self):
         cores = make_tt_cores(
-            input_dim=(2, 2, 2, 2),
+            in_dim=(2, 2, 2, 2),
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(45))
         updated = list(cores)
@@ -219,7 +219,7 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
     def test_standard_zip_up_contracts_each_core_once_per_side(
             self, direction):
         cores = make_tt_cores(
-            input_dim=(2, 2, 2, 2),
+            in_dim=(2, 2, 2, 2),
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(50))
         cache = tk.decompositions.TTEnvironmentCache(cores)

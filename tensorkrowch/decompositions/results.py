@@ -1261,12 +1261,12 @@ class _QuantizedTuckerDecomposition(TensorDecomposition1D):
             self.cores,
             metrics=self.metrics,
             metadata=self._source_upper_metadata)
-        self._hierarchical_input_dim = self._flattened_input_dim()
+        self._hierarchical_in_dim = self._flattened_in_dim()
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Input dimensions of the explicitly flattened digit-site network."""
-        return self._hierarchical_input_dim
+        return self._hierarchical_in_dim
 
     @property
     def output_shape(self) -> Tuple[int, ...]:
@@ -1274,7 +1274,7 @@ class _QuantizedTuckerDecomposition(TensorDecomposition1D):
         variable_positions = set(self.variable_positions)
         return tuple(
             dimension
-            for site, dimension in enumerate(self.upper.input_dim)
+            for site, dimension in enumerate(self.upper.in_dim)
             if site not in variable_positions)
 
     @property
@@ -1295,29 +1295,29 @@ class _QuantizedTuckerDecomposition(TensorDecomposition1D):
                 self.factors, self.variable_positions)):
             expected = (
                 (self.layout.base[variable],) * self.layout.level[variable])
-            if factor.input_dim[:-1] != expected:
+            if factor.in_dim[:-1] != expected:
                 raise ValueError(
                     'Factor digit dimensions should match the quantized layout')
-            if factor.input_dim[-1] != upper.input_dim[position]:
+            if factor.in_dim[-1] != upper.in_dim[position]:
                 raise ValueError(
                     'Factor connector dimension should match its upper site')
             if factor.device != upper.device or factor.dtype != upper.dtype:
                 raise ValueError(
                     'Upper cores and factors should share device and dtype')
-        return upper.rank, (), upper.input_dim, None
+        return upper.rank, (), upper.in_dim, None
 
-    def _flattened_input_dim(self) -> Tuple[int, ...]:
+    def _flattened_in_dim(self) -> Tuple[int, ...]:
         """Expands each upper connector into its factor digit dimensions."""
         variable_by_position = {
             position: variable
             for variable, position in enumerate(self.variable_positions)}
         dimensions = []
-        for site, dimension in enumerate(self.upper.input_dim):
+        for site, dimension in enumerate(self.upper.in_dim):
             variable = variable_by_position.get(site)
             if variable is None:
                 dimensions.append(dimension)
             else:
-                dimensions.extend(self.factors[variable].input_dim[:-1])
+                dimensions.extend(self.factors[variable].in_dim[:-1])
         return tuple(dimensions)
 
     def _standard_cores(self) -> List[torch.Tensor]:

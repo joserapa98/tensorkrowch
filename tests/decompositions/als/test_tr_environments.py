@@ -20,7 +20,7 @@ class TestDirectTREnvironment:  # MARK: TestDirectTREnvironment
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_matches_dense_oracle(self, dtype):
         cores = make_tr_cores(
-            input_dim=(2, 3, 2),
+            in_dim=(2, 3, 2),
             rank=(2, 3, 2),
             dtype=dtype,
             generator=torch.Generator().manual_seed(90))
@@ -61,7 +61,7 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
     def test_exact_design_matches_direct_oracle(
             self, dtype, direction, n_segments):
         cores = make_tr_cores(
-            input_dim=(2, 2, 3, 2, 2),
+            in_dim=(2, 2, 3, 2, 2),
             rank=(2, 3, 2, 4, 2),
             dtype=dtype,
             generator=torch.Generator().manual_seed(92))
@@ -109,7 +109,7 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
 
     def test_cross_segment_gauge_update_is_atomic(self):
         cores = make_tr_cores(
-            input_dim=(2, 2, 2, 2),
+            in_dim=(2, 2, 2, 2),
             rank=(2, 3, 3, 2),
             generator=torch.Generator().manual_seed(94))
         gauged, applied = absorb_right_qr(cores, site=1)
@@ -189,7 +189,7 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
 
     def test_segment_partition_is_balanced_and_complete(self):
         cores = make_tr_cores(
-            input_dim=(2,) * 7,
+            in_dim=(2,) * 7,
             rank=(2,) * 7,
             generator=torch.Generator().manual_seed(97))
         cache = tk.decompositions.TRSegmentEnvironmentCache(

@@ -8,7 +8,7 @@ from tensorkrowch.decompositions.sources.base import (
     ConfigurationBatch,
     _discrete_indices,
     _fiber_configurations,
-    _normalize_input_dim,
+    _normalize_in_dim,
     _SourceEvaluationTracker,
 )
 
@@ -25,7 +25,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
     ----------
     function : callable
         Function evaluated on configuration batches.
-    input_dim : sequence of int
+    in_dim : sequence of int
         Discrete input dimension at every site. These dimensions also provide
         the default grid for discrete fibers.
     output_shape : sequence of int or None, optional
@@ -41,7 +41,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
 
     def __init__(self,
                  function: Callable,
-                 input_dim: Sequence[int],
+                 in_dim: Sequence[int],
                  output_shape: Optional[Sequence[int]] = (),
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
@@ -72,16 +72,16 @@ class CallableTensorSource(_SourceEvaluationTracker):
                 raise ValueError('`batch_size` should be a positive integer')
 
         self.function = function
-        self._input_dim = _normalize_input_dim(input_dim)
+        self._in_dim = _normalize_in_dim(in_dim)
         self._output_shape = normalized_output_shape
         self._dtype = dtype
-        self._device = torch.device(device)
+        self._device = torch.empty(0, device=device).device
         self.batch_size = batch_size
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Discrete input dimension at every site."""
-        return self._input_dim
+        return self._in_dim
 
     @property
     def output_shape(self) -> Optional[Tuple[int, ...]]:
@@ -130,13 +130,13 @@ class CallableTensorSource(_SourceEvaluationTracker):
         if not isinstance(configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
-        if configurations.n_sites != len(self.input_dim):
+        if configurations.n_sites != len(self.in_dim):
             raise ValueError(
                 'Configurations should contain one value per input site')
         configurations = configurations.to(self.device)
         if configurations.kind == 'indices':
             _discrete_indices(
-                configurations, self.input_dim, self.device)
+                configurations, self.in_dim, self.device)
 
         if configurations.batch_size == 0:
             if (self.output_shape is None) or (self.dtype is None):
@@ -150,6 +150,10 @@ class CallableTensorSource(_SourceEvaluationTracker):
             return result
 
         batch_size = self.batch_size or configurations.batch_size
+        if batch_size >= configurations.batch_size:
+            result = self._evaluate_batch(configurations)
+            self._record_evaluation(points=configurations.batch_size)
+            return result
         chunks = []
         for start in range(0, configurations.batch_size, batch_size):
             stop = min(start + batch_size, configurations.batch_size)
@@ -168,14 +172,14 @@ class CallableTensorSource(_SourceEvaluationTracker):
         """Evaluates a callable fiber over explicit or discrete site values."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.input_dim)):
+        if (site < 0) or (site >= len(self.in_dim)):
             raise ValueError('`site` should identify an input site')
         if values is None:
             if configurations.kind != 'indices':
                 raise ValueError(
                     'Coordinate fibers require explicit `values`')
             values = torch.arange(
-                self.input_dim[site], device=configurations.device)
+                self.in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)

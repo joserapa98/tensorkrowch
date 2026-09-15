@@ -54,6 +54,20 @@ class TestConfigurationBatch:  # MARK: TestConfigurationBatch
 
 class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
 
+    def test_callable_resolves_effective_device(self):
+        configurations = tk.decompositions.ConfigurationBatch(
+            torch.tensor([[0, 1], [1, 2]]))
+        source = tk.decompositions.CallableTensorSource(
+            lambda indices: indices.sum(dim=1).to(torch.float64),
+            in_dim=(2, 3),
+            dtype=torch.float64,
+            device='cpu:0')
+
+        assert source.device == configurations.device
+        assert torch.equal(
+            source.evaluate(configurations),
+            torch.tensor([1., 3.], dtype=torch.float64))
+
     def test_dense_scalar_evaluation_and_fiber(self):
         tensor = torch.arange(24, dtype=torch.float64).reshape(2, 3, 4)
         source = tk.decompositions.DenseTensorSource(tensor)
@@ -69,7 +83,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
     def test_dense_tensor_output(self):
         tensor = torch.arange(24, dtype=torch.float64).reshape(2, 3, 4)
         source = tk.decompositions.DenseTensorSource(
-            tensor, input_dim=(2, 3))
+            tensor, in_dim=(2, 3))
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 1], [1, 2]]))
 
@@ -87,7 +101,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 3, 4),
+            in_dim=(2, 3, 4),
             dtype=torch.float64,
             batch_size=2)
         configurations = tk.decompositions.ConfigurationBatch(
@@ -109,7 +123,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         source = tk.decompositions.CallableTensorSource(
             lambda x: torch.stack((x[:, 0], x[:, 1]), dim=1).to(
                 torch.complex128),
-            input_dim=(2, 3),
+            in_dim=(2, 3),
             output_shape=None,
             dtype=None)
         configurations = tk.decompositions.ConfigurationBatch(
@@ -128,7 +142,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(1, 1),
+            in_dim=(1, 1),
             dtype=torch.float64)
         configurations = tk.decompositions.ConfigurationBatch(
             (
@@ -144,7 +158,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
     def test_callable_discrete_fiber(self):
         source = tk.decompositions.CallableTensorSource(
             lambda x: (x[:, 0] + 2 * x[:, 1]).to(torch.float64),
-            input_dim=(2, 3),
+            in_dim=(2, 3),
             dtype=torch.float64)
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 1], [1, 2]]))
@@ -158,13 +172,13 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         tensor = torch.randn(2, 3)
         dense = tk.decompositions.as_tensor_source(tensor)
         callable_source = tk.decompositions.as_tensor_source(
-            lambda x: x.sum(dim=1).float(), input_dim=(2, 3))
+            lambda x: x.sum(dim=1).float(), in_dim=(2, 3))
 
         assert isinstance(dense, tk.decompositions.DenseTensorSource)
         assert isinstance(callable_source,
                           tk.decompositions.CallableTensorSource)
         assert tk.decompositions.as_tensor_source(dense) is dense
-        with pytest.raises(ValueError, match='input_dim'):
+        with pytest.raises(ValueError, match='in_dim'):
             tk.decompositions.as_tensor_source(lambda x: x)
 
 
@@ -174,7 +188,7 @@ class TestSparseAndTTSources:  # MARK: TestSparseAndTTSources
         source = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 0], [0, 0], [1, 2]]),
             values=torch.tensor([1., 2., 4.]),
-            input_dim=(2, 3))
+            in_dim=(2, 3))
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 0], [0, 2], [1, 2]]))
 
@@ -190,7 +204,7 @@ class TestSparseAndTTSources:  # MARK: TestSparseAndTTSources
     def test_empirical_distribution_accumulates_normalized_mass(self):
         distribution = tk.decompositions.EmpiricalDistribution(
             torch.tensor([[0, 1], [0, 1], [1, 0], [1, 1]]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]]))
 
@@ -224,7 +238,7 @@ class TestSparseAndTTSources:  # MARK: TestSparseAndTTSources
         source = tk.decompositions.as_tensor_source(decomposition)
 
         assert isinstance(source, tk.decompositions.TTTensorSource)
-        assert source.input_dim == decomposition.input_dim
+        assert source.in_dim == decomposition.in_dim
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_tt_structured_prefix_suffix_and_phi_match_dense(self, dtype):

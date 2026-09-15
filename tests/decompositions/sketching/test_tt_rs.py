@@ -31,7 +31,7 @@ class TestTTRS:  # MARK: TestTTRS
         result = tk.decompositions.TTRS(
             source,
             sketch_operator=operator,
-            output_device=None).fit(
+            out_device=None).fit(
                 rank=1,
                 generator=torch.Generator().manual_seed(301),
                 strict_system=True,
@@ -50,7 +50,7 @@ class TestTTRS:  # MARK: TestTTRS
             [0, 0], [0, 0], [0, 1], [1, 0], [1, 1], [1, 1]])
         cores, info = tk.decompositions.tt_rs(
             dataset=dataset,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             rank=2,
             return_info=True)
         expected = torch.tensor(
@@ -69,7 +69,7 @@ class TestTTRS:  # MARK: TestTTRS
         result = tk.decompositions.TTRS(
             tt_source,
             sketch_operator=tk.decompositions.MarginalSketch.markov(),
-            output_device=None).fit(rank=1, batch_size=3)
+            out_device=None).fit(rank=1, batch_size=3)
 
         assert torch.allclose(result.contract_dense(), dense)
         assert result.metadata['system']['source_path'] == 'structured_tt'
@@ -83,7 +83,7 @@ class TestTTRS:  # MARK: TestTTRS
             source,
             sketch_operator=tk.decompositions.TTStackSketch(
                 tt_rank=2, n_stacks=2),
-            output_device=None)
+            out_device=None)
         first = decomposer.fit(
             rank=1, generator=torch.Generator().manual_seed(302))
         second = decomposer.fit(

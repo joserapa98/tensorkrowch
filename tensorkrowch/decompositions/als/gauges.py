@@ -81,16 +81,16 @@ class QRGauge:
             direction: Direction
             ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         _validate_factor_input(core, direction)
-        left_rank, input_dim, right_rank = core.shape
+        left_rank, in_dim, right_rank = core.shape
         if direction == 'forward':
-            matrix = core.reshape(left_rank * input_dim, right_rank)
+            matrix = core.reshape(left_rank * in_dim, right_rank)
             isometry, factor = torch.linalg.qr(matrix, mode='reduced')
             if isometry.shape[1] != right_rank:
                 raise ValueError(
                     'The right rank is not algebraically feasible for QR')
             return isometry.reshape(core.shape), factor
 
-        matrix = core.reshape(left_rank, input_dim * right_rank)
+        matrix = core.reshape(left_rank, in_dim * right_rank)
         isometry, factor = torch.linalg.qr(
             matrix.mT.conj(), mode='reduced')
         if isometry.shape[1] != left_rank:
@@ -122,9 +122,9 @@ class SVDGauge:
             direction: Direction
             ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         _validate_factor_input(core, direction)
-        left_rank, input_dim, right_rank = core.shape
+        left_rank, in_dim, right_rank = core.shape
         if direction == 'forward':
-            matrix = core.reshape(left_rank * input_dim, right_rank)
+            matrix = core.reshape(left_rank * in_dim, right_rank)
             u, singular_values, vh = torch.linalg.svd(
                 matrix, full_matrices=False)
             if u.shape[1] != right_rank:
@@ -133,7 +133,7 @@ class SVDGauge:
             factor = singular_values.to(vh.dtype).unsqueeze(1) * vh
             return u.reshape(core.shape), factor
 
-        matrix = core.reshape(left_rank, input_dim * right_rank)
+        matrix = core.reshape(left_rank, in_dim * right_rank)
         u, singular_values, vh = torch.linalg.svd(
             matrix, full_matrices=False)
         if vh.shape[0] != left_rank:

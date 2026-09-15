@@ -11,10 +11,10 @@ from tests.decompositions.als._oracles import contract_tr_dense
 def _uniform_tr(dtype=torch.float64, n_sites=3):
     """Creates one generic rank-two TR satisfying BLOSTR dimensions."""
     generator = torch.Generator().manual_seed(300 + n_sites)
-    input_dim = (4,) * n_sites
+    in_dim = (4,) * n_sites
     cores = [
         torch.randn(2, dimension, 2, dtype=dtype, generator=generator)
-        for dimension in input_dim
+        for dimension in in_dim
     ]
     return cores, contract_tr_dense(cores)
 
@@ -32,7 +32,7 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
                 slices=((0,), (1,), (2,), (3,)),
                 n_iters=20,
                 n_restarts=3,
-                output_device=None,
+                out_device=None,
                 return_info=True)
 
         approximation = contract_tr_dense(cores)
@@ -57,7 +57,7 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
                     n_iters=10,
                     n_restarts=2,
                     generator=torch.Generator().manual_seed(81),
-                    output_device=None,
+                    out_device=None,
                     return_info=True))
 
         first_cores, first_info = outputs[0]
@@ -81,7 +81,7 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
                 slices=((0, 0), (1, 0), (2, 1), (3, 2)),
                 n_iters=20,
                 n_restarts=3,
-                output_device=None)
+                out_device=None)
 
         assert [tuple(core.shape) for core in cores] == [(2, 4, 2)] * 4
         assert torch.allclose(
@@ -97,7 +97,7 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
                     torch.zeros(4, 4, 4, dtype=torch.float64),
                     rank=2,
                     slices=((0,), (1,), (2,), (3,)),
-                    output_device=None)
+                    out_device=None)
 
     def test_rejects_nonuniform_ranks_and_insufficient_dimensions(self):
         tensor = torch.randn(
@@ -182,7 +182,7 @@ class TestBLOSTRLoopOpener:  # MARK: TestBLOSTRLoopOpener
             function,
             rank=2,
             context={
-                'input_dim': tensor.shape,
+                'in_dim': tensor.shape,
                 'dtype': tensor.dtype,
             })
 

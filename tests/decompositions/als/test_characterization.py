@@ -43,7 +43,7 @@ class TestDenseALSOracles:  # MARK: TestDenseALSOracles
 
     def test_heterogeneous_tr_environment_matches_direct_products(self):
         cores = make_tr_cores(
-            input_dim=(2, 3, 2, 2),
+            in_dim=(2, 3, 2, 2),
             rank=(2, 3, 2, 4),
             generator=torch.Generator().manual_seed(1))
 

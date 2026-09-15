@@ -263,7 +263,7 @@ class _EvaluationPlanBuilder:
         """Validates one request against the shared source input metadata."""
         if not isinstance(request, _EvaluationRequest):
             raise TypeError('`request` should be _EvaluationRequest type')
-        if request.configurations.n_sites != len(self.source.input_dim):
+        if request.configurations.n_sites != len(self.source.in_dim):
             raise ValueError(
                 'Configurations should contain one value per source input site')
 

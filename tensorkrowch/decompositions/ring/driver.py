@@ -23,7 +23,7 @@ class RingTargetProvider(Protocol):
     """Provides local targets, ranks and contexts to the ring driver."""
 
     @property
-    def input_dim(self) -> Sequence[int]:
+    def in_dim(self) -> Sequence[int]:
         """Returns one input dimension per final TR site."""
 
     def local_target(self,
@@ -180,15 +180,15 @@ def _validate_provider(provider: RingTargetProvider) -> Tuple[int, ...]:
     if not isinstance(provider, RingTargetProvider):
         raise TypeError('`provider` should implement RingTargetProvider')
     try:
-        input_dim = tuple(provider.input_dim)
+        in_dim = tuple(provider.in_dim)
     except TypeError as exc:
-        raise TypeError('`provider.input_dim` should be a sequence') from exc
-    if len(input_dim) < 3:
+        raise TypeError('`provider.in_dim` should be a sequence') from exc
+    if len(in_dim) < 3:
         raise ValueError('Bidirectional ring construction requires three sites')
     if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-           for dim in input_dim):
+           for dim in in_dim):
         raise ValueError('Provider input dimensions should be positive integers')
-    return input_dim
+    return in_dim
 
 
 def _validate_opening(opening: LoopOpening,
@@ -235,7 +235,7 @@ class BidirectionalRingDriver:
             context: Optional[
                 Mapping[str, Any]] = None) -> BidirectionalRingResult:
         """Runs the isolated central/right/left/boundary driver workflow."""
-        input_dim = _validate_provider(provider)
+        in_dim = _validate_provider(provider)
         if not isinstance(opener, LoopOpener):
             raise TypeError('`opener` should implement LoopOpener')
         if not isinstance(recursion, GaugeRecursion):
@@ -267,12 +267,12 @@ class BidirectionalRingDriver:
                 f'reason={selection.reason}, sites={selection.sites}, '
                 f'input_capacity={selection.input_capacity}, '
                 f'required_input_capacity={selection.required_input_capacity}')
-        if len(selection.sites) == len(input_dim):
+        if len(selection.sites) == len(in_dim):
             raise ValueError(
                 'The central block should leave at least one boundary site '
                 'to reconcile its two outgoing gauges')
 
-        cores: list = [None] * len(input_dim)
+        cores: list = [None] * len(in_dim)
         openings: Dict[Tuple[int, ...], LoopOpening] = {}
         order = []
         directions = []
@@ -308,7 +308,7 @@ class BidirectionalRingDriver:
                 recursion=recursion,
                 selection=selection,
                 central_opening=central_opening,
-                input_dim=input_dim,
+                in_dim=in_dim,
                 context=context,
                 cores=cores,
                 openings=openings,
@@ -317,9 +317,9 @@ class BidirectionalRingDriver:
                 metrics=metrics,
                 recursion_diagnostics=recursion_diagnostics)
 
-        remaining = len(input_dim) - len(central_sites)
-        left_site = (selection.left - 1) % len(input_dim)
-        right_site = (selection.right + 1) % len(input_dim)
+        remaining = len(in_dim) - len(central_sites)
+        left_site = (selection.left - 1) % len(in_dim)
+        right_site = (selection.right + 1) % len(in_dim)
         left_opening = central_opening
         right_opening = central_opening
 
@@ -351,7 +351,7 @@ class BidirectionalRingDriver:
                 sites, 'right', opening, cores, openings, order,
                 directions, metrics)
             right_opening = opening
-            right_site = (right_site + 1) % len(input_dim)
+            right_site = (right_site + 1) % len(in_dim)
             remaining -= 1
             if remaining <= 1:
                 break
@@ -383,7 +383,7 @@ class BidirectionalRingDriver:
                 sites, 'left', opening, cores, openings, order,
                 directions, metrics)
             left_opening = opening
-            left_site = (left_site - 1) % len(input_dim)
+            left_site = (left_site - 1) % len(in_dim)
             remaining -= 1
 
         if remaining == 1:
@@ -449,7 +449,7 @@ class BidirectionalRingDriver:
             recursion: GaugeRecursion,
             selection: BlockSelection,
             central_opening: LoopOpening,
-            input_dim: Tuple[int, ...],
+            in_dim: Tuple[int, ...],
             context: Mapping[str, Any],
             cores: list,
             openings: Dict[Tuple[int, ...], LoopOpening],
@@ -458,7 +458,7 @@ class BidirectionalRingDriver:
             metrics: DecompositionMetrics,
             recursion_diagnostics: list) -> BidirectionalRingResult:
         """Runs two independent sweeps and absorbs both open target edges."""
-        if selection.left == 0 or selection.right == len(input_dim) - 1:
+        if selection.left == 0 or selection.right == len(in_dim) - 1:
             raise ValueError(
                 'An open-boundary provider requires an internal central block')
         close_boundary = getattr(provider, 'close_boundary', None)
@@ -468,7 +468,7 @@ class BidirectionalRingDriver:
 
         boundaries = {}
         right_opening = central_opening
-        for site in range(selection.right + 1, len(input_dim) - 1):
+        for site in range(selection.right + 1, len(in_dim) - 1):
             sites = (site,)
             target = provider.local_target(sites, context)
             fixed_left = self._advance(
@@ -497,14 +497,14 @@ class BidirectionalRingDriver:
                 directions, metrics)
             right_opening = opening
         right_closure = close_boundary(
-            site=len(input_dim) - 1,
+            site=len(in_dim) - 1,
             direction='right',
             opening=right_opening,
             context=self._boundary_context(
                 recursion=recursion,
                 direction='right',
                 opening=right_opening,
-                boundary_site=len(input_dim) - 1,
+                boundary_site=len(in_dim) - 1,
                 provider=provider,
                 context=context,
                 openings=openings,

@@ -34,7 +34,7 @@ from tensorkrowch.decompositions.sketching.transforms import (
 def _one_site_phi(source, values=None):
     """Creates a scalar one-site Phi over explicit discrete values."""
     if values is None:
-        values = torch.arange(source.input_dim[0])
+        values = torch.arange(source.in_dim[0])
     output_spec = _OutputSpec.normalize(
         torch.ones(1), n_input_sites=1)
     return PhiOperator(source, ((0, values),), output_spec)
@@ -107,7 +107,7 @@ class TestGlobalValueTransform:  # MARK: TestGlobalValueTransform
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(3,),
+            in_dim=(3,),
             dtype=torch.float64)
         phi = _one_site_phi(source, torch.tensor([0, 1]))
 
@@ -282,7 +282,7 @@ class TestLocalValueTransform:  # MARK: TestLocalValueTransform
     def test_empirical_values_admit_a_generic_local_kernel_transform(self):
         source = tk.decompositions.EmpiricalDistribution(
             dataset=torch.tensor([[0], [0], [2], [2]]),
-            input_dim=(3,))
+            in_dim=(3,))
         phi = _one_site_phi(source)
         kernel = torch.tensor([
             [0.75, 0.25, 0.00],

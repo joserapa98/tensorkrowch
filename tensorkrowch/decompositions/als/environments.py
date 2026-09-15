@@ -89,7 +89,7 @@ class TTLocalEnvironment:
     """Left/right TT contractions defining one local design matrix."""
 
     site: int
-    input_dim: int
+    in_dim: int
     left: torch.Tensor
     right: torch.Tensor
     site_ids: Optional[torch.Tensor]
@@ -105,14 +105,14 @@ class TTLocalEnvironment:
         """Materializes the exact or sampled local TT design matrix."""
         if self.sampled:
             basis = nnf.one_hot(
-                self.site_ids.to(torch.long), self.input_dim).to(
+                self.site_ids.to(torch.long), self.in_dim).to(
                     device=self.left.device, dtype=self.left.dtype)
             design = torch.einsum(
                 'ja,jp,jb->japb', self.left, basis, self.right)
             return design.reshape(design.shape[0], -1)
 
         identity = torch.eye(
-            self.input_dim,
+            self.in_dim,
             device=self.left.device,
             dtype=self.left.dtype)
         design = (
@@ -121,7 +121,7 @@ class TTLocalEnvironment:
             self.right[None, None, :, None, None, :]
         )
         return design.reshape(
-            self.left.shape[0] * self.input_dim * self.right.shape[0], -1)
+            self.left.shape[0] * self.in_dim * self.right.shape[0], -1)
 
     def scale_target(self, target: torch.Tensor) -> torch.Tensor:
         """Applies the same global normalization used by the environment."""
@@ -130,7 +130,7 @@ class TTLocalEnvironment:
         if self.sampled:
             n_rows = self.left.shape[0]
         else:
-            n_rows = self.left.shape[0] * self.input_dim * self.right.shape[0]
+            n_rows = self.left.shape[0] * self.in_dim * self.right.shape[0]
         if target.shape[0] != n_rows:
             raise ValueError(
                 '`target` rows should match the local environment design')
@@ -152,7 +152,7 @@ class TRLocalEnvironment:
     """Cyclic TR contraction defining one local design matrix."""
 
     site: int
-    input_dim: int
+    in_dim: int
     environment: torch.Tensor
     site_ids: torch.Tensor
     log_scale: torch.Tensor
@@ -162,7 +162,7 @@ class TRLocalEnvironment:
     def design(self) -> torch.Tensor:
         """Materializes local rows in standard core vectorization order."""
         basis = nnf.one_hot(
-            self.site_ids.to(torch.long), self.input_dim).to(
+            self.site_ids.to(torch.long), self.in_dim).to(
                 device=self.environment.device,
                 dtype=self.environment.dtype)
         design = torch.einsum(
@@ -283,7 +283,7 @@ class TTEnvironmentCache:
         return self._versions
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Input dimension at every TT site."""
         return tuple(core.shape[1] for core in self._cores)
 
@@ -351,17 +351,17 @@ class TTEnvironmentCache:
         if isinstance(samples, SampleBatch):
             if samples.ids.device != self._cores[0].device:
                 raise ValueError('Samples and TT cores should share a device')
-            if samples.ids.max() >= prod(self.input_dim):
+            if samples.ids.max() >= prod(self.in_dim):
                 raise ValueError('A sampled row id is out of bounds')
             self._sample_indices = _unravel_indices(
-                samples.ids.to(torch.long), self.input_dim)
+                samples.ids.to(torch.long), self.in_dim)
             self._sample_generation = samples.generation
             return
         if not isinstance(samples, ConfigurationBatch):
             raise TypeError(
                 '`samples` should be ConfigurationBatch, SampleBatch or None')
         self._sample_indices = _discrete_indices(
-            samples, self.input_dim, self._cores[0].device)
+            samples, self.in_dim, self._cores[0].device)
         self._sample_generation = 0
 
     def prepare_sweep(
@@ -458,7 +458,7 @@ class TTEnvironmentCache:
         self._active_site = site
         return TTLocalEnvironment(
             site=site,
-            input_dim=self.input_dim[site],
+            in_dim=self.in_dim[site],
             left=left,
             right=right,
             site_ids=site_ids,
@@ -586,7 +586,7 @@ class DirectTREnvironment:
             raise ValueError('`site` should identify a TR core')
         indices, generation, sampled = _tr_sample_indices(
             samples=samples,
-            input_dim=tuple(core.shape[1] for core in self._cores),
+            in_dim=tuple(core.shape[1] for core in self._cores),
             device=self._cores[0].device)
         order = (*range(site + 1, n_sites), *range(site))
         environment = None
@@ -613,7 +613,7 @@ class DirectTREnvironment:
             dtype=self._cores[0].dtype)
         return TRLocalEnvironment(
             site=site,
-            input_dim=self._cores[site].shape[1],
+            in_dim=self._cores[site].shape[1],
             environment=environment,
             site_ids=indices[:, site],
             log_scale=environment.real.new_zeros(()),
@@ -623,25 +623,25 @@ class DirectTREnvironment:
 
 def _tr_sample_indices(
         samples: Optional[Union[ConfigurationBatch, SampleBatch]],
-        input_dim: Sequence[int],
+        in_dim: Sequence[int],
         device: torch.device
         ) -> Tuple[torch.Tensor, Optional[int], bool]:
     """Normalizes exact and sampled TR rows to packed discrete indices."""
     if samples is None:
-        ids = torch.arange(prod(input_dim), device=device, dtype=torch.long)
-        return _unravel_indices(ids, input_dim), None, False
+        ids = torch.arange(prod(in_dim), device=device, dtype=torch.long)
+        return _unravel_indices(ids, in_dim), None, False
     if isinstance(samples, SampleBatch):
         if samples.ids.device != device:
             raise ValueError('Samples and TR cores should share a device')
-        if samples.ids.max() >= prod(input_dim):
+        if samples.ids.max() >= prod(in_dim):
             raise ValueError('A sampled row id is out of bounds')
-        return (_unravel_indices(samples.ids.to(torch.long), input_dim),
+        return (_unravel_indices(samples.ids.to(torch.long), in_dim),
                 samples.generation,
                 True)
     if not isinstance(samples, ConfigurationBatch):
         raise TypeError(
             '`samples` should be ConfigurationBatch, SampleBatch or None')
-    return _discrete_indices(samples, input_dim, device), 0, True
+    return _discrete_indices(samples, in_dim, device), 0, True
 
 
 class TRSegmentEnvironmentCache:
@@ -754,7 +754,7 @@ class TRSegmentEnvironmentCache:
         return self._versions
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Input dimension at every TR site."""
         return tuple(core.shape[1] for core in self._cores)
 
@@ -900,7 +900,7 @@ class TRSegmentEnvironmentCache:
             raise ValueError(
                 '`order` should contain all TR sites forward or reverse')
         self._indices, self._sample_generation, self._sampled = \
-            _tr_sample_indices(samples, self.input_dim, self._cores[0].device)
+            _tr_sample_indices(samples, self.in_dim, self._cores[0].device)
         self._order = order
         self._cursor = 0
         self._active_site = None
@@ -964,7 +964,7 @@ class TRSegmentEnvironmentCache:
         self._active_site = site
         return TRLocalEnvironment(
             site=site,
-            input_dim=self.input_dim[site],
+            in_dim=self.in_dim[site],
             environment=environment,
             site_ids=self._indices[:, site],
             log_scale=log_scale,

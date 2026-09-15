@@ -226,7 +226,7 @@ class PhiOperator:
             input_sites = output_spec.input_positions
         input_region = SiteRegion(input_sites)
         if len(input_region) != output_spec.n_input_sites or \
-                len(input_region) != len(source.input_dim):
+                len(input_region) != len(source.in_dim):
             raise ValueError(
                 '`input_sites` should contain one site per source input')
         if output_sites is None:

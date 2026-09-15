@@ -103,20 +103,20 @@ def _complex_dtype(dtype: torch.dtype) -> torch.dtype:
 
 
 def _flat_to_configuration(flat: int,
-                           input_dim: Sequence[int]) -> Tuple[int, ...]:
+                           in_dim: Sequence[int]) -> Tuple[int, ...]:
     """Unravels one flat interior-slice id."""
-    configuration = [0] * len(input_dim)
-    for axis in range(len(input_dim) - 1, -1, -1):
-        configuration[axis] = flat % input_dim[axis]
-        flat //= input_dim[axis]
+    configuration = [0] * len(in_dim)
+    for axis in range(len(in_dim) - 1, -1, -1):
+        configuration[axis] = flat % in_dim[axis]
+        flat //= in_dim[axis]
     return tuple(configuration)
 
 
-def _draw_slices(input_dim: Sequence[int],
+def _draw_slices(in_dim: Sequence[int],
                  generator: Optional[torch.Generator]
                  ) -> Tuple[Tuple[int, ...], ...]:
     """Draws two distinct slice ratios from interior configurations."""
-    interior = tuple(input_dim[1:-1])
+    interior = tuple(in_dim[1:-1])
     n_configurations = prod(interior)
     if n_configurations < 3:
         raise ValueError(
@@ -134,7 +134,7 @@ def _draw_slices(input_dim: Sequence[int],
 
 def _validate_slices(
         slices: Sequence[Sequence[int]],
-        input_dim: Sequence[int]) -> Tuple[Tuple[int, ...], ...]:
+        in_dim: Sequence[int]) -> Tuple[Tuple[int, ...], ...]:
     """Validates four user-provided interior slice configurations."""
     if isinstance(slices, (str, bytes)):
         raise TypeError('`slices` should contain four index sequences')
@@ -145,7 +145,7 @@ def _validate_slices(
             '`slices` should contain four index sequences') from exc
     if len(slices) != 4:
         raise ValueError('`slices` should contain alpha, beta and their primes')
-    interior = tuple(input_dim[1:-1])
+    interior = tuple(in_dim[1:-1])
     for configuration in slices:
         if len(configuration) != len(interior):
             raise ValueError(
@@ -377,8 +377,8 @@ def _recover_tail(first: _FirstCoreFactorization,
     records = []
     left_rank = ranks[0]
     remaining_input = tuple(tensor.shape[1:])
-    for offset, input_dimension in enumerate(remaining_input[:-1], start=1):
-        matrix = tail.reshape(left_rank * input_dimension, -1)
+    for offset, in_dimension in enumerate(remaining_input[:-1], start=1):
+        matrix = tail.reshape(left_rank * in_dimension, -1)
         u, singular_values, vh, info = truncated_svd(
             matrix,
             rank=ranks[offset],
@@ -388,7 +388,7 @@ def _recover_tail(first: _FirstCoreFactorization,
             cum_percentage=cum_percentage,
             return_info=True)
         selected_rank = singular_values.shape[-1]
-        cores.append(u.reshape(left_rank, input_dimension, selected_rank))
+        cores.append(u.reshape(left_rank, in_dimension, selected_rank))
         tail = (singular_values.to(vh.dtype).unsqueeze(-1) * vh).reshape(
             selected_rank,
             *remaining_input[(offset):],
@@ -413,7 +413,7 @@ def _fit_blostr(tensor: torch.Tensor,
                 atol: Optional[float] = None,
                 rtol: Optional[float] = None,
                 cum_percentage: Optional[float] = None,
-                output_device: _Device = 'cpu') -> TRDecomposition:
+                out_device: _Device = 'cpu') -> TRDecomposition:
     """Runs multiple spectral slice attempts and keeps the best recovery."""
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
@@ -429,8 +429,8 @@ def _fit_blostr(tensor: torch.Tensor,
     n_restarts = _normalize_positive_int(n_restarts, 'n_restarts')
     if generator is not None and not isinstance(generator, torch.Generator):
         raise TypeError('`generator` should be torch.Generator type or None')
-    if output_device is not None:
-        output_device = torch.device(output_device)
+    if out_device is not None:
+        out_device = torch.device(out_device)
 
     active_tensor = tensor.to(dtype=_complex_dtype(tensor.dtype))
     fixed_slices = None if slices is None else _validate_slices(
@@ -487,7 +487,7 @@ def _fit_blostr(tensor: torch.Tensor,
             denominator=denominator)],
         timings=[TimingRecord(name='fit', elapsed=elapsed)])
     final_cores = [
-        core if output_device is None else core.to(output_device)
+        core if out_device is None else core.to(out_device)
         for core in candidate.cores
     ]
     return TRDecomposition(
@@ -509,22 +509,22 @@ def _materialize_target(target,
     """Materializes a scalar local source for the spectral algorithm."""
     source = as_tensor_source(
         target,
-        input_dim=context.get('input_dim'),
+        in_dim=context.get('in_dim'),
         output_shape=(),
         dtype=context.get('dtype'),
         device=context.get('device', 'cpu'),
         batch_size=context.get('batch_size'))
     axes = [
         torch.arange(dimension, device=source.device)
-        for dimension in source.input_dim
+        for dimension in source.in_dim
     ]
     indices = torch.cartesian_prod(*axes)
-    if len(source.input_dim) == 1:
+    if len(source.in_dim) == 1:
         indices = indices.unsqueeze(1)
     values = source.evaluate(ConfigurationBatch(indices, kind='indices'))
     if values.shape != (indices.shape[0],):
         raise ValueError('BLOSTR requires a scalar tensor source')
-    return values.reshape(source.input_dim)
+    return values.reshape(source.in_dim)
 
 
 def _mirror_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
@@ -554,7 +554,7 @@ class BLOSTRLoopOpener:
             fit_options = {}
         if not isinstance(fit_options, Mapping):
             raise TypeError('`fit_options` should be a mapping or None')
-        reserved = {'rank', 'output_device', 'return_info'}
+        reserved = {'rank', 'out_device', 'return_info'}
         overlap = reserved.intersection(fit_options)
         if overlap:
             raise ValueError(
@@ -586,18 +586,18 @@ class BLOSTRLoopOpener:
             context = {}
         elif not isinstance(context, Mapping):
             raise TypeError('`context` should be a mapping or None')
-        input_dim = context.get('input_dim')
-        if input_dim is None:
+        in_dim = context.get('in_dim')
+        if in_dim is None:
             if not isinstance(target, torch.Tensor):
                 raise ValueError(
-                    '`context["input_dim"]` is required for a lazy target')
-            input_dim = target.shape
-        input_dim = tuple(input_dim)
-        ranks = _normalize_rank(rank, len(input_dim))
+                    '`context["in_dim"]` is required for a lazy target')
+            in_dim = target.shape
+        in_dim = tuple(in_dim)
+        ranks = _normalize_rank(rank, len(in_dim))
         self.capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
-            block_size=len(input_dim) - 2)
+            block_size=len(in_dim) - 2)
 
         dense = _materialize_target(target, context)
         active_ranks = ranks
@@ -612,7 +612,7 @@ class BLOSTRLoopOpener:
         result = _fit_blostr(
             dense,
             active_ranks,
-            output_device=None,
+            out_device=None,
             **fit_options)
         cores = tuple(result.cores)
         if orientation == 'left':
@@ -650,7 +650,7 @@ def tr_blostr(tensor: torch.Tensor,
               atol: Optional[float] = None,
               rtol: Optional[float] = None,
               cum_percentage: Optional[float] = None,
-              output_device: _Device = 'cpu',
+              out_device: _Device = 'cpu',
               return_info: bool = False):
     r"""Decomposes a dense tensor into a TR with experimental BLOSTR.
 
@@ -693,7 +693,7 @@ def tr_blostr(tensor: torch.Tensor,
     cutoff, atol, rtol, cum_percentage : float, optional
         Standard :func:`~tensorkrowch.truncated_svd` criteria used while
         recovering all cores after the first spectral core.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Final core storage device. ``None`` keeps the input device.
     return_info : bool
         If ``True``, returns ``(cores, info)``.
@@ -734,7 +734,7 @@ def tr_blostr(tensor: torch.Tensor,
         atol=atol,
         rtol=rtol,
         cum_percentage=cum_percentage,
-        output_device=output_device)
+        out_device=out_device)
     if return_info:
         return result.cores, result.as_info()
     return result.cores

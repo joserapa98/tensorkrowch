@@ -178,7 +178,7 @@ class TensorSource(Protocol):
     """Shared value-provider contract used by ALS and sketching."""
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Discrete input dimension at every site."""
 
     @property
@@ -247,24 +247,24 @@ class _SourceEvaluationTracker:
         self._initialize_evaluation_stats()
 
 
-def _normalize_input_dim(input_dim: Sequence[int]) -> Tuple[int, ...]:
+def _normalize_in_dim(in_dim: Sequence[int]) -> Tuple[int, ...]:
     """Validates and normalizes a discrete input dimension."""
-    if isinstance(input_dim, (str, bytes)):
-        raise TypeError('`input_dim` should be a sequence of integers')
+    if isinstance(in_dim, (str, bytes)):
+        raise TypeError('`in_dim` should be a sequence of integers')
     try:
-        normalized = tuple(input_dim)
+        normalized = tuple(in_dim)
     except TypeError as exc:
         raise TypeError(
-            '`input_dim` should be a sequence of integers') from exc
+            '`in_dim` should be a sequence of integers') from exc
     if not normalized:
-        raise ValueError('`input_dim` should contain at least one site')
+        raise ValueError('`in_dim` should contain at least one site')
     if any((not isinstance(dim, int)) or (dim < 1) for dim in normalized):
-        raise ValueError('`input_dim` should contain positive integers')
+        raise ValueError('`in_dim` should contain positive integers')
     return normalized
 
 
 def _discrete_indices(configurations: ConfigurationBatch,
-                      input_dim: Sequence[int],
+                      in_dim: Sequence[int],
                       device: torch.device) -> torch.Tensor:
     """Validates discrete configurations and returns packed long indices."""
     if not isinstance(configurations, ConfigurationBatch):
@@ -272,11 +272,11 @@ def _discrete_indices(configurations: ConfigurationBatch,
             '`configurations` should be ConfigurationBatch type')
     if configurations.kind != 'indices':
         raise ValueError('This source requires discrete index configurations')
-    if configurations.n_sites != len(input_dim):
+    if configurations.n_sites != len(in_dim):
         raise ValueError(
             'Configurations should contain one value per input site')
     indices = configurations.as_tensor().to(device=device, dtype=torch.long)
-    for site, dim in enumerate(input_dim):
+    for site, dim in enumerate(in_dim):
         if torch.any(indices[:, site] < 0) or \
                 torch.any(indices[:, site] >= dim):
             raise ValueError(
@@ -285,22 +285,22 @@ def _discrete_indices(configurations: ConfigurationBatch,
 
 
 def _ravel_indices(indices: torch.Tensor,
-                   input_dim: Sequence[int]) -> torch.Tensor:
+                   in_dim: Sequence[int]) -> torch.Tensor:
     """Converts global multi-indices to flat row ids."""
     strides = []
-    for site in range(len(input_dim)):
-        strides.append(prod(input_dim[site + 1:]))
+    for site in range(len(in_dim)):
+        strides.append(prod(in_dim[site + 1:]))
     stride_tensor = indices.new_tensor(strides)
     return (indices * stride_tensor).sum(dim=1)
 
 
 def _unravel_indices(flat_ids: torch.Tensor,
-                     input_dim: Sequence[int]) -> torch.Tensor:
+                     in_dim: Sequence[int]) -> torch.Tensor:
     """Converts flat row ids to global multi-indices."""
     remainder = flat_ids
     sites = []
-    for site, dim in enumerate(input_dim):
-        stride = prod(input_dim[site + 1:])
+    for site, dim in enumerate(in_dim):
+        stride = prod(in_dim[site + 1:])
         sites.append(torch.div(remainder, stride, rounding_mode='floor'))
         remainder = torch.remainder(remainder, stride) if stride > 1 \
             else torch.zeros_like(remainder)

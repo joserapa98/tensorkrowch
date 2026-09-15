@@ -52,7 +52,7 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             dtype=torch.float64)
         first = _discrete_phi(source)
         second = _discrete_phi(source, reverse=True)
@@ -96,7 +96,7 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             dtype=torch.float64)
         builder = _EvaluationPlanBuilder(source)
         first = _discrete_phi(source).collect(builder)
@@ -124,7 +124,7 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             dtype=torch.float64)
         phi = _discrete_phi(source)
         builder = _EvaluationPlanBuilder(source)
@@ -141,7 +141,7 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
     def test_expand_adds_closure_points_and_rejects_late_phi_requests(self):
         source = tk.decompositions.CallableTensorSource(
             lambda indices: indices.sum(dim=1).to(torch.float64),
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             dtype=torch.float64)
         phi = _discrete_phi(source)
         builder = _EvaluationPlanBuilder(source)
@@ -185,7 +185,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             lambda values: (
                 values[:, 0] + 10 * values[:, 1] + 100 * values[:, 2]
             ).to(torch.float64),
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             dtype=torch.float64)
         pool = _SamplePool(torch.tensor([
             [0., 0., 3.],
@@ -219,7 +219,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             lambda values: (
                 values[:, 0] + 10 * values[:, 1] + 100 * values[:, 2]
             ).to(torch.float64),
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             dtype=torch.float64)
         phi = PhiOperator(
             source,
@@ -242,7 +242,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
     def test_functional_fiber_after_freeze_uses_an_independent_session(self):
         source = tk.decompositions.CallableTensorSource(
             lambda values: values.sum(dim=1).to(torch.float64),
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             dtype=torch.float64)
         phi = PhiOperator(
             source,
@@ -309,7 +309,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         phi = PhiOperator(
             source,
             tuple((site, torch.arange(dim))
-                  for site, dim in enumerate(source.input_dim)),
+                  for site, dim in enumerate(source.in_dim)),
             _scalar_output_spec(3))
         dense = contract_tt_dense(cores)
 
@@ -330,7 +330,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             dtype=torch.float64)
         phi = PhiOperator(
             source,
@@ -351,7 +351,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
     def test_legacy_singleton_scalar_output_needs_no_output_site(self):
         source = tk.decompositions.CallableTensorSource(
             lambda indices: indices.sum(dim=1, keepdim=True).to(torch.float64),
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             output_shape=(1,),
             dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
@@ -371,7 +371,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             output_shape=(2, 3),
             dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
@@ -420,7 +420,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             indices = torch.tensor(list(product(
                 *(range(dim) for dim in dense.shape))))
             source = tk.decompositions.SparseTensorSource(
-                indices, dense.reshape(-1), input_dim=dense.shape)
+                indices, dense.reshape(-1), in_dim=dense.shape)
         else:
             source = tk.decompositions.TTTensorSource(cores)
         phi = PhiOperator(
@@ -435,7 +435,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         sites = ((0, 0), (0, 1), (1, 0), (1, 1))
         source = tk.decompositions.CallableTensorSource(
             lambda values: values.sum(dim=1),
-            input_dim=(2, 2, 2, 2),
+            in_dim=(2, 2, 2, 2),
             dtype=torch.float32)
         samples = torch.tensor([
             [0., 1., 0., 0.],

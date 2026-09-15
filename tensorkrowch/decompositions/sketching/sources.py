@@ -49,7 +49,7 @@ def _resolve_rs_source(
         *,
         source=None,
         dataset: Optional[torch.Tensor] = None,
-        input_dim: Optional[Sequence[int]] = None,
+        in_dim: Optional[Sequence[int]] = None,
         weights: Optional[torch.Tensor] = None,
         dtype: Optional[torch.dtype] = None,
         device: Optional[Union[str, torch.device]] = None) -> TensorSource:
@@ -63,14 +63,14 @@ def _resolve_rs_source(
                 weights = weights.to(device=device)
         return EmpiricalDistribution(
             dataset=dataset,
-            input_dim=input_dim,
+            in_dim=in_dim,
             weights=weights,
             dtype=dtype)
     if weights is not None:
         raise ValueError('`weights` can only be passed together with `dataset`')
     return as_tensor_source(
         source,
-        input_dim=input_dim,
+        in_dim=in_dim,
         output_shape=(),
         dtype=dtype,
         device='cpu' if device is None else device)

@@ -26,7 +26,7 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
         assert digits.shape == (4, 6)
         assert torch.equal(layout.decode_digits(digits), indices)
         assert layout.grid_size == (8, 9, 2)
-        assert layout.input_dim == tuple(
+        assert layout.in_dim == tuple(
             layout.base[variable] for variable, _ in layout.sites())
 
     def test_standard_xyz_schedules_with_unequal_levels(self):
@@ -315,7 +315,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
         grouped_digits = grouped.encode_indices(variable_indices)
         values = (variable_indices[:, 0] +
                   10 * variable_indices[:, 1]).to(torch.float64)
-        dense = torch.empty(grouped.input_dim, dtype=torch.float64)
+        dense = torch.empty(grouped.in_dim, dtype=torch.float64)
         dense[tuple(grouped_digits.T)] = values
         tt = tk.decompositions.TTSVD(
             dense, out_device=None).fit(rank=4)

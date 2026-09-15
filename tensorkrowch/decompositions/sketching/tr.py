@@ -167,7 +167,7 @@ class _SketchLoopOpener:
 
         local_context = {} if context is None else dict(context)
         local_context.update({
-            'input_dim': tuple(tensor.shape),
+            'in_dim': tuple(tensor.shape),
             'dtype': tensor.dtype,
             'device': tensor.device,
         })
@@ -269,7 +269,7 @@ class _SketchTargetProvider:
     """Exposes fitted Phi targets and recursive sketch bases to the driver."""
 
     targets: Mapping[Tuple[int, ...], _SketchLocalTarget]
-    input_dim: Sequence[int]
+    in_dim: Sequence[int]
     rank: Sequence[int]
     prefixes: Sequence[Any]
     suffixes: Sequence[Any]
@@ -299,7 +299,7 @@ class _SketchTargetProvider:
     def local_context(self, sites, context):
         target = self.local_target(sites, context)
         return {
-            'input_dim': tuple(target.tensor.shape),
+            'in_dim': tuple(target.tensor.shape),
             'dtype': target.tensor.dtype,
             'device': target.tensor.device,
             'generator': context.get('generator'),
@@ -353,7 +353,7 @@ class _SketchTargetProvider:
         target = self.targets[(site,)].tensor
         solver = LeastSquaresSolver()
         if direction == 'right':
-            if site != len(self.input_dim) - 1:
+            if site != len(self.in_dim) - 1:
                 raise ValueError('The right boundary should be the last site')
             values = target.squeeze(-1)
             matrix = gauge.permute(1, 2, 0).reshape(
@@ -446,7 +446,7 @@ class TRRSS(TTRSS):
             out_position=None,
             device: Device = None,
             dtype: Optional[torch.dtype] = None,
-            output_device: Device = 'cpu',
+            out_device: Device = 'cpu',
             input_fitters: Optional[Sequence[InputFitter]] = None,
             range_projector: Optional[RangeProjector] = None,
             global_transform: Optional[GlobalValueTransform] = None,
@@ -473,18 +473,18 @@ class TRRSS(TTRSS):
             device=device,
             dtype=dtype)
         embeddings = tuple(
-            torch.eye(dimension) for dimension in layout.input_dim)
+            torch.eye(dimension) for dimension in layout.in_dim)
         digit_domains = tuple(
-            torch.arange(dimension) for dimension in layout.input_dim)
+            torch.arange(dimension) for dimension in layout.in_dim)
         return _QuantizedTRRSS(
             source=adapter,
             embedding=embeddings,
-            input_dim=layout.input_dim,
+            in_dim=layout.in_dim,
             domain=digit_domains,
             out_position=out_position,
             device=device,
             dtype=dtype,
-            output_device=output_device,
+            out_device=out_device,
             input_fitters=input_fitters,
             range_projector=range_projector,
             global_transform=global_transform,
@@ -604,7 +604,7 @@ class TRRSS(TTRSS):
         Returns
         -------
         TRDecomposition
-            Lightweight cyclic decomposition stored on ``output_device``.
+            Lightweight cyclic decomposition stored on ``out_device``.
 
         Examples
         --------
@@ -971,7 +971,7 @@ class TRRSS(TTRSS):
             context.state['rank_spec'] = rank_spec
         provider = _SketchTargetProvider(
             targets=targets,
-            input_dim=site_dim,
+            in_dim=site_dim,
             rank=rank_spec,
             prefixes=context.regions['prefixes'],
             suffixes=context.regions['suffixes'],
@@ -1097,7 +1097,7 @@ class TRRSS(TTRSS):
             raise TypeError('`result` should be TRDecomposition type')
         expected = context.state.get(
             'fitted_site_dim', self.outputs.site_dim(self.embeddings))
-        if result.input_dim != expected:
+        if result.in_dim != expected:
             raise ValueError('The result input dimensions are inconsistent')
 
 
@@ -1219,12 +1219,12 @@ class QTRTuckerRSS(QTTTuckerRSS):
         decomposer = _QTTTuckerTRRSS(
             indexed_function,
             embedding=embeddings,
-            input_dim=self.layout.grid_size,
+            in_dim=self.layout.grid_size,
             domain=index_domains,
             out_position=self.out_position,
             device=self.adapter.device,
             dtype=probe.dtype,
-            output_device=None,
+            out_device=None,
             input_fitters=fitters,
             synchronize_timers=self.synchronize_timers)
         upper = decomposer.fit(
@@ -1254,7 +1254,7 @@ class QTRTuckerRSS(QTTTuckerRSS):
             'rss_recovery_guarantee': False,
             'variable_positions': tuple(decomposer.variable_positions),
             'connector_rank': [
-                factor.input_dim[-1] for factor in decomposer.factors],
+                factor.in_dim[-1] for factor in decomposer.factors],
             'quantization': {
                 'base': self.layout.base,
                 'level': self.layout.level,
@@ -1276,8 +1276,8 @@ class QTRTuckerRSS(QTTTuckerRSS):
             out_of_domain=self.adapter.out_of_domain,
             metrics=upper.metrics,
             metadata=metadata)
-        return result if self.output_device is None else result.to(
-            device=self.output_device)
+        return result if self.out_device is None else result.to(
+            device=self.out_device)
 
 
 def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
@@ -1330,7 +1330,7 @@ class TRRS(TTRS):
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> decomposer = TRRS(dataset=dataset, input_dim=(2, 2, 2))
+    >>> decomposer = TRRS(dataset=dataset, in_dim=(2, 2, 2))
     >>> result = decomposer.fit(rank=1)
     >>> result.rank
     [1, 1, 1]
@@ -1341,24 +1341,24 @@ class TRRS(TTRS):
             source=None,
             *,
             dataset: Optional[torch.Tensor] = None,
-            input_dim: Optional[Sequence[int]] = None,
+            in_dim: Optional[Sequence[int]] = None,
             weights: Optional[torch.Tensor] = None,
             sketch_operator: Optional[SketchOperator] = None,
             dtype: Optional[torch.dtype] = None,
             device: Device = None,
-            output_device: Device = 'cpu',
+            out_device: Device = 'cpu',
             synchronize_timers: bool = True) -> None:
         super().__init__(
             source=source,
             dataset=dataset,
-            input_dim=input_dim,
+            in_dim=in_dim,
             weights=weights,
             sketch_operator=sketch_operator,
             dtype=dtype,
             device=device,
-            output_device=None,
+            out_device=None,
             synchronize_timers=synchronize_timers)
-        self._tr_output_device = output_device
+        self._tr_out_device = out_device
 
     @torch.no_grad()
     def fit(
@@ -1438,13 +1438,13 @@ class TRRS(TTRS):
         Returns
         -------
         TRDecomposition
-            Lightweight cyclic result stored on ``output_device``.
+            Lightweight cyclic result stored on ``out_device``.
         """
         if isinstance(rank, bool) or not isinstance(rank, int):
             raise TypeError('`rank` should be int type')
         if rank < 1:
             raise ValueError('`rank` should be positive')
-        if len(self.source.input_dim) < 3:
+        if len(self.source.in_dim) < 3:
             raise ValueError('TR-RS requires at least three sites')
         if warm_start is not None:
             if not isinstance(warm_start, TRDecomposition):
@@ -1468,8 +1468,8 @@ class TRRS(TTRS):
                 name='start',
                 phase='TR-RS',
                 values={
-                    'sites': len(self.source.input_dim),
-                    'input_dim': self.source.input_dim,
+                    'sites': len(self.source.in_dim),
+                    'in_dim': self.source.in_dim,
                     'rank': rank,
                     'operator': type(self.sketch_operator).__name__,
                 }))
@@ -1487,7 +1487,7 @@ class TRRS(TTRS):
             collect_metrics=collect_metrics)
         tr_result = TT2TR(
             tt_result,
-            output_device=self._tr_output_device).fit(
+            out_device=self._tr_out_device).fit(
                 rank=rank,
                 tr_rank=rank,
                 center=center,
@@ -1563,7 +1563,7 @@ def tr_rs(
         source=None,
         *,
         dataset: Optional[torch.Tensor] = None,
-        input_dim: Optional[Sequence[int]] = None,
+        in_dim: Optional[Sequence[int]] = None,
         weights: Optional[torch.Tensor] = None,
         sketch_operator: Optional[SketchOperator] = None,
         rank: int = 1,
@@ -1585,7 +1585,7 @@ def tr_rs(
         device: Device = None,
         generator: Optional[torch.Generator] = None,
         strict_system: bool = False,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
         return_info: bool = False):
     """Projects a complete discrete source into TR cores with TR-RS.
@@ -1598,7 +1598,7 @@ def tr_rs(
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> cores = tr_rs(dataset=dataset, input_dim=(2, 2, 2), rank=1)
+    >>> cores = tr_rs(dataset=dataset, in_dim=(2, 2, 2), rank=1)
     >>> len(cores)
     3
     """
@@ -1607,12 +1607,12 @@ def tr_rs(
     result = TRRS(
         source=source,
         dataset=dataset,
-        input_dim=input_dim,
+        in_dim=in_dim,
         weights=weights,
         sketch_operator=sketch_operator,
         dtype=dtype,
         device=device,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             center=center,
             loop_opener=loop_opener,
@@ -1675,7 +1675,7 @@ def qtr_tucker_rss(
         device: Device = None,
         dtype: Optional[torch.dtype] = None,
         generator: Optional[torch.Generator] = None,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
         return_info: bool = False):
     """Builds local QTT factors connected through an upper Tensor Ring.
@@ -1720,7 +1720,7 @@ def qtr_tucker_rss(
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             sketch_samples,
             labels=labels,
             rank=rank,
@@ -1782,7 +1782,7 @@ def qtr_rss(
         device: Device = None,
         dtype: Optional[torch.dtype] = None,
         generator: Optional[torch.Generator] = None,
-        output_device: Device = 'cpu',
+        out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
         return_info: bool = False):
     """Decomposes a multivariable physical function into QTR cores.
@@ -1826,7 +1826,7 @@ def qtr_rss(
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device=output_device)
+        out_device=out_device)
     result = decomposer.fit(
         sketch_samples,
         labels=labels,
@@ -1856,7 +1856,7 @@ def tr_rss(function,
            embedding,
            sketch_samples: Samples,
            labels: Optional[torch.Tensor] = None,
-           input_dim=None,
+           in_dim=None,
            domain=None,
            domain_multiplier: int = 1,
            out_position=None,
@@ -1875,7 +1875,7 @@ def tr_rss(function,
            device: Device = None,
            dtype: Optional[torch.dtype] = None,
            generator: Optional[torch.Generator] = None,
-           output_device: Device = 'cpu',
+           out_device: Device = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False):
     r"""Decomposes a sampled function into Tensor Ring cores.
@@ -1895,12 +1895,12 @@ def tr_rss(function,
         Correlated sketch samples in packed or per-site form.
     labels : torch.Tensor, optional
         Flattened output labels with shape ``(batch_size,)``.
-    input_dim : int or sequence of int, optional
+    in_dim : int or sequence of int, optional
         Expected shared or per-site embedding dimensions.
     domain : torch.Tensor or sequence of torch.Tensor, optional
         Shared finite domain or one domain per input site.
     domain_multiplier : int, optional
-        Maximum inferred-domain size in multiples of ``input_dim``.
+        Maximum inferred-domain size in multiples of ``in_dim``.
     out_position : int or sequence of int, optional
         Explicit positions of output sites; defaults to an even distribution.
     rank : int or sequence of int
@@ -1948,7 +1948,7 @@ def tr_rss(function,
         Dtype of source values and numerical cores.
     generator : torch.Generator, optional
         Generator used for randomized choices.
-    output_device : str, torch.device or None, optional
+    out_device : str, torch.device or None, optional
         Device receiving final cores; CPU by default.
     verbose : bool or int, optional
         Verbosity from 0 to 3.
@@ -1979,13 +1979,13 @@ def tr_rss(function,
     result = TRRSS(
         function=function,
         embedding=embedding,
-        input_dim=input_dim,
+        in_dim=in_dim,
         domain=domain,
         domain_multiplier=domain_multiplier,
         out_position=out_position,
         device=device,
         dtype=dtype,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             sketch_samples=sketch_samples,
             labels=labels,
             rank=rank,

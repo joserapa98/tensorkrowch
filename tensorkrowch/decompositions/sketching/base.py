@@ -180,7 +180,7 @@ class RecursiveSketching(ABC):
             range_projector: Optional[RangeProjector] = None,
             global_transform: Optional[GlobalValueTransform] = None,
             local_transform: Optional[LocalValueTransform] = None,
-            output_device: Optional[Union[str, torch.device]] = 'cpu',
+            out_device: Optional[Union[str, torch.device]] = 'cpu',
             synchronize_timers: bool = True) -> None:
         if not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')
@@ -190,7 +190,7 @@ class RecursiveSketching(ABC):
             raise TypeError('`embeddings` should be _EmbeddingSpec type')
         if not isinstance(outputs, _OutputSpec):
             raise TypeError('`outputs` should be _OutputSpec type')
-        if domains.n_sites != len(source.input_dim) or \
+        if domains.n_sites != len(source.in_dim) or \
                 embeddings.n_sites != domains.n_sites or \
                 outputs.n_input_sites != domains.n_sites:
             raise ValueError(
@@ -211,7 +211,7 @@ class RecursiveSketching(ABC):
         self.outputs = outputs
         self._runtime = _RuntimePolicy(
             device=source.device,
-            out_device=output_device,
+            out_device=out_device,
             dtype=source.dtype,
             synchronize_timers=synchronize_timers)
         self._range_projector = range_projector
@@ -249,7 +249,7 @@ class RecursiveSketching(ABC):
                     self.embeddings.matrix(axis)))
             else:
                 fitters.append(BasisFitter(
-                    input_dim=self.outputs.output_shape[axis]))
+                    in_dim=self.outputs.output_shape[axis]))
         return tuple(fitters)
 
     def _new_context(

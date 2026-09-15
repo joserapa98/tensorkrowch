@@ -80,7 +80,7 @@ class _TTCoreProvider:
     def __post_init__(self) -> None:
         source = TTTensorSource(self.tt)
         self.cores = tuple(source.cores)
-        self.input_dim = source.input_dim
+        self.in_dim = source.in_dim
 
     def local_target(self,
                      sites: Sequence[int],
@@ -110,7 +110,7 @@ class _TTCoreProvider:
                       context: Mapping[str, Any]) -> Mapping[str, Any]:
         target = self.local_target(sites, context)
         return {
-            'input_dim': tuple(target.shape),
+            'in_dim': tuple(target.shape),
             'dtype': target.dtype,
             'device': target.device,
         }
@@ -215,7 +215,7 @@ class TT2TR:
     ----------
     tt : TTDecomposition, sequence of torch.Tensor or MPS
         Open-boundary TT to convert. At least three sites are required.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized TR cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the input device.
     """
@@ -223,10 +223,10 @@ class TT2TR:
     def __init__(self,
                  tt,
                  *,
-                 output_device: _Device = 'cpu') -> None:
+                 out_device: _Device = 'cpu') -> None:
         self._tt = _as_tt_decomposition(tt)
         self._runtime = _RuntimePolicy.from_tensor(
-            self._tt.cores[0], out_device=output_device)
+            self._tt.cores[0], out_device=out_device)
 
     @property
     def tt(self) -> TTDecomposition:
@@ -360,7 +360,7 @@ class TT2TR:
                 phase='TT to TR',
                 values={
                     'sites': len(self.tt.cores),
-                    'input_dim': self.tt.input_dim,
+                    'in_dim': self.tt.in_dim,
                     'rank': rank_spec,
                     'center': center,
                 }))
@@ -477,7 +477,7 @@ def tt2tr(tt,
           gauge_tolerance: float = 1e-8,
           inverse_policy: str = 'pinv',
           rank_rtol: Optional[float] = None,
-          output_device: _Device = 'cpu',
+          out_device: _Device = 'cpu',
           verbose: Union[bool, int] = 0,
           return_info: bool = False):
     """Converts open-boundary TT cores into prescribed tensor ring cores.
@@ -488,7 +488,7 @@ def tt2tr(tt,
     closing link. The local ALS configuration remains encapsulated by
     ``loop_opener`` rather than expanding this function's signature.
 
-    Parameters are equivalent to :meth:`TT2TR.fit`, with ``output_device``
+    Parameters are equivalent to :meth:`TT2TR.fit`, with ``out_device``
     selecting final core storage and ``return_info=True`` returning
     ``(cores, info)``.
 
@@ -503,7 +503,7 @@ def tt2tr(tt,
     """
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
-    result = TT2TR(tt, output_device=output_device).fit(
+    result = TT2TR(tt, out_device=out_device).fit(
         rank=rank,
         tr_rank=tr_rank,
         center=center,

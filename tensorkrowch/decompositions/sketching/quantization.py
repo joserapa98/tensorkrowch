@@ -169,7 +169,7 @@ class QuantizedLayout:
             self.base, self.level))
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Basis input dimension of every digit site in schedule order."""
         return tuple(self.base[variable] for variable, _ in self.sites())
 
@@ -847,17 +847,17 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
                     source_layout.level != layout.level or \
                     source_layout.n_variables != layout.n_variables:
                 raise ValueError('Source and adapter layouts are incompatible')
-            if tuple(source.input_dim) != source_layout.input_dim:
+            if tuple(source.in_dim) != source_layout.in_dim:
                 raise ValueError(
                     'Digit source dimensions do not match `source_layout`')
         elif source_layout is not None:
             raise ValueError(
                 '`source_layout` is only valid with `source_space="digits"`')
         elif is_source and source_space == 'indices':
-            if tuple(source.input_dim) != layout.grid_size:
+            if tuple(source.in_dim) != layout.grid_size:
                 raise ValueError(
                     'Indexed source dimensions should match layout grid sizes')
-        elif is_source and len(source.input_dim) != layout.n_variables:
+        elif is_source and len(source.in_dim) != layout.n_variables:
             raise ValueError(
                 'Physical source should contain one site per variable')
 
@@ -888,9 +888,9 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         self._output_shape = output_shape
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Basis dimension of every scheduled digit site."""
-        return self.layout.input_dim
+        return self.layout.in_dim
 
     @property
     def output_shape(self) -> Optional[Tuple[int, ...]]:
@@ -980,7 +980,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates scheduled digit configurations through the fixed adapter."""
         digits = _discrete_indices(
-            configurations, self.input_dim, self.device)
+            configurations, self.in_dim, self.device)
         indices = self.layout.decode_digits(digits)
         if self.source_space == 'digits':
             source_digits = self.layout.reorder_configurations(
@@ -1008,11 +1008,11 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         """Evaluates one digit fiber through the generic adapter path."""
         if isinstance(site, bool) or not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if site < 0 or site >= len(self.input_dim):
+        if site < 0 or site >= len(self.in_dim):
             raise ValueError('`site` should identify a digit site')
         if values is None:
             values = torch.arange(
-                self.input_dim[site], device=configurations.device)
+                self.in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)
@@ -1069,7 +1069,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             **kwargs)
         indices = provisional.physical_to_indices(dataset)
         source = EmpiricalDistribution(
-            indices, input_dim=layout.grid_size, weights=weights)
+            indices, in_dim=layout.grid_size, weights=weights)
         return cls(
             source,
             layout,

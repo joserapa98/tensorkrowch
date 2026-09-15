@@ -34,7 +34,7 @@ class TestTRRS:  # MARK: TestTRRS
             result = tk.decompositions.TRRS(
                 source,
                 sketch_operator=operator,
-                output_device=None).fit(
+                out_device=None).fit(
                     rank=1,
                     generator=torch.Generator().manual_seed(311),
                     strict_system=True,
@@ -55,7 +55,7 @@ class TestTRRS:  # MARK: TestTRRS
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             cores, info = tk.decompositions.tr_rs(
                 dataset=dataset,
-                input_dim=(2, 2, 2),
+                in_dim=(2, 2, 2),
                 rank=1,
                 return_info=True)
 
@@ -71,7 +71,7 @@ class TestTRRS:  # MARK: TestTRRS
         source = tk.decompositions.TTTensorSource(tt)
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TRRS(
-                source, output_device=None).fit(rank=1)
+                source, out_device=None).fit(rank=1)
 
         assert torch.allclose(result.contract_dense(), dense)
         assert result.metrics.fidelities[0].fidelity > 1 - 1e-10

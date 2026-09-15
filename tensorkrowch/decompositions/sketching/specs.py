@@ -251,14 +251,14 @@ class _EmbeddingSpec:
         if matrix.ndim != 2:
             raise ValueError(
                 f'Embedding at site {site} should return shape '
-                '(n_values, input_dim)')
+                '(n_values, in_dim)')
         if matrix.shape[0] != domain.shape[0]:
             raise ValueError(
                 f'Embedding at site {site} returned {matrix.shape[0]} rows '
                 f'for a domain with {domain.shape[0]} values')
         if matrix.shape[1] < 1:
             raise ValueError(
-                f'Embedding at site {site} should have positive input_dim')
+                f'Embedding at site {site} should have positive in_dim')
         if not (matrix.is_floating_point() or matrix.is_complex()):
             raise TypeError(
                 f'Embedding at site {site} should be floating or complex')
@@ -276,7 +276,7 @@ class _EmbeddingSpec:
         return self.domains.n_sites
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Embedding dimension associated with every input site."""
         return tuple(matrix.shape[1] for matrix in self.matrices)
 
@@ -325,7 +325,7 @@ class _EmbeddingSpec:
         if not isinstance(result, torch.Tensor):
             raise TypeError(
                 f'Embedding at site {site} should return a torch.Tensor')
-        expected = (values.shape[0], self.input_dim[site])
+        expected = (values.shape[0], self.in_dim[site])
         if result.shape != expected:
             raise ValueError(
                 f'Embedding at site {site} should return shape {expected}')
@@ -654,7 +654,7 @@ class _OutputSpec:
             raise ValueError(
                 'Embeddings and output layout should have matching inputs')
         return tuple(
-            embeddings.input_dim[axis] if kind == 'input'
+            embeddings.in_dim[axis] if kind == 'input'
             else self.output_shape[axis]
             for kind, axis in self.layout)
 

@@ -8,7 +8,7 @@ from tensorkrowch.decompositions.sources.base import (
     ConfigurationBatch,
     _discrete_indices,
     _fiber_configurations,
-    _normalize_input_dim,
+    _normalize_in_dim,
     _SourceEvaluationTracker,
 )
 
@@ -20,7 +20,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
     ----------
     tensor : torch.Tensor
         Dense tensor whose leading dimensions are input dimensions.
-    input_dim : sequence of int, optional
+    in_dim : sequence of int, optional
         Input dimension at every site. If omitted, every tensor dimension is
         interpreted as an input site and the source is scalar. Supplying a
         prefix leaves the remaining tensor dimensions as output dimensions.
@@ -28,28 +28,28 @@ class DenseTensorSource(_SourceEvaluationTracker):
 
     def __init__(self,
                  tensor: torch.Tensor,
-                 input_dim: Optional[Sequence[int]] = None) -> None:
+                 in_dim: Optional[Sequence[int]] = None) -> None:
         self._initialize_evaluation_stats()
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if tensor.ndim < 1:
             raise ValueError('`tensor` should contain at least one input site')
-        if input_dim is None:
-            normalized_input_dim = tuple(tensor.shape)
+        if in_dim is None:
+            normalized_in_dim = tuple(tensor.shape)
         else:
-            normalized_input_dim = _normalize_input_dim(input_dim)
-            if tuple(tensor.shape[:len(normalized_input_dim)]) != \
-                    normalized_input_dim:
+            normalized_in_dim = _normalize_in_dim(in_dim)
+            if tuple(tensor.shape[:len(normalized_in_dim)]) != \
+                    normalized_in_dim:
                 raise ValueError(
-                    '`input_dim` should match the leading tensor dimensions')
+                    '`in_dim` should match the leading tensor dimensions')
         self.tensor = tensor
-        self._input_dim = normalized_input_dim
-        self._output_shape = tuple(tensor.shape[len(normalized_input_dim):])
+        self._in_dim = normalized_in_dim
+        self._output_shape = tuple(tensor.shape[len(normalized_in_dim):])
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Discrete input dimension at every site."""
-        return self._input_dim
+        return self._in_dim
 
     @property
     def output_shape(self) -> Tuple[int, ...]:
@@ -69,7 +69,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Gathers dense values at discrete global configurations."""
         indices = _discrete_indices(
-            configurations, self.input_dim, self.device)
+            configurations, self.in_dim, self.device)
         result = self.tensor[tuple(indices[:, site]
                                    for site in range(indices.shape[1]))]
         self._record_evaluation(points=indices.shape[0])
@@ -82,11 +82,11 @@ class DenseTensorSource(_SourceEvaluationTracker):
         """Evaluates a discrete site fiber for every base configuration."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.input_dim)):
+        if (site < 0) or (site >= len(self.in_dim)):
             raise ValueError('`site` should identify an input site')
         if values is None:
             values = torch.arange(
-                self.input_dim[site], device=configurations.device)
+                self.in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)

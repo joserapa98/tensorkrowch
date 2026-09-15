@@ -74,7 +74,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
         assert isinstance(fitted, FittedInputAxis)
         assert fitted.axis == 1
         assert fitted.domain_size == 4
-        assert fitted.input_dim == 2
+        assert fitted.in_dim == 2
         assert fitted.record is None
         assert torch.allclose(fitted.tensor, coefficients)
 
@@ -230,7 +230,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
                     axis=0,
                     domain=domains.for_site(site))
 
-            assert fitted.input_dim == coefficients[site].shape[0]
+            assert fitted.in_dim == coefficients[site].shape[0]
             assert torch.allclose(fitted.tensor, coefficients[site], atol=1e-6)
 
 
@@ -240,12 +240,12 @@ class TestBasisFitter:  # MARK: TestBasisFitter
         tensor = torch.arange(12.).reshape(3, 2, 2)
         first_labels = torch.tensor([2, 0, 1])
         second_labels = torch.tensor([1, 0])
-        first = tk.decompositions.BasisFitter(input_dim=3).fit(
+        first = tk.decompositions.BasisFitter(in_dim=3).fit(
             _materialized(tensor),
             axis=0,
             domain=first_labels,
             return_info=True)
-        second = tk.decompositions.BasisFitter(input_dim=2).fit(
+        second = tk.decompositions.BasisFitter(in_dim=2).fit(
             _materialized(first.tensor),
             axis=2,
             domain=second_labels,
@@ -262,7 +262,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
     def test_missing_basis_labels_are_filled_with_zero(self):
         values = torch.tensor([3.0, 5.0])
 
-        fitted = tk.decompositions.BasisFitter(input_dim=4).fit(
+        fitted = tk.decompositions.BasisFitter(in_dim=4).fit(
             _materialized(values),
             axis=0,
             domain=torch.tensor([3, 1]))
@@ -274,7 +274,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
         phi = _FiberOnlyPhi(tensor)
 
         fitted = tk.decompositions.BasisFitter(
-            input_dim=3, fiber_batch_size=2).fit(
+            in_dim=3, fiber_batch_size=2).fit(
                 phi,
                 axis=1,
                 domain=torch.tensor([1, 2, 0]),
@@ -293,7 +293,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
             (torch.tensor([-1, 0]), 'inside'),
         ])
     def test_invalid_basis_domains_are_rejected(self, domain, match):
-        fitter = tk.decompositions.BasisFitter(input_dim=2)
+        fitter = tk.decompositions.BasisFitter(in_dim=2)
 
         with pytest.raises(ValueError, match=match):
             fitter.fit(_materialized(torch.ones(2)), 0, domain)
@@ -310,7 +310,7 @@ class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
         phi = _FiberOnlyPhi(target)
         fitter = tk.decompositions.TrainableEmbeddingFitter(
             _AffineEmbedding(),
-            input_dim=2,
+            in_dim=2,
             max_steps=20,
             tolerance=1e-10,
             patience=10,
@@ -388,14 +388,14 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
             embedding=torch.eye(4, dtype=torch.float64),
             domain=domain,
             input_fitters=fitters,
-            output_device=None).fit(
+            out_device=None).fit(
                 samples,
                 rank=4,
                 legacy_projection=False)
         expected = function(samples).reshape(4, 4)
 
         assert torch.allclose(result.contract_dense(), expected)
-        assert result.input_dim == (4, 4)
+        assert result.in_dim == (4, 4)
 
     def test_tensor_environment_is_kept_at_factor_endpoint(self):
         physical_domain = torch.tensor([0., 1.], dtype=torch.float64)
@@ -407,7 +407,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(4,),
+            in_dim=(4,),
             output_shape=(2, 3),
             dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
@@ -445,7 +445,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
         assert torch.allclose(fitted.tensor, expected)
         assert torch.allclose(fitted.tensor, oracle.contract_dense())
         assert fitted.factor is not None
-        assert fitted.factor.input_dim == (2, 2, 2)
+        assert fitted.factor.in_dim == (2, 2, 2)
         assert fitted.reduced_tensor.shape == (2, 2, 3)
         factor_values = fitter.factor_values(fitted, initial_domain)
         assert torch.allclose(
@@ -468,7 +468,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
 
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(4,),
+            in_dim=(4,),
             output_shape=(2, 3),
             dtype=torch.float64)
         output_spec = _OutputSpec.normalize(

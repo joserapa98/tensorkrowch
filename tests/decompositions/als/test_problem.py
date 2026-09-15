@@ -14,7 +14,7 @@ class TestObservedEntries:  # MARK: TestObservedEntries
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[1, 2], [0, 1], [1, 2]]),
             values=torch.tensor([4., 3., 4.]),
-            input_dim=(2, 3),
+            in_dim=(2, 3),
             weights=torch.tensor([2., 1., 2.]))
 
         assert torch.equal(observations.indices,
@@ -36,14 +36,14 @@ class TestObservedEntries:  # MARK: TestObservedEntries
             tk.decompositions.ObservedEntries(
                 indices=torch.tensor([[0, 1], [0, 1]]),
                 values=values,
-                input_dim=(2, 2),
+                in_dim=(2, 2),
                 weights=weights)
 
     def test_weighted_absolute_and_relative_errors(self):
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([3., 4.]),
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             weights=torch.tensor([2., 0.5]))
 
         absolute, relative = observations.error(torch.tensor([2., 6.]))
@@ -62,7 +62,7 @@ class TestObservedEntries:  # MARK: TestObservedEntries
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([0., 0.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
 
         _, relative = observations.error(approximation)
 
@@ -89,7 +89,7 @@ class TestALSProblem:  # MARK: TestALSProblem
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 1], [1, 0]]),
             values=torch.tensor([2., 3.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
         problem = tk.decompositions.ALSProblem(observations=observations)
 
         absolute, relative = problem.objective_error(torch.tensor([1., 5.]))
@@ -104,13 +104,13 @@ class TestALSProblem:  # MARK: TestALSProblem
         sparse = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 1]]),
             values=torch.tensor([2.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
         missing = tk.decompositions.ConfigurationBatch(
             torch.tensor([[1, 1]]))
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 1]]),
             values=torch.tensor([2.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
         completion = tk.decompositions.ALSProblem(
             observations=observations)
 
@@ -123,7 +123,7 @@ class TestALSProblem:  # MARK: TestALSProblem
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 0]]),
             values=torch.tensor([1.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
 
         with pytest.raises(ValueError, match='input dimensions'):
             tk.decompositions.ALSProblem(

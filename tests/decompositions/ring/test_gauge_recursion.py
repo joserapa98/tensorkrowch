@@ -173,7 +173,7 @@ class TestTTCoreGaugeRecursionIntegration:  # MARK: Integration
 
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TT2TR(
-                tt, output_device=None).fit(
+                tt, out_device=None).fit(
                     rank=1, gauge_recursion='tt_core')
 
         assert result.metadata['gauge_recursion'] == 'tt_core'
@@ -199,7 +199,7 @@ class TestTTCoreGaugeRecursionIntegration:  # MARK: Integration
 
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TT2TR(
-                tt, output_device=None).fit(
+                tt, out_device=None).fit(
                     rank=2,
                     tr_rank=1,
                     loop_opener=opener,

@@ -163,7 +163,7 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
         problem = tk.decompositions.ALSProblem(observations=observations)
         backend = _FakeALSBackend([0.5, 0.01])
 

@@ -43,7 +43,7 @@ class TestTTRSS:
 
         assert isinstance(first, TTDecomposition)
         assert first.rank == [2, 2]
-        assert first.input_dim == (2, 2, 2)
+        assert first.in_dim == (2, 2, 2)
         assert all(core.device.type == 'cpu' for core in first.cores)
         assert all(torch.equal(left, right)
                    for left, right in zip(first.cores, second.cores))
@@ -120,7 +120,7 @@ class TestTTRSS:
         function, embedding, samples, domain = _problem()
         source = tk.decompositions.CallableTensorSource(
             function,
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             output_shape=(1,),
             dtype=torch.float64)
         result = tk.decompositions.TTRSS(
@@ -156,7 +156,7 @@ class TestTTRSS:
         assert info['rank'] == [2, 2]
         assert info['metrics']['errors'][0]['kind'] == 'sketch_samples'
 
-    def test_heterogeneous_coordinates_embeddings_and_input_dim(self):
+    def test_heterogeneous_coordinates_embeddings_and_in_dim(self):
         scalar_domain = torch.tensor([0., 1.], dtype=torch.float64)
         vector_domain = torch.tensor(
             [[0., 0.], [1., 1.]], dtype=torch.float64)
@@ -176,13 +176,13 @@ class TestTTRSS:
         result = tk.decompositions.TTRSS(
             function=function,
             embedding=embeddings,
-            input_dim=(2, 3),
+            in_dim=(2, 3),
             domain=(scalar_domain, vector_domain)).fit(
                 (first, second),
                 rank=2,
                 collect_metrics=True)
 
-        assert result.input_dim == (2, 3)
+        assert result.in_dim == (2, 3)
         assert result.metrics.errors[0].kind == 'sketch_samples'
         assert result.metrics.errors[0].relative < 1e-10
 
@@ -206,18 +206,18 @@ class TestTTRSS:
                 rank=4,
                 collect_metrics=True)
 
-        assert result.input_dim == (2, 2, 2, 2, 2)
+        assert result.in_dim == (2, 2, 2, 2, 2)
         assert result.metadata['output_shape'] == (2, 2)
         assert result.metadata['out_position'] == (0, 4)
         assert result.metrics.errors[0].relative < 1e-10
 
-    def test_projection_controls_total_metrics_and_output_device(self):
+    def test_projection_controls_total_metrics_and_out_device(self):
         function, embedding, samples, domain = _problem()
         result = tk.decompositions.TTRSS(
             function=function,
             embedding=embedding,
             domain=domain,
-            output_device=None).fit(
+            out_device=None).fit(
                 samples,
                 rank=2,
                 random_projection=True,
@@ -231,13 +231,13 @@ class TestTTRSS:
         assert all(record.requested_dim == 2
                    for record in result.metrics.range_projections)
 
-    def test_input_dim_and_warm_start_are_explicit(self):
+    def test_in_dim_and_warm_start_are_explicit(self):
         function, embedding, samples, domain = _problem()
-        with pytest.raises(ValueError, match='input_dim'):
+        with pytest.raises(ValueError, match='in_dim'):
             tk.decompositions.TTRSS(
                 function=function,
                 embedding=embedding,
-                input_dim=3,
+                in_dim=3,
                 domain=domain).fit(samples, rank=2)
 
         result = tk.decompositions.TTRSS(

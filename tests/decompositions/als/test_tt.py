@@ -25,7 +25,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
     def test_svd_initialization_recovers_dense_tensor(self, gauge):
         _, tensor = _exact_tt()
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 init='svd',
                 gauge=gauge,
@@ -34,7 +34,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
                 collect_metrics=True)
 
         assert isinstance(result, tk.decompositions.TTDecomposition)
-        assert result.input_dim == tensor.shape
+        assert result.in_dim == tensor.shape
         assert result.rank == [2, 2]
         assert torch.allclose(
             result.contract_dense(), tensor, atol=1e-10, rtol=1e-10)
@@ -46,7 +46,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
         tensor = torch.randn(2, 3, 2, dtype=torch.float64,
                              generator=generator)
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 generator=torch.Generator().manual_seed(12),
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -70,9 +70,9 @@ class TestTTALSExact:  # MARK: TestTTALSExact
 
         result = tk.decompositions.TTALS(
             function,
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             dtype=torch.complex128,
-            output_device=None).fit(
+            out_device=None).fit(
                 rank=2,
                 init='svd',
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -92,9 +92,9 @@ class TestTTALSExact:  # MARK: TestTTALSExact
 
         decomposition = tk.decompositions.TTALS(
             function,
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             dtype=torch.float64,
-            output_device=None)
+            out_device=None)
         convergence = tk.decompositions.ConvergencePolicy(max_sweeps=1)
 
         first = decomposition.fit(
@@ -109,7 +109,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
     def test_feasible_ranks_are_clipped_per_cut(self):
         tensor = torch.randn(2, 3, 4, dtype=torch.float64)
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=100,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1))
@@ -119,7 +119,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
     def test_one_site_tensor_uses_the_same_driver(self):
         tensor = torch.tensor([1., -2., 3.], dtype=torch.float64)
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=1,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1),
@@ -134,7 +134,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
         fixed = initial[1].clone()
         fixed_cores = [None, fixed, None]
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 fixed_cores=fixed_cores,
                 gauge='qr',
@@ -149,7 +149,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
     def test_all_fixed_cores_stop_without_updates(self):
         initial, tensor = _exact_tt()
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 fixed_cores=initial)
 
@@ -162,7 +162,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
     def test_fast_path_does_not_collect_local_or_sweep_records(self):
         _, tensor = _exact_tt()
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1),
@@ -174,7 +174,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
     def test_relative_error_convergence_uses_exact_dense_objective(self):
         _, tensor = _exact_tt()
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 init='svd',
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -208,7 +208,7 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
     def test_vector_output_is_rejected_explicitly(self):
         tensor = torch.randn(2, 2, 3)
         source = tk.decompositions.DenseTensorSource(
-            tensor, input_dim=(2, 2))
+            tensor, in_dim=(2, 2))
 
         with pytest.raises(ValueError, match='scalar tensor source'):
             tk.decompositions.TTALS(source).fit(rank=2)
@@ -220,13 +220,13 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
             rank=2,
             init='svd',
             max_sweeps=1,
-            output_device=None)
+            out_device=None)
         cores_info, info = tk.decompositions.tt_als(
             tensor,
             rank=2,
             init='svd',
             max_sweeps=1,
-            output_device=None,
+            out_device=None,
             return_info=True)
 
         assert len(cores) == len(cores_info) == tensor.ndim
@@ -247,7 +247,7 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
             l2_reg_mode='absolute')
 
         normalized = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 solver=solver,
                 gauge='none',
@@ -255,7 +255,7 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1))
         direct = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 solver=solver,
                 gauge='none',
@@ -281,8 +281,8 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
         decomposition = tk.decompositions.TTALS.completion(
             indices,
             values,
-            input_dim=tensor.shape,
-            output_device=None)
+            in_dim=tensor.shape,
+            out_device=None)
 
         result = decomposition.fit(
             rank=1,
@@ -309,12 +309,12 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
         observations = tk.decompositions.ObservedEntries(
             indices=indices,
             values=values,
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             weights=weights)
         history = HistoryObserver()
 
         result = tk.decompositions.TTALS.completion(
-            observations, output_device=None).fit(
+            observations, out_device=None).fit(
                 rank=2,
                 generator=torch.Generator().manual_seed(51),
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -335,7 +335,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
         decomposition = tk.decompositions.TTALS.completion(
             torch.tensor([[0, 0], [1, 1]]),
             torch.tensor([1., 2.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
 
         with pytest.raises(ValueError, match='permanently observed'):
             decomposition.fit(rank=2, sampling='exact')
@@ -357,9 +357,9 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
         history = HistoryObserver()
         result = tk.decompositions.TTALS(
             function,
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             dtype=torch.float64,
-            output_device=None).fit(
+            out_device=None).fit(
                 rank=2,
                 sampling='uniform',
                 n_samples=12,
@@ -384,7 +384,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
 
         def fit(seed):
             return tk.decompositions.TTALS(
-                tensor, output_device=None).fit(
+                tensor, out_device=None).fit(
                     rank=2,
                     sampling='uniform',
                     n_samples=9,
@@ -422,7 +422,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
             sample_reuse_sweeps=2,
             max_sweeps=2,
             generator=torch.Generator().manual_seed(54),
-            output_device=None,
+            out_device=None,
             return_info=True)
 
         assert len(cores) == tensor.ndim
@@ -437,7 +437,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
     def test_exact_mode_redraws_current_design_at_every_site(self, gauge):
         tensor = torch.randn(2, 3, 2, dtype=torch.float64)
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 sampling='leverage',
                 n_samples=12,
@@ -460,7 +460,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
             self):
         tensor = torch.randn(2, 3, 2, dtype=torch.float64)
         result = tk.decompositions.TTALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 sampling='leverage',
                 n_samples=10,
@@ -491,7 +491,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
 
         tk.decompositions.TTALS(
             function,
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             dtype=torch.float64).fit(
                 rank=2,
                 sampling='leverage',
@@ -524,7 +524,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
 
         with pytest.raises(ValueError, match='does not support fixed cores'):
             tk.decompositions.TTALS(
-                tensor, output_device=None).fit(
+                tensor, out_device=None).fit(
                     initial_cores=initial,
                     fixed_cores=[None, initial[1], None],
                     sampling='leverage',

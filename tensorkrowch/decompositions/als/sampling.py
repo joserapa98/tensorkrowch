@@ -282,7 +282,7 @@ class ObservedRows:
         """Returns every fixed observed id with unit effective weights."""
         _validate_draw(state, site, n_samples)
         n_observations = self.observations.flat_ids.numel()
-        if state.n_rows != prod(self.observations.input_dim):
+        if state.n_rows != prod(self.observations.in_dim):
             raise ValueError(
                 'Sampling state rows should match the observation input shape')
         if (n_samples is not None) and (n_samples != n_observations):
@@ -501,16 +501,16 @@ class TTLeverageRows:
             site: int,
             indices: torch.Tensor) -> torch.Tensor:
         """Evaluates mixed probabilities after canonical validation."""
-        input_dim = tuple(core.shape[1] for core in cores)
+        in_dim = tuple(core.shape[1] for core in cores)
         left_probability = _region_row_probability(
             cores[:site], indices[:, :site])
         right_cores = self._right_sampling_cores(cores[site + 1:])
         right_probability = _region_row_probability(
             right_cores,
             indices[:, site + 1:].flip(1))
-        leverage = left_probability * right_probability / input_dim[site]
+        leverage = left_probability * right_probability / in_dim[site]
         uniform = leverage.new_full(
-            leverage.shape, 1 / prod(input_dim))
+            leverage.shape, 1 / prod(in_dim))
         return (1 - self.uniform_mix) * leverage + \
             self.uniform_mix * uniform
 
@@ -583,11 +583,11 @@ class TTLeverageRows:
         else:
             indices = leverage_indices
 
-        input_dim = tuple(core.shape[1] for core in cores)
-        ids = _ravel_indices(indices, input_dim)
+        in_dim = tuple(core.shape[1] for core in cores)
+        ids = _ravel_indices(indices, in_dim)
         if self.uniform_mix == 0:
             probabilities = left_probability.to(state.device) * \
-                right_probability.to(state.device) / input_dim[site]
+                right_probability.to(state.device) / in_dim[site]
         else:
             probabilities = self._probabilities_from_indices(
                 cores, site, indices)
@@ -622,7 +622,7 @@ class TRProductLeverageRows:
 
     The published algorithm samples environment configurations and retains the
     full active input fiber. Accordingly, ``n_samples`` counts environments;
-    the returned batch contains ``n_samples * input_dim[site]`` scalar rows.
+    the returned batch contains ``n_samples * in_dim[site]`` scalar rows.
     Expanding fibers is a TensorKrowch row-interface adaptation and preserves
     the paper's sampling weights.
 
@@ -686,9 +686,9 @@ class TRProductLeverageRows:
     @staticmethod
     def _input_leverage(core: torch.Tensor) -> torch.Tensor:
         """Returns row leverage of the core's mode-input unfolding."""
-        left_rank, input_dim, right_rank = core.shape
+        left_rank, in_dim, right_rank = core.shape
         unfolding = core.permute(1, 0, 2).reshape(
-            input_dim, left_rank * right_rank)
+            in_dim, left_rank * right_rank)
         return TRProductLeverageRows._row_leverage(unfolding)
 
     @staticmethod
@@ -697,10 +697,10 @@ class TRProductLeverageRows:
         """Returns independent unfolding-leverage marginals."""
         probabilities = []
         for current, core in enumerate(cores):
-            input_dim = core.shape[1]
+            in_dim = core.shape[1]
             if current == site:
                 probability = core.real.new_full(
-                    (input_dim,), 1 / input_dim)
+                    (in_dim,), 1 / in_dim)
             else:
                 probability = TRProductLeverageRows._input_leverage(core)
             probabilities.append(probability)
@@ -801,14 +801,14 @@ class TRProductLeverageRows:
         else:
             indices = product_indices
 
-        input_dim = tuple(core.shape[1] for core in cores)
+        in_dim = tuple(core.shape[1] for core in cores)
         active_values = torch.arange(
-            input_dim[site], device=state.device, dtype=torch.long)
+            in_dim[site], device=state.device, dtype=torch.long)
         indices = indices.unsqueeze(1).expand(
-            n_samples, input_dim[site], len(cores)).clone()
+            n_samples, in_dim[site], len(cores)).clone()
         indices[:, :, site] = active_values.unsqueeze(0)
         indices = indices.reshape(-1, len(cores))
-        ids = _ravel_indices(indices, input_dim)
+        ids = _ravel_indices(indices, in_dim)
         probabilities = self._mixed_probabilities(
             marginals, indices, state.n_rows)
         if torch.any(probabilities <= 0):
@@ -998,17 +998,17 @@ class TRExactLeverageRows:
         if isinstance(site, bool) or not isinstance(site, int) or \
                 (site < 0) or (site >= len(cores)):
             raise ValueError('`site` should identify a TR core')
-        input_dim = tuple(core.shape[1] for core in cores)
+        in_dim = tuple(core.shape[1] for core in cores)
         indices = _discrete_indices(
-            configurations, input_dim, cores[0].device)
+            configurations, in_dim, cores[0].device)
         exact_state = self._exact_state(cores, site)
         environment_probability = self._environment_probabilities(
             cores, site, indices, exact_state)
-        environment_rows = prod(input_dim) // input_dim[site]
+        environment_rows = prod(in_dim) // in_dim[site]
         mixed_environment = (
             (1 - self.uniform_mix) * environment_probability +
             self.uniform_mix / environment_rows)
-        return mixed_environment / input_dim[site]
+        return mixed_environment / in_dim[site]
 
     @staticmethod
     def _conditional_scores(
@@ -1097,21 +1097,21 @@ class TRExactLeverageRows:
 
         environment_probability = self._environment_probabilities(
             cores, site, indices, exact_state)
-        input_dim = tuple(core.shape[1] for core in cores)
-        environment_rows = state.n_rows // input_dim[site]
+        in_dim = tuple(core.shape[1] for core in cores)
+        environment_rows = state.n_rows // in_dim[site]
         mixed_environment = (
             (1 - self.uniform_mix) * environment_probability +
             self.uniform_mix / environment_rows)
 
         active_values = torch.arange(
-            input_dim[site], device=state.device, dtype=torch.long)
+            in_dim[site], device=state.device, dtype=torch.long)
         indices = indices.unsqueeze(1).expand(
-            n_samples, input_dim[site], len(cores)).clone()
+            n_samples, in_dim[site], len(cores)).clone()
         indices[:, :, site] = active_values.unsqueeze(0)
         indices = indices.reshape(-1, len(cores))
-        ids = _ravel_indices(indices, input_dim)
+        ids = _ravel_indices(indices, in_dim)
         probabilities = mixed_environment.repeat_interleave(
-            input_dim[site]) / input_dim[site]
+            in_dim[site]) / in_dim[site]
         if torch.any(probabilities <= 0):
             raise ValueError(
                 'Drawn exact-leverage rows should have positive support')

@@ -97,7 +97,7 @@ class TestEmbeddingSpec:  # MARK: TestEmbeddingSpec
             (scalar_embedding, vector_embedding), domains)
 
         assert calls == [1, 1]
-        assert spec.input_dim == (2, 3)
+        assert spec.in_dim == (2, 3)
         assert spec.matrix(0).shape == (3, 2)
         assert spec.matrix(1).shape == (2, 3)
         assert calls == [1, 1]
@@ -120,7 +120,7 @@ class TestEmbeddingSpec:  # MARK: TestEmbeddingSpec
         spec = _EmbeddingSpec.normalize(embedding, domains)
 
         assert calls == [2, 3]
-        assert spec.input_dim == (2, 2)
+        assert spec.in_dim == (2, 2)
 
     def test_tensor_embedding_looks_up_values_in_its_site_domain(self):
         domains = _DomainSpec.normalize(
@@ -134,7 +134,7 @@ class TestEmbeddingSpec:  # MARK: TestEmbeddingSpec
 
         result = spec.evaluate(0, torch.tensor([30, 10]))
 
-        assert spec.input_dim == (2,)
+        assert spec.in_dim == (2,)
         assert result.dtype == torch.complex128
         assert torch.equal(result, table[[2, 0]])
         with pytest.raises(ValueError, match='site 0.*outside'):
@@ -145,7 +145,7 @@ class TestEmbeddingSpec:  # MARK: TestEmbeddingSpec
         [
             (lambda values: values, 'site 1.*shape'),
             (lambda values: torch.ones(values.shape[0], 0),
-             'site 1.*positive input_dim'),
+             'site 1.*positive in_dim'),
             (lambda values: torch.full(
                 (values.shape[0], 2), float('inf')), 'site 1.*finite'),
         ])

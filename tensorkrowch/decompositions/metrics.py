@@ -381,7 +381,7 @@ class InputFitRecord:
     method: str
     axis: int
     domain_size: int
-    input_dim: int
+    in_dim: int
     residual_absolute: float
     residual_relative: float
     condition_number: float
@@ -391,7 +391,7 @@ class InputFitRecord:
     def __post_init__(self) -> None:
         if not isinstance(self.method, str) or not self.method:
             raise TypeError('`method` should be a non-empty string')
-        for name in ('axis', 'domain_size', 'input_dim'):
+        for name in ('axis', 'domain_size', 'in_dim'):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f'`{name}` should be int type')

@@ -128,7 +128,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 1], [1, 0], [1, 2]]),
             values=torch.tensor([2., 3., 4.]),
-            input_dim=(2, 3))
+            in_dim=(2, 3))
         sampler = tk.decompositions.ObservedRows(observations)
         state = _RowSamplingState(n_rows=6, core_versions=(0, 0))
 
@@ -221,7 +221,7 @@ class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
         observations = tk.decompositions.ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
-            input_dim=(2, 2))
+            in_dim=(2, 2))
         sampler = tk.decompositions.ObservedRows(observations)
         policy = tk.decompositions.SampleRefreshPolicy(reuse_sweeps=1)
         state = _RowSamplingState(n_rows=4, core_versions=(0, 0))
@@ -365,7 +365,7 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
 
     def test_product_probabilities_match_mode_input_leverage_formula(self):
         cores = make_tr_cores(
-            input_dim=(2, 3, 2),
+            in_dim=(2, 3, 2),
             rank=(2, 3, 2),
             generator=torch.Generator().manual_seed(70))
         sampler = tk.decompositions.TRProductLeverageRows(lambda: cores)
@@ -394,7 +394,7 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
 
     def test_uniform_mix_adds_support_to_zero_slice_bound(self):
         cores = make_tr_cores(
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(71))
         cores[0][:, 0, :] = 0
@@ -450,7 +450,7 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
     def test_reweighted_full_objective_is_unbiased_in_expectation(self):
         generator = torch.Generator().manual_seed(74)
         cores = make_tr_cores(
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             rank=(2, 2, 2),
             generator=generator)
         site = 1
@@ -483,16 +483,16 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_probabilities_match_dense_design_leverage(self, dtype):
-        input_dim = (3, 2, 3, 2)
+        in_dim = (3, 2, 3, 2)
         cores = make_tr_cores(
-            input_dim=input_dim,
+            in_dim=in_dim,
             rank=(2, 3, 2, 2),
             dtype=dtype,
             generator=torch.Generator().manual_seed(75))
         site = 1
         sampler = tk.decompositions.TRExactLeverageRows(lambda: cores)
-        ids = torch.arange(prod(input_dim))
-        indices = torch.stack(torch.unravel_index(ids, input_dim), dim=1)
+        ids = torch.arange(prod(in_dim))
+        indices = torch.stack(torch.unravel_index(ids, in_dim), dim=1)
         probabilities = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(indices))
 
@@ -509,37 +509,37 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
         assert sampler.proposal_exact
 
     def test_draw_expands_fibers_and_records_exact_probabilities(self):
-        input_dim = (3, 2, 3, 2)
+        in_dim = (3, 2, 3, 2)
         cores = make_tr_cores(
-            input_dim=input_dim,
+            in_dim=in_dim,
             rank=(2, 2, 2, 2),
             generator=torch.Generator().manual_seed(76))
         site = 2
         sampler = tk.decompositions.TRExactLeverageRows(
             lambda: cores, uniform_mix=0.1)
         state = _RowSamplingState(
-            n_rows=prod(input_dim), core_versions=(1, 4, 2, 3))
+            n_rows=prod(in_dim), core_versions=(1, 4, 2, 3))
         batch = sampler.draw(
             state,
             site=site,
             n_samples=40,
             generator=torch.Generator().manual_seed(77))
         indices = torch.stack(torch.unravel_index(
-            batch.ids, input_dim), dim=1)
+            batch.ids, in_dim), dim=1)
         expected = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(indices))
-        fibers = indices.reshape(40, input_dim[site], len(input_dim))
+        fibers = indices.reshape(40, in_dim[site], len(in_dim))
 
-        assert batch.ids.numel() == 40 * input_dim[site]
+        assert batch.ids.numel() == 40 * in_dim[site]
         assert torch.equal(
             fibers[:, :, site],
-            torch.arange(input_dim[site]).expand(40, -1))
+            torch.arange(in_dim[site]).expand(40, -1))
         assert torch.equal(
             fibers[:, :, :site],
-            fibers[:, :1, :site].expand(-1, input_dim[site], -1))
+            fibers[:, :1, :site].expand(-1, in_dim[site], -1))
         assert torch.equal(
             fibers[:, :, site + 1:],
-            fibers[:, :1, site + 1:].expand(-1, input_dim[site], -1))
+            fibers[:, :1, site + 1:].expand(-1, in_dim[site], -1))
         assert torch.allclose(batch.probabilities, expected)
         assert torch.allclose(
             batch.weights, (batch.ids.numel() * expected).rsqrt())
@@ -547,40 +547,40 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
         assert not batch.is_exact_for((1, 5, 2, 3))
 
     def test_conditional_draw_frequencies_match_exact_probabilities(self):
-        input_dim = (3, 2, 3, 2)
+        in_dim = (3, 2, 3, 2)
         cores = make_tr_cores(
-            input_dim=input_dim,
+            in_dim=in_dim,
             rank=(2, 2, 2, 2),
             generator=torch.Generator().manual_seed(80))
         site = 1
         n_samples = 30_000
         sampler = tk.decompositions.TRExactLeverageRows(lambda: cores)
         state = _RowSamplingState(
-            n_rows=prod(input_dim), core_versions=(0, 0, 0, 0))
+            n_rows=prod(in_dim), core_versions=(0, 0, 0, 0))
         batch = sampler.draw(
             state,
             site=site,
             n_samples=n_samples,
             generator=torch.Generator().manual_seed(81))
 
-        base_ids = batch.ids.reshape(n_samples, input_dim[site])[:, 0]
+        base_ids = batch.ids.reshape(n_samples, in_dim[site])[:, 0]
         frequencies = torch.bincount(
-            base_ids, minlength=prod(input_dim)).to(torch.float64) / n_samples
-        all_ids = torch.arange(prod(input_dim))
+            base_ids, minlength=prod(in_dim)).to(torch.float64) / n_samples
+        all_ids = torch.arange(prod(in_dim))
         all_indices = torch.stack(
-            torch.unravel_index(all_ids, input_dim), dim=1)
+            torch.unravel_index(all_ids, in_dim), dim=1)
         row_probabilities = sampler.probabilities(
             site, tk.decompositions.ConfigurationBatch(all_indices))
         expected = torch.where(
             all_indices[:, site] == 0,
-            row_probabilities * input_dim[site],
+            row_probabilities * in_dim[site],
             torch.zeros_like(row_probabilities))
 
         assert torch.max(torch.abs(frequencies - expected)) < 6e-3
 
     def test_zero_environment_design_is_rejected(self):
         cores = make_tr_cores(
-            input_dim=(2, 2, 2),
+            in_dim=(2, 2, 2),
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(78))
         cores[0].zero_()

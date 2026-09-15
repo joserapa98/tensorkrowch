@@ -44,7 +44,7 @@ class TestTT2TR:  # MARK: TestTT2TR
             self, center, dtype, phase):
         tt = _rank_one_tt(dtype=dtype, phase=phase)
         result = tk.decompositions.TT2TR(
-            tt, output_device=None).fit(rank=1, center=center)
+            tt, out_device=None).fit(rank=1, center=center)
 
         assert result.rank == [1, 1, 1, 1, 1]
         assert torch.allclose(
@@ -69,7 +69,7 @@ class TestTT2TR:  # MARK: TestTT2TR
         tt = tk.decompositions.TTSVD(
             dense, out_device=None).fit()
         result = tk.decompositions.TT2TR(
-            tt, output_device=None).fit(
+            tt, out_device=None).fit(
                 rank=2,
                 tr_rank=1,
                 center=2,
@@ -87,7 +87,7 @@ class TestTT2TR:  # MARK: TestTT2TR
         tt = tk.decompositions.TTSVD(
             dense, out_device=None).fit()
         result = tk.decompositions.TT2TR(
-            tt, output_device=None).fit(
+            tt, out_device=None).fit(
                 rank=2,
                 tr_rank=2,
                 center=2,
@@ -111,13 +111,13 @@ class TestTT2TR:  # MARK: TestTT2TR
         tt = _rank_one_tt()
         with pytest.raises(ValueError, match='Cannot cancel'):
             tk.decompositions.TT2TR(
-                tt, output_device=None).fit(
+                tt, out_device=None).fit(
                     rank=2,
                     tr_rank=2,
                     loop_opener=_short_als())
 
         result = tk.decompositions.TT2TR(
-            tt, output_device=None).fit(
+            tt, out_device=None).fit(
                 rank=2,
                 tr_rank=2,
                 loop_opener=_short_als(),
@@ -131,7 +131,7 @@ class TestTT2TR:  # MARK: TestTT2TR
         cores, info = tk.decompositions.tt2tr(
             model,
             rank=1,
-            output_device=None,
+            out_device=None,
             return_info=True)
 
         assert [tuple(core.shape) for core in cores] == [
@@ -149,7 +149,7 @@ class TestTT2TR:  # MARK: TestTT2TR
         tt = _rank_one_tt()
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TT2TR(
-                tt, output_device=None).fit(
+                tt, out_device=None).fit(
                     rank=1,
                     loop_opener='blostr+als')
 
@@ -164,7 +164,7 @@ class TestTT2TR:  # MARK: TestTT2TR
         tt = _rank_one_tt()
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TT2TR(
-                tt, output_device=None).fit(
+                tt, out_device=None).fit(
                     rank=1,
                     schedule='alternating')
 
@@ -177,7 +177,7 @@ class TestTT2TR:  # MARK: TestTT2TR
     def test_history_observer_receives_structured_steps_and_summary(self):
         observer = HistoryObserver()
         result = tk.decompositions.TT2TR(
-            _rank_one_tt(), output_device=None).fit(
+            _rank_one_tt(), out_device=None).fit(
                 rank=1, verbose=0, observer=observer)
 
         assert observer.metrics is result.metrics
@@ -196,7 +196,7 @@ class TestTT2TR:  # MARK: TestTT2TR
                 torch.randn(2, 2), torch.randn(2, 2)])
         with pytest.raises(ValueError, match='internal TT site'):
             tk.decompositions.TT2TR(
-                _rank_one_tt(), output_device=None).fit(rank=1, center=0)
+                _rank_one_tt(), out_device=None).fit(rank=1, center=0)
         with pytest.raises(ValueError, match='positive'):
             tk.decompositions.TT2TR(
-                _rank_one_tt(), output_device=None).fit(rank=0)
+                _rank_one_tt(), out_device=None).fit(rank=0)

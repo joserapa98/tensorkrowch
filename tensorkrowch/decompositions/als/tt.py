@@ -39,7 +39,7 @@ from tensorkrowch.decompositions.svd.tt import TTSVD
 
 def _standard_tt_cores(
         cores: Union[TTDecomposition, Sequence[torch.Tensor]],
-        input_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
+        in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight or standard OBC core shapes."""
     if isinstance(cores, TTDecomposition):
         if cores.n_batches:
@@ -54,14 +54,14 @@ def _standard_tt_cores(
         raise TypeError(
             '`initial_cores` should be a TTDecomposition or a core sequence') \
             from exc
-    if len(cores) != len(input_dim):
+    if len(cores) != len(in_dim):
         raise ValueError('`initial_cores` should contain one core per site')
     if not all(isinstance(core, torch.Tensor) for core in cores):
         raise TypeError('`initial_cores` should contain torch.Tensor objects')
 
     standard = []
     n_sites = len(cores)
-    for site, (core, site_input_dim) in enumerate(zip(cores, input_dim)):
+    for site, (core, site_in_dim) in enumerate(zip(cores, in_dim)):
         if n_sites == 1:
             if core.ndim == 1:
                 core = core.reshape(1, core.shape[0], 1)
@@ -88,7 +88,7 @@ def _standard_tt_cores(
             raise ValueError(
                 'Interior cores should have left rank, input and right rank '
                 'dimensions')
-        if core.shape[1] != site_input_dim:
+        if core.shape[1] != site_in_dim:
             raise ValueError(
                 '`initial_cores` input dimensions should match the source')
         standard.append(core)
@@ -105,14 +105,14 @@ def _result_tt_cores(
     return (cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1))
 
 
-def _feasible_tt_rank(input_dim: Sequence[int], rank: int) -> Tuple[int, ...]:
+def _feasible_tt_rank(in_dim: Sequence[int], rank: int) -> Tuple[int, ...]:
     """Clips one shared rank cap to every algebraically feasible TT cut."""
     ranks = []
-    for cut in range(1, len(input_dim)):
+    for cut in range(1, len(in_dim)):
         ranks.append(min(
             rank,
-            prod(input_dim[:cut]),
-            prod(input_dim[cut:])))
+            prod(in_dim[:cut]),
+            prod(in_dim[cut:])))
     return tuple(ranks)
 
 
@@ -255,7 +255,7 @@ class _TTALSBackend:
         self.sample_batch = None
         self.current_target = self.full_target
         self._sampling_state = _RowSamplingState(
-            n_rows=prod(self.cache.input_dim),
+            n_rows=prod(self.cache.in_dim),
             core_versions=self.cache.core_versions,
             device=self.cache.cores[0].device)
         self._direction = None
@@ -312,7 +312,7 @@ class _TTALSBackend:
                     0, positions.to(observations.values.device))
             else:
                 indices = _unravel_indices(
-                    batch.ids, self.cache.input_dim)
+                    batch.ids, self.cache.in_dim)
                 configurations = ConfigurationBatch(
                     indices, kind='indices')
                 evaluated = self.problem.evaluate(configurations)
@@ -677,7 +677,7 @@ class TTALS:
     source : TensorSource, TTDecomposition, torch.Tensor or callable
         Scalar tensor or function to approximate. A callable receives batches
         of integer configurations with shape ``(batch, sites)``.
-    input_dim : sequence of int, optional
+    in_dim : sequence of int, optional
         Input dimension at every site. It is required for callables and may be
         omitted when the source already declares it.
     dtype : torch.dtype, optional
@@ -686,30 +686,30 @@ class TTALS:
         Device used by a callable source. Existing sources retain their device.
     batch_size : int, optional
         Maximum callable evaluation batch used while enumerating the target.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the computation device.
     """
 
     def __init__(self,
                  source,
-                 input_dim: Optional[Sequence[int]] = None,
+                 in_dim: Optional[Sequence[int]] = None,
                  *,
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
                  batch_size: Optional[int] = None,
-                 output_device: Optional[
+                 out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
         self.source = as_tensor_source(
             source,
-            input_dim=input_dim,
+            in_dim=in_dim,
             output_shape=(),
             dtype=dtype,
             device=device,
             batch_size=batch_size)
         self.problem = ALSProblem(source=self.source)
-        self.output_device = None if output_device is None \
-            else torch.device(output_device)
+        self.out_device = None if out_device is None \
+            else torch.device(out_device)
         self._configurations = None
         self._target = None
 
@@ -717,16 +717,16 @@ class TTALS:
     def completion(cls,
                    observations,
                    values: Optional[torch.Tensor] = None,
-                   input_dim: Optional[Sequence[int]] = None,
+                   in_dim: Optional[Sequence[int]] = None,
                    weights: Optional[torch.Tensor] = None,
                    *,
-                   output_device: Optional[
+                   out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TTALS':
         """Creates TT-ALS for a permanently observed completion objective.
 
         ``observations`` may already be :class:`ObservedEntries` or may be an
         integer tensor of global multi-indices. In the latter case, ``values``
-        and the complete ``input_dim`` are required. Entries outside this
+        and the complete ``in_dim`` are required. Entries outside this
         fixed set remain unknown and are never interpreted as zeros.
 
         Parameters
@@ -736,11 +736,11 @@ class TTALS:
             ``(observations, sites)``.
         values : torch.Tensor, optional
             Scalar value at every supplied index.
-        input_dim : sequence of int, optional
+        in_dim : sequence of int, optional
             Complete input dimension, required with raw indices.
         weights : torch.Tensor, optional
             Non-negative multiplicative weight per observed value.
-        output_device : str or torch.device, optional
+        out_device : str or torch.device, optional
             Device where finalized cores are stored. The default is ``"cpu"``.
 
         Returns
@@ -754,14 +754,14 @@ class TTALS:
         >>> indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
         >>> values = torch.tensor([1., 2., 4.])
         >>> decomposition = TTALS.completion(
-        ...     indices, values, input_dim=(2, 2))
+        ...     indices, values, in_dim=(2, 2))
         >>> result = decomposition.fit(rank=2)
         """
         if isinstance(observations, ObservedEntries):
-            if (values is not None) or (input_dim is not None) or \
+            if (values is not None) or (in_dim is not None) or \
                     (weights is not None):
                 raise ValueError(
-                    '`values`, `input_dim` and `weights` belong inside an '
+                    '`values`, `in_dim` and `weights` belong inside an '
                     'existing ObservedEntries object')
             observed_entries = observations
         else:
@@ -770,13 +770,13 @@ class TTALS:
                     '`observations` should be ObservedEntries or torch.Tensor')
             if values is None:
                 raise ValueError('`values` is required with observation indices')
-            if input_dim is None:
+            if in_dim is None:
                 raise ValueError(
-                    '`input_dim` is required with observation indices')
+                    '`in_dim` is required with observation indices')
             observed_entries = ObservedEntries(
                 indices=observations,
                 values=values,
-                input_dim=input_dim,
+                in_dim=in_dim,
                 weights=weights)
         if observed_entries.output_shape:
             raise ValueError(
@@ -785,16 +785,16 @@ class TTALS:
         instance = cls.__new__(cls)
         instance.source = None
         instance.problem = ALSProblem(observations=observed_entries)
-        instance.output_device = None if output_device is None \
-            else torch.device(output_device)
+        instance.out_device = None if out_device is None \
+            else torch.device(out_device)
         instance._configurations = None
         instance._target = None
         return instance
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Input dimension fixed by the source or completion problem."""
-        return self.problem.input_dim
+        return self.problem.in_dim
 
     def _runtime_reference(self) -> torch.Tensor:
         """Returns one scalar carrying the source runtime without densifying."""
@@ -805,7 +805,7 @@ class TTALS:
                 (), device=self.source.device, dtype=self.source.dtype)
 
         indices = torch.zeros(
-            (1, len(self.input_dim)),
+            (1, len(self.in_dim)),
             device=self.source.device,
             dtype=torch.long)
         value = self.source.evaluate(
@@ -828,8 +828,8 @@ class TTALS:
                 raise ValueError(
                     'Completion does not define unknown target entries')
             flat_ids = torch.arange(
-                prod(self.input_dim), device=self.source.device)
-            indices = _unravel_indices(flat_ids, self.input_dim)
+                prod(self.in_dim), device=self.source.device)
+            indices = _unravel_indices(flat_ids, self.in_dim)
             configurations = ConfigurationBatch(indices, kind='indices')
             target = self.source.evaluate(configurations)
             if target.shape != (flat_ids.numel(),):
@@ -842,7 +842,7 @@ class TTALS:
                 raise ValueError(
                     'The tensor source should return only finite values')
             self._configurations = configurations
-            self._target = target.reshape(self.input_dim)
+            self._target = target.reshape(self.in_dim)
         return self._configurations, self._target
 
     def _random_cores(self,
@@ -852,18 +852,18 @@ class TTALS:
                       generator: Optional[torch.Generator]
                       ) -> Tuple[torch.Tensor, ...]:
         """Initializes random TT cores at feasible ranks."""
-        ranks = _feasible_tt_rank(self.input_dim, rank)
+        ranks = _feasible_tt_rank(self.in_dim, rank)
         boundary_ranks = (1, *ranks, 1)
         cores = []
-        for site, site_input_dim in enumerate(self.input_dim):
+        for site, site_in_dim in enumerate(self.in_dim):
             core = torch.randn(
                 boundary_ranks[site],
-                site_input_dim,
+                site_in_dim,
                 boundary_ranks[site + 1],
                 device=device,
                 dtype=dtype,
                 generator=generator)
-            core = core / max(1, boundary_ranks[site] * site_input_dim) ** 0.5
+            core = core / max(1, boundary_ranks[site] * site_in_dim) ** 0.5
             cores.append(core)
         return tuple(cores)
 
@@ -897,16 +897,16 @@ class TTALS:
                         rank=rank,
                         collect_metrics=False)
                 cores = _standard_tt_cores(
-                    decomposition, self.input_dim)
+                    decomposition, self.in_dim)
         else:
-            cores = _standard_tt_cores(initial_cores, self.input_dim)
+            cores = _standard_tt_cores(initial_cores, self.in_dim)
 
         if any((core.device != target.device) or (core.dtype != target.dtype)
                for core in cores):
             raise ValueError(
                 'Initial cores and source values should share dtype and device')
         feasible_ranks = _feasible_tt_rank(
-            self.input_dim,
+            self.in_dim,
             rank if rank is not None else max(
                 (core.shape[-1] for core in cores[:-1]), default=1))
         current_ranks = tuple(core.shape[-1] for core in cores[:-1])
@@ -917,7 +917,7 @@ class TTALS:
                 'Initial TT ranks should not exceed the requested feasible '
                 '`rank` cap')
         algebraic_caps = _feasible_tt_rank(
-            self.input_dim,
+            self.in_dim,
             max(current_ranks, default=1))
         if any(current_rank > allowed
                for current_rank, allowed in zip(current_ranks,
@@ -935,7 +935,7 @@ class TTALS:
             raise TypeError(
                 '`fixed_cores` should contain one tensor or None per site') \
                 from exc
-        if len(fixed_cores) != len(self.input_dim):
+        if len(fixed_cores) != len(self.in_dim):
             raise ValueError('`fixed_cores` should contain one entry per site')
 
         final_cores = list(cores)
@@ -946,14 +946,14 @@ class TTALS:
             if not isinstance(fixed_core, torch.Tensor):
                 raise TypeError(
                     '`fixed_cores` should contain torch.Tensor objects or None')
-            if len(self.input_dim) == 1:
+            if len(self.in_dim) == 1:
                 normalized = _standard_tt_cores(
-                    (fixed_core,), self.input_dim)[0]
+                    (fixed_core,), self.in_dim)[0]
             else:
                 core = fixed_core
                 if site == 0 and core.ndim == 2:
                     core = core.unsqueeze(0)
-                elif site == (len(self.input_dim) - 1) and core.ndim == 2:
+                elif site == (len(self.in_dim) - 1) and core.ndim == 2:
                     core = core.unsqueeze(-1)
                 if core.ndim != 3:
                     raise ValueError(
@@ -998,7 +998,7 @@ class TTALS:
         sequence using standard or boundary-squeezed TT shapes. Without it,
         ``rank`` is required and acts as one shared upper bound: every cut is
         initialized with
-        ``min(rank, prod(input_dim[:k]), prod(input_dim[k:]))``. Existing cores
+        ``min(rank, prod(in_dim[:k]), prod(in_dim[k:]))``. Existing cores
         that exceed this cap are rejected rather than silently truncated.
 
         With ``sampling="leverage"``, exact sampling follows *Efficient
@@ -1219,9 +1219,9 @@ class TTALS:
             collect_metrics=collect_metrics)
 
         result_cores = _result_tt_cores(driver_result.cores)
-        if self.output_device is not None:
+        if self.out_device is not None:
             result_cores = tuple(
-                core.to(device=self.output_device) for core in result_cores)
+                core.to(device=self.out_device) for core in result_cores)
         return TTDecomposition(
             cores=result_cores,
             metrics=driver_result.metrics,
@@ -1253,7 +1253,7 @@ class TTALS:
 
 def tt_als(source,
            rank: Optional[int] = None,
-           input_dim: Optional[Sequence[int]] = None,
+           in_dim: Optional[Sequence[int]] = None,
            initial_cores=None,
            init: str = 'random',
            fixed_cores=None,
@@ -1280,7 +1280,7 @@ def tt_als(source,
            dtype: Optional[torch.dtype] = None,
            device: Union[str, torch.device] = 'cpu',
            batch_size: Optional[int] = None,
-           output_device: Optional[Union[str, torch.device]] = 'cpu',
+           out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
            return_info: bool = False):
@@ -1288,7 +1288,7 @@ def tt_als(source,
 
     This is the simple functional interface. ``source`` may be a dense tensor,
     callable, :class:`TensorSource` or existing :class:`TTDecomposition`.
-    Callables require ``input_dim`` and receive integer configurations with
+    Callables require ``in_dim`` and receive integer configurations with
     shape ``(batch, sites)``. Use :class:`TTALS` for repeated fits of the same
     source or to pass advanced policy objects directly.
 
@@ -1304,7 +1304,7 @@ def tt_als(source,
         Scalar discrete tensor or function to approximate.
     rank : int, optional
         Shared maximum TT rank. Required without ``initial_cores``.
-    input_dim : sequence of int, optional
+    in_dim : sequence of int, optional
         Input dimension at every site; required for callables.
     initial_cores : sequence of torch.Tensor or TTDecomposition, optional
         Initial TT approximation.
@@ -1356,7 +1356,7 @@ def tt_als(source,
         Callable evaluation device.
     batch_size : int, optional
         Callable evaluation batch size.
-    output_device : str or torch.device, optional
+    out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
     generator : torch.Generator, optional
         Random-initialization generator.
@@ -1398,11 +1398,11 @@ def tt_als(source,
         acceptance=acceptance)
     result = TTALS(
         source=source,
-        input_dim=input_dim,
+        in_dim=in_dim,
         dtype=dtype,
         device=device,
         batch_size=batch_size,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,

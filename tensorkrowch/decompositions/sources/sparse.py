@@ -8,7 +8,7 @@ from tensorkrowch.decompositions.sources.base import (
     ConfigurationBatch,
     _discrete_indices,
     _fiber_configurations,
-    _normalize_input_dim,
+    _normalize_in_dim,
     _ravel_indices,
     _SourceEvaluationTracker,
     _unravel_indices,
@@ -28,14 +28,14 @@ class SparseTensorSource(_SourceEvaluationTracker):
         Integer tensor of shape ``(nnz, sites)``.
     values : torch.Tensor
         Non-zero values with shape ``(nnz, *output_shape)``.
-    input_dim : sequence of int
+    in_dim : sequence of int
         Complete discrete input dimension.
     """
 
     def __init__(self,
                  indices: torch.Tensor,
                  values: torch.Tensor,
-                 input_dim: Sequence[int]) -> None:
+                 in_dim: Sequence[int]) -> None:
         self._initialize_evaluation_stats()
         if not isinstance(indices, torch.Tensor):
             raise TypeError('`indices` should be torch.Tensor type')
@@ -56,15 +56,15 @@ class SparseTensorSource(_SourceEvaluationTracker):
         if not (values.is_floating_point() or values.is_complex()):
             raise TypeError('`values` should have a floating or complex dtype')
 
-        self._input_dim = _normalize_input_dim(input_dim)
-        if indices.shape[1] != len(self.input_dim):
+        self._in_dim = _normalize_in_dim(in_dim)
+        if indices.shape[1] != len(self.in_dim):
             raise ValueError('`indices` should contain one column per site')
         indices = _discrete_indices(
             ConfigurationBatch(indices, kind='indices'),
-            self.input_dim,
+            self.in_dim,
             values.device)
 
-        flat_ids = _ravel_indices(indices, self.input_dim)
+        flat_ids = _ravel_indices(indices, self.in_dim)
         unique_ids, inverse = torch.unique(
             flat_ids, sorted=True, return_inverse=True)
         coalesced_values = values.new_zeros(
@@ -72,14 +72,14 @@ class SparseTensorSource(_SourceEvaluationTracker):
         coalesced_values.index_add_(0, inverse, values)
 
         self._flat_ids = unique_ids
-        self._indices = _unravel_indices(unique_ids, self.input_dim)
+        self._indices = _unravel_indices(unique_ids, self.in_dim)
         self._values = coalesced_values
         self._output_shape = tuple(values.shape[1:])
 
     @property
-    def input_dim(self) -> Tuple[int, ...]:
+    def in_dim(self) -> Tuple[int, ...]:
         """Discrete input dimension at every site."""
-        return self._input_dim
+        return self._in_dim
 
     @property
     def output_shape(self) -> Tuple[int, ...]:
@@ -109,8 +109,8 @@ class SparseTensorSource(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates sparse values, returning zero outside the support."""
         indices = _discrete_indices(
-            configurations, self.input_dim, self.device)
-        flat_ids = _ravel_indices(indices, self.input_dim)
+            configurations, self.in_dim, self.device)
+        flat_ids = _ravel_indices(indices, self.in_dim)
         positions = torch.searchsorted(self._flat_ids, flat_ids)
         safe_positions = positions.clamp(max=max(self._flat_ids.numel() - 1,
                                                  0))
@@ -131,11 +131,11 @@ class SparseTensorSource(_SourceEvaluationTracker):
         """Evaluates a sparse discrete fiber without densifying the source."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.input_dim)):
+        if (site < 0) or (site >= len(self.in_dim)):
             raise ValueError('`site` should identify an input site')
         if values is None:
             values = torch.arange(
-                self.input_dim[site], device=configurations.device)
+                self.in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)
@@ -150,7 +150,7 @@ class EmpiricalDistribution(SparseTensorSource):
     ----------
     dataset : torch.Tensor
         Integer observations with shape ``(samples, sites)``.
-    input_dim : sequence of int, optional
+    in_dim : sequence of int, optional
         Complete discrete input dimension. If omitted, each dimension is one
         plus the largest observed index.
     weights : torch.Tensor, optional
@@ -162,7 +162,7 @@ class EmpiricalDistribution(SparseTensorSource):
 
     def __init__(self,
                  dataset: torch.Tensor,
-                 input_dim: Optional[Sequence[int]] = None,
+                 in_dim: Optional[Sequence[int]] = None,
                  weights: Optional[torch.Tensor] = None,
                  dtype: Optional[torch.dtype] = None) -> None:
         if not isinstance(dataset, torch.Tensor):
@@ -174,13 +174,13 @@ class EmpiricalDistribution(SparseTensorSource):
                 '`dataset` should be a two-dimensional integer tensor')
         if dataset.shape[0] < 1:
             raise ValueError('`dataset` should contain at least one sample')
-        if input_dim is None:
+        if in_dim is None:
             if torch.any(dataset < 0):
                 raise ValueError('`dataset` indices should be non-negative')
-            input_dim = tuple(
+            in_dim = tuple(
                 int(dataset[:, site].max().item()) + 1
                 for site in range(dataset.shape[1]))
-        normalized_input_dim = _normalize_input_dim(input_dim)
+        normalized_in_dim = _normalize_in_dim(in_dim)
 
         if dtype is None:
             dtype = torch.get_default_dtype()
@@ -211,7 +211,7 @@ class EmpiricalDistribution(SparseTensorSource):
         super().__init__(
             indices=dataset,
             values=mass / total,
-            input_dim=normalized_input_dim)
+            in_dim=normalized_in_dim)
 
 
 __all__ = ['SparseTensorSource', 'EmpiricalDistribution']

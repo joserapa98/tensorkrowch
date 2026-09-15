@@ -84,7 +84,7 @@ class TestSamplePool:  # MARK: TestSamplePool
             _packed_values(sketch), torch.tensor([[0, 0], [0, 1]]))
         assert pool.restrict(region) is sketch
 
-    def test_vector_input_dimensions_are_preserved_per_site(self):
+    def test_vector_in_dimensions_are_preserved_per_site(self):
         samples = torch.tensor([
             [[0., 1.], [2., 3.]],
             [[0., 1.], [4., 5.]],

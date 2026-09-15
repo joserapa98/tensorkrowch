@@ -14,7 +14,7 @@ from tests.decompositions.als._oracles import (contract_tr_dense,
 def _exact_tr(dtype=torch.float64):
     """Returns a heterogeneous TR and its dense contraction."""
     cores = make_tr_cores(
-        input_dim=(2, 3, 2),
+        in_dim=(2, 3, 2),
         rank=(2, 3, 2),
         dtype=dtype,
         generator=torch.Generator().manual_seed(100))
@@ -27,13 +27,13 @@ class TestTRALSExact:  # MARK: TestTRALSExact
     def test_one_sweep_matches_direct_dense_oracle(self, dtype):
         target_cores, tensor = _exact_tr(dtype)
         initial = make_tr_cores(
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             rank=(2, 3, 2),
             dtype=dtype,
             generator=torch.Generator().manual_seed(101))
         expected = reference_tr_sweep(initial, tensor, qr=False)
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 gauge='none',
                 solver=tk.decompositions.LeastSquaresSolver(
@@ -55,7 +55,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
     def test_exact_objective_is_monotone(self, gauge):
         _, tensor = _exact_tr()
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=(2, 2, 2),
                 gauge=gauge,
                 generator=torch.Generator().manual_seed(102),
@@ -71,7 +71,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
     def test_svd_initialization_uses_tr_svd_and_shared_rank(self):
         _, tensor = _exact_tr()
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=3,
                 init='svd',
                 gauge='none',
@@ -87,7 +87,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
         initial, tensor = _exact_tr()
         fixed = initial[0].clone()
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 fixed_cores=(fixed, None, None),
                 gauge='qr',
@@ -102,7 +102,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
     def test_all_fixed_cores_stop_without_updates(self):
         initial, tensor = _exact_tr()
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 initial_cores=initial,
                 fixed_cores=initial)
 
@@ -115,7 +115,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
     def test_fast_path_omits_records_and_objective_reductions(self):
         _, tensor = _exact_tr()
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=2,
                 convergence=tk.decompositions.ConvergencePolicy(
                     max_sweeps=1),
@@ -139,9 +139,9 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         history = HistoryObserver()
         result = tk.decompositions.TRALS(
             function,
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             dtype=torch.float64,
-            output_device=None).fit(
+            out_device=None).fit(
                 rank=2,
                 sampling='uniform',
                 n_samples=12,
@@ -173,8 +173,8 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         decomposition = tk.decompositions.TRALS.completion(
             indices,
             values,
-            input_dim=tensor.shape,
-            output_device=None)
+            in_dim=tensor.shape,
+            out_device=None)
         result = decomposition.fit(
             rank=2,
             generator=torch.Generator().manual_seed(104),
@@ -201,9 +201,9 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
 
         result = tk.decompositions.TRALS(
             function,
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             dtype=torch.float64,
-            output_device=None).fit(
+            out_device=None).fit(
                 rank=2,
                 gauge='none',
                 sampling='leverage',
@@ -251,9 +251,9 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
 
         result = tk.decompositions.TRALS(
             function,
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             dtype=torch.float64,
-            output_device=None).fit(
+            out_device=None).fit(
                 rank=2,
                 gauge='none',
                 sampling='leverage',
@@ -282,7 +282,7 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
     def test_rank_sequence_uses_right_link_semantics(self):
         tensor = torch.randn(2, 3, 4, dtype=torch.float64)
         result = tk.decompositions.TRALS(
-            tensor, output_device=None).fit(
+            tensor, out_device=None).fit(
                 rank=(2, 3, 4),
                 gauge='none',
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -296,7 +296,7 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
     def test_rank_length_and_cap_are_validated(self):
         tensor = torch.randn(2, 2, 2, dtype=torch.float64)
         initial = make_tr_cores(
-            input_dim=tensor.shape,
+            in_dim=tensor.shape,
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(105))
 
@@ -316,12 +316,12 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
             tensor,
             rank=2,
             max_sweeps=1,
-            output_device=None)
+            out_device=None)
         cores_info, info = tk.decompositions.tr_als(
             tensor,
             rank=2,
             max_sweeps=1,
-            output_device=None,
+            out_device=None,
             return_info=True)
 
         assert len(cores) == len(cores_info) == tensor.ndim
@@ -338,7 +338,7 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
             n_samples=8,
             leverage_uniform_mix=0.1,
             max_sweeps=1,
-            output_device=None,
+            out_device=None,
             generator=torch.Generator().manual_seed(107),
             return_info=True)
 
@@ -355,7 +355,7 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
             leverage_method='exact',
             n_samples=5,
             max_sweeps=1,
-            output_device=None,
+            out_device=None,
             generator=torch.Generator().manual_seed(109),
             return_info=True)
 

@@ -45,7 +45,7 @@ _Rank = Optional[Union[int, Sequence[int]]]
 
 def _standard_tr_cores(
         cores: Union[TRDecomposition, Sequence[torch.Tensor]],
-        input_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
+        in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight TR cores to standard cyclic shapes."""
     if isinstance(cores, TRDecomposition):
         if cores.n_batches:
@@ -60,15 +60,15 @@ def _standard_tr_cores(
         raise TypeError(
             '`initial_cores` should be a TRDecomposition or a core sequence') \
             from exc
-    if len(cores) != len(input_dim):
+    if len(cores) != len(in_dim):
         raise ValueError('`initial_cores` should contain one core per site')
     if not all(isinstance(core, torch.Tensor) for core in cores):
         raise TypeError('`initial_cores` should contain torch.Tensor objects')
-    for core, site_input_dim in zip(cores, input_dim):
+    for core, site_in_dim in zip(cores, in_dim):
         if core.ndim != 3:
             raise ValueError(
                 'TR cores should have left rank, input and right rank dimensions')
-        if core.shape[1] != site_input_dim:
+        if core.shape[1] != site_in_dim:
             raise ValueError(
                 '`initial_cores` input dimensions should match the source')
     return TRSegmentEnvironmentCache._validate_cores(cores)
@@ -229,7 +229,7 @@ class _TRALSBackend:
         self.sample_batch = None
         self.current_target = self.full_target
         self._sampling_state = _RowSamplingState(
-            n_rows=prod(self.cache.input_dim),
+            n_rows=prod(self.cache.in_dim),
             core_versions=self.cache.core_versions,
             device=self.cache.cores[0].device)
         self._direction = None
@@ -284,7 +284,7 @@ class _TRALSBackend:
                 self.current_target = observations.values.index_select(
                     0, positions.to(observations.values.device))
             else:
-                indices = _unravel_indices(batch.ids, self.cache.input_dim)
+                indices = _unravel_indices(batch.ids, self.cache.in_dim)
                 evaluated = self.problem.evaluate(
                     ConfigurationBatch(indices, kind='indices'))
                 if evaluated.shape != (batch.ids.numel(),):
@@ -483,9 +483,9 @@ class _TRLeverageALSBackend:
             generator=self.generator)
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
-        input_dim = self._cores[site].shape[1]
+        in_dim = self._cores[site].shape[1]
         if isinstance(self.problem.source, FiberTensorSource):
-            base_indices = indices[::input_dim].clone()
+            base_indices = indices[::in_dim].clone()
             target = self.problem.source.fiber(
                 ConfigurationBatch(base_indices, kind='indices'), site)
             target = target.reshape(-1)
@@ -609,18 +609,18 @@ class TRALS(TTALS):
     def completion(cls,
                    observations,
                    values: Optional[torch.Tensor] = None,
-                   input_dim: Optional[Sequence[int]] = None,
+                   in_dim: Optional[Sequence[int]] = None,
                    weights: Optional[torch.Tensor] = None,
                    *,
-                   output_device: Optional[
+                   out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TRALS':
         """Creates TR-ALS for a permanently observed completion objective."""
         return super().completion(
             observations=observations,
             values=values,
-            input_dim=input_dim,
+            in_dim=in_dim,
             weights=weights,
-            output_device=output_device)
+            out_device=out_device)
 
     def _random_cores(self,
                       ranks: Sequence[int],
@@ -630,15 +630,15 @@ class TRALS(TTALS):
                       ) -> Tuple[torch.Tensor, ...]:
         """Initializes random cyclic cores with prescribed right-link ranks."""
         cores = []
-        for site, site_input_dim in enumerate(self.input_dim):
+        for site, site_in_dim in enumerate(self.in_dim):
             core = torch.randn(
                 ranks[site - 1],
-                site_input_dim,
+                site_in_dim,
                 ranks[site],
                 dtype=dtype,
                 device=device,
                 generator=generator)
-            core = core / max(1, ranks[site - 1] * site_input_dim) ** 0.5
+            core = core / max(1, ranks[site - 1] * site_in_dim) ** 0.5
             cores.append(core)
         return tuple(cores)
 
@@ -653,7 +653,7 @@ class TRALS(TTALS):
         """Builds and validates initialization plus fixed-site semantics."""
         if init not in ('random', 'svd'):
             raise ValueError("`init` should be 'random' or 'svd'")
-        rank_caps = _normalize_tr_rank(rank, len(self.input_dim))
+        rank_caps = _normalize_tr_rank(rank, len(self.in_dim))
         if initial_cores is None:
             if rank_caps is None:
                 raise ValueError(
@@ -666,9 +666,9 @@ class TRALS(TTALS):
                     target, out_device=None).fit(
                         rank=max(rank_caps),
                         collect_metrics=False)
-                cores = _standard_tr_cores(decomposition, self.input_dim)
+                cores = _standard_tr_cores(decomposition, self.in_dim)
         else:
-            cores = _standard_tr_cores(initial_cores, self.input_dim)
+            cores = _standard_tr_cores(initial_cores, self.in_dim)
 
         if any((core.device != target.device) or (core.dtype != target.dtype)
                for core in cores):
@@ -692,7 +692,7 @@ class TRALS(TTALS):
             raise TypeError(
                 '`fixed_cores` should contain one tensor or None per site') \
                 from exc
-        if len(fixed_cores) != len(self.input_dim):
+        if len(fixed_cores) != len(self.in_dim):
             raise ValueError('`fixed_cores` should contain one entry per site')
 
         final_cores = list(cores)
@@ -961,9 +961,9 @@ class TRALS(TTALS):
             collect_metrics=collect_metrics)
 
         result_cores = tuple(driver_result.cores)
-        if self.output_device is not None:
+        if self.out_device is not None:
             result_cores = tuple(
-                core.to(device=self.output_device) for core in result_cores)
+                core.to(device=self.out_device) for core in result_cores)
         return TRDecomposition(
             cores=result_cores,
             metrics=driver_result.metrics,
@@ -1002,7 +1002,7 @@ class TRALS(TTALS):
 
 def tr_als(source,
            rank: _Rank = None,
-           input_dim: Optional[Sequence[int]] = None,
+           in_dim: Optional[Sequence[int]] = None,
            initial_cores=None,
            init: str = 'random',
            fixed_cores=None,
@@ -1031,7 +1031,7 @@ def tr_als(source,
            dtype: Optional[torch.dtype] = None,
            device: Union[str, torch.device] = 'cpu',
            batch_size: Optional[int] = None,
-           output_device: Optional[Union[str, torch.device]] = 'cpu',
+           out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
            return_info: bool = False):
@@ -1069,11 +1069,11 @@ def tr_als(source,
         acceptance=acceptance)
     result = TRALS(
         source=source,
-        input_dim=input_dim,
+        in_dim=in_dim,
         dtype=dtype,
         device=device,
         batch_size=batch_size,
-        output_device=output_device).fit(
+        out_device=out_device).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,

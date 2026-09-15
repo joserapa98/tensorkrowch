@@ -6,18 +6,18 @@ import torch
 import tensorkrowch as tk
 
 
-def _rank_one_sparse(input_dim=(2, 3, 2), dtype=torch.float64):
+def _rank_one_sparse(in_dim=(2, 3, 2), dtype=torch.float64):
     factors = [
         torch.arange(1, dimension + 1, dtype=dtype)
-        for dimension in input_dim
+        for dimension in in_dim
     ]
     dense = factors[0]
     for factor in factors[1:]:
         dense = dense.unsqueeze(-1) * factor
     indices = torch.cartesian_prod(*(
-        torch.arange(dimension) for dimension in input_dim))
+        torch.arange(dimension) for dimension in in_dim))
     return tk.decompositions.SparseTensorSource(
-        indices, dense.reshape(-1), input_dim), dense
+        indices, dense.reshape(-1), in_dim), dense
 
 
 class TestMarginalSketch:  # MARK: TestMarginalSketch
@@ -36,7 +36,7 @@ class TestMarginalSketch:  # MARK: TestMarginalSketch
         assert system.diagnostics['marginal_order'] == 1
 
     def test_factor_changes_the_contracted_measure_explicitly(self):
-        source, dense = _rank_one_sparse(input_dim=(2, 2, 2))
+        source, dense = _rank_one_sparse(in_dim=(2, 2, 2))
         factor = (
             torch.tensor([1., 2.]),
             torch.tensor([1., 3.]),
@@ -64,7 +64,7 @@ class TestSampledSketch:  # MARK: TestSampledSketch
         assert torch.allclose(result.contract_dense(), dense)
 
     def test_sample_cap_preserves_recursive_prefix_dimensions(self):
-        source, _ = _rank_one_sparse(input_dim=(2, 2, 2, 2))
+        source, _ = _rank_one_sparse(in_dim=(2, 2, 2, 2))
         system = tk.decompositions.SampledSketch(
             sketch_size=2).builder(source).build(
                 generator=torch.Generator().manual_seed(201))
@@ -106,7 +106,7 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
         assert result.metadata['coefficient_ranks'] == [1, 1]
 
     def test_orthogonal_variant_is_labelled_separately(self):
-        source, _ = _rank_one_sparse(input_dim=(3, 3, 3))
+        source, _ = _rank_one_sparse(in_dim=(3, 3, 3))
         system = tk.decompositions.TTStackSketch(
             tt_rank=2,
             n_stacks=1,
@@ -126,7 +126,7 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
                 torch.ones(1, 2, 1),
             ),
             left_blocks=(torch.zeros(1, 2, 1),),
-            input_dim=(2, 2),
+            in_dim=(2, 2),
             operator='degenerate_test')
 
         with pytest.raises(ValueError, match='rank deficient'):

@@ -190,31 +190,31 @@ class CoreDeterminingSystem:
 
     phi: Sequence[torch.Tensor]
     left_blocks: Sequence[torch.Tensor]
-    input_dim: Sequence[int]
+    in_dim: Sequence[int]
     operator: str
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         phi = tuple(self.phi)
         blocks = tuple(self.left_blocks)
-        input_dim = tuple(self.input_dim)
-        if len(phi) != len(input_dim):
+        in_dim = tuple(self.in_dim)
+        if len(phi) != len(in_dim):
             raise ValueError('`phi` should contain one local tensor per site')
-        if len(blocks) != len(input_dim) - 1:
+        if len(blocks) != len(in_dim) - 1:
             raise ValueError(
                 '`left_blocks` should contain one recursive block per TT cut')
         previous = 1
         for site, tensor in enumerate(phi):
             if not isinstance(tensor, torch.Tensor) or tensor.ndim != 3:
                 raise ValueError('Every local Phi should have three axes')
-            if tensor.shape[0] != previous or tensor.shape[1] != input_dim[site]:
+            if tensor.shape[0] != previous or tensor.shape[1] != in_dim[site]:
                 raise ValueError('Local Phi dimensions are not recursive')
             if site < len(blocks):
                 block = blocks[site]
                 if not isinstance(block, torch.Tensor) or block.ndim != 3:
                     raise ValueError(
                         'Every recursive left block should have three axes')
-                if block.shape[1:] != (input_dim[site], previous):
+                if block.shape[1:] != (in_dim[site], previous):
                     raise ValueError(
                         'A recursive block does not match its previous sketch')
                 previous = block.shape[0]
@@ -222,7 +222,7 @@ class CoreDeterminingSystem:
             raise ValueError('The final local Phi should have unit right size')
         object.__setattr__(self, 'phi', phi)
         object.__setattr__(self, 'left_blocks', blocks)
-        object.__setattr__(self, 'input_dim', input_dim)
+        object.__setattr__(self, 'in_dim', in_dim)
         object.__setattr__(self, 'diagnostics', dict(self.diagnostics))
 
     def solve(self,
@@ -239,7 +239,7 @@ class CoreDeterminingSystem:
             raise TypeError('`strict_system` should be bool type')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
-        ranks = _normalize_rank(rank, len(self.input_dim))
+        ranks = _normalize_rank(rank, len(self.in_dim))
         truncation = {
             'cutoff': cutoff,
             'atol': atol,
@@ -280,7 +280,7 @@ class CoreDeterminingSystem:
 
         cores = [bases[0]]
         solver = LeastSquaresSolver()
-        for site in range(1, len(self.input_dim)):
+        for site in range(1, len(self.in_dim)):
             right = bases[site]
             solution, record = solver.solve(
                 coefficients[site - 1],
@@ -288,7 +288,7 @@ class CoreDeterminingSystem:
                 site=site,
                 return_record=True)
             cores.append(solution.reshape(
-                solution.shape[0], self.input_dim[site], right.shape[-1]))
+                solution.shape[0], self.in_dim[site], right.shape[-1]))
             if collect_metrics:
                 metrics.local_solves.append(record)
 
@@ -316,7 +316,7 @@ class _SupportSketchSystemBuilder:
             raise TypeError('`source` should implement TensorSource')
         if tuple(source.output_shape) != ():
             raise ValueError('TT-RS currently requires a scalar source')
-        if len(source.input_dim) < 2:
+        if len(source.in_dim) < 2:
             raise ValueError('TT-RS requires at least two input sites')
         self.source = source
         self.operator = operator
@@ -336,7 +336,7 @@ class _SupportSketchSystemBuilder:
         else:
             axes = [
                 torch.arange(dimension, device=self.source.device)
-                for dimension in self.source.input_dim
+                for dimension in self.source.in_dim
             ]
             indices = torch.cartesian_prod(*axes)
             if batch_size is None:
@@ -358,13 +358,13 @@ class _SupportSketchSystemBuilder:
             raise ValueError('TT-RS cannot decompose an empty sparse support')
         weights = self.operator._weights(
             indices,
-            self.source.input_dim,
+            self.source.in_dim,
             values.dtype,
             generator)
         values = values * weights.value_scale.to(values.dtype)
         phis = []
-        n_sites = len(self.source.input_dim)
-        for site, dimension in enumerate(self.source.input_dim):
+        n_sites = len(self.source.in_dim)
+        for site, dimension in enumerate(self.source.in_dim):
             left = values.new_ones(values.shape[0], 1) if site == 0 \
                 else weights.left[site - 1].to(values.dtype)
             right = values.new_ones(values.shape[0], 1) \
@@ -379,7 +379,7 @@ class _SupportSketchSystemBuilder:
         return CoreDeterminingSystem(
             phi=phis,
             left_blocks=weights.left_blocks,
-            input_dim=self.source.input_dim,
+            in_dim=self.source.in_dim,
             operator=type(self.operator).__name__,
             diagnostics={
                 'support_size': values.shape[0],
@@ -404,7 +404,7 @@ class _SampledStructuredSystemBuilder:
               generator: Optional[torch.Generator] = None
               ) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
-        dimensions = self.source.input_dim
+        dimensions = self.source.in_dim
         device = self.source.device
         if self.operator.samples is None:
             reference = None
@@ -475,7 +475,7 @@ class _SampledStructuredSystemBuilder:
         return CoreDeterminingSystem(
             phi=phis,
             left_blocks=blocks,
-            input_dim=dimensions,
+            in_dim=dimensions,
             operator=type(self.operator).__name__,
             diagnostics={
                 'source_path': 'structured_tt',
@@ -504,7 +504,7 @@ class _MarginalStructuredSystemBuilder:
               ) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
         del generator
-        dimensions = self.source.input_dim
+        dimensions = self.source.in_dim
         blocks = self.operator._left_blocks(
             dimensions, self.source.dtype, self.source.device)
         phi_kernel = _structured_capability(self.source, 'marginal_phi')
@@ -515,7 +515,7 @@ class _MarginalStructuredSystemBuilder:
         return CoreDeterminingSystem(
             phi=phis,
             left_blocks=blocks,
-            input_dim=dimensions,
+            in_dim=dimensions,
             operator=type(self.operator).__name__,
             diagnostics={
                 'source_path': 'structured_tt',
@@ -546,7 +546,7 @@ class _TTStackStructuredSystemBuilder:
               ) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
         left_cores, right_cores, blocks = self.operator._components(
-            self.source.input_dim,
+            self.source.in_dim,
             self.source.dtype,
             self.source.device,
             generator)
@@ -558,7 +558,7 @@ class _TTStackStructuredSystemBuilder:
         return CoreDeterminingSystem(
             phi=phis,
             left_blocks=blocks,
-            input_dim=self.source.input_dim,
+            in_dim=self.source.in_dim,
             operator=type(self.operator).__name__,
             diagnostics={
                 'source_path': 'structured_tt',
@@ -574,9 +574,9 @@ class _TTStackStructuredSystemBuilder:
                 'core_determining_gate': (
                     'recursive_left_and_suffix_right'),
                 'left_dimensions': (feature_dim,) * (
-                    len(self.source.input_dim) - 1),
+                    len(self.source.in_dim) - 1),
                 'right_dimensions': (feature_dim,) * (
-                    len(self.source.input_dim) - 1),
+                    len(self.source.in_dim) - 1),
             })
 
 
@@ -612,12 +612,12 @@ class SampledSketch:
             return _SampledStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _weights(self, indices, input_dim, dtype, generator):
+    def _weights(self, indices, in_dim, dtype, generator):
         reference = indices if self.samples is None else self.samples.to(
             device=indices.device, dtype=torch.long)
-        if reference.shape[1] != len(input_dim):
+        if reference.shape[1] != len(in_dim):
             raise ValueError('`samples` should contain one index per site')
-        for site, dimension in enumerate(input_dim):
+        for site, dimension in enumerate(in_dim):
             if torch.any(reference[:, site] < 0) or \
                     torch.any(reference[:, site] >= dimension):
                 raise ValueError(f'`samples` are out of bounds at site {site}')
@@ -626,16 +626,16 @@ class SampledSketch:
         right = []
         blocks = []
         prefix_states = []
-        for site in range(len(input_dim) - 1):
+        for site in range(len(in_dim) - 1):
             ref_ids = _ravel_subset(
-                reference[:, :site + 1], input_dim[:site + 1])
+                reference[:, :site + 1], in_dim[:site + 1])
             states = _sample_states(ref_ids, self.sketch_size, generator)
             prefix_states.append(states)
-            ids = _ravel_subset(indices[:, :site + 1], input_dim[:site + 1])
+            ids = _ravel_subset(indices[:, :site + 1], in_dim[:site + 1])
             left.append(_one_hot_ids(
                 _selected_ids(ids, states), states.numel(), dtype))
 
-            suffix_dim = input_dim[site + 1:]
+            suffix_dim = in_dim[site + 1:]
             ref_suffix = _ravel_subset(reference[:, site + 1:], suffix_dim)
             suffix_states = _sample_states(
                 ref_suffix, self.sketch_size, generator)
@@ -648,12 +648,12 @@ class SampledSketch:
             old_states = indices.new_tensor([0]) if site == 0 \
                 else prefix_states[site - 1]
             block = torch.zeros(
-                states.numel(), input_dim[site], old_states.numel(),
+                states.numel(), in_dim[site], old_states.numel(),
                 dtype=dtype, device=indices.device)
             for new_position, state in enumerate(states):
-                current = torch.remainder(state, input_dim[site])
+                current = torch.remainder(state, in_dim[site])
                 previous = torch.div(
-                    state, input_dim[site], rounding_mode='floor')
+                    state, in_dim[site], rounding_mode='floor')
                 old_position = 0 if site == 0 else int(
                     _selected_ids(previous.reshape(1), old_states)[0].item())
                 if old_position >= 0:
@@ -705,40 +705,40 @@ class MarginalSketch:
             return _MarginalStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _left_blocks(self, input_dim, dtype, device):
+    def _left_blocks(self, in_dim, dtype, device):
         """Constructs recursive Markov blocks independently of source rows."""
         blocks = []
-        for site in range(len(input_dim) - 1):
+        for site in range(len(in_dim) - 1):
             left_start = max(0, site + 1 - self.order)
-            left_dim = input_dim[left_start:site + 1]
+            left_dim = in_dim[left_start:site + 1]
             old_start = max(0, site - self.order)
-            old_dim = input_dim[old_start:site]
+            old_dim = in_dim[old_start:site]
             old_size = prod(old_dim) if old_dim else 1
             new_size = prod(left_dim)
             block = torch.zeros(
-                new_size, input_dim[site], old_size,
+                new_size, in_dim[site], old_size,
                 dtype=dtype, device=device)
             old_ids = torch.arange(old_size, device=device)
-            for value in range(input_dim[site]):
+            for value in range(in_dim[site]):
                 if self.order == 1:
                     new_ids = torch.full_like(old_ids, value)
                 else:
                     tail_modulus = prod(old_dim[-(self.order - 1):]) \
                         if old_dim else 1
                     tail = torch.remainder(old_ids, tail_modulus)
-                    new_ids = tail * input_dim[site] + value
+                    new_ids = tail * in_dim[site] + value
                 block[new_ids, value, old_ids] = 1
             blocks.append(block)
         return blocks
 
-    def _weights(self, indices, input_dim, dtype, generator):
+    def _weights(self, indices, in_dim, dtype, generator):
         del generator
-        if self.factor is not None and len(self.factor) != len(input_dim):
+        if self.factor is not None and len(self.factor) != len(in_dim):
             raise ValueError('`factor` should contain one vector per site')
         scale = torch.ones(indices.shape[0], dtype=dtype, device=indices.device)
         if self.factor is not None:
             for site, (factor, dimension) in enumerate(zip(
-                    self.factor, input_dim)):
+                    self.factor, in_dim)):
                 if factor.shape != (dimension,):
                     raise ValueError(
                         f'`factor` at site {site} has an invalid shape')
@@ -748,16 +748,16 @@ class MarginalSketch:
 
         left = []
         right = []
-        blocks = self._left_blocks(input_dim, dtype, indices.device)
-        for site in range(len(input_dim) - 1):
+        blocks = self._left_blocks(in_dim, dtype, indices.device)
+        for site in range(len(in_dim) - 1):
             left_start = max(0, site + 1 - self.order)
-            left_dim = input_dim[left_start:site + 1]
+            left_dim = in_dim[left_start:site + 1]
             left_ids = _ravel_subset(
                 indices[:, left_start:site + 1], left_dim)
             left.append(_one_hot_ids(left_ids, prod(left_dim), dtype))
 
-            right_stop = min(len(input_dim), site + 1 + self.order)
-            right_dim = input_dim[site + 1:right_stop]
+            right_stop = min(len(in_dim), site + 1 + self.order)
+            right_dim = in_dim[site + 1:right_stop]
             right_ids = _ravel_subset(
                 indices[:, site + 1:right_stop], right_dim)
             right.append(_one_hot_ids(right_ids, prod(right_dim), dtype))
@@ -835,7 +835,7 @@ class TTStackSketch:
             return _TTStackStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _components(self, input_dim, dtype, device, generator):
+    def _components(self, in_dim, dtype, device, generator):
         """Draws TT stacks and constructs their recursive left blocks."""
         feature_dim = self.tt_rank * self.n_stacks
         scale = 1 / sqrt(self.tt_rank)
@@ -846,9 +846,9 @@ class TTStackSketch:
         for stack in range(self.n_stacks):
             stack_left = []
             stack_right = []
-            for site, dimension in enumerate(input_dim):
+            for site, dimension in enumerate(in_dim):
                 left_rank = 1 if site == 0 else self.tt_rank
-                right_rank = 1 if site == len(input_dim) - 1 \
+                right_rank = 1 if site == len(in_dim) - 1 \
                     else self.tt_rank
                 left_core = _gaussian(
                     (left_rank, dimension, right_rank),
@@ -865,9 +865,9 @@ class TTStackSketch:
             right_cores.append(tuple(stack_right))
 
         blocks = []
-        for site in range(len(input_dim) - 1):
+        for site in range(len(in_dim) - 1):
             block = torch.zeros(
-                feature_dim, input_dim[site],
+                feature_dim, in_dim[site],
                 1 if site == 0 else feature_dim,
                 dtype=dtype, device=device)
             for stack in range(self.n_stacks):
@@ -882,18 +882,18 @@ class TTStackSketch:
             blocks.append(block)
         return tuple(left_cores), tuple(right_cores), tuple(blocks)
 
-    def _weights(self, indices, input_dim, dtype, generator):
+    def _weights(self, indices, in_dim, dtype, generator):
         feature_dim = self.tt_rank * self.n_stacks
         device = indices.device
         stack_scale = 1 / sqrt(self.n_stacks)
         left_cores, right_cores, blocks = self._components(
-            input_dim, dtype, device, generator)
+            in_dim, dtype, device, generator)
 
         left = []
         state = torch.ones(
             indices.shape[0], self.n_stacks, 1,
             dtype=dtype, device=device)
-        for site in range(len(input_dim) - 1):
+        for site in range(len(in_dim) - 1):
             next_state = []
             for stack in range(self.n_stacks):
                 core = left_cores[stack][site]
@@ -906,18 +906,18 @@ class TTStackSketch:
             state = torch.stack(next_state, dim=1)
             left.append(state.reshape(indices.shape[0], feature_dim))
 
-        right = [None] * (len(input_dim) - 1)
+        right = [None] * (len(in_dim) - 1)
         state = torch.ones(
             indices.shape[0], self.n_stacks, 1,
             dtype=dtype, device=device)
-        for site in range(len(input_dim) - 1, 0, -1):
+        for site in range(len(in_dim) - 1, 0, -1):
             next_state = []
             for stack in range(self.n_stacks):
                 core = right_cores[stack][site]
                 selected = core[:, indices[:, site], :].permute(1, 0, 2)
                 value = torch.einsum(
                     'nba,na->nb', selected, state[:, stack])
-                if site == len(input_dim) - 1:
+                if site == len(in_dim) - 1:
                     value = value * stack_scale
                 next_state.append(value)
             state = torch.stack(next_state, dim=1)

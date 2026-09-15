@@ -139,7 +139,7 @@ def _collect_phi_target(
 def _restore_fitted_axis(solution: torch.Tensor,
                          shape: Sequence[int],
                          axis: int) -> torch.Tensor:
-    """Restores a solved ``input_dim x n_fibers`` table to Phi layout."""
+    """Restores a solved ``in_dim x n_fibers`` table to Phi layout."""
     other_shape = tuple(shape[:axis]) + tuple(shape[(axis + 1):])
     return solution.reshape(solution.shape[0], *other_shape).movedim(0, axis)
 
@@ -151,7 +151,7 @@ class FittedInputAxis:
     tensor: torch.Tensor
     axis: int
     domain_size: int
-    input_dim: int
+    in_dim: int
     record: Optional[InputFitRecord] = None
     model: Optional[torch.nn.Module] = None
     model_state: Optional[Mapping[str, torch.Tensor]] = None
@@ -169,15 +169,15 @@ class FittedInputAxis:
             raise TypeError('`axis` should be int type')
         if self.axis < 0 or self.axis >= self.tensor.ndim:
             raise ValueError('`axis` is out of bounds for `tensor`')
-        for name in ('domain_size', 'input_dim'):
+        for name in ('domain_size', 'in_dim'):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f'`{name}` should be int type')
             if value < 1:
                 raise ValueError(f'`{name}` should be positive')
-        if self.tensor.shape[self.axis] != self.input_dim:
+        if self.tensor.shape[self.axis] != self.in_dim:
             raise ValueError(
-                '`tensor` size at `axis` should equal `input_dim`')
+                '`tensor` size at `axis` should equal `in_dim`')
         if self.record is not None and \
                 not isinstance(self.record, InputFitRecord):
             raise TypeError('`record` should be InputFitRecord type or None')
@@ -273,7 +273,7 @@ class FixedEmbeddingFitter:
         if matrix.ndim != 2 or matrix.shape[0] != domain.shape[0] or \
                 matrix.shape[1] < 1:
             raise ValueError(
-                '`embedding` should produce shape (domain_size, input_dim)')
+                '`embedding` should produce shape (domain_size, in_dim)')
         if not (matrix.is_floating_point() or matrix.is_complex()):
             raise TypeError('`embedding` should be floating or complex')
         if not torch.isfinite(matrix).all():
@@ -330,7 +330,7 @@ class FixedEmbeddingFitter:
                 method='fixed_embedding',
                 axis=axis,
                 domain_size=matrix.shape[0],
-                input_dim=matrix.shape[1],
+                in_dim=matrix.shape[1],
                 residual_absolute=local_record.residual_absolute,
                 residual_relative=local_record.residual_relative,
                 condition_number=condition,
@@ -341,7 +341,7 @@ class FixedEmbeddingFitter:
             tensor=tensor,
             axis=axis,
             domain_size=matrix.shape[0],
-            input_dim=matrix.shape[1],
+            in_dim=matrix.shape[1],
             record=record)
 
 
@@ -349,24 +349,24 @@ class BasisFitter:
     """Fits an integer-labelled Phi axis in the corresponding basis exactly."""
 
     def __init__(self,
-                 input_dim: Optional[int] = None,
+                 in_dim: Optional[int] = None,
                  fiber_batch_size: Optional[int] = None) -> None:
-        if input_dim is not None and (
-                isinstance(input_dim, bool) or not isinstance(input_dim, int)
-                or input_dim < 1):
-            raise ValueError('`input_dim` should be a positive integer or None')
+        if in_dim is not None and (
+                isinstance(in_dim, bool) or not isinstance(in_dim, int)
+                or in_dim < 1):
+            raise ValueError('`in_dim` should be a positive integer or None')
         if fiber_batch_size is not None and (
                 isinstance(fiber_batch_size, bool) or
                 not isinstance(fiber_batch_size, int) or
                 fiber_batch_size < 1):
             raise ValueError(
                 '`fiber_batch_size` should be a positive integer or None')
-        self.input_dim = input_dim
+        self.in_dim = in_dim
         self.fiber_batch_size = fiber_batch_size
 
     @staticmethod
     def _labels(domain: torch.Tensor,
-                input_dim: Optional[int]) -> Tuple[torch.Tensor, int]:
+                in_dim: Optional[int]) -> Tuple[torch.Tensor, int]:
         """Validates basis labels and resolves the complete input dimension."""
         if not isinstance(domain, torch.Tensor):
             raise TypeError('`domain` should be torch.Tensor type')
@@ -379,12 +379,12 @@ class BasisFitter:
         labels = domain.to(torch.long)
         if torch.unique(labels).shape[0] != labels.shape[0]:
             raise ValueError('Basis labels in `domain` should be unique')
-        resolved_dim = input_dim
+        resolved_dim = in_dim
         if resolved_dim is None:
             resolved_dim = int(labels.max().detach().cpu()) + 1
         if torch.any(labels < 0) or torch.any(labels >= resolved_dim):
             raise ValueError(
-                'Basis labels in `domain` should lie inside `input_dim`')
+                'Basis labels in `domain` should lie inside `in_dim`')
         return labels, resolved_dim
 
     def required_queries(
@@ -396,7 +396,7 @@ class BasisFitter:
         """Basis selection requires no additional Phi queries."""
         shape = _phi_shape(phi_view)
         axis = _normalize_axis(axis, shape)
-        labels, _ = self._labels(domain, self.input_dim)
+        labels, _ = self._labels(domain, self.in_dim)
         if labels.shape[0] != shape[axis]:
             raise ValueError(
                 '`domain` should match the selected Phi-axis size')
@@ -412,17 +412,17 @@ class BasisFitter:
         """Places sampled values at their basis labels without solving."""
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
-        labels, input_dim = self._labels(domain, self.input_dim)
+        labels, in_dim = self._labels(domain, self.in_dim)
         target, shape, used_fibers = _collect_phi_target(
             phi_view, axis, domain, self.fiber_batch_size)
         axis = _normalize_axis(axis, shape)
-        solution = target.new_zeros((input_dim, target.shape[1]))
+        solution = target.new_zeros((in_dim, target.shape[1]))
         solution.index_copy_(0, labels.to(solution.device), target)
         record = InputFitRecord(
             method='basis',
             axis=axis,
             domain_size=domain.shape[0],
-            input_dim=input_dim,
+            in_dim=in_dim,
             residual_absolute=0.,
             residual_relative=0.,
             condition_number=1.,
@@ -432,7 +432,7 @@ class BasisFitter:
             tensor=tensor,
             axis=axis,
             domain_size=domain.shape[0],
-            input_dim=input_dim,
+            in_dim=in_dim,
             record=record)
 
 
@@ -440,7 +440,7 @@ class TrainableEmbeddingFitter:
     """Fits a Phi axis with a locally trained embedding model.
 
     ``model(domain)`` must return a matrix with shape
-    ``(domain_size, input_dim)``. Training jointly optimizes the model and one
+    ``(domain_size, in_dim)``. Training jointly optimizes the model and one
     temporary coefficient table against functional Phi fibers. A final shared
     least-squares solve removes optimizer error from the returned coefficients.
     Gradients and random state are confined to this fitter; the surrounding
@@ -455,7 +455,7 @@ class TrainableEmbeddingFitter:
     def __init__(
             self,
             model: torch.nn.Module,
-            input_dim: Optional[int] = None,
+            in_dim: Optional[int] = None,
             optimizer_factory: Optional[Callable] = None,
             optimizer_kwargs: Optional[Mapping[str, Any]] = None,
             solver: Optional[LeastSquaresSolver] = None,
@@ -466,11 +466,11 @@ class TrainableEmbeddingFitter:
             seed: int = 0) -> None:
         if not isinstance(model, torch.nn.Module):
             raise TypeError('`model` should be torch.nn.Module type')
-        if input_dim is not None and (
-                isinstance(input_dim, bool) or not isinstance(input_dim, int)):
-            raise TypeError('`input_dim` should be int type or None')
-        if input_dim is not None and input_dim < 1:
-            raise ValueError('`input_dim` should be positive')
+        if in_dim is not None and (
+                isinstance(in_dim, bool) or not isinstance(in_dim, int)):
+            raise TypeError('`in_dim` should be int type or None')
+        if in_dim is not None and in_dim < 1:
+            raise ValueError('`in_dim` should be positive')
         if optimizer_factory is not None and not callable(optimizer_factory):
             raise TypeError('`optimizer_factory` should be callable or None')
         if optimizer_kwargs is not None and not isinstance(
@@ -501,7 +501,7 @@ class TrainableEmbeddingFitter:
             raise ValueError('`fiber_batch_size` should be positive')
 
         self.model = model
-        self.input_dim = input_dim
+        self.in_dim = in_dim
         self.optimizer_factory = torch.optim.Adam \
             if optimizer_factory is None else optimizer_factory
         self.optimizer_kwargs = {'lr': 1e-2} \
@@ -539,9 +539,9 @@ class TrainableEmbeddingFitter:
         if matrix.ndim != 2 or matrix.shape[0] != domain.shape[0] or \
                 matrix.shape[1] < 1:
             raise ValueError(
-                '`model` should return shape (domain_size, input_dim)')
-        if self.input_dim is not None and matrix.shape[1] != self.input_dim:
-            raise ValueError('`model` output does not match `input_dim`')
+                '`model` should return shape (domain_size, in_dim)')
+        if self.in_dim is not None and matrix.shape[1] != self.in_dim:
+            raise ValueError('`model` output does not match `in_dim`')
         if not (matrix.is_floating_point() or matrix.is_complex()):
             raise TypeError('`model` output should be floating or complex')
         if not torch.isfinite(matrix).all():
@@ -583,13 +583,13 @@ class TrainableEmbeddingFitter:
         with torch.random.fork_rng(devices=cuda_devices), torch.enable_grad():
             torch.manual_seed(self.seed)
             matrix = self._embedding_matrix(domain, model_device)
-            input_dim = matrix.shape[1]
+            in_dim = matrix.shape[1]
             dtype = torch.promote_types(matrix.dtype, target.dtype)
             coefficient = torch.nn.Parameter(torch.randn(
-                input_dim,
+                in_dim,
                 target.shape[1],
                 device=model_device,
-                dtype=dtype) / max(input_dim, 1) ** 0.5)
+                dtype=dtype) / max(in_dim, 1) ** 0.5)
             optimizer = self.optimizer_factory(
                 [*parameters, coefficient], **self.optimizer_kwargs)
             denominator = torch.linalg.vector_norm(
@@ -655,7 +655,7 @@ class TrainableEmbeddingFitter:
                     method='trainable_embedding',
                     axis=axis,
                     domain_size=matrix.shape[0],
-                    input_dim=matrix.shape[1],
+                    in_dim=matrix.shape[1],
                     residual_absolute=absolute,
                     residual_relative=relative,
                     condition_number=condition,
@@ -671,7 +671,7 @@ class TrainableEmbeddingFitter:
             tensor=tensor,
             axis=axis,
             domain_size=domain.shape[0],
-            input_dim=matrix.shape[1],
+            in_dim=matrix.shape[1],
             record=record,
             model=model,
             model_state=model_state,
@@ -918,7 +918,7 @@ class QTTInputFitter:
             domain=self.domain,
             sample_space='digits',
             out_position=out_position,
-            output_device=None).fit(
+            out_device=None).fit(
                 sketch_digits,
                 labels=labels,
                 rank=self.rank,
@@ -962,7 +962,7 @@ class QTTInputFitter:
                 method='qtt',
                 axis=axis,
                 domain_size=self.layout.grid_size[0],
-                input_dim=self.layout.grid_size[0],
+                in_dim=self.layout.grid_size[0],
                 residual_absolute=absolute,
                 residual_relative=relative,
                 condition_number=1.,
@@ -985,7 +985,7 @@ class QTTInputFitter:
             tensor=tensor,
             axis=axis,
             domain_size=self.layout.grid_size[0],
-            input_dim=tensor.shape[axis],
+            in_dim=tensor.shape[axis],
             record=record,
             factor=factor,
             reduced_tensor=reduced_tensor,

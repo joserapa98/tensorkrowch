@@ -197,7 +197,7 @@ def _source_from_context(target, context: Mapping[str, Any]) -> TensorSource:
     """Normalizes a local target through the shared TensorSource contract."""
     return as_tensor_source(
         target,
-        input_dim=context.get('input_dim'),
+        in_dim=context.get('in_dim'),
         output_shape=(),
         dtype=context.get('dtype'),
         device=context.get('device', 'cpu'),
@@ -213,7 +213,7 @@ def _mirror_source(source: TensorSource) -> TensorSource:
 
     return as_tensor_source(
         evaluate,
-        input_dim=tuple(reversed(source.input_dim)),
+        in_dim=tuple(reversed(source.in_dim)),
         output_shape=(),
         dtype=source.dtype,
         device=source.device)
@@ -231,7 +231,7 @@ def _cast_source(source: TensorSource,
 
     return as_tensor_source(
         evaluate,
-        input_dim=source.input_dim,
+        in_dim=source.in_dim,
         output_shape=(),
         dtype=dtype,
         device=source.device)
@@ -334,15 +334,15 @@ class ALSLoopOpener:
             fixed_left = fixed_left.to(dtype=runtime_dtype)
         if fixed_right is not None:
             fixed_right = fixed_right.to(dtype=runtime_dtype)
-        if len(source.input_dim) < 3:
+        if len(source.in_dim) < 3:
             raise ValueError(
                 'A local loop opening should contain left, physical and right '
                 'input dimensions')
-        ranks = _normalize_rank(rank, len(source.input_dim))
+        ranks = _normalize_rank(rank, len(source.in_dim))
         self.capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
-            block_size=len(source.input_dim) - 2)
+            block_size=len(source.in_dim) - 2)
 
         if orientation == 'left':
             source = _mirror_source(source)
@@ -353,7 +353,7 @@ class ALSLoopOpener:
             )
             if initial_cores is not None:
                 initial_cores = _mirror_cores(tuple(initial_cores))
-        fixed_cores = [None] * len(source.input_dim)
+        fixed_cores = [None] * len(source.in_dim)
         fixed_cores[0] = fixed_left
         fixed_cores[-1] = fixed_right
 
@@ -362,7 +362,7 @@ class ALSLoopOpener:
             'convergence', ConvergencePolicy(max_sweeps=10))
         if context.get('generator') is not None:
             fit_options.setdefault('generator', context['generator'])
-        result = TRALS(source, output_device=None).fit(
+        result = TRALS(source, out_device=None).fit(
             rank=ranks,
             initial_cores=initial_cores,
             fixed_cores=fixed_cores,
@@ -405,7 +405,7 @@ class FixedGaugeCoreOpener:
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         source = _source_from_context(target, context)
-        if source.input_dim.__len__() != 3:
+        if source.in_dim.__len__() != 3:
             raise ValueError(
                 'FixedGaugeCoreOpener requires exactly one physical site')
         self.capabilities.require(
@@ -424,10 +424,10 @@ class FixedGaugeCoreOpener:
                 fixed_left.permute(2, 1, 0),
             )
         if fixed_left.shape != (
-                ranks[-1], source.input_dim[0], ranks[0]):
+                ranks[-1], source.in_dim[0], ranks[0]):
             raise ValueError('`fixed_left` shape should match target and ranks')
         if fixed_right.shape != (
-                ranks[1], source.input_dim[-1], ranks[-1]):
+                ranks[1], source.in_dim[-1], ranks[-1]):
             raise ValueError('`fixed_right` shape should match target and ranks')
         if fixed_left.device != fixed_right.device or \
                 fixed_left.dtype != fixed_right.dtype:
@@ -436,7 +436,7 @@ class FixedGaugeCoreOpener:
         configurations = ConfigurationBatch(
             torch.cartesian_prod(*(
                 torch.arange(dim, device=fixed_left.device)
-                for dim in source.input_dim)),
+                for dim in source.in_dim)),
             kind='indices')
         values = source.evaluate(configurations)
         if values.shape != (configurations.batch_size,):
@@ -449,12 +449,12 @@ class FixedGaugeCoreOpener:
         environment = torch.einsum(
             'iab,jca->ijbc', left_environment, right_environment)
         identity = torch.eye(
-            source.input_dim[1],
+            source.in_dim[1],
             device=values.device,
             dtype=values.dtype)
         design = torch.einsum(
             'ijbc,pq->ipjbqc', environment, identity).reshape(
-                values.numel(), ranks[0] * source.input_dim[1] * ranks[1])
+                values.numel(), ranks[0] * source.in_dim[1] * ranks[1])
         solution, record = self.solver.solve(
             design,
             values.reshape(-1),
@@ -462,7 +462,7 @@ class FixedGaugeCoreOpener:
             sweep=0,
             return_record=True)
         core = solution.reshape(
-            ranks[0], source.input_dim[1], ranks[1])
+            ranks[0], source.in_dim[1], ranks[1])
         result_cores = (fixed_left, core, fixed_right)
         if orientation == 'left':
             result_cores = _mirror_cores(result_cores)
@@ -512,8 +512,8 @@ class CallableLoopOpener:
         """Validates constraints and normalizes the callable result."""
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
-        input_dim = context.get('input_dim')
-        block_size = 1 if input_dim is None else len(tuple(input_dim)) - 2
+        in_dim = context.get('in_dim')
+        block_size = 1 if in_dim is None else len(tuple(in_dim)) - 2
         self.capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
@@ -569,8 +569,8 @@ class CompositeLoopOpener:
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
             block_size=(
-                1 if context.get('input_dim') is None
-                else len(tuple(context['input_dim'])) - 2))
+                1 if context.get('in_dim') is None
+                else len(tuple(context['in_dim'])) - 2))
         initialization_error = None
         try:
             initial = self.initializer.open(

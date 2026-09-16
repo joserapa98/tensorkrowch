@@ -1,14 +1,23 @@
-"""Tensor train backed tensor sources."""
+"""
+This script contains:
 
-from typing import (Optional, Protocol, Sequence, Tuple, Union)
+    Internal classes:
+        * _MPSAdapter
+
+    Public classes:
+        * TTTensorSource
+"""
+
+from typing import Optional, Protocol, Sequence, Tuple, Union
 
 import torch
 
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
+
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _discrete_indices,
-                                                      _SourceEvaluationTracker)
+                                                      _SourceEvaluationTracker,
+                                                      _discrete_indices)
 
 
 class _MPSAdapter(Protocol):
@@ -26,13 +35,12 @@ class _MPSAdapter(Protocol):
 class TTTensorSource(_SourceEvaluationTracker):
     """Scalar tensor source represented directly by TT cores.
 
-    The source contracts raw PyTorch cores without constructing a
-    TensorKrowch graph. It accepts a
-    :class:`~tensorkrowch.decompositions.TTDecomposition`, an open-boundary
-    :class:`~tensorkrowch.models.MPS` adapter or a core sequence with the same
-    conventions. Model adapters only extract their tensors. Keeping the
-    specialized contractions here avoids routing repeated ALS/sketching
-    evaluations through a TensorKrowch graph.
+    The source contracts raw PyTorch cores without constructing a TensorKrowch
+    graph. It accepts a :class:`~tensorkrowch.decompositions.TTDecomposition`,
+    an open-boundary :class:`~tensorkrowch.models.MPS` adapter or a core
+    sequence with the same conventions. Model adapters only extract their
+    tensors. Keeping the specialized contractions here avoids routing repeated
+    ALS/sketching evaluations through a TensorKrowch graph.
 
     Parameters
     ----------
@@ -116,20 +124,6 @@ class TTTensorSource(_SourceEvaluationTracker):
         self.cores = standard_cores
         self._in_dim = tuple(core.shape[1] for core in standard_cores)
 
-    @staticmethod
-    def _standard_ttm_cores(
-            sketch: TTMDecomposition) -> Tuple[torch.Tensor, ...]:
-        """Returns TTM cores with left, input, output and right axes."""
-        if sketch.n_batches:
-            raise ValueError('Batched TTM sketches are not supported')
-        if len(sketch.cores) == 1:
-            return (sketch.cores[0].unsqueeze(0).unsqueeze(-1),)
-        cores = [sketch.cores[0].permute(0, 2, 1).unsqueeze(0)]
-        cores.extend(core.permute(0, 1, 3, 2)
-                     for core in sketch.cores[1:-1])
-        cores.append(sketch.cores[-1].unsqueeze(-1))
-        return tuple(cores)
-
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Input dimension at every TT site."""
@@ -150,6 +144,20 @@ class TTTensorSource(_SourceEvaluationTracker):
         """Device shared by the TT cores."""
         return self.cores[0].device
 
+    @staticmethod
+    def _standard_ttm_cores(
+            sketch: TTMDecomposition) -> Tuple[torch.Tensor, ...]:
+        """Returns TTM cores with left, input, output and right axes."""
+        if sketch.n_batches:
+            raise ValueError('Batched TTM sketches are not supported')
+        if len(sketch.cores) == 1:
+            return (sketch.cores[0].unsqueeze(0).unsqueeze(-1),)
+        cores = [sketch.cores[0].permute(0, 2, 1).unsqueeze(0)]
+        cores.extend(core.permute(0, 1, 3, 2)
+                     for core in sketch.cores[1:-1])
+        cores.append(sketch.cores[-1].unsqueeze(-1))
+        return tuple(cores)
+
     def _selected_matrices(self, indices: torch.Tensor):
         """Selects one TT matrix per configuration and site."""
         return [
@@ -157,12 +165,36 @@ class TTTensorSource(_SourceEvaluationTracker):
             for site, core in enumerate(self.cores)
         ]
 
+    def _partial_indices(self,
+                         configurations: torch.Tensor,
+                         *,
+                         start: int,
+                         name: str) -> torch.Tensor:
+        """Validates a consecutive partial discrete configuration batch."""
+        if not isinstance(configurations, torch.Tensor):
+            raise TypeError(f'`{name}` should be torch.Tensor type')
+        if configurations.ndim != 2 or configurations.dtype not in (
+                torch.uint8, torch.int8, torch.int16, torch.int32,
+                torch.int64):
+            raise TypeError(
+                f'`{name}` should be a two-dimensional integer tensor')
+        stop = start + configurations.shape[1]
+        if start < 0 or stop > len(self.cores):
+            raise ValueError(f'`{name}` contains too many sites')
+        indices = configurations.to(device=self.device, dtype=torch.long)
+        for offset, dimension in enumerate(self.in_dim[start:stop]):
+            values = indices[:, offset]
+            if torch.any(values < 0) or torch.any(values >= dimension):
+                raise ValueError(
+                    f'`{name}` is out of bounds at partial site {offset}')
+        return indices
+
     def left_environments(self,
                           configurations: torch.Tensor) -> torch.Tensor:
         """Contracts exact prefixes into their outgoing TT environments.
 
-        ``configurations`` has shape ``(rows, prefix_sites)``. An empty
-        prefix returns one unit boundary row. This kernel records no source
+        ``configurations`` has shape ``(rows, prefix_sites)``. An empty prefix
+        returns one unit boundary row. This kernel records no source
         evaluations because it contracts the stored representation directly.
         """
         indices = self._partial_indices(
@@ -195,30 +227,6 @@ class TTTensorSource(_SourceEvaluationTracker):
             environment = torch.einsum(
                 'bar,br->ba', matrices, environment)
         return environment
-
-    def _partial_indices(self,
-                         configurations: torch.Tensor,
-                         *,
-                         start: int,
-                         name: str) -> torch.Tensor:
-        """Validates a consecutive partial discrete configuration batch."""
-        if not isinstance(configurations, torch.Tensor):
-            raise TypeError(f'`{name}` should be torch.Tensor type')
-        if configurations.ndim != 2 or configurations.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64):
-            raise TypeError(
-                f'`{name}` should be a two-dimensional integer tensor')
-        stop = start + configurations.shape[1]
-        if start < 0 or stop > len(self.cores):
-            raise ValueError(f'`{name}` contains too many sites')
-        indices = configurations.to(device=self.device, dtype=torch.long)
-        for offset, dimension in enumerate(self.in_dim[start:stop]):
-            values = indices[:, offset]
-            if torch.any(values < 0) or torch.any(values >= dimension):
-                raise ValueError(
-                    f'`{name}` is out of bounds at partial site {offset}')
-        return indices
 
     def local_phi(self,
                   site: int,

@@ -1,4 +1,10 @@
-"""Convergence and update policies for ALS sweeps."""
+"""
+This script contains:
+
+    Public classes:
+        * UpdatePolicy
+        * ConvergencePolicy
+"""
 
 from dataclasses import dataclass
 from math import isfinite
@@ -11,10 +17,24 @@ from tensorkrowch.decompositions.metrics import SweepRecord
 
 @dataclass(frozen=True)
 class UpdatePolicy:
-    """Applies damping and optional local non-increasing acceptance."""
+    """Controls damping and acceptance of a local least-squares proposal.
 
-    damping: float = 1.0
-    acceptance: str = 'always'
+    The accepted update is formed before any gauge factorization or absorption.
+    Acceptance compares residuals of the same local system; it is separate from
+    convergence of the complete tensor objective.
+
+    Parameters
+    ----------
+    damping : float
+        Fraction of the proposal step, in ``(0, 1]``. The default ``1`` accepts
+        the full step before applying the acceptance rule.
+    acceptance : {"always", "non_increasing"}
+        Whether to accept every damped proposal or only one whose local
+        residual is no larger than that of the current core.
+    """
+
+    damping: float = 1.0  # Fraction of the proposed local step to apply
+    acceptance: str = 'always'  # Local residual acceptance rule
 
     def __post_init__(self) -> None:
         if isinstance(self.damping, bool) or \
@@ -58,15 +78,45 @@ class UpdatePolicy:
 
 @dataclass(frozen=True)
 class ConvergencePolicy:
-    """Primary ALS stopping criteria evaluated at complete sweep boundaries."""
+    """Defines ALS stopping rules at complete sweep boundaries.
 
-    max_sweeps: int = 10
-    error_atol: Optional[float] = None
-    error_rtol: Optional[float] = None
-    change_rtol: Optional[float] = None
-    patience: Optional[int] = None
-    keep_best: bool = False
-    callback: Optional[Callable] = None
+    Error, stability and best-state policies require a fixed comparable
+    objective: the full tensor for exact ALS or the permanent observed set for
+    completion. Renewable uniform/leverage batches support a sweep budget and
+    an optional callback, because their local residuals are not global
+    validation errors.
+
+    Parameters
+    ----------
+    max_sweeps : int
+        Positive maximum number of directional sweeps. Default is ``10``.
+    error_atol : float, optional
+        Stop when the absolute objective error is at most this value.
+    error_rtol : float, optional
+        Stop when the relative objective error is at most this value.
+    change_rtol : float, optional
+        Maximum relative change between consecutive complete-sweep errors for a
+        sweep to count as stable. These tolerances are objective tolerances,
+        not singular-value truncation criteria.
+    patience : int, optional
+        Consecutive stable sweeps required. Defaults to one when
+        ``change_rtol`` is set; otherwise it must be omitted.
+    keep_best : bool
+        Restore the best complete-sweep state before returning. Default is
+        False.
+    callback : callable, optional
+        Called as ``callback(sweep_record, cores)`` after a complete sweep.
+        Return True to stop. Cores are the current state; the callback should
+        not mutate them or the backend caches.
+    """
+
+    max_sweeps: int = 10  # Maximum number of directional sweeps
+    error_atol: Optional[float] = None  # Absolute objective stopping tolerance
+    error_rtol: Optional[float] = None  # Relative objective stopping tolerance
+    change_rtol: Optional[float] = None  # Relative objective-change tolerance
+    patience: Optional[int] = None  # Required consecutive stable sweeps
+    keep_best: bool = False  # Whether to restore the best complete-sweep state
+    callback: Optional[Callable] = None  # Optional complete-sweep stopping callback
 
     def __post_init__(self) -> None:
         if isinstance(self.max_sweeps, bool) or \

@@ -1,33 +1,48 @@
-"""Conversion of open-boundary tensor trains into tensor rings."""
+"""
+This script contains:
+
+    Internal classes:
+        * _TTCoreProvider
+
+    Public classes:
+        * TT2TR
+
+    Internal functions:
+        * _as_tt_decomposition
+        * _normalize_rank
+        * _resolve_gauge_recursion
+        * _fidelity_error
+
+    Public functions:
+        * tt2tr
+"""
 
 from dataclasses import dataclass
-from typing import (Any, Mapping, Optional, Sequence, Tuple, Union)
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
-from tensorkrowch.decompositions.metrics import (ErrorRecord, FidelityRecord,
+from tensorkrowch.decompositions.metrics import (ErrorRecord,
+                                                 FidelityRecord,
                                                  TimingRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TTDecomposition,
-                                                 TRDecomposition)
-from tensorkrowch.decompositions.ring.blocks import (
-    PrescribedCentralBlockSelector,
-)
-from tensorkrowch.decompositions.ring.driver import (BoundaryClosure,
-                                                     BidirectionalRingDriver)
-from tensorkrowch.decompositions.ring.gauges import (
-    GaugeRecursion,
-    PseudoinverseGaugeRecursion,
-    TTCoreGaugeRecursion,
-)
-from tensorkrowch.decompositions.ring.opening import (LoopOpener,
-                                                      FixedGaugeCoreOpener,
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 TTDecomposition)
+from tensorkrowch.decompositions.sources.tt import TTTensorSource
+
+from tensorkrowch.decompositions.ring.blocks import (PrescribedCentralBlockSelector)
+from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
+                                                     BoundaryClosure)
+from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
+                                                     PseudoinverseGaugeRecursion,
+                                                     TTCoreGaugeRecursion)
+from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
+                                                      LoopOpener,
                                                       resolve_loop_opener)
 from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
-from tensorkrowch.decompositions.sources.tt import TTTensorSource
 
 
 _Device = Optional[Union[str, torch.device]]
@@ -72,7 +87,7 @@ def _normalize_rank(rank: int,
 class _TTCoreProvider:
     """Exposes TT supercores and open-edge absorptions to the ring driver."""
 
-    tt: TTDecomposition
+    tt: TTDecomposition  # Original open-boundary TT used to supply local targets
 
     boundary_mode = 'open'
 
@@ -84,6 +99,8 @@ class _TTCoreProvider:
     def local_target(self,
                      sites: Sequence[int],
                      context: Mapping[str, Any]) -> torch.Tensor:
+        """Returns the TT core or contracted supercore for the requested
+        sites."""
         sites = tuple(sites)
         if not sites or sites != tuple(range(sites[0], sites[-1] + 1)):
             raise ValueError('TT local sites should form a contiguous interval')
@@ -97,6 +114,7 @@ class _TTCoreProvider:
                    sites: Sequence[int],
                    rank,
                    context: Mapping[str, Any]) -> Tuple[int, ...]:
+        """Maps global prescribed ranks to the local cyclic factorization."""
         sites = tuple(sites)
         rank = tuple(rank)
         return (
@@ -107,6 +125,8 @@ class _TTCoreProvider:
     def local_context(self,
                       sites: Sequence[int],
                       context: Mapping[str, Any]) -> Mapping[str, Any]:
+        """Adds target dimensions and runtime to the local execution
+        context."""
         target = self.local_target(sites, context)
         return {
             **context,
@@ -174,7 +194,8 @@ def _resolve_gauge_recursion(
 
 def _fidelity_error(tt: TTDecomposition,
                     tr: TRDecomposition) -> FidelityRecord:
-    """Computes phase-aware fidelity and relative L2 error without densifying."""
+    """Computes phase-aware fidelity and relative L2 error without
+    densifying."""
     normalized_overlap = tt.normalized_overlap(tr)
     target_norm = tt.norm()
     approximation_norm = tr.norm()
@@ -279,9 +300,9 @@ class TT2TR:
             Local loop-opening strategy. The simple preset uses exact TR-ALS;
             advanced ALS options should be encapsulated in an
             :class:`~tensorkrowch.decompositions.ALSLoopOpener`.
-            ``"blostr+als"`` tries an experimental spectral initialization
-            and falls back cleanly to the same ALS path if BLOSTR assumptions
-            are not satisfied.
+            ``"blostr+als"`` tries an experimental spectral initialization and
+            falls back cleanly to the same ALS path if BLOSTR assumptions are
+            not satisfied.
         schedule : {``"center_out"``, ``"alternating"``}
             Serial ring-construction schedule. ``"alternating"`` is an
             experimental anchor/fixed-block schedule and falls back explicitly
@@ -293,8 +314,8 @@ class TT2TR:
             layouts use the documented fallback.
         gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
             Strategy used to propagate virtual bases. ``"pseudoinverse"`` is
-            the stable characterized default. ``"tt_core"`` uses the
-            original TT cores as recursive projectors and is experimental.
+            the stable characterized default. ``"tt_core"`` uses the original
+            TT cores as recursive projectors and is experimental.
         allow_projective_gauges : bool
             Whether rank-deficient directional pseudoinverses may propagate a
             projector instead of cancelling exactly.
@@ -328,7 +349,7 @@ class TT2TR:
         >>> result = TT2TR(tt).fit(rank=1)
         >>> result.rank
         [1, 1, 1]
-        >>> result.metrics.fidelities[0].fidelity > 0.999
+        >>> bool(result.metrics.fidelities[0].fidelity > 0.999)
         True
         """
         if not isinstance(collect_metrics, bool):
@@ -468,9 +489,58 @@ def tt2tr(tt,
     closing link. The local ALS configuration remains encapsulated by
     ``loop_opener`` rather than expanding this function's signature.
 
-    Parameters are equivalent to :meth:`TT2TR.fit`, with ``out_device``
-    selecting final core storage and ``return_info=True`` returning
-    ``(cores, info)``.
+    Parameters
+    ----------
+    tt : TTDecomposition, sequence of torch.Tensor or MPS
+        Open-boundary TT to convert. At least three sites are required.
+    rank : int
+        Positive rank prescribed on every non-cyclic TR link.
+    tr_rank : int, optional
+        Positive cyclic rank. Defaults to ``rank``.
+    center : int, optional
+        Internal TT site opened first. Defaults to the middle site.
+    loop_opener : {``"als"``, ``"blostr+als"``}, LoopOpener or callable
+        Local loop-opening strategy. The simple preset uses exact TR-ALS;
+        advanced ALS options should be encapsulated in an
+        :class:`~tensorkrowch.decompositions.ALSLoopOpener`. ``"blostr+als"``
+        tries an experimental spectral initialization and falls back cleanly to
+        the same ALS path if BLOSTR assumptions are not satisfied.
+    schedule : {``"center_out"``, ``"alternating"``}
+        Serial ring-construction schedule. ``"alternating"`` is an experimental
+        anchor/fixed-block schedule and falls back explicitly to
+        ``"center_out"`` when the site layout or propagated gauges are
+        incompatible.
+    schedule_block_size : int
+        Consecutive sites per alternating block. Open-boundary TT targets
+        currently support the exact checkerboard with size one; other layouts
+        use the documented fallback.
+    gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
+        Strategy used to propagate virtual bases. ``"pseudoinverse"`` is the
+        stable characterized default. ``"tt_core"`` uses the original TT cores
+        as recursive projectors and is experimental.
+    allow_projective_gauges : bool
+        Whether rank-deficient directional pseudoinverses may propagate a
+        projector instead of cancelling exactly.
+    gauge_tolerance : float
+        Maximum relative error accepted for gauge cancellation.
+    inverse_policy : {``"auto"``, ``"solve"``, ``"inverse"``, ``"pinv"``}
+        Linear algebra used to construct directional gauge duals.
+    rank_rtol : float, optional
+        Relative singular-value threshold for pseudoinverses and numerical
+        gauge ranks.
+    out_device : str or torch.device, optional
+        Device where finalized TR cores are stored. The default is ``"cpu"``;
+        ``None`` keeps them on the input device.
+    verbose : bool or int
+        Console verbosity from 0 (silent) to 3 (final cores included).
+    return_info : bool
+        If ``True``, also returns metadata and structured ALS metrics.
+
+    Returns
+    -------
+    list[torch.Tensor] or tuple
+        Cores in original site order, or ``(cores, info)`` with
+        ``return_info=True``.
 
     Examples
     --------

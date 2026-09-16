@@ -1,18 +1,22 @@
-"""Sparse tensor sources and empirical distributions."""
+"""
+This script contains:
+
+    Public classes:
+        * SparseTensorSource
+        * EmpiricalDistribution
+"""
 
 from typing import Optional, Sequence, Tuple
 
 import torch
 
-from tensorkrowch.decompositions.sources.base import (
-    ConfigurationBatch,
-    _discrete_indices,
-    _fiber_configurations,
-    _normalize_in_dim,
-    _ravel_indices,
-    _SourceEvaluationTracker,
-    _unravel_indices,
-)
+from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
+                                                      _SourceEvaluationTracker,
+                                                      _discrete_indices,
+                                                      _fiber_configurations,
+                                                      _normalize_in_dim,
+                                                      _ravel_indices,
+                                                      _unravel_indices)
 
 
 class SparseTensorSource(_SourceEvaluationTracker):

@@ -1,4 +1,13 @@
-"""ALS target problems and fixed observed entries."""
+"""
+This script contains:
+
+    Public classes:
+        * ObservedEntries
+        * ALSProblem
+
+    Internal functions:
+        * _zero_safe_relative_error
+"""
 
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence, Tuple
@@ -30,26 +39,27 @@ class ObservedEntries:
     """Fixed entries defining a matrix/tensor completion objective.
 
     Repeated indices are deduplicated only when their values and weights are
-    identical. Values outside these global indices remain unknown; they are
-    not interpreted as zeros.
+    identical. Values outside these global indices remain unknown; they are not
+    interpreted as zeros.
 
     Parameters
     ----------
     indices : torch.Tensor
         Global integer multi-indices with shape ``(observations, sites)``.
     values : torch.Tensor
-        Observed target values with shape
-        ``(observations, *output_shape)``.
+        Observed target values with shape ``(observations, *output_shape)``.
     in_dim : sequence of int
         Complete discrete input dimension.
     weights : torch.Tensor, optional
         Non-negative multiplicative weights ``W`` in the observed objective.
     """
 
-    indices: torch.Tensor
-    values: torch.Tensor
-    in_dim: Sequence[int]
+    indices: torch.Tensor  # Observed discrete configurations in row order
+    values: torch.Tensor  # Values in original configuration or observation order
+    in_dim: Sequence[int]  # Input dimension at each represented site
+    # Multiplicative residual weights in row order
     weights: Optional[torch.Tensor] = None
+    # Flattened global configuration identifiers
     flat_ids: torch.Tensor = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -152,8 +162,8 @@ class ObservedEntries:
 
         The errors are
 
-        ``absolute = ||W * P_omega(approximation - target)||`` and
-        ``relative = absolute / ||W * P_omega(target)||``.
+        ``absolute = ||W * P_omega(approximation - target)||`` and ``relative =
+        absolute / ||W * P_omega(target)||``.
         """
         if not isinstance(approximation, torch.Tensor):
             raise TypeError('`approximation` should be torch.Tensor type')
@@ -187,11 +197,13 @@ class ALSProblem:
     separately and do not change either meaning.
     """
 
-    source: Optional[TensorSource] = None
+    source: Optional[TensorSource] = None  # Shared provider of target values
+    # Permanent completion observations, when present
     observations: Optional[ObservedEntries] = None
-    selector: Optional[Any] = None
+    selector: Optional[Any] = None  # Row-selection strategy for a known source
+    # Multiplicative residual weights in row order
     weights: Optional[torch.Tensor] = None
-    loss: str = 'l2'
+    loss: str = 'l2'  # Objective loss identifier
 
     def __post_init__(self) -> None:
         if (self.source is None) and (self.observations is None):

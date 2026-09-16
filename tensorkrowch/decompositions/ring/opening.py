@@ -1,8 +1,40 @@
-"""Strategies and contracts for opening local tensor network loops."""
+"""
+This script contains:
+
+    Public classes:
+        * LoopOpenerCapabilities
+        * LoopOpening
+        * LoopOpener
+        * ALSLoopOpener
+        * FixedGaugeCoreOpener
+        * CallableLoopOpener
+        * CompositeLoopOpener
+
+    Internal functions:
+        * _normalize_context
+        * _normalize_orientation
+        * _normalize_rank
+        * _mirror_rank
+        * _mirror_cores
+        * _source_from_context
+        * _mirror_source
+        * _cast_source
+        * _opening_from_result
+
+    Public functions:
+        * resolve_loop_opener
+"""
 
 from dataclasses import dataclass, field
-from typing import (Any, Callable, Mapping, Optional, Protocol, Sequence, Tuple,
-                    Union, runtime_checkable)
+from typing import (Any,
+                    Callable,
+                    Mapping,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    Tuple,
+                    Union,
+                    runtime_checkable)
 
 import torch
 
@@ -24,10 +56,11 @@ _Context = Optional[Mapping[str, Any]]
 class LoopOpenerCapabilities:
     """Declares the constraints accepted by a loop-opening strategy."""
 
-    supports_fixed_left: bool = False
-    supports_fixed_right: bool = False
+    supports_fixed_left: bool = False  # Whether the opener can preserve a left gauge
+    supports_fixed_right: bool = False  # Whether the opener can preserve a right gauge
+    # Whether both gauges can be fixed simultaneously
     supports_two_fixed_gauges: bool = False
-    supports_blocks: bool = False
+    supports_blocks: bool = False  # Whether more than one input core can be opened
 
     def __post_init__(self) -> None:
         for name in (
@@ -43,7 +76,8 @@ class LoopOpenerCapabilities:
                 fixed_left: bool,
                 fixed_right: bool,
                 block_size: int) -> None:
-        """Raises before execution when requested constraints are unsupported."""
+        """Raises before execution when requested constraints are
+        unsupported."""
         if fixed_left and not self.supports_fixed_left:
             raise ValueError('The loop opener does not support a fixed left gauge')
         if fixed_right and not self.supports_fixed_right:
@@ -53,7 +87,7 @@ class LoopOpenerCapabilities:
             raise ValueError(
                 'The loop opener does not support two fixed gauges')
         if block_size > 1 and not self.supports_blocks:
-            raise ValueError('The loop opener does not support physical blocks')
+            raise ValueError('The loop opener does not support input blocks')
 
 
 @dataclass(frozen=True)
@@ -66,12 +100,14 @@ class LoopOpening:
     right-link rank of ``all_cores[k]``.
     """
 
-    left_gauge: Optional[torch.Tensor]
-    cores: Sequence[torch.Tensor]
-    right_gauge: Optional[torch.Tensor]
-    rank: Sequence[int]
-    orientation: str = 'right'
+    left_gauge: Optional[torch.Tensor]  # Left external gauge core
+    cores: Sequence[torch.Tensor]  # Raw cores in site order
+    right_gauge: Optional[torch.Tensor]  # Right external gauge core
+    rank: Sequence[int]  # Right-link ranks in core order
+    orientation: str = 'right'  # Left or right interpretation of the gauge axes
+    # Optional least-squares measurements for this opening
     local_records: Sequence[LocalSolveRecord] = ()
+    # Local strategy diagnostics and construction state
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -79,7 +115,7 @@ class LoopOpening:
             raise ValueError("`orientation` should be 'right' or 'left'")
         cores = tuple(self.cores)
         if not cores:
-            raise ValueError('`cores` should contain at least one physical core')
+            raise ValueError('`cores` should contain at least one input core')
         if not all(isinstance(core, torch.Tensor) and core.ndim == 3
                    for core in cores):
             raise ValueError(
@@ -111,19 +147,27 @@ class LoopOpening:
 
     @property
     def all_cores(self) -> Tuple[torch.Tensor, ...]:
-        """Returns gauges and physical cores in standard cyclic order."""
+        """Returns gauges and input cores in standard cyclic order."""
         return tuple(
             core for core in (self.left_gauge, *self.cores, self.right_gauge)
             if core is not None)
 
     def contract_dense(self) -> torch.Tensor:
-        """Contracts the complete local opening without constructing a model."""
+        """Contracts the complete local opening without constructing a
+        model."""
         return TRDecomposition(self.all_cores).contract_dense()
 
 
 @runtime_checkable
 class LoopOpener(Protocol):
-    """Protocol implemented by local loop-opening strategies."""
+    """Solves one local cyclic factorization with explicit gauge constraints.
+
+    An opening represents its target as left gauge, input core(s) and right
+    gauge. Capabilities declare whether a strategy accepts either or both fixed
+    gauges and whether it supports multiple input cores. Fixed gauges must be
+    preserved exactly. The target and gauge recursion are independent of the
+    opener.
+    """
 
     @property
     def capabilities(self) -> LoopOpenerCapabilities:
@@ -137,7 +181,34 @@ class LoopOpener(Protocol):
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Opens one local target with optional fixed incoming gauges."""
+        """Opens a local tensor into gauges and input cores.
+
+        Parameters
+        ----------
+        target : torch.Tensor or TensorSource
+            Local scalar tensor with axes ``(left external, *in_dim, right
+            external)``, or a source representing that tensor.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left, fixed_right : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        orientation : {"right", "left"}
+            Construction direction. Returned cores always follow the original
+            target order, including when the algorithm uses a mirrored local
+            problem.
+        context : mapping, optional
+            Provider metadata and internal execution options, such as
+            initialization, generator and whether to collect local metrics.
+
+        Returns
+        -------
+        LoopOpening
+            Left gauge, input cores, right gauge, actual ranks and local
+            diagnostics.
+        """
 
 
 def _normalize_context(context: _Context) -> Mapping[str, Any]:
@@ -298,7 +369,38 @@ class ALSLoopOpener:
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Fits a local TR with zero or one fixed environment gauge."""
+        """Fits a local TR with zero or one fixed environment gauge.
+
+        Parameters
+        ----------
+        target : torch.Tensor or TensorSource
+            Local scalar tensor with axes ``(left external, *in_dim, right
+            external)``, or a source representing that tensor.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        fixed_right : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        orientation : {"right", "left"}
+            Construction direction. Returned cores always follow the original
+            target order, including when the algorithm uses a mirrored local
+            problem.
+        context : mapping, optional
+            Provider metadata and internal execution options, such as
+            initialization, generator and whether to collect local metrics.
+
+        Returns
+        -------
+        LoopOpening
+            Gauges and cores in original target order with optional local
+            metrics.
+        """
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         source = _source_from_context(target, context)
@@ -372,7 +474,18 @@ class ALSLoopOpener:
 
 
 class FixedGaugeCoreOpener:
-    """Solves one physical core directly between two fixed gauges."""
+    """Solves the single remaining input core with both gauges fixed.
+
+    The full effective local design is solved once using LeastSquaresSolver.
+    The external maps remain fixed; they are not pseudoinverted separately.
+    This opener requires exactly one input core between the two gauges.
+
+    Parameters
+    ----------
+    solver : LeastSquaresSolver, optional
+        Reusable local solver. Defaults to the shared stable least-squares
+        policy.
+    """
 
     _capabilities = LoopOpenerCapabilities(
         supports_fixed_left=True,
@@ -401,11 +514,42 @@ class FixedGaugeCoreOpener:
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Solves the unique unknown core by one dense least-squares system."""
+        """Solves the unique unknown core by one dense least-squares system.
+
+        Parameters
+        ----------
+        target : torch.Tensor or TensorSource
+            Local scalar tensor with axes ``(left external, *in_dim, right
+            external)``, or a source representing that tensor.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        fixed_right : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        orientation : {"right", "left"}
+            Construction direction. Returned cores always follow the original
+            target order, including when the algorithm uses a mirrored local
+            problem.
+        context : mapping, optional
+            Provider metadata and internal execution options, such as
+            initialization, generator and whether to collect local metrics.
+
+        Returns
+        -------
+        LoopOpening
+            Gauges and cores in original target order with optional local
+            metrics.
+        """
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         source = _source_from_context(target, context)
-        if source.in_dim.__len__() != 3:
+        if len(source.in_dim) != 3:
             raise ValueError(
                 'FixedGaugeCoreOpener requires exactly one physical site')
         self.capabilities.require(
@@ -479,7 +623,17 @@ class FixedGaugeCoreOpener:
 
 
 class CallableLoopOpener:
-    """Adapts a compatible callable to the :class:`LoopOpener` protocol."""
+    """Adapts a callable to the loop-opening protocol.
+
+    Parameters
+    ----------
+    opener : callable
+        Receives the arguments of LoopOpener.open and returns a LoopOpening or
+        TRDecomposition.
+    capabilities : LoopOpenerCapabilities, optional
+        Constraints supported by the callable. Unsupported fixed gauges or
+        block sizes are rejected before invoking it.
+    """
 
     def __init__(self,
                  opener: Callable[..., Any],
@@ -507,7 +661,38 @@ class CallableLoopOpener:
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Validates constraints and normalizes the callable result."""
+        """Validates constraints and normalizes the callable result.
+
+        Parameters
+        ----------
+        target : torch.Tensor or TensorSource
+            Local scalar tensor with axes ``(left external, *in_dim, right
+            external)``, or a source representing that tensor.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        fixed_right : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        orientation : {"right", "left"}
+            Construction direction. Returned cores always follow the original
+            target order, including when the algorithm uses a mirrored local
+            problem.
+        context : mapping, optional
+            Provider metadata and internal execution options, such as
+            initialization, generator and whether to collect local metrics.
+
+        Returns
+        -------
+        LoopOpening
+            Gauges and cores in original target order with optional local
+            metrics.
+        """
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         in_dim = context.get('in_dim')
@@ -531,7 +716,25 @@ class CallableLoopOpener:
 
 
 class CompositeLoopOpener:
-    """Uses one unrestricted opener as initialization for a refining opener."""
+    """Initializes an opening and refines it under the requested gauge
+    constraints.
+
+    The initializer opens the target without fixed gauges. Its cores initialize
+    the refiner, which imposes the final constraints. A fallback can preserve
+    an initializer failure as a diagnostic and let the refiner choose its own
+    init.
+
+    Parameters
+    ----------
+    initializer : LoopOpener
+        Unrestricted initializer, for example BLOSTRLoopOpener.
+    refiner : LoopOpener
+        Strategy supporting the final gauge constraints, normally
+        ALSLoopOpener.
+    fallback_on_error : bool
+        Whether an initializer failure should allow refinement without its
+        cores. The default is False. Refiner failures always propagate.
+    """
 
     def __init__(self,
                  initializer: LoopOpener,
@@ -560,7 +763,38 @@ class CompositeLoopOpener:
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Initializes without constraints and refines with requested gauges."""
+        """Initializes without constraints and refines with requested gauges.
+
+        Parameters
+        ----------
+        target : torch.Tensor or TensorSource
+            Local scalar tensor with axes ``(left external, *in_dim, right
+            external)``, or a source representing that tensor.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        fixed_right : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        orientation : {"right", "left"}
+            Construction direction. Returned cores always follow the original
+            target order, including when the algorithm uses a mirrored local
+            problem.
+        context : mapping, optional
+            Provider metadata and internal execution options, such as
+            initialization, generator and whether to collect local metrics.
+
+        Returns
+        -------
+        LoopOpening
+            Gauges and cores in original target order with optional local
+            metrics.
+        """
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         self.capabilities.require(

@@ -1,6 +1,28 @@
-"""Gauge policies shared by ALS topology backends."""
+"""
+This script contains:
 
-from typing import Optional, Protocol, Sequence, Tuple, Union, runtime_checkable
+    Public classes:
+        * GaugePolicy
+        * NoGauge
+        * QRGauge
+        * SVDGauge
+
+    Internal functions:
+        * _validate_factor_input
+        * _absorb_factor
+        * _validate_region_arguments
+        * _neighbor_regions
+
+    Public functions:
+        * resolve_gauge_policy
+"""
+
+from typing import (Optional,
+                    Protocol,
+                    Sequence,
+                    Tuple,
+                    Union,
+                    runtime_checkable)
 
 import torch
 
@@ -21,7 +43,19 @@ def _validate_factor_input(core: torch.Tensor, direction: Direction) -> None:
 
 @runtime_checkable
 class GaugePolicy(Protocol):
-    """Factor and absorb a gauge without changing the represented tensor."""
+    """Factors a solved core and absorbs its remaining gauge into a neighbor.
+
+    ``factor(core, direction)`` returns a replacement core and an optional
+    matrix. ``absorb(matrix, neighbor, direction)`` returns the receiving
+    neighbor. Their contraction preserves the original pair, including complex
+    values. Drivers choose NoGauge before factorization when no legal trainable
+    receiver exists.
+
+    ``direction`` is ``"forward"`` or ``"reverse"``. Standard core axes are
+    ``(left rank, input, right rank)``; factorization never interprets leading
+    axes as data batches. ``invalidated_regions`` identifies the affected
+    positions.
+    """
 
     def factor(
             self,
@@ -44,7 +78,11 @@ class GaugePolicy(Protocol):
 
 
 class NoGauge:
-    """Leaves a solved core unchanged and produces no factor."""
+    """Leaves a solved core unchanged and produces no neighboring update.
+
+    Implements :class:`GaugePolicy` in both sweep directions. This policy does
+    not choose ranks or apply the singular-value truncation criteria of TT-SVD.
+    """
 
     name = 'none'
 
@@ -53,6 +91,8 @@ class NoGauge:
             core: torch.Tensor,
             direction: Direction
             ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """Factors the core along the outgoing rank for the requested
+        direction."""
         _validate_factor_input(core, direction)
         return core, None
 
@@ -60,18 +100,26 @@ class NoGauge:
                factor: torch.Tensor,
                neighbor: torch.Tensor,
                direction: Direction) -> torch.Tensor:
+        """Absorbs the factor into the receiving core without changing the
+        pair."""
         raise RuntimeError('NoGauge does not produce an absorbable factor')
 
     def invalidated_regions(self,
                             site: int,
                             direction: Direction,
                             n_sites: int) -> Sequence[int]:
+        """Returns positions whose cached contractions depend on this gauge
+        move."""
         _validate_region_arguments(site, direction, n_sites)
         return (site,)
 
 
 class QRGauge:
-    """Moves the non-isometric QR factor along the sweep direction."""
+    """Moves the orthogonality center using a non-truncating QR factorization.
+
+    Implements :class:`GaugePolicy` in both sweep directions. This policy does
+    not choose ranks or apply the singular-value truncation criteria of TT-SVD.
+    """
 
     name = 'qr'
 
@@ -80,6 +128,8 @@ class QRGauge:
             core: torch.Tensor,
             direction: Direction
             ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """Factors the core along the outgoing rank for the requested
+        direction."""
         _validate_factor_input(core, direction)
         left_rank, in_dim, right_rank = core.shape
         if direction == 'forward':
@@ -102,17 +152,25 @@ class QRGauge:
                factor: torch.Tensor,
                neighbor: torch.Tensor,
                direction: Direction) -> torch.Tensor:
+        """Absorbs the factor into the receiving core without changing the
+        pair."""
         return _absorb_factor(factor, neighbor, direction)
 
     def invalidated_regions(self,
                             site: int,
                             direction: Direction,
                             n_sites: int) -> Sequence[int]:
+        """Returns positions whose cached contractions depend on this gauge
+        move."""
         return _neighbor_regions(site, direction, n_sites)
 
 
 class SVDGauge:
-    """Moves the full singular-value factor along the sweep direction."""
+    """Moves the orthogonality center using a non-truncating SVD factorization.
+
+    Implements :class:`GaugePolicy` in both sweep directions. This policy does
+    not choose ranks or apply the singular-value truncation criteria of TT-SVD.
+    """
 
     name = 'svd'
 
@@ -121,6 +179,8 @@ class SVDGauge:
             core: torch.Tensor,
             direction: Direction
             ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """Factors the core along the outgoing rank for the requested
+        direction."""
         _validate_factor_input(core, direction)
         left_rank, in_dim, right_rank = core.shape
         if direction == 'forward':
@@ -146,12 +206,16 @@ class SVDGauge:
                factor: torch.Tensor,
                neighbor: torch.Tensor,
                direction: Direction) -> torch.Tensor:
+        """Absorbs the factor into the receiving core without changing the
+        pair."""
         return _absorb_factor(factor, neighbor, direction)
 
     def invalidated_regions(self,
                             site: int,
                             direction: Direction,
                             n_sites: int) -> Sequence[int]:
+        """Returns positions whose cached contractions depend on this gauge
+        move."""
         return _neighbor_regions(site, direction, n_sites)
 
 

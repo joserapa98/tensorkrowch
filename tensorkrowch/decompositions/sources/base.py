@@ -1,8 +1,29 @@
-"""Common tensor-source contracts and configuration batches."""
+"""
+This script contains:
+
+    Internal classes:
+        * _SourceEvaluationTracker
+
+    Public classes:
+        * ConfigurationBatch
+        * TensorSource
+        * FiberTensorSource
+
+    Internal functions:
+        * _normalize_in_dim
+        * _discrete_indices
+        * _ravel_indices
+        * _unravel_indices
+        * _fiber_configurations
+"""
 
 from dataclasses import dataclass
 from math import prod
-from typing import (Optional, Protocol, Sequence, Tuple, Union,
+from typing import (Optional,
+                    Protocol,
+                    Sequence,
+                    Tuple,
+                    Union,
                     runtime_checkable)
 
 import torch
@@ -26,11 +47,11 @@ _INTEGER_DTYPES = (
 class ConfigurationBatch:
     """Batch of discrete indices or physical coordinates.
 
-    ``values`` can be a packed tensor whose first two dimensions are
-    ``(batch, sites)``, or a sequence containing one tensor per site. The
-    sequence form permits different coordinate shapes at different sites.
-    ``kind`` applies to the complete batch, so discrete indices and physical
-    coordinates cannot be mixed implicitly.
+    ``values`` can be a packed tensor whose first two dimensions are ``(batch,
+    sites)``, or a sequence containing one tensor per site. The sequence form
+    permits different coordinate shapes at different sites. ``kind`` applies to
+    the complete batch, so discrete indices and physical coordinates cannot be
+    mixed implicitly.
 
     Parameters
     ----------
@@ -43,8 +64,8 @@ class ConfigurationBatch:
         scalar integers at every site.
     """
 
-    values: ConfigurationValues
-    kind: str = 'indices'
+    values: ConfigurationValues  # Values in original configuration or observation order
+    kind: str = 'indices'  # Whether configurations contain indices or coordinates
 
     def __post_init__(self) -> None:
         if self.kind not in ('indices', 'coordinates'):
@@ -175,7 +196,20 @@ class ConfigurationBatch:
 
 @runtime_checkable
 class TensorSource(Protocol):
-    """Shared value-provider contract used by ALS and sketching."""
+    """Provides values for a fixed tensor or function without imposing an
+    algorithm.
+
+    ``in_dim`` declares the discrete input dimensions. ``output_shape``
+    describes the tensor returned after each configuration; it is ``()`` for
+    scalar sources and may be ``None`` until a callable is first evaluated.
+    ``dtype`` can likewise be inferred on first evaluation. ``device`` is the
+    effective evaluation device.
+
+    ALS and sketching consume the same protocol. A source does not define a
+    loss, choose sampled rows or interpret absent observations. Implementations
+    must preserve the configuration order and return deterministic values for a
+    fixed input and fixed source state.
+    """
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -194,7 +228,22 @@ class TensorSource(Protocol):
         """Device on which evaluations are performed."""
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates the source on a configuration batch."""
+        """Evaluates configurations in their original order.
+
+        Parameters
+        ----------
+        configurations : ConfigurationBatch
+            A batch containing one discrete index or coordinate per source
+            site.
+
+        Returns
+        -------
+        torch.Tensor
+            Values with shape ``(batch, *output_shape)`` on the source device
+            and with its declared or inferred dtype. Evaluation retains the
+            source's autograd behavior; diagnostic counters do not change the
+            returned values.
+        """
 
 
 @runtime_checkable
@@ -205,11 +254,39 @@ class FiberTensorSource(TensorSource, Protocol):
               configurations: ConfigurationBatch,
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates a site fiber for every base configuration."""
+        """Evaluates one varying input site for every base configuration.
+
+        Parameters
+        ----------
+        configurations : ConfigurationBatch
+            Base configurations defining all sites except the varying site.
+        site : int
+            Zero-based input site replaced by the fiber values.
+        values : torch.Tensor, optional
+            Candidate indices or coordinates, with the candidate axis first. If
+            omitted, discrete sources enumerate ``range(in_dim[site])``.
+            Coordinate fibers require explicit values.
+
+        Returns
+        -------
+        torch.Tensor
+            Shape ``(batch, n_values, *output_shape)``. The base batch and
+            candidate axis are independent and preserve their original orders.
+        """
 
 
 class _SourceEvaluationTracker:
     """Adds inexpensive cumulative evaluation counters to built-in sources."""
+
+    @property
+    def evaluation_stats(self) -> EvaluationStats:
+        """Cumulative point-evaluation counters for this source."""
+        return EvaluationStats(
+            requested_points=self._requested_points,
+            unique_points=self._unique_points,
+            batches=self._evaluation_batches,
+            cache_hits=self._cache_hits,
+            source_calls=self._source_calls)
 
     def _initialize_evaluation_stats(self) -> None:
         self._requested_points = 0
@@ -223,7 +300,8 @@ class _SourceEvaluationTracker:
                            batches: int = 1,
                            unique_points: Optional[int] = None,
                            cache_hits: int = 0) -> None:
-        """Records one successful source query without tensor synchronization."""
+        """Records one successful source query without tensor
+        synchronization."""
         if unique_points is None:
             unique_points = points
         self._requested_points += points
@@ -231,16 +309,6 @@ class _SourceEvaluationTracker:
         self._evaluation_batches += batches
         self._cache_hits += cache_hits
         self._source_calls += 1
-
-    @property
-    def evaluation_stats(self) -> EvaluationStats:
-        """Cumulative point-evaluation counters for this source."""
-        return EvaluationStats(
-            requested_points=self._requested_points,
-            unique_points=self._unique_points,
-            batches=self._evaluation_batches,
-            cache_hits=self._cache_hits,
-            source_calls=self._source_calls)
 
     def reset_evaluation_stats(self) -> None:
         """Resets cumulative point-evaluation counters to zero."""

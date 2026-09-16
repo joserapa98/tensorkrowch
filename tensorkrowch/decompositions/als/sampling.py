@@ -1,4 +1,28 @@
-"""Row sampling and refresh policies for ALS local systems."""
+"""
+This script contains:
+
+    Internal classes:
+        * _RowSamplingState
+        * _TRExactLeverageState
+
+    Public classes:
+        * SampleBatch
+        * RowSampler
+        * ExactRows
+        * ObservedRows
+        * UniformRows
+        * TTLeverageRows
+        * TRProductLeverageRows
+        * TRExactLeverageRows
+        * SampleRefreshPolicy
+
+    Internal functions:
+        * _validate_draw
+        * _sample_batch
+        * _region_metrics
+        * _sample_region
+        * _region_row_probability
+"""
 
 from dataclasses import dataclass, replace
 from math import prod
@@ -6,11 +30,12 @@ from typing import Callable, Optional, Protocol, Sequence, Tuple
 
 import torch
 
-from tensorkrowch.decompositions.als.problem import ObservedEntries
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
                                                       _ravel_indices,
                                                       _unravel_indices)
+
+from tensorkrowch.decompositions.als.problem import ObservedEntries
 
 
 _INTEGER_DTYPES = (
@@ -31,13 +56,14 @@ class SampleBatch:
     unchanged while the batch is reused.
     """
 
-    ids: torch.Tensor
-    probabilities: torch.Tensor
-    weights: torch.Tensor
-    generation: int
+    ids: torch.Tensor  # Global row identifiers drawn by the sampler
+    probabilities: torch.Tensor  # Original draw probabilities retained with these rows
+    weights: torch.Tensor  # Multiplicative residual weights in row order
+    generation: int  # Sampling generation number
+    # Core versions used to build the sampling proposal
     proposal_core_versions: Tuple[int, ...] = ()
-    proposal_exact: bool = True
-    site: Optional[int] = None
+    proposal_exact: bool = True  # Whether the proposal is exact for its recorded design
+    site: Optional[int] = None  # Optional zero-based active site
 
     def __post_init__(self) -> None:
         if not isinstance(self.ids, torch.Tensor):
@@ -138,9 +164,10 @@ class SampleBatch:
 class _RowSamplingState:
     """Immutable state passed to row samplers by ALS drivers."""
 
-    n_rows: int
-    core_versions: Tuple[int, ...]
-    generation: int = 0
+    n_rows: int  # Number of possible global rows
+    core_versions: Tuple[int, ...]  # Current version of every participating core
+    generation: int = 0  # Sampling generation number
+    # Effective device used for tensor operations
     device: torch.device = torch.device('cpu')
 
     def __post_init__(self) -> None:
@@ -259,12 +286,20 @@ class ExactRows:
     def update_after_core(self,
                           state: _RowSamplingState,
                           site: int) -> _RowSamplingState:
-        """Increments the core version; exact rows remain design-independent."""
+        """Increments the core version; exact rows remain
+        design-independent."""
         return state.update_core(site)
 
 
 class ObservedRows:
-    """Deterministic non-refreshable rows from fixed observations."""
+    """Deterministic non-refreshable rows from fixed observations.
+
+    Parameters
+    ----------
+    observations : ObservedEntries
+        Permanent observations to enumerate. Their ids and residual weights are
+        reused unchanged; this selector is not refreshable.
+    """
 
     proposal_exact = True
     refreshable = False
@@ -416,9 +451,9 @@ class TTLeverageRows:
     """Samples TT local-design rows from mixed-canonical leverage scores.
 
     The exact mixed-canonical construction follows *Efficient Leverage Score
-    Sampling for Tensor Train Decomposition* (2024), available in this
-    `paper <https://arxiv.org/abs/2406.02749>`_ by Vivek Bharadwaj, Beheshteh
-    T. Rakhshan, Osman Asif Malik and Guillaume Rabusseau.
+    Sampling for Tensor Train Decomposition* (2024), available in this `paper
+    <https://arxiv.org/abs/2406.02749>`_ by Vivek Bharadwaj, Beheshteh T.
+    Rakhshan, Osman Asif Malik and Guillaume Rabusseau.
 
     The current cores are obtained from ``cores`` at every draw. Cores to the
     left of the selected site must be left-isometric, and cores to its right
@@ -431,6 +466,17 @@ class TTLeverageRows:
     Importance weighting makes the sampled Gram matrix and right-hand side
     unbiased when support is sufficient; it does not make the nonlinear
     least-squares solution itself an unbiased estimator.
+
+    Parameters
+    ----------
+    cores : callable
+        Returns the current standard cores whenever a distribution is built.
+        Each core has shape ``(left rank, input, right rank)``. The callback
+        exposes updates without copying or retaining an obsolete decomposition.
+    uniform_mix : float
+        Uniform proposal weight in ``[0, 1]``. Default is zero. A positive
+        value gives every global row nonzero probability; draw probabilities
+        always include the mixture and stay attached to the sampled rows.
     """
 
     proposal_exact = True
@@ -609,13 +655,13 @@ class TRProductLeverageRows:
     """Samples an approximate product-leverage proposal for TR designs.
 
     This implements the product proposal from Algorithm 2 of *A Sampling-Based
-    Method for Tensor Ring Decomposition* (2021), available in this
-    `paper <https://arxiv.org/abs/2010.08581>`_ by Osman Asif Malik and Stephen
+    Method for Tensor Ring Decomposition* (2021), available in this `paper
+    <https://arxiv.org/abs/2010.08581>`_ by Osman Asif Malik and Stephen
     Becker. For every core outside the active site, it computes row leverage
-    scores of the mode-input unfolding with shape
-    ``(input, left rank * right rank)``. Their product bounds the leverage
-    distribution of the complete cyclic design, but is not that exact
-    distribution, so batches are labelled ``proposal_exact=False``.
+    scores of the mode-input unfolding with shape ``(input, left rank * right
+    rank)``. Their product bounds the leverage distribution of the complete
+    cyclic design, but is not that exact distribution, so batches are labelled
+    ``proposal_exact=False``.
 
     The published algorithm samples environment configurations and retains the
     full active input fiber. Accordingly, ``n_samples`` counts environments;
@@ -627,6 +673,17 @@ class TRProductLeverageRows:
     the actual mixed draw probability, so sampled Gram matrices and right-hand
     sides target the full row objective even though the proposal is only an
     approximation to leverage scores.
+
+    Parameters
+    ----------
+    cores : callable
+        Returns the current standard cores whenever a distribution is built.
+        Each core has shape ``(left rank, input, right rank)``. The callback
+        exposes updates without copying or retaining an obsolete decomposition.
+    uniform_mix : float
+        Uniform proposal weight in ``[0, 1]``. Default is zero. A positive
+        value gives every global row nonzero probability; draw probabilities
+        always include the mixture and stay attached to the sampled rows.
     """
 
     proposal_exact = False
@@ -830,10 +887,11 @@ class TRProductLeverageRows:
 class _TRExactLeverageState:
     """Contractions defining one exact cyclic leverage distribution."""
 
-    order: Tuple[int, ...]
-    suffix_metrics: Tuple[torch.Tensor, ...]
+    order: Tuple[int, ...]  # Site order used by the contraction or construction
+    suffix_metrics: Tuple[torch.Tensor, ...]  # Contracted suffix density operators
+    # Small Hermitian pseudoinverse of the implicit design Gram
     gram_pseudoinverse: torch.Tensor
-    numerical_rank: int
+    numerical_rank: int  # Numerical rank at the specified tolerance
 
 
 class TRExactLeverageRows:
@@ -844,15 +902,26 @@ class TRExactLeverageRows:
     in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik,
     Vivek Bharadwaj and Riley Murray, to a TR one-site ALS environment. It
     contracts the double-layer Gram matrix, computes its small pseudoinverse
-    and draws the joint input configuration sequentially from exact
-    conditional probabilities. The exponentially tall design matrix and its
-    complete leverage vector are never formed.
+    and draws the joint input configuration sequentially from exact conditional
+    probabilities. The exponentially tall design matrix and its complete
+    leverage vector are never formed.
 
     As in the paper, ``n_samples`` counts environment configurations and every
     selected environment retains the complete active input fiber. TensorKrowch
     additionally permits ``uniform_mix`` for full-support robustness. A mixed
     proposal still stores and uses its exact draw probabilities, although only
     ``uniform_mix=0`` is the pure leverage distribution analyzed in the paper.
+
+    Parameters
+    ----------
+    cores : callable
+        Returns the current standard cores whenever a distribution is built.
+        Each core has shape ``(left rank, input, right rank)``. The callback
+        exposes updates without copying or retaining an obsolete decomposition.
+    uniform_mix : float
+        Uniform proposal weight in ``[0, 1]``. Default is zero. A positive
+        value gives every global row nonzero probability; draw probabilities
+        always include the mixture and stay attached to the sampled rows.
     """
 
     proposal_exact = True
@@ -987,26 +1056,6 @@ class TRExactLeverageRows:
             raise ValueError('Exact leverage contraction became non-positive')
         return scores.clamp_min(0) / exact_state.numerical_rank
 
-    def probabilities(self,
-                      site: int,
-                      configurations: ConfigurationBatch) -> torch.Tensor:
-        """Returns exact mixed proposal probabilities for scalar rows."""
-        cores = self._current_cores()
-        if isinstance(site, bool) or not isinstance(site, int) or \
-                (site < 0) or (site >= len(cores)):
-            raise ValueError('`site` should identify a TR core')
-        in_dim = tuple(core.shape[1] for core in cores)
-        indices = _discrete_indices(
-            configurations, in_dim, cores[0].device)
-        exact_state = self._exact_state(cores, site)
-        environment_probability = self._environment_probabilities(
-            cores, site, indices, exact_state)
-        environment_rows = prod(in_dim) // in_dim[site]
-        mixed_environment = (
-            (1 - self.uniform_mix) * environment_probability +
-            self.uniform_mix / environment_rows)
-        return mixed_environment / in_dim[site]
-
     @staticmethod
     def _conditional_scores(
             candidates: torch.Tensor,
@@ -1029,6 +1078,26 @@ class TRExactLeverageRows:
             raise ValueError(
                 'A conditional leverage contraction became non-positive')
         return scores.clamp_min(0)
+
+    def probabilities(self,
+                      site: int,
+                      configurations: ConfigurationBatch) -> torch.Tensor:
+        """Returns exact mixed proposal probabilities for scalar rows."""
+        cores = self._current_cores()
+        if isinstance(site, bool) or not isinstance(site, int) or \
+                (site < 0) or (site >= len(cores)):
+            raise ValueError('`site` should identify a TR core')
+        in_dim = tuple(core.shape[1] for core in cores)
+        indices = _discrete_indices(
+            configurations, in_dim, cores[0].device)
+        exact_state = self._exact_state(cores, site)
+        environment_probability = self._environment_probabilities(
+            cores, site, indices, exact_state)
+        environment_rows = prod(in_dim) // in_dim[site]
+        mixed_environment = (
+            (1 - self.uniform_mix) * environment_probability +
+            self.uniform_mix / environment_rows)
+        return mixed_environment / in_dim[site]
 
     def draw(self,
              state: _RowSamplingState,
@@ -1136,7 +1205,7 @@ class SampleRefreshPolicy:
     ids and probabilities for the complete fit.
     """
 
-    reuse_sweeps: int = 1
+    reuse_sweeps: int = 1  # Number of sweeps sharing one frozen generation
 
     def __post_init__(self) -> None:
         if isinstance(self.reuse_sweeps, bool) or \

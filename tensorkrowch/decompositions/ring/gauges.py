@@ -1,15 +1,36 @@
-"""Oriented virtual-basis maps used by tensor ring recursions."""
+"""
+This script contains:
 
-import warnings
+    Public classes:
+        * ExperimentalWarning
+        * GaugeMap
+        * GaugeRecursionStep
+        * GaugeRecursion
+        * PseudoinverseGaugeRecursion
+        * TTCoreGaugeRecursion
+
+    Internal functions:
+        * _validate_non_negative_float
+        * _matrix_from_core
+        * _core_from_matrix
+"""
+
 from dataclasses import dataclass, field
 from math import isfinite
-from typing import (Any, Mapping, Optional, Protocol, Sequence, Tuple,
+from typing import (Any,
+                    Mapping,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    Tuple,
                     runtime_checkable)
+import warnings
 
 import torch
 
 from tensorkrowch.decompositions.metrics import GaugeRecord
 from tensorkrowch.decompositions.observers import DecompositionEvent
+
 from tensorkrowch.decompositions.ring.opening import LoopOpening
 
 
@@ -32,7 +53,8 @@ def _validate_non_negative_float(value: Optional[float],
 
 def _matrix_from_core(core: torch.Tensor,
                       orientation: str) -> torch.Tensor:
-    """Places the transported dimension in rows and both TR ranks in columns."""
+    """Places the transported dimension in rows and both TR ranks in
+    columns."""
     if orientation == 'left':
         return core.permute(1, 0, 2).reshape(core.shape[1], -1)
     return core.permute(1, 2, 0).reshape(core.shape[1], -1)
@@ -56,9 +78,9 @@ class GaugeMap:
 
     A left gauge has shape ``(cyclic_rank, external_dim, local_rank)`` and a
     right gauge has shape ``(local_rank, external_dim, cyclic_rank)``. Both
-    orientations are matricized as
-    ``external_dim x (cyclic_rank * local_rank)``. Mirroring a gauge therefore
-    changes its core orientation while preserving the represented matrix.
+    orientations are matricized as ``external_dim x (cyclic_rank *
+    local_rank)``. Mirroring a gauge therefore changes its core orientation
+    while preserving the represented matrix.
 
     Calling :meth:`inverse_or_pinv` returns the directional dual ``F`` that
     aims to satisfy ``G.T @ F = I``. Tensor network links use a bilinear index
@@ -66,12 +88,15 @@ class GaugeMap:
     complex gauges.
     """
 
-    core: torch.Tensor
-    orientation: str
-    site: Optional[int] = None
+    core: torch.Tensor  # Raw local tensor with standard rank axes
+    orientation: str  # Left or right interpretation of the gauge axes
+    site: Optional[int] = None  # Optional zero-based active site
+    # Effective method used to construct the directional dual
     inverse_method: Optional[str] = None
+    # Original gauge matrix whose dual is represented
     _reference_matrix: Optional[torch.Tensor] = field(
         default=None, repr=False, compare=False)
+    # Relative singular-value cutoff used for the dual
     _rank_rtol: Optional[float] = field(
         default=None, repr=False, compare=False)
 
@@ -252,7 +277,8 @@ class GaugeMap:
             allow_projective: bool = False,
             *,
             rank_rtol: Optional[float] = None) -> GaugeRecord:
-        """Returns diagnostics or rejects a non-cancellable propagated gauge."""
+        """Returns diagnostics or rejects a non-cancellable propagated
+        gauge."""
         if not isinstance(allow_projective, bool):
             raise TypeError('`allow_projective` should be bool type')
         record = self.diagnostics(
@@ -300,8 +326,10 @@ class GaugeMap:
 class GaugeRecursionStep:
     """Stores the fixed gauge and diagnostics produced by one recursion."""
 
-    gauge: torch.Tensor
+    gauge: torch.Tensor  # Gauge passed to the next local problem
+    # Gauge measurements produced by this transition
     records: Sequence[GaugeRecord] = ()
+    # Local strategy diagnostics and construction state
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -340,9 +368,25 @@ class GaugeRecursion(Protocol):
 class PseudoinverseGaugeRecursion:
     """Advances gauges by directional inverse or pseudoinverse cancellation.
 
-    This is the direct recursion used by the characterized TT-to-TR method.
-    An outgoing right gauge is dualized and mirrored into the fixed left gauge
-    of the next site; the leftward operation is its exact mirror.
+    This is the direct recursion used by the characterized TT-to-TR method. An
+    outgoing right gauge is dualized and mirrored into the fixed left gauge of
+    the next site; the leftward operation is its exact mirror.
+
+    Parameters
+    ----------
+    inverse_policy : {"auto", "solve", "inverse", "pinv"}
+        Method used for the directional map. Default is ``"pinv"``. ``"auto"``
+        uses a solve for square systems and a pseudoinverse otherwise.
+    allow_projective : bool
+        Whether a rank-deficient map or a projection residual above tolerance
+        is allowed. Default is False; incompatible cancellation then raises an
+        error.
+    tolerance : float
+        Maximum accepted relative cancellation/projection error. Default is
+        1e-8.
+    rank_rtol : float, optional
+        Relative singular-value cutoff for pseudoinverses and numerical ranks.
+        If omitted, the dtype and matrix dimensions determine the cutoff.
     """
 
     def __init__(self,
@@ -427,12 +471,28 @@ class TTCoreGaugeRecursion:
 
     The incoming gauge and retained TR core define a prefix or suffix basis.
     This strategy expresses that basis in the next TT virtual basis by solving
-    a local coordinate problem against the original TT core. Thus the
-    recursion mirrors the environment extension used by recursive sketching,
-    with a TT core acting as the recursive projector.
+    a local coordinate problem against the original TT core. Thus the recursion
+    mirrors the environment extension used by recursive sketching, with a TT
+    core acting as the recursive projector.
 
     This strategy is experimental. It assumes that every recursion source is
     one TT site and that the provider exposes standardized TT cores.
+
+    Parameters
+    ----------
+    inverse_policy : {"auto", "solve", "inverse", "pinv"}
+        Method used for the directional map. Default is ``"auto"``. ``"auto"``
+        uses a solve for square systems and a pseudoinverse otherwise.
+    allow_projective : bool
+        Whether a rank-deficient map or a projection residual above tolerance
+        is allowed. Default is False; incompatible cancellation then raises an
+        error.
+    tolerance : float
+        Maximum accepted relative cancellation/projection error. Default is
+        1e-8.
+    rank_rtol : float, optional
+        Relative singular-value cutoff for pseudoinverses and numerical ranks.
+        If omitted, the dtype and matrix dimensions determine the cutoff.
     """
 
     def __init__(self,

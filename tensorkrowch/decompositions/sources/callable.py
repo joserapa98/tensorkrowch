@@ -1,16 +1,19 @@
-"""Callable tensor sources with deterministic evaluation batching."""
+"""
+This script contains:
+
+    Public classes:
+        * CallableTensorSource
+"""
 
 from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.decompositions.sources.base import (
-    ConfigurationBatch,
-    _discrete_indices,
-    _fiber_configurations,
-    _normalize_in_dim,
-    _SourceEvaluationTracker,
-)
+from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
+                                                      _SourceEvaluationTracker,
+                                                      _discrete_indices,
+                                                      _fiber_configurations,
+                                                      _normalize_in_dim)
 
 
 class CallableTensorSource(_SourceEvaluationTracker):
@@ -18,8 +21,8 @@ class CallableTensorSource(_SourceEvaluationTracker):
 
     Packed configurations are passed to ``function`` as a tensor. A
     heterogeneous configuration batch is passed as a tuple containing one
-    tensor per site. The callable must preserve the leading configuration
-    batch and return shape ``(batch, *output_shape)``.
+    tensor per site. The callable must preserve the leading configuration batch
+    and return shape ``(batch, *output_shape)``.
 
     Parameters
     ----------

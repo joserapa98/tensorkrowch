@@ -1,7 +1,26 @@
-"""Bidirectional orchestration shared by tensor ring constructions."""
+"""
+This script contains:
+
+    Public classes:
+        * RingTargetProvider
+        * BoundaryClosure
+        * BidirectionalRingResult
+        * BidirectionalRingDriver
+
+    Internal functions:
+        * _normalize_context
+        * _validate_provider
+        * _validate_opening
+"""
 
 from dataclasses import dataclass, field
-from typing import (Any, Dict, Mapping, Optional, Protocol, Sequence, Tuple,
+from typing import (Any,
+                    Dict,
+                    Mapping,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    Tuple,
                     runtime_checkable)
 
 import torch
@@ -10,6 +29,7 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  GaugeRecord)
 from tensorkrowch.decompositions.observers import DecompositionEvent
 from tensorkrowch.decompositions.results import TRDecomposition
+
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector)
 from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
@@ -48,10 +68,12 @@ class RingTargetProvider(Protocol):
 class BoundaryClosure:
     """Stores one final core obtained by absorbing an open target boundary."""
 
-    site: int
-    direction: str
-    core: torch.Tensor
+    site: int  # Optional zero-based active site
+    direction: str  # Direction of the current sweep or closure
+    core: torch.Tensor  # Raw local tensor with standard rank axes
+    # Gauge measurements produced by this transition
     records: Sequence[GaugeRecord] = ()
+    # Local strategy diagnostics and construction state
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -78,13 +100,18 @@ class BoundaryClosure:
 class BidirectionalRingResult:
     """Stores ordered cores and structural diagnostics from a driver run."""
 
-    cores: Sequence[torch.Tensor]
-    central_block: BlockSelection
+    cores: Sequence[torch.Tensor]  # Raw cores in site order
+    central_block: BlockSelection  # Selection defining the initial block
+    # Completed local openings indexed by their sites
     openings: Mapping[Tuple[int, ...], LoopOpening]
+    # Site order used by the contraction or construction
     order: Sequence[Tuple[int, ...]]
-    directions: Sequence[str]
+    directions: Sequence[str]  # Construction direction for each recorded step
+    # Completed open-boundary closures indexed by site
     boundaries: Mapping[int, BoundaryClosure] = field(default_factory=dict)
+    # Structured measurements collected during execution
     metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
+    # Local strategy diagnostics and construction state
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -224,225 +251,6 @@ class BidirectionalRingDriver:
     gauge. Its final site is opened with both gauges, explicitly reconciling
     the two fronts instead of leaving an unchecked cyclic interface.
     """
-
-    def fit(self,
-            provider: RingTargetProvider,
-            rank,
-            opener: LoopOpener,
-            recursion: GaugeRecursion,
-            block_selector: Optional[CentralBlockSelector] = None,
-            *,
-            center: Optional[int] = None,
-            boundary_opener: Optional[LoopOpener] = None,
-            context: Optional[
-                Mapping[str, Any]] = None) -> BidirectionalRingResult:
-        """Runs the isolated central/right/left/boundary driver workflow."""
-        in_dim = _validate_provider(provider)
-        if not isinstance(opener, LoopOpener):
-            raise TypeError('`opener` should implement LoopOpener')
-        if not isinstance(recursion, GaugeRecursion):
-            raise TypeError('`recursion` should implement GaugeRecursion')
-        if block_selector is None:
-            block_selector = CentralBlockSelector()
-        elif not isinstance(block_selector, CentralBlockSelector):
-            raise TypeError(
-                '`block_selector` should be CentralBlockSelector type')
-        if boundary_opener is None:
-            if opener.capabilities.supports_two_fixed_gauges:
-                boundary_opener = opener
-            else:
-                boundary_opener = FixedGaugeCoreOpener()
-        elif not isinstance(boundary_opener, LoopOpener):
-            raise TypeError('`boundary_opener` should implement LoopOpener')
-        context = _normalize_context(context)
-        bounds = context.get('block_bounds')
-        boundary_mode = getattr(provider, 'boundary_mode', 'cyclic')
-        if boundary_mode not in ('cyclic', 'open'):
-            raise ValueError(
-                "`provider.boundary_mode` should be 'cyclic' or 'open'")
-
-        selection = block_selector.select(
-            provider, rank, center=center, bounds=bounds)
-        if not selection.feasible:
-            raise ValueError(
-                'Could not select a refinable central block: '
-                f'reason={selection.reason}, sites={selection.sites}, '
-                f'input_capacity={selection.input_capacity}, '
-                f'required_input_capacity={selection.required_input_capacity}')
-        if len(selection.sites) == len(in_dim):
-            raise ValueError(
-                'The central block should leave at least one boundary site '
-                'to reconcile its two outgoing gauges')
-
-        cores: list = [None] * len(in_dim)
-        openings: Dict[Tuple[int, ...], LoopOpening] = {}
-        order = []
-        directions = []
-        metrics = DecompositionMetrics()
-        recursion_diagnostics = []
-
-        central_sites = selection.sites
-        central_target = provider.local_target(central_sites, context)
-        central_opening = self._open(
-            provider=provider,
-            rank=rank,
-            opener=opener,
-            sites=central_sites,
-            target=central_target,
-            orientation='right',
-            fixed_left=None,
-            fixed_right=None,
-            context=context)
-        self._store_opening(
-            central_sites,
-            'center',
-            central_opening,
-            cores,
-            openings,
-            order,
-            directions,
-            metrics)
-
-        if boundary_mode == 'open':
-            return self._fit_open_boundaries(
-                provider=provider,
-                rank=rank,
-                opener=opener,
-                recursion=recursion,
-                selection=selection,
-                central_opening=central_opening,
-                in_dim=in_dim,
-                context=context,
-                cores=cores,
-                openings=openings,
-                order=order,
-                directions=directions,
-                metrics=metrics,
-                recursion_diagnostics=recursion_diagnostics)
-
-        remaining = len(in_dim) - len(central_sites)
-        left_site = (selection.left - 1) % len(in_dim)
-        right_site = (selection.right + 1) % len(in_dim)
-        left_opening = central_opening
-        right_opening = central_opening
-
-        while remaining > 1:
-            sites = (right_site,)
-            target = provider.local_target(sites, context)
-            fixed_left = self._advance(
-                recursion=recursion,
-                direction='right',
-                opening=right_opening,
-                local_target=target,
-                from_sites=self._opening_sites(openings, right_opening),
-                to_sites=sites,
-                provider=provider,
-                context=context,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics)
-            opening = self._open(
-                provider=provider,
-                rank=rank,
-                opener=opener,
-                sites=sites,
-                target=target,
-                orientation='right',
-                fixed_left=fixed_left,
-                fixed_right=None,
-                context=context)
-            self._store_opening(
-                sites, 'right', opening, cores, openings, order,
-                directions, metrics)
-            right_opening = opening
-            right_site = (right_site + 1) % len(in_dim)
-            remaining -= 1
-            if remaining <= 1:
-                break
-
-            sites = (left_site,)
-            target = provider.local_target(sites, context)
-            fixed_right = self._advance(
-                recursion=recursion,
-                direction='left',
-                opening=left_opening,
-                local_target=target,
-                from_sites=self._opening_sites(openings, left_opening),
-                to_sites=sites,
-                provider=provider,
-                context=context,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics)
-            opening = self._open(
-                provider=provider,
-                rank=rank,
-                opener=opener,
-                sites=sites,
-                target=target,
-                orientation='left',
-                fixed_left=None,
-                fixed_right=fixed_right,
-                context=context)
-            self._store_opening(
-                sites, 'left', opening, cores, openings, order,
-                directions, metrics)
-            left_opening = opening
-            left_site = (left_site - 1) % len(in_dim)
-            remaining -= 1
-
-        if remaining == 1:
-            if left_site != right_site:
-                raise RuntimeError(
-                    'The two ring sweeps did not reach the same boundary site')
-            sites = (right_site,)
-            target = provider.local_target(sites, context)
-            fixed_left = self._advance(
-                recursion=recursion,
-                direction='right',
-                opening=right_opening,
-                local_target=target,
-                from_sites=self._opening_sites(openings, right_opening),
-                to_sites=sites,
-                provider=provider,
-                context=context,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics)
-            fixed_right = self._advance(
-                recursion=recursion,
-                direction='left',
-                opening=left_opening,
-                local_target=target,
-                from_sites=self._opening_sites(openings, left_opening),
-                to_sites=sites,
-                provider=provider,
-                context=context,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics)
-            opening = self._open(
-                provider=provider,
-                rank=rank,
-                opener=boundary_opener,
-                sites=sites,
-                target=target,
-                orientation='right',
-                fixed_left=fixed_left,
-                fixed_right=fixed_right,
-                context=context)
-            self._store_opening(
-                sites, 'boundary', opening, cores, openings, order,
-                directions, metrics)
-
-        if any(core is None for core in cores):
-            raise RuntimeError('The ring driver did not assemble every site')
-        return BidirectionalRingResult(
-            cores=cores,
-            central_block=selection,
-            openings=openings,
-            order=order,
-            directions=directions,
-            metrics=metrics,
-            diagnostics={
-                'recursions': tuple(recursion_diagnostics),
-            })
 
     def _fit_open_boundaries(
             self,
@@ -774,6 +582,225 @@ class BidirectionalRingDriver:
                 values={'sites': (closure.site,),
                         'direction': closure.direction,
                         'total_sites': len(cores)}))
+
+    def fit(self,
+            provider: RingTargetProvider,
+            rank,
+            opener: LoopOpener,
+            recursion: GaugeRecursion,
+            block_selector: Optional[CentralBlockSelector] = None,
+            *,
+            center: Optional[int] = None,
+            boundary_opener: Optional[LoopOpener] = None,
+            context: Optional[
+                Mapping[str, Any]] = None) -> BidirectionalRingResult:
+        """Runs the isolated central/right/left/boundary driver workflow."""
+        in_dim = _validate_provider(provider)
+        if not isinstance(opener, LoopOpener):
+            raise TypeError('`opener` should implement LoopOpener')
+        if not isinstance(recursion, GaugeRecursion):
+            raise TypeError('`recursion` should implement GaugeRecursion')
+        if block_selector is None:
+            block_selector = CentralBlockSelector()
+        elif not isinstance(block_selector, CentralBlockSelector):
+            raise TypeError(
+                '`block_selector` should be CentralBlockSelector type')
+        if boundary_opener is None:
+            if opener.capabilities.supports_two_fixed_gauges:
+                boundary_opener = opener
+            else:
+                boundary_opener = FixedGaugeCoreOpener()
+        elif not isinstance(boundary_opener, LoopOpener):
+            raise TypeError('`boundary_opener` should implement LoopOpener')
+        context = _normalize_context(context)
+        bounds = context.get('block_bounds')
+        boundary_mode = getattr(provider, 'boundary_mode', 'cyclic')
+        if boundary_mode not in ('cyclic', 'open'):
+            raise ValueError(
+                "`provider.boundary_mode` should be 'cyclic' or 'open'")
+
+        selection = block_selector.select(
+            provider, rank, center=center, bounds=bounds)
+        if not selection.feasible:
+            raise ValueError(
+                'Could not select a refinable central block: '
+                f'reason={selection.reason}, sites={selection.sites}, '
+                f'input_capacity={selection.input_capacity}, '
+                f'required_input_capacity={selection.required_input_capacity}')
+        if len(selection.sites) == len(in_dim):
+            raise ValueError(
+                'The central block should leave at least one boundary site '
+                'to reconcile its two outgoing gauges')
+
+        cores: list = [None] * len(in_dim)
+        openings: Dict[Tuple[int, ...], LoopOpening] = {}
+        order = []
+        directions = []
+        metrics = DecompositionMetrics()
+        recursion_diagnostics = []
+
+        central_sites = selection.sites
+        central_target = provider.local_target(central_sites, context)
+        central_opening = self._open(
+            provider=provider,
+            rank=rank,
+            opener=opener,
+            sites=central_sites,
+            target=central_target,
+            orientation='right',
+            fixed_left=None,
+            fixed_right=None,
+            context=context)
+        self._store_opening(
+            central_sites,
+            'center',
+            central_opening,
+            cores,
+            openings,
+            order,
+            directions,
+            metrics)
+
+        if boundary_mode == 'open':
+            return self._fit_open_boundaries(
+                provider=provider,
+                rank=rank,
+                opener=opener,
+                recursion=recursion,
+                selection=selection,
+                central_opening=central_opening,
+                in_dim=in_dim,
+                context=context,
+                cores=cores,
+                openings=openings,
+                order=order,
+                directions=directions,
+                metrics=metrics,
+                recursion_diagnostics=recursion_diagnostics)
+
+        remaining = len(in_dim) - len(central_sites)
+        left_site = (selection.left - 1) % len(in_dim)
+        right_site = (selection.right + 1) % len(in_dim)
+        left_opening = central_opening
+        right_opening = central_opening
+
+        while remaining > 1:
+            sites = (right_site,)
+            target = provider.local_target(sites, context)
+            fixed_left = self._advance(
+                recursion=recursion,
+                direction='right',
+                opening=right_opening,
+                local_target=target,
+                from_sites=self._opening_sites(openings, right_opening),
+                to_sites=sites,
+                provider=provider,
+                context=context,
+                metrics=metrics,
+                diagnostics=recursion_diagnostics)
+            opening = self._open(
+                provider=provider,
+                rank=rank,
+                opener=opener,
+                sites=sites,
+                target=target,
+                orientation='right',
+                fixed_left=fixed_left,
+                fixed_right=None,
+                context=context)
+            self._store_opening(
+                sites, 'right', opening, cores, openings, order,
+                directions, metrics)
+            right_opening = opening
+            right_site = (right_site + 1) % len(in_dim)
+            remaining -= 1
+            if remaining <= 1:
+                break
+
+            sites = (left_site,)
+            target = provider.local_target(sites, context)
+            fixed_right = self._advance(
+                recursion=recursion,
+                direction='left',
+                opening=left_opening,
+                local_target=target,
+                from_sites=self._opening_sites(openings, left_opening),
+                to_sites=sites,
+                provider=provider,
+                context=context,
+                metrics=metrics,
+                diagnostics=recursion_diagnostics)
+            opening = self._open(
+                provider=provider,
+                rank=rank,
+                opener=opener,
+                sites=sites,
+                target=target,
+                orientation='left',
+                fixed_left=None,
+                fixed_right=fixed_right,
+                context=context)
+            self._store_opening(
+                sites, 'left', opening, cores, openings, order,
+                directions, metrics)
+            left_opening = opening
+            left_site = (left_site - 1) % len(in_dim)
+            remaining -= 1
+
+        if remaining == 1:
+            if left_site != right_site:
+                raise RuntimeError(
+                    'The two ring sweeps did not reach the same boundary site')
+            sites = (right_site,)
+            target = provider.local_target(sites, context)
+            fixed_left = self._advance(
+                recursion=recursion,
+                direction='right',
+                opening=right_opening,
+                local_target=target,
+                from_sites=self._opening_sites(openings, right_opening),
+                to_sites=sites,
+                provider=provider,
+                context=context,
+                metrics=metrics,
+                diagnostics=recursion_diagnostics)
+            fixed_right = self._advance(
+                recursion=recursion,
+                direction='left',
+                opening=left_opening,
+                local_target=target,
+                from_sites=self._opening_sites(openings, left_opening),
+                to_sites=sites,
+                provider=provider,
+                context=context,
+                metrics=metrics,
+                diagnostics=recursion_diagnostics)
+            opening = self._open(
+                provider=provider,
+                rank=rank,
+                opener=boundary_opener,
+                sites=sites,
+                target=target,
+                orientation='right',
+                fixed_left=fixed_left,
+                fixed_right=fixed_right,
+                context=context)
+            self._store_opening(
+                sites, 'boundary', opening, cores, openings, order,
+                directions, metrics)
+
+        if any(core is None for core in cores):
+            raise RuntimeError('The ring driver did not assemble every site')
+        return BidirectionalRingResult(
+            cores=cores,
+            central_block=selection,
+            openings=openings,
+            order=order,
+            directions=directions,
+            metrics=metrics,
+            diagnostics={
+                'recursions': tuple(recursion_diagnostics),
+            })
 
 
 __all__ = [

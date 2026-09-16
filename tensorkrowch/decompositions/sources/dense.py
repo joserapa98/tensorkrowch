@@ -1,16 +1,19 @@
-"""Dense tensor sources."""
+"""
+This script contains:
+
+    Public classes:
+        * DenseTensorSource
+"""
 
 from typing import Optional, Sequence, Tuple
 
 import torch
 
-from tensorkrowch.decompositions.sources.base import (
-    ConfigurationBatch,
-    _discrete_indices,
-    _fiber_configurations,
-    _normalize_in_dim,
-    _SourceEvaluationTracker,
-)
+from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
+                                                      _SourceEvaluationTracker,
+                                                      _discrete_indices,
+                                                      _fiber_configurations,
+                                                      _normalize_in_dim)
 
 
 class DenseTensorSource(_SourceEvaluationTracker):

@@ -1,4 +1,17 @@
-"""Topology-independent ALS sweep orchestration."""
+"""
+This script contains:
+
+    Internal classes:
+        * _ALSDriverResult
+
+    Public classes:
+        * ALSBackend
+        * ALSSweepDriver
+
+    Internal functions:
+        * _relative_objective_change
+        * _report_als_result
+"""
 
 from dataclasses import dataclass, replace
 from time import perf_counter
@@ -6,19 +19,18 @@ from typing import Optional, Protocol, Sequence, Tuple
 
 import torch
 
-from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
-                                                         UpdatePolicy)
-from tensorkrowch.decompositions.als.environments import CoreUpdateSet
-from tensorkrowch.decompositions.als.problem import ALSProblem
-from tensorkrowch.decompositions.als.solvers import (
-    NonFiniteLocalSystemError,
-    NonFiniteSolutionError,
-)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  LocalSolveRecord,
                                                  SweepRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver)
+
+from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
+                                                         UpdatePolicy)
+from tensorkrowch.decompositions.als.environments import CoreUpdateSet
+from tensorkrowch.decompositions.als.problem import ALSProblem
+from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
+                                                     NonFiniteSolutionError)
 
 
 class ALSBackend(Protocol):
@@ -70,11 +82,11 @@ class ALSBackend(Protocol):
 class _ALSDriverResult:
     """Internal result returned from the generic ALS sweep driver."""
 
-    cores: Tuple[torch.Tensor, ...]
-    metrics: DecompositionMetrics
-    converged: bool
-    stop_reason: str
-    n_sweeps: int
+    cores: Tuple[torch.Tensor, ...]  # Raw cores in site order
+    metrics: DecompositionMetrics  # Structured measurements collected during execution
+    converged: bool  # Whether the normalized stop reason denotes convergence
+    stop_reason: str  # Normalized reason for stopping
+    n_sweeps: int  # Number of completed directional sweeps
 
 
 def _relative_objective_change(previous: SweepRecord,

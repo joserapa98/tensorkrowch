@@ -1,4 +1,23 @@
-"""Block selection, rank discovery and splitting for tensor rings."""
+"""
+This script contains:
+
+    Public classes:
+        * BlockSelection
+        * CentralBlockSelector
+        * PrescribedCentralBlockSelector
+        * RingRankEstimate
+        * RingRankEstimator
+        * BlockSplit
+
+    Internal functions:
+        * _normalize_positive_int
+        * _normalize_in_dim
+        * _normalize_rank_spec
+        * _pad_block_cores
+
+    Public functions:
+        * split_block_ttsvd
+"""
 
 from dataclasses import dataclass, field
 from math import ceil, prod, sqrt
@@ -67,15 +86,16 @@ def _normalize_rank_spec(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
 class BlockSelection:
     """Describes a contiguous block selected for a local ring operation."""
 
-    sites: Sequence[int]
-    in_dim: Sequence[int]
-    left_rank_cap: int
-    right_rank_cap: int
-    input_capacity: int
-    required_input_capacity: int
-    feasible: bool
-    reason: str
-    boundary: Optional[str] = None
+    sites: Sequence[int]  # Ordered zero-based sites represented by this object
+    in_dim: Sequence[int]  # Input dimension at each represented site
+    left_rank_cap: int  # Rank cap at the left block boundary
+    right_rank_cap: int  # Rank cap at the right block boundary
+    input_capacity: int  # Product of input dimensions in the selected block
+    required_input_capacity: int  # Input capacity required by the external ranks
+    feasible: bool  # Whether all requested capacities are satisfied
+    reason: str  # Reason for the update or selection outcome
+    boundary: Optional[str] = None  # Boundary touched by the selected block
+    # Sequence of blocks visited during selection
     growth: Sequence[Tuple[int, int]] = ()
 
     def __post_init__(self) -> None:
@@ -142,7 +162,30 @@ class CentralBlockSelector:
                center: Optional[int] = None,
                *,
                bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
-        """Grows a contiguous block until input capacity exceeds rank caps."""
+        """Grows a contiguous block until its input capacity exceeds the rank
+        product.
+
+        Parameters
+        ----------
+        provider : RingTargetProvider or sequence[int]
+            Provider declaring ``in_dim``, or the dimensions themselves.
+        rank : int or sequence[int]
+            Right-link caps of the complete ring. The scalar form shares one
+            cap.
+        center : int, optional
+            Initial site. Defaults to the middle of the allowed interval.
+        bounds : tuple[int, int], optional
+            Inclusive lower and upper site bounds. Defaults to the entire
+            chain.
+
+        Returns
+        -------
+        BlockSelection
+            Selected sites, growth history and capacity checks. Exhausting the
+            bounds returns an infeasible selection with a reason; it does not
+            discard the block already reached. No tensors are contracted during
+            selection.
+        """
         in_dim = _normalize_in_dim(provider)
         n_sites = len(in_dim)
         rank_spec = _normalize_rank_spec(rank, n_sites)
@@ -240,7 +283,13 @@ class PrescribedCentralBlockSelector(CentralBlockSelector):
                center: Optional[int] = None,
                *,
                bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
-        """Returns one internal site with its adjacent right-link caps."""
+        """Selects one prescribed center without adaptive block growth.
+
+        Uses the same arguments and returns as
+        :meth:`CentralBlockSelector.select`. The fixed-rank TT-to-TR path
+        deliberately opens one site, even if its input capacity does not
+        satisfy the adaptive selector's strict rank-product test.
+        """
         in_dim = _normalize_in_dim(provider)
         rank_spec = _normalize_rank_spec(rank, len(in_dim))
         if center is None:
@@ -269,13 +318,13 @@ class PrescribedCentralBlockSelector(CentralBlockSelector):
 class RingRankEstimate:
     """Stores a balanced ring-rank estimate and its cap diagnostics."""
 
-    left_rank: int
-    right_rank: int
-    cyclic_rank: int
-    cyclic_rank_estimate: float
-    rank_caps: Tuple[int, int, int]
-    feasible: bool
-    limitations: Sequence[str] = ()
+    left_rank: int  # Estimated left virtual rank
+    right_rank: int  # Estimated right virtual rank
+    cyclic_rank: int  # Estimated or prescribed closing rank
+    cyclic_rank_estimate: float  # Unclipped estimate of the cyclic rank
+    rank_caps: Tuple[int, int, int]  # Requested caps for the estimated virtual links
+    feasible: bool  # Whether all requested capacities are satisfied
+    limitations: Sequence[str] = ()  # Capacity constraints that remain unsatisfied
 
     def __post_init__(self) -> None:
         for name in ('left_rank', 'right_rank', 'cyclic_rank'):
@@ -309,7 +358,24 @@ class RingRankEstimator:
                  right_dim: int,
                  auxiliary_rank: int,
                  rank_caps: Sequence[int]) -> RingRankEstimate:
-        """Balances three ranks and reports every unsatisfied capacity."""
+        """Estimates three compatible local ring ranks under explicit caps.
+
+        Parameters
+        ----------
+        left_dim, right_dim : int
+            Positive external dimensions of the local target.
+        auxiliary_rank : int
+            Positive auxiliary capacity used by the rank-balancing heuristic.
+        rank_caps : sequence[int]
+            Three positive caps in left, right and cyclic order.
+
+        Returns
+        -------
+        RingRankEstimate
+            Estimated ranks and all unsatisfied capacity constraints. This is a
+            capacity heuristic, not a numerical rank determination from
+            singular values.
+        """
         left_dim = _normalize_positive_int(left_dim, 'left_dim')
         right_dim = _normalize_positive_int(right_dim, 'right_dim')
         auxiliary_rank = _normalize_positive_int(
@@ -382,13 +448,15 @@ class RingRankEstimator:
 class BlockSplit:
     """Stores a TT-SVD split of a supercore and optional explicit padding."""
 
-    cores: Sequence[torch.Tensor]
-    in_dim: Sequence[int]
-    effective_rank: Sequence[int]
-    rank: Sequence[int]
-    requested_rank: Optional[int]
-    padding: Sequence[int]
+    cores: Sequence[torch.Tensor]  # Raw cores in site order
+    in_dim: Sequence[int]  # Input dimension at each represented site
+    effective_rank: Sequence[int]  # Ranks retained before optional zero padding
+    rank: Sequence[int]  # Right-link ranks in core order
+    requested_rank: Optional[int]  # Requested shared rank or right-link rank profile
+    padding: Sequence[int]  # Number of zero channels added at each internal cut
+    # Structured measurements collected during execution
     metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
+    # Small structural and algorithm configuration metadata
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -481,12 +549,62 @@ def split_block_ttsvd(
         pad_rank: bool = False,
         collect_metrics: bool = False,
         out_device: Optional[Union[str, torch.device]] = None) -> BlockSplit:
-    """Splits a supercore while retaining its two external rank axes.
+    r"""Splits a supercore while retaining its two external rank axes.
 
     ``block`` has shape ``(left_rank, *in_dim, right_rank)``. The external
     ranks are fused into the first and last TT-SVD inputs and restored after
     the split. ``rank`` is one shared upper bound for all internal cuts.
     Padding to that bound is performed only when ``pad_rank=True``.
+
+    Parameters
+    ----------
+    block : torch.Tensor
+        Supercore with shape ``(left_rank, *in_dim, right_rank)``.
+    in_dim : sequence[int]
+        Input dimensions of the sites to recover, in their original order.
+    rank : int, optional
+        Maximum rank allowed at every link. At each SVD cut, at most this many
+        singular values are retained.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is ``<=
+        rtol``. It must be finite and in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in ``[0,
+        1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
+    renormalize : bool
+        Whether the TT-SVD subroutine extracts intermediate scales. Default is
+        False.
+    pad_rank : bool
+        Zero-pad internal links to the shared cap after truncation. Default is
+        False. Padding is recorded separately from the retained numerical
+        ranks.
+    collect_metrics : bool
+        Whether to retain SVD truncation and timing records. Default is False.
+    out_device : str or torch.device, optional
+        Device for the returned cores. Default is None, retaining the active
+        device.
+
+    Returns
+    -------
+    BlockSplit
+        Recovered cores, effective and stored ranks, optional padding and
+        metrics.
     """
     if not isinstance(block, torch.Tensor):
         raise TypeError('`block` should be torch.Tensor type')

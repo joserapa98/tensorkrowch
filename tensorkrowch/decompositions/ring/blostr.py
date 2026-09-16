@@ -1,27 +1,60 @@
-"""Experimental blockwise spectral tensor ring decomposition."""
+"""
+This script contains:
 
-import warnings
+    Internal classes:
+        * _FirstCoreFactorization
+
+    Public classes:
+        * BLOSTRLoopOpener
+
+    Internal functions:
+        * _normalize_rank
+        * _normalize_positive_int
+        * _normalize_non_negative_float
+        * _random_permutation
+        * _complex_dtype
+        * _flat_to_configuration
+        * _draw_slices
+        * _validate_slices
+        * _slice_matrix
+        * _balanced_order
+        * _selected_eigenspace
+        * _first_core
+        * _recover_tail
+        * _fit_blostr
+        * _materialize_target
+        * _mirror_cores
+        * _mirror_rank
+
+    Public functions:
+        * tr_blostr
+"""
+
 from contextlib import nullcontext
 from dataclasses import dataclass
 from math import isfinite, prod
-from typing import (Any, Mapping, Optional, Sequence, Tuple, Union)
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+import warnings
 
 import torch
 
+from tensorkrowch.utils import truncated_svd
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
-from tensorkrowch.decompositions.observers import (DecompositionEvent,
-    _normalize_verbosity, _resolve_observer)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   _normalize_verbosity,
+                                                   _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.sources import (ConfigurationBatch,
+                                                 as_tensor_source)
+
 from tensorkrowch.decompositions.ring.gauges import ExperimentalWarning
 from tensorkrowch.decompositions.ring.opening import (LoopOpenerCapabilities,
                                                       LoopOpening)
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 as_tensor_source)
-from tensorkrowch.utils import truncated_svd
 
 
 _Rank = Union[int, Sequence[int]]
@@ -32,9 +65,10 @@ _Device = Optional[Union[str, torch.device]]
 class _FirstCoreFactorization:
     """Stores the recovered first core and spectral diagnostics."""
 
-    core: torch.Tensor
+    core: torch.Tensor  # Raw local tensor with standard rank axes
+    # Interior configurations used for spectral slice selection
     slices: Tuple[Tuple[int, ...], ...]
-    errors: Tuple[ErrorRecord, ...]
+    errors: Tuple[ErrorRecord, ...]  # Optional spectral or reconstruction error records
 
 
 def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
@@ -562,6 +596,14 @@ class BLOSTRLoopOpener:
     target, rank, output device and ``return_info``. BLOSTR does not support
     fixed gauges; combine it with :class:`CompositeLoopOpener` and an ALS
     refiner when constraints are required.
+
+    Parameters
+    ----------
+    fit_options : mapping, optional
+        Spectral slicing, clustering and tail-truncation options. The enclosing
+        opener controls target, rank, output device and metric collection. This
+        experimental strategy requires uniform local TR ranks and no fixed
+        gauges.
     """
 
     _capabilities = LoopOpenerCapabilities(supports_blocks=True)
@@ -598,7 +640,38 @@ class BLOSTRLoopOpener:
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: Optional[Mapping[str, Any]] = None) -> LoopOpening:
-        """Recovers a free local ring and exposes its environment gauges."""
+        """Recovers a free local ring and exposes its environment gauges.
+
+        Parameters
+        ----------
+        target : torch.Tensor or TensorSource
+            Local scalar tensor with axes ``(left external, *in_dim, right
+            external)``, or a source representing that tensor.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        fixed_right : torch.Tensor, optional
+            Gauges to retain exactly. The selected strategy must support the
+            supplied constraints. Their shapes follow ordinary three-axis TR
+            cores.
+        orientation : {"right", "left"}
+            Construction direction. Returned cores always follow the original
+            target order, including when the algorithm uses a mirrored local
+            problem.
+        context : mapping, optional
+            Provider metadata and internal execution options, such as
+            initialization, generator and whether to collect local metrics.
+
+        Returns
+        -------
+        LoopOpening
+            Gauges and cores in original target order with optional local
+            metrics.
+        """
         if orientation not in ('right', 'left'):
             raise ValueError("`orientation` should be 'right' or 'left'")
         if context is None:
@@ -676,21 +749,20 @@ def tr_blostr(tensor: torch.Tensor,
 
     This implements the blockwise simultaneous-diagonalization construction
     from Algorithm 1 of *A Provably Efficient Method for Tensor Ring
-    Decomposition and Its Applications*, Han Chen, Sitan Chen and Anru R.
-    Zhang (2025), available in this `paper
-    <https://arxiv.org/abs/2512.01016>`_. TensorKrowch recovers the remaining
-    cores with its standard truncated-SVD semantics and can try several
-    reproducible spectral slices.
+    Decomposition and Its Applications*, Han Chen, Sitan Chen and Anru R. Zhang
+    (2025), available in this `paper <https://arxiv.org/abs/2512.01016>`_.
+    TensorKrowch recovers the remaining cores with its standard truncated-SVD
+    semantics and can try several reproducible spectral slices.
 
     The current implementation requires a common TR rank, passed either as a
     scalar or as an equal-valued sequence with one right-link rank per core.
     This is the uniform-rank setting covered by the spectral construction; a
     non-uniform sequence is rejected instead of returning an inaccurate
-    decomposition. The first and last input dimensions must be at least
-    ``rank ** 2``. BLOSTR is sensitive to slice degeneracy; failed attempts
-    produce explicit diagnostics rather than silent zero padding. Spectral
-    factors are complex-valued even when ``tensor`` is real, since valid
-    complex gauges may be required to represent the same real tensor.
+    decomposition. The first and last input dimensions must be at least ``rank
+    ** 2``. BLOSTR is sensitive to slice degeneracy; failed attempts produce
+    explicit diagnostics rather than silent zero padding. Spectral factors are
+    complex-valued even when ``tensor`` is real, since valid complex gauges may
+    be required to represent the same real tensor.
 
     Parameters
     ----------
@@ -710,13 +782,37 @@ def tr_blostr(tensor: torch.Tensor,
         Balanced clustering iterations and random restarts.
     generator : torch.Generator, optional
         Controls slice selection and balanced-clustering initialization.
-    cutoff, atol, rtol, cum_percentage : float, optional
-        Standard :func:`~tensorkrowch.truncated_svd` criteria used while
-        recovering all cores after the first spectral core.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is ``<=
+        rtol``. It must be finite and in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in ``[0,
+        1]``.
+
+        .. math::
+
+            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+            cum\_percentage
     out_device : str or torch.device, optional
         Final core storage device. ``None`` keeps the input device.
     return_info : bool
         If ``True``, returns ``(cores, info)``.
+
+    verbose : bool or int
+        Console level from 0 (silent) to 3 (final cores). Nonzero verbosity
+        also collects diagnostics; level 2 adds spectral-attempt errors and
+        timings.
 
     Returns
     -------

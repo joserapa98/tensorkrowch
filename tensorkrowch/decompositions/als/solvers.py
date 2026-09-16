@@ -1,4 +1,18 @@
-"""Stable local least-squares solvers used by ALS drivers."""
+"""
+This script contains:
+
+    Public classes:
+        * NonFiniteLocalSystemError
+        * NonFiniteSolutionError
+        * LeastSquaresSolver
+
+    Internal functions:
+        * _stable_norm
+        * _column_norms
+        * _column_scales
+        * _relative_error
+        * _solve_local_proposal
+"""
 
 from dataclasses import replace
 from math import isfinite, sqrt
@@ -7,6 +21,7 @@ from typing import Optional, Tuple, Union
 import torch
 
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
+
 from tensorkrowch.decompositions.als.convergence import UpdatePolicy
 
 
@@ -58,17 +73,17 @@ class LeastSquaresSolver:
     """Solve stable local least-squares systems with optional Tikhonov terms.
 
     The solver minimizes ``||A x - b||^2 + lambda ||x||^2``. Tikhonov
-    regularization is represented by augmented rows, never by normal
-    equations. Column scaling is then applied as a change of variables to the
-    complete augmented matrix, followed by one global scaling of both matrix
-    and right-hand side.
+    regularization is represented by augmented rows, never by normal equations.
+    Column scaling is then applied as a change of variables to the complete
+    augmented matrix, followed by one global scaling of both matrix and
+    right-hand side.
 
     Parameters
     ----------
     l2_reg : float, optional
-        Non-negative regularization coefficient. In ``"absolute"`` mode this
-        is ``lambda``. In ``"relative"`` mode it is multiplied by the square
-        of the RMS column norm of the original environment.
+        Non-negative regularization coefficient. In ``"absolute"`` mode this is
+        ``lambda``. In ``"relative"`` mode it is multiplied by the square of
+        the RMS column norm of the original environment.
     l2_reg_mode : {``"absolute"``, ``"relative"``}, optional
         Interpretation of ``l2_reg`` before any numerical scaling.
     rcond : float or None, optional
@@ -81,8 +96,8 @@ class LeastSquaresSolver:
         magnitude before solving.
     driver : str or None, optional
         Preferred :func:`torch.linalg.lstsq` driver. CPU failures are retried
-        with the remaining supported drivers and the effective driver is
-        stored in :class:`LocalSolveRecord`.
+        with the remaining supported drivers and the effective driver is stored
+        in :class:`LocalSolveRecord`.
     """
 
     _DRIVERS = ('gelsy', 'gelsd', 'gelss', 'gels')
@@ -234,13 +249,39 @@ class LeastSquaresSolver:
               regularization_scale: Optional[torch.Tensor] = None):
         """Solves one local system and optionally records its diagnostics.
 
-        ``target`` may be one- or two-dimensional. A one-dimensional target
-        produces a one-dimensional solution; multiple right-hand sides are
-        solved together. With ``return_record=False`` the second tuple element
-        is ``None`` and no residual or Python scalar diagnostics are computed.
-        ``regularization_scale`` rescales ``lambda`` when a caller has applied
-        the same global normalization to ``environment`` and ``target``; it is
-        intended for absolute regularization in normalized environment caches.
+        A vector target produces a vector solution. Multiple right-hand sides
+        share the same factorization. Diagnostics describe the original local
+        system before column and system scaling; records are detached, while
+        the solution retains its PyTorch autograd graph. No device fallback is
+        performed.
+
+        Parameters
+        ----------
+        environment : torch.Tensor
+            Real or complex design matrix with shape ``(n_rows,
+            n_parameters)``.
+        target : torch.Tensor
+            Right-hand side with shape ``(n_rows,)`` or ``(n_rows,
+            n_targets)``, sharing the matrix device and dtype.
+        site : int or tuple[int], optional
+            Site or block identifier attached to the local record.
+        sweep : int, optional
+            Zero-based sweep identifier attached to the local record.
+        return_record : bool
+            Whether to calculate residuals and create a LocalSolveRecord. With
+            False, these diagnostic calculations are skipped. Default is True.
+        regularization_scale : torch.Tensor, optional
+            Non-negative scalar factor for the regularization coefficient when
+            a caller has normalized both the design and target. Environment
+            caches use it to preserve absolute Tikhonov regularization under
+            that normalization.
+
+        Returns
+        -------
+        tuple[torch.Tensor, LocalSolveRecord or None]
+            Solution and optional diagnostics, including the effective
+            least-squares driver. CPU driver retries remain on CPU; accelerator
+            errors propagate.
         """
         if not isinstance(environment, torch.Tensor):
             raise TypeError('`environment` should be torch.Tensor type')

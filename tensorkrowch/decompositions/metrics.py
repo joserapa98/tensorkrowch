@@ -6,6 +6,12 @@ This script contains:
         * TruncationRecord
         * TimingRecord
         * FidelityRecord
+        * LocalSolveRecord
+        * GaugeRecord
+        * SweepRecord
+        * EvaluationStats
+        * InputFitRecord
+        * RangeProjectionRecord
 
     Class for decomposition metrics:
         * DecompositionMetrics
@@ -291,22 +297,25 @@ class TruncationRecord:
 class LocalSolveRecord:
     """Stores diagnostics for one local least-squares solve."""
 
-    environment_shape: Tuple[int, int]
-    target_shape: Tuple[int, ...]
-    driver: str
-    abs_residual: torch.Tensor
-    rel_residual: torch.Tensor
-    target_norm: torch.Tensor
-    l2_reg: float = 0.0
+    environment_shape: Tuple[int, int]  # Shape of the original local design matrix
+    target_shape: Tuple[int, ...]  # Shape of the original right-hand side
+    driver: str  # Effective least-squares driver
+    abs_residual: torch.Tensor  # Norm of the local residual
+    rel_residual: torch.Tensor  # Residual norm divided by the target norm
+    target_norm: torch.Tensor  # Norm used to normalize the local residual
+    l2_reg: float = 0.0  # Configured regularization coefficient
+    # Regularization after relative or environment rescaling
     effective_l2_reg: torch.Tensor = 0.0
+    # Absolute or relative interpretation of regularization
     l2_reg_mode: str = 'absolute'
-    column_scaling: bool = False
-    system_scaling: bool = False
-    system_scale: torch.Tensor = 1.0
-    site: Optional[Any] = None
-    sweep: Optional[int] = None
+    column_scaling: bool = False  # Whether columns were balanced
+    system_scaling: bool = False  # Whether the augmented system was scaled
+    system_scale: torch.Tensor = 1.0  # Global divisor applied to the augmented system
+    site: Optional[Any] = None  # Optional zero-based active site
+    sweep: Optional[int] = None  # Zero-based directional sweep index
+    # Whether the recorded proposal matches the current design
     sampling_exact: Optional[bool] = None
-    sample_generation: Optional[int] = None
+    sample_generation: Optional[int] = None  # Generation of the sampled rows
 
     def __post_init__(self) -> None:
         environment_shape = tuple(self.environment_shape)
@@ -477,17 +486,18 @@ class RangeProjectionRecord:
 class GaugeRecord:
     """Stores rank, conditioning and cancellation diagnostics for one gauge."""
 
-    orientation: str
-    shape: Tuple[int, int]
-    numerical_rank: int
-    cancellable_rank: int
-    condition_number: torch.Tensor
-    cancellation_error: torch.Tensor
-    projective: bool
-    inverse_method: str
-    tolerance: float
+    orientation: str  # Left or right interpretation of the gauge axes
+    shape: Tuple[int, int]  # Shape of the original matricized gauge
+    numerical_rank: int  # Numerical rank at the specified tolerance
+    cancellable_rank: int  # Number of columns required for exact cancellation
+    condition_number: torch.Tensor  # Estimated spectral condition number
+    cancellation_error: torch.Tensor  # Relative error of the directional cancellation
+    projective: bool  # Whether the map cancels only a projected subspace
+    inverse_method: str  # Effective method used to construct the directional dual
+    tolerance: float  # Configured cancellation-error tolerance
+    # Absolute singular-value threshold used for numerical rank
     rank_tolerance: torch.Tensor
-    site: Optional[int] = None
+    site: Optional[int] = None  # Optional zero-based active site
 
     def __post_init__(self) -> None:
         if self.orientation not in ('left', 'right'):
@@ -546,13 +556,16 @@ class GaugeRecord:
 class SweepRecord:
     """Stores objective metrics measured once at the end of an ALS sweep."""
 
-    sweep: int
+    sweep: int  # Zero-based directional sweep index
+    # Absolute fixed-objective error at the end of the sweep
     abs_error: Optional[torch.Tensor] = None
+    # Relative fixed-objective error at the end of the sweep
     rel_error: Optional[torch.Tensor] = None
+    # Relative change since the preceding complete sweep
     rel_change: Optional[torch.Tensor] = None
-    elapsed: Optional[float] = None
-    sample_generation: Optional[int] = None
-    stop_reason: Optional[str] = None
+    elapsed: Optional[float] = None  # Elapsed wall-clock time in seconds
+    sample_generation: Optional[int] = None  # Generation of the sampled rows
+    stop_reason: Optional[str] = None  # Normalized reason for stopping
 
     def __post_init__(self) -> None:
         if isinstance(self.sweep, bool) or \
@@ -659,8 +672,10 @@ class EvaluationStats:
 class FidelityRecord:
     """Stores a phase-aware normalized overlap and its fidelity."""
 
+    # Complex normalized overlap with its original phase
     normalized_overlap: torch.Tensor
-    error: Optional[ErrorRecord] = None
+    error: Optional[ErrorRecord] = None  # Optional final reconstruction error
+    # Squared magnitude of the normalized overlap
     fidelity: torch.Tensor = field(init=False)
 
     def __post_init__(self) -> None:

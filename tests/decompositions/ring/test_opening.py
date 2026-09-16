@@ -46,7 +46,7 @@ class TestLoopOpeningContracts:  # MARK: TestLoopOpeningContracts
         with pytest.raises(ValueError, match='fixed right'):
             capabilities.require(
                 fixed_left=False, fixed_right=True, block_size=1)
-        with pytest.raises(ValueError, match='physical blocks'):
+        with pytest.raises(ValueError, match='input blocks'):
             capabilities.require(
                 fixed_left=False, fixed_right=False, block_size=2)
 

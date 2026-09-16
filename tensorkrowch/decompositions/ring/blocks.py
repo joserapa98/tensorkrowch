@@ -25,6 +25,7 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
 from tensorkrowch.decompositions.svd.tt import TTSVD
 
@@ -614,8 +615,16 @@ def split_block_ttsvd(
             '`block` should have two external rank axes around `in_dim`')
     if tuple(block.shape[1:-1]) != in_dim:
         raise ValueError('The inner axes of `block` should match `in_dim`')
-    if rank is not None:
-        rank = _normalize_positive_int(rank, 'rank')
+    if block.shape[0] < 1 or block.shape[-1] < 1:
+        raise ValueError('The external ranks of `block` should be positive')
+    truncation = _TruncationSpec(
+        rank=rank,
+        cutoff=cutoff,
+        atol=atol,
+        rtol=rtol,
+        cum_percentage=cum_percentage)
+    if not isinstance(renormalize, bool):
+        raise TypeError('`renormalize` should be bool type')
     if not isinstance(pad_rank, bool):
         raise TypeError('`pad_rank` should be bool type')
     if pad_rank and rank is None:
@@ -649,12 +658,8 @@ def split_block_ttsvd(
         *in_dim[1:-1],
         in_dim[-1] * right_rank)
     tensor = block.reshape(fused_in_dim)
-    result = TTSVD(tensor, out_device=out_device).fit(
-        rank=rank,
-        cutoff=cutoff,
-        atol=atol,
-        rtol=rtol,
-        cum_percentage=cum_percentage,
+    result = TTSVD(tensor, out_device=out_device)._fit_validated(
+        truncation=truncation,
         renormalize=renormalize,
         collect_metrics=collect_metrics)
 

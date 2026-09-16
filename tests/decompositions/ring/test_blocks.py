@@ -206,3 +206,23 @@ class TestBlockTTSVD:  # MARK: TestBlockTTSVD
                 torch.randn(1, 2, 2, 1),
                 in_dim=(2, 2),
                 pad_rank=True)
+
+    @pytest.mark.parametrize('in_dim', [(2,), (2, 2)])
+    @pytest.mark.parametrize('options, error', [
+        ({'cutoff': -1.0}, ValueError),
+        ({'atol': float('nan')}, ValueError),
+        ({'rtol': 1.1}, ValueError),
+        ({'cum_percentage': -0.1}, ValueError),
+        ({'rank': True}, TypeError),
+        ({'renormalize': 1}, TypeError),
+    ])
+    def test_split_validates_options_even_without_internal_cuts(
+            self, in_dim, options, error):
+        block = torch.ones(1, *in_dim, 1)
+        with pytest.raises(error):
+            split_block_ttsvd(block, in_dim=in_dim, **options)
+
+    @pytest.mark.parametrize('in_dim', [(2,), (2, 2)])
+    def test_split_rejects_empty_external_ranks(self, in_dim):
+        with pytest.raises(ValueError, match='external ranks'):
+            split_block_ttsvd(torch.empty(0, *in_dim, 1), in_dim=in_dim)

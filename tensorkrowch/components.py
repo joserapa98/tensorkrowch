@@ -4960,6 +4960,11 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
                 if node._virtual and ('virtual_result' not in node._name):
+                    # TODO: Clear successors before skipping persistent virtual
+                    # nodes. Their cached operations can point to resultant nodes
+                    # deleted below, so a later contraction may reuse detached
+                    # children. Add regression coverage for user virtual nodes and
+                    # reserved virtual memories before changing this behaviour.
                     # Virtual nodes named "virtual_result" are nodes that are
                     # required in some situations during contraction, like
                     # ParamStackNodes

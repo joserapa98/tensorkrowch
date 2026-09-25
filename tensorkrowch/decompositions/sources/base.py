@@ -45,13 +45,17 @@ _INTEGER_DTYPES = (
 
 @dataclass(frozen=True)
 class ConfigurationBatch:
-    """Batch of discrete indices or physical coordinates.
+    """Batch of discrete indices or possibly continuous coordinates.
 
     ``values`` can be a packed tensor whose first two dimensions are ``(batch,
-    sites)``, or a sequence containing one tensor per site. The sequence form
-    permits different coordinate shapes at different sites. ``kind`` applies to
-    the complete batch, so discrete indices and physical coordinates cannot be
-    mixed implicitly.
+    n_sites)``, or a sequence containing one tensor per site. For discrete
+    ``kind="indices"``, each site holds one integer that selects a slice of a
+    tensor or an input to a discrete function. For ``kind="coordinates"``, each
+    site holds a physical value passed to a callable, often to evaluate a
+    continuous function. Coordinates may also be vectors: a packed batch then
+    has shape ``(batch, n_sites, *coordinate_shape)``, while the sequence form
+    permits different coordinate shapes at different sites. ``kind`` applies
+    to the entire batch; it does not mix indices and coordinates implicitly.
 
     Parameters
     ----------
@@ -60,8 +64,9 @@ class ConfigurationBatch:
         heterogeneous batch must share its leading batch dimension, device and
         dtype.
     kind : {``"indices"``, ``"coordinates"``}
-        Semantic type of every value in the batch. Discrete indices must be
-        scalar integers at every site.
+        Meaning of the values at every site. ``"indices"`` is the default and
+        requires scalar integers. ``"coordinates"`` accepts physical values,
+        including continuous or vector-valued coordinates for callables.
     """
 
     values: ConfigurationValues  # Values in original configuration or observation order
@@ -99,8 +104,6 @@ class ConfigurationBatch:
             raise TypeError('Every site value should be a torch.Tensor')
 
         first = site_values[0]
-        if first.ndim < 1:
-            raise ValueError('Every site value should have a batch dimension')
         for value in site_values:
             if value.ndim < 1:
                 raise ValueError(
@@ -199,11 +202,12 @@ class TensorSource(Protocol):
     """Provides values for a fixed tensor or function without imposing an
     algorithm.
 
-    ``in_dim`` declares the discrete input dimensions. ``output_shape``
-    describes the tensor returned after each configuration; it is ``()`` for
-    scalar sources and may be ``None`` until a callable is first evaluated.
-    ``dtype`` can likewise be inferred on first evaluation. ``device`` is the
-    effective evaluation device.
+    ``in_dim`` declares one input dimension per site. It bounds discrete
+    indices but does not bound continuous coordinates passed to a callable.
+    ``out_shape`` describes the tensor returned after each configuration; it
+    is ``()`` for scalar sources and may be ``None`` until a callable is first
+    evaluated. ``dtype`` can likewise be inferred on first evaluation.
+    ``device`` is the effective evaluation device.
 
     ALS and sketching consume the same protocol. A source does not define a
     loss, choose sampled rows or interpret absent observations. Implementations
@@ -216,7 +220,7 @@ class TensorSource(Protocol):
         """Discrete input dimension at every site."""
 
     @property
-    def output_shape(self) -> Optional[Tuple[int, ...]]:
+    def out_shape(self) -> Optional[Tuple[int, ...]]:
         """Shape returned after the leading configuration batch."""
 
     @property
@@ -239,7 +243,7 @@ class TensorSource(Protocol):
         Returns
         -------
         torch.Tensor
-            Values with shape ``(batch, *output_shape)`` on the source device
+            Values with shape ``(batch, *out_shape)`` on the source device
             and with its declared or inferred dtype. Evaluation retains the
             source's autograd behavior; diagnostic counters do not change the
             returned values.
@@ -248,30 +252,47 @@ class TensorSource(Protocol):
 
 @runtime_checkable
 class FiberTensorSource(TensorSource, Protocol):
-    """Optional source capability for evaluating one varying site."""
+    """Optional source capability for evaluating one varying input site.
+
+    A fiber fixes the input at every site except one. For each configuration
+    in a batch, :meth:`fiber` replaces that site's value with every candidate
+    value and evaluates the source on all resulting configurations.
+    """
 
     def fiber(self,
               configurations: ConfigurationBatch,
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates one varying input site for every base configuration.
+        """Evaluates a source while varying one site of each configuration.
+
+        For example, if a scalar source represents ``f(i, j)`` and a base
+        configuration is ``(i=1, j=0)``, setting ``site=1`` and
+        ``values=[0, 1, 2]`` returns ``[f(1, 0), f(1, 1), f(1, 2)]`` for that
+        configuration. Other configurations in the batch are expanded in the
+        same way, without changing their order.
 
         Parameters
         ----------
         configurations : ConfigurationBatch
-            Base configurations defining all sites except the varying site.
+            Base configurations in batch order. Their values at sites other
+            than ``site`` remain fixed; the value at ``site`` is replaced.
         site : int
-            Zero-based input site replaced by the fiber values.
+            Zero-based input site whose value varies.
         values : torch.Tensor, optional
-            Candidate indices or coordinates, with the candidate axis first. If
-            omitted, discrete sources enumerate ``range(in_dim[site])``.
-            Coordinate fibers require explicit values.
+            Candidate values for the selected site. Discrete indices have shape
+            ``(n_values,)``; coordinates have shape
+            ``(n_values, *site_shape)``. If omitted for discrete indices, the
+            source evaluates every index in ``range(in_dim[site])``. Coordinate
+            fibers require explicit values because there is no finite default
+            grid for a continuous domain.
 
         Returns
         -------
         torch.Tensor
-            Shape ``(batch, n_values, *output_shape)``. The base batch and
-            candidate axis are independent and preserve their original orders.
+            Values with shape ``(batch, n_values, *out_shape)``. The first
+            axis follows the input configurations; the second follows
+            ``values`` (or increasing discrete indices when omitted). A scalar
+            source has ``out_shape=()`` and returns ``(batch, n_values)``.
         """
 
 

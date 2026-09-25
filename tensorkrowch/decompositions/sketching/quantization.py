@@ -802,7 +802,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             *,
             source_space: str = 'physical',
             source_layout: Optional[QuantizedLayout] = None,
-            output_shape: Optional[Sequence[int]] = None,
+            out_shape: Optional[Sequence[int]] = None,
             dtype: Optional[torch.dtype] = None,
             device: Optional[Union[str, torch.device]] = None,
             computational_grid: str = 'endpoints',
@@ -827,12 +827,12 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         out_of_domain = _out_of_domain(out_of_domain)
         if dtype is not None and not isinstance(dtype, torch.dtype):
             raise TypeError('`dtype` should be torch.dtype type or None')
-        if output_shape is not None:
-            output_shape = tuple(output_shape)
+        if out_shape is not None:
+            out_shape = tuple(out_shape)
             if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-                   for dim in output_shape):
+                   for dim in out_shape):
                 raise ValueError(
-                    '`output_shape` should contain positive integers')
+                    '`out_shape` should contain positive integers')
 
         is_source = isinstance(source, TensorSource)
         if not is_source and not callable(source):
@@ -869,8 +869,8 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             if dtype is not None and source.dtype is not None and \
                     source.dtype != dtype:
                 raise ValueError('`source` and `dtype` should match')
-            if output_shape is None:
-                output_shape = source.output_shape
+            if out_shape is None:
+                out_shape = source.out_shape
         else:
             resolved_device = torch.device('cpu' if device is None else device)
             resolved_dtype = dtype
@@ -885,7 +885,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         self.out_of_domain = out_of_domain
         self._device = resolved_device
         self._dtype = resolved_dtype
-        self._output_shape = output_shape
+        self._out_shape = out_shape
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -893,9 +893,9 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         return self.layout.in_dim
 
     @property
-    def output_shape(self) -> Optional[Tuple[int, ...]]:
+    def out_shape(self) -> Optional[Tuple[int, ...]]:
         """Declared or inferred physical-source output shape."""
-        return self._output_shape
+        return self._out_shape
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
@@ -966,10 +966,10 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
                 '`source` should preserve the leading batch dimension')
         if not (values.is_floating_point() or values.is_complex()):
             raise TypeError('`source` output should be floating or complex')
-        output_shape = tuple(values.shape[1:])
-        if self._output_shape is None:
-            self._output_shape = output_shape
-        elif output_shape != self._output_shape:
+        out_shape = tuple(values.shape[1:])
+        if self._out_shape is None:
+            self._out_shape = out_shape
+        elif out_shape != self._out_shape:
             raise ValueError('`source` output shape changed between calls')
         if self._dtype is None:
             self._dtype = values.dtype

@@ -87,7 +87,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 1], [1, 2]]))
 
-        assert source.output_shape == (4,)
+        assert source.out_shape == (4,)
         assert torch.equal(source.evaluate(configurations),
                            torch.stack((tensor[0, 1], tensor[1, 2])))
         assert source.fiber(configurations, site=0).shape == (2, 2, 4)
@@ -124,7 +124,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
             lambda x: torch.stack((x[:, 0], x[:, 1]), dim=1).to(
                 torch.complex128),
             in_dim=(2, 3),
-            output_shape=None,
+            out_shape=None,
             dtype=None)
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 1], [1, 2]]))
@@ -132,7 +132,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         result = source.evaluate(configurations)
 
         assert result.shape == (2, 2)
-        assert source.output_shape == (2,)
+        assert source.out_shape == (2,)
         assert source.dtype == torch.complex128
 
     def test_callable_receives_heterogeneous_coordinates(self):

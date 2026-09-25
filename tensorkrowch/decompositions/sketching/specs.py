@@ -352,35 +352,35 @@ def _default_output_positions(n_input_sites: int,
 class _OutputSpec:
     """Maps tensor-output axes to ordered sites in the decomposed chain."""
 
-    output_shape: Sequence[int]
+    out_shape: Sequence[int]
     n_input_sites: int
     positions: Sequence[int] = ()
 
     def __post_init__(self) -> None:
         n_input_sites = _normalize_n_sites(self.n_input_sites)
-        if isinstance(self.output_shape, (str, bytes)):
-            raise TypeError('`output_shape` should be a sequence of integers')
+        if isinstance(self.out_shape, (str, bytes)):
+            raise TypeError('`out_shape` should be a sequence of integers')
         try:
-            output_shape = tuple(self.output_shape)
+            out_shape = tuple(self.out_shape)
         except TypeError as exc:
             raise TypeError(
-                '`output_shape` should be a sequence of integers') from exc
+                '`out_shape` should be a sequence of integers') from exc
         if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-               for dim in output_shape):
+               for dim in out_shape):
             raise ValueError(
-                '`output_shape` should contain positive integers')
+                '`out_shape` should contain positive integers')
         try:
             positions = tuple(self.positions)
         except TypeError as exc:
             raise TypeError('`positions` should be a sequence of integers') \
                 from exc
-        if len(positions) != len(output_shape):
+        if len(positions) != len(out_shape):
             raise ValueError(
                 '`positions` should contain one site per output axis')
         if any(isinstance(position, bool) or not isinstance(position, int)
                for position in positions):
             raise TypeError('Output positions should be integers')
-        n_sites = n_input_sites + len(output_shape)
+        n_sites = n_input_sites + len(out_shape)
         if any(position < 0 or position >= n_sites for position in positions):
             raise ValueError(
                 f'Output positions should be between 0 and {n_sites - 1}')
@@ -388,7 +388,7 @@ class _OutputSpec:
                 positions, positions[1:])):
             raise ValueError(
                 'Output positions should be distinct and strictly increasing')
-        object.__setattr__(self, 'output_shape', output_shape)
+        object.__setattr__(self, 'out_shape', out_shape)
         object.__setattr__(self, 'n_input_sites', n_input_sites)
         object.__setattr__(self, 'positions', positions)
 
@@ -409,11 +409,11 @@ class _OutputSpec:
         if not torch.isfinite(values).all():
             raise ValueError('Function output should be finite')
         n_input_sites = _normalize_n_sites(n_input_sites)
-        output_shape = tuple(values.shape[1:])
-        if output_shape == (1,):
-            output_shape = ()
+        out_shape = tuple(values.shape[1:])
+        if out_shape == (1,):
+            out_shape = ()
 
-        n_output_sites = len(output_shape)
+        n_output_sites = len(out_shape)
         if not n_output_sites:
             if out_position not in (None, (), []):
                 raise ValueError(
@@ -440,12 +440,12 @@ class _OutputSpec:
                 raise TypeError(
                     '`out_position` should be int or a sequence of ints') \
                     from exc
-        return cls(output_shape, n_input_sites, positions)
+        return cls(out_shape, n_input_sites, positions)
 
     @property
     def n_output_sites(self) -> int:
         """Number of tensor-output axes represented as sites."""
-        return len(self.output_shape)
+        return len(self.out_shape)
 
     @property
     def n_sites(self) -> int:
@@ -455,12 +455,12 @@ class _OutputSpec:
     @property
     def scalar(self) -> bool:
         """Whether the source has no explicit tensor-output axes."""
-        return not self.output_shape
+        return not self.out_shape
 
     @property
     def flat_dim(self) -> int:
         """Flattened row-major output dimension."""
-        return prod(self.output_shape) if self.output_shape else 1
+        return prod(self.out_shape) if self.out_shape else 1
 
     @property
     def layout(self) -> Tuple[Tuple[str, int], ...]:
@@ -496,7 +496,7 @@ class _OutputSpec:
                 raise ValueError(
                     'Scalar output should have shape (batch,) or (batch, 1)')
         else:
-            expected_tail = self.output_shape
+            expected_tail = self.out_shape
             if (values.ndim != (1 + len(expected_tail))) or \
                     (tuple(values.shape[1:]) != expected_tail):
                 raise ValueError(
@@ -520,13 +520,13 @@ class _OutputSpec:
                 torch.uint8):
             raise TypeError('`indices` should contain integers')
         indices = indices.to(dtype=torch.long)
-        for axis, dim in enumerate(self.output_shape):
+        for axis, dim in enumerate(self.out_shape):
             if torch.any(indices[:, axis] < 0) or \
                     torch.any(indices[:, axis] >= dim):
                 raise ValueError(
                     f'Output indices at axis {axis} are out of bounds')
         strides = indices.new_tensor([
-            prod(self.output_shape[axis + 1:])
+            prod(self.out_shape[axis + 1:])
             for axis in range(self.n_output_sites)])
         return (indices * strides).sum(dim=1)
 
@@ -538,7 +538,7 @@ class _OutputSpec:
         remainder = labels
         axes = [None] * self.n_output_sites
         for axis in range(self.n_output_sites - 1, -1, -1):
-            dim = self.output_shape[axis]
+            dim = self.out_shape[axis]
             axes[axis] = torch.remainder(remainder, dim)
             remainder = torch.div(remainder, dim, rounding_mode='floor')
         return torch.stack(axes, dim=1)
@@ -655,7 +655,7 @@ class _OutputSpec:
                 'Embeddings and output layout should have matching inputs')
         return tuple(
             embeddings.in_dim[axis] if kind == 'input'
-            else self.output_shape[axis]
+            else self.out_shape[axis]
             for kind, axis in self.layout)
 
     def embed_site(self,
@@ -675,9 +675,9 @@ class _OutputSpec:
                 torch.uint8):
             raise TypeError('Output-site values should be integer indices')
         if torch.any(values < 0) or \
-                torch.any(values >= self.output_shape[axis]):
+                torch.any(values >= self.out_shape[axis]):
             raise ValueError(f'Output indices at axis {axis} are out of bounds')
-        embedded = basis(values, dim=self.output_shape[axis])
+        embedded = basis(values, dim=self.out_shape[axis])
         return embedded if dtype is None else embedded.to(dtype=dtype)
 
 

@@ -352,7 +352,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         source = tk.decompositions.CallableTensorSource(
             lambda indices: indices.sum(dim=1, keepdim=True).to(torch.float64),
             in_dim=(2, 2),
-            output_shape=(1,),
+            out_shape=(1,),
             dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
             torch.ones(1, 1), n_input_sites=2)
@@ -372,7 +372,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         source = tk.decompositions.CallableTensorSource(
             function,
             in_dim=(2, 2),
-            output_shape=(2, 3),
+            out_shape=(2, 3),
             dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
             torch.ones(1, 2, 3),

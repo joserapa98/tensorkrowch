@@ -195,9 +195,9 @@ class RecursiveSketching(ABC):
                 outputs.n_input_sites != domains.n_sites:
             raise ValueError(
                 'Source, domains, embeddings and outputs should share sites')
-        if source.output_shape is not None:
-            source_output = tuple(source.output_shape)
-            expected_output = outputs.output_shape if not outputs.scalar else ()
+        if source.out_shape is not None:
+            source_output = tuple(source.out_shape)
+            expected_output = outputs.out_shape if not outputs.scalar else ()
             if source_output == (1,) and outputs.scalar:
                 source_output = ()
             if source_output != expected_output:
@@ -249,7 +249,7 @@ class RecursiveSketching(ABC):
                     self.embeddings.matrix(axis)))
             else:
                 fitters.append(BasisFitter(
-                    in_dim=self.outputs.output_shape[axis]))
+                    in_dim=self.outputs.out_shape[axis]))
         return tuple(fitters)
 
     def _new_context(
@@ -399,7 +399,7 @@ class RecursiveSketching(ABC):
         if kind == 'input':
             return self.domains.for_site(source_axis)
         return torch.arange(
-            self.outputs.output_shape[source_axis],
+            self.outputs.out_shape[source_axis],
             device=self.source.device)
 
     def _required_input_queries(

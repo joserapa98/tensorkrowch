@@ -256,7 +256,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
             layout,
             coordinate_map,
             domain,
-            output_shape=(2,),
+            out_shape=(2,),
             dtype=torch.float32)
         indices = torch.tensor([[0, 0, 0], [1, 2, 3], [3, 1, 2]])
         digits = layout.encode_indices(indices)
@@ -267,7 +267,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
             indices, layout.grid_size, domain)
 
         assert torch.equal(result, function(physical))
-        assert adapter.output_shape == (2,)
+        assert adapter.out_shape == (2,)
 
     def test_indexed_tensor_source_uses_decoded_variable_indices(self):
         layout = tk.decompositions.QuantizedLayout(

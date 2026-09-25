@@ -47,7 +47,7 @@ class ObservedEntries:
     indices : torch.Tensor
         Global integer multi-indices with shape ``(observations, sites)``.
     values : torch.Tensor
-        Observed target values with shape ``(observations, *output_shape)``.
+        Observed target values with shape ``(observations, *out_shape)``.
     in_dim : sequence of int
         Complete discrete input dimension.
     weights : torch.Tensor, optional
@@ -146,7 +146,7 @@ class ObservedEntries:
                 0, selected_tensor))
 
     @property
-    def output_shape(self) -> Tuple[int, ...]:
+    def out_shape(self) -> Tuple[int, ...]:
         """Shape stored at every observed index."""
         return tuple(self.values.shape[1:])
 
@@ -177,7 +177,7 @@ class ObservedEntries:
         residual = approximation - self.values
         target = self.values
         if self.weights is not None:
-            shape = (self.weights.shape[0],) + (1,) * len(self.output_shape)
+            shape = (self.weights.shape[0],) + (1,) * len(self.out_shape)
             weights = self.weights.reshape(shape)
             residual = residual * weights
             target = target * weights
@@ -223,9 +223,9 @@ class ALSProblem:
                 raise ValueError(
                     'Source and observations should have matching input '
                     'dimensions')
-            if (self.source.output_shape is not None) and \
-                    (self.source.output_shape !=
-                     self.observations.output_shape):
+            if (self.source.out_shape is not None) and \
+                    (self.source.out_shape !=
+                     self.observations.out_shape):
                 raise ValueError(
                     'Source and observations should have matching output shapes')
 
@@ -235,11 +235,11 @@ class ALSProblem:
                     'Completion weights belong to `ObservedEntries`')
             if not isinstance(self.weights, torch.Tensor):
                 raise TypeError('`weights` should be torch.Tensor type')
-            output_shape = self.source.output_shape
-            if output_shape is None:
+            out_shape = self.source.out_shape
+            if out_shape is None:
                 raise ValueError(
                     'Source output shape is required for global weights')
-            expected_shape = (*self.source.in_dim, *output_shape)
+            expected_shape = (*self.source.in_dim, *out_shape)
             if self.weights.shape != expected_shape:
                 raise ValueError(
                     '`weights` should match the complete source tensor shape')
@@ -260,11 +260,11 @@ class ALSProblem:
         return self.observations.in_dim
 
     @property
-    def output_shape(self) -> Optional[Tuple[int, ...]]:
+    def out_shape(self) -> Optional[Tuple[int, ...]]:
         """Target output shape when already known."""
         if self.source is not None:
-            return self.source.output_shape
-        return self.observations.output_shape
+            return self.source.out_shape
+        return self.observations.out_shape
 
     @property
     def has_fixed_objective(self) -> bool:

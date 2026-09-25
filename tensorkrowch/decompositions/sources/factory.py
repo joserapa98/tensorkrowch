@@ -24,7 +24,7 @@ SourceLike = Union[TensorSource, TTDecomposition, torch.Tensor, Callable]
 def as_tensor_source(
         source: SourceLike,
         in_dim: Optional[Sequence[int]] = None,
-        output_shape: Optional[Sequence[int]] = (),
+        out_shape: Optional[Sequence[int]] = (),
         dtype: Optional[torch.dtype] = None,
         device: Union[str, torch.device] = 'cpu',
         batch_size: Optional[int] = None) -> TensorSource:
@@ -44,7 +44,7 @@ def as_tensor_source(
     in_dim : sequence[int], optional
         Discrete input dimensions. Required for a callable. For a dense tensor,
         they identify the leading input axes; remaining axes form its output.
-    output_shape : sequence[int], optional
+    out_shape : sequence[int], optional
         Callable output shape after the batch axis. The default ``()`` denotes
         a scalar; ``None`` infers the shape on first evaluation.
     dtype : torch.dtype, optional
@@ -78,7 +78,7 @@ def as_tensor_source(
         return CallableTensorSource(
             source,
             in_dim=in_dim,
-            output_shape=output_shape,
+            out_shape=out_shape,
             dtype=dtype,
             device=device,
             batch_size=batch_size)

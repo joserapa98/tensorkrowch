@@ -562,7 +562,7 @@ def _materialize_target(target,
     source = as_tensor_source(
         target,
         in_dim=context.get('in_dim'),
-        output_shape=(),
+        out_shape=(),
         dtype=context.get('dtype'),
         device=context.get('device', 'cpu'),
         batch_size=context.get('batch_size'))

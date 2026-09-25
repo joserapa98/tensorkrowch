@@ -22,7 +22,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
     Packed configurations are passed to ``function`` as a tensor. A
     heterogeneous configuration batch is passed as a tuple containing one
     tensor per site. The callable must preserve the leading configuration batch
-    and return shape ``(batch, *output_shape)``.
+    and return shape ``(batch, *out_shape)``.
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
     in_dim : sequence of int
         Discrete input dimension at every site. These dimensions also provide
         the default grid for discrete fibers.
-    output_shape : sequence of int or None, optional
+    out_shape : sequence of int or None, optional
         Declared function output shape. The default ``()`` denotes a scalar.
         ``None`` infers the shape from the first non-empty evaluation.
     dtype : torch.dtype or None, optional
@@ -45,29 +45,29 @@ class CallableTensorSource(_SourceEvaluationTracker):
     def __init__(self,
                  function: Callable,
                  in_dim: Sequence[int],
-                 output_shape: Optional[Sequence[int]] = (),
+                 out_shape: Optional[Sequence[int]] = (),
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
                  batch_size: Optional[int] = None) -> None:
         self._initialize_evaluation_stats()
         if not callable(function):
             raise TypeError('`function` should be callable')
-        if output_shape is None:
-            normalized_output_shape = None
+        if out_shape is None:
+            normalized_out_shape = None
         else:
-            if isinstance(output_shape, (str, bytes)):
+            if isinstance(out_shape, (str, bytes)):
                 raise TypeError(
-                    '`output_shape` should be a sequence of integers or None')
+                    '`out_shape` should be a sequence of integers or None')
             try:
-                normalized_output_shape = tuple(output_shape)
+                normalized_out_shape = tuple(out_shape)
             except TypeError as exc:
                 raise TypeError(
-                    '`output_shape` should be a sequence of integers or None') \
+                    '`out_shape` should be a sequence of integers or None') \
                     from exc
             if any((not isinstance(dim, int)) or (dim < 1)
-                   for dim in normalized_output_shape):
+                   for dim in normalized_out_shape):
                 raise ValueError(
-                    '`output_shape` should contain positive integers')
+                    '`out_shape` should contain positive integers')
         if (dtype is not None) and (not isinstance(dtype, torch.dtype)):
             raise TypeError('`dtype` should be torch.dtype type or None')
         if batch_size is not None:
@@ -76,7 +76,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
 
         self.function = function
         self._in_dim = _normalize_in_dim(in_dim)
-        self._output_shape = normalized_output_shape
+        self._out_shape = normalized_out_shape
         self._dtype = dtype
         self._device = torch.empty(0, device=device).device
         self.batch_size = batch_size
@@ -87,9 +87,9 @@ class CallableTensorSource(_SourceEvaluationTracker):
         return self._in_dim
 
     @property
-    def output_shape(self) -> Optional[Tuple[int, ...]]:
+    def out_shape(self) -> Optional[Tuple[int, ...]]:
         """Declared or inferred function output shape."""
-        return self._output_shape
+        return self._out_shape
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
@@ -116,12 +116,12 @@ class CallableTensorSource(_SourceEvaluationTracker):
             raise ValueError(
                 '`function` should preserve the configuration batch dimension')
 
-        output_shape = tuple(result.shape[1:])
-        if self._output_shape is None:
-            self._output_shape = output_shape
-        elif output_shape != self._output_shape:
+        out_shape = tuple(result.shape[1:])
+        if self._out_shape is None:
+            self._out_shape = out_shape
+        elif out_shape != self._out_shape:
             raise ValueError(
-                '`function` output shape does not match `output_shape`')
+                '`function` output shape does not match `out_shape`')
         if self._dtype is None:
             self._dtype = result.dtype
         elif result.dtype != self._dtype:
@@ -142,11 +142,11 @@ class CallableTensorSource(_SourceEvaluationTracker):
                 configurations, self.in_dim, self.device)
 
         if configurations.batch_size == 0:
-            if (self.output_shape is None) or (self.dtype is None):
+            if (self.out_shape is None) or (self.dtype is None):
                 raise ValueError(
                     'An empty first evaluation requires output shape and dtype')
             result = torch.empty(
-                (0, *self.output_shape),
+                (0, *self.out_shape),
                 device=self.device,
                 dtype=self.dtype)
             self._record_evaluation(points=0, batches=0)

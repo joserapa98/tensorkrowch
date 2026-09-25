@@ -31,7 +31,7 @@ class SparseTensorSource(_SourceEvaluationTracker):
     indices : torch.Tensor
         Integer tensor of shape ``(nnz, sites)``.
     values : torch.Tensor
-        Non-zero values with shape ``(nnz, *output_shape)``.
+        Non-zero values with shape ``(nnz, *out_shape)``.
     in_dim : sequence of int
         Complete discrete input dimension.
     """
@@ -78,7 +78,7 @@ class SparseTensorSource(_SourceEvaluationTracker):
         self._flat_ids = unique_ids
         self._indices = _unravel_indices(unique_ids, self.in_dim)
         self._values = coalesced_values
-        self._output_shape = tuple(values.shape[1:])
+        self._out_shape = tuple(values.shape[1:])
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -86,9 +86,9 @@ class SparseTensorSource(_SourceEvaluationTracker):
         return self._in_dim
 
     @property
-    def output_shape(self) -> Tuple[int, ...]:
+    def out_shape(self) -> Tuple[int, ...]:
         """Shape stored at every sparse support entry."""
-        return self._output_shape
+        return self._out_shape
 
     @property
     def dtype(self) -> torch.dtype:
@@ -119,7 +119,7 @@ class SparseTensorSource(_SourceEvaluationTracker):
         safe_positions = positions.clamp(max=max(self._flat_ids.numel() - 1,
                                                  0))
         result = self._values.new_zeros(
-            (flat_ids.numel(), *self.output_shape))
+            (flat_ids.numel(), *self.out_shape))
         if self._flat_ids.numel():
             matched = (positions < self._flat_ids.numel()) & \
                 (self._flat_ids.index_select(0, safe_positions) == flat_ids)
@@ -144,7 +144,7 @@ class SparseTensorSource(_SourceEvaluationTracker):
             configurations, site, values)
         result = self.evaluate(expanded)
         return result.reshape(
-            configurations.batch_size, n_values, *self.output_shape)
+            configurations.batch_size, n_values, *self.out_shape)
 
 
 class EmpiricalDistribution(SparseTensorSource):

@@ -970,7 +970,7 @@ class QTTInputFitter:
         metadata = {
             'algorithm': 'qtt_input_fit',
             'layout': self.layout,
-            'output_shape': fixed_shape,
+            'out_shape': fixed_shape,
             'out_position': out_position,
             'connector_rank': reduced.shape[0],
             'materialized_tensor': self.materialize_tensor,

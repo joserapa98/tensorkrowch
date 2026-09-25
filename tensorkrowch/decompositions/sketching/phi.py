@@ -243,14 +243,14 @@ class PhiOperator:
                 (len(input_region) + len(output_region)):
             raise ValueError('Input and output sites should be distinct')
 
-        source_output_shape = source.output_shape
-        if source_output_shape is not None:
-            source_output_shape = tuple(source_output_shape)
+        source_out_shape = source.out_shape
+        if source_out_shape is not None:
+            source_out_shape = tuple(source_out_shape)
             if output_spec.scalar:
-                if source_output_shape not in ((), (1,)):
+                if source_out_shape not in ((), (1,)):
                     raise ValueError(
                         'The source output should match the scalar output spec')
-            elif source_output_shape != output_spec.output_shape:
+            elif source_out_shape != output_spec.out_shape:
                 raise ValueError(
                     'The source and output spec should have matching shapes')
 

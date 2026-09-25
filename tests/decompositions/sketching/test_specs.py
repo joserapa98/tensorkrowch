@@ -176,7 +176,7 @@ class TestOutputSpec:  # MARK: TestOutputSpec
         spec = _OutputSpec.normalize(values, n_input_sites=3)
 
         assert spec.scalar
-        assert spec.output_shape == ()
+        assert spec.out_shape == ()
         assert spec.positions == ()
         assert spec.n_sites == 3
         assert spec.layout == (
@@ -188,7 +188,7 @@ class TestOutputSpec:  # MARK: TestOutputSpec
                 torch.ones(4), n_input_sites=3, out_position=1)
 
     @pytest.mark.parametrize(
-        'output_shape, n_inputs, positions, expected_layout',
+        'out_shape, n_inputs, positions, expected_layout',
         [
             (
                 (3,), 4, (2,),
@@ -211,8 +211,8 @@ class TestOutputSpec:  # MARK: TestOutputSpec
             ),
         ])
     def test_default_positions_split_inputs_into_balanced_groups(
-            self, output_shape, n_inputs, positions, expected_layout):
-        values = torch.ones(4, *output_shape)
+            self, out_shape, n_inputs, positions, expected_layout):
+        values = torch.ones(4, *out_shape)
 
         spec = _OutputSpec.normalize(values, n_input_sites=n_inputs)
 

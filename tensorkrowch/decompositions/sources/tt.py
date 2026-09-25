@@ -130,7 +130,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         return self._in_dim
 
     @property
-    def output_shape(self) -> Tuple[int, ...]:
+    def out_shape(self) -> Tuple[int, ...]:
         """Empty shape because this source is scalar."""
         return ()
 

@@ -314,7 +314,7 @@ class _SupportSketchSystemBuilder:
                  operator: SketchOperator) -> None:
         if not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')
-        if tuple(source.output_shape) != ():
+        if tuple(source.out_shape) != ():
             raise ValueError('TT-RS currently requires a scalar source')
         if len(source.in_dim) < 2:
             raise ValueError('TT-RS requires at least two input sites')

@@ -71,7 +71,7 @@ def _resolve_rs_source(
     return as_tensor_source(
         source,
         in_dim=in_dim,
-        output_shape=(),
+        out_shape=(),
         dtype=dtype,
         device='cpu' if device is None else device)
 

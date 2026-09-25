@@ -691,7 +691,7 @@ class TTALS:
         self.source = as_tensor_source(
             source,
             in_dim=in_dim,
-            output_shape=(),
+            out_shape=(),
             dtype=dtype,
             device=device,
             batch_size=batch_size)
@@ -948,7 +948,7 @@ class TTALS:
                 values=values,
                 in_dim=in_dim,
                 weights=weights)
-        if observed_entries.output_shape:
+        if observed_entries.out_shape:
             raise ValueError(
                 'TT-ALS completion currently requires scalar observations')
 

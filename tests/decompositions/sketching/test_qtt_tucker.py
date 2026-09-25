@@ -84,11 +84,11 @@ class TestQTTTuckerRSS:
             return_info=True)
 
         assert result.variable_positions == (0, 2)
-        assert result.output_shape == (2,)
+        assert result.out_shape == (2,)
         assert result.evaluate(samples).shape == (samples.shape[0], 2)
         assert torch.allclose(result.evaluate(samples), function(samples))
         assert info['topology'] == 'qtt_tucker'
-        assert info['output_shape'] == [2]
+        assert info['out_shape'] == [2]
 
     def test_heterogeneous_interleaved_layout_evaluates_same_points(self):
         layout = tk.decompositions.QuantizedLayout(

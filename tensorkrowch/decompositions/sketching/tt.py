@@ -519,7 +519,7 @@ class TTRSS(RecursiveSketching):
             source = as_tensor_source(
                 typed_function,
                 in_dim=domains.n_values,
-                output_shape=tuple(probe.shape[1:]),
+                out_shape=tuple(probe.shape[1:]),
                 dtype=dtype,
                 device=device)
 
@@ -804,7 +804,7 @@ class TTRSS(RecursiveSketching):
         kind, axis = self.outputs.layout[site]
         values = self.domains.for_site(axis) if kind == 'input' \
             else torch.arange(
-                self.outputs.output_shape[axis], device=self.source.device)
+                self.outputs.out_shape[axis], device=self.source.device)
         components.append((site, values))
 
         suffix = regions['suffixes'][site + 1]
@@ -1036,7 +1036,7 @@ class TTRSS(RecursiveSketching):
         selected = context.state['selected_values']
         metadata = {
             'algorithm': 'tt_rss',
-            'output_shape': tuple(self.outputs.output_shape),
+            'out_shape': tuple(self.outputs.out_shape),
             'out_position': None if self.outputs.scalar else (
                 self.outputs.positions[0]
                 if self.outputs.n_output_sites == 1
@@ -1155,7 +1155,7 @@ def _quantized_source(
         domain,
         source_space=source_space,
         source_layout=source_layout,
-        output_shape=None,
+        out_shape=None,
         dtype=dtype,
         device=device,
         computational_grid=computational_grid,
@@ -1497,7 +1497,7 @@ class QTTTuckerRSS:
         fitters = []
         for kind, axis in outputs.layout:
             if kind == 'output':
-                fitters.append(BasisFitter(outputs.output_shape[axis]))
+                fitters.append(BasisFitter(outputs.out_shape[axis]))
                 continue
             size = self.layout.grid_size[axis]
             interval = torch.tensor(
@@ -2216,7 +2216,7 @@ def tt_rss(
     The callable receives packed samples or a tuple with one coordinate tensor
     per input site. It may return a scalar batch with shape ``(batch_size,)``
     (the legacy ``(batch_size, 1)`` form is also accepted), or a tensor batch
-    with shape ``(batch_size, *output_shape)``. Every tensor-output axis becomes
+    with shape ``(batch_size, *out_shape)``. Every tensor-output axis becomes
     a basis-embedded TT site. The returned OBC cores can be passed directly to
     :class:`~tensorkrowch.models.MPS`; callers may use the recorded output
     positions to interpret output sites.

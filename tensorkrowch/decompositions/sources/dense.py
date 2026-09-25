@@ -47,7 +47,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
                     '`in_dim` should match the leading tensor dimensions')
         self.tensor = tensor
         self._in_dim = normalized_in_dim
-        self._output_shape = tuple(tensor.shape[len(normalized_in_dim):])
+        self._out_shape = tuple(tensor.shape[len(normalized_in_dim):])
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -55,9 +55,9 @@ class DenseTensorSource(_SourceEvaluationTracker):
         return self._in_dim
 
     @property
-    def output_shape(self) -> Tuple[int, ...]:
+    def out_shape(self) -> Tuple[int, ...]:
         """Shape returned after the configuration batch."""
-        return self._output_shape
+        return self._out_shape
 
     @property
     def dtype(self) -> torch.dtype:
@@ -94,7 +94,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
             configurations, site, values)
         result = self.evaluate(expanded)
         return result.reshape(
-            configurations.batch_size, n_values, *self.output_shape)
+            configurations.batch_size, n_values, *self.out_shape)
 
 
 __all__ = ['DenseTensorSource']

@@ -121,7 +121,7 @@ class TestTTRSS:
         source = tk.decompositions.CallableTensorSource(
             function,
             in_dim=(2, 2, 2),
-            output_shape=(1,),
+            out_shape=(1,),
             dtype=torch.float64)
         result = tk.decompositions.TTRSS(
             source=source,
@@ -207,7 +207,7 @@ class TestTTRSS:
                 collect_metrics=True)
 
         assert result.in_dim == (2, 2, 2, 2, 2)
-        assert result.metadata['output_shape'] == (2, 2)
+        assert result.metadata['out_shape'] == (2, 2)
         assert result.metadata['out_position'] == (0, 4)
         assert result.metrics.errors[0].relative < 1e-10
 

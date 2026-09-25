@@ -269,7 +269,7 @@ def _source_from_context(target, context: Mapping[str, Any]) -> TensorSource:
     return as_tensor_source(
         target,
         in_dim=context.get('in_dim'),
-        output_shape=(),
+        out_shape=(),
         dtype=context.get('dtype'),
         device=context.get('device', 'cpu'),
         batch_size=context.get('batch_size'))
@@ -285,7 +285,7 @@ def _mirror_source(source: TensorSource) -> TensorSource:
     return as_tensor_source(
         evaluate,
         in_dim=tuple(reversed(source.in_dim)),
-        output_shape=(),
+        out_shape=(),
         dtype=source.dtype,
         device=source.device)
 
@@ -303,7 +303,7 @@ def _cast_source(source: TensorSource,
     return as_tensor_source(
         evaluate,
         in_dim=source.in_dim,
-        output_shape=(),
+        out_shape=(),
         dtype=dtype,
         device=source.device)
 

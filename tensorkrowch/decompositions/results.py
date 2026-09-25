@@ -158,6 +158,16 @@ class TensorDecomposition1D(TensorDecomposition):
         return self._in_dim
 
     @property
+    def n_sites(self) -> int:
+        """Number of sites in the stored core network.
+
+        Each stored core represents one site. A hierarchical quantized result
+        counts its upper-network sites; :meth:`flatten` constructs a separate
+        result whose sites include the digit factors.
+        """
+        return len(self.cores)
+
+    @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
         """Output dimension per site, when the decomposition has one."""
         return self._out_dim
@@ -1269,7 +1279,7 @@ class _QuantizedTuckerDecomposition(TensorDecomposition1D):
         return self._hierarchical_in_dim
 
     @property
-    def output_shape(self) -> Tuple[int, ...]:
+    def out_shape(self) -> Tuple[int, ...]:
         """Tensor-output dimensions retained as open upper-network sites."""
         variable_positions = set(self.variable_positions)
         return tuple(
@@ -1526,7 +1536,7 @@ class _QuantizedTuckerDecomposition(TensorDecomposition1D):
             'factor_rank': [list(rank) for rank in self.factor_rank],
             'grid_size': list(self.layout.grid_size),
             'variable_positions': list(self.variable_positions),
-            'output_shape': list(self.output_shape),
+            'out_shape': list(self.out_shape),
         })
         return info
 

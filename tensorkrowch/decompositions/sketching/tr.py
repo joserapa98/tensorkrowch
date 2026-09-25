@@ -844,7 +844,7 @@ class TRRSS(TTRSS):
             kind, axis = self.outputs.layout[site]
             values = self.domains.for_site(axis) if kind == 'input' \
                 else torch.arange(
-                    self.outputs.output_shape[axis],
+                    self.outputs.out_shape[axis],
                     device=self.source.device)
             components.append((site, values))
         suffix = regions['suffixes'][sites[-1] + 1]
@@ -1041,7 +1041,7 @@ class TRRSS(TTRSS):
                          context: _SketchingFitContext) -> TRDecomposition:
         metadata = {
             'algorithm': 'tr_rss',
-            'output_shape': tuple(self.outputs.output_shape),
+            'out_shape': tuple(self.outputs.out_shape),
             'out_position': None if self.outputs.scalar else (
                 self.outputs.positions[0]
                 if self.outputs.n_output_sites == 1
@@ -1181,7 +1181,7 @@ class QTRTuckerRSS(QTTTuckerRSS):
         fitters = []
         for kind, axis in outputs.layout:
             if kind == 'output':
-                fitters.append(BasisFitter(outputs.output_shape[axis]))
+                fitters.append(BasisFitter(outputs.out_shape[axis]))
                 continue
             size = self.layout.grid_size[axis]
             interval = torch.tensor(

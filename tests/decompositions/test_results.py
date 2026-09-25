@@ -564,7 +564,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert torch.allclose(result.evaluate(points), expected)
         assert torch.allclose(result.evaluate_indices(indices), expected)
         assert result.input_dim == (2, 2, 2, 2)
-        assert result.output_shape == ()
+        assert result.out_shape == ()
         assert result.flatten().topology == (
             'tt' if upper_type is tk.decompositions.TTDecomposition else 'tr')
         assert torch.allclose(
@@ -597,7 +597,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             'bi,ioj,bj->bo', first[indices[:, 0]], output_core,
             second[indices[:, 1]])
 
-        assert result.output_shape == (3,)
+        assert result.out_shape == (3,)
         assert result.input_dim == (2, 2, 3, 2, 2)
         assert torch.allclose(result.evaluate_indices(indices), expected)
         assert torch.allclose(

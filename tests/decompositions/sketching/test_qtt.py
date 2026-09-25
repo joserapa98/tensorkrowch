@@ -121,7 +121,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             return_info=True)
 
         assert len(cores) == 4
-        assert info['metadata']['output_shape'] == (2, 2)
+        assert info['metadata']['out_shape'] == (2, 2)
         assert info['metadata']['quantization']['domain'].dtype == \
             torch.float64
         assert info['metrics']['errors'][0]['relative'] < 1e-9

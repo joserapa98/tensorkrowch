@@ -10,7 +10,6 @@ from typing import Callable, Optional, Sequence, Union
 
 import torch
 
-from tensorkrowch.components import TensorNetwork
 from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sources.base import TensorSource
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
@@ -20,7 +19,7 @@ from tensorkrowch.decompositions.sources.tt import TTTensorSource
 from tensorkrowch.models.mps import MPS
 
 
-SourceLike = Union[TensorSource, TTDecomposition, torch.Tensor, Callable]
+SourceLike = Union[TensorSource, TTDecomposition, MPS, torch.Tensor, Callable]
 
 
 def as_tensor_source(
@@ -32,19 +31,19 @@ def as_tensor_source(
         batch_size: Optional[int] = None,
         *,
         in_features: Optional[Sequence[int]] = None) -> TensorSource:
-    """Normalizes a tensor, callable or TT into the shared source interface.
+    """Normalizes a tensor, callable, TT or MPS into a tensor source.
 
     Existing sources are returned unchanged. A dense tensor is wrapped without
-    copying it, and a TT result or open-boundary MPS adapter is evaluated
+    copying it, and a TT result or open-boundary MPS is evaluated
     directly from its cores. Runtime overrides describe callables; existing
     sources retain their own device and dtype.
 
     Parameters
     ----------
     source : TensorSource, TTDecomposition, torch.Tensor, MPS or callable
-        Value provider to normalize. A callable receives packed configurations
-        or a tuple of site tensors and must preserve their leading batch
-        dimension.
+        Value provider to normalize. An MPS must have open boundaries. A
+        callable receives packed configurations or a tuple of site tensors and
+        must preserve their leading batch dimension.
     in_dim : sequence[int], optional
         Discrete input dimensions. Required for a callable and ignored for a
         dense tensor, whose dimensions are derived from its shape.
@@ -78,8 +77,6 @@ def as_tensor_source(
         return source
     if isinstance(source, MPS):
         return TTTensorSource(source)
-    if isinstance(source, TensorNetwork):
-        raise TypeError('Only MPS models can define TT sources')
     if isinstance(source, torch.Tensor):
         return DenseTensorSource(source, in_features=in_features)
     if builtins.callable(source):
@@ -96,7 +93,7 @@ def as_tensor_source(
     if isinstance(source, TensorSource):
         return source
     raise TypeError(
-        '`source` should be a TensorSource, TTDecomposition, tensor or callable')
+        '`source` should be a TensorSource, TTDecomposition, MPS, tensor or callable')
 
 
 __all__ = ['as_tensor_source']

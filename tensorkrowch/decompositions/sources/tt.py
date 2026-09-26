@@ -9,7 +9,6 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.components import TensorNetwork
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
@@ -24,14 +23,14 @@ class TTTensorSource(_SourceEvaluationTracker):
     The source contracts raw PyTorch cores without constructing a TensorKrowch
     graph. It accepts a :class:`~tensorkrowch.decompositions.TTDecomposition`,
     an open-boundary :class:`~tensorkrowch.models.MPS` or a core sequence with
-    the same conventions. MPS models only supply their raw tensors. Keeping
-    the specialized contractions here avoids routing repeated
+    the same conventions. The MPS supplies its raw tensors. Keeping the
+    specialized contractions here avoids routing repeated
     ALS/sketching evaluations through a TensorKrowch graph.
 
     Parameters
     ----------
     tensor : TTDecomposition, MPS or sequence of torch.Tensor
-        Lightweight TT result, open-boundary model or raw TT cores.
+        Lightweight TT result, open-boundary MPS or raw TT cores.
     """
 
     def __init__(
@@ -43,8 +42,6 @@ class TTTensorSource(_SourceEvaluationTracker):
                 raise ValueError(
                     'Only open-boundary MPS models can define TT sources')
             tensor = tensor.tensors
-        elif isinstance(tensor, TensorNetwork):
-            raise TypeError('Only MPS models can define TT sources')
         if isinstance(tensor, TTDecomposition):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')
@@ -52,17 +49,19 @@ class TTTensorSource(_SourceEvaluationTracker):
         else:
             if isinstance(tensor, torch.Tensor):
                 raise TypeError(
-                    '`tensor` should be TTDecomposition or a core sequence')
+                    '`tensor` should be TTDecomposition, MPS or a core sequence')
             try:
                 cores = list(tensor)
             except TypeError as exc:
                 raise TypeError(
-                    '`tensor` should be TTDecomposition or a core sequence') \
+                    '`tensor` should be TTDecomposition, MPS or a core sequence') \
                     from exc
         if not cores:
             raise ValueError('`tensor` should contain at least one core')
         if not all(isinstance(core, torch.Tensor) for core in cores):
-            raise TypeError('TT cores should be torch.Tensor objects')
+            raise TypeError(
+                '`tensor` should be TTDecomposition, MPS or a sequence of '
+                'torch.Tensor cores')
 
         if len(cores) == 1:
             if cores[0].ndim == 1:

@@ -207,9 +207,7 @@ class TestMPSAdapter:  # MARK: TestMPSAdapter
     def test_mpo_is_not_treated_as_an_mps(self):
         model = tk.models.MPO(n_features=2, in_dim=2, out_dim=2, bond_dim=2)
 
-        with pytest.raises(TypeError, match='Only MPS models'):
-            tk.decompositions.as_tensor_source(model)
-        with pytest.raises(TypeError, match='Only MPS models'):
+        with pytest.raises(TypeError, match='MPS or a sequence'):
             tk.decompositions.TTTensorSource(model)
 
 

@@ -126,8 +126,8 @@ class TRMSVD:
         for site, core in enumerate(cores):
             core = core.reshape(
                 core.shape[0],
-                self.in_dim[site],
-                self.out_dim[site],
+                self._in_dim[site],
+                self._out_dim[site],
                 core.shape[-1])
             trm_cores.append(core.permute(0, 1, 3, 2))
         return trm_cores
@@ -256,7 +256,7 @@ class TRMSVD:
         if center is None:
             center = self.center
         else:
-            self._engine._validate_center(center, len(self.in_dim))
+            self._engine._validate_center(center, len(self._in_dim))
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
@@ -268,10 +268,10 @@ class TRMSVD:
                 name='start',
                 phase='TRM-SVD',
                 values={
-                    'sites': len(self.in_dim),
-                    'in_dim': self.in_dim,
-                    'out_dim': self.out_dim,
-                    'layout': self.layout,
+                    'sites': len(self._in_dim),
+                    'in_dim': self._in_dim,
+                    'out_dim': self._out_dim,
+                    'layout': self._layout,
                     'matrix_input': self._matrix_input,
                     'center': center,
                     'rank_mode': (
@@ -294,7 +294,7 @@ class TRMSVD:
             metadata={
                 **tr_result.metadata,
                 'algorithm': 'trm_svd',
-                'layout': self.layout,
+                'layout': self._layout,
                 'matrix_input': self._matrix_input,
             })
 

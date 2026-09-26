@@ -93,7 +93,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Gathers dense values at discrete global configurations."""
         indices = _discrete_indices(
-            configurations, self.in_dim, self.device)
+            configurations, self._in_dim, self.device)
         result = self._ordered_tensor[tuple(
             indices[:, site] for site in range(indices.shape[1]))]
         self._record_evaluation(points=indices.shape[0])
@@ -106,16 +106,16 @@ class DenseTensorSource(_SourceEvaluationTracker):
         """Evaluates a discrete site fiber for every base configuration."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.in_dim)):
+        if (site < 0) or (site >= len(self._in_dim)):
             raise ValueError('`site` should identify an input site')
         if values is None:
             values = torch.arange(
-                self.in_dim[site], device=configurations.device)
+                self._in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)
         return result.reshape(
-            configurations.batch_size, n_values, *self.out_shape)
+            configurations.batch_size, n_values, *self._out_shape)
 
 
 __all__ = ['DenseTensorSource']

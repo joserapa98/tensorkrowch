@@ -61,14 +61,14 @@ class SparseTensorSource(_SourceEvaluationTracker):
             raise TypeError('`values` should have a floating or complex dtype')
 
         self._in_dim = _normalize_in_dim(in_dim)
-        if indices.shape[1] != len(self.in_dim):
+        if indices.shape[1] != len(self._in_dim):
             raise ValueError('`indices` should contain one column per site')
         indices = _discrete_indices(
             ConfigurationBatch(indices, kind='indices'),
-            self.in_dim,
+            self._in_dim,
             values.device)
 
-        flat_ids = _ravel_indices(indices, self.in_dim)
+        flat_ids = _ravel_indices(indices, self._in_dim)
         unique_ids, inverse = torch.unique(
             flat_ids, sorted=True, return_inverse=True)
         coalesced_values = values.new_zeros(
@@ -76,7 +76,7 @@ class SparseTensorSource(_SourceEvaluationTracker):
         coalesced_values.index_add_(0, inverse, values)
 
         self._flat_ids = unique_ids
-        self._indices = _unravel_indices(unique_ids, self.in_dim)
+        self._indices = _unravel_indices(unique_ids, self._in_dim)
         self._values = coalesced_values
         self._out_shape = tuple(values.shape[1:])
 
@@ -113,13 +113,13 @@ class SparseTensorSource(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates sparse values, returning zero outside the support."""
         indices = _discrete_indices(
-            configurations, self.in_dim, self.device)
-        flat_ids = _ravel_indices(indices, self.in_dim)
+            configurations, self._in_dim, self.device)
+        flat_ids = _ravel_indices(indices, self._in_dim)
         positions = torch.searchsorted(self._flat_ids, flat_ids)
         safe_positions = positions.clamp(max=max(self._flat_ids.numel() - 1,
                                                  0))
         result = self._values.new_zeros(
-            (flat_ids.numel(), *self.out_shape))
+            (flat_ids.numel(), *self._out_shape))
         if self._flat_ids.numel():
             matched = (positions < self._flat_ids.numel()) & \
                 (self._flat_ids.index_select(0, safe_positions) == flat_ids)
@@ -135,16 +135,16 @@ class SparseTensorSource(_SourceEvaluationTracker):
         """Evaluates a sparse discrete fiber without densifying the source."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.in_dim)):
+        if (site < 0) or (site >= len(self._in_dim)):
             raise ValueError('`site` should identify an input site')
         if values is None:
             values = torch.arange(
-                self.in_dim[site], device=configurations.device)
+                self._in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)
         return result.reshape(
-            configurations.batch_size, n_values, *self.out_shape)
+            configurations.batch_size, n_values, *self._out_shape)
 
 
 class EmpiricalDistribution(SparseTensorSource):

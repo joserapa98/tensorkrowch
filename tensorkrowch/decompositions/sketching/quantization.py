@@ -959,7 +959,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         """Validates and infers output metadata after one source call."""
         if not isinstance(values, torch.Tensor):
             raise TypeError('`source` should return a torch.Tensor')
-        if values.device != self.device:
+        if values.device != self._device:
             raise ValueError('`source` should return values on adapter device')
         if values.ndim < 1 or values.shape[0] != batch_size:
             raise ValueError(
@@ -980,7 +980,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates scheduled digit configurations through the fixed adapter."""
         digits = _discrete_indices(
-            configurations, self.in_dim, self.device)
+            configurations, self.in_dim, self._device)
         indices = self.layout.decode_digits(digits)
         if self.source_space == 'digits':
             source_digits = self.layout.reorder_configurations(

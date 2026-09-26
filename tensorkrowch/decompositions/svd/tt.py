@@ -452,8 +452,8 @@ class TTSVD:
             _resolve_observer(verbosity, None) if emit_events else None)
 
         if fit_observer is not None:
-            batch_shape = tuple(self.tensor.shape[:self.n_batches])
-            in_dim = tuple(self.tensor.shape[self.n_batches:])
+            batch_shape = tuple(self._tensor.shape[:self._n_batches])
+            in_dim = tuple(self._tensor.shape[self._n_batches:])
             fit_observer.emit(DecompositionEvent(
                 name='start',
                 phase='TT-SVD',

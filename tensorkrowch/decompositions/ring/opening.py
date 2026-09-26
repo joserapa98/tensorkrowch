@@ -441,7 +441,7 @@ class ALSLoopOpener:
                 'A local loop opening should contain left, physical and right '
                 'input dimensions')
         ranks = _normalize_rank(rank, len(source.in_dim))
-        self.capabilities.require(
+        self._capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
             block_size=len(source.in_dim) - 2)
@@ -552,7 +552,7 @@ class FixedGaugeCoreOpener:
         if len(source.in_dim) != 3:
             raise ValueError(
                 'FixedGaugeCoreOpener requires exactly one physical site')
-        self.capabilities.require(
+        self._capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
             block_size=1)
@@ -697,7 +697,7 @@ class CallableLoopOpener:
         context = _normalize_context(context)
         in_dim = context.get('in_dim')
         block_size = 1 if in_dim is None else len(tuple(in_dim)) - 2
-        self.capabilities.require(
+        self._capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
             block_size=block_size)

@@ -108,7 +108,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
         result = self.function(argument)
         if not isinstance(result, torch.Tensor):
             raise TypeError('`function` should return a torch.Tensor')
-        if result.device != self.device:
+        if result.device != self._device:
             raise ValueError(
                 '`function` should return values on the source device')
         if (result.ndim < 1) or \
@@ -133,22 +133,22 @@ class CallableTensorSource(_SourceEvaluationTracker):
         if not isinstance(configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
-        if configurations.n_sites != len(self.in_dim):
+        if configurations.n_sites != len(self._in_dim):
             raise ValueError(
                 'Configurations should contain one value per input site')
-        configurations = configurations.to(self.device)
+        configurations = configurations.to(self._device)
         if configurations.kind == 'indices':
             _discrete_indices(
-                configurations, self.in_dim, self.device)
+                configurations, self._in_dim, self._device)
 
         if configurations.batch_size == 0:
-            if (self.out_shape is None) or (self.dtype is None):
+            if (self._out_shape is None) or (self._dtype is None):
                 raise ValueError(
                     'An empty first evaluation requires output shape and dtype')
             result = torch.empty(
-                (0, *self.out_shape),
-                device=self.device,
-                dtype=self.dtype)
+                (0, *self._out_shape),
+                device=self._device,
+                dtype=self._dtype)
             self._record_evaluation(points=0, batches=0)
             return result
 
@@ -175,14 +175,14 @@ class CallableTensorSource(_SourceEvaluationTracker):
         """Evaluates a callable fiber over explicit or discrete site values."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.in_dim)):
+        if (site < 0) or (site >= len(self._in_dim)):
             raise ValueError('`site` should identify an input site')
         if values is None:
             if configurations.kind != 'indices':
                 raise ValueError(
                     'Coordinate fibers require explicit `values`')
             values = torch.arange(
-                self.in_dim[site], device=configurations.device)
+                self._in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
             configurations, site, values)
         result = self.evaluate(expanded)

@@ -686,7 +686,7 @@ class BLOSTRLoopOpener:
             in_dim = target.shape
         in_dim = tuple(in_dim)
         ranks = _normalize_rank(rank, len(in_dim))
-        self.capabilities.require(
+        self._capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
             block_size=len(in_dim) - 2)

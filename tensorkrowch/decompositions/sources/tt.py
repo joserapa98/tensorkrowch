@@ -168,7 +168,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         if start < 0 or stop > len(self.cores):
             raise ValueError(f'`{name}` contains too many sites')
         indices = configurations.to(device=self.device, dtype=torch.long)
-        for offset, dimension in enumerate(self.in_dim[start:stop]):
+        for offset, dimension in enumerate(self._in_dim[start:stop]):
             values = indices[:, offset]
             if torch.any(values < 0) or torch.any(values >= dimension):
                 raise ValueError(
@@ -264,7 +264,7 @@ class TTTensorSource(_SourceEvaluationTracker):
             if len(factors) != len(self.cores):
                 raise ValueError('`factor` should contain one vector per site')
             for position, (value, dimension) in enumerate(zip(
-                    factors, self.in_dim)):
+                    factors, self._in_dim)):
                 if not isinstance(value, torch.Tensor) or \
                         value.shape != (dimension,):
                     raise ValueError(
@@ -353,7 +353,7 @@ class TTTensorSource(_SourceEvaluationTracker):
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates discrete configurations by batched TT contraction."""
         indices = _discrete_indices(
-            configurations, self.in_dim, self.device)
+            configurations, self._in_dim, self.device)
         matrices = self._selected_matrices(indices)
         result = matrices[0]
         for matrix in matrices[1:]:
@@ -369,10 +369,10 @@ class TTTensorSource(_SourceEvaluationTracker):
         """Contracts both TT environments and leaves one input site open."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self.in_dim)):
+        if (site < 0) or (site >= len(self._in_dim)):
             raise ValueError('`site` should identify an input site')
         indices = _discrete_indices(
-            configurations, self.in_dim, self.device)
+            configurations, self._in_dim, self.device)
         matrices = self._selected_matrices(indices)
 
         left = self.cores[0].new_ones((indices.shape[0], 1))
@@ -386,7 +386,7 @@ class TTTensorSource(_SourceEvaluationTracker):
 
         if values is None:
             self._record_evaluation(
-                points=indices.shape[0] * self.in_dim[site])
+                points=indices.shape[0] * self._in_dim[site])
             return result
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
@@ -395,7 +395,7 @@ class TTTensorSource(_SourceEvaluationTracker):
                 torch.int64)):
             raise TypeError('`values` should be a one-dimensional integer tensor')
         values = values.to(device=self.device, dtype=torch.long)
-        if torch.any(values < 0) or torch.any(values >= self.in_dim[site]):
+        if torch.any(values < 0) or torch.any(values >= self._in_dim[site]):
             raise ValueError('`values` are out of bounds for the selected site')
         result = result.index_select(1, values)
         self._record_evaluation(points=indices.shape[0] * values.shape[0])
@@ -418,7 +418,7 @@ class TTTensorSource(_SourceEvaluationTracker):
             raise TypeError('`conjugate_sketch` should be bool type')
 
         if isinstance(sketch, TTMDecomposition):
-            if sketch.in_dim != self.in_dim:
+            if sketch.in_dim != self._in_dim:
                 raise ValueError(
                     'Source and sketch should have matching input dimensions')
             if sketch.device != self.device:
@@ -449,7 +449,7 @@ class TTTensorSource(_SourceEvaluationTracker):
 
         sketch_source = sketch if isinstance(sketch, TTTensorSource) \
             else TTTensorSource(sketch)
-        if sketch_source.in_dim != self.in_dim:
+        if sketch_source.in_dim != self._in_dim:
             raise ValueError(
                 'Source and sketch should have matching input dimensions')
         if sketch_source.device != self.device:

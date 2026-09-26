@@ -1444,7 +1444,7 @@ class TRRS(TTRS):
             raise TypeError('`rank` should be int type')
         if rank < 1:
             raise ValueError('`rank` should be positive')
-        if len(self.source.in_dim) < 3:
+        if len(self._source.in_dim) < 3:
             raise ValueError('TR-RS requires at least three sites')
         if warm_start is not None:
             if not isinstance(warm_start, TRDecomposition):
@@ -1468,8 +1468,8 @@ class TRRS(TTRS):
                 name='start',
                 phase='TR-RS',
                 values={
-                    'sites': len(self.source.in_dim),
-                    'in_dim': self.source.in_dim,
+                    'sites': len(self._source.in_dim),
+                    'in_dim': self._source.in_dim,
                     'rank': rank,
                     'operator': type(self.sketch_operator).__name__,
                 }))
@@ -1504,7 +1504,7 @@ class TRRS(TTRS):
         metadata = dict(tr_result.metadata)
         metadata.update({
             'algorithm': 'tr_rs',
-            'source_type': type(self.source).__name__,
+            'source_type': type(self._source).__name__,
             'sketch_operator': type(self.sketch_operator).__name__,
             'tt_rank': list(tt_result.rank),
             'experimental': True,
@@ -1514,10 +1514,10 @@ class TRRS(TTRS):
             metrics=metrics,
             metadata=metadata)
 
-        if collect_metrics and isinstance(self.source, SupportTensorSource):
-            samples = self.source.support.as_tensor()
+        if collect_metrics and isinstance(self._source, SupportTensorSource):
+            samples = self._source.support.as_tensor()
             approximation = result.evaluate(samples)
-            target = self.source.support_values.to(
+            target = self._source.support_values.to(
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - target)
             denominator = torch.linalg.vector_norm(target)

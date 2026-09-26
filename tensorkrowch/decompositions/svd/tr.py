@@ -237,12 +237,12 @@ class TRSVD:
         initial_truncation = (
             truncation if rank_policy.initial_cap == truncation.rank else
             replace(truncation, rank=rank_policy.initial_cap))
-        in_dim = tuple(self.tensor.shape)
+        in_dim = tuple(self._tensor.shape)
 
         total_timer_context = (
             self._runtime.timer() if collect_metrics else nullcontext())
         with total_timer_context as total_timer:
-            tensor = self._runtime.prepare(self.tensor)
+            tensor = self._runtime.prepare(self._tensor)
             left_size = prod(in_dim[:center])
             right_size = prod(in_dim[center:])
             matrix = tensor.reshape(left_size, right_size)
@@ -502,16 +502,16 @@ class TRSVD:
             rtol=rtol,
             cum_percentage=cum_percentage)
         if center is None:
-            center = self.center
+            center = self._center
         else:
-            self._validate_center(center, self.tensor.ndim)
+            self._validate_center(center, self._tensor.ndim)
         verbosity = _normalize_verbosity(verbose)
         emit_events = bool(verbosity)
         collect_metrics = collect_metrics or emit_events
         fit_observer = (
             _resolve_observer(verbosity, None) if emit_events else None)
 
-        in_dim = tuple(self.tensor.shape)
+        in_dim = tuple(self._tensor.shape)
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
                 name='start',
@@ -543,7 +543,7 @@ class TRSVD:
             selected_rank = initial_capacity - initial_padding
             timing = result.metrics.timings[0]
             approximation = result.contract_dense()
-            target = self.tensor.to(
+            target = self._tensor.to(
                 device=approximation.device, dtype=approximation.dtype)
             abs_log_error = _log_tensor_norm(approximation - target)
             target_log_norm = _log_tensor_norm(target)

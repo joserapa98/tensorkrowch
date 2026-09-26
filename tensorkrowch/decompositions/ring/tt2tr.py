@@ -364,9 +364,9 @@ class TT2TR:
             raise TypeError('`schedule_block_size` should be int type')
         if schedule_block_size < 1:
             raise ValueError('`schedule_block_size` should be positive')
-        rank_spec = _normalize_rank(rank, tr_rank, len(self.tt.cores))
+        rank_spec = _normalize_rank(rank, tr_rank, len(self._tt.cores))
         if center is None:
-            center = len(self.tt.cores) // 2
+            center = len(self._tt.cores) // 2
         verbosity = _normalize_verbosity(verbose)
         fit_observer = _resolve_observer(verbosity, None) \
             if verbosity else None
@@ -377,15 +377,15 @@ class TT2TR:
             allow_projective=allow_projective_gauges,
             tolerance=gauge_tolerance,
             rank_rtol=rank_rtol)
-        provider = _TTCoreProvider(self.tt)
+        provider = _TTCoreProvider(self._tt)
 
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
                 name='start',
                 phase='TT to TR',
                 values={
-                    'sites': len(self.tt.cores),
-                    'in_dim': self.tt.in_dim,
+                    'sites': len(self._tt.cores),
+                    'in_dim': self._tt.in_dim,
                     'rank': rank_spec,
                     'center': center,
                 }))
@@ -412,7 +412,7 @@ class TT2TR:
                 driver_result = BidirectionalRingDriver().fit(
                     **driver_options)
             active_result = driver_result.as_decomposition()
-            fidelity = _fidelity_error(self.tt, active_result)
+            fidelity = _fidelity_error(self._tt, active_result)
             active_result.metrics.fidelities.append(fidelity)
             active_result.metrics.errors.insert(0, fidelity.error)
 

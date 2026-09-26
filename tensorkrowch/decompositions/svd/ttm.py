@@ -108,25 +108,25 @@ class TTMSVD:
             self, cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
         """Reopens fused TT input axes into TTM input/output axes."""
         if len(cores) == 1:
-            return [cores[0].reshape(self.in_dim[0], self.out_dim[0])]
+            return [cores[0].reshape(self._in_dim[0], self._out_dim[0])]
 
         ttm_cores = []
         first = cores[0].reshape(
-            self.in_dim[0], self.out_dim[0], cores[0].shape[-1])
+            self._in_dim[0], self._out_dim[0], cores[0].shape[-1])
         ttm_cores.append(first.permute(0, 2, 1))
 
         for site, core in enumerate(cores[1:-1], 1):
             core = core.reshape(
                 core.shape[0],
-                self.in_dim[site],
-                self.out_dim[site],
+                self._in_dim[site],
+                self._out_dim[site],
                 core.shape[-1])
             ttm_cores.append(core.permute(0, 1, 3, 2))
 
         last = cores[-1].reshape(
             cores[-1].shape[0],
-            self.in_dim[-1],
-            self.out_dim[-1])
+            self._in_dim[-1],
+            self._out_dim[-1])
         ttm_cores.append(last)
         return ttm_cores
 
@@ -256,10 +256,10 @@ class TTMSVD:
                 name='start',
                 phase='TTM-SVD',
                 values={
-                    'sites': len(self.in_dim),
-                    'in_dim': self.in_dim,
-                    'out_dim': self.out_dim,
-                    'layout': self.layout,
+                    'sites': len(self._in_dim),
+                    'in_dim': self._in_dim,
+                    'out_dim': self._out_dim,
+                    'layout': self._layout,
                     'matrix_input': self._matrix_input,
                     'renormalize': renormalize,
                 }))
@@ -279,7 +279,7 @@ class TTMSVD:
             metrics=tt_result.metrics,
             metadata={
                 'algorithm': 'ttm_svd',
-                'layout': self.layout,
+                'layout': self._layout,
                 'matrix_input': self._matrix_input,
                 'renormalize': renormalize,
             })

@@ -1790,20 +1790,20 @@ class TTRS:
             observer is not None
         fit_observer = _resolve_observer(verbosity, observer) \
             if bool(verbosity) or observer is not None else None
-        before_stats = getattr(self.source, 'evaluation_stats', None)
+        before_stats = getattr(self._source, 'evaluation_stats', None)
 
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
                 name='start',
                 phase='TT-RS',
                 values={
-                    'sites': len(self.source.in_dim),
-                    'in_dim': self.source.in_dim,
+                    'sites': len(self._source.in_dim),
+                    'in_dim': self._source.in_dim,
                     'operator': type(self.sketch_operator).__name__,
                 }))
         timer = None
         start = perf_counter() if need_diagnostics else None
-        system = self.sketch_operator.builder(self.source).build(
+        system = self.sketch_operator.builder(self._source).build(
             batch_size=batch_size,
             generator=generator)
         result = system.solve(
@@ -1818,24 +1818,24 @@ class TTRS:
             timer = perf_counter() - start
             result.metrics.timings.append(TimingRecord(
                 name='fit', elapsed=timer))
-        after_stats = getattr(self.source, 'evaluation_stats', None)
+        after_stats = getattr(self._source, 'evaluation_stats', None)
         if collect_metrics and before_stats is not None and after_stats is not None:
             result.metrics.evaluations.append(after_stats.delta(before_stats))
 
         metadata = dict(result.metadata)
         metadata.update({
             'algorithm': 'tt_rs',
-            'in_dim': tuple(self.source.in_dim),
-            'source_type': type(self.source).__name__,
+            'in_dim': tuple(self._source.in_dim),
+            'source_type': type(self._source).__name__,
         })
         active = TTDecomposition(
             result.cores,
             metrics=result.metrics,
             metadata=metadata)
-        if collect_metrics and isinstance(self.source, SupportTensorSource):
-            samples = self.source.support.as_tensor()
+        if collect_metrics and isinstance(self._source, SupportTensorSource):
+            samples = self._source.support.as_tensor()
             approximation = active.evaluate(samples)
-            target = self.source.support_values.to(
+            target = self._source.support_values.to(
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - target)
             denominator = torch.linalg.vector_norm(target)

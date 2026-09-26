@@ -88,15 +88,15 @@ class TensorDecomposition1D(TensorDecomposition):
     metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
     metadata: Dict[str, Any] = field(default_factory=dict)  # Algorithm metadata
     n_batches: int = 0  # Number of leading batch dimensions in every core
-    rank: List[int] = field(init=False)  # Rank inferred from adjacent cores
+    _rank: Tuple[int, ...] = field(init=False, repr=False)  # Adjacent core ranks
     _batch_shape: Tuple[int, ...] = field(init=False, repr=False)  # Shared batch shape
     _in_dim: Tuple[int, ...] = field(init=False, repr=False)  # Input dimensions
-    _same_in_dim: bool = field(init=False, repr=False)  # Uniform input dims
     # Optional output dimensions represented by dedicated sites
     _out_dim: Optional[Tuple[int, ...]] = field(init=False, repr=False)
 
     _family: ClassVar[str] = 'tensor'
     _topology: ClassVar[str] = 'tensor'
+
     def __post_init__(self) -> None:
         if isinstance(self.n_batches, bool) or \
                 not isinstance(self.n_batches, int):
@@ -132,10 +132,9 @@ class TensorDecomposition1D(TensorDecomposition):
                 raise ValueError('All cores should have the same dtype')
 
         rank, batch_shape, in_dim, out_dim = self._validate_cores()
-        self.rank = rank
+        self._rank = tuple(rank)
         self._batch_shape = batch_shape
         self._in_dim = in_dim
-        self._same_in_dim = all(dim == in_dim[0] for dim in in_dim[1:])
         self._out_dim = out_dim
 
     @property
@@ -147,6 +146,11 @@ class TensorDecomposition1D(TensorDecomposition):
     def dtype(self) -> torch.dtype:
         """Data type shared by all cores."""
         return self.cores[0].dtype
+
+    @property
+    def rank(self) -> List[int]:
+        """Bond ranks inferred from the cores."""
+        return list(self._rank)
 
     @property
     def batch_shape(self) -> Tuple[int, ...]:
@@ -233,9 +237,9 @@ class TensorDecomposition1D(TensorDecomposition):
     def _normalize_data(
             self,
             data: EvaluationData,
-            dimensions: Sequence[int],
-            same_dim: bool,
-            n_batches: int
+            n_batches: int,
+            *,
+            output: bool = False
             ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
         """Normalizes discrete indices or embedded vectors by site."""
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
@@ -243,6 +247,9 @@ class TensorDecomposition1D(TensorDecomposition):
         if n_batches < 0:
             raise ValueError('`n_batches` should be non-negative')
 
+        dimensions = self.out_dim if output else self.in_dim
+        if dimensions is None:
+            raise ValueError('This result has no output dimensions')
         n_sites = len(dimensions)
         if isinstance(data, torch.Tensor):
             if data.ndim == (n_batches + 1):
@@ -256,7 +263,7 @@ class TensorDecomposition1D(TensorDecomposition):
                 site_data = list(data.to(device=self.device).unbind(-1))
                 discrete = True
             elif data.ndim == (n_batches + 2):
-                if not same_dim:
+                if any(dim != dimensions[0] for dim in dimensions[1:]):
                     raise ValueError(
                         'Embedded inputs should be provided as a sequence when '
                         'site dimensions differ')
@@ -507,7 +514,7 @@ class _VectorDecomposition1D(TensorDecomposition1D):
         batches followed by input batches.
         """
         site_data, discrete, data_batch_shape = self._normalize_data(
-            data, self.in_dim, self._same_in_dim, n_batches)
+            data, n_batches)
         matrices = self._local_matrices(
             site_data, discrete, data_batch_shape)
         return self._contract_local_matrices(matrices)
@@ -791,12 +798,6 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
     """Common evaluation and product-state application for 1D matrices."""
 
     _family: ClassVar[str] = 'matrix'
-    _same_out_dim: bool = field(init=False, repr=False)  # Uniform output dims
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self._same_out_dim = all(
-            dim == self.out_dim[0] for dim in self.out_dim[1:])
 
     def __call__(
             self,
@@ -887,9 +888,9 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
         without materializing those products.
         """
         in_data_by_site, in_discrete, data_batch_shape = self._normalize_data(
-            in_data, self.in_dim, self._same_in_dim, n_batches)
+            in_data, n_batches)
         out_data_by_site, out_discrete, out_batch_shape = self._normalize_data(
-            out_data, self.out_dim, self._same_out_dim, n_batches)
+            out_data, n_batches, output=True)
         if out_batch_shape != data_batch_shape:
             raise ValueError(
                 'Input and output data should have the same batch shape')
@@ -907,7 +908,7 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
               n_batches: int = 1) -> TensorDecomposition1D:
         """Applies the matrix to product inputs and returns a 1D result."""
         site_data, discrete, data_batch_shape = self._normalize_data(
-            data, self.in_dim, self._same_in_dim, n_batches)
+            data, n_batches)
         core_batch_size = int(torch.Size(self.batch_shape).numel())
         data_batch_size = int(torch.Size(data_batch_shape).numel())
         output_cores = []

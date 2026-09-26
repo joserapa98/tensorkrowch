@@ -89,6 +89,11 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         result = tk.decompositions.TTDecomposition(cores)
 
         assert result.rank == [3, 5]
+        ranks = result.rank
+        ranks[0] = 1
+        assert result.rank == [3, 5]
+        with pytest.raises(AttributeError):
+            result.rank = [1, 5]
         assert result.input_dim == (2, 4, 2)
         assert result.output_dim is None
 

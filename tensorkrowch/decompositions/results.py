@@ -30,7 +30,7 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord)
 
 
-StateData = Union[torch.Tensor, Sequence[torch.Tensor]]
+EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
 
 
 _INTEGER_DTYPES = (
@@ -232,7 +232,7 @@ class TensorDecomposition1D(TensorDecomposition):
 
     def _normalize_data(
             self,
-            data: StateData,
+            data: EvaluationData,
             dimensions: Sequence[int],
             same_dim: bool,
             n_batches: int
@@ -455,7 +455,7 @@ class _VectorDecomposition1D(TensorDecomposition1D):
     _family: ClassVar[str] = 'state'
 
     def __call__(self,
-                 data: StateData,
+                 data: EvaluationData,
                  n_batches: int = 1) -> torch.Tensor:
         """Calls :meth:`evaluate`."""
         return self.evaluate(data, n_batches=n_batches)
@@ -491,7 +491,7 @@ class _VectorDecomposition1D(TensorDecomposition1D):
         return matrices
 
     def evaluate(self,
-                 data: StateData,
+                 data: EvaluationData,
                  n_batches: int = 1) -> torch.Tensor:
         """Evaluates the decomposition on indices or embedded input vectors.
 
@@ -515,7 +515,7 @@ class _VectorDecomposition1D(TensorDecomposition1D):
     def error(self,
               function: Callable[..., torch.Tensor],
               samples: torch.Tensor,
-              data: Optional[StateData] = None,
+              data: Optional[EvaluationData] = None,
               n_batches: int = 1,
               **kwargs: Any) -> ErrorRecord:
         """Measures errors on samples, optionally using embedded inputs."""
@@ -800,8 +800,8 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
 
     def __call__(
             self,
-            in_data: StateData,
-            out_data: Optional[StateData] = None,
+            in_data: EvaluationData,
+            out_data: Optional[EvaluationData] = None,
             n_batches: int = 1
             ) -> Union[torch.Tensor, TensorDecomposition1D]:
         """Applies the matrix or evaluates it when outputs are provided."""
@@ -875,8 +875,8 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
         return matrices
 
     def evaluate(self,
-                 in_data: StateData,
-                 out_data: StateData,
+                 in_data: EvaluationData,
+                 out_data: EvaluationData,
                  n_batches: int = 1) -> torch.Tensor:
         """Evaluates entries at paired input and output configurations.
 
@@ -903,7 +903,7 @@ class _MatrixDecomposition1D(TensorDecomposition1D):
         return self._contract_local_matrices(matrices)
 
     def apply(self,
-              data: StateData,
+              data: EvaluationData,
               n_batches: int = 1) -> TensorDecomposition1D:
         """Applies the matrix to product inputs and returns a 1D result."""
         site_data, discrete, data_batch_shape = self._normalize_data(

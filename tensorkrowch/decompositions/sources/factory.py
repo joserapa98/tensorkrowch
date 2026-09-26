@@ -11,7 +11,8 @@ from typing import Callable, Optional, Sequence, Union
 import torch
 
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.sources.base import TensorSource
+from tensorkrowch.decompositions.sources.base import (TensorSource,
+                                                      _normalize_in_dim)
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
@@ -27,7 +28,9 @@ def as_tensor_source(
         out_shape: Optional[Sequence[int]] = (),
         dtype: Optional[torch.dtype] = None,
         device: Union[str, torch.device] = 'cpu',
-        batch_size: Optional[int] = None) -> TensorSource:
+        batch_size: Optional[int] = None,
+        *,
+        in_features: Optional[Sequence[int]] = None) -> TensorSource:
     """Normalizes a tensor, callable or TT into the shared source interface.
 
     Existing sources are returned unchanged. A dense tensor is wrapped without
@@ -43,7 +46,11 @@ def as_tensor_source(
         dimension.
     in_dim : sequence[int], optional
         Discrete input dimensions. Required for a callable. For a dense tensor,
-        they identify the leading input axes; remaining axes form its output.
+        they may validate the dimensions selected by ``in_features``. Without
+        ``in_features``, they identify the leading input axes for compatibility.
+    in_features : sequence[int], optional
+        Axes used as input sites when ``source`` is a dense tensor. If omitted
+        with no ``in_dim``, every tensor axis is an input site.
     out_shape : sequence[int], optional
         Callable output shape after the batch axis. The default ``()`` denotes
         a scalar; ``None`` infers the shape on first evaluation.
@@ -59,6 +66,8 @@ def as_tensor_source(
     TensorSource
         Source with consistent value, dimension and runtime contracts.
     """
+    if in_features is not None and not isinstance(source, torch.Tensor):
+        raise TypeError('`in_features` is only used for dense tensor sources')
     if isinstance(source, TTDecomposition):
         return TTTensorSource(source)
     if isinstance(source, (
@@ -70,12 +79,13 @@ def as_tensor_source(
     if hasattr(source, 'boundary') and hasattr(type(source), 'tensors'):
         return TTTensorSource(source)
     if isinstance(source, torch.Tensor):
-        if in_dim is None:
-            return DenseTensorSource(source)
-        if tuple(source.shape[:len(in_dim)]) != tuple(in_dim):
-            raise ValueError(
-                '`in_dim` should match the leading tensor dimensions')
-        return DenseTensorSource(source, in_features=tuple(range(len(in_dim))))
+        dimensions = None if in_dim is None else _normalize_in_dim(in_dim)
+        if in_features is None and dimensions is not None:
+            in_features = tuple(range(len(dimensions)))
+        dense_source = DenseTensorSource(source, in_features=in_features)
+        if dimensions is not None and dense_source.in_dim != dimensions:
+            raise ValueError('`in_dim` should match the selected tensor axes')
+        return dense_source
     if builtins.callable(source):
         if in_dim is None:
             raise ValueError(

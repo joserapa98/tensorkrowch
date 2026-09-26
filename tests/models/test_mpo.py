@@ -10,6 +10,25 @@ import pytest
 import torch
 import tensorkrowch as tk
 
+
+@pytest.mark.parametrize('model_cls', [tk.models.MPO, tk.models.UMPO])
+def test_mpo_site_count_name_and_deprecated_alias(model_cls):
+    kwargs = {'in_dim': 2, 'out_dim': 2, 'bond_dim': 2}
+
+    mpo = model_cls(n_sites=3, **kwargs)
+    assert mpo.n_sites == 3
+
+    positional_mpo = model_cls(3, **kwargs)
+    assert positional_mpo.n_sites == 3
+
+    with pytest.warns(DeprecationWarning, match='n_features'):
+        legacy_mpo = model_cls(n_features=3, **kwargs)
+    with pytest.warns(DeprecationWarning, match='n_features'):
+        assert legacy_mpo.n_features == 3
+
+    with pytest.raises(TypeError, match='cannot both be provided'):
+        model_cls(n_sites=3, n_features=3, **kwargs)
+
 AUTO_BOOL_CASES = [True, False]
 N_FEATURES_CASES = [1, 2, 3, 4, 10]
 SMALL_N_FEATURES_CASES = [1, 2, 4]
@@ -21,16 +40,16 @@ INIT_METHODS = ['zeros', 'ones', 'copy', 'rand', 'randn']
 MODEL_N_FEATURES_CASES = [1, 2, 3, 4, 6]
 CANONICALIZE_MODES = ['svd', 'svdr', 'qr']
 CANONICALIZE_CASES = [
-    (n_features, boundary, oc, mode, renormalize)
-    for n_features in SMALL_N_FEATURES_CASES
+    (n_sites, boundary, oc, mode, renormalize)
+    for n_sites in SMALL_N_FEATURES_CASES
     for boundary in BOUNDARY_CASES
-    for oc in range(n_features)
+    for oc in range(n_sites)
     for mode in CANONICALIZE_MODES
     for renormalize in AUTO_BOOL_CASES
 ]
 MPO_MPS_DATA_ALGORITHM_CASES = [
-    (n_features, mpo_boundary, mps_boundary, inline_input, inline_mats, renormalize)
-    for n_features in SMALL_N_FEATURES_CASES
+    (n_sites, mpo_boundary, mps_boundary, inline_input, inline_mats, renormalize)
+    for n_sites in SMALL_N_FEATURES_CASES
     for mpo_boundary in BOUNDARY_CASES
     for mps_boundary in BOUNDARY_CASES
     for inline_input in AUTO_BOOL_CASES
@@ -38,8 +57,8 @@ MPO_MPS_DATA_ALGORITHM_CASES = [
     for renormalize in AUTO_BOOL_CASES
 ]
 UMPO_MPS_DATA_ALGORITHM_CASES = [
-    (n_features, mps_boundary, inline_input, inline_mats)
-    for n_features in SMALL_N_FEATURES_CASES
+    (n_sites, mps_boundary, inline_input, inline_mats)
+    for n_sites in SMALL_N_FEATURES_CASES
     for mps_boundary in BOUNDARY_CASES
     for inline_input in AUTO_BOOL_CASES
     for inline_mats in AUTO_BOOL_CASES
@@ -64,7 +83,7 @@ def _assert_boundary_vector(node):
 
 
 def _assert_copied_mpo(mpo, copied_mpo, share_tensors):
-    assert mpo.n_features == copied_mpo.n_features
+    assert mpo.n_sites == copied_mpo.n_sites
     assert mpo.in_dim == copied_mpo.in_dim
     assert mpo.out_dim == copied_mpo.out_dim
     assert mpo.bond_dim == copied_mpo.bond_dim
@@ -131,17 +150,17 @@ def _assert_obc_boundary_runtime(model, device, dtype):
                                    dtype)
 
 
-def _run_umpo_mps_data_case(n_features, mps_boundary, inline_input, inline_mats):
+def _run_umpo_mps_data_case(n_sites, mps_boundary, inline_input, inline_mats):
     phys_dim = torch.randint(low=2, high=6, size=(1,)).item()
-    bond_dim = torch.randint(low=2, high=5, size=(n_features,)).tolist()
+    bond_dim = torch.randint(low=2, high=5, size=(n_sites,)).tolist()
 
-    mpo = tk.models.UMPO(n_features=n_features,
+    mpo = tk.models.UMPO(n_sites=n_sites,
                          in_dim=phys_dim,
                          out_dim=2,
                          bond_dim=10)
 
     mps_data = tk.models.MPSData(
-        n_features=n_features,
+        n_sites=n_sites,
         phys_dim=phys_dim,
         bond_dim=bond_dim[:-1] if mps_boundary == 'obc' else bond_dim,
         boundary=mps_boundary)
@@ -151,10 +170,10 @@ def _run_umpo_mps_data_case(n_features, mps_boundary, inline_input, inline_mats)
         if not inline_input or not inline_mats:
             mpo.reset()
 
-        bond_dim = torch.randint(low=2, high=5, size=(n_features,)).tolist()
+        bond_dim = torch.randint(low=2, high=5, size=(n_sites,)).tolist()
         tensors = [
             torch.randn(5, bond_dim[i - 1], phys_dim, bond_dim[i])
-            for i in range(n_features)
+            for i in range(n_sites)
         ]
         if mps_boundary == 'obc':
             tensors[0] = tensors[0][:, 0]
@@ -165,7 +184,7 @@ def _run_umpo_mps_data_case(n_features, mps_boundary, inline_input, inline_mats)
                      inline_input=inline_input,
                      inline_mats=inline_mats)
 
-        assert result.shape == tuple([5] + [2] * n_features)
+        assert result.shape == tuple([5] + [2] * n_sites)
 
     for i, node in enumerate(mpo.mats_env):
         assert node.is_connected_to(mps_data.mats_env[i])
@@ -188,27 +207,27 @@ class TestMPO:  # MARK: TestMPO
         else:
             assert (torch.tensor(mpo.bond_dim[:-1]) <= rank).all()
 
-    def _assert_mpo_leaf_nodes(self, mpo, n_features):
+    def _assert_mpo_leaf_nodes(self, mpo, n_sites):
         # Boundary conditions determine whether the boundary vectors are exposed
         # as extra leaves after canonicalization.
         if mpo.boundary == 'obc':
-            assert len(mpo.leaf_nodes) == n_features + 2
+            assert len(mpo.leaf_nodes) == n_sites + 2
         else:
-            assert len(mpo.leaf_nodes) == n_features
+            assert len(mpo.leaf_nodes) == n_sites
 
-    def _run_mpo_mps_data_case(self, n_features, mpo_boundary, mps_boundary,
+    def _run_mpo_mps_data_case(self, n_sites, mpo_boundary, mps_boundary,
                                inline_input, inline_mats, renormalize):
-        phys_dim = torch.randint(low=2, high=6, size=(n_features,)).tolist()
-        bond_dim = torch.randint(low=2, high=5, size=(n_features,)).tolist()
+        phys_dim = torch.randint(low=2, high=6, size=(n_sites,)).tolist()
+        bond_dim = torch.randint(low=2, high=5, size=(n_sites,)).tolist()
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=phys_dim,
                             out_dim=2,
                             bond_dim=10,
                             boundary=mpo_boundary)
 
         mps_data = tk.models.MPSData(
-            n_features=n_features,
+            n_sites=n_sites,
             phys_dim=phys_dim,
             bond_dim=bond_dim[:-1] if mps_boundary == 'obc' else bond_dim,
             boundary=mps_boundary)
@@ -219,10 +238,10 @@ class TestMPO:  # MARK: TestMPO
             if not inline_input or not inline_mats:
                 mpo.reset()
 
-            bond_dim = torch.randint(low=2, high=5, size=(n_features,)).tolist()
+            bond_dim = torch.randint(low=2, high=5, size=(n_sites,)).tolist()
             tensors = [
                 torch.randn(5, bond_dim[i - 1], phys_dim[i], bond_dim[i])
-                for i in range(n_features)
+                for i in range(n_sites)
             ]
             if mps_boundary == 'obc':
                 tensors[0] = tensors[0][:, 0]
@@ -234,7 +253,7 @@ class TestMPO:  # MARK: TestMPO
                          inline_mats=inline_mats,
                          renormalize=renormalize)
 
-            assert result.shape == tuple([5] + [2] * n_features)
+            assert result.shape == tuple([5] + [2] * n_sites)
 
         for i, node in enumerate(mpo.mats_env):
             assert node.is_connected_to(mps_data.mats_env[i])
@@ -254,7 +273,7 @@ class TestMPO:  # MARK: TestMPO
             tensors[-1] = tensors[-1][..., 0, :]
 
         mpo = tk.models.MPO(tensors=tensors)
-        assert mpo.n_features == n
+        assert mpo.n_sites == n
         assert mpo.boundary == boundary
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -272,7 +291,7 @@ class TestMPO:  # MARK: TestMPO
             tensors[-1] = tensors[-1][..., 0, :]
 
         mpo = tk.models.MPO(tensors=tensors)
-        assert mpo.n_features == n
+        assert mpo.n_sites == n
         assert mpo.boundary == boundary
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -283,12 +302,12 @@ class TestMPO:  # MARK: TestMPO
         tensors = [torch.randn(10, 2, 10, 2) for _ in range(10)]
         mpo = tk.models.MPO(tensors=tensors,
                             boundary='obc',
-                            n_features=3,
+                            n_sites=3,
                             in_dim=4,
                             out_dim=3,
                             bond_dim=7)
         assert mpo.boundary == 'pbc'
-        assert mpo.n_features == 10
+        assert mpo.n_sites == 10
         assert mpo.in_dim == [2] * 10
         assert mpo.out_dim == [2] * 10
         assert mpo.bond_dim == [10] * 10
@@ -317,12 +336,12 @@ class TestMPO:  # MARK: TestMPO
     @pytest.mark.parametrize('init_method', INIT_METHODS)
     def test_initialize_init_method(self, n, boundary, init_method):
         mpo = tk.models.MPO(boundary=boundary,
-                            n_features=n,
+                            n_sites=n,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
                             init_method=init_method)
-        assert mpo.n_features == n
+        assert mpo.n_sites == n
         assert mpo.boundary == boundary
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -335,7 +354,7 @@ class TestMPO:  # MARK: TestMPO
     @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_parameterized(self, parameterized, boundary):
-        mpo = tk.models.MPO(n_features=4,
+        mpo = tk.models.MPO(n_sites=4,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -353,13 +372,13 @@ class TestMPO:  # MARK: TestMPO
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mpo = tk.models.MPO(boundary=boundary,
-                            n_features=n,
+                            n_sites=n,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
                             init_method=init_method,
                             **model_kwargs)
-        assert mpo.n_features == n
+        assert mpo.n_sites == n
         assert mpo.boundary == boundary
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -370,13 +389,13 @@ class TestMPO:  # MARK: TestMPO
             _assert_boundary_vector(mpo.left_node)
             _assert_boundary_vector(mpo.right_node)
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
-    def test_in_out_dims(self, n_features, boundary):
-        in_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
-        out_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+    def test_in_out_dims(self, n_sites, boundary):
+        in_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
+        out_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=in_dim,
                             out_dim=out_dim,
                             bond_dim=10,
@@ -385,66 +404,66 @@ class TestMPO:  # MARK: TestMPO
         assert mpo.in_dim == in_dim
         assert mpo.out_dim == out_dim
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
-    def test_in_out_dims_error(self, n_features, boundary):
-        # in_dim should have n_features elements.
-        in_dim = torch.randint(low=2, high=10, size=(n_features + 1,)).tolist()
-        out_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+    def test_in_out_dims_error(self, n_sites, boundary):
+        # in_dim should have n_sites elements.
+        in_dim = torch.randint(low=2, high=10, size=(n_sites + 1,)).tolist()
+        out_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         with pytest.raises(ValueError):
-            tk.models.MPO(n_features=n_features,
+            tk.models.MPO(n_sites=n_sites,
                           in_dim=in_dim,
                           out_dim=out_dim,
                           bond_dim=10,
                           boundary=boundary)
 
-        # out_dim should have n_features elements.
-        in_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
-        out_dim = torch.randint(low=2, high=10, size=(n_features + 1,)).tolist()
+        # out_dim should have n_sites elements.
+        in_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
+        out_dim = torch.randint(low=2, high=10, size=(n_sites + 1,)).tolist()
         with pytest.raises(ValueError):
-            tk.models.MPO(n_features=n_features,
+            tk.models.MPO(n_sites=n_sites,
                           in_dim=in_dim,
                           out_dim=out_dim,
                           bond_dim=10,
                           boundary=boundary)
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
-    def test_bond_dims(self, n_features, boundary):
-        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+    def test_bond_dims(self, n_sites, boundary):
+        bond_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=5,
                             out_dim=5,
                             bond_dim=bond_dim,
                             boundary=boundary)
 
-        assert mpo.in_dim == [5] * n_features
-        assert mpo.out_dim == [5] * n_features
+        assert mpo.in_dim == [5] * n_sites
+        assert mpo.out_dim == [5] * n_sites
         assert mpo.bond_dim == bond_dim
 
         extended_bond_dim = [mpo.mats_env[0].shape[0]] + \
             [node.shape[2] for node in mpo.mats_env]
 
         if boundary == 'obc':
-            if n_features == 1:
+            if n_sites == 1:
                 assert extended_bond_dim == [1, 1]
             else:
                 assert extended_bond_dim == [bond_dim[0]] + bond_dim + [bond_dim[-1]]
         else:
             assert extended_bond_dim == [bond_dim[-1]] + bond_dim
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
-    def test_copy(self, n_features, boundary, share_tensors):
-        in_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
-        out_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
-        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+    def test_copy(self, n_sites, boundary, share_tensors):
+        in_dim = torch.randint(low=2, high=12, size=(n_sites,)).tolist()
+        out_dim = torch.randint(low=2, high=12, size=(n_sites,)).tolist()
+        bond_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=in_dim,
                             out_dim=out_dim,
                             bond_dim=bond_dim,
@@ -455,19 +474,19 @@ class TestMPO:  # MARK: TestMPO
         assert isinstance(copied_mpo, tk.models.MPO)
         _assert_copied_mpo(mpo, copied_mpo, share_tensors)
 
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy_preserves_mixed_parameterization(self,
-                                                   n_features,
+                                                   n_sites,
                                                    boundary,
                                                    share_tensors):
-        in_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
-        out_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
-        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+        in_dim = torch.randint(low=2, high=12, size=(n_sites,)).tolist()
+        out_dim = torch.randint(low=2, high=12, size=(n_sites,)).tolist()
+        bond_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=in_dim,
                             out_dim=out_dim,
                             bond_dim=bond_dim,
@@ -480,16 +499,16 @@ class TestMPO:  # MARK: TestMPO
         _assert_parameterization_pattern(copied_mpo.mats_env,
                                          expected_param_flags)
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     @pytest.mark.parametrize('override', AUTO_BOOL_CASES)
-    def test_deparameterize(self, n_features, boundary, override):
-        in_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
-        out_dim = torch.randint(low=2, high=12, size=(n_features,)).tolist()
-        bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+    def test_deparameterize(self, n_sites, boundary, override):
+        in_dim = torch.randint(low=2, high=12, size=(n_sites,)).tolist()
+        out_dim = torch.randint(low=2, high=12, size=(n_sites,)).tolist()
+        bond_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=in_dim,
                             out_dim=out_dim,
                             bond_dim=bond_dim,
@@ -508,10 +527,10 @@ class TestMPO:  # MARK: TestMPO
 
         _assert_deparameterized_nodes(new_nodes)
 
-    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('n_sites', INIT_N_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
-    def test_copy_preserves_boundary_dtype(self, n_features, share_tensors):
-        mpo = tk.models.MPO(n_features=n_features,
+    def test_copy_preserves_boundary_dtype(self, n_sites, share_tensors):
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=3,
                             out_dim=2,
                             bond_dim=4,
@@ -524,12 +543,12 @@ class TestMPO:  # MARK: TestMPO
         assert copied_mpo.right_node.dtype == torch.complex64
         assert copied_mpo.mats_env[0].dtype == torch.complex64
 
-    @pytest.mark.parametrize('n_features', INIT_N_CASES)
-    def test_deparameterize_preserves_boundary_runtime(self, n_features):
+    @pytest.mark.parametrize('n_sites', INIT_N_CASES)
+    def test_deparameterize_preserves_boundary_runtime(self, n_sites):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         dtype = torch.complex64
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=3,
                             out_dim=2,
                             bond_dim=4,
@@ -540,10 +559,10 @@ class TestMPO:  # MARK: TestMPO
         _assert_nodes_device_and_dtype(non_param_mpo.mats_env, device, dtype)
         _assert_obc_boundary_runtime(non_param_mpo, device, dtype)
 
-    @pytest.mark.parametrize('n_features', INIT_N_CASES)
+    @pytest.mark.parametrize('n_sites', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
-    def test_to(self, n_features, boundary):
-        mpo = tk.models.MPO(n_features=n_features,
+    def test_to(self, n_sites, boundary):
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -563,7 +582,7 @@ class TestMPO:  # MARK: TestMPO
                                            dtype)
     
     def test_update_bond_dim(self):
-        mpo = tk.models.MPO(n_features=100,
+        mpo = tk.models.MPO(n_sites=100,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -580,7 +599,7 @@ class TestMPO:  # MARK: TestMPO
         assert (mpo.left_node.tensor == torch.tensor([1., 0., 0. , 0., 0.])).all()
         assert (mpo.right_node.tensor == torch.tensor([1., 0., 0. , 0., 0.])).all()
     
-    def _run_all_algorithms_case(self, n_features, boundary, auto_stack,
+    def _run_all_algorithms_case(self, n_sites, boundary, auto_stack,
                                  auto_unbind, inline_input, inline_mats,
                                  renormalize, device=None):
         tensor_kwargs = {}
@@ -589,10 +608,10 @@ class TestMPO:  # MARK: TestMPO
             tensor_kwargs['device'] = device
             model_kwargs['device'] = device
 
-        example = torch.randn(1, n_features, 2, **tensor_kwargs)
-        data = torch.randn(100, n_features, 2, **tensor_kwargs)
+        example = torch.randn(1, n_sites, 2, **tensor_kwargs)
+        data = torch.randn(100, n_sites, 2, **tensor_kwargs)
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -610,13 +629,13 @@ class TestMPO:  # MARK: TestMPO
                      inline_mats=inline_mats,
                      renormalize=renormalize)
 
-        assert result.shape == tuple([100] + [2] * n_features)
-        assert len(mpo.edges) == n_features
+        assert result.shape == tuple([100] + [2] * n_sites)
+        assert len(mpo.edges) == n_sites
         if boundary == 'obc':
-            assert len(mpo.leaf_nodes) == n_features + 2
+            assert len(mpo.leaf_nodes) == n_sites + 2
         else:
-            assert len(mpo.leaf_nodes) == n_features
-        assert len(mpo.data_nodes) == n_features
+            assert len(mpo.leaf_nodes) == n_sites
+        assert len(mpo.data_nodes) == n_sites
         if not inline_input and auto_stack:
             assert len(mpo.virtual_nodes) == 2
         else:
@@ -627,30 +646,30 @@ class TestMPO:  # MARK: TestMPO
             assert node.grad is not None
 
     @pytest.mark.parametrize('runtime', ALGORITHM_RUNTIME_CASES)
-    @pytest.mark.parametrize('n_features', N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', N_FEATURES_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('inline_input', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('inline_mats', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('renormalize', AUTO_BOOL_CASES)
-    def test_all_algorithms(self, runtime, n_features, boundary, auto_stack,
+    def test_all_algorithms(self, runtime, n_sites, boundary, auto_stack,
                             auto_unbind, inline_input, inline_mats,
                             renormalize):
         device = None
         if runtime == 'cuda':
             device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self._run_all_algorithms_case(n_features, boundary, auto_stack,
+        self._run_all_algorithms_case(n_sites, boundary, auto_stack,
                                       auto_unbind, inline_input,
                                       inline_mats, renormalize, device=device)
     
     def test_mpo_mps_data_manually(self):
-        mpo = tk.models.MPO(n_features=10,
+        mpo = tk.models.MPO(n_sites=10,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
                             boundary='obc')
-        mps_data = tk.models.MPSData(n_features=10,
+        mps_data = tk.models.MPSData(n_sites=10,
                                      phys_dim=2,
                                      bond_dim=5)
         tensors = [torch.randn(100, 5, 2, 5) for _ in range(10)]
@@ -671,7 +690,7 @@ class TestMPO:  # MARK: TestMPO
             mpo_nodes[-1] = mpo_nodes[-1] @ mpo.right_node
             
             result = mpo_nodes[0]
-            for i in range(mpo.n_features - 1):
+            for i in range(mpo.n_sites - 1):
                 result = mps_nodes[i] @ result
                 result = result @ mpo_nodes[i + 1]
             result = mps_nodes[-1] @ result
@@ -686,23 +705,23 @@ class TestMPO:  # MARK: TestMPO
         assert result.shape == tuple([100] + [2] * 10)
     
     @pytest.mark.parametrize(
-        'n_features,mpo_boundary,mps_boundary,inline_input,inline_mats,renormalize',
+        'n_sites,mpo_boundary,mps_boundary,inline_input,inline_mats,renormalize',
         MPO_MPS_DATA_ALGORITHM_CASES,
     )
-    def test_mpo_mps_data_all_algorithms(self, n_features, mpo_boundary,
+    def test_mpo_mps_data_all_algorithms(self, n_sites, mpo_boundary,
                                          mps_boundary, inline_input,
                                          inline_mats, renormalize):
-        self._run_mpo_mps_data_case(n_features, mpo_boundary, mps_boundary,
+        self._run_mpo_mps_data_case(n_sites, mpo_boundary, mps_boundary,
                                     inline_input, inline_mats, renormalize)
     
     @pytest.mark.parametrize(
-        'n_features,boundary,oc,mode,renormalize',
+        'n_sites,boundary,oc,mode,renormalize',
         CANONICALIZE_CASES,
     )
-    def test_canonicalize(self, n_features, boundary, oc, mode, renormalize):
+    def test_canonicalize(self, n_sites, boundary, oc, mode, renormalize):
         # Canonicalization should respect the requested rank constraint and
         # preserve the expected boundary bookkeeping.
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -717,19 +736,19 @@ class TestMPO:  # MARK: TestMPO
                          renormalize=renormalize)
 
         self._assert_canonicalized_mpo_bond_dim(mpo, rank, mode)
-        self._assert_mpo_leaf_nodes(mpo, n_features)
+        self._assert_mpo_leaf_nodes(mpo, n_sites)
 
     @pytest.mark.parametrize(
-        'n_features,boundary,oc,mode,renormalize',
+        'n_sites,boundary,oc,mode,renormalize',
         CANONICALIZE_CASES,
     )
     def test_canonicalize_preserves_mixed_parameterization(self,
-                                                           n_features,
+                                                           n_sites,
                                                            boundary,
                                                            oc,
                                                            mode,
                                                            renormalize):
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -747,19 +766,19 @@ class TestMPO:  # MARK: TestMPO
 
         _assert_parameterization_pattern(mpo.mats_env, expected_param_flags)
         self._assert_canonicalized_mpo_bond_dim(mpo, rank, mode)
-        self._assert_mpo_leaf_nodes(mpo, n_features)
+        self._assert_mpo_leaf_nodes(mpo, n_sites)
 
     @pytest.mark.parametrize(
-        'n_features,boundary,oc,mode,renormalize',
+        'n_sites,boundary,oc,mode,renormalize',
         CANONICALIZE_CASES,
     )
-    def test_canonicalize_diff_bond_dims(self, n_features, boundary, oc,
+    def test_canonicalize_diff_bond_dims(self, n_sites, boundary, oc,
                                          mode, renormalize):
         # Same canonicalization checks, but starting from heterogeneous bond dims.
-        bond_dim = torch.randint(low=2, high=6, size=(n_features,)).tolist()
+        bond_dim = torch.randint(low=2, high=6, size=(n_sites,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mpo = tk.models.MPO(n_features=n_features,
+        mpo = tk.models.MPO(n_sites=n_sites,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=bond_dim,
@@ -774,10 +793,10 @@ class TestMPO:  # MARK: TestMPO
                          renormalize=renormalize)
 
         self._assert_canonicalized_mpo_bond_dim(mpo, rank, mode)
-        self._assert_mpo_leaf_nodes(mpo, n_features)
+        self._assert_mpo_leaf_nodes(mpo, n_sites)
     
     def test_save_load_model(self):
-        mpo = tk.models.MPO(n_features=100,
+        mpo = tk.models.MPO(n_sites=100,
                             in_dim=2,
                             out_dim=2,
                             bond_dim=10,
@@ -790,7 +809,7 @@ class TestMPO:  # MARK: TestMPO
         mpo_state_dict = mpo.state_dict()
         
         # Load new model from state_dict
-        new_mpo = tk.models.MPO(n_features=100,
+        new_mpo = tk.models.MPO(n_sites=100,
                                 in_dim=2,
                                 out_dim=2,
                                 bond_dim=5,
@@ -803,8 +822,8 @@ class TestUMPO:  # MARK: TestUMPO
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_tensors(self, n):
         tensor = torch.randn(10, 2, 10, 2)
-        mpo = tk.models.UMPO(n_features=n, tensor=tensor)
-        assert mpo.n_features == n
+        mpo = tk.models.UMPO(n_sites=n, tensor=tensor)
+        assert mpo.n_sites == n
         assert mpo.boundary == 'pbc'
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -816,8 +835,8 @@ class TestUMPO:  # MARK: TestUMPO
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         tensor_kwargs = _runtime_kwargs(runtime, device)
         tensor = torch.randn(10, 2, 10, 2, **tensor_kwargs)
-        mpo = tk.models.UMPO(n_features=n, tensor=tensor)
-        assert mpo.n_features == n
+        mpo = tk.models.UMPO(n_sites=n, tensor=tensor)
+        assert mpo.n_sites == n
         assert mpo.boundary == 'pbc'
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -828,30 +847,30 @@ class TestUMPO:  # MARK: TestUMPO
         # Tensor should be at most rank-4 tensor
         tensor = torch.randn(10, 2, 10, 2, 5)
         with pytest.raises(ValueError):
-            mpo = tk.models.UMPO(n_features=5,
+            mpo = tk.models.UMPO(n_sites=5,
                                  tensor=tensor)
         
         # Bond dimensions should coincide
         tensor = torch.randn(10, 2, 7, 2)
         with pytest.raises(ValueError):
-            mpo = tk.models.UMPO(n_features=5,
+            mpo = tk.models.UMPO(n_sites=5,
                                  tensor=tensor)
         
         # First and last bond dims should coincide
         tensors = torch.randn(5, 2, 3, 2)
         with pytest.raises(ValueError):
-            mpo = tk.models.UMPO(n_features=1,
+            mpo = tk.models.UMPO(n_sites=1,
                                  tensor=tensor)
     
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('init_method', INIT_METHODS)
     def test_initialize_init_method(self, n, init_method):
-        mpo = tk.models.UMPO(n_features=n,
+        mpo = tk.models.UMPO(n_sites=n,
                              in_dim=2,
                              out_dim=2,
                              bond_dim=10,
                              init_method=init_method)
-        assert mpo.n_features == n
+        assert mpo.n_sites == n
         assert mpo.boundary == 'pbc'
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
@@ -859,7 +878,7 @@ class TestUMPO:  # MARK: TestUMPO
 
     @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
     def test_initialize_parameterized(self, parameterized):
-        mpo = tk.models.UMPO(n_features=4,
+        mpo = tk.models.UMPO(n_sites=4,
                              in_dim=2,
                              out_dim=2,
                              bond_dim=10,
@@ -876,60 +895,60 @@ class TestUMPO:  # MARK: TestUMPO
     def test_initialize_init_method_runtime(self, runtime, n, init_method):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
-        mpo = tk.models.UMPO(n_features=n,
+        mpo = tk.models.UMPO(n_sites=n,
                              in_dim=2,
                              out_dim=2,
                              bond_dim=10,
                              init_method=init_method,
                              **model_kwargs)
-        assert mpo.n_features == n
+        assert mpo.n_sites == n
         assert mpo.boundary == 'pbc'
         assert mpo.in_dim == [2] * n
         assert mpo.out_dim == [2] * n
         assert mpo.bond_dim == [10] * n
         _assert_nodes_runtime(mpo.mats_env, runtime, device)
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
-    def test_in_out_dims(self, n_features):
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
+    def test_in_out_dims(self, n_sites):
         in_dim = torch.randint(low=2, high=10, size=(1,)).item()
         out_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mpo = tk.models.UMPO(n_features=n_features,
+        mpo = tk.models.UMPO(n_sites=n_sites,
                              in_dim=in_dim,
                              out_dim=out_dim,
                              bond_dim=10)
 
-        assert mpo.in_dim == [in_dim] * n_features
-        assert mpo.out_dim == [out_dim] * n_features
+        assert mpo.in_dim == [in_dim] * n_sites
+        assert mpo.out_dim == [out_dim] * n_sites
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
-    def test_in_out_dims_error(self, n_features):
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
+    def test_in_out_dims_error(self, n_sites):
         # in_dim should be int.
-        in_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+        in_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         out_dim = torch.randint(low=2, high=10, size=(1,)).item()
         with pytest.raises(TypeError):
-            tk.models.UMPO(n_features=n_features,
+            tk.models.UMPO(n_sites=n_sites,
                            in_dim=in_dim,
                            out_dim=out_dim,
                            bond_dim=10)
 
         # out_dim should be int.
         in_dim = torch.randint(low=2, high=10, size=(1,)).item()
-        out_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+        out_dim = torch.randint(low=2, high=10, size=(n_sites,)).tolist()
         with pytest.raises(TypeError):
-            tk.models.UMPO(n_features=n_features,
+            tk.models.UMPO(n_sites=n_sites,
                            in_dim=in_dim,
                            out_dim=out_dim,
                            bond_dim=10)
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
-    def test_copy(self, n_features, share_tensors):
+    def test_copy(self, n_sites, share_tensors):
         in_dim = torch.randint(low=2, high=12, size=(1,)).item()
         out_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mpo = tk.models.UMPO(n_features=n_features,
+        mpo = tk.models.UMPO(n_sites=n_sites,
                              in_dim=in_dim,
                              out_dim=out_dim,
                              bond_dim=bond_dim)
@@ -939,14 +958,14 @@ class TestUMPO:  # MARK: TestUMPO
         assert isinstance(copied_mpo, tk.models.UMPO)
         _assert_copied_mpo(mpo, copied_mpo, share_tensors)
 
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
-    def test_copy_preserves_parameterization(self, n_features, share_tensors):
+    def test_copy_preserves_parameterization(self, n_sites, share_tensors):
         in_dim = torch.randint(low=2, high=12, size=(1,)).item()
         out_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mpo = tk.models.UMPO(n_features=n_features,
+        mpo = tk.models.UMPO(n_sites=n_sites,
                              in_dim=in_dim,
                              out_dim=out_dim,
                              bond_dim=bond_dim)
@@ -960,14 +979,14 @@ class TestUMPO:  # MARK: TestUMPO
         _assert_initialized_parameterization([copied_mpo.uniform_memory],
                                              parameterized=False)
     
-    @pytest.mark.parametrize('n_features', MODEL_N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', MODEL_N_FEATURES_CASES)
     @pytest.mark.parametrize('override', AUTO_BOOL_CASES)
-    def test_deparameterize(self, n_features, override):
+    def test_deparameterize(self, n_sites, override):
         in_dim = torch.randint(low=2, high=12, size=(1,)).item()
         out_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mpo = tk.models.UMPO(n_features=n_features,
+        mpo = tk.models.UMPO(n_sites=n_sites,
                              in_dim=in_dim,
                              out_dim=out_dim,
                              bond_dim=bond_dim)
@@ -982,17 +1001,17 @@ class TestUMPO:  # MARK: TestUMPO
         _assert_deparameterized_nodes(non_param_mpo.mats_env,
                                       tensor_address='virtual_uniform')
     
-    @pytest.mark.parametrize('n_features', N_FEATURES_CASES)
+    @pytest.mark.parametrize('n_sites', N_FEATURES_CASES)
     @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('inline_input', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('inline_mats', AUTO_BOOL_CASES)
-    def test_all_algorithms(self, n_features, auto_stack,
+    def test_all_algorithms(self, n_sites, auto_stack,
                             auto_unbind, inline_input, inline_mats):
-        example = torch.randn(1, n_features, 2)
-        data = torch.randn(100, n_features, 2)
+        example = torch.randn(1, n_sites, 2)
+        data = torch.randn(100, n_sites, 2)
 
-        mpo = tk.models.UMPO(n_features=n_features,
+        mpo = tk.models.UMPO(n_sites=n_sites,
                              in_dim=2,
                              out_dim=2,
                              bond_dim=10)
@@ -1006,10 +1025,10 @@ class TestUMPO:  # MARK: TestUMPO
                      inline_input=inline_input,
                      inline_mats=inline_mats)
 
-        assert result.shape == tuple([100] + [2] * n_features)
-        assert len(mpo.edges) == n_features
-        assert len(mpo.leaf_nodes) == n_features
-        assert len(mpo.data_nodes) == n_features
+        assert result.shape == tuple([100] + [2] * n_sites)
+        assert len(mpo.edges) == n_sites
+        assert len(mpo.leaf_nodes) == n_sites
+        assert len(mpo.data_nodes) == n_sites
         assert len(mpo.virtual_nodes) == 2
 
         result.sum().backward()
@@ -1017,10 +1036,10 @@ class TestUMPO:  # MARK: TestUMPO
             assert node.grad is not None
     
     @pytest.mark.parametrize(
-        'n_features,mps_boundary,inline_input,inline_mats',
+        'n_sites,mps_boundary,inline_input,inline_mats',
         UMPO_MPS_DATA_ALGORITHM_CASES,
     )
-    def test_mpo_mps_data_all_algorithms(self, n_features, mps_boundary,
+    def test_mpo_mps_data_all_algorithms(self, n_sites, mps_boundary,
                                          inline_input, inline_mats):
-        _run_umpo_mps_data_case(n_features, mps_boundary,
+        _run_umpo_mps_data_case(n_sites, mps_boundary,
                                 inline_input, inline_mats)

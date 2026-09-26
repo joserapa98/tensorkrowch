@@ -3,6 +3,7 @@ This script contains:
     * MPSData
 """
 
+import warnings
 from abc import abstractmethod, ABC
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
@@ -15,6 +16,7 @@ import torch.nn as nn
 import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
+from tensorkrowch.models._sites import _resolve_n_sites
 
 from tensorkrowch.utils import split_sequence_into_regions, random_unitary
 
@@ -47,15 +49,17 @@ class MPSData(TensorNetwork):  # MARK: MPSData
 
     Parameters
     ----------
-    n_features : int, optional
+    n_sites : int, optional
         Number of nodes that will be in ``mats_env``. That is, number of nodes
         without taking into account ``left_node`` and ``right_node``.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     phys_dim : int, list[int] or tuple[int], optional
         Physical dimension(s). If given as a sequence, its length should be
-        equal to ``n_features``.
+        equal to ``n_sites``.
     bond_dim : int, list[int] or tuple[int], optional
         Bond dimension(s). If given as a sequence, its length should be equal
-        to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
+        to ``n_sites`` (if ``boundary = "pbc"``) or ``n_sites - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
     boundary : {"obc", "pbc"}
@@ -67,7 +71,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
     tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
-        Instead of providing ``n_features``, ``phys_dim``, ``bond_dim`` and
+        Instead of providing ``n_sites``, ``phys_dim``, ``bond_dim`` and
         ``boundary``, a list of MPS tensors can be provided. In such case, all
         mentioned attributes will be inferred from the given tensors. All
         tensors should be rank-(n+3) tensors, with shape
@@ -94,11 +98,11 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         
     Examples
     --------
-    >>> mps = tk.models.MPSData(n_features=5,
+    >>> mps = tk.models.MPSData(n_sites=5,
     ...                         phys_dim=2,
     ...                         bond_dim=5,
     ...                         boundary="pbc")
-    >>> # n_features * (batch_size x bond_dim x feature_size x bond_dim)
+    >>> # n_sites * (batch_size x bond_dim x feature_size x bond_dim)
     >>> data = [torch.ones(20, 5, 2, 5) for _ in range(5)]
     >>> mps.add_data(data)
     >>> for node in mps.mats_env:
@@ -106,7 +110,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
     """
 
     def __init__(self,
-                 n_features: Optional[int] = None,
+                 n_sites: Optional[int] = None,
                  phys_dim: Optional[Union[int, Sequence[int]]] = None,
                  bond_dim: Optional[Union[int, Sequence[int]]] = None,
                  boundary: Text = 'obc',
@@ -115,8 +119,11 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                  init_method: Optional[Text] = None,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
 
+        n_sites = _resolve_n_sites(n_sites, n_features)
         super().__init__(name='mps_data')
         
         # n_batches
@@ -130,21 +137,21 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                 raise ValueError('`boundary` should be one of "obc" or "pbc"')
             self._boundary = boundary
 
-            # n_features
-            if not isinstance(n_features, int):
-                raise TypeError('`n_features` should be int type')
-            elif n_features < 1:
-                raise ValueError('`n_features` should be at least 1')
-            self._n_features = n_features
+            # n_sites
+            if not isinstance(n_sites, int):
+                raise TypeError('`n_sites` should be int type')
+            elif n_sites < 1:
+                raise ValueError('`n_sites` should be at least 1')
+            self._n_sites = n_sites
 
             # phys_dim
             if isinstance(phys_dim, (list, tuple)):
-                if len(phys_dim) != n_features:
+                if len(phys_dim) != n_sites:
                     raise ValueError('If `phys_dim` is given as a sequence of int, '
-                                        'its length should be equal to `n_features`')
+                                        'its length should be equal to `n_sites`')
                 self._phys_dim = list(phys_dim)
             elif isinstance(phys_dim, int):
-                self._phys_dim = [phys_dim] * n_features
+                self._phys_dim = [phys_dim] * n_sites
             else:
                 raise TypeError('`phys_dim` should be int, tuple[int] or list[int] '
                                 'type')
@@ -152,23 +159,23 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             # bond_dim
             if isinstance(bond_dim, (list, tuple)):
                 if boundary == 'obc':
-                    if len(bond_dim) != n_features - 1:
+                    if len(bond_dim) != n_sites - 1:
                         raise ValueError(
                             'If `bond_dim` is given as a sequence of int, and '
                             '`boundary` is "obc", its length should be equal '
-                            'to `n_features` - 1')
+                            'to `n_sites` - 1')
                 elif boundary == 'pbc':
-                    if len(bond_dim) != n_features:
+                    if len(bond_dim) != n_sites:
                         raise ValueError(
                             'If `bond_dim` is given as a sequence of int, and '
                             '`boundary` is "pbc", its length should be equal '
-                            'to `n_features`')
+                            'to `n_sites`')
                 self._bond_dim = list(bond_dim)
             elif isinstance(bond_dim, int):
                 if boundary == 'obc':
-                    self._bond_dim = [bond_dim] * (n_features - 1)
+                    self._bond_dim = [bond_dim] * (n_sites - 1)
                 elif boundary == 'pbc':
-                    self._bond_dim = [bond_dim] * n_features
+                    self._bond_dim = [bond_dim] * n_sites
             else:
                 raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
                                 ' type')
@@ -178,7 +185,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                 raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
                                 'list[torch.Tensor] type')
             else:
-                self._n_features = len(tensors)
+                self._n_sites = len(tensors)
                 self._phys_dim = []
                 self._bond_dim = []
                 for i, t in enumerate(tensors):
@@ -206,7 +213,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                             self._boundary = 'pbc'
                             self._phys_dim.append(t.shape[-2])
                             self._bond_dim.append(t.shape[-1])
-                    elif i == (self._n_features - 1):
+                    elif i == (self._n_sites - 1):
                         if t.ndim != tensors[0].ndim:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
@@ -254,9 +261,18 @@ class MPSData(TensorNetwork):  # MARK: MPSData
     # Properties
     # ----------
     @property
-    def n_features(self) -> int:
+    def n_sites(self) -> int:
         """Returns number of nodes."""
-        return self._n_features
+        return self._n_sites
+
+    @property
+    def n_features(self) -> int:
+        """Deprecated alias for :attr:`n_sites`."""
+        warnings.warn(
+            '`n_features` is deprecated and will be removed; use `n_sites`.',
+            DeprecationWarning,
+            stacklevel=2)
+        return self._n_sites
 
     @property
     def phys_dim(self) -> List[int]:
@@ -328,7 +344,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             node = Node(shape=(*([1] * self._n_batches),
                                aux_bond_dim[i - 1],
                                self._phys_dim[i],
@@ -348,12 +364,12 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             if self._boundary == 'pbc':
                 if i == 0:
                     periodic_edge = self._mats_env[-1]['left']
-                if i == self._n_features - 1:
+                if i == self._n_sites - 1:
                     self._mats_env[-1]['right'] ^ periodic_edge
             else:
                 if i == 0:
                     self._left_node['right'] ^ self._mats_env[-1]['left']
-                if i == self._n_features - 1:
+                if i == self._n_sites - 1:
                     self._mats_env[-1]['right'] ^ self._right_node['left']
     
     def initialize(self,
@@ -407,7 +423,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                         # Left node
                         aux_tensor[..., 0, :, :] = node.tensor[..., 0, :, :]
                         node.tensor = aux_tensor
-                    elif i == (self._n_features - 1):
+                    elif i == (self._n_sites - 1):
                         # Right node
                         aux_tensor[..., 0] = node.tensor[..., 0]
                         node.tensor = aux_tensor
@@ -432,16 +448,16 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         if not isinstance(data, Sequence):
             raise TypeError(
                 '`data` should be list[torch.Tensor] or tuple[torch.Tensor] type')
-        if len(data) != self._n_features:
+        if len(data) != self._n_sites:
             raise ValueError('`data` should be a sequence of tensors of length'
-                             ' equal to `n_features`')
+                             ' equal to `n_sites`')
         if any([not isinstance(x, torch.Tensor) for x in data]):
             raise TypeError(
                 '`data` should be list[torch.Tensor] or tuple[torch.Tensor] type')
         
         # Check physical dimensions coincide
         for i, (data_tensor, node) in enumerate(zip(data, self._mats_env)):
-            if (self._boundary == 'obc') and (i == (self._n_features - 1)):
+            if (self._boundary == 'obc') and (i == (self._n_sites - 1)):
                 if data_tensor.shape[-1] != node.shape[-2]:
                     raise ValueError(
                         f'Physical dimension {data_tensor.shape[-1]} of '
@@ -461,7 +477,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         dtype = data[0].dtype
         for i, node in enumerate(self._mats_env):
             if self._boundary == 'obc':
-                if (i == 0) and (i == (self._n_features - 1)):
+                if (i == 0) and (i == (self._n_sites - 1)):
                     aux_tensor = torch.zeros(*data[i].shape[:-1],
                                              *node.shape[-3:],
                                              device=device,
@@ -476,7 +492,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                                              dtype=dtype)
                     aux_tensor[..., 0, :, :] = data[i]
                     data[i] = aux_tensor
-                elif i == (self._n_features - 1):
+                elif i == (self._n_sites - 1):
                     aux_tensor = torch.zeros(*data[i].shape[:-1],
                                              *node.shape[-2:],
                                              device=device,

@@ -25,6 +25,7 @@ import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 from tensorkrowch.models import MPO, UMPO
+from tensorkrowch.models._sites import _resolve_n_sites
 from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import split_sequence_into_regions, random_unitary
 
@@ -64,22 +65,24 @@ class MPS(TensorNetwork):  # MARK: MPS
 
     Parameters
     ----------
-    n_features : int, optional
+    n_sites : int, optional
         Number of nodes that will be in ``mats_env``. That is, number of nodes
         without taking into account ``left_node`` and ``right_node``.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     phys_dim : int, list[int] or tuple[int], optional
         Physical dimension(s). If given as a sequence, its length should be
-        equal to ``n_features``.
+        equal to ``n_sites``.
     bond_dim : int, list[int] or tuple[int], optional
         Bond dimension(s). If given as a sequence, its length should be equal
-        to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
+        to ``n_sites`` (if ``boundary = "pbc"``) or ``n_sites - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
     boundary : {"obc", "pbc"}
         String indicating whether periodic or open boundary conditions should
         be used.
     tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
-        Instead of providing ``n_features``, ``phys_dim``, ``bond_dim`` and
+        Instead of providing ``n_sites``, ``phys_dim``, ``bond_dim`` and
         ``boundary``, a list of MPS tensors can be provided. In such case, all
         mentioned attributes will be inferred from the given tensors. All
         tensors should be rank-3 tensors, with shape ``(bond_dim, phys_dim,
@@ -124,21 +127,21 @@ class MPS(TensorNetwork):  # MARK: MPS
     --------
     ``MPS`` with the same physical dimensions:
     
-    >>> mps = tk.models.MPS(n_features=5,
+    >>> mps = tk.models.MPS(n_sites=5,
     ...                     phys_dim=2,
     ...                     bond_dim=5)
-    >>> data = torch.ones(20, 5, 2) # batch_size x n_features x feature_size
+    >>> data = torch.ones(20, 5, 2) # batch_size x n_sites x feature_size
     >>> result = mps(data)
     >>> result.shape
     torch.Size([20])
     
     ``MPS`` with different physical dimensions:
     
-    >>> mps = tk.models.MPS(n_features=5,
+    >>> mps = tk.models.MPS(n_sites=5,
     ...                     phys_dim=list(range(2, 7)),
     ...                     bond_dim=5)
     >>> data = [torch.ones(20, i)
-    ...         for i in range(2, 7)] # n_features * [batch_size x feature_size]
+    ...         for i in range(2, 7)] # n_sites * [batch_size x feature_size]
     >>> result = mps(data)
     >>> result.shape
     torch.Size([20])
@@ -153,7 +156,7 @@ class MPS(TensorNetwork):  # MARK: MPS
     
     >>> mps = tk.models.MPS(tensors=tensors,
     ...                     out_features=[0, 3, 9])
-    >>> data = torch.ones(20, 7, 2) # batch_size x n_features x feature_size
+    >>> data = torch.ones(20, 7, 2) # batch_size x len(in_features) x feature_size
     >>> result = mps(data)
     >>> result.shape
     torch.Size([20, 2, 2, 2])
@@ -165,7 +168,7 @@ class MPS(TensorNetwork):  # MARK: MPS
     """
 
     def __init__(self,
-                 n_features: Optional[int] = None,
+                 n_sites: Optional[int] = None,
                  phys_dim: Optional[Union[int, Sequence[int]]] = None,
                  bond_dim: Optional[Union[int, Sequence[int]]] = None,
                  boundary: Text = 'obc',
@@ -177,8 +180,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                  parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
 
+        n_sites = _resolve_n_sites(n_sites, n_features)
         super().__init__(name='mps')
         
         if tensors is None:
@@ -187,21 +193,21 @@ class MPS(TensorNetwork):  # MARK: MPS
                 raise ValueError('`boundary` should be one of "obc" or "pbc"')
             self._boundary = boundary
 
-            # n_features
-            if not isinstance(n_features, int):
-                raise TypeError('`n_features` should be int type')
-            elif n_features < 1:
-                raise ValueError('`n_features` should be at least 1')
-            self._n_features = n_features
+            # n_sites
+            if not isinstance(n_sites, int):
+                raise TypeError('`n_sites` should be int type')
+            elif n_sites < 1:
+                raise ValueError('`n_sites` should be at least 1')
+            self._n_sites = n_sites
 
             # phys_dim
             if isinstance(phys_dim, Sequence):
-                if len(phys_dim) != n_features:
+                if len(phys_dim) != n_sites:
                     raise ValueError('If `phys_dim` is given as a sequence of int, '
-                                     'its length should be equal to `n_features`')
+                                     'its length should be equal to `n_sites`')
                 self._phys_dim = list(phys_dim)
             elif isinstance(phys_dim, int):
-                self._phys_dim = [phys_dim] * n_features
+                self._phys_dim = [phys_dim] * n_sites
             else:
                 raise TypeError('`phys_dim` should be int, tuple[int] or list[int] '
                                 'type')
@@ -209,36 +215,36 @@ class MPS(TensorNetwork):  # MARK: MPS
             # bond_dim
             if isinstance(bond_dim, Sequence):
                 if boundary == 'obc':
-                    if len(bond_dim) != n_features - 1:
+                    if len(bond_dim) != n_sites - 1:
                         raise ValueError(
                             'If `bond_dim` is given as a sequence of int, and '
                             '`boundary` is "obc", its length should be equal '
-                            'to `n_features` - 1')
+                            'to `n_sites` - 1')
                 elif boundary == 'pbc':
-                    if len(bond_dim) != n_features:
+                    if len(bond_dim) != n_sites:
                         raise ValueError(
                             'If `bond_dim` is given as a sequence of int, and '
                             '`boundary` is "pbc", its length should be equal '
-                            'to `n_features`')
+                            'to `n_sites`')
                 self._bond_dim = list(bond_dim)
             elif isinstance(bond_dim, int):
                 if boundary == 'obc':
-                    self._bond_dim = [bond_dim] * (n_features - 1)
+                    self._bond_dim = [bond_dim] * (n_sites - 1)
                 elif boundary == 'pbc':
-                    self._bond_dim = [bond_dim] * n_features
+                    self._bond_dim = [bond_dim] * n_sites
             else:
                 raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
                                 ' type')
         
         else:
-            self._n_features, self._phys_dim, self._bond_dim, self._boundary = \
+            self._n_sites, self._phys_dim, self._bond_dim, self._boundary = \
                 self._infer_shape_from_tensors(tensors)
         
         # in_features and out_features
         if in_features is None:
             if out_features is None:
                 # By default, all nodes are input nodes
-                self._in_features = list(range(self._n_features))
+                self._in_features = list(range(self._n_sites))
                 self._out_features = []
             else:
                 if isinstance(out_features, (list, tuple)):
@@ -246,11 +252,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                         if not isinstance(out_f, int):
                             raise TypeError('`out_features` should be tuple[int]'
                                             ' or list[int] type')
-                        if (out_f < 0) or (out_f >= self._n_features):
+                        if (out_f < 0) or (out_f >= self._n_sites):
                             raise ValueError('Elements of `out_features` should'
-                                             ' be between 0 and (`n_features` - 1)')
+                                             ' be between 0 and (`n_sites` - 1)')
                     out_features = set(out_features)
-                    in_features = set(range(self._n_features)).difference(out_features)
+                    in_features = set(range(self._n_sites)).difference(out_features)
                     
                     self._in_features = list(in_features)
                     self._out_features = list(out_features)
@@ -266,16 +272,16 @@ class MPS(TensorNetwork):  # MARK: MPS
                     if not isinstance(in_f, int):
                         raise TypeError('`in_features` should be tuple[int]'
                                         ' or list[int] type')
-                    if (in_f < 0) or (in_f >= self._n_features):
+                    if (in_f < 0) or (in_f >= self._n_sites):
                         raise ValueError('Elements in `in_features` should'
-                                         'be between 0 and (`n_features` - 1)')
+                                         'be between 0 and (`n_sites` - 1)')
                 in_features = set(in_features)
             else:
                 raise TypeError('`in_features` should be tuple[int]'
                                 ' or list[int] type')
                     
             if out_features is None:
-                out_features = set(range(self._n_features)).difference(in_features)
+                out_features = set(range(self._n_sites)).difference(in_features)
                 
                 self._in_features = list(in_features)
                 self._out_features = list(out_features)
@@ -287,7 +293,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 union = in_features.union(out_features)
                 inter = in_features.intersection(out_features)
                 
-                if (union == set(range(self._n_features))) and (inter == set([])):
+                if (union == set(range(self._n_sites))) and (inter == set([])):
                     self._in_features = list(in_features)
                     self._out_features = list(out_features)
                     
@@ -297,7 +303,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     raise ValueError(
                         'If both `in_features` and `out_features` are provided,'
                         ' they should be complementary. That is, the union should'
-                        ' be the total range 0, ..., (`n_features` - 1), and '
+                        ' be the total range 0, ..., (`n_sites` - 1), and '
                         'the intersection should be empty')
         
         # n_batches
@@ -325,9 +331,18 @@ class MPS(TensorNetwork):  # MARK: MPS
     # Properties
     # ----------
     @property
-    def n_features(self) -> int:
+    def n_sites(self) -> int:
         """Returns number of nodes."""
-        return self._n_features
+        return self._n_sites
+
+    @property
+    def n_features(self) -> int:
+        """Deprecated alias for :attr:`n_sites`."""
+        warnings.warn(
+            '`n_features` is deprecated and will be removed; use `n_sites`.',
+            DeprecationWarning,
+            stacklevel=2)
+        return self._n_sites
 
     @property
     def phys_dim(self) -> List[int]:
@@ -386,11 +401,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if not isinstance(in_f, int):
                     raise TypeError('`in_features` should be tuple[int]'
                                     ' or list[int] type')
-                if (in_f < 0) or (in_f >= self._n_features):
+                if (in_f < 0) or (in_f >= self._n_sites):
                     raise ValueError('Elements in `in_features` should'
-                                     'be between 0 and (`n_features` - 1)')
+                                     'be between 0 and (`n_sites` - 1)')
             in_features = set(in_features)
-            out_features = set(range(self._n_features)).difference(in_features)
+            out_features = set(range(self._n_sites)).difference(in_features)
                 
             self._in_features = list(in_features)
             self._out_features = list(out_features)
@@ -423,11 +438,11 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if not isinstance(out_f, int):
                     raise TypeError('`out_features` should be tuple[int]'
                                     ' or list[int] type')
-                if (out_f < 0) or (out_f >= self._n_features):
+                if (out_f < 0) or (out_f >= self._n_sites):
                     raise ValueError('Elements in `out_features` should'
-                                        'be between 0 and (`n_features` - 1)')
+                                        'be between 0 and (`n_sites` - 1)')
             out_features = set(out_features)
-            in_features = set(range(self._n_features)).difference(out_features)
+            in_features = set(range(self._n_sites)).difference(out_features)
                 
             self._in_features = list(in_features)
             self._out_features = list(out_features)
@@ -498,7 +513,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
                             'list[torch.Tensor] type')
 
-        n_features = len(tensors)
+        n_sites = len(tensors)
         phys_dim = []
         bond_dim = []
         boundary = None
@@ -526,7 +541,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     boundary = 'pbc'
                     phys_dim.append(t.shape[1])
                     bond_dim.append(t.shape[2])
-            elif i == (n_features - 1):
+            elif i == (n_sites - 1):
                 if t.ndim != tensors[0].ndim:
                     raise ValueError(
                         'The first and last elements in `tensors` '
@@ -554,7 +569,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 phys_dim.append(t.shape[1])
                 bond_dim.append(t.shape[2])
 
-        return n_features, phys_dim, bond_dim, boundary
+        return n_sites, phys_dim, bond_dim, boundary
     
     def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPS."""
@@ -581,7 +596,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         node_cls = ParamNode if parameterized else Node
 
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             node = node_cls(shape=(aux_bond_dim[i - 1],
                                    self._phys_dim[i],
                                    aux_bond_dim[i]),
@@ -596,12 +611,12 @@ class MPS(TensorNetwork):  # MARK: MPS
             if self._boundary == 'pbc':
                 if i == 0:
                     periodic_edge = self._mats_env[-1]['left']
-                if i == self._n_features - 1:
+                if i == self._n_sites - 1:
                     self._mats_env[-1]['right'] ^ periodic_edge
             else:
                 if i == 0:
                     self._left_node['right'] ^ self._mats_env[-1]['left']
-                if i == self._n_features - 1:
+                if i == self._n_sites - 1:
                     self._mats_env[-1]['right'] ^ self._right_node['left']
     
     def _make_canonical(self,
@@ -620,7 +635,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     node_shape = node.shape[1:]
                     aux_shape = node_shape
                     phys_dim = node_shape[0]
-                elif i == (self._n_features - 1):
+                elif i == (self._n_sites - 1):
                     node_shape = node.shape[:2]
                     aux_shape = node_shape
                     phys_dim = node_shape[1]
@@ -638,7 +653,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
-            if i == (self._n_features - 1):
+            if i == (self._n_sites - 1):
                 if (self._boundary == 'obc') and (i == 0):
                     tensor = tensor[:, 0]
                 tensor = tensor / tensor.norm()
@@ -662,7 +677,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if i == 0:
                     size_1 = 1
                     size_2 = min(node.shape[2], size)
-                elif i == (self._n_features - 1):
+                elif i == (self._n_sites - 1):
                     size_1 = min(node.shape[0], size)
                     size_2 = 1
                 else:
@@ -682,7 +697,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             if self._boundary == 'obc':
                 if i == 0:
                     units = units.squeeze(0)
-                elif i == (self._n_features - 1):
+                elif i == (self._n_sites - 1):
                     units = units.squeeze(-1)
             tensors.append(units)
         
@@ -744,9 +759,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             tensors = self._make_canonical(device=device, dtype=dtype)
 
         if tensors is not None:
-            if len(tensors) != self._n_features:
+            if len(tensors) != self._n_sites:
                 raise ValueError(
-                    '`tensors` should be a sequence of `n_features` elements')
+                    '`tensors` should be a sequence of `n_sites` elements')
             
             if self._boundary == 'obc':
                 tensors = tensors[:]
@@ -803,7 +818,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                         # Left node
                         aux_tensor[0] = node.tensor[0]
                         node.tensor = aux_tensor
-                    elif i == (self._n_features - 1):
+                    elif i == (self._n_sites - 1):
                         # Right node
                         aux_tensor[..., 0] = node.tensor[..., 0]
                         node.tensor = aux_tensor
@@ -843,7 +858,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         -------
         MPS
         """
-        new_mps = MPS(n_features=self._n_features,
+        new_mps = MPS(n_sites=self._n_sites,
                       phys_dim=self._phys_dim,
                       bond_dim=self._bond_dim,
                       boundary=self._boundary,
@@ -856,7 +871,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                       dtype=None)
         new_mps.name = self.name + '_copy'
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
                 set_param=isinstance(self._mats_env[i], ParamNode))
         
@@ -900,7 +915,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         else:
             net = self.copy(share_tensors=False)
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
             
         return net
@@ -1073,7 +1088,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         """Absorbs contracted input regions into the output regions."""
         nodes_out_env = []
         out_first = self.out_regions[0][0] == 0
-        out_last = self.out_regions[-1][-1] == (self._n_features - 1)
+        out_last = self.out_regions[-1][-1] == (self._n_sites - 1)
         
         for i, region in enumerate(self.out_regions):
             aux_out_env = [self._mats_env[j] for j in region]
@@ -1243,9 +1258,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         elif mpo is not None:
             if not isinstance(mpo, MPO):
                 raise TypeError('`mpo` should be MPO type')
-            if mpo._n_features != len(self._out_features):
+            if mpo._n_sites != len(self._out_features):
                 raise ValueError(
-                    '`mpo` should have as many features as output nodes are '
+                    '`mpo` should have as many sites as output nodes are '
                     'in the MPS')
             
         in_regions = self.in_regions
@@ -1564,7 +1579,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             Sequence of nodes' indices in the MPS. These indices specify the
             nodes that should be traced to compute the density matrix. If
             it is empty ``[]``, the total density matrix will be returned,
-            though this may be costly if :attr:`n_features` is big.
+            though this may be costly if :attr:`n_sites` is big.
         renormalize : bool
             Indicates whether nodes should be renormalized after contraction.
             If not, it may happen that the norm explodes or vanishes, as it
@@ -1576,7 +1591,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         Examples
         --------
-        >>> mps = tk.models.MPS(n_features=4,
+        >>> mps = tk.models.MPS(n_sites=4,
         ...                     phys_dim=[2, 3, 4, 5],
         ...                     bond_dim=5)
         >>> density = mps.reduced_density(trace_sites=[0, 2])
@@ -1591,10 +1606,10 @@ class MPS(TensorNetwork):  # MARK: MPS
             if not isinstance(site, int):
                 raise TypeError(
                     'elements of `trace_sites` should be int type')
-            if (site < 0) or (site >= self._n_features):
+            if (site < 0) or (site >= self._n_sites):
                 raise ValueError(
                     'Elements of `trace_sites` should be between 0 and '
-                    '(`n_features` - 1)')
+                    '(`n_sites` - 1)')
         
         if set(trace_sites) != set(self.out_features):
             if self._data_nodes:
@@ -1637,7 +1652,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             result = self.forward(renormalize=renormalize,
                                   marginalize_output=True)
         
-        if self._n_features == 1:
+        if self._n_sites == 1:
             size = result.shape[0]
             result = result.outer(result).view(size, size)
         
@@ -1651,7 +1666,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         Computes the von Neumann entropy of the reduced density matrix
         :math:`\rho_A` (entanglement entropy) between subsystems :math:`A` and
         :math:`B`, where :math:`A` goes from site 0 to ``middle_site``, and
-        :math:`B` goes from ``middle_site + 1`` to ``n_features - 1``.
+        :math:`B` goes from ``middle_site + 1`` to ``n_sites - 1``.
         
         To compute the entanglement entropy, the MPS is put into canonical form
         with orthogonality center at ``middle_site``. Bond dimensions are not
@@ -1670,7 +1685,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         ----------
         middle_site : int
             Position that separates regios :math:`A` and :math:`B`. It should
-            be between 0 and ``n_features - 2``.
+            be between 0 and ``n_sites - 2``.
         renormalize : bool
             Indicates whether nodes should be renormalized after SVD/QR
             decompositions. If not, it may happen that the norm explodes as it
@@ -1688,9 +1703,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
         
-        if (middle_site < 0) or (middle_site > (self._n_features - 2)):
+        if (middle_site < 0) or (middle_site > (self._n_sites - 2)):
             raise ValueError(
-                '`middle_site` should be between 0 and `n_features` - 2')
+                '`middle_site` should be between 0 and `n_sites` - 2')
         
         log_norm = 0
         
@@ -1777,16 +1792,16 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         * ``(phys_dim,)`` when there is only one output node.
         * ``(len(out_features), phys_dim)`` with no batch dimension.
-        * ``(n_features, phys_dim)`` with no batch dimension. Only the entries
+        * ``(n_sites, phys_dim)`` with no batch dimension. Only the entries
           corresponding to ``out_features`` are used.
         * Either of the two previous layouts with an initial batch dimension
           of size 1.
 
         It can also be passed as a list or tuple containing either
-        ``len(out_features)`` or ``n_features`` tensors. Each tensor should
+        ``len(out_features)`` or ``n_sites`` tensors. Each tensor should
         have shape ``(phys_dim,)`` or ``(1, phys_dim)``. In the latter case,
         the initial dimension is a batch dimension of size 1. For a sequence
-        with ``n_features`` elements, only those corresponding to
+        with ``n_sites`` elements, only those corresponding to
         ``out_features`` are used.
 
         Thus, all accepted layouts represent a single configuration; batches
@@ -1804,7 +1819,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         Examples
         --------
-        >>> mps = tk.models.MPSLayer(n_features=4,
+        >>> mps = tk.models.MPSLayer(n_sites=4,
         ...                          in_dim=2,
         ...                          out_dim=3,
         ...                          bond_dim=5)
@@ -1813,10 +1828,10 @@ class MPS(TensorNetwork):  # MARK: MPS
         >>> embedded_label.shape
         torch.Size([3])
         >>> cond_mps = mps.condition(embedded_label)
-        >>> cond_mps.n_features
+        >>> cond_mps.n_sites
         3
 
-        >>> mps = tk.models.MPS(n_features=4, phys_dim=2, bond_dim=5,
+        >>> mps = tk.models.MPS(n_sites=4, phys_dim=2, bond_dim=5,
         ...                     out_features=[1, 3])
         >>> all_data = tk.embeddings.basis(
         ...     torch.tensor([[0, 1, 0, 1]]), dim=2).float()
@@ -1849,10 +1864,10 @@ class MPS(TensorNetwork):  # MARK: MPS
                     '`data` should be provided without batch dimension or '
                     'with batch size 1')
 
-            if data.shape[-2] == self._n_features:
+            if data.shape[-2] == self._n_sites:
                 data = data[self._out_features]
         else:
-            if len(data) == self._n_features:
+            if len(data) == self._n_sites:
                 data = [data[site] for site in self._out_features]
 
             data = list(data)
@@ -2098,13 +2113,13 @@ class MPS(TensorNetwork):  # MARK: MPS
         elif isinstance(domain, torch.Tensor):
             domains = [domain] * n_inputs
         elif isinstance(domain, Sequence):
-            if len(domain) == self._n_features:
+            if len(domain) == self._n_sites:
                 domains = [domain[site] for site in self._in_features]
             elif len(domain) == n_inputs:
                 domains = list(domain)
             else:
                 raise ValueError(
-                    '`domain` should have either `n_features` elements or as '
+                    '`domain` should have either `n_sites` elements or as '
                     'many elements as input nodes are sampled')
         else:
             raise TypeError('`domain` should be torch.Tensor type')
@@ -2112,14 +2127,14 @@ class MPS(TensorNetwork):  # MARK: MPS
         if embedding is None or callable(embedding):
             embeddings_arg = [embedding] * n_inputs
         elif isinstance(embedding, Sequence):
-            if len(embedding) == self._n_features:
+            if len(embedding) == self._n_sites:
                 embeddings_arg = [embedding[site]
                                   for site in self._in_features]
             elif len(embedding) == n_inputs:
                 embeddings_arg = list(embedding)
             else:
                 raise ValueError(
-                    '`embedding` should have either `n_features` elements or '
+                    '`embedding` should have either `n_sites` elements or '
                     'as many elements as input nodes are sampled')
         else:
             raise TypeError('`embedding` should be callable type')
@@ -2128,14 +2143,14 @@ class MPS(TensorNetwork):  # MARK: MPS
                 isinstance(embedding_matrices, torch.Tensor):
             matrices_arg = [embedding_matrices] * n_inputs
         elif isinstance(embedding_matrices, Sequence):
-            if len(embedding_matrices) == self._n_features:
+            if len(embedding_matrices) == self._n_sites:
                 matrices_arg = [embedding_matrices[site]
                                 for site in self._in_features]
             elif len(embedding_matrices) == n_inputs:
                 matrices_arg = list(embedding_matrices)
             else:
                 raise ValueError(
-                    '`embedding_matrices` should have either `n_features` '
+                    '`embedding_matrices` should have either `n_sites` '
                     'elements or as many elements as input nodes are sampled')
         else:
             raise TypeError(
@@ -2327,10 +2342,10 @@ class MPS(TensorNetwork):  # MARK: MPS
                                  right_env: Optional[Node],
                                  renormalize: bool) -> List[Node]:
         """Builds reusable right environments with a right-to-left zip-up."""
-        right_envs = [None] * self._n_features
+        right_envs = [None] * self._n_sites
         right_envs[-1] = right_env
 
-        for site in range(self._n_features - 1, 0, -1):
+        for site in range(self._n_sites - 1, 0, -1):
             right_env = self._contract_sample_site(
                 node=self._mats_env[site],
                 copied_node=copied_nodes[site],
@@ -2390,7 +2405,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             Values from which each input node is sampled. A single tensor is
             shared by all input nodes. A sequence can be ordered either by the
             sampled input nodes, with ``len(in_features)`` elements, or by all
-            MPS sites, with ``n_features`` elements. In the latter case,
+            MPS sites, with ``n_sites`` elements. In the latter case,
             entries at output sites are ignored. If ``None``, each input node
             uses ``torch.arange(phys_dim)``.
         embedding : callable, list[callable] or tuple[callable], optional
@@ -2441,7 +2456,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         Examples
         --------
-        >>> mps = tk.models.MPS(n_features=4,
+        >>> mps = tk.models.MPS(n_sites=4,
         ...                     phys_dim=2,
         ...                     bond_dim=5)
         >>> samples = mps.sample(n_samples=10)
@@ -2547,7 +2562,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             right_env = None
         else:
             if canonical:
-                for i in range(self._n_features - 1):
+                for i in range(self._n_sites - 1):
                     self._mats_env[i]['right'].disconnect()
                     copied_nodes[i]['right'].disconnect()
                 self._mats_env[-1]['right'].disconnect()
@@ -2564,8 +2579,8 @@ class MPS(TensorNetwork):  # MARK: MPS
             copied_node.reattach_edges(axes=['input'])
 
         # Connect physical metrics or right-context data to both layers.
-        matrix_nodes = [None] * self._n_features
-        condition_nodes = [None] * self._n_features
+        matrix_nodes = [None] * self._n_sites
+        condition_nodes = [None] * self._n_sites
         if in_condition is not None:
             super().set_data_nodes(
                 input_edges=[node['input'] for node in self.in_env],
@@ -2604,7 +2619,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 node['input'] ^ copied_node['input']
 
         if canonical:
-            right_envs = [None] * self._n_features
+            right_envs = [None] * self._n_sites
         else:
             right_envs = self._build_sample_right_envs(
                 copied_nodes=copied_nodes,
@@ -2618,7 +2633,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         sample_indices = []
         input_idx = 0
 
-        for site in range(self._n_features):
+        for site in range(self._n_sites):
             if site in self._in_features:
                 node = self._mats_env[site]
                 copied_node = copied_nodes[site]
@@ -2732,7 +2747,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     from_left=True,
                     renormalize=renormalize)
 
-            if canonical and site < (self._n_features - 1):
+            if canonical and site < (self._n_sites - 1):
                 right_axes = [axis.name for axis in left_env.axes
                               if ('right' in axis.name) and
                               (not axis.is_batch())]
@@ -2753,7 +2768,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         if self._boundary == 'pbc':
             self._mats_env[-1]['right'] ^ self._mats_env[0]['left']
         elif canonical:
-            for i in range(self._n_features - 1):
+            for i in range(self._n_sites - 1):
                 self._mats_env[i]['right'] ^ self._mats_env[i + 1]['left']
             self._mats_env[-1]['right'] ^ self._right_node['left']
 
@@ -2813,7 +2828,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         ----------
         oc : int
             Position of the orthogonality center. It should be between 0 and 
-            ``n_features - 1``.
+            ``n_sites - 1``.
         mode : {"svd", "svdr", "qr"}
             Indicates which decomposition should be used to split a node after
             contracting it. See more at :func:`~tensorkrowch.svd_`,
@@ -2855,7 +2870,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             
         Examples
         --------
-        >>> mps = tk.models.MPS(n_features=4,
+        >>> mps = tk.models.MPS(n_sites=4,
         ...                     phys_dim=2,
         ...                     bond_dim=5)
         >>> mps.canonicalize(rank=3)
@@ -2868,10 +2883,10 @@ class MPS(TensorNetwork):  # MARK: MPS
         self.auto_stack = False
 
         if oc is None:
-            oc = self._n_features - 1
-        elif (oc < 0) or (oc >= self._n_features):
+            oc = self._n_sites - 1
+        elif (oc < 0) or (oc >= self._n_sites):
             raise ValueError('Orthogonality center position `oc` should be '
-                             'between 0 and `n_features` - 1')
+                             'between 0 and `n_sites` - 1')
         
         log_norm = 0
         
@@ -3063,7 +3078,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         L = L.tensor
 
-        if idx < (self._n_features - 1):
+        if idx < (self._n_sites - 1):
             bond_dim = self._bond_dim[idx]
 
             prod_phys_left = 1
@@ -3072,7 +3087,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             bond_dim = min(bond_dim, prod_phys_left)
 
             prod_phys_right = 1
-            for i in range(idx + 1, self._n_features):
+            for i in range(idx + 1, self._n_sites):
                 prod_phys_right *= self.phys_dim[i]
             bond_dim = min(bond_dim, prod_phys_right)
 
@@ -3133,7 +3148,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         new_tensors = []
         left_nodeC = None
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             tensor, left_nodeC = self._aux_canonicalize_univocal(
                 nodes=nodes,
                 idx=i,
@@ -3141,7 +3156,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             new_tensors.append(tensor)
         
         for i, node in enumerate(nodes):
-            if i < (self._n_features - 1):
+            if i < (self._n_sites - 1):
                 if self._bond_dim[i] < node['right'].size():
                     node['right'].change_size(self._bond_dim[i])
 
@@ -3172,8 +3187,10 @@ class UMPS(MPS):  # MARK: UMPS
 
     Parameters
     ----------
-    n_features : int
+    n_sites : int, optional
         Number of nodes that will be in ``mats_env``.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     phys_dim : int, optional
         Physical dimension.
     bond_dim : int, optional
@@ -3183,7 +3200,7 @@ class UMPS(MPS):  # MARK: UMPS
         be used.
     tensor: torch.Tensor, optional
         Instead of providing ``phys_dim`` and ``bond_dim``, a single tensor
-        can be provided. ``n_features`` is still needed to specify how many
+        can be provided. ``n_sites`` is still needed to specify how many
         times the tensor should be used to form a finite MPS. The tensor
         should be rank-3, with its first and last dimensions being equal.
     in_features: list[int] or tuple[int], optional
@@ -3221,20 +3238,20 @@ class UMPS(MPS):  # MARK: UMPS
         
     Examples
     --------
-    >>> mps = tk.models.UMPS(n_features=4,
+    >>> mps = tk.models.UMPS(n_sites=4,
     ...                      phys_dim=2,
     ...                      bond_dim=5)
     >>> for node in mps.mats_env:
     ...     assert node.tensor_address() == 'virtual_uniform'
     ...
-    >>> data = torch.ones(20, 4, 2) # batch_size x n_features x feature_size
+    >>> data = torch.ones(20, 4, 2) # batch_size x n_sites x feature_size
     >>> result = mps(data)
     >>> result.shape
     torch.Size([20])
     """
 
     def __init__(self,
-                 n_features: int,
+                 n_sites: Optional[int] = None,
                  phys_dim: Optional[int] = None,
                  bond_dim: Optional[int] = None,
                  boundary: Text = 'pbc',
@@ -3246,15 +3263,18 @@ class UMPS(MPS):  # MARK: UMPS
                  parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
-        
+
+        n_sites = _resolve_n_sites(n_sites, n_features)
         tensors = None
         
-        # n_features
-        if not isinstance(n_features, int):
-            raise TypeError('`n_features` should be int type')
-        elif n_features < 1:
-            raise ValueError('`n_features` should be at least 1')
+        # n_sites
+        if not isinstance(n_sites, int):
+            raise TypeError('`n_sites` should be int type')
+        elif n_sites < 1:
+            raise ValueError('`n_sites` should be at least 1')
         
         if tensor is not None:
             if not isinstance(tensor, torch.Tensor):
@@ -3269,9 +3289,9 @@ class UMPS(MPS):  # MARK: UMPS
             if bond_dim is None:
                 bond_dim = tensor.shape[0]
             if boundary == 'pbc':
-                tensors = [tensor] * n_features
+                tensors = [tensor] * n_sites
         
-        super().__init__(n_features=n_features,
+        super().__init__(n_sites=n_sites,
                          phys_dim=phys_dim,
                          bond_dim=bond_dim,
                          boundary=boundary,
@@ -3450,7 +3470,7 @@ class UMPS(MPS):  # MARK: UMPS
         -------
         UMPS
         """
-        new_mps = UMPS(n_features=self._n_features,
+        new_mps = UMPS(n_sites=self._n_sites,
                        phys_dim=self._phys_dim[0],
                        bond_dim=self._bond_dim[0] if self._bond_dim else 1,
                        boundary=self._boundary,
@@ -3501,7 +3521,7 @@ class UMPS(MPS):  # MARK: UMPS
         else:
             net = self.copy(share_tensors=False)
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest
@@ -3567,34 +3587,36 @@ class MPSLayer(MPS):  # MARK: MPSLayer
 
     Parameters
     ----------
-    n_features : int, optional
+    n_sites : int, optional
         Number of nodes that will be in ``mats_env``. That is, number of nodes
         without taking into account ``left_node`` and ``right_node``. This also
         includes the output node, so if one wants to instantiate an ``MPSLayer``
-        for a dataset with ``n`` features, it should be ``n_features = n + 1``,
+        for a dataset with ``n`` features, it should be ``n_sites = n + 1``,
         to account for the output node.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     in_dim : int, list[int] or tuple[int], optional
         Input dimension(s). Equivalent to the physical dimension(s) but only
         for input nodes. If given as a sequence, its length should be equal to
-        ``n_features - 1``, since these are the input dimensions of the input
+        ``n_sites - 1``, since these are the input dimensions of the input
         nodes.
     out_dim : int, optional
         Output dimension (labels) for the output node. Equivalent to the
         physical dimension of the output node.
     bond_dim : int, list[int] or tuple[int], optional
         Bond dimension(s). If given as a sequence, its length should be equal
-        to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
+        to ``n_sites`` (if ``boundary = "pbc"``) or ``n_sites - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node (including output node).
     out_position : int, optional
         Position of the output node (label). Should be between 0 and
-        ``n_features - 1``. If ``None``, the output node will be located at the
+        ``n_sites - 1``. If ``None``, the output node will be located at the
         middle of the MPS.
     boundary : {"obc", "pbc"}
         String indicating whether periodic or open boundary conditions should
         be used.
     tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
-        Instead of providing ``n_features``, ``in_dim``, ``out_dim``,
+        Instead of providing ``n_sites``, ``in_dim``, ``out_dim``,
         ``bond_dim`` and ``boundary``, a list of MPS tensors can be provided.
         In such case, all mentioned attributes will be inferred from the given
         tensors. All tensors should be rank-3 tensors, with shape ``(bond_dim,
@@ -3626,30 +3648,30 @@ class MPSLayer(MPS):  # MARK: MPSLayer
     --------
     ``MPSLayer`` with same input dimensions:
     
-    >>> mps_layer = tk.models.MPSLayer(n_features=4,
+    >>> mps_layer = tk.models.MPSLayer(n_sites=4,
     ...                                in_dim=2,
     ...                                out_dim=10,
     ...                                bond_dim=5)
-    >>> data = torch.ones(20, 3, 2) # batch_size x (n_features - 1) x feature_size
+    >>> data = torch.ones(20, 3, 2) # batch_size x (n_sites - 1) x feature_size
     >>> result = mps_layer(data)
     >>> result.shape
     torch.Size([20, 10])
     
     ``MPSLayer`` with different input dimensions:
     
-    >>> mps_layer = tk.models.MPSLayer(n_features=4,
+    >>> mps_layer = tk.models.MPSLayer(n_sites=4,
     ...                                in_dim=list(range(2, 5)),
     ...                                out_dim=10,
     ...                                bond_dim=5)
     >>> data = [torch.ones(20, i)
-    ...         for i in range(2, 5)] # (n_features - 1) * [batch_size x feature_size]
+    ...         for i in range(2, 5)] # (n_sites - 1) * [batch_size x feature_size]
     >>> result = mps_layer(data)
     >>> result.shape
     torch.Size([20, 10])
     """
 
     def __init__(self,
-                 n_features: Optional[int] = None,
+                 n_sites: Optional[int] = None,
                  in_dim: Optional[Union[int, Sequence[int]]] = None,
                  out_dim: Optional[int] = None,
                  bond_dim: Optional[Union[int, Sequence[int]]] = None,
@@ -3661,34 +3683,37 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                  parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
-        
+
+        n_sites = _resolve_n_sites(n_sites, n_features)
         phys_dim = None
         
         if tensors is not None:
             if not isinstance(tensors, (list, tuple)):
                 raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
                                 'list[torch.Tensor] type')
-            n_features = len(tensors)
+            n_sites = len(tensors)
         else:
-            if not isinstance(n_features, int):
-                raise TypeError('`n_features` should be int type')
+            if not isinstance(n_sites, int):
+                raise TypeError('`n_sites` should be int type')
             
         # out_position
         if out_position is None:
-            out_position = n_features // 2
-        if (out_position < 0) or (out_position > n_features):
+            out_position = n_sites // 2
+        if (out_position < 0) or (out_position > n_sites):
             raise ValueError(
-                f'`out_position` should be between 0 and {n_features}')
+                f'`out_position` should be between 0 and {n_sites}')
         self._out_position = out_position
         
         if tensors is None:
             # in_dim
             if isinstance(in_dim, (list, tuple)):
-                if len(in_dim) != (n_features - 1):
+                if len(in_dim) != (n_sites - 1):
                     raise ValueError(
                         'If `in_dim` is given as a sequence of int, its '
-                        'length should be equal to `n_features` - 1')
+                        'length should be equal to `n_sites` - 1')
                 else:
                     for dim in in_dim:
                         if not isinstance(dim, int):
@@ -3697,9 +3722,9 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                                 'list[int] type')
                 in_dim = list(in_dim)
             elif isinstance(in_dim, int):
-                in_dim = [in_dim] * (n_features - 1)
+                in_dim = [in_dim] * (n_sites - 1)
             else:
-                if n_features == 1:
+                if n_sites == 1:
                     in_dim = []
                 else:
                     raise TypeError(
@@ -3712,7 +3737,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             # phys_dim
             phys_dim = in_dim[:out_position] + [out_dim] + in_dim[out_position:]
             
-        super().__init__(n_features=n_features,
+        super().__init__(n_sites=n_sites,
                          phys_dim=phys_dim,
                          bond_dim=bond_dim,
                          boundary=boundary,
@@ -3794,7 +3819,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         if self._boundary == 'obc':
             if self._out_position == 0:
                 out_tensor = out_tensor[0]
-            if self._out_position == (self._n_features - 1):
+            if self._out_position == (self._n_sites - 1):
                 out_tensor = out_tensor[..., 0]
         out_tensor = out_tensor / out_tensor.norm() * sqrt(phys_dim)
         
@@ -3872,7 +3897,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         if self._boundary == 'obc':
             if self._out_position == 0:
                 out_tensor = out_tensor[0]
-            if self._out_position == (self._n_features - 1):
+            if self._out_position == (self._n_sites - 1):
                 out_tensor = out_tensor[..., 0]
         
         # Right nodes
@@ -3966,8 +3991,8 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             tensors = self._make_canonical(device=device, dtype=dtype)
 
         if tensors is not None:
-            if len(tensors) != self._n_features:
-                raise ValueError('`tensors` should be a sequence of `n_features`'
+            if len(tensors) != self._n_sites:
+                raise ValueError('`tensors` should be a sequence of `n_sites`'
                                  ' elements')
             
             if self._boundary == 'obc':
@@ -4031,7 +4056,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                         # Left node
                         aux_tensor[0] = node.tensor[0]
                         node.tensor = aux_tensor
-                    elif i == (self._n_features - 1):
+                    elif i == (self._n_sites - 1):
                         # Right node
                         aux_tensor[..., 0] = node.tensor[..., 0]
                         node.tensor = aux_tensor
@@ -4062,7 +4087,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         -------
         MPSLayer
         """
-        new_mps = MPSLayer(n_features=self._n_features,
+        new_mps = MPSLayer(n_sites=self._n_sites,
                            in_dim=self._in_dim,
                            out_dim=self._out_dim,
                            bond_dim=self._bond_dim,
@@ -4075,7 +4100,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                            dtype=None)
         new_mps.name = self.name + '_copy'
 
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
                 set_param=isinstance(self._mats_env[i], ParamNode))
 
@@ -4110,11 +4135,13 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
 
     Parameters
     ----------
-    n_features : int
+    n_sites : int, optional
         Number of nodes that will be in ``mats_env``. This also includes the
         output node, so if one wants to instantiate a ``UMPSLayer`` for a
-        dataset with ``n`` features, it should be ``n_features = n + 1``, to
+        dataset with ``n`` features, it should be ``n_sites = n + 1``, to
         account for the output node.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     in_dim : int, optional
         Input dimension. Equivalent to the physical dimension but only for
         input nodes.
@@ -4124,16 +4151,16 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         Bond dimension.
     out_position : int, optional
         Position of the output node (label). Should be between 0 and
-        ``n_features - 1``. If ``None``, the output node will be located at the
+        ``n_sites - 1``. If ``None``, the output node will be located at the
         middle of the MPS.
     tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
         Instead of providing ``in_dim``, ``out_dim`` and ``bond_dim``, a
         sequence of 2 tensors can be provided, the first one will be the uniform
         tensor, and the second one will be the output node's tensor.
-        ``n_features`` is still needed to specify how many times the uniform
+        ``n_sites`` is still needed to specify how many times the uniform
         tensor should be used to form a finite MPS. In this case, since the
         output node will have a different tensor, the uniform tensor will be
-        used in the remaining ``n_features - 1`` input nodes. Both tensors
+        used in the remaining ``n_sites - 1`` input nodes. Both tensors
         should be rank-3, with all their first and last dimensions being equal.
     n_batches : int
         Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
@@ -4156,7 +4183,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         
     Examples
     --------
-    >>> mps_layer = tk.models.UMPSLayer(n_features=4,
+    >>> mps_layer = tk.models.UMPSLayer(n_sites=4,
     ...                                 in_dim=2,
     ...                                 out_dim=10,
     ...                                 bond_dim=5)
@@ -4164,14 +4191,14 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
     ...     if i != mps_layer.out_position: 
     ...         assert node.tensor_address() == 'virtual_uniform'
     ...
-    >>> data = torch.ones(20, 3, 2) # batch_size x (n_features - 1) x feature_size
+    >>> data = torch.ones(20, 3, 2) # batch_size x (n_sites - 1) x feature_size
     >>> result = mps_layer(data)
     >>> result.shape
     torch.Size([20, 10])
     """
         
     def __init__(self,
-                 n_features: int,
+                 n_sites: Optional[int] = None,
                  in_dim: Optional[int] = None,
                  out_dim: Optional[int] = None,
                  bond_dim: Optional[int] = None,
@@ -4182,30 +4209,33 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                  parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
-        
+
+        n_sites = _resolve_n_sites(n_sites, n_features)
         phys_dim = None
         
-        # n_features
-        if not isinstance(n_features, int):
-            raise TypeError('`n_features` should be int type')
-        elif n_features < 1:
-            raise ValueError('`n_features` should be at least 1')
+        # n_sites
+        if not isinstance(n_sites, int):
+            raise TypeError('`n_sites` should be int type')
+        elif n_sites < 1:
+            raise ValueError('`n_sites` should be at least 1')
             
         # out_position
         if out_position is None:
-            out_position = n_features // 2
-        if (out_position < 0) or (out_position > n_features):
+            out_position = n_sites // 2
+        if (out_position < 0) or (out_position > n_sites):
             raise ValueError(
-                f'`out_position` should be between 0 and {n_features}')
+                f'`out_position` should be between 0 and {n_sites}')
         self._out_position = out_position
         
         if tensors is None:
             # in_dim
             if isinstance(in_dim, int):
-                in_dim = [in_dim] * (n_features - 1)
+                in_dim = [in_dim] * (n_sites - 1)
             else:
-                if n_features == 1:
+                if n_sites == 1:
                     in_dim = []
                 else:
                     raise TypeError(
@@ -4239,15 +4269,15 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                         ' dimensions so that the MPS can have periodic boundary'
                         ' conditions')
             
-            if n_features == 1:
+            if n_sites == 1:
                 # Only output node is used, uniform memory will
                 # take that tensor too
                 tensors = [tensors[1]]
             else:
                 tensors = [tensors[0]] * out_position + [tensors[1]] + \
-                    [tensors[0]] * (n_features - 1 - out_position)
+                    [tensors[0]] * (n_sites - 1 - out_position)
         
-        super().__init__(n_features=n_features,
+        super().__init__(n_sites=n_sites,
                          phys_dim=phys_dim,
                          bond_dim=bond_dim,
                          boundary='pbc',
@@ -4460,7 +4490,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         -------
         UMPSLayer
         """
-        new_mps = UMPSLayer(n_features=self._n_features,
+        new_mps = UMPSLayer(n_sites=self._n_sites,
                             in_dim=self._in_dim[0] if self._in_dim else None,
                             out_dim=self._out_dim,
                             bond_dim=self._bond_dim,
@@ -4511,7 +4541,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         else:
             net = self.copy(share_tensors=False)
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest
@@ -4760,7 +4790,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                                       dilation=dilation)
 
         MPS.__init__(self,
-                     n_features=self._kernel_size[0] * self._kernel_size[1],
+                     n_sites=self._kernel_size[0] * self._kernel_size[1],
                      phys_dim=in_channels,
                      bond_dim=bond_dim,
                      boundary=boundary,
@@ -4842,7 +4872,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                           dtype=None)
         new_mps.name = self.name + '_copy'
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
                 set_param=isinstance(self._mats_env[i], ParamNode))
         
@@ -4948,7 +4978,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                                       dilation=dilation)
 
         UMPS.__init__(self,
-                      n_features=self._kernel_size[0] * self._kernel_size[1],
+                      n_sites=self._kernel_size[0] * self._kernel_size[1],
                       phys_dim=in_channels,
                       bond_dim=bond_dim,
                       boundary=boundary,
@@ -5141,7 +5171,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                                       dilation=dilation)
 
         MPSLayer.__init__(self,
-                          n_features=self._kernel_size[0] * \
+                          n_sites=self._kernel_size[0] * \
                               self._kernel_size[1] + 1,
                           in_dim=in_channels,
                           out_dim=out_channels,
@@ -5233,7 +5263,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                                dtype=None)
         new_mps.name = self.name + '_copy'
 
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             new_mps._mats_env[i] = new_mps._mats_env[i].parameterize(
                 set_param=isinstance(self._mats_env[i], ParamNode))
         
@@ -5350,7 +5380,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                                       dilation=dilation)
 
         UMPSLayer.__init__(self,
-                           n_features=self._kernel_size[0] * \
+                           n_sites=self._kernel_size[0] * \
                                self._kernel_size[1] + 1,
                            in_dim=in_channels,
                            out_dim=out_channels,

@@ -10,11 +10,48 @@ Tests for mps:
 """
 
 import itertools
+import warnings
 
 import pytest
 
 import torch
 import tensorkrowch as tk
+
+
+@pytest.mark.parametrize('model_type, options, positional', [
+    (tk.models.MPS, {'phys_dim': 2, 'bond_dim': 2}, (2, 2, 2)),
+    (tk.models.UMPS, {'phys_dim': 2, 'bond_dim': 2}, (2, 2, 2)),
+    (tk.models.MPSLayer,
+     {'in_dim': 2, 'out_dim': 2, 'bond_dim': 2}, (2, 2, 2, 2)),
+    (tk.models.UMPSLayer,
+     {'in_dim': 2, 'out_dim': 2, 'bond_dim': 2}, (2, 2, 2, 2)),
+    (tk.models.MPSData, {'phys_dim': 2, 'bond_dim': 2}, (2, 2, 2)),
+])
+def test_mps_site_count_name_and_deprecated_alias(
+        model_type, options, positional):
+    with warnings.catch_warnings(record=True) as emitted:
+        warnings.simplefilter('always', DeprecationWarning)
+        model = model_type(n_sites=2, **options)
+        assert model.n_sites == 2
+        assert model_type(*positional).n_sites == 2
+    assert not emitted
+
+    with pytest.warns(DeprecationWarning, match='n_features'):
+        legacy = model_type(n_features=2, **options)
+    assert legacy.n_sites == 2
+    with pytest.warns(DeprecationWarning, match='n_features'):
+        assert legacy.n_features == 2
+
+    with pytest.raises(TypeError, match='cannot both be provided'):
+        model_type(n_sites=2, n_features=2, **options)
+
+
+def test_convolutional_mps_inherits_site_count_alias():
+    model = tk.models.ConvMPS(
+        in_channels=2, bond_dim=2, kernel_size=2)
+    assert model.n_sites == 4
+    with pytest.warns(DeprecationWarning, match='n_features'):
+        assert model.n_features == 4
 
 AUTO_BOOL_CASES = [True, False]
 N_FEATURES_CASES = [1, 2, 3, 4, 10]
@@ -116,7 +153,7 @@ def _assert_nodes_runtime(nodes, runtime, device):
 
 
 def _assert_copied_mps(mps, copied_mps, share_tensors):
-    assert mps.n_features == copied_mps.n_features
+    assert mps.n_sites == copied_mps.n_sites
     assert mps.phys_dim == copied_mps.phys_dim
     assert mps.bond_dim == copied_mps.bond_dim
     assert mps.boundary == copied_mps.boundary
@@ -196,7 +233,7 @@ def _assert_obc_boundary_runtime(model, device, dtype):
 
 
 def _assert_mps_data_node_shapes(mps, n_batches, batch_size):
-    if (mps.n_features == 1) and (mps.boundary == 'obc'):
+    if (mps.n_sites == 1) and (mps.boundary == 'obc'):
         assert mps.mats_env[0].shape == tuple([batch_size] * n_batches + [1, 2, 1])
         return
 
@@ -404,7 +441,7 @@ class TestMPS:  # MARK: TestMPS
                            atol):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary='obc',
@@ -449,7 +486,7 @@ class TestMPS:  # MARK: TestMPS
             tensors[-1] = tensors[-1][..., 0]
 
         mps = tk.models.MPS(tensors=tensors)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
@@ -466,7 +503,7 @@ class TestMPS:  # MARK: TestMPS
             tensors[-1] = tensors[-1][..., 0]
 
         mps = tk.models.MPS(tensors=tensors)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
@@ -476,11 +513,11 @@ class TestMPS:  # MARK: TestMPS
         tensors = [torch.randn(10, 2, 10) for _ in range(10)]
         mps = tk.models.MPS(tensors=tensors,
                             boundary='obc',
-                            n_features=3,
+                            n_sites=3,
                             phys_dim=4,
                             bond_dim=7)
         assert mps.boundary == 'pbc'
-        assert mps.n_features == 10
+        assert mps.n_sites == 10
         assert mps.phys_dim == [2] * 10
         assert mps.bond_dim == [10] * 10
         assert mps.in_features == list(range(10))
@@ -510,11 +547,11 @@ class TestMPS:  # MARK: TestMPS
     def test_initialize_init_method(self, n, boundary, init_method):
         # All init methods should preserve the requested metadata.
         mps = tk.models.MPS(boundary=boundary,
-                            n_features=n,
+                            n_sites=n,
                             phys_dim=2,
                             bond_dim=5,
                             init_method=init_method)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * (n - 1 if boundary == 'obc' else n)
@@ -526,7 +563,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_parameterized(self, parameterized, boundary):
-        mps = tk.models.MPS(n_features=4,
+        mps = tk.models.MPS(n_sites=4,
                             phys_dim=2,
                             bond_dim=5,
                             boundary=boundary,
@@ -543,12 +580,12 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPS(boundary=boundary,
-                            n_features=n,
+                            n_sites=n,
                             phys_dim=2,
                             bond_dim=5,
                             init_method=init_method,
                             **model_kwargs)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * (n - 1 if boundary == 'obc' else n)
@@ -564,7 +601,7 @@ class TestMPS:  # MARK: TestMPS
         device = _runtime_device(runtime)
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPS(boundary=boundary,
-                            n_features=3,
+                            n_sites=3,
                             phys_dim=2,
                             bond_dim=5,
                             **model_kwargs)
@@ -580,11 +617,11 @@ class TestMPS:  # MARK: TestMPS
     def test_initialize_canonical(self, n, boundary):
         # Canonical init keeps the requested shape and, for OBC, the expected norm.
         mps = tk.models.MPS(boundary=boundary,
-                            n_features=n,
+                            n_sites=n,
                             phys_dim=2,
                             bond_dim=2,
                             init_method='canonical')
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [2] * (n - 1 if boundary == 'obc' else n)
@@ -598,12 +635,12 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPS(boundary=boundary,
-                            n_features=n,
+                            n_sites=n,
                             phys_dim=2,
                             bond_dim=2,
                             init_method='canonical',
                             **model_kwargs)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [2] * (n - 1 if boundary == 'obc' else n)
@@ -647,7 +684,7 @@ class TestMPS:  # MARK: TestMPS
     def test_phys_dims(self, n_features, boundary):
         phys_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=10,
                             boundary=boundary)
@@ -660,7 +697,7 @@ class TestMPS:  # MARK: TestMPS
         # phys_dim should have n_features elements.
         phys_dim = torch.randint(low=2, high=10, size=(n_features + 1,)).tolist()
         with pytest.raises(ValueError):
-            tk.models.MPS(n_features=n_features,
+            tk.models.MPS(n_sites=n_features,
                           phys_dim=phys_dim,
                           bond_dim=10,
                           boundary=boundary)
@@ -671,7 +708,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=bond_dim,
                             boundary=boundary)
@@ -698,7 +735,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary=boundary)
@@ -719,7 +756,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary=boundary)
@@ -739,7 +776,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary=boundary)
@@ -760,7 +797,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy_preserves_boundary_dtype(self, n_features, share_tensors):
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=3,
                             bond_dim=4,
                             boundary='obc',
@@ -777,7 +814,7 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.complex64
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=3,
                             bond_dim=4,
                             boundary='obc').to(device=device, dtype=dtype)
@@ -790,7 +827,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_to(self, n_features, boundary):
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary)
@@ -811,7 +848,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_to_contracted(self, n_features, boundary):
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary)
@@ -841,7 +878,7 @@ class TestMPS:  # MARK: TestMPS
                                            dtype)
     
     def test_update_bond_dim(self):
-        mps = tk.models.MPS(n_features=100,
+        mps = tk.models.MPS(n_sites=100,
                             phys_dim=2,
                             bond_dim=10,
                             boundary='obc',
@@ -962,7 +999,7 @@ class TestMPS:  # MARK: TestMPS
         tensor_kwargs, model_kwargs, is_complex = self._runtime_kwargs(runtime)
         example, data = self._tensor_inputs(n_features, 5, tensor_kwargs)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary,
@@ -1005,7 +1042,7 @@ class TestMPS:  # MARK: TestMPS
         phys_dim = self._sample_unique_phys_dim(n_features)
         example, data = self._list_inputs(phys_dim, {})
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=2,
                             boundary=boundary)
@@ -1048,7 +1085,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
         example, data = self._tensor_inputs(n_features, 5, {})
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=bond_dim,
                             boundary=boundary)
@@ -1092,7 +1129,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
         example, data = self._list_inputs(phys_dim, {})
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary=boundary)
@@ -1134,7 +1171,7 @@ class TestMPS:  # MARK: TestMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features), {})
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary,
@@ -1183,7 +1220,7 @@ class TestMPS:  # MARK: TestMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features), tensor_kwargs)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary,
@@ -1238,7 +1275,7 @@ class TestMPS:  # MARK: TestMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features), tensor_kwargs)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary,
@@ -1280,8 +1317,8 @@ class TestMPS:  # MARK: TestMPS
     def _leaf_nodes_with_mpo(n_features, in_features_len,
                              mps_boundary, mpo_boundary):
         mps_leaf_nodes = n_features + 2 if mps_boundary == 'obc' else n_features
-        mpo_n_features = n_features - in_features_len
-        mpo_leaf_nodes = mpo_n_features + 2 if mpo_boundary == 'obc' else mpo_n_features
+        mpo_n_sites = n_features - in_features_len
+        mpo_leaf_nodes = mpo_n_sites + 2 if mpo_boundary == 'obc' else mpo_n_sites
         return mps_leaf_nodes + mpo_leaf_nodes
 
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
@@ -1301,13 +1338,13 @@ class TestMPS:  # MARK: TestMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features), tensor_kwargs)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=mps_boundary,
                             in_features=in_features,
                             **model_kwargs)
-        mpo = tk.models.MPO(n_features=n_features - len(in_features),
+        mpo = tk.models.MPO(n_sites=n_features - len(in_features),
                             in_dim=5,
                             out_dim=5,
                             bond_dim=2,
@@ -1359,7 +1396,7 @@ class TestMPS:  # MARK: TestMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features), {})
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary,
@@ -1400,7 +1437,7 @@ class TestMPS:  # MARK: TestMPS
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
         in_features = self._sample_unique_features(n_features)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=5,
                             bond_dim=2,
                             boundary=boundary,
@@ -1428,7 +1465,7 @@ class TestMPS:  # MARK: TestMPS
                                     high=n_features,
                                     size=(n_features // 2,)).tolist()
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary=boundary,
@@ -1460,7 +1497,7 @@ class TestMPS:  # MARK: TestMPS
 
         phys_dim = [2, 3, 2]
         bond_dim = [2, 3] if boundary == 'obc' else [2, 3, 4]
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=phys_dim,
                             bond_dim=bond_dim,
                             boundary=boundary,
@@ -1490,7 +1527,7 @@ class TestMPS:  # MARK: TestMPS
     def test_sample_marginalizes_output_nodes_exactly(self,
                                                       monkeypatch,
                                                       boundary):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             boundary=boundary,
@@ -1517,7 +1554,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_sample_with_in_condition_matches_exact_conditionals(
             self, monkeypatch, boundary):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             boundary=boundary)
@@ -1549,7 +1586,7 @@ class TestMPS:  # MARK: TestMPS
                 prefixes[batch].append(indices[batch, step].item())
 
     def test_sample_canonical_matches_right_environments(self, monkeypatch):
-        mps = tk.models.MPS(n_features=4,
+        mps = tk.models.MPS(n_sites=4,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='obc')
@@ -1580,7 +1617,7 @@ class TestMPS:  # MARK: TestMPS
     def test_sample_ignores_incompatible_canonical(self,
                                                    boundary,
                                                    sample_kwargs):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             boundary=boundary)
@@ -1593,7 +1630,7 @@ class TestMPS:  # MARK: TestMPS
         assert samples.shape == (2, 3)
 
     def test_sample_rejects_mps_without_input_nodes(self):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             in_features=[])
@@ -1605,7 +1642,7 @@ class TestMPS:  # MARK: TestMPS
     ############################
 
     def test_sample_build_matrices_matches_basis_metric(self, monkeypatch):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='obc')
@@ -1630,7 +1667,7 @@ class TestMPS:  # MARK: TestMPS
             assert torch.allclose(probs_id, probs_built)
 
     def test_sample_with_continuous_embedding(self):
-        mps = tk.models.MPS(n_features=2,
+        mps = tk.models.MPS(n_sites=2,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='obc')
@@ -1645,7 +1682,7 @@ class TestMPS:  # MARK: TestMPS
         assert torch.isin(samples, domain).all()
 
     def test_sample_keeps_mps_usable(self):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='obc')
@@ -1662,7 +1699,7 @@ class TestMPS:  # MARK: TestMPS
     @pytest.mark.parametrize('out_position', [0, 1, 3])
     def test_condition_matches_mpslayer_fixed_output(self, out_position):
         label = 1
-        layer = tk.models.MPSLayer(n_features=4,
+        layer = tk.models.MPSLayer(n_sites=4,
                                    in_dim=2,
                                    out_dim=3,
                                    bond_dim=2,
@@ -1682,7 +1719,7 @@ class TestMPS:  # MARK: TestMPS
 
     @pytest.mark.parametrize('boundary', ['obc', 'pbc'])
     def test_condition_multiple_output_nodes(self, boundary):
-        mps = tk.models.MPS(n_features=5,
+        mps = tk.models.MPS(n_sites=5,
                             phys_dim=2,
                             bond_dim=2,
                             boundary=boundary,
@@ -1704,7 +1741,7 @@ class TestMPS:  # MARK: TestMPS
         assert torch.allclose(cond_output, original_output)
 
     def test_condition_pbc_output_regions_at_both_ends(self):
-        mps = tk.models.MPS(n_features=5,
+        mps = tk.models.MPS(n_sites=5,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='pbc',
@@ -1737,7 +1774,7 @@ class TestMPS:  # MARK: TestMPS
          'restricted_list_batch',
          'full_list_batch'])
     def test_condition_accepts_data_layouts(self, layout):
-        mps = tk.models.MPS(n_features=4,
+        mps = tk.models.MPS(n_sites=4,
                             phys_dim=2,
                             bond_dim=2,
                             out_features=[1, 3])
@@ -1782,7 +1819,7 @@ class TestMPS:  # MARK: TestMPS
         [torch.randn(2, 2, 2),
          [torch.randn(2, 2), torch.randn(1, 2)]])
     def test_condition_rejects_batch_size_greater_than_one(self, data):
-        mps = tk.models.MPS(n_features=4,
+        mps = tk.models.MPS(n_sites=4,
                             phys_dim=2,
                             bond_dim=2,
                             out_features=[1, 3])
@@ -1792,7 +1829,7 @@ class TestMPS:  # MARK: TestMPS
 
     def test_condition_then_sample_matches_exact_distribution(self,
                                                               monkeypatch):
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='obc',
@@ -1821,7 +1858,7 @@ class TestMPS:  # MARK: TestMPS
             prefix.append(indices[0, step].item())
 
     def test_sample_uses_trapezoidal_point_masses(self, monkeypatch):
-        mps = tk.models.MPS(n_features=1,
+        mps = tk.models.MPS(n_sites=1,
                             phys_dim=1,
                             bond_dim=2,
                             boundary='obc')
@@ -1848,7 +1885,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = torch.randint(low=2, high=6, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=2,
                             bond_dim=bond_dim,
                             boundary=boundary,
@@ -1880,7 +1917,7 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=2,
                             bond_dim=6,
                             boundary=boundary,
@@ -1914,7 +1951,7 @@ class TestMPS:  # MARK: TestMPS
         elif runtime == 'complex':
             runtime_kwargs['dtype'] = torch.complex64
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=2,
                             bond_dim=6,
                             boundary=boundary,
@@ -1952,7 +1989,7 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         runtime_kwargs = self._get_runtime_kwargs(runtime, device)
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=2,
                             bond_dim=6,
                             boundary=boundary,
@@ -1987,7 +2024,7 @@ class TestMPS:  # MARK: TestMPS
         bond_dim = torch.randint(low=2, high=6, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPS(n_features=n_features,
+        mps = tk.models.MPS(n_sites=n_features,
                             phys_dim=2,
                             bond_dim=bond_dim,
                             boundary=boundary,
@@ -2005,7 +2042,7 @@ class TestMPS:  # MARK: TestMPS
     def test_canonicalize_linalg_error_breaks_tensors_access(self):
         # Non-finite values make ``torch.linalg.svd`` fail, which currently
         # leaves OBC boundary tensors unusable for ``mps.tensors`` afterwards.
-        mps = tk.models.MPS(n_features=3,
+        mps = tk.models.MPS(n_sites=3,
                             phys_dim=2,
                             bond_dim=4,
                             boundary='obc',
@@ -2041,7 +2078,7 @@ class TestMPS:  # MARK: TestMPS
         self._run_univocal_case(n_features, 'default', 2, 100, 1e-4)
     
     def test_save_load_model(self):
-        mps = tk.models.MPS(n_features=100,
+        mps = tk.models.MPS(n_sites=100,
                             phys_dim=2,
                             bond_dim=10,
                             boundary='obc',
@@ -2054,14 +2091,14 @@ class TestMPS:  # MARK: TestMPS
         mps_state_dict = mps.state_dict()
         
         # Load new model from state_dict
-        new_mps = tk.models.MPS(n_features=100,
+        new_mps = tk.models.MPS(n_sites=100,
                                 phys_dim=2,
                                 bond_dim=5,
                                 boundary='obc')
         new_mps.load_state_dict(mps_state_dict)
     
     def test_save_load_model_univocal(self):
-        mps = tk.models.MPS(n_features=100,
+        mps = tk.models.MPS(n_sites=100,
                             phys_dim=2,
                             bond_dim=10,
                             boundary='obc',
@@ -2074,7 +2111,7 @@ class TestMPS:  # MARK: TestMPS
         mps_state_dict = mps.state_dict()
         
         # Load new model from state_dict
-        new_mps = tk.models.MPS(n_features=100,
+        new_mps = tk.models.MPS(n_sites=100,
                                 phys_dim=2,
                                 bond_dim=new_bond_dim,
                                 boundary='obc')
@@ -2086,8 +2123,8 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_tensors(self, n):
         tensor = torch.randn(10, 2, 10)
-        mps = tk.models.UMPS(n_features=n, tensor=tensor)
-        assert mps.n_features == n
+        mps = tk.models.UMPS(n_sites=n, tensor=tensor)
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * n
@@ -2095,12 +2132,12 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('n', [2, 5])
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_boundary(self, n, boundary):
-        mps = tk.models.UMPS(n_features=n,
+        mps = tk.models.UMPS(n_sites=n,
                              phys_dim=2,
                              bond_dim=5,
                              boundary=boundary)
 
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * (n - 1 if boundary == 'obc' else n)
@@ -2113,7 +2150,7 @@ class TestUMPS:  # MARK: TestUMPS
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_boundary_with_tensor(self, n, boundary):
         tensor = torch.randn(10, 2, 10)
-        mps = tk.models.UMPS(n_features=n,
+        mps = tk.models.UMPS(n_sites=n,
                              boundary=boundary,
                              tensor=tensor,
                              parameterized=False)
@@ -2129,8 +2166,8 @@ class TestUMPS:  # MARK: TestUMPS
         device = _runtime_device(runtime)
         tensor_kwargs = _runtime_kwargs(runtime, device)
         tensor = torch.randn(10, 2, 10, **tensor_kwargs)
-        mps = tk.models.UMPS(n_features=n, tensor=tensor)
-        assert mps.n_features == n
+        mps = tk.models.UMPS(n_sites=n, tensor=tensor)
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * n
@@ -2140,36 +2177,36 @@ class TestUMPS:  # MARK: TestUMPS
         # Tensor should be at most rank-3 tensor
         tensor = torch.randn(10, 2, 7, 3)
         with pytest.raises(ValueError):
-            mps = tk.models.UMPS(n_features=5,
+            mps = tk.models.UMPS(n_sites=5,
                                  tensor=tensor)
         
         # Bond dimensions should coincide
         tensor = torch.randn(10, 2, 7)
         with pytest.raises(ValueError):
-            mps = tk.models.UMPS(n_features=5,
+            mps = tk.models.UMPS(n_sites=5,
                                  tensor=tensor)
         
         # First and last bond dims should coincide
         tensors = torch.randn(5, 2, 3)
         with pytest.raises(ValueError):
-            mps = tk.models.UMPS(n_features=1,
+            mps = tk.models.UMPS(n_sites=1,
                                  tensor=tensor)
     
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('init_method', MPS_INIT_METHODS)
     def test_initialize_init_method(self, n, init_method):
-        mps = tk.models.UMPS(n_features=n,
+        mps = tk.models.UMPS(n_sites=n,
                              phys_dim=2,
                              bond_dim=5,
                              init_method=init_method)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * n
 
     @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
     def test_initialize_parameterized(self, parameterized):
-        mps = tk.models.UMPS(n_features=4,
+        mps = tk.models.UMPS(n_sites=4,
                              phys_dim=2,
                              bond_dim=5,
                              parameterized=parameterized)
@@ -2185,12 +2222,12 @@ class TestUMPS:  # MARK: TestUMPS
     def test_initialize_init_method_runtime(self, runtime, n, init_method):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
-        mps = tk.models.UMPS(n_features=n,
+        mps = tk.models.UMPS(n_sites=n,
                              phys_dim=2,
                              bond_dim=5,
                              init_method=init_method,
                              **model_kwargs)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [5] * n
@@ -2198,11 +2235,11 @@ class TestUMPS:  # MARK: TestUMPS
     
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_unitaries(self, n):
-        mps = tk.models.UMPS(n_features=n,
+        mps = tk.models.UMPS(n_sites=n,
                              phys_dim=2,
                              bond_dim=2,
                              init_method='unit')
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [2] * n
@@ -2214,12 +2251,12 @@ class TestUMPS:  # MARK: TestUMPS
             pytest.skip('torch.linalg.qr is not implemented for MPS')
         device = _runtime_device(runtime)
         model_kwargs = _runtime_kwargs(runtime, device)
-        mps = tk.models.UMPS(n_features=n,
+        mps = tk.models.UMPS(n_sites=n,
                              phys_dim=2,
                              bond_dim=2,
                              init_method='unit',
                              **model_kwargs)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [2] * n
@@ -2227,7 +2264,7 @@ class TestUMPS:  # MARK: TestUMPS
     
     def test_in_and_out_features(self):
         tensor = torch.randn(10, 2, 10)
-        mps = tk.models.UMPS(n_features=10,
+        mps = tk.models.UMPS(n_sites=10,
                              tensor=tensor,
                              in_features=[0, 1, 4, 5])
         
@@ -2245,18 +2282,18 @@ class TestUMPS:  # MARK: TestUMPS
         
         # Raises error if in_features and out_features are not complementary
         with pytest.raises(ValueError):
-            mps = tk.models.UMPS(n_features=10,
+            mps = tk.models.UMPS(n_sites=10,
                                  tensor=tensor,
                                  in_features=[0, 1, 4, 5],
                                  out_features=[0, 2, 3, 6, 7, 8, 9])
         
         # Raises error if in_features or out_features are out of range
         with pytest.raises(ValueError):
-            mps = tk.models.UMPS(n_features=10,
+            mps = tk.models.UMPS(n_sites=10,
                                  tensor=tensor,
                                  in_features=[0, 7, 15])
         with pytest.raises(ValueError):
-            mps = tk.models.UMPS(n_features=10,
+            mps = tk.models.UMPS(n_sites=10,
                                  tensor=tensor,
                                  out_features=[-1])
     
@@ -2266,7 +2303,7 @@ class TestUMPS:  # MARK: TestUMPS
         phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=phys_dim,
                              bond_dim=bond_dim)
 
@@ -2277,7 +2314,7 @@ class TestUMPS:  # MARK: TestUMPS
     
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_copy_preserves_boundary(self, boundary):
-        mps = tk.models.UMPS(n_features=3,
+        mps = tk.models.UMPS(n_sites=3,
                              phys_dim=5,
                              bond_dim=2,
                              boundary=boundary)
@@ -2293,7 +2330,7 @@ class TestUMPS:  # MARK: TestUMPS
         phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=phys_dim,
                              bond_dim=bond_dim)
         mps = mps.parameterize(set_param=False, override=True)
@@ -2312,7 +2349,7 @@ class TestUMPS:  # MARK: TestUMPS
         phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=phys_dim,
                              bond_dim=bond_dim)
 
@@ -2328,7 +2365,7 @@ class TestUMPS:  # MARK: TestUMPS
 
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     def test_to(self, n_features):
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=5,
                              bond_dim=2)
 
@@ -2343,7 +2380,7 @@ class TestUMPS:  # MARK: TestUMPS
 
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     def test_to_contracted(self, n_features):
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=5,
                              bond_dim=2)
 
@@ -2457,7 +2494,7 @@ class TestUMPS:  # MARK: TestUMPS
         example = torch.randn(1, n_features, 5)
         data = torch.randn(100, n_features, 5)
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=5,
                              bond_dim=2)
         mps.auto_stack = auto_stack
@@ -2495,7 +2532,7 @@ class TestUMPS:  # MARK: TestUMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features))
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=5,
                              bond_dim=2,
                              in_features=in_features)
@@ -2540,7 +2577,7 @@ class TestUMPS:  # MARK: TestUMPS
         in_features = self._sample_in_features(n_features)
         example, data = self._partial_inputs(len(in_features))
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=5,
                              bond_dim=2,
                              in_features=in_features)
@@ -2581,7 +2618,7 @@ class TestUMPS:  # MARK: TestUMPS
                                                high=n_features,
                                                size=(n_features // 2,)).tolist()))
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=5,
                              bond_dim=2,
                              in_features=in_features,
@@ -2605,7 +2642,7 @@ class TestUMPS:  # MARK: TestUMPS
                                     high=n_features,
                                     size=(n_features // 2,)).tolist()
 
-        mps = tk.models.UMPS(n_features=n_features,
+        mps = tk.models.UMPS(n_sites=n_features,
                              phys_dim=phys_dim,
                              bond_dim=bond_dim,
                              in_features=trace_sites,
@@ -2620,7 +2657,7 @@ class TestUMPS:  # MARK: TestUMPS
         density = mps.reduced_density(trace_sites)
     
     def test_canonicalize_error(self):
-        mps = tk.models.UMPS(n_features=10,
+        mps = tk.models.UMPS(n_sites=10,
                              phys_dim=2,
                              bond_dim=10,
                              in_features=[])
@@ -2629,7 +2666,7 @@ class TestUMPS:  # MARK: TestUMPS
             mps.canonicalize()
     
     def test_canonicalize_univocal_error(self):
-        mps = tk.models.UMPS(n_features=6,
+        mps = tk.models.UMPS(n_sites=6,
                              phys_dim=2,
                              bond_dim=10,
                              in_features=[])
@@ -2649,7 +2686,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
             tensors[-1] = tensors[-1][..., 0]
 
         mps = tk.models.MPSLayer(tensors=tensors)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.in_dim == [2] * (n - 1)
         assert mps.out_dim == 2
@@ -2660,12 +2697,12 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         tensors = [torch.randn(10, 2, 10) for _ in range(10)]
         mps = tk.models.MPSLayer(tensors=tensors,
                                  boundary='obc',
-                                 n_features=3,
+                                 n_sites=3,
                                  in_dim=4,
                                  out_dim=5,
                                  bond_dim=7)
         assert mps.boundary == 'pbc'
-        assert mps.n_features == 10
+        assert mps.n_sites == 10
         assert mps.in_dim == [2] * 9
         assert mps.out_dim == 2
         assert mps.phys_dim == [2] * 10
@@ -2676,12 +2713,12 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     @pytest.mark.parametrize('init_method', MPS_INIT_METHODS)
     def test_initialize_init_method(self, n, boundary, init_method):
         mps = tk.models.MPSLayer(boundary=boundary,
-                                 n_features=n,
+                                 n_sites=n,
                                  in_dim=2,
                                  out_dim=10,
                                  bond_dim=5,
                                  init_method=init_method)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.in_dim == [2] * (n - 1)
         assert mps.out_dim == 10
@@ -2694,7 +2731,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_parameterized(self, parameterized, boundary):
         mps = tk.models.MPSLayer(boundary=boundary,
-                                 n_features=4,
+                                 n_sites=4,
                                  in_dim=2,
                                  out_dim=10,
                                  bond_dim=5,
@@ -2711,13 +2748,13 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPSLayer(boundary=boundary,
-                                 n_features=n,
+                                 n_sites=n,
                                  in_dim=2,
                                  out_dim=10,
                                  bond_dim=5,
                                  init_method=init_method,
                                  **model_kwargs)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.in_dim == [2] * (n - 1)
         assert mps.out_dim == 10
@@ -2731,12 +2768,12 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
     def test_initialize_canonical(self, n, boundary):
         mps = tk.models.MPSLayer(boundary=boundary,
-                                 n_features=n,
+                                 n_sites=n,
                                  in_dim=10,
                                  out_dim=10,
                                  bond_dim=10,
                                  init_method='canonical')
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [10] * n
         assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
@@ -2750,13 +2787,13 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         model_kwargs = _runtime_kwargs(runtime, device)
         mps = tk.models.MPSLayer(boundary=boundary,
-                                 n_features=n,
+                                 n_sites=n,
                                  in_dim=10,
                                  out_dim=10,
                                  bond_dim=10,
                                  init_method='canonical',
                                  **model_kwargs)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [10] * n
         assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
@@ -2789,7 +2826,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     def test_in_out_dims(self, n_features, boundary):
         in_dim = torch.randint(low=2, high=10, size=(n_features - 1,)).tolist()
 
-        mps = tk.models.MPSLayer(n_features=n_features,
+        mps = tk.models.MPSLayer(n_sites=n_features,
                                  in_dim=in_dim,
                                  out_dim=2,
                                  bond_dim=10,
@@ -2807,7 +2844,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         # in_dim should have (n_features - 1) elements.
         in_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         with pytest.raises(ValueError):
-            tk.models.MPSLayer(n_features=n_features,
+            tk.models.MPSLayer(n_sites=n_features,
                                in_dim=in_dim,
                                out_dim=2,
                                bond_dim=10,
@@ -2822,7 +2859,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPSLayer(n_features=n_features,
+        mps = tk.models.MPSLayer(n_sites=n_features,
                                  in_dim=in_dim,
                                  out_dim=out_dim,
                                  bond_dim=bond_dim,
@@ -2846,7 +2883,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPSLayer(n_features=n_features,
+        mps = tk.models.MPSLayer(n_sites=n_features,
                                  in_dim=in_dim,
                                  out_dim=out_dim,
                                  bond_dim=bond_dim,
@@ -2868,7 +2905,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
         bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
 
-        mps = tk.models.MPSLayer(n_features=n_features,
+        mps = tk.models.MPSLayer(n_sites=n_features,
                                  in_dim=in_dim,
                                  out_dim=out_dim,
                                  bond_dim=bond_dim,
@@ -2890,7 +2927,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
     @pytest.mark.parametrize('share_tensors', AUTO_BOOL_CASES)
     def test_copy_preserves_boundary_dtype(self, n_features, share_tensors):
-        mps = tk.models.MPSLayer(n_features=n_features,
+        mps = tk.models.MPSLayer(n_sites=n_features,
                                  in_dim=[] if n_features == 1 else [3] * (n_features - 1),
                                  out_dim=2,
                                  bond_dim=4,
@@ -2908,7 +2945,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         dtype = torch.complex64
 
-        mps = tk.models.MPSLayer(n_features=n_features,
+        mps = tk.models.MPSLayer(n_sites=n_features,
                                  in_dim=[] if n_features == 1 else [3] * (n_features - 1),
                                  out_dim=2,
                                  bond_dim=4,
@@ -2920,7 +2957,7 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         _assert_obc_boundary_runtime(non_param_mps, device, dtype)
 
     def test_canonicalize_univocal_after_trace(self):
-        mps = tk.models.MPSLayer(n_features=4,
+        mps = tk.models.MPSLayer(n_sites=4,
                                  in_dim=2,
                                  out_dim=3,
                                  bond_dim=5,
@@ -2941,8 +2978,8 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_tensors(self, n):
         tensors = [torch.randn(10, 2, 10), torch.randn(10, 2, 10)]
-        mps = tk.models.UMPSLayer(n_features=n, tensors=tensors)
-        assert mps.n_features == n
+        mps = tk.models.UMPSLayer(n_sites=n, tensors=tensors)
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.in_dim == [2] * (n - 1)
         assert mps.out_dim == 2
@@ -2953,12 +2990,12 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
     @pytest.mark.parametrize('n', INIT_N_CASES)
     @pytest.mark.parametrize('init_method', MPS_INIT_METHODS)
     def test_initialize_init_method(self, n, init_method):
-        mps = tk.models.UMPSLayer(n_features=n,
+        mps = tk.models.UMPSLayer(n_sites=n,
                                   in_dim=2,
                                   out_dim=5,
                                   bond_dim=2,
                                   init_method=init_method)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.in_dim == [2] * (n - 1)
         assert mps.out_dim == 5
@@ -2967,7 +3004,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
 
     @pytest.mark.parametrize('parameterized', AUTO_BOOL_CASES)
     def test_initialize_parameterized(self, parameterized):
-        mps = tk.models.UMPSLayer(n_features=4,
+        mps = tk.models.UMPSLayer(n_sites=4,
                                   in_dim=2,
                                   out_dim=5,
                                   bond_dim=2,
@@ -2982,12 +3019,12 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
     
     @pytest.mark.parametrize('n', INIT_N_CASES)
     def test_initialize_with_unitaries(self, n):
-        mps = tk.models.UMPSLayer(n_features=n,
+        mps = tk.models.UMPSLayer(n_sites=n,
                                   in_dim=2,
                                   out_dim=5,
                                   bond_dim=2,
                                   init_method='unit')
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == 'pbc'
         assert mps.in_dim == [2] * (n - 1)
         assert mps.out_dim == 5
@@ -2997,7 +3034,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
     def test_in_and_out_features(self):
         tensors = [torch.randn(10, 2, 10),  # uniform memory
                    torch.randn(10, 2, 10)]  # output tensor
-        mps = tk.models.UMPSLayer(n_features=10,
+        mps = tk.models.UMPSLayer(n_sites=10,
                                   tensors=tensors,
                                   out_position=5)
         
@@ -3025,7 +3062,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
 
         # in_dim should be int.
         with pytest.raises(TypeError):
-            tk.models.UMPSLayer(n_features=n_features,
+            tk.models.UMPSLayer(n_sites=n_features,
                                 in_dim=in_dim,
                                 out_dim=2,
                                 bond_dim=10)
@@ -3037,7 +3074,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
         out_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mps = tk.models.UMPSLayer(n_features=n_features,
+        mps = tk.models.UMPSLayer(n_sites=n_features,
                                   in_dim=in_dim,
                                   out_dim=out_dim,
                                   bond_dim=bond_dim)
@@ -3055,7 +3092,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
         out_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mps = tk.models.UMPSLayer(n_features=n_features,
+        mps = tk.models.UMPSLayer(n_sites=n_features,
                                   in_dim=in_dim,
                                   out_dim=out_dim,
                                   bond_dim=bond_dim)
@@ -3082,7 +3119,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
         out_dim = torch.randint(low=2, high=12, size=(1,)).item()
         bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
 
-        mps = tk.models.UMPSLayer(n_features=n_features,
+        mps = tk.models.UMPSLayer(n_sites=n_features,
                                   in_dim=in_dim,
                                   out_dim=out_dim,
                                   bond_dim=bond_dim)
@@ -3098,7 +3135,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
                                       tensor_address='virtual_uniform')
     
     def test_canonicalize_error(self):
-        mps = tk.models.UMPSLayer(n_features=10,
+        mps = tk.models.UMPSLayer(n_sites=10,
                                   in_dim=2,
                                   out_dim=2,
                                   bond_dim=10)
@@ -3107,7 +3144,7 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
             mps.canonicalize()
     
     def test_canonicalize_univocal_error(self):
-        mps = tk.models.UMPSLayer(n_features=6,
+        mps = tk.models.UMPSLayer(n_sites=6,
                                   in_dim=2,
                                   out_dim=2,
                                   bond_dim=10)
@@ -3127,7 +3164,7 @@ class TestMPSData:   # MARK: TestMPSData
             tensors[-1] = tensors[-1][..., 0]
 
         mps = tk.models.MPSData(tensors=tensors)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
@@ -3144,7 +3181,7 @@ class TestMPSData:   # MARK: TestMPSData
             tensors[-1] = tensors[-1][..., 0]
 
         mps = tk.models.MPSData(tensors=tensors)
-        assert mps.n_features == n
+        assert mps.n_sites == n
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n
         assert mps.bond_dim == [10] * (n - 1 if boundary == 'obc' else n)
@@ -3154,11 +3191,11 @@ class TestMPSData:   # MARK: TestMPSData
         tensors = [torch.randn(20, 10, 2, 10) for _ in range(10)]
         mps = tk.models.MPSData(tensors=tensors,
                                 boundary='obc',
-                                n_features=3,
+                                n_sites=3,
                                 phys_dim=4,
                                 bond_dim=7)
         assert mps.boundary == 'pbc'
-        assert mps.n_features == 10
+        assert mps.n_sites == 10
         assert mps.phys_dim == [2] * 10
         assert mps.bond_dim == [10] * 10
         
@@ -3189,13 +3226,13 @@ class TestMPSData:   # MARK: TestMPSData
     def test_initialize_init_method(self, n_features, boundary, n_batches,
                                     init_method):
         mps = tk.models.MPSData(boundary=boundary,
-                                n_features=n_features,
+                                n_sites=n_features,
                                 phys_dim=2,
                                 bond_dim=5,
                                 n_batches=n_batches,
                                 init_method=init_method)
 
-        assert mps.n_features == n_features
+        assert mps.n_sites == n_features
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n_features
         assert mps.bond_dim == [5] * (n_features - 1 if boundary == 'obc'
@@ -3207,7 +3244,7 @@ class TestMPSData:   # MARK: TestMPSData
     @pytest.mark.parametrize('n_batches', [1, 2, 3])
     def test_initialize_add_data(self, n_features, boundary, n_batches):
         mps = tk.models.MPSData(boundary=boundary,
-                                n_features=n_features,
+                                n_sites=n_features,
                                 phys_dim=2,
                                 bond_dim=5,
                                 n_batches=n_batches)
@@ -3220,7 +3257,7 @@ class TestMPSData:   # MARK: TestMPSData
 
         mps.add_data(tensors)
 
-        assert mps.n_features == n_features
+        assert mps.n_sites == n_features
         assert mps.boundary == boundary
         assert mps.phys_dim == [2] * n_features
         assert mps.bond_dim == [5] * (n_features - 1 if boundary == 'obc'

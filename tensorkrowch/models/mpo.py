@@ -16,6 +16,7 @@ import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 from tensorkrowch.models import MPSData
+from tensorkrowch.models._sites import _resolve_n_sites
 
 
 class MPO(TensorNetwork):  # MARK: MPO
@@ -44,25 +45,27 @@ class MPO(TensorNetwork):  # MARK: MPO
 
     Parameters
     ----------
-    n_features : int, optional
+    n_sites : int, optional
         Number of nodes that will be in ``mats_env``. That is, number of nodes
         without taking into account ``left_node`` and ``right_node``.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     in_dim : int, list[int] or tuple[int], optional
         Input dimension(s). If given as a sequence, its length should be equal
-        to ``n_features``.
+        to ``n_sites``.
     out_dim : int, list[int] or tuple[int], optional
         Output dimension(s). If given as a sequence, its length should be equal
-        to ``n_features``.
+        to ``n_sites``.
     bond_dim : int, list[int] or tuple[int], optional
         Bond dimension(s). If given as a sequence, its length should be equal
-        to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
+        to ``n_sites`` (if ``boundary = "pbc"``) or ``n_sites - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
     boundary : {"obc", "pbc"}
         String indicating whether periodic or open boundary conditions should
         be used.
     tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
-        Instead of providing ``n_features``, ``in_dim``, ``in_dim``, ``bond_dim``
+        Instead of providing ``n_sites``, ``in_dim``, ``in_dim``, ``bond_dim``
         and ``boundary``, a list of MPO tensors can be provided. In such case,
         all mentioned attributes will be inferred from the given tensors. All
         tensors should be rank-4 tensors, with shape ``(bond_dim, in_dim,
@@ -94,30 +97,30 @@ class MPO(TensorNetwork):  # MARK: MPO
     --------
     ``MPO`` with same input/output dimensions:
     
-    >>> mpo = tk.models.MPO(n_features=5,
+    >>> mpo = tk.models.MPO(n_sites=5,
     ...                     in_dim=2,
     ...                     out_dim=2,
     ...                     bond_dim=5)
-    >>> data = torch.ones(20, 5, 2) # batch_size x n_features x feature_size
+    >>> data = torch.ones(20, 5, 2) # batch_size x n_sites x feature_size
     >>> result = mpo(data)
     >>> result.shape
     torch.Size([20, 2, 2, 2, 2, 2])
     
     ``MPO`` with different input/physical dimensions:
     
-    >>> mpo = tk.models.MPO(n_features=5,
+    >>> mpo = tk.models.MPO(n_sites=5,
     ...                     in_dim=list(range(2, 7)),
     ...                     out_dim=list(range(7, 2, -1)),
     ...                     bond_dim=5)
     >>> data = [torch.ones(20, i)
-    ...         for i in range(2, 7)] # n_features * [batch_size x feature_size]
+    ...         for i in range(2, 7)] # n_sites * [batch_size x feature_size]
     >>> result = mpo(data)
     >>> result.shape
     torch.Size([20, 7, 6, 5, 4, 3])
     """
 
     def __init__(self,
-                 n_features: Optional[int] = None,
+                 n_sites: Optional[int] = None,
                  in_dim: Optional[Union[int, Sequence[int]]] = None,
                  out_dim: Optional[Union[int, Sequence[int]]] = None,
                  bond_dim: Optional[Union[int, Sequence[int]]] = None,
@@ -128,8 +131,11 @@ class MPO(TensorNetwork):  # MARK: MPO
                  parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
 
+        n_sites = _resolve_n_sites(n_sites, n_features)
         super().__init__(name='mpo')
         
         if tensors is None:
@@ -138,33 +144,33 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError('`boundary` should be one of "obc" or "pbc"')
             self._boundary = boundary
 
-            # n_features
-            if not isinstance(n_features, int):
-                raise TypeError('`n_features` should be int type')
-            elif n_features < 1:
-                raise ValueError('`n_features` should be at least 1')
-            self._n_features = n_features
+            # n_sites
+            if not isinstance(n_sites, int):
+                raise TypeError('`n_sites` should be int type')
+            elif n_sites < 1:
+                raise ValueError('`n_sites` should be at least 1')
+            self._n_sites = n_sites
 
             # in_dim
             if isinstance(in_dim, (list, tuple)):
-                if len(in_dim) != n_features:
+                if len(in_dim) != n_sites:
                     raise ValueError('If `in_dim` is given as a sequence of int, '
-                                     'its length should be equal to `n_features`')
+                                     'its length should be equal to `n_sites`')
                 self._in_dim = list(in_dim)
             elif isinstance(in_dim, int):
-                self._in_dim = [in_dim] * n_features
+                self._in_dim = [in_dim] * n_sites
             else:
                 raise TypeError('`in_dim` should be int, tuple[int] or list[int] '
                                 'type')
             
             # out_dim
             if isinstance(out_dim, (list, tuple)):
-                if len(out_dim) != n_features:
+                if len(out_dim) != n_sites:
                     raise ValueError('If `out_dim` is given as a sequence of int, '
-                                     'its length should be equal to `n_features`')
+                                     'its length should be equal to `n_sites`')
                 self._out_dim = list(out_dim)
             elif isinstance(out_dim, int):
-                self._out_dim = [out_dim] * n_features
+                self._out_dim = [out_dim] * n_sites
             else:
                 raise TypeError('`out_dim` should be int, tuple[int] or list[int] '
                                 'type')
@@ -172,23 +178,23 @@ class MPO(TensorNetwork):  # MARK: MPO
             # bond_dim
             if isinstance(bond_dim, (list, tuple)):
                 if boundary == 'obc':
-                    if len(bond_dim) != n_features - 1:
+                    if len(bond_dim) != n_sites - 1:
                         raise ValueError(
                             'If `bond_dim` is given as a sequence of int, and '
                             '`boundary` is "obc", its length should be equal '
-                            'to `n_features` - 1')
+                            'to `n_sites` - 1')
                 elif boundary == 'pbc':
-                    if len(bond_dim) != n_features:
+                    if len(bond_dim) != n_sites:
                         raise ValueError(
                             'If `bond_dim` is given as a sequence of int, and '
                             '`boundary` is "pbc", its length should be equal '
-                            'to `n_features`')
+                            'to `n_sites`')
                 self._bond_dim = list(bond_dim)
             elif isinstance(bond_dim, int):
                 if boundary == 'obc':
-                    self._bond_dim = [bond_dim] * (n_features - 1)
+                    self._bond_dim = [bond_dim] * (n_sites - 1)
                 elif boundary == 'pbc':
-                    self._bond_dim = [bond_dim] * n_features
+                    self._bond_dim = [bond_dim] * n_sites
             else:
                 raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
                                 ' type')
@@ -198,7 +204,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
                                 'list[torch.Tensor] type')
             else:
-                self._n_features = len(tensors)
+                self._n_sites = len(tensors)
                 self._in_dim = []
                 self._out_dim = []
                 self._bond_dim = []
@@ -228,7 +234,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                             self._in_dim.append(t.shape[1])
                             self._bond_dim.append(t.shape[2])
                             self._out_dim.append(t.shape[3])
-                    elif i == (self._n_features - 1):
+                    elif i == (self._n_sites - 1):
                         if t.ndim != tensors[0].ndim:
                             raise ValueError(
                                 'The first and last elements in `tensors` '
@@ -284,9 +290,18 @@ class MPO(TensorNetwork):  # MARK: MPO
     # Properties
     # ----------
     @property
+    def n_sites(self) -> int:
+        """Returns the number of physical sites."""
+        return self._n_sites
+
+    @property
     def n_features(self) -> int:
-        """Returns number of nodes."""
-        return self._n_features
+        """Deprecated alias for :attr:`n_sites`."""
+        warnings.warn(
+            '`n_features` is deprecated and will be removed; use `n_sites`.',
+            DeprecationWarning,
+            stacklevel=2)
+        return self._n_sites
 
     @property
     def in_dim(self) -> List[int]:
@@ -384,7 +399,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         
         node_cls = ParamNode if parameterized else Node
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             node = node_cls(shape=(aux_bond_dim[i - 1],
                                    self._in_dim[i],
                                    aux_bond_dim[i],
@@ -400,12 +415,12 @@ class MPO(TensorNetwork):  # MARK: MPO
             if self._boundary == 'pbc':
                 if i == 0:
                     periodic_edge = self._mats_env[-1]['left']
-                if i == self._n_features - 1:
+                if i == self._n_sites - 1:
                     self._mats_env[-1]['right'] ^ periodic_edge
             else:
                 if i == 0:
                     self._left_node['right'] ^ self._mats_env[-1]['left']
-                if i == self._n_features - 1:
+                if i == self._n_sites - 1:
                     self._mats_env[-1]['right'] ^ self._right_node['left']
     
     def initialize(self,
@@ -443,8 +458,8 @@ class MPO(TensorNetwork):  # MARK: MPO
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
         if tensors is not None:
-            if len(tensors) != self._n_features:
-                raise ValueError('`tensors` should be a sequence of `n_features`'
+            if len(tensors) != self._n_sites:
+                raise ValueError('`tensors` should be a sequence of `n_sites`'
                                  ' elements')
             
             if self._boundary == 'obc':
@@ -495,7 +510,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                         # Left node
                         aux_tensor[0] = node.tensor[0]
                         node.tensor = aux_tensor
-                    elif i == (self._n_features - 1):
+                    elif i == (self._n_sites - 1):
                         # Right node
                         aux_tensor[..., 0, :] = node.tensor[..., 0, :]
                         node.tensor = aux_tensor
@@ -535,7 +550,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         -------
         MPO
         """
-        new_mpo = MPO(n_features=self._n_features,
+        new_mpo = MPO(n_sites=self._n_sites,
                       in_dim=self._in_dim,
                       out_dim=self._out_dim,
                       bond_dim=self._bond_dim,
@@ -547,7 +562,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                       dtype=None)
         new_mpo.name = self.name + '_copy'
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             new_mpo._mats_env[i] = new_mpo._mats_env[i].parameterize(
                 set_param=isinstance(self._mats_env[i], ParamNode))
         
@@ -592,7 +607,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         else:
             net = self.copy(share_tensors=False)
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
             
         return net
@@ -781,7 +796,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         If the ``MPO`` is contracted with a ``MPSData``, MPS nodes will become
         part of the MPO network, and they will be connected to the ``"input"``
         edges of the MPO. Thus, the MPS and the MPO should have the same number
-        of features (``n_features``).
+        of features (``n_sites``).
         
         Even though it is not necessary to connect the ``MPSData`` nodes to the
         MPO nodes by hand before contraction, it can be done. However, one
@@ -835,7 +850,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         if mps is not None:
             if not isinstance(mps, MPSData):
                 raise TypeError('`mps` should be MPSData type')
-            if mps._n_features != self._n_features:
+            if mps._n_sites != self._n_sites:
                 raise ValueError(
                     '`mps` should have as many features as the MPO')
             
@@ -929,7 +944,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         ----------
         oc : int
             Position of the orthogonality center. It should be between 0 and 
-            ``n_features - 1``.
+            ``n_sites - 1``.
         mode : {"svd", "svdr", "qr"}
             Indicates which decomposition should be used to split a node after
             contracting it. See more at :func:`~tensorkrowch.svd_`,
@@ -970,7 +985,7 @@ class MPO(TensorNetwork):  # MARK: MPO
             
         Examples
         --------
-        >>> mpo = tk.models.MPO(n_features=4,
+        >>> mpo = tk.models.MPO(n_sites=4,
         ...                     in_dim=2,
         ...                     out_dim=2,
         ...                     bond_dim=5)
@@ -984,10 +999,10 @@ class MPO(TensorNetwork):  # MARK: MPO
         self.auto_stack = False
 
         if oc is None:
-            oc = self._n_features - 1
-        elif (oc < 0) or (oc >= self._n_features):
+            oc = self._n_sites - 1
+        elif (oc < 0) or (oc >= self._n_sites):
             raise ValueError('Orthogonality center position `oc` should be '
-                             'between 0 and `n_features` - 1')
+                             'between 0 and `n_sites` - 1')
         
         log_norm = 0
         
@@ -1100,8 +1115,10 @@ class UMPO(MPO):  # MARK: UMPO
 
     Parameters
     ----------
-    n_features : int
+    n_sites : int
         Number of nodes that will be in ``mats_env``.
+    n_features : int, optional
+        Deprecated alias for ``n_sites``. Passing both names raises an error.
     in_dim : int, optional
         Input dimension.
     out_dim : int, optional
@@ -1110,7 +1127,7 @@ class UMPO(MPO):  # MARK: UMPO
         Bond dimension.
     tensor: torch.Tensor, optional
         Instead of providing ``in_dim``, ``out_dim`` and ``bond_dim``, a single
-        tensor can be provided. ``n_features`` is still needed to specify how
+        tensor can be provided. ``n_sites`` is still needed to specify how
         many times the tensor should be used to form a finite MPO. The tensor
         should be rank-4, with its first and third dimensions being equal.
     n_batches : int
@@ -1134,21 +1151,21 @@ class UMPO(MPO):  # MARK: UMPO
         
     Examples
     --------
-    >>> mpo = tk.models.UMPO(n_features=4,
+    >>> mpo = tk.models.UMPO(n_sites=4,
     ...                      in_dim=2,
     ...                      out_dim=2,
     ...                      bond_dim=5)
     >>> for node in mpo.mats_env:
     ...     assert node.tensor_address() == 'virtual_uniform'
     ...
-    >>> data = torch.ones(20, 4, 2) # batch_size x n_features x feature_size
+    >>> data = torch.ones(20, 4, 2) # batch_size x n_sites x feature_size
     >>> result = mpo(data)
     >>> result.shape
     torch.Size([20, 2, 2, 2, 2])
     """
 
     def __init__(self,
-                 n_features: int = None,
+                 n_sites: Optional[int] = None,
                  in_dim: Optional[int] = None,
                  out_dim: Optional[int] = None,
                  bond_dim: Optional[int] = None,
@@ -1158,15 +1175,18 @@ class UMPO(MPO):  # MARK: UMPO
                  parameterized: bool = True,
                  device: Optional[torch.device] = None,
                  dtype: Optional[torch.dtype] = None,
+                 *,
+                 n_features: Optional[int] = None,
                  **kwargs) -> None:
 
+        n_sites = _resolve_n_sites(n_sites, n_features)
         tensors = None
         
-        # n_features
-        if not isinstance(n_features, int):
-            raise TypeError('`n_features` should be int type')
-        elif n_features < 1:
-            raise ValueError('`n_features` should be at least 1')
+        # n_sites
+        if not isinstance(n_sites, int):
+            raise TypeError('`n_sites` should be int type')
+        elif n_sites < 1:
+            raise ValueError('`n_sites` should be at least 1')
         
         if tensor is None:
             # in_dim
@@ -1191,9 +1211,9 @@ class UMPO(MPO):  # MARK: UMPO
                                  ' be equal so that the MPS can have '
                                  'periodic boundary conditions')
             
-            tensors = [tensor] * n_features
+            tensors = [tensor] * n_sites
         
-        super().__init__(n_features=n_features,
+        super().__init__(n_sites=n_sites,
                          in_dim=in_dim,
                          out_dim=out_dim,
                          bond_dim=bond_dim,
@@ -1285,7 +1305,7 @@ class UMPO(MPO):  # MARK: UMPO
         -------
         UMPO
         """
-        new_mpo = UMPO(n_features=self._n_features,
+        new_mpo = UMPO(n_sites=self._n_sites,
                        in_dim=self._in_dim[0],
                        out_dim=self._out_dim[0],
                        bond_dim=self._bond_dim[0],
@@ -1328,7 +1348,7 @@ class UMPO(MPO):  # MARK: UMPO
         else:
             net = self.copy(share_tensors=False)
         
-        for i in range(self._n_features):
+        for i in range(self._n_sites):
             net._mats_env[i] = net._mats_env[i].parameterize(set_param=set_param)
         
         # It is important that uniform_memory is parameterized after the rest

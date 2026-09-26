@@ -11,8 +11,7 @@ from typing import Callable, Optional, Sequence, Union
 import torch
 
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.sources.base import (TensorSource,
-                                                      _normalize_in_dim)
+from tensorkrowch.decompositions.sources.base import TensorSource
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
@@ -45,12 +44,11 @@ def as_tensor_source(
         or a tuple of site tensors and must preserve their leading batch
         dimension.
     in_dim : sequence[int], optional
-        Discrete input dimensions. Required for a callable. For a dense tensor,
-        they may validate the dimensions selected by ``in_features``. Without
-        ``in_features``, they identify the leading input axes for compatibility.
+        Discrete input dimensions. Required for a callable and ignored for a
+        dense tensor, whose dimensions are derived from its shape.
     in_features : sequence[int], optional
         Axes used as input sites when ``source`` is a dense tensor. If omitted
-        with no ``in_dim``, every tensor axis is an input site.
+        every tensor axis is an input site.
     out_shape : sequence[int], optional
         Callable output shape after the batch axis. The default ``()`` denotes
         a scalar; ``None`` infers the shape on first evaluation.
@@ -79,13 +77,7 @@ def as_tensor_source(
     if hasattr(source, 'boundary') and hasattr(type(source), 'tensors'):
         return TTTensorSource(source)
     if isinstance(source, torch.Tensor):
-        dimensions = None if in_dim is None else _normalize_in_dim(in_dim)
-        if in_features is None and dimensions is not None:
-            in_features = tuple(range(len(dimensions)))
-        dense_source = DenseTensorSource(source, in_features=in_features)
-        if dimensions is not None and dense_source.in_dim != dimensions:
-            raise ValueError('`in_dim` should match the selected tensor axes')
-        return dense_source
+        return DenseTensorSource(source, in_features=in_features)
     if builtins.callable(source):
         if in_dim is None:
             raise ValueError(

@@ -202,12 +202,13 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
     def test_as_tensor_source_normalizes_supported_inputs(self):
         tensor = torch.randn(2, 3)
         dense = tk.decompositions.as_tensor_source(tensor)
-        dense_with_output = tk.decompositions.as_tensor_source(
+        dense_with_ignored_dim = tk.decompositions.as_tensor_source(
             tensor, in_dim=(2,))
-        assert dense_with_output.in_features == (0,)
-        assert dense_with_output.out_shape == (3,)
+        assert dense_with_ignored_dim.in_features == (0, 1)
+        assert dense_with_ignored_dim.in_dim == (2, 3)
+        assert dense_with_ignored_dim.out_shape == ()
         dense_with_selected_axis = tk.decompositions.as_tensor_source(
-            tensor, in_features=(1,), in_dim=(3,))
+            tensor, in_features=(1,), in_dim=(2,))
         assert dense_with_selected_axis.in_dim == (3,)
         assert dense_with_selected_axis.out_shape == (2,)
         callable_source = tk.decompositions.as_tensor_source(
@@ -219,9 +220,6 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         assert tk.decompositions.as_tensor_source(dense) is dense
         with pytest.raises(ValueError, match='in_dim'):
             tk.decompositions.as_tensor_source(lambda x: x)
-        with pytest.raises(ValueError, match='in_dim'):
-            tk.decompositions.as_tensor_source(
-                tensor, in_features=(1,), in_dim=(2,))
         with pytest.raises(TypeError, match='in_features'):
             tk.decompositions.as_tensor_source(
                 lambda x: x, in_dim=(2,), in_features=(0,))

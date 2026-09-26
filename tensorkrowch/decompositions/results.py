@@ -33,6 +33,15 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 StateInput = Union[torch.Tensor, Sequence[torch.Tensor]]
 
 
+_INTEGER_DTYPES = (
+    torch.uint8,
+    torch.int8,
+    torch.int16,
+    torch.int32,
+    torch.int64,
+)
+
+
 class TensorDecomposition(ABC):
     """Topology-neutral interface for lightweight decomposition results."""
 
@@ -88,14 +97,6 @@ class TensorDecomposition1D(TensorDecomposition):
 
     _family: ClassVar[str] = 'tensor'
     _topology: ClassVar[str] = 'tensor'
-    _integer_dtypes: ClassVar[Tuple[torch.dtype, ...]] = (
-        torch.uint8,
-        torch.int8,
-        torch.int16,
-        torch.int32,
-        torch.int64,
-    )
-
     def __post_init__(self) -> None:
         if isinstance(self.n_batches, bool) or \
                 not isinstance(self.n_batches, int):
@@ -249,7 +250,7 @@ class TensorDecomposition1D(TensorDecomposition):
                     raise ValueError(
                         'The last dimension of discrete inputs should equal '
                         'the number of sites')
-                if inputs.dtype not in self._integer_dtypes:
+                if inputs.dtype not in _INTEGER_DTYPES:
                     raise TypeError(
                         'Discrete inputs should have an integer dtype')
                 site_inputs = list(inputs.to(device=self.device).unbind(-1))
@@ -283,7 +284,7 @@ class TensorDecomposition1D(TensorDecomposition):
                 raise TypeError('Every site input should be a torch.Tensor')
 
             if all(item.ndim == n_batches for item in site_inputs):
-                if not all(item.dtype in self._integer_dtypes
+                if not all(item.dtype in _INTEGER_DTYPES
                            for item in site_inputs):
                     raise TypeError(
                         'Discrete inputs should have an integer dtype')

@@ -10,12 +10,14 @@ from typing import Callable, Optional, Sequence, Union
 
 import torch
 
+from tensorkrowch.components import TensorNetwork
 from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sources.base import TensorSource
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 from tensorkrowch.decompositions.sources.tt import TTTensorSource
+from tensorkrowch.models.mps import MPS
 
 
 SourceLike = Union[TensorSource, TTDecomposition, torch.Tensor, Callable]
@@ -74,8 +76,10 @@ def as_tensor_source(
             SparseTensorSource,
             TTTensorSource)):
         return source
-    if hasattr(source, 'boundary') and hasattr(type(source), 'tensors'):
+    if isinstance(source, MPS):
         return TTTensorSource(source)
+    if isinstance(source, TensorNetwork):
+        raise TypeError('Only MPS models can define TT sources')
     if isinstance(source, torch.Tensor):
         return DenseTensorSource(source, in_features=in_features)
     if builtins.callable(source):

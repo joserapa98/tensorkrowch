@@ -1,35 +1,21 @@
 """
 This script contains:
 
-    Internal classes:
-        * _MPSAdapter
-
     Public classes:
         * TTTensorSource
 """
 
-from typing import Optional, Protocol, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.components import TensorNetwork
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
-
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices)
-
-
-class _MPSAdapter(Protocol):
-    """Minimal model surface required to extract open-boundary TT cores."""
-
-    @property
-    def boundary(self) -> str:
-        """Boundary-condition identifier."""
-
-    @property
-    def tensors(self) -> Sequence[torch.Tensor]:
-        """Raw compact MPS tensors."""
+from tensorkrowch.models.mps import MPS
 
 
 class TTTensorSource(_SourceEvaluationTracker):
@@ -37,9 +23,9 @@ class TTTensorSource(_SourceEvaluationTracker):
 
     The source contracts raw PyTorch cores without constructing a TensorKrowch
     graph. It accepts a :class:`~tensorkrowch.decompositions.TTDecomposition`,
-    an open-boundary :class:`~tensorkrowch.models.MPS` adapter or a core
-    sequence with the same conventions. Model adapters only extract their
-    tensors. Keeping the specialized contractions here avoids routing repeated
+    an open-boundary :class:`~tensorkrowch.models.MPS` or a core sequence with
+    the same conventions. MPS models only supply their raw tensors. Keeping
+    the specialized contractions here avoids routing repeated
     ALS/sketching evaluations through a TensorKrowch graph.
 
     Parameters
@@ -50,14 +36,15 @@ class TTTensorSource(_SourceEvaluationTracker):
 
     def __init__(
             self,
-            tensor: Union[TTDecomposition, Sequence[torch.Tensor],
-                          _MPSAdapter]) -> None:
+            tensor: Union[TTDecomposition, Sequence[torch.Tensor], MPS]) -> None:
         self._initialize_evaluation_stats()
-        if hasattr(tensor, 'boundary') and hasattr(type(tensor), 'tensors'):
+        if isinstance(tensor, MPS):
             if tensor.boundary != 'obc':
                 raise ValueError(
                     'Only open-boundary MPS models can define TT sources')
             tensor = tensor.tensors
+        elif isinstance(tensor, TensorNetwork):
+            raise TypeError('Only MPS models can define TT sources')
         if isinstance(tensor, TTDecomposition):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')

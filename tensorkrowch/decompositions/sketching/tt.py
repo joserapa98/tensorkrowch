@@ -268,7 +268,7 @@ class TTRSS(RecursiveSketching):
         self._local_solver = LeastSquaresSolver() \
             if local_solver is None else local_solver
         self._synchronize_timers = synchronize_timers
-        self._input_kind = 'coordinates'
+        self._input_kind = 'features'
 
     @classmethod
     def quantized(
@@ -352,7 +352,7 @@ class TTRSS(RecursiveSketching):
 
     def _normalize_samples(self, sketch_samples: Samples) -> ConfigurationBatch:
         """Normalizes packed or heterogeneous samples for the fixed source."""
-        kind = 'coordinates'
+        kind = 'features'
         if isinstance(self._source_like, TensorSource) and \
                 not isinstance(self._source_like, CallableTensorSource):
             kind = 'indices'
@@ -434,7 +434,7 @@ class TTRSS(RecursiveSketching):
                     '`source` and `sketch_samples` should share input sites')
             if self._device is not None and source.device != self._device:
                 raise ValueError('`source` and `device` should match')
-            self._input_kind = 'coordinates' \
+            self._input_kind = 'features' \
                 if isinstance(source, CallableTensorSource) else 'indices'
             ids = torch.zeros(1, dtype=torch.long, device=samples.device)
             configurations = samples.index_select(ids).to(source.device)
@@ -1201,7 +1201,7 @@ class _QuantizedRSSMixin:
             # already-quantized internal representation.
             if sketch_samples.kind == 'indices':
                 return super()._normalize_samples(sketch_samples)
-            if sketch_samples.kind != 'coordinates' or \
+            if sketch_samples.kind != 'features' or \
                     not sketch_samples.packed:
                 raise ValueError(
                     'Physical sketch samples should be packed coordinates')

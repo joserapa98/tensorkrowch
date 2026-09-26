@@ -40,9 +40,9 @@ def _concatenate_configurations(
         if batch.kind != first.kind:
             raise ValueError(
                 'Configuration batches should use the same value kind')
-        if batch.site_shape != first.site_shape:
+        if batch.feature_shape != first.feature_shape:
             raise ValueError(
-                'Configuration batches should have matching site shapes')
+                'Configuration batches should have matching feature shapes')
         if batch.device != first.device:
             raise ValueError('Configuration batches should share a device')
         if batch.dtype != first.dtype:

@@ -217,9 +217,9 @@ class PhiOperator:
             raise TypeError('`source` should implement TensorSource')
         if not isinstance(output_spec, _OutputSpec):
             raise TypeError('`output_spec` should be _OutputSpec type')
-        if input_kind not in (None, 'indices', 'coordinates'):
+        if input_kind not in (None, 'indices', 'features'):
             raise ValueError(
-                "`input_kind` should be 'indices', 'coordinates' or None")
+                "`input_kind` should be 'indices', 'features' or None")
 
         default_input_sites = input_sites is None
         if input_sites is None:
@@ -346,7 +346,7 @@ class PhiOperator:
                 torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
             kind = 'indices' if all(
                 value.ndim == 1 and value.dtype in integer_dtypes
-                for value in input_values) else 'coordinates'
+                for value in input_values) else 'features'
         else:
             kind = self.input_kind
 

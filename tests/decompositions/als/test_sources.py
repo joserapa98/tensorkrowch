@@ -20,24 +20,33 @@ class TestConfigurationBatch:  # MARK: TestConfigurationBatch
         assert configurations.packed
         assert configurations.batch_size == 2
         assert configurations.n_sites == 3
-        assert configurations.site_shape == ((), (), ())
+        assert configurations.feature_shape is None
         assert torch.equal(configurations.as_tensor(), values)
         assert torch.equal(
             configurations.index_select(torch.tensor([1])).as_tensor(),
             values[1:])
 
-    def test_heterogeneous_coordinates_preserve_site_shapes(self):
+    def test_heterogeneous_features_preserve_feature_shapes(self):
         configurations = tk.decompositions.ConfigurationBatch(
             (
                 torch.tensor([0.1, 0.2]),
                 torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
             ),
-            kind='coordinates')
+            kind='features')
 
         assert not configurations.packed
-        assert configurations.site_shape == ((), (2,))
+        assert configurations.feature_shape == ((), (2,))
         with pytest.raises(ValueError, match='cannot be packed'):
             configurations.as_tensor()
+
+    def test_packed_feature_shapes(self):
+        scalar = tk.decompositions.ConfigurationBatch(
+            torch.randn(2, 3), kind='features')
+        vector = tk.decompositions.ConfigurationBatch(
+            torch.randn(2, 3, 4), kind='features')
+
+        assert scalar.feature_shape == ((), (), ())
+        assert vector.feature_shape == ((4,), (4,), (4,))
 
     @pytest.mark.parametrize(
         'values, kind, error',
@@ -149,7 +158,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
                 torch.tensor([1., 2.], dtype=torch.float64),
                 torch.tensor([[3., 4.], [5., 6.]], dtype=torch.float64),
             ),
-            kind='coordinates')
+            kind='features')
 
         assert torch.equal(
             source.evaluate(configurations),

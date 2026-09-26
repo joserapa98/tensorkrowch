@@ -421,7 +421,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
              (1, torch.arange(2)),
              (2, torch.arange(3))),
             output_spec,
-            input_kind='coordinates')
+            input_kind='features')
         fitter = tk.decompositions.QTTInputFitter(
             base=2,
             level=2,
@@ -482,7 +482,7 @@ class TestQTTInputFitter:  # MARK: TestQTTInputFitter
              (1, torch.arange(2)),
              (2, torch.arange(3))),
             output_spec,
-            input_kind='coordinates')
+            input_kind='features')
         expected = function(initial_domain.reshape(-1, 1))
         fitter = tk.decompositions.QTTInputFitter(
             base=2,

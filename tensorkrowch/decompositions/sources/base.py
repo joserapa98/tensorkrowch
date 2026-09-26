@@ -45,17 +45,17 @@ _INTEGER_DTYPES = (
 
 @dataclass(frozen=True)
 class ConfigurationBatch:
-    """Batch of discrete indices or possibly continuous coordinates.
+    """Batch of discrete indices or possibly continuous features.
 
     ``values`` can be a packed tensor whose first two dimensions are ``(batch,
     n_sites)``, or a sequence containing one tensor per site. For discrete
     ``kind="indices"``, each site holds one integer that selects a slice of a
-    tensor or an input to a discrete function. For ``kind="coordinates"``, each
-    site holds a physical value passed to a callable, often to evaluate a
-    continuous function. Coordinates may also be vectors: a packed batch then
-    has shape ``(batch, n_sites, *coordinate_shape)``, while the sequence form
-    permits different coordinate shapes at different sites. ``kind`` applies
-    to the entire batch; it does not mix indices and coordinates implicitly.
+    tensor or an input to a discrete function. For ``kind="features"``, each
+    site holds a scalar or vector-valued feature passed to a callable, such as
+    a continuous input or a latent feature from another model layer. A packed
+    batch then has shape ``(batch, n_sites, *feature_shape)``, while the
+    sequence form permits different feature shapes at different sites.
+    ``kind`` applies to the entire batch; it does not mix indices and features.
 
     Parameters
     ----------
@@ -63,19 +63,19 @@ class ConfigurationBatch:
         Packed configurations or one tensor per site. Every site tensor in a
         heterogeneous batch must share its leading batch dimension, device and
         dtype.
-    kind : {``"indices"``, ``"coordinates"``}
+    kind : {``"indices"``, ``"features"``}
         Meaning of the values at every site. ``"indices"`` is the default and
-        requires scalar integers. ``"coordinates"`` accepts physical values,
-        including continuous or vector-valued coordinates for callables.
+        requires scalar integers. ``"features"`` accepts scalar or
+        vector-valued inputs for callables.
     """
 
     values: ConfigurationValues  # Values in original configuration or observation order
-    kind: str = 'indices'  # Whether configurations contain indices or coordinates
+    kind: str = 'indices'  # Whether configurations contain indices or features
 
     def __post_init__(self) -> None:
-        if self.kind not in ('indices', 'coordinates'):
+        if self.kind not in ('indices', 'features'):
             raise ValueError(
-                "`kind` should be 'indices' or 'coordinates'")
+                "`kind` should be 'indices' or 'features'")
 
         if isinstance(self.values, torch.Tensor):
             if self.values.ndim < 2:
@@ -157,8 +157,10 @@ class ConfigurationBatch:
         return self.values[0].dtype
 
     @property
-    def site_shape(self) -> Tuple[Tuple[int, ...], ...]:
-        """Coordinate shape stored at every site, excluding the batch."""
+    def feature_shape(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
+        """Feature shape at each site, or ``None`` for discrete indices."""
+        if self.kind == 'indices':
+            return None
         if self.packed:
             shape = tuple(self.values.shape[2:])
             return (shape,) * self.n_sites
@@ -168,9 +170,10 @@ class ConfigurationBatch:
         """Returns a packed tensor when all site shapes are compatible."""
         if self.packed:
             return self.values
-        if any(shape != self.site_shape[0] for shape in self.site_shape[1:]):
+        shapes = tuple(tuple(value.shape[1:]) for value in self.values)
+        if any(shape != shapes[0] for shape in shapes[1:]):
             raise ValueError(
-                'Heterogeneous site shapes cannot be packed into one tensor')
+                'Heterogeneous feature shapes cannot be packed into one tensor')
         return torch.stack(self.values, dim=1)
 
     def index_select(self, indices: torch.Tensor) -> 'ConfigurationBatch':
@@ -203,7 +206,7 @@ class TensorSource(Protocol):
     algorithm.
 
     ``in_dim`` declares one input dimension per site. It bounds discrete
-    indices but does not bound continuous coordinates passed to a callable.
+    indices but does not bound continuous features passed to a callable.
     ``out_shape`` describes the tensor returned after each configuration; it
     is ``()`` for scalar sources and may be ``None`` until a callable is first
     evaluated. ``dtype`` can likewise be inferred on first evaluation.
@@ -237,7 +240,7 @@ class TensorSource(Protocol):
         Parameters
         ----------
         configurations : ConfigurationBatch
-            A batch containing one discrete index or coordinate per source
+            A batch containing one discrete index or feature per source
             site.
 
         Returns
@@ -280,11 +283,11 @@ class FiberTensorSource(TensorSource, Protocol):
             Zero-based input site whose value varies.
         values : torch.Tensor, optional
             Candidate values for the selected site. Discrete indices have shape
-            ``(n_values,)``; coordinates have shape
-            ``(n_values, *site_shape)``. If omitted for discrete indices, the
-            source evaluates every index in ``range(in_dim[site])``. Coordinate
-            fibers require explicit values because there is no finite default
-            grid for a continuous domain.
+            ``(n_values,)``; features have shape
+            ``(n_values, *feature_shape[site])``. If omitted for discrete
+            indices, the source evaluates every index in
+            ``range(in_dim[site])``. Feature fibers require explicit values
+            because there is no finite default grid for a continuous domain.
 
         Returns
         -------

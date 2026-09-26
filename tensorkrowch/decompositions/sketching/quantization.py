@@ -994,7 +994,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             physical = self.indices_to_physical(indices)
             if isinstance(self.source, TensorSource):
                 values = self.source.evaluate(ConfigurationBatch(
-                    physical, kind='coordinates'))
+                    physical, kind='features'))
             else:
                 values = self.source(physical)
         values = self._validate_values(values, digits.shape[0])

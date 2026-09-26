@@ -8,7 +8,7 @@ Tensor sources shared by ALS and recursive sketching.
             └─ TTTensorSource
 
         ConfigurationBatch
-            └─ packed indices or heterogeneous coordinates ─> source.evaluate()
+            └─ packed indices or heterogeneous features ─> source.evaluate()
 
         FiberTensorSource
             └─ optional source.fiber() over one varying input site

@@ -46,7 +46,7 @@ class TestDomainSpec:  # MARK: TestDomainSpec
                 torch.tensor([1., 0., 1., 2.]),
                 torch.tensor([[1., 2.], [1., 2.], [3., 4.], [1., 2.]]),
             ),
-            kind='coordinates')
+            kind='features')
 
         spec = _DomainSpec.normalize(None, n_sites=2, samples=samples)
 

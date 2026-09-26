@@ -199,7 +199,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             source,
             (left, (1, middle_values), right),
             _scalar_output_spec(3),
-            input_kind='coordinates')
+            input_kind='features')
 
         result = phi.materialize(batch_size=3)
 
@@ -225,7 +225,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             source,
             tuple((site, torch.tensor([0., 1.])) for site in range(3)),
             _scalar_output_spec(3),
-            input_kind='coordinates')
+            input_kind='features')
         values = torch.tensor([-1., 0.5, 2.])
 
         fiber = phi.fiber_at(
@@ -249,7 +249,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             ((0, torch.tensor([0., 1.])),
              (1, torch.tensor([0., 1.]))),
             _scalar_output_spec(2),
-            input_kind='coordinates')
+            input_kind='features')
         builder = _EvaluationPlanBuilder(source)
         phi.collect(builder)
         builder.freeze()
@@ -340,7 +340,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
                     [[3., 1.], [4., -1.]], dtype=torch.float64)),
             ),
             _scalar_output_spec(2),
-            input_kind='coordinates')
+            input_kind='features')
 
         result = phi.materialize()
 
@@ -453,7 +453,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             ),
             _scalar_output_spec(4),
             input_sites=sites,
-            input_kind='coordinates')
+            input_kind='features')
 
         result = phi.materialize()
 

@@ -346,11 +346,11 @@ class TensorDecomposition1D(TensorDecomposition):
             raise ValueError('The decomposition families are incompatible')
         if len(self.cores) != len(other.cores):
             raise ValueError('Decompositions should have the same number of sites')
-        if self.in_dim != other.in_dim:
+        if self._in_dim != other._in_dim:
             raise ValueError('Decompositions should have matching input dimensions')
-        if self._out_dim != other.out_dim:
+        if self._out_dim != other._out_dim:
             raise ValueError('Decompositions should have matching output dimensions')
-        if self._batch_shape != other.batch_shape:
+        if self._batch_shape != other._batch_shape:
             raise ValueError('Decompositions should have matching batch shapes')
         if self.device != other.device:
             raise ValueError('Decompositions should be on the same device')

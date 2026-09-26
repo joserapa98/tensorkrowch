@@ -92,7 +92,7 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
     def test_dense_tensor_output(self):
         tensor = torch.arange(24, dtype=torch.float64).reshape(2, 3, 4)
         source = tk.decompositions.DenseTensorSource(
-            tensor, in_dim=(2, 3))
+            tensor, in_features=(0, 1))
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 1], [1, 2]]))
 
@@ -100,6 +100,28 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         assert torch.equal(source.evaluate(configurations),
                            torch.stack((tensor[0, 1], tensor[1, 2])))
         assert source.fiber(configurations, site=0).shape == (2, 2, 4)
+
+    def test_dense_nonleading_input_axes(self):
+        tensor = torch.arange(120).reshape(2, 3, 4, 5)
+        source = tk.decompositions.DenseTensorSource(
+            tensor, in_features=(2, 0))
+        configurations = tk.decompositions.ConfigurationBatch(
+            torch.tensor([[1, 0], [3, 1]]))
+
+        assert source.in_features == (2, 0)
+        assert source.out_features == (1, 3)
+        assert source.in_dim == (4, 2)
+        assert source.out_shape == (3, 5)
+        assert torch.equal(source.evaluate(configurations),
+                           torch.stack((tensor[0, :, 1, :],
+                                        tensor[1, :, 3, :])))
+        assert source.fiber(configurations, site=0).shape == (2, 4, 3, 5)
+
+    @pytest.mark.parametrize('features', [(), (0, 0), (2,), (-1,), (True,)])
+    def test_dense_rejects_invalid_input_axes(self, features):
+        with pytest.raises(ValueError):
+            tk.decompositions.DenseTensorSource(
+                torch.ones(2, 3), in_features=features)
 
     def test_callable_batches_are_contiguous_and_deterministic(self):
         batch_sizes = []
@@ -180,6 +202,10 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
     def test_as_tensor_source_normalizes_supported_inputs(self):
         tensor = torch.randn(2, 3)
         dense = tk.decompositions.as_tensor_source(tensor)
+        dense_with_output = tk.decompositions.as_tensor_source(
+            tensor, in_dim=(2,))
+        assert dense_with_output.in_features == (0,)
+        assert dense_with_output.out_shape == (3,)
         callable_source = tk.decompositions.as_tensor_source(
             lambda x: x.sum(dim=1).float(), in_dim=(2, 3))
 

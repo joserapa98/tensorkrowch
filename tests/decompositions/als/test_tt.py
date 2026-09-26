@@ -208,7 +208,7 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
     def test_vector_output_is_rejected_explicitly(self):
         tensor = torch.randn(2, 2, 3)
         source = tk.decompositions.DenseTensorSource(
-            tensor, in_dim=(2, 2))
+            tensor, in_features=(0, 1))
 
         with pytest.raises(ValueError, match='scalar tensor source'):
             tk.decompositions.TTALS(source).fit(rank=2)

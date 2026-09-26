@@ -12,8 +12,7 @@ import torch
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
-                                                      _fiber_configurations,
-                                                      _normalize_in_dim)
+                                                      _fiber_configurations)
 
 
 class DenseTensorSource(_SourceEvaluationTracker):
@@ -22,32 +21,54 @@ class DenseTensorSource(_SourceEvaluationTracker):
     Parameters
     ----------
     tensor : torch.Tensor
-        Dense tensor whose leading dimensions are input dimensions.
-    in_dim : sequence of int, optional
-        Input dimension at every site. If omitted, every tensor dimension is
-        interpreted as an input site and the source is scalar. Supplying a
-        prefix leaves the remaining tensor dimensions as output dimensions.
+        Dense tensor containing input and optional output axes.
+    in_features : sequence of int, optional
+        Tensor axes used as input sites, in configuration order. If omitted,
+        every axis is an input site and the source is scalar. Remaining axes
+        form the output, in their original order.
     """
 
     def __init__(self,
                  tensor: torch.Tensor,
-                 in_dim: Optional[Sequence[int]] = None) -> None:
+                 in_features: Optional[Sequence[int]] = None) -> None:
         self._initialize_evaluation_stats()
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if tensor.ndim < 1:
             raise ValueError('`tensor` should contain at least one input site')
-        if in_dim is None:
-            normalized_in_dim = tuple(tensor.shape)
+        if in_features is None:
+            in_features = tuple(range(tensor.ndim))
+        elif not isinstance(in_features, (list, tuple)):
+            raise TypeError('`in_features` should be a list or tuple of ints')
         else:
-            normalized_in_dim = _normalize_in_dim(in_dim)
-            if tuple(tensor.shape[:len(normalized_in_dim)]) != \
-                    normalized_in_dim:
-                raise ValueError(
-                    '`in_dim` should match the leading tensor dimensions')
+            in_features = tuple(in_features)
+        if not in_features:
+            raise ValueError('`in_features` should contain at least one axis')
+        if any(isinstance(axis, bool) or not isinstance(axis, int) or
+               axis < 0 or axis >= tensor.ndim for axis in in_features):
+            raise ValueError('`in_features` should contain valid tensor axes')
+        if len(set(in_features)) != len(in_features):
+            raise ValueError('`in_features` should not contain duplicate axes')
+        if any(tensor.shape[axis] < 1 for axis in in_features):
+            raise ValueError('Input dimensions should be positive')
+        out_features = tuple(axis for axis in range(tensor.ndim)
+                             if axis not in in_features)
         self.tensor = tensor
-        self._in_dim = normalized_in_dim
-        self._out_shape = tuple(tensor.shape[len(normalized_in_dim):])
+        self._in_features = in_features
+        self._out_features = out_features
+        self._ordered_tensor = tensor.permute(*in_features, *out_features)
+        self._in_dim = tuple(tensor.shape[axis] for axis in in_features)
+        self._out_shape = tuple(tensor.shape[axis] for axis in out_features)
+
+    @property
+    def in_features(self) -> Tuple[int, ...]:
+        """Tensor axes used as input sites, in configuration order."""
+        return self._in_features
+
+    @property
+    def out_features(self) -> Tuple[int, ...]:
+        """Remaining tensor axes, in their original order."""
+        return self._out_features
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -73,8 +94,8 @@ class DenseTensorSource(_SourceEvaluationTracker):
         """Gathers dense values at discrete global configurations."""
         indices = _discrete_indices(
             configurations, self.in_dim, self.device)
-        result = self.tensor[tuple(indices[:, site]
-                                   for site in range(indices.shape[1]))]
+        result = self._ordered_tensor[tuple(
+            indices[:, site] for site in range(indices.shape[1]))]
         self._record_evaluation(points=indices.shape[0])
         return result
 

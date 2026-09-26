@@ -70,7 +70,12 @@ def as_tensor_source(
     if hasattr(source, 'boundary') and hasattr(type(source), 'tensors'):
         return TTTensorSource(source)
     if isinstance(source, torch.Tensor):
-        return DenseTensorSource(source, in_dim=in_dim)
+        if in_dim is None:
+            return DenseTensorSource(source)
+        if tuple(source.shape[:len(in_dim)]) != tuple(in_dim):
+            raise ValueError(
+                '`in_dim` should match the leading tensor dimensions')
+        return DenseTensorSource(source, in_features=tuple(range(len(in_dim))))
     if builtins.callable(source):
         if in_dim is None:
             raise ValueError(

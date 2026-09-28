@@ -9,6 +9,8 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.formats import TensorTrain, TensorTrainMatrix
+
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
@@ -42,10 +44,10 @@ class TTTensorSource(_SourceEvaluationTracker):
                 raise ValueError(
                     'Only open-boundary MPS models can define TT sources')
             tensor = tensor.tensors
-        if isinstance(tensor, TTDecomposition):
+        if isinstance(tensor, TensorTrain):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')
-            cores = list(tensor.cores)
+            cores = list(tensor._standard_cores())
         else:
             if isinstance(tensor, torch.Tensor):
                 raise TypeError(
@@ -136,13 +138,8 @@ class TTTensorSource(_SourceEvaluationTracker):
         """Returns TTM cores with left, input, output and right axes."""
         if sketch.n_batches:
             raise ValueError('Batched TTM sketches are not supported')
-        if len(sketch.cores) == 1:
-            return (sketch.cores[0].unsqueeze(0).unsqueeze(-1),)
-        cores = [sketch.cores[0].permute(0, 2, 1).unsqueeze(0)]
-        cores.extend(core.permute(0, 1, 3, 2)
-                     for core in sketch.cores[1:-1])
-        cores.append(sketch.cores[-1].unsqueeze(-1))
-        return tuple(cores)
+        return tuple(core.permute(0, 1, 3, 2)
+                     for core in sketch._operator_cores())
 
     def _selected_matrices(self, indices: torch.Tensor):
         """Selects one TT matrix per configuration and site."""
@@ -417,7 +414,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         if not isinstance(conjugate_sketch, bool):
             raise TypeError('`conjugate_sketch` should be bool type')
 
-        if isinstance(sketch, TTMDecomposition):
+        if isinstance(sketch, TensorTrainMatrix):
             if sketch.in_dim != self._in_dim:
                 raise ValueError(
                     'Source and sketch should have matching input dimensions')

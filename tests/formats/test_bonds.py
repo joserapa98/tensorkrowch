@@ -13,17 +13,17 @@ def test_vidal_and_mixed_centers(make_format, topology, mode):
     network.canonicalize_vidal(mode)
     assert isinstance(network.bonds, tk.formats.VidalGauge)
     assert torch.allclose(network.contract_dense(), dense)
-    for oc in range(network.n_sites):
-        mixed = network.clone().materialize_bonds(oc)
+    for orth_center in range(network.n_sites):
+        mixed = network.clone().materialize_bonds(orth_center)
         assert mixed.bonds is None
         assert torch.allclose(mixed.contract_dense(), dense)
         for site, core in enumerate(mixed._standard_cores()):
-            if site < oc:
+            if site < orth_center:
                 matrix = core.reshape(-1, core.shape[-1])
                 assert torch.allclose(matrix.adjoint() @ matrix,
                                       torch.eye(matrix.shape[-1], dtype=matrix.dtype),
                                       atol=1e-10, rtol=1e-10)
-            elif site > oc:
+            elif site > orth_center:
                 matrix = core.reshape(core.shape[-3], -1)
                 assert torch.allclose(matrix @ matrix.adjoint(),
                                       torch.eye(matrix.shape[-2], dtype=matrix.dtype),
@@ -37,7 +37,7 @@ def test_mixed_inverse_bonds_and_zero(make_format):
     dense = network.contract_dense()
     network.canonicalize_vidal(inverse_positions=[1], remaining_mode='explicit')
     assert network.bonds.powers == [(0, 0), (1, 1), (0, 0)]
-    assert torch.allclose(network.materialize_bonds(oc=2).contract_dense(), dense)
+    assert torch.allclose(network.materialize_bonds(orth_center=2).contract_dense(), dense)
     zero = tk.formats.TT([torch.zeros(2, 2), torch.ones(2, 3)])
     for mode in ['explicit', 'implicit']:
         result = zero.clone().canonicalize_vidal(mode)

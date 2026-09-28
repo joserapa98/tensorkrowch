@@ -233,11 +233,11 @@ class TensorFormat1D(TensorFormat):
         self._bonds = value
         self._orth_center = None
 
-    def materialize_bonds(self, oc: Optional[int] = None):
+    def materialize_bonds(self, orth_center: Optional[int] = None):
         """Absorbs factors towards the selected orthogonality center in-place."""
         from tensorkrowch.formats.canonical import materialize_bonds
 
-        return materialize_bonds(self, oc)
+        return materialize_bonds(self, orth_center)
 
     def _set_standard_cores(self, cores: Sequence[torch.Tensor], bonds=None):
         from tensorkrowch.formats.operations import _build_network
@@ -249,15 +249,17 @@ class TensorFormat1D(TensorFormat):
         self._dirty = True
         self.validate()
 
-    def canonicalize(self, oc: Optional[int] = None, renormalize: bool = False):
+    def canonicalize(self,
+                     orth_center: Optional[int] = None,
+                     renormalize: bool = False):
         """QR/RQ sweeps in-place, preserving the tensor and its global scale.
 
-        oc defaults to the last site. On cyclic networks this is a local gauge
+        orth_center defaults to the last site. On cyclic networks this is a local gauge
         relative to the stored cut, without a global Schmidt interpretation.
         """
         from tensorkrowch.formats.canonical import canonicalize
 
-        return canonicalize(self, oc, renormalize)
+        return canonicalize(self, orth_center, renormalize)
 
     def canonicalize_vidal(self,
                            mode: str = 'implicit',

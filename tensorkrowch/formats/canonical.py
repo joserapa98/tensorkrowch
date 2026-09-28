@@ -28,19 +28,19 @@ def _redistribute(cores, gauge, powers):
     return cores, VidalGauge(gauge.spectra, powers)
 
 
-def materialize_bonds(network, oc=None):
+def materialize_bonds(network, orth_center=None):
     network._ensure_valid()
-    oc = network.n_sites - 1 if oc is None else oc
-    if isinstance(oc, bool) or not isinstance(oc, int):
-        raise TypeError('`oc` should be int type or None')
-    if not 0 <= oc < network.n_sites:
-        raise ValueError('`oc` should select a valid site')
+    orth_center = network.n_sites - 1 if orth_center is None else orth_center
+    if isinstance(orth_center, bool) or not isinstance(orth_center, int):
+        raise TypeError('`orth_center` should be int type or None')
+    if not 0 <= orth_center < network.n_sites:
+        raise ValueError('`orth_center` should select a valid site')
     if network._bonds is None:
         return network
     cores = list(network._raw_standard_cores())
     network._bonds.validate(cores, network._cyclic)
     if isinstance(network._bonds, VidalGauge):
-        powers = [(0, 1) if site < oc else (1, 0)
+        powers = [(0, 1) if site < orth_center else (1, 0)
                   for site in range(len(network._bonds.spectra))]
         cores, _ = _redistribute(cores, network._bonds, powers)
         network._set_standard_cores(cores)
@@ -48,7 +48,7 @@ def materialize_bonds(network, oc=None):
     for site, value in enumerate(network._bonds.values):
         if value is None:
             continue
-        if site >= oc:
+        if site >= orth_center:
             cores[site] = cores[site] * value[..., None, None, :]
         else:
             neighbour = (site + 1) % len(cores)
@@ -97,7 +97,7 @@ def canonicalize_vidal(network, mode, inverse_positions,
     else:
         work = _build_network(network._standard_cores(), network._in_dim,
                               network._out_dim, network._n_batches, False)
-        work.canonicalize(oc=0)
+        work.canonicalize(orth_center=0)
         cores = list(work._standard_cores())
         spectra = []
         batch = network._batch_shape
@@ -129,13 +129,13 @@ def canonicalize_vidal(network, mode, inverse_positions,
     return network
 
 
-def canonicalize(network, oc=None, renormalize=False):
+def canonicalize(network, orth_center=None, renormalize=False):
     network._ensure_valid()
-    oc = network.n_sites - 1 if oc is None else oc
-    if isinstance(oc, bool) or not isinstance(oc, int):
-        raise TypeError('`oc` should be int type or None')
-    if not 0 <= oc < network.n_sites:
-        raise ValueError('`oc` should select a valid site')
+    orth_center = network.n_sites - 1 if orth_center is None else orth_center
+    if isinstance(orth_center, bool) or not isinstance(orth_center, int):
+        raise TypeError('`orth_center` should be int type or None')
+    if not 0 <= orth_center < network.n_sites:
+        raise ValueError('`orth_center` should select a valid site')
     if not isinstance(renormalize, bool):
         raise TypeError('`renormalize` should be bool type')
     cores = list(network._standard_cores())
@@ -143,7 +143,7 @@ def canonicalize(network, oc=None, renormalize=False):
         raise ValueError('Canonicalization requires finite cores')
     batch = network._batch_shape
     log_scale = cores[0].real.new_zeros(batch)
-    for site in range(oc):
+    for site in range(orth_center):
         core = cores[site]
         matrix = core.reshape(*batch, -1, core.shape[-1])
         q, r = torch.linalg.qr(matrix, mode='reduced')
@@ -154,7 +154,7 @@ def canonicalize(network, oc=None, renormalize=False):
             log_scale = log_scale + scale.log()
         cores[site] = q.reshape(*batch, core.shape[-3], core.shape[-2], q.shape[-1])
         cores[site + 1] = torch.einsum('...ab,...bpr->...apr', r, cores[site + 1])
-    for site in range(len(cores) - 1, oc, -1):
+    for site in range(len(cores) - 1, orth_center, -1):
         core = cores[site]
         matrix = core.reshape(*batch, core.shape[-3], -1)
         q, r = torch.linalg.qr(matrix.transpose(-2, -1).conj(), mode='reduced')
@@ -168,7 +168,7 @@ def canonicalize(network, oc=None, renormalize=False):
             *batch, q.shape[-1], core.shape[-2], core.shape[-1])
         cores[site - 1] = cores[site - 1] @ r
     if renormalize:
-        cores[oc] = cores[oc] * log_scale.exp()[..., None, None, None]
+        cores[orth_center] = cores[orth_center] * log_scale.exp()[..., None, None, None]
     network._set_standard_cores(cores)
-    network._orth_center = oc
+    network._orth_center = orth_center
     return network

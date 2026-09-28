@@ -77,7 +77,7 @@ def test_factored_operations(make_format, topology):
     assert torch.allclose(a.norm(), dense.norm())
     assert torch.allclose((a * a).contract_dense(), dense.square())
     assert torch.allclose(a.conj().contract_dense(), dense.conj())
-    assert torch.allclose(a.clone().materialize_bonds(oc=1).contract_dense(), dense)
+    assert torch.allclose(a.clone().materialize_bonds(orth_center=1).contract_dense(), dense)
     copied = a.clone()
     assert copied.bonds.values[0].data_ptr() != a.bonds.values[0].data_ptr()
     a.bonds.values[0] = torch.ones(1)

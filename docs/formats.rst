@@ -89,7 +89,7 @@ Views may share storage; use ``clone()`` for independent tensors.
 Gauges and compression
 ----------------------
 
-``canonicalize(oc=None, renormalize=False)`` performs only QR/RQ sweeps.
+``canonicalize(orth_center=None, renormalize=False)`` performs only QR/RQ sweeps.
 The default center is the last site. It preserves the represented tensor and
 global scale. Open chains have left/right isometries around the center;
 cyclic chains obtain a local gauge relative to the stored cut, with no claim
@@ -104,7 +104,7 @@ only block-interface inverses, with explicit or implicit bonds elsewhere.
 Inverse mode rejects zero Schmidt values or values at/below
 ``inverse_cutoff``; it does not silently truncate support.
 
-``materialize_bonds(oc=...)`` redistributes the current absorption, including
+``materialize_bonds(orth_center=...)`` redistributes the current absorption, including
 already absorbed roots and inverse factors. Explicit Lambda to the left of
 the center goes to its right neighbour; to the right it goes to its left
 neighbour. Inverse factors go to the opposite neighbour. A mixed-canonical
@@ -125,14 +125,14 @@ For improved small-value accuracy, independently of the base SVD backend:
        torch.randn(2, 2, dtype=torch.float64)])
    with tk.svd_method('qr_svd', refine=True):
        tt.canonicalize_vidal(inverse_positions=[2], remaining_mode='implicit')
-   tt.materialize_bonds(oc=3)
+   tt.materialize_bonds(orth_center=3)
 
 The refinement follows the Appendix of
 `Stoudenmire and White <https://arxiv.org/pdf/1301.3494>`_ and cannot recover
 information already lost in the input precision.
 
 ``rounding`` performs a left QR sweep followed by right, sitewise truncated
-SVDs on TT/TTM, ending at ``oc=0``. TR/TRM use one execution of
+SVDs on TT/TTM, ending at ``orth_center=0``. TR/TRM use one execution of
 `Mickelin--Karaman Algorithm 4 <https://arxiv.org/pdf/1807.02513>`_, including
 the cyclic closure reduction. The one-site ring case reduces its trace exactly.
 TR rounding does not guarantee minimal ranks, especially after products or

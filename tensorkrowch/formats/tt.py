@@ -8,11 +8,26 @@ from ._chain import _VectorFormat1D, TensorFormat1D
 class TensorTrain(_VectorFormat1D):
     """Lightweight open raw-tensor network.
 
-    Cores use the reviewed decomposition layouts and retain tensor storage and
-    autograd. Numerical methods operate without TensorKrowch nodes or edges.
+    With leading structural batch axes B, endpoint cores have shapes
+    ``(*B, input, right)`` and ``(*B, left, input)``; interiors use
+    ``(*B, left, input, right)``. A single core is ``(*B, input)``.
+    The constructor shares tensors and copies their container. No nodes or
+    edges are constructed, and input tensors retain autograd.
     """
 
     _topology = 'tt'
+
+    def to_mps(self, parameterized=False, **kwargs):
+        """Builds MPS or MPSData from these cores without detaching."""
+        from .adapters import to_mps
+        return to_mps(self, parameterized, **kwargs)
+
+    @classmethod
+    def from_mps(cls, model):
+        """Collects effective open-boundary MPS/MPSData tensors."""
+        from .adapters import from_mps
+        result = from_mps(model, cyclic=False)
+        return cls(result.cores, n_batches=result.n_batches)
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -75,5 +90,3 @@ class TensorTrain(_VectorFormat1D):
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         result = self._contract_open_chain(matrices)
         return result.squeeze(-1).squeeze(-1)
-
-

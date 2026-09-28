@@ -125,6 +125,9 @@ class TensorFormat1D(TensorFormat):
             result._bonds = self._bonds._map_tensors(function)
         return result
 
+    def _same_auxiliary_tensors(self, other):
+        return True
+
     def to(self, device=None, dtype=None, copy=False):
         """Returns a conversion preserving the concrete class and autograd.
 
@@ -138,7 +141,7 @@ class TensorFormat1D(TensorFormat):
         result = self._map_tensors(lambda tensor: tensor.to(device=device, dtype=dtype, copy=copy))
         same_bonds = self._bonds is None or all(
             new is old for new, old in zip(result._bonds.values, self._bonds.values))
-        if not copy and same_bonds and all(new is old for new, old in zip(result._cores, self._cores)):
+        if not copy and same_bonds and self._same_auxiliary_tensors(result) and all(new is old for new, old in zip(result._cores, self._cores)):
             return self
         result.validate()
         return result
@@ -235,6 +238,53 @@ class TensorFormat1D(TensorFormat):
         from .rounding import rounding
         return rounding(self, rank, cutoff, atol, rtol, cum_percentage,
                         renormalize, rel_error, return_info)
+
+    def canonicalize_minimal(self, max_iter=200, lr=0.05, tol=1e-8):
+        """Uses implicit Vidal for trains or experimental gauge balancing for rings.
+
+        Ring optimization preserves the best finite iterate and may stop before
+        convergence. It optimizes temporary gauges without accumulating input
+        core gradients; batched rings share one gauge per bond.
+        """
+        from .orbits import canonicalize_minimal
+        return canonicalize_minimal(self, max_iter, lr, tol)
+
+    def block(self, groups, return_info=False):
+        """Returns a network of contiguous blocks with recoverable dimensions."""
+        from .blocking import block
+        return block(self, groups, return_info)
+
+    def unblock(self, info=None, **kwargs):
+        """Returns the original site layout, optionally truncating local splits."""
+        from .blocking import unblock
+        return unblock(self, info, **kwargs)
+
+    def contract_block(self, first, last):
+        """Returns a local tensor with both external ranks left open."""
+        from .blocking import contract_block
+        return contract_block(self, first, last)
+
+    def split_block(self, block, first, last, **kwargs):
+        """Splits a local tensor into standard fused cores and internal factors."""
+        from .blocking import split_block
+        self._ensure_valid()
+        if any(isinstance(site, bool) or not isinstance(site, int) for site in (first, last)):
+            raise TypeError('Block endpoints should be integers')
+        if not 0 <= first <= last < self.n_sites:
+            raise ValueError('Block endpoints should select an ordered region')
+        outputs = None if self._out_dim is None else self._out_dim[first:last + 1]
+        return split_block(block, self._in_dim[first:last + 1], outputs,
+                           self._n_batches, **kwargs)
+
+    def replace_block(self, first, last, replacement):
+        """Replaces a region atomically, preserving external interfaces."""
+        from .blocking import replace_block
+        return replace_block(self, first, last, replacement)
+
+    def absorb_bond(self, bond, side='left'):
+        """Moves one bond's diagonal weights into the selected neighbour."""
+        from .blocking import absorb_bond
+        return absorb_bond(self, bond, side)
 
     def add(self, other, method='stacked'):
         """Returns an exact sum; cyclic sums default to stacked endpoints."""

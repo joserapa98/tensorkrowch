@@ -298,13 +298,49 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         """Returns the list of MPS tensors."""
         mps_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
-            mps_tensors[0] = mps_tensors[0][0, :, :]
-            mps_tensors[-1] = mps_tensors[-1][:, :, 0]
+            if len(mps_tensors) == 1:
+                return [mps_tensors[0][..., 0, :, 0]]
+            mps_tensors[0] = mps_tensors[0][..., 0, :, :]
+            mps_tensors[-1] = mps_tensors[-1][..., :, :, 0]
         return mps_tensors
     
     # -------
     # Methods
     # -------
+    def to_tt(self):
+        """Returns a lightweight batched TT from open data tensors."""
+        from tensorkrowch.formats import TensorTrain
+        return TensorTrain.from_mps(self)
+
+    def to_tr(self):
+        """Returns a lightweight batched TR from periodic data tensors."""
+        from tensorkrowch.formats import TensorRing
+        return TensorRing.from_mps(self)
+
+    @classmethod
+    def from_tt(cls, tensor_train, **kwargs):
+        """Constructs MPSData from a batched open tensor format."""
+        from tensorkrowch.formats import TensorTrain
+        if not isinstance(tensor_train, TensorTrain):
+            raise TypeError('`tensor_train` should be TensorTrain type')
+        from tensorkrowch.formats.operations import _build_network
+        effective = _build_network(tensor_train._standard_cores(),
+                                   tensor_train.in_dim, None,
+                                   tensor_train.n_batches, False)
+        return cls(tensors=list(effective.cores), n_batches=effective.n_batches, **kwargs)
+
+    @classmethod
+    def from_tr(cls, tensor_ring, **kwargs):
+        """Constructs MPSData from a batched cyclic tensor format."""
+        from tensorkrowch.formats import TensorRing
+        if not isinstance(tensor_ring, TensorRing):
+            raise TypeError('`tensor_ring` should be TensorRing type')
+        from tensorkrowch.formats.operations import _build_network
+        effective = _build_network(tensor_ring._standard_cores(),
+                                   tensor_ring.in_dim, None,
+                                   tensor_ring.n_batches, True)
+        return cls(tensors=list(effective.cores), n_batches=effective.n_batches, **kwargs)
+
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
         if self._leaf_nodes:

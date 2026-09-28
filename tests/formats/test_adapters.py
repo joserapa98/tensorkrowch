@@ -37,3 +37,28 @@ def test_invalid_rotation(make_format):
             make_format('tr').rotate(first)
     with pytest.raises(TypeError):
         make_format('tr').rotate(True)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('n_sites', [1, 2, 4])
+def test_model_roundtrip(make_format, topology, n_sites):
+    network = make_format(topology, n_sites, dtype=torch.complex128)
+    dense = network.contract_dense()
+    if topology.endswith('m'):
+        model = network.to_mpo()
+        restored = model.to_trm() if topology == 'trm' else model.to_ttm()
+    else:
+        model = network.to_mps()
+        restored = model.to_tr() if topology == 'tr' else model.to_tt()
+    assert torch.allclose(restored.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr'])
+@pytest.mark.parametrize('n_sites', [1, 2, 4])
+def test_mps_data_roundtrip(make_format, topology, n_sites):
+    network = make_format(topology, n_sites, n_batches=2)
+    model = network.to_mps()
+    assert isinstance(model, tk.models.MPSData)
+    restored = model.to_tt() if topology == 'tt' else model.to_tr()
+    assert restored.batch_shape == (2, 2)
+    assert torch.allclose(restored.contract_dense(), network.contract_dense())

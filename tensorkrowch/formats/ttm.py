@@ -2,19 +2,32 @@
 
 from typing import ClassVar, List, Optional, Sequence, Tuple
 import torch
-from ._chain import _MatrixFormat1D, TensorFormat1D
+from ._chain import _MatrixFormat1D
 from .tt import TensorTrain
-from .tr import TensorRing
 
 
 class TensorTrainMatrix(_MatrixFormat1D):
     """Lightweight open raw-tensor network.
 
-    Cores use the reviewed decomposition layouts and retain tensor storage and
-    autograd. Numerical methods operate without TensorKrowch nodes or edges.
+    Endpoint shapes are ``(input, right, output)`` and
+    ``(left, input, output)``; interiors are
+    ``(left, input, right, output)``. A single core is ``(input, output)``.
+    Structural batches are currently unsupported. Tensor storage and autograd
+    are retained without constructing TensorKrowch nodes or edges.
     """
 
     _topology = 'ttm'
+
+    def to_mpo(self, parameterized=False, **kwargs):
+        """Builds an open-boundary MPO without detaching the effective cores."""
+        from .adapters import to_mpo
+        return to_mpo(self, parameterized, **kwargs)
+
+    @classmethod
+    def from_mpo(cls, model):
+        """Collects effective open-boundary MPO tensors."""
+        from .adapters import from_mpo
+        return cls(from_mpo(model, cyclic=False).cores)
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -85,15 +98,6 @@ class TensorTrainMatrix(_MatrixFormat1D):
         return cores
 
 
-    def _raw_operator_cores(self) -> List[torch.Tensor]:
-        """Returns cores with separate left, input, right and output axes."""
-        if len(self.cores) == 1:
-            return [self.cores[0].unsqueeze(0).unsqueeze(2)]
-
-        cores = [self.cores[0].unsqueeze(0)]
-        cores.extend(self.cores[1:-1])
-        cores.append(self.cores[-1].unsqueeze(2))
-        return cores
 
 
     def _contract_local_matrices(
@@ -116,5 +120,3 @@ class TensorTrainMatrix(_MatrixFormat1D):
         return TensorTrain(
             cores=cores,
             n_batches=n_batches)
-
-

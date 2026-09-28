@@ -10,3 +10,4 @@ API Reference
    initializers
    embeddings
    decompositions
+   formats

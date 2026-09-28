@@ -479,6 +479,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         """Returns the list of MPS tensors."""
         mps_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
+            if len(mps_tensors) == 1:
+                return [torch.einsum('l,lir,r->i', self._left_node.tensor,
+                                      mps_tensors[0], self._right_node.tensor)]
             mps_tensors[0] = torch.einsum('l,lir->ir',
                                           self._left_node.tensor,
                                           mps_tensors[0])
@@ -490,6 +493,36 @@ class MPS(TensorNetwork):  # MARK: MPS
     # -------
     # Methods
     # -------
+    def to_tt(self):
+        """Returns a lightweight TT from effective open-boundary tensors."""
+        from tensorkrowch.formats import TensorTrain
+        return TensorTrain.from_mps(self)
+
+    def to_tr(self):
+        """Returns a lightweight TR from effective periodic tensors."""
+        from tensorkrowch.formats import TensorRing
+        return TensorRing.from_mps(self)
+
+    @classmethod
+    def from_tt(cls, tensor_train, **kwargs):
+        """Constructs MPS from an unbatched open format's effective tensors."""
+        from tensorkrowch.formats import TensorTrain
+        if not isinstance(tensor_train, TensorTrain):
+            raise TypeError('`tensor_train` should be TensorTrain type')
+        if tensor_train.n_batches:
+            raise ValueError('Batched vector cores require MPSData')
+        return tensor_train.to_mps(**kwargs)
+
+    @classmethod
+    def from_tr(cls, tensor_ring, **kwargs):
+        """Constructs MPS from an unbatched cyclic format's effective tensors."""
+        from tensorkrowch.formats import TensorRing
+        if not isinstance(tensor_ring, TensorRing):
+            raise TypeError('`tensor_ring` should be TensorRing type')
+        if tensor_ring.n_batches:
+            raise ValueError('Batched vector cores require MPSData')
+        return tensor_ring.to_mps(**kwargs)
+
     @staticmethod
     def _infer_shape_from_tensors(
             tensors: Sequence[torch.Tensor]

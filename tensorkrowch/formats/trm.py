@@ -2,8 +2,7 @@
 
 from typing import ClassVar, List, Optional, Sequence, Tuple
 import torch
-from ._chain import _MatrixFormat1D, TensorFormat1D
-from .tt import TensorTrain
+from ._chain import _MatrixFormat1D
 from .tr import TensorRing
 
 
@@ -15,6 +14,17 @@ class TensorRingMatrix(_MatrixFormat1D):
     """
 
     _topology = 'trm'
+
+    def to_mpo(self, parameterized=False, **kwargs):
+        """Builds a periodic MPO; batched MPO cores are explicitly unsupported."""
+        from .adapters import to_mpo
+        return to_mpo(self, parameterized, **kwargs)
+
+    @classmethod
+    def from_mpo(cls, model):
+        """Collects effective periodic MPO tensors."""
+        from .adapters import from_mpo
+        return cls(from_mpo(model, cyclic=True).cores)
 
     def rotate(self, first=0):
         """Returns a cyclic rotation with input/output pairs moving together."""
@@ -66,9 +76,6 @@ class TensorRingMatrix(_MatrixFormat1D):
         return cores
 
 
-    def _raw_operator_cores(self) -> List[torch.Tensor]:
-        """Returns cores with separate left, input, right and output axes."""
-        return list(self.cores)
 
 
     def _contract_local_matrices(
@@ -84,4 +91,3 @@ class TensorRingMatrix(_MatrixFormat1D):
         return TensorRing(
             cores=cores,
             n_batches=n_batches)
-

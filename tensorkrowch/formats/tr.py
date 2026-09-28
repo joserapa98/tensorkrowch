@@ -14,6 +14,18 @@ class TensorRing(_VectorFormat1D):
 
     _topology = 'tr'
 
+    def to_mps(self, parameterized=False, **kwargs):
+        """Builds periodic MPS or MPSData from effective cores."""
+        from .adapters import to_mps
+        return to_mps(self, parameterized, **kwargs)
+
+    @classmethod
+    def from_mps(cls, model):
+        """Collects effective periodic MPS/MPSData tensors."""
+        from .adapters import from_mps
+        result = from_mps(model, cyclic=True)
+        return cls(result.cores, n_batches=result.n_batches)
+
     def rotate(self, first=0):
         """Returns a cyclic rotation with the selected site first."""
         from .adapters import rotate
@@ -56,4 +68,3 @@ class TensorRing(_VectorFormat1D):
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         result = self._contract_open_chain(matrices)
         return result.diagonal(dim1=-2, dim2=-1).sum(-1)
-

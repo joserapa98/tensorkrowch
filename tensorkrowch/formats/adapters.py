@@ -54,3 +54,62 @@ def ring_to_train(network):
                                    cores[-1].shape[-2], 1))
     return _build_network(result, network._in_dim, network._out_dim,
                           network._n_batches, False)
+
+
+def to_mps(network, parameterized=False, **kwargs):
+    """Builds MPS or MPSData from effective vector cores, without detaching."""
+    from tensorkrowch.models import MPS, MPSData
+    network._ensure_valid()
+    if network._out_dim is not None:
+        raise TypeError('MPS adapters require a vector format')
+    if not isinstance(parameterized, bool):
+        raise TypeError('`parameterized` should be bool type')
+    effective = _build_network(network._standard_cores(), network._in_dim, None,
+                               network._n_batches, network._topology.startswith('tr'))
+    if network._n_batches:
+        if parameterized:
+            raise ValueError('MPSData does not expose parameterized model cores')
+        return MPSData(tensors=list(effective.cores), n_batches=network._n_batches, **kwargs)
+    return MPS(tensors=list(effective.cores), parameterized=parameterized, **kwargs)
+
+
+def from_mps(model, cyclic):
+    """Collects effective model tensors, including open boundary contractions."""
+    from tensorkrowch.models import MPS, MPSData
+    from .tt import TensorTrain
+    from .tr import TensorRing
+    if not isinstance(model, (MPS, MPSData)):
+        raise TypeError('`model` should be MPS or MPSData type')
+    boundary = 'pbc' if cyclic else 'obc'
+    if model.boundary != boundary:
+        raise ValueError(f'This adapter requires {boundary} boundaries')
+    n_batches = model.n_batches if isinstance(model, MPSData) else 0
+    return (TensorRing if cyclic else TensorTrain)(model.tensors, n_batches=n_batches)
+
+
+def to_mpo(network, parameterized=False, **kwargs):
+    """Builds an MPO from effective matrix cores without modifying the format."""
+    from tensorkrowch.models import MPO
+    network._ensure_valid()
+    if network._out_dim is None:
+        raise TypeError('MPO adapters require a matrix format')
+    if network._n_batches:
+        raise ValueError('Batched MPO model cores are not supported')
+    if not isinstance(parameterized, bool):
+        raise TypeError('`parameterized` should be bool type')
+    effective = _build_network(network._standard_cores(), network._in_dim,
+                               network._out_dim, 0, network._topology.startswith('tr'))
+    return MPO(tensors=list(effective.cores), parameterized=parameterized, **kwargs)
+
+
+def from_mpo(model, cyclic):
+    """Collects effective MPO tensors, including open boundary contractions."""
+    from tensorkrowch.models import MPO
+    from .ttm import TensorTrainMatrix
+    from .trm import TensorRingMatrix
+    if not isinstance(model, MPO):
+        raise TypeError('`model` should be MPO type')
+    boundary = 'pbc' if cyclic else 'obc'
+    if model.boundary != boundary:
+        raise ValueError(f'This adapter requires {boundary} boundaries')
+    return (TensorRingMatrix if cyclic else TensorTrainMatrix)(model.tensors)

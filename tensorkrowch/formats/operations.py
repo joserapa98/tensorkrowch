@@ -31,10 +31,12 @@ def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
 def _binary_inputs(first, second, same_family=True):
     """Checks local dimensions and prepares compatible structural batches."""
     from ._chain import TensorFormat1D
+    from .quantics import _check_semantics
     if not isinstance(second, TensorFormat1D):
         raise TypeError('`other` should be TensorFormat1D type')
     first._ensure_valid()
     second._ensure_valid()
+    _check_semantics(first, second, product=not same_family)
     if first.n_sites != second.n_sites:
         raise ValueError('Formats should have the same number of sites')
     if first.device != second.device:
@@ -91,7 +93,8 @@ def add(first, second, method='stacked', coefficient=1):
                 core[..., :x.shape[-3], :, :x.shape[-1]] = x
                 core[..., x.shape[-3]:, :, x.shape[-1]:] = y
             cores.append(core)
-    return _build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic)
+    from .quantics import _inherit_semantics
+    return _inherit_semantics(_build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
 def hadamard(first, second):
@@ -102,7 +105,8 @@ def hadamard(first, second):
         core = torch.einsum('...lpr,...aps->...laprs', x, y)
         cores.append(core.reshape(*batch, x.shape[-3] * y.shape[-3],
                                   x.shape[-2], x.shape[-1] * y.shape[-1]))
-    return _build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic)
+    from .quantics import _inherit_semantics
+    return _inherit_semantics(_build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
 def scale(network, coefficient):
@@ -119,8 +123,9 @@ def scale(network, coefficient):
     cores[0] = cores[0] * coefficient
     dtype = cores[0].dtype
     cores = [core.to(dtype=dtype) for core in cores]
-    return _build_network(cores, network._in_dim, network._out_dim,
-                          network._n_batches, network._topology.startswith('tr'))
+    from .quantics import _inherit_semantics
+    return _inherit_semantics(_build_network(cores, network._in_dim, network._out_dim,
+                                            network._n_batches, network._topology.startswith('tr')), network)
 
 
 def apply(first, second):
@@ -159,4 +164,6 @@ def apply(first, second):
                                   y.shape[-4 if right_matrix else -3], physical,
                                   x.shape[-2 if left_matrix else -1] *
                                   y.shape[-2 if right_matrix else -1]))
-    return _build_network(cores, in_dim, out_dim, len(batch), cyclic)
+    from .quantics import _inherit_semantics
+    return _inherit_semantics(_build_network(cores, in_dim, out_dim, len(batch), cyclic),
+                              first, second, product=True)

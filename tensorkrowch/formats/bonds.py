@@ -15,7 +15,8 @@ from tensorkrowch.formats.base import _SafeList
 
 
 class BondFactors1D:
-    """Optional diagonals between adjacent cores, including a cyclic closure.
+    """
+    Optional diagonals between adjacent cores, including a cyclic closure.
 
     Each format owns a separate bond container, sharing the supplied tensors.
     Element and same-length slice replacements validate against its cores
@@ -25,45 +26,20 @@ class BondFactors1D:
     ----------
     values : sequence[torch.Tensor or None]
         One diagonal per stored bond. A diagonal has shape ``(rank,)`` or
-        ``(*core_batch, rank)``. None denotes an identity without allocation.
-
+        ``(*core_batch, rank)``. ``None`` denotes an identity without allocation.
     """
 
     def __init__(self, values) -> None:
-        """Initializes the stored tensor references and validates construction."""
         self._on_change = None
         self.values = values
 
-    def _on_sequence_changed(self):
-        """Validates factors, notifies the format and invalidates Vidal state."""
-        if not all(
-                value is None or isinstance(value, torch.Tensor)
-                for value in self._values):
-            raise TypeError('Bond factors should be tensors or None')
-        if self._on_change is not None:
-            self._on_change()
-        if hasattr(self, '_valid'):
-            self._valid = False
-
     @property
     def values(self):
-        """Mutable diagonal factors, validated on replacement when attached."""
+        """Diagonal factors at the bonds of a :class:`1D format <TensorFormat1D>`."""
         return self._values
 
     @values.setter
     def values(self, values):
-        r"""Replaces all stored diagonal factors.
-
-        Invalid replacement preserves the previous sequence. Manual replacement
-        invalidates Vidal metadata.
-
-        Parameters
-        ----------
-        values : sequence of torch.Tensor or None
-            One compatible factor per stored bond. Attached containers validate
-            against their format immediately. None entries denote identity
-            factors.
-        """
         if isinstance(values, torch.Tensor):
             raise TypeError('`values` should be a sequence of diagonals')
         previous = getattr(self, '_values', None)
@@ -74,14 +50,19 @@ class BondFactors1D:
             self._values = previous
             raise
 
+    def _on_sequence_changed(self):
+        """Validates factors and notifies the format."""
+        if not all(value is None or isinstance(value, torch.Tensor)
+                   for value in self._values):
+            raise TypeError('Bond factors should be tensors or None')
+        if self._on_change is not None:
+            self._on_change()
+
     def _with_callback(self, on_change):
         """Copies bond lists and binds their callback, preserving tensors."""
         result = copy(self)
         result._on_change = on_change
         result._values = _SafeList(self._values, result._on_sequence_changed)
-        if isinstance(self, VidalGauge):
-            result._spectra = _SafeList(self._spectra, result._on_sequence_changed)
-            result._powers = _SafeList(self._powers, result._on_sequence_changed)
         return result
 
     def validate(self, cores: Sequence[torch.Tensor], cyclic: bool):
@@ -185,6 +166,18 @@ class VidalGauge(BondFactors1D):
     def powers(self):
         """Absorption powers; manual replacement invalidates Vidal state."""
         return self._powers
+
+    def _on_sequence_changed(self):
+        """Validates factors, notifies the format and invalidates Vidal state."""
+        super()._on_sequence_changed()
+        self._valid = False
+
+    def _with_callback(self, on_change):
+        """Copies bond lists and binds their callback, preserving tensors."""
+        result = super()._with_callback(on_change)
+        result._spectra = _SafeList(self._spectra, result._on_sequence_changed)
+        result._powers = _SafeList(self._powers, result._on_sequence_changed)
+        return result
 
     def _map_tensors(self, function):
         """Maps stored tensors while preserving concrete container semantics."""

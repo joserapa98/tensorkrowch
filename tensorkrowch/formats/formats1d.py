@@ -374,7 +374,8 @@ def split_block(block: torch.Tensor,
 
 
 class TensorFormat1D(TensorFormat):
-    r"""Compact chain of raw cores, with cached dimensions and bond ranks.
+    r"""
+    Compact chain of raw cores, with cached dimensions and bond ranks.
 
     The constructor copies the container and shares tensor storage. Element
     and same-length slice replacement validate immediately and refresh metadata.

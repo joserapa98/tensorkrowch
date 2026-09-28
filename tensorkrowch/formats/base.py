@@ -18,7 +18,8 @@ import torch
 
 @dataclass(frozen=True)
 class SampleError:
-    r"""Stores sample errors while preserving tensor storage and autograd.
+    r"""
+    Stores sample errors while preserving tensor storage and autograd.
 
     Frozen record: field references cannot be reassigned. Tensor contents and
     autograd are preserved without copying or detaching.
@@ -48,7 +49,6 @@ class _SafeList(list):
     """Fixed-length list that validates replacements through a callback."""
 
     def __init__(self, values, on_change: Callable[[], None]) -> None:
-        """Stores references and the callback for controlled replacements."""
         super().__init__(values)
         self._on_change = on_change
 
@@ -91,7 +91,8 @@ class TensorFormat(ABC):
     @abstractmethod
     def to(self, device: Optional[Union[str, torch.device]] = None,
            dtype: Optional[torch.dtype] = None, copy: bool = False):
-        r"""Returns a device/dtype conversion, preserving the concrete format.
+        r"""
+        Returns a device/dtype conversion, preserving the concrete format.
 
         PyTorch device errors propagate without a CPU fallback. Autograd is
         retained.
@@ -123,7 +124,8 @@ class TensorFormat(ABC):
         """
 
     def cpu(self):
-        r"""Returns the format on CPU.
+        r"""
+        Returns the format on CPU.
 
         Returns
         -------
@@ -134,7 +136,8 @@ class TensorFormat(ABC):
         return self.to(device='cpu')
 
     def cuda(self, device: Optional[Union[int, str, torch.device]] = None):
-        r"""Returns the format on a CUDA device.
+        r"""
+        Returns the format on a CUDA device.
 
         Parameters
         ----------
@@ -156,7 +159,8 @@ class TensorFormat(ABC):
         return self.to(device=target)
 
     def mps(self):
-        r"""Returns the format on MPS.
+        r"""
+        Returns the format on MPS.
 
         Returns
         -------
@@ -168,7 +172,8 @@ class TensorFormat(ABC):
 
     @abstractmethod
     def clone(self):
-        r"""Clones the structural tensors, preserving autograd.
+        r"""
+        Clones the structural tensors, preserving autograd.
 
         Returns
         -------
@@ -178,7 +183,8 @@ class TensorFormat(ABC):
 
     @abstractmethod
     def detach(self):
-        r"""Returns a detached format sharing tensor storage.
+        r"""
+        Returns a detached format sharing tensor storage.
 
         Returns
         -------
@@ -189,7 +195,8 @@ class TensorFormat(ABC):
 
     @abstractmethod
     def detach_(self):
-        r"""Detaches structural tensors in-place by replacing references.
+        r"""
+        Detaches structural tensors in-place by replacing references.
 
         Returns
         -------

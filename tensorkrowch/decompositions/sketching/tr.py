@@ -418,7 +418,7 @@ class TRRSS(TTRSS):
     ...     return (1 + data).prod(dim=1)
     >>> def embedding(values):
     ...     return torch.stack((1 - values, values), dim=-1)
-    >>> decomposer = TRRSS(function, embedding, domain=domain)
+    >>> decomposer = tk.decompositions.TRRSS(function, embedding, domain=domain)
     >>> result = decomposer.fit(samples, rank=1)
     >>> result.rank
     [1, 1, 1, 1]
@@ -615,7 +615,7 @@ class TRRSS(TTRSS):
         >>> function = lambda data: (1 + data).prod(dim=1)
         >>> embedding = lambda values: torch.stack(
         ...     (1 - values, values), dim=-1)
-        >>> result = TRRSS(
+        >>> result = tk.decompositions.TRRSS(
         ...     function, embedding, domain=domain).fit(samples, rank=1)
         >>> len(result.cores)
         3
@@ -1332,7 +1332,7 @@ class TRRS(TTRS):
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> decomposer = TRRS(dataset=dataset, in_dim=(2, 2, 2))
+    >>> decomposer = tk.decompositions.TRRS(dataset=dataset, in_dim=(2, 2, 2))
     >>> result = decomposer.fit(rank=1)
     >>> result.rank
     [1, 1, 1]
@@ -1601,7 +1601,7 @@ def tr_rs(
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> cores = tr_rs(dataset=dataset, in_dim=(2, 2, 2), rank=1)
+    >>> cores = tk.decompositions.tr_rs(dataset=dataset, in_dim=(2, 2, 2), rank=1)
     >>> len(cores)
     3
     """
@@ -1990,7 +1990,7 @@ def tr_rss(function,
     >>> function = lambda data: (1 + data).prod(dim=1)
     >>> embedding = lambda values: torch.stack(
     ...     (1 - values, values), dim=-1)
-    >>> cores = tr_rss(
+    >>> cores = tk.decompositions.tr_rss(
     ...     function, embedding, samples, domain=domain, rank=1)
     >>> [tuple(core.shape) for core in cores]
     [(1, 2, 1), (1, 2, 1), (1, 2, 1)]

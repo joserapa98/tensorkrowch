@@ -83,7 +83,7 @@ class QuantizedLayout:
 
     Examples
     --------
-    >>> layout = QuantizedLayout(
+    >>> layout = tk.formats.QuantizedLayout(
     ...     n_variables=2, base=2, level=3, ordering='interleaved')
     >>> digits = layout.encode_indices(torch.tensor([[3, 5]]))
     >>> torch.equal(layout.decode_digits(digits), torch.tensor([[3, 5]]))

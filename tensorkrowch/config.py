@@ -94,7 +94,7 @@ def set_svd_refinement(refine: bool) -> None:
     ----------
     refine : bool
         Whether SVD-based operations refine small singular values with
-        :func:`~tensorkrowch.utils.accurate_svd`. Initially False. Refinement
+        :func:`~tensorkrowch.utils.accurate_svd`. Initially ``False``. Refinement
         is independent of the exact backend selected by :func:`set_svd_method`.
     """
     if not isinstance(refine, bool):
@@ -123,19 +123,23 @@ def svd_method(method: Text,
 
     Examples
     --------
-    >>> with svd_method('qr_svd'):
-    ...     active_method = get_svd_method()
-    >>> active_method
-    'qr_svd'
+    >>> tensor = torch.arange(8.).reshape(2, 2, 2)
+    >>> with tk.svd_method('qr_svd', refine=True):
+    ...     cores = tk.decompositions.tt_svd(tensor, rank=2)
+    ...     active_settings = (tk.get_svd_method(), tk.get_svd_refinement())
+    >>> active_settings
+    ('qr_svd', True)
+    >>> [tuple(core.shape) for core in cores]
+    [(2, 2), (2, 2, 2), (2, 2)]
     """
     method = _validate_svd_method(method)
     if (refine is not None) and not isinstance(refine, bool):
         raise TypeError('`refine` should be bool type or None')
-    token = _SVD_METHOD_OVERRIDE.set(method)
+    method_token = _SVD_METHOD_OVERRIDE.set(method)
     refinement_token = _SVD_REFINEMENT_OVERRIDE.set(
         get_svd_refinement() if refine is None else refine)
     try:
         yield
     finally:
-        _SVD_METHOD_OVERRIDE.reset(token)
+        _SVD_METHOD_OVERRIDE.reset(method_token)
         _SVD_REFINEMENT_OVERRIDE.reset(refinement_token)

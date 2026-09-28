@@ -352,7 +352,7 @@ class TT2TR:
         >>> tt = [torch.tensor([[1.], [2.]]),
         ...       torch.tensor([[[1.], [3.]]]),
         ...       torch.tensor([[2., 1.]])]
-        >>> result = TT2TR(tt).fit(rank=1)
+        >>> result = tk.decompositions.TT2TR(tt).fit(rank=1)
         >>> result.rank
         [1, 1, 1]
         >>> bool(result.metrics.fidelities[0].fidelity > 0.999)
@@ -553,7 +553,7 @@ def tt2tr(tt,
     >>> tt = [torch.tensor([[1.], [2.]]),
     ...       torch.tensor([[[1.], [3.]]]),
     ...       torch.tensor([[2., 1.]])]
-    >>> cores = tt2tr(tt, rank=1)
+    >>> cores = tk.decompositions.tt2tr(tt, rank=1)
     >>> [tuple(core.shape) for core in cores]
     [(1, 2, 1), (1, 2, 1), (1, 2, 1)]
     """

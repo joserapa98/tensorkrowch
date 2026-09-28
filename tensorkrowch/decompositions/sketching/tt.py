@@ -1348,7 +1348,7 @@ class QTTTuckerRSS:
     >>> grid = torch.linspace(0, 1, 4)
     >>> samples = torch.cartesian_prod(grid, grid)
     >>> function = lambda values: (1 + values).prod(dim=1)
-    >>> result = QTTTuckerRSS(
+    >>> result = tk.decompositions.QTTTuckerRSS(
     ...     function, n_variables=2, base=2, level=2,
     ...     domain=torch.tensor([0., 1.])).fit(
     ...         samples, rank=2, connector_rank=2)
@@ -1649,7 +1649,7 @@ class TTRS:
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> decomposer = TTRS(dataset=dataset, in_dim=(2, 2))
+    >>> decomposer = tk.decompositions.TTRS(dataset=dataset, in_dim=(2, 2))
     >>> result = decomposer.fit(rank=2)
     >>> result.in_dim
     (2, 2)
@@ -1774,7 +1774,7 @@ class TTRS:
         >>> values = torch.tensor([1., 2., 2., 4.])
         >>> source = tk.decompositions.SparseTensorSource(
         ...     indices, values, in_dim=(2, 2))
-        >>> result = TTRS(
+        >>> result = tk.decompositions.TTRS(
         ...     source,
         ...     sketch_operator=tk.decompositions.SampledSketch()).fit(rank=1)
         >>> result.rank
@@ -1922,7 +1922,7 @@ def tt_rs(
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> cores = tt_rs(dataset=dataset, in_dim=(2, 2), rank=2)
+    >>> cores = tk.decompositions.tt_rs(dataset=dataset, in_dim=(2, 2), rank=2)
     >>> len(cores)
     2
     """
@@ -2126,7 +2126,7 @@ def qtt_rss(
     Examples
     --------
     >>> samples = torch.tensor([[0.], [1 / 3], [2 / 3], [1.]])
-    >>> cores = qtt_rss(
+    >>> cores = tk.decompositions.qtt_rss(
     ...     lambda x: 1 + x[:, 0],
     ...     samples,
     ...     n_variables=1,

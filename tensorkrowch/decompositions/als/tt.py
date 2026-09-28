@@ -956,7 +956,7 @@ class TTALS:
         --------
         >>> indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
         >>> values = torch.tensor([1., 2., 4.])
-        >>> decomposition = TTALS.completion(
+        >>> decomposition = tk.decompositions.TTALS.completion(
         ...     indices, values, in_dim=(2, 2))
         >>> result = decomposition.fit(rank=2)
         """
@@ -1104,7 +1104,7 @@ class TTALS:
         Fit a three-site tensor and create a TensorKrowch model:
 
         >>> tensor = torch.randn(2, 3, 2)
-        >>> result = TTALS(tensor).fit(rank=2)
+        >>> result = tk.decompositions.TTALS(tensor).fit(rank=2)
         >>> [tuple(core.shape) for core in result.cores]
         [(2, 2), (2, 3, 2), (2, 2)]
         >>> import tensorkrowch as tk
@@ -1445,7 +1445,7 @@ def tt_als(source,
     Examples
     --------
     >>> tensor = torch.randn(2, 2, 2)
-    >>> cores = tt_als(tensor, rank=2, max_sweeps=2)
+    >>> cores = tk.decompositions.tt_als(tensor, rank=2, max_sweeps=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2)]
     """

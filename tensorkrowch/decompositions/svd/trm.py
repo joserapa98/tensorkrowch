@@ -244,7 +244,7 @@ class TRMSVD:
         Fix a tensor and compare decompositions with two shared rank caps:
 
         >>> tensor = torch.arange(36.).reshape(2, 3, 2, 3)
-        >>> decomposer = TRMSVD(tensor)
+        >>> decomposer = tk.decompositions.TRMSVD(tensor)
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2)
         >>> rank_one.rank
@@ -463,14 +463,14 @@ def trm_svd(tensor: torch.Tensor,
     Decompose a grouped two-site tensor with a shared rank cap:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = trm_svd(tensor, layout='grouped', rank=2)
+    >>> cores = tk.decompositions.trm_svd(tensor, layout='grouped', rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2, 3), (2, 2, 2, 3)]
 
     Tensorize an ordinary matrix with heterogeneous site dimensions:
 
     >>> matrix = torch.arange(144.).reshape(12, 12)
-    >>> cores = trm_svd(
+    >>> cores = tk.decompositions.trm_svd(
     ...     matrix, in_dim=(3, 4), out_dim=(2, 6), rank=3)
     >>> len(cores)
     2

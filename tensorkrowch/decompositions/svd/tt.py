@@ -436,7 +436,7 @@ class TTSVD:
         ranks:
 
         >>> tensor = torch.arange(24.).reshape(2, 3, 4)
-        >>> decomposer = TTSVD(tensor)
+        >>> decomposer = tk.decompositions.TTSVD(tensor)
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2, collect_metrics=True)
         >>> rank_one.rank
@@ -631,13 +631,13 @@ def tt_svd(tensor: torch.Tensor,
     Decompose a four-site tensor and inspect the resulting core shapes:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tt_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
 
     Request structured ranks, errors and timings when they are needed:
 
-    >>> cores, info = tt_svd(
+    >>> cores, info = tk.decompositions.tt_svd(
     ...     tensor, rank=2, return_info=True)
     >>> info['rank']
     [2, 2, 2]
@@ -743,7 +743,7 @@ def vec_to_mps(vec: torch.Tensor,
     names:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tt_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
     """

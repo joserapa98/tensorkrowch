@@ -237,7 +237,7 @@ class TTMSVD:
         Fix a grouped tensor once and compare two maximum ranks:
 
         >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-        >>> decomposer = TTMSVD(tensor, layout='grouped')
+        >>> decomposer = tk.decompositions.TTMSVD(tensor, layout='grouped')
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2)
         >>> rank_one.rank
@@ -433,14 +433,14 @@ def ttm_svd(tensor: torch.Tensor,
     Decompose a grouped two-site tensor:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = ttm_svd(tensor, layout='grouped', rank=2)
+    >>> cores = tk.decompositions.ttm_svd(tensor, layout='grouped', rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 3), (2, 2, 3)]
 
     Tensorize an ordinary matrix with heterogeneous site dimensions:
 
     >>> matrix = torch.arange(144.).reshape(12, 12)
-    >>> cores = ttm_svd(
+    >>> cores = tk.decompositions.ttm_svd(
     ...     matrix, in_dim=(3, 4), out_dim=(2, 6))
     >>> [tuple(core.shape) for core in cores]
     [(3, 6, 2), (6, 4, 6)]
@@ -542,7 +542,7 @@ def mat_to_mpo(mat: torch.Tensor,
     The canonical replacement keeps the historical interleaved layout:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = ttm_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.ttm_svd(tensor, rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2)]
     """

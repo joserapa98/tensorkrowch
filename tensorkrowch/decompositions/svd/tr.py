@@ -494,7 +494,7 @@ class TRSVD:
         Fix a tensor and compare shared rank caps at the middle cut:
 
         >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-        >>> decomposer = TRSVD(tensor)
+        >>> decomposer = tk.decompositions.TRSVD(tensor)
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2)
         >>> max(rank_one.rank)
@@ -701,15 +701,15 @@ def tr_svd(tensor: torch.Tensor,
     Decompose a four-site tensor with a shared rank cap:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tr_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tr_svd(tensor, rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2), (2, 2, 2), (2, 2, 2)]
 
     Inspect the initial padding required by a shared rank cap:
 
     >>> singular_values = torch.tensor([5., 3., 1., 0.])
-    >>> _, info = tr_svd(torch.diag(singular_values),
-    ...                  rank=2, return_info=True)
+    >>> _, info = tk.decompositions.tr_svd(torch.diag(singular_values),
+    ...                                  rank=2, cutoff=0, return_info=True)
     >>> info['rank']
     [2, 2]
     >>> info['metadata']['initial_padding']

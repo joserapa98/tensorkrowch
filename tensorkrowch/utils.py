@@ -288,7 +288,7 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
     Example
     -------
     >>> sequence = [1, 2, 3, 5, 6, 7, 10, 11, 13]
-    >>> split_sequence_into_regions(sequence)
+    >>> tk.utils.split_sequence_into_regions(sequence)
     [[1, 2, 3], [5, 6, 7], [10, 11], [13]]
     """
     if not isinstance(lst, Sequence) or not all(isinstance(x, int) for x in lst):   #TODO: use this in my code
@@ -491,7 +491,7 @@ def accurate_svd(tensor: Tensor,
     Examples
     --------
     >>> tensor = torch.diag(torch.tensor([1., 1e-6, 1e-12], dtype=torch.float64))
-    >>> u, s, vh = accurate_svd(tensor, svd_method='qr_svd')
+    >>> u, s, vh = tk.utils.accurate_svd(tensor, svd_method='qr_svd')
     >>> torch.allclose((u * s.unsqueeze(-2)) @ vh, tensor)
     True
     """
@@ -641,7 +641,7 @@ def truncated_svd(tensor: Tensor,
     Examples
     --------
     >>> tensor = torch.randn(4, 4)
-    >>> u, s, vh = truncated_svd(tensor, rank=2)
+    >>> u, s, vh = tk.utils.truncated_svd(tensor, rank=2)
     >>> len(s)
     2
     """

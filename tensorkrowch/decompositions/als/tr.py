@@ -808,7 +808,7 @@ class TRALS(TTALS):
         --------
         >>> indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
         >>> values = torch.tensor([1., 2., 4.])
-        >>> decomposition = TRALS.completion(
+        >>> decomposition = tk.decompositions.TRALS.completion(
         ...     indices, values, in_dim=(2, 2))
         >>> result = decomposition.fit(rank=2)
         """
@@ -923,9 +923,9 @@ class TRALS(TTALS):
         Examples
         --------
         >>> tensor = torch.randn(2, 3, 2)
-        >>> result = TRALS(tensor).fit(
+        >>> result = tk.decompositions.TRALS(tensor).fit(
         ...     rank=(2, 2, 2),
-        ...     convergence=ConvergencePolicy(max_sweeps=2))
+        ...     convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2))
         >>> [tuple(core.shape) for core in result.cores]
         [(2, 2, 2), (2, 3, 2), (2, 2, 2)]
         >>> import tensorkrowch as tk

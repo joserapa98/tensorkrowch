@@ -824,8 +824,8 @@ def tr_blostr(tensor: torch.Tensor,
     >>> generator = torch.Generator().manual_seed(0)
     >>> cores = [torch.randn(2, 4, 2, generator=generator)
     ...          for _ in range(3)]
-    >>> tensor = TRDecomposition(cores).contract_dense()
-    >>> recovered = tr_blostr(
+    >>> tensor = tk.decompositions.TRDecomposition(cores).contract_dense()
+    >>> recovered = tk.decompositions.tr_blostr(
     ...     tensor, rank=2,
     ...     generator=torch.Generator().manual_seed(1))
     >>> [tuple(core.shape) for core in recovered]

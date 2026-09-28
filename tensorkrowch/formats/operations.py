@@ -7,10 +7,11 @@ import torch
 
 def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
     """Restores public vector/matrix endpoints from standard fused cores."""
-    from .tt import TT
-    from .tr import TR
-    from .ttm import TTM
-    from .trm import TRM
+    from tensorkrowch.formats.tr import TR
+    from tensorkrowch.formats.trm import TRM
+    from tensorkrowch.formats.tt import TT
+    from tensorkrowch.formats.ttm import TTM
+
     stored = []
     for site, core in enumerate(cores):
         if out_dim is not None:
@@ -30,8 +31,9 @@ def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
 
 def _binary_inputs(first, second, same_family=True):
     """Checks local dimensions and prepares compatible structural batches."""
-    from ._chain import TensorFormat1D
-    from .quantics import _check_semantics
+    from tensorkrowch.formats._chain import TensorFormat1D
+    from tensorkrowch.formats.quantics import _check_semantics
+
     if not isinstance(second, TensorFormat1D):
         raise TypeError('`other` should be TensorFormat1D type')
     first._ensure_valid()
@@ -93,7 +95,8 @@ def add(first, second, method='stacked', coefficient=1):
                 core[..., :x.shape[-3], :, :x.shape[-1]] = x
                 core[..., x.shape[-3]:, :, x.shape[-1]:] = y
             cores.append(core)
-    from .quantics import _inherit_semantics
+    from tensorkrowch.formats.quantics import _inherit_semantics
+
     return _inherit_semantics(_build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
@@ -105,7 +108,8 @@ def hadamard(first, second):
         core = torch.einsum('...lpr,...aps->...laprs', x, y)
         cores.append(core.reshape(*batch, x.shape[-3] * y.shape[-3],
                                   x.shape[-2], x.shape[-1] * y.shape[-1]))
-    from .quantics import _inherit_semantics
+    from tensorkrowch.formats.quantics import _inherit_semantics
+
     return _inherit_semantics(_build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
@@ -123,7 +127,8 @@ def scale(network, coefficient):
     cores[0] = cores[0] * coefficient
     dtype = cores[0].dtype
     cores = [core.to(dtype=dtype) for core in cores]
-    from .quantics import _inherit_semantics
+    from tensorkrowch.formats.quantics import _inherit_semantics
+
     return _inherit_semantics(_build_network(cores, network._in_dim, network._out_dim,
                                             network._n_batches, network._topology.startswith('tr')), network)
 
@@ -164,6 +169,7 @@ def apply(first, second):
                                   y.shape[-4 if right_matrix else -3], physical,
                                   x.shape[-2 if left_matrix else -1] *
                                   y.shape[-2 if right_matrix else -1]))
-    from .quantics import _inherit_semantics
+    from tensorkrowch.formats.quantics import _inherit_semantics
+
     return _inherit_semantics(_build_network(cores, in_dim, out_dim, len(batch), cyclic),
                               first, second, product=True)

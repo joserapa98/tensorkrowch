@@ -2,8 +2,8 @@
 
 import torch
 
-from .bonds import BondFactors
-from .operations import _build_network
+from tensorkrowch.formats.bonds import BondFactors
+from tensorkrowch.formats.operations import _build_network
 
 
 def rotate(network, first=0):
@@ -59,6 +59,7 @@ def ring_to_train(network):
 def to_mps(network, parameterized=False, **kwargs):
     """Builds MPS or MPSData from effective vector cores, without detaching."""
     from tensorkrowch.models import MPS, MPSData
+
     network._ensure_valid()
     if network._out_dim is not None:
         raise TypeError('MPS adapters require a vector format')
@@ -76,8 +77,10 @@ def to_mps(network, parameterized=False, **kwargs):
 def from_mps(model, cyclic):
     """Collects effective model tensors, including open boundary contractions."""
     from tensorkrowch.models import MPS, MPSData
-    from .tt import TT
-    from .tr import TR
+
+    from tensorkrowch.formats.tr import TR
+    from tensorkrowch.formats.tt import TT
+
     if not isinstance(model, (MPS, MPSData)):
         raise TypeError('`model` should be MPS or MPSData type')
     boundary = 'pbc' if cyclic else 'obc'
@@ -90,6 +93,7 @@ def from_mps(model, cyclic):
 def to_mpo(network, parameterized=False, **kwargs):
     """Builds an MPO from effective matrix cores without modifying the format."""
     from tensorkrowch.models import MPO
+
     network._ensure_valid()
     if network._out_dim is None:
         raise TypeError('MPO adapters require a matrix format')
@@ -105,8 +109,10 @@ def to_mpo(network, parameterized=False, **kwargs):
 def from_mpo(model, cyclic):
     """Collects effective MPO tensors, including open boundary contractions."""
     from tensorkrowch.models import MPO
-    from .ttm import TTM
-    from .trm import TRM
+
+    from tensorkrowch.formats.trm import TRM
+    from tensorkrowch.formats.ttm import TTM
+
     if not isinstance(model, MPO):
         raise TypeError('`model` should be MPO type')
     boundary = 'pbc' if cyclic else 'obc'

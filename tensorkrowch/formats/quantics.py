@@ -5,12 +5,13 @@ from math import prod
 
 import torch
 
-from .quantization import (QuantizedLayout, CoordinateMap, _CompositeCoordinateMap,
-                           _unit_to_indices)
-from .tt import TT
-from .tr import TR
-from .ttm import TTM
-from .trm import TRM
+from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
+                                               _CompositeCoordinateMap,
+                                               _unit_to_indices)
+from tensorkrowch.formats.tr import TR
+from tensorkrowch.formats.trm import TRM
+from tensorkrowch.formats.tt import TT
+from tensorkrowch.formats.ttm import TTM
 
 
 def _map_structure(value, function):
@@ -355,7 +356,8 @@ class _QuanticsMatrix:
         return result
 
     def apply(self, data, n_batches=1):
-        from ._chain import TensorFormat1D
+        from tensorkrowch.formats._chain import TensorFormat1D
+
         result = super().apply(data, n_batches=n_batches)
         if isinstance(data, TensorFormat1D):
             return result

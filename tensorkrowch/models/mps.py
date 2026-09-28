@@ -30,6 +30,9 @@ from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import split_sequence_into_regions, random_unitary
 
 
+_UNSET_ORTH_CENTER = object()
+
+
 class MPS(TensorNetwork):  # MARK: MPS
     """
     Class for Matrix Product States. This is the base class from which
@@ -2781,14 +2784,16 @@ class MPS(TensorNetwork):  # MARK: MPS
     
     @torch.no_grad()
     def canonicalize(self,
-                     oc: Optional[int] = None,
+                     orth_center: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
                      atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
-                     renormalize: bool = False) -> None:
+                     renormalize: bool = False,
+                     *,
+                     oc: Optional[int] = _UNSET_ORTH_CENTER) -> None:
         r"""
         Turns MPS into canonical form via local SVD/QR decompositions.
         
@@ -2826,9 +2831,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         Parameters
         ----------
-        oc : int
-            Position of the orthogonality center. It should be between 0 and 
-            ``n_sites - 1``.
+        orth_center : int, optional
+            Position of the orthogonality center, between 0 and
+            ``n_sites - 1``. Defaults to the last site when ``None``.
         mode : {"svd", "svdr", "qr"}
             Indicates which decomposition should be used to split a node after
             contracting it. See more at :func:`~tensorkrowch.svd_`,
@@ -2868,25 +2873,40 @@ class MPS(TensorNetwork):  # MARK: MPS
             the normalization factor is evenly distributed among all nodes of
             the MPS.
             
+        oc : int, optional
+            Deprecated alias for ``orth_center``. It will be removed in a
+            future release and emits a DeprecationWarning when supplied.
+            Cannot be combined with a non-None ``orth_center``.
+
         Examples
         --------
         >>> mps = tk.models.MPS(n_sites=4,
         ...                     phys_dim=2,
         ...                     bond_dim=5)
-        >>> mps.canonicalize(rank=3)
+        >>> mps.canonicalize(orth_center=3, rank=3)
         >>> mps.bond_dim
         [3, 3, 3]
         """
+        if oc is not _UNSET_ORTH_CENTER:
+            if orth_center is not None:
+                raise TypeError('`orth_center` and `oc` cannot both be provided')
+            warnings.warn(
+                '`oc` is deprecated and will be removed; use `orth_center`.',
+                DeprecationWarning,
+                stacklevel=3)
+            orth_center = oc
+
         self.reset()
 
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
 
-        if oc is None:
-            oc = self._n_sites - 1
-        elif (oc < 0) or (oc >= self._n_sites):
-            raise ValueError('Orthogonality center position `oc` should be '
-                             'between 0 and `n_sites` - 1')
+        if orth_center is None:
+            orth_center = self._n_sites - 1
+        elif (orth_center < 0) or (orth_center >= self._n_sites):
+            raise ValueError(
+                'Orthogonality center position `orth_center` should be '
+                'between 0 and `n_sites` - 1')
         
         log_norm = 0
         
@@ -2906,7 +2926,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         if rank is None:
             keep_rank = True
         
-        for i in range(oc):
+        for i in range(orth_center):
             if mode == 'svd':
                 result1, result2 = nodes[i]['right'].svd_(
                     side='right',
@@ -2937,7 +2957,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             nodes[i] = result1.parameterize(set_param=set_params[i])
             nodes[i + 1] = result2
 
-        for i in range(len(nodes) - 1, oc, -1):
+        for i in range(len(nodes) - 1, orth_center, -1):
             if mode == 'svd':
                 result1, result2 = nodes[i]['left'].svd_(
                     side='left',
@@ -2968,7 +2988,8 @@ class MPS(TensorNetwork):  # MARK: MPS
             nodes[i] = result2.parameterize(set_param=set_params[i])
             nodes[i - 1] = result1
 
-        nodes[oc] = nodes[oc].parameterize(set_param=set_params[oc])
+        nodes[orth_center] = nodes[orth_center].parameterize(
+            set_param=set_params[orth_center])
         
         # Rescale
         if renormalize and (log_norm != 0):
@@ -3536,15 +3557,29 @@ class UMPS(MPS):  # MARK: UMPS
         return net
     
     def canonicalize(self,
-                     oc: Optional[int] = None,
+                     orth_center: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
                      atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
-                     renormalize: bool = False) -> None:
-        """:meta private:"""
+                     renormalize: bool = False,
+                     *,
+                     oc: Optional[int] = _UNSET_ORTH_CENTER) -> None:
+        """``oc`` is deprecated; use ``orth_center`` instead.
+
+        :meta private:
+        """
+        if oc is not _UNSET_ORTH_CENTER:
+            if orth_center is not None:
+                raise TypeError('`orth_center` and `oc` cannot both be provided')
+            warnings.warn(
+                '`oc` is deprecated and will be removed; use `orth_center`.',
+                DeprecationWarning,
+                stacklevel=2)
+            orth_center = oc
+
         raise NotImplementedError(
             '`canonicalize` not implemented for UMPS')
     
@@ -4556,15 +4591,29 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         return net
     
     def canonicalize(self,
-                     oc: Optional[int] = None,
+                     orth_center: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
                      atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
-                     renormalize: bool = False) -> None:
-        """:meta private:"""
+                     renormalize: bool = False,
+                     *,
+                     oc: Optional[int] = _UNSET_ORTH_CENTER) -> None:
+        """``oc`` is deprecated; use ``orth_center`` instead.
+
+        :meta private:
+        """
+        if oc is not _UNSET_ORTH_CENTER:
+            if orth_center is not None:
+                raise TypeError('`orth_center` and `oc` cannot both be provided')
+            warnings.warn(
+                '`oc` is deprecated and will be removed; use `orth_center`.',
+                DeprecationWarning,
+                stacklevel=2)
+            orth_center = oc
+
         raise NotImplementedError(
             '`canonicalize` not implemented for UMPSLayer')
     

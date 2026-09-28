@@ -1590,7 +1590,7 @@ class TestMPS:  # MARK: TestMPS
                             phys_dim=2,
                             bond_dim=2,
                             boundary='obc')
-        mps.canonicalize(oc=0, mode='svd')
+        mps.canonicalize(orth_center=0, mode='svd')
 
         captured = self._capture_multinomial_probs(monkeypatch)
         mps.sample(n_samples=2, canonical=False)
@@ -1961,7 +1961,7 @@ class TestMPS:  # MARK: TestMPS
         self._trace_mps_for_canonicalize(mps, n_features, runtime)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mps.canonicalize(oc=oc,
+        mps.canonicalize(orth_center=oc,
                          mode=mode,
                          rank=rank,
                          cum_percentage=0.98,
@@ -2004,7 +2004,7 @@ class TestMPS:  # MARK: TestMPS
                                          inline_mats=True)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mps.canonicalize(oc=oc,
+        mps.canonicalize(orth_center=oc,
                          mode=mode,
                          rank=rank,
                          cum_percentage=0.98,
@@ -2032,7 +2032,7 @@ class TestMPS:  # MARK: TestMPS
 
         self._trace_mps_for_canonicalize(mps, n_features, 'default')
 
-        mps.canonicalize(oc=oc,
+        mps.canonicalize(orth_center=oc,
                          mode=mode,
                          renormalize=renormalize)
 

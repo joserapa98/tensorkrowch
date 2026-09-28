@@ -728,7 +728,7 @@ class TestMPO:  # MARK: TestMPO
                             boundary=boundary)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mpo.canonicalize(oc=oc,
+        mpo.canonicalize(orth_center=oc,
                          mode=mode,
                          rank=rank,
                          cum_percentage=0.98,
@@ -757,7 +757,7 @@ class TestMPO:  # MARK: TestMPO
         expected_param_flags = _deparameterize_even_nodes(mpo)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mpo.canonicalize(oc=oc,
+        mpo.canonicalize(orth_center=oc,
                          mode=mode,
                          rank=rank,
                          cum_percentage=0.98,
@@ -785,7 +785,7 @@ class TestMPO:  # MARK: TestMPO
                             boundary=boundary)
 
         rank = torch.randint(3, 7, (1,)).item()
-        mpo.canonicalize(oc=oc,
+        mpo.canonicalize(orth_center=oc,
                          mode=mode,
                          rank=rank,
                          cum_percentage=0.98,

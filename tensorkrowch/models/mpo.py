@@ -19,6 +19,9 @@ from tensorkrowch.models import MPSData
 from tensorkrowch.models._sites import _resolve_n_sites
 
 
+_UNSET_ORTH_CENTER = object()
+
+
 class MPO(TensorNetwork):  # MARK: MPO
     """
     Class for Matrix Product Operators. This is the base class from which
@@ -912,14 +915,16 @@ class MPO(TensorNetwork):  # MARK: MPO
     
     @torch.no_grad()
     def canonicalize(self,
-                     oc: Optional[int] = None,
+                     orth_center: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
                      atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
-                     renormalize: bool = False) -> None:
+                     renormalize: bool = False,
+                     *,
+                     oc: Optional[int] = _UNSET_ORTH_CENTER) -> None:
         r"""
         Turns MPO into `canonical` form via local SVD/QR decompositions in the
         same way this transformation is applied to :class:`~tensorkrowch.models.MPS`.
@@ -942,9 +947,9 @@ class MPO(TensorNetwork):  # MARK: MPO
         
         Parameters
         ----------
-        oc : int
-            Position of the orthogonality center. It should be between 0 and 
-            ``n_sites - 1``.
+        orth_center : int, optional
+            Position of the orthogonality center, between 0 and
+            ``n_sites - 1``. Defaults to the last site when ``None``.
         mode : {"svd", "svdr", "qr"}
             Indicates which decomposition should be used to split a node after
             contracting it. See more at :func:`~tensorkrowch.svd_`,
@@ -983,26 +988,41 @@ class MPO(TensorNetwork):  # MARK: MPO
             the normalization factor is evenly distributed among all nodes of
             the MPO.
             
+        oc : int, optional
+            Deprecated alias for ``orth_center``. It will be removed in a
+            future release and emits a DeprecationWarning when supplied.
+            Cannot be combined with a non-None ``orth_center``.
+
         Examples
         --------
         >>> mpo = tk.models.MPO(n_sites=4,
         ...                     in_dim=2,
         ...                     out_dim=2,
         ...                     bond_dim=5)
-        >>> mpo.canonicalize(rank=3)
+        >>> mpo.canonicalize(orth_center=3, rank=3)
         >>> mpo.bond_dim
         [3, 3, 3]
         """
+        if oc is not _UNSET_ORTH_CENTER:
+            if orth_center is not None:
+                raise TypeError('`orth_center` and `oc` cannot both be provided')
+            warnings.warn(
+                '`oc` is deprecated and will be removed; use `orth_center`.',
+                DeprecationWarning,
+                stacklevel=3)
+            orth_center = oc
+
         self.reset()
 
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
 
-        if oc is None:
-            oc = self._n_sites - 1
-        elif (oc < 0) or (oc >= self._n_sites):
-            raise ValueError('Orthogonality center position `oc` should be '
-                             'between 0 and `n_sites` - 1')
+        if orth_center is None:
+            orth_center = self._n_sites - 1
+        elif (orth_center < 0) or (orth_center >= self._n_sites):
+            raise ValueError(
+                'Orthogonality center position `orth_center` should be '
+                'between 0 and `n_sites` - 1')
         
         log_norm = 0
         
@@ -1022,7 +1042,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         if rank is None:
             keep_rank = True
         
-        for i in range(oc):
+        for i in range(orth_center):
             if mode == 'svd':
                 result1, result2 = nodes[i]['right'].svd_(
                     side='right',
@@ -1053,7 +1073,7 @@ class MPO(TensorNetwork):  # MARK: MPO
             nodes[i] = result1.parameterize(set_param=set_params[i])
             nodes[i + 1] = result2
 
-        for i in range(len(nodes) - 1, oc, -1):
+        for i in range(len(nodes) - 1, orth_center, -1):
             if mode == 'svd':
                 result1, result2 = nodes[i]['left'].svd_(
                     side='left',
@@ -1084,7 +1104,8 @@ class MPO(TensorNetwork):  # MARK: MPO
             nodes[i] = result2.parameterize(set_param=set_params[i])
             nodes[i - 1] = result1
 
-        nodes[oc] = nodes[oc].parameterize(set_param=set_params[oc])
+        nodes[orth_center] = nodes[orth_center].parameterize(
+            set_param=set_params[orth_center])
         
         # Rescale
         if log_norm != 0:
@@ -1363,14 +1384,28 @@ class UMPO(MPO):  # MARK: UMPO
         return net
     
     def canonicalize(self,
-                     oc: Optional[int] = None,
+                     orth_center: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cutoff: Optional[float] = None,
                      atol: Optional[float] = None,
                      rtol: Optional[float] = None,
                      cum_percentage: Optional[float] = None,
-                     renormalize: bool = False) -> None:
-        """:meta private:"""
+                     renormalize: bool = False,
+                     *,
+                     oc: Optional[int] = _UNSET_ORTH_CENTER) -> None:
+        """``oc`` is deprecated; use ``orth_center`` instead.
+
+        :meta private:
+        """
+        if oc is not _UNSET_ORTH_CENTER:
+            if orth_center is not None:
+                raise TypeError('`orth_center` and `oc` cannot both be provided')
+            warnings.warn(
+                '`oc` is deprecated and will be removed; use `orth_center`.',
+                DeprecationWarning,
+                stacklevel=2)
+            orth_center = oc
+
         raise NotImplementedError(
             '`canonicalize` not implemented for UMPO')

@@ -455,14 +455,46 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
 class TestAccurateSVD:  # MARK: TestAccurateSVD
 
     @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    def test_active_backend_and_refinement(self, method, monkeypatch):
+        tensor = torch.diag(torch.tensor([1., 1e-6, 1e-12], dtype=torch.float64))
+        original_backend = tk.utils._backend_svd
+        backends = []
+
+        def recording_backend(matrix, backend):
+            backends.append(backend)
+            return original_backend(matrix, backend)
+
+        monkeypatch.setattr(tk.utils, '_backend_svd', recording_backend)
+        monkeypatch.setattr(tk.config, '_DEFAULT_SVD_METHOD', method)
+        monkeypatch.setattr(tk.config, '_DEFAULT_SVD_REFINEMENT', False)
+        tk.utils.accurate_svd(tensor)
+        assert len(backends) > 1
+        assert all(backend == method for backend in backends)
+
+        other_method = 'qr_svd' if method == 'svd' else 'svd'
+        backends.clear()
+        with tk.svd_method(other_method, refine=False):
+            tk.utils.accurate_svd(tensor)
+            assert len(backends) > 1
+            assert all(backend == other_method for backend in backends)
+            backends.clear()
+            with tk.svd_method(other_method, refine=True):
+                tk.utils.truncated_svd(tensor, svd_method=method)
+            assert all(backend == method for backend in backends)
+            assert tk.get_svd_method() == other_method
+        assert tk.get_svd_method() == method
+        assert not tk.get_svd_refinement()
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
     @pytest.mark.parametrize('shape', [(7, 4), (4, 7), (4, 4), (1, 1),
                                       (2, 3, 7, 4), (2, 3, 4, 7)])
     @pytest.mark.parametrize('dtype', [torch.float32, torch.float64,
                                       torch.complex64, torch.complex128])
     def test_reconstruction_and_orthogonality(self, method, shape, dtype):
         tensor = _controlled_spectrum_matrix(shape, dtype)
-        u, s, vh = tk.utils.accurate_svd(
-            tensor, svd_method=method, recursion_threshold=0.5)
+        with tk.svd_method(method):
+            u, s, vh = tk.utils.accurate_svd(
+                tensor, recursion_threshold=0.5)
         rtol, atol = _svd_tolerances(dtype)
         identity = torch.eye(min(shape[-2:]), dtype=dtype)
         assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
@@ -486,7 +518,8 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
         tensor = torch.block_diag(*blocks)
         if tensor.is_complex():
             tensor = tensor * (0.6 + 0.8j)
-        u, s, vh = tk.utils.accurate_svd(tensor, svd_method=method)
+        with tk.svd_method(method):
+            u, s, vh = tk.utils.accurate_svd(tensor)
         assert torch.allclose(s, spectrum, rtol=1e-12, atol=0)
         assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
                               rtol=1e-12, atol=1e-30)
@@ -496,7 +529,8 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
         tensor = torch.stack([torch.zeros(4, 4),
                                torch.diag(torch.tensor([1., 1e-6, 0., 0.])),
                                torch.eye(4)]).to(torch.complex128)
-        u, s, vh = tk.utils.accurate_svd(tensor, svd_method=method)
+        with tk.svd_method(method):
+            u, s, vh = tk.utils.accurate_svd(tensor)
         assert torch.isfinite(s).all()
         assert torch.equal(s[0], torch.zeros_like(s[0]))
         assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
@@ -514,8 +548,8 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
             return original_svd(matrix, **kwargs)
 
         monkeypatch.setattr(torch.linalg, 'svd', recording_svd)
-        u, s, vh = tk.utils.accurate_svd(tensor, svd_method='svd',
-                                        max_depth=depth)
+        with tk.svd_method('svd'):
+            u, s, vh = tk.utils.accurate_svd(tensor, max_depth=depth)
         assert len(shapes) == depth + 1
         assert torch.allclose(_reconstruct_svd(u, s, vh), tensor)
 
@@ -523,8 +557,8 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
     def test_autograd(self, method):
         tensor = _controlled_spectrum_matrix((5, 3), torch.float64)
         tensor.requires_grad_()
-        _, s, _ = tk.utils.accurate_svd(tensor, svd_method=method,
-                                       recursion_threshold=0.5)
+        with tk.svd_method(method):
+            _, s, _ = tk.utils.accurate_svd(tensor, recursion_threshold=0.5)
         gradient, = torch.autograd.grad(s.square().sum(), tensor)
         assert torch.allclose(gradient, 2 * tensor, rtol=1e-10, atol=1e-12)
 
@@ -545,8 +579,6 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
         ({'max_depth': -1}, ValueError),
         ({'max_depth': True}, TypeError),
         ({'max_depth': 1.5}, TypeError),
-        ({'svd_method': 'invalid'}, ValueError),
-        ({'svd_method': 1}, TypeError),
     ])
     def test_invalid_controls(self, kwargs, error):
         with pytest.raises(error):
@@ -573,7 +605,8 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
     @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
     def test_accelerator(self, method, device):
         tensor = torch.diag(torch.tensor([1., 1e-5, 1e-10], device=device))
-        u, s, vh = tk.utils.accurate_svd(tensor, svd_method=method)
+        with tk.svd_method(method):
+            u, s, vh = tk.utils.accurate_svd(tensor)
         assert u.device == tensor.device and s.device == tensor.device
         assert vh.device == tensor.device
         assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,

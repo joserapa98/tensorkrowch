@@ -29,6 +29,7 @@ from torch import Tensor
 
 from tensorkrowch.config import (_validate_svd_method, get_svd_method,
                                 get_svd_refinement)
+from tensorkrowch.config import svd_method as _svd_method_context
 
 
 def print_list(lst: List) -> Text:
@@ -435,7 +436,6 @@ def _refine_svd(tensor: Tensor,
 
 
 def accurate_svd(tensor: Tensor,
-                 svd_method: Optional[Text] = None,
                  recursion_threshold: float = 1e-4,
                  max_depth: int = 16) -> Tuple[Tensor, Tensor, Tensor]:
     r"""
@@ -445,9 +445,19 @@ def accurate_svd(tensor: Tensor,
     `Real-Space Parallel Density Matrix Renormalization Group
     <https://arxiv.org/pdf/1301.3494>`_. After the initial SVD, the small-value
     subspace is projected from the original matrix and decomposed recursively.
+    A single SVD may resolve the largest singular values well while losing
+    relative accuracy in much smaller ones. Refinement isolates that tail in
+    a smaller matrix, recomputes its SVD and updates the associated singular
+    vectors. This repeats only when the smaller matrix still has a separated
+    tail, up to the recursion limit.
     This can improve relative accuracy in the tail, but cannot recover values
     lost when forming the input or guarantee relative accuracy below its
     floating-point resolution. No singular values are truncated or inverted.
+
+    The backend is selected by :func:`~tensorkrowch.get_svd_method`, including
+    overrides from :func:`~tensorkrowch.svd_method`, and is fixed throughout
+    recursion. This function always attempts refinement, independently of
+    :func:`~tensorkrowch.get_svd_refinement`.
 
     Parameters
     ----------
@@ -455,16 +465,16 @@ def accurate_svd(tensor: Tensor,
         Finite floating-point or complex matrix with shape ``(*, m, n)``.
         Matrix dimensions must be positive. Leading batch dimensions are
         supported; each matrix may select a different refinement subspace.
-    svd_method : {"svd", "qr_svd"}, optional
-        Backend used at every recursion level. Defaults to the active
-        :func:`~tensorkrowch.get_svd_method`. Refinement is always enabled here,
-        independently of :func:`~tensorkrowch.get_svd_refinement`.
     recursion_threshold : float
-        Relative threshold in ``(0, 1)`` for selecting the small-value tail.
-        Default is ``1e-4``.
+        Relative threshold in ``(0, 1)`` for selecting the small-value tail
+        at each level: refine values satisfying ``s[i] / s[0] < threshold``.
+        Default is ``1e-4``. Larger thresholds include more values in the
+        refinement; this is neither a truncation tolerance nor an error bound.
     max_depth : int
-        Maximum number of recursive refinement levels. Default is 16.
-        Zero returns the unrefined economy-size SVD.
+        Maximum number of additional SVD refinement levels after the initial
+        SVD. Default is 16. Zero returns the unrefined economy-size SVD.
+        Recursion stops earlier if no tail is selected, the subspace has only
+        one singular value, or all singular values are zero.
 
     Returns
     -------
@@ -476,7 +486,7 @@ def accurate_svd(tensor: Tensor,
     Raises
     ------
     TypeError
-        If tensor, backend or refinement controls have invalid types.
+        If tensor or refinement controls have invalid types.
     ValueError
         If the input is not a finite matrix or a refinement control is outside
         its accepted interval.
@@ -491,7 +501,9 @@ def accurate_svd(tensor: Tensor,
     Examples
     --------
     >>> tensor = torch.diag(torch.tensor([1., 1e-6, 1e-12], dtype=torch.float64))
-    >>> u, s, vh = tk.utils.accurate_svd(tensor, svd_method='qr_svd')
+    >>> with tk.svd_method('qr_svd'):
+    ...     u, s, vh = tk.utils.accurate_svd(
+    ...         tensor, recursion_threshold=1e-4, max_depth=2)
     >>> torch.allclose((u * s.unsqueeze(-2)) @ vh, tensor)
     True
     """
@@ -512,8 +524,7 @@ def accurate_svd(tensor: Tensor,
         raise TypeError('`max_depth` should be int type')
     if max_depth < 0:
         raise ValueError('`max_depth` should be non-negative')
-    svd_method = (get_svd_method() if svd_method is None
-                  else _validate_svd_method(svd_method))
+    svd_method = get_svd_method()
     u, s, vh = _backend_svd(tensor, svd_method)
     if max_depth == 0:
         return u, s, vh
@@ -539,7 +550,8 @@ def _compact_svd(tensor: Tensor,
                  svd_method: Text) -> Tuple[Tensor, Tensor, Tensor]:
     """Computes an economy-size SVD with the active refinement setting."""
     if get_svd_refinement():
-        return accurate_svd(tensor, svd_method=svd_method)
+        with _svd_method_context(svd_method):
+            return accurate_svd(tensor)
     if not isinstance(tensor, Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
     return _backend_svd(tensor, svd_method)

@@ -5,7 +5,10 @@ This script contains:
         * _SafeList
 
     Public classes:
+        * RoundingInfo
         * SampleError
+        * BlockLayout
+        * SplitBlock
         * TensorFormat
 """
 
@@ -137,9 +140,10 @@ class SplitBlock:
     cores : tuple[torch.Tensor, ...]
         Local cores in standard (*batch, left, physical, right) layout with
         physical axes fused for matrices.
-    bonds : sequence of torch.Tensor or None
+    bonds : sequence[torch.Tensor or None] or None
         Factors internal to the local block; external interface factors are
-        excluded.
+        excluded. ``None`` denotes an identity factor or, for the complete
+        sequence, the absence of explicit factors.
     spectra : tuple[torch.Tensor, ...]
         Singular values at the local SVD cuts. They are not certified global
         Schmidt spectra.

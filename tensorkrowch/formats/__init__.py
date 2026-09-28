@@ -34,11 +34,10 @@ Module flow:
 """
 
 from tensorkrowch.formats.base import (RoundingInfo, SampleError, BlockLayout,
-                                       SplitBlock, TensorFormat)
+                                     SplitBlock, TensorFormat)
 from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
 from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
-                                         RoundingInfo, BlockLayout,
-                                         SplitBlock, split_block)
+                                         split_block)
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
                                        MinimalCanonicalInfo)
 from tensorkrowch.formats.quantics import QTT, QTR, QTTM, QTRM

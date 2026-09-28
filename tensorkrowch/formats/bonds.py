@@ -6,7 +6,7 @@ This script contains:
         * VidalGauge
 """
 
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 import torch
 
@@ -32,7 +32,7 @@ class BondFactors1D:
     """
 
     def __init__(self,
-                 values: Sequence[torch.Tensor],
+                 values: Sequence[Optional[torch.Tensor]],
                  on_change: Callable[[], None]) -> None:
         if isinstance(values, torch.Tensor):
             raise TypeError('`values` should be a sequence of diagonals')
@@ -41,11 +41,14 @@ class BondFactors1D:
 
     @property
     def values(self):
-        """Diagonal factors at the bonds of a :class:`1D format <TensorFormat1D>`."""
+        """
+        Diagonal factors at the bonds of the owning
+        :class:`1D format <tensorkrowch.formats.TensorFormat1D>`.
+        """
         return self._values
 
     @values.setter
-    def values(self, values: Sequence[torch.Tensor]) -> None:
+    def values(self, values: Sequence[Optional[torch.Tensor]]) -> None:
         if isinstance(values, torch.Tensor):
             raise TypeError('`values` should be a sequence of diagonals')
         previous = getattr(self, '_values', None)
@@ -123,7 +126,7 @@ class VidalGauge(BondFactors1D):
 
     Parameters
     ----------
-    values : sequence of torch.Tensor or None
+    values : sequence[torch.Tensor or None]
         Stored diagonal factors, preserved independently of the Vidal metadata.
     spectra : sequence of torch.Tensor
         Real, finite, non-negative singular-value vectors, optionally
@@ -138,7 +141,7 @@ class VidalGauge(BondFactors1D):
     """
 
     def __init__(self,
-                 values: Sequence[torch.Tensor],
+                 values: Sequence[Optional[torch.Tensor]],
                  spectra: Sequence[torch.Tensor],
                  powers: Sequence[Tuple[float, float]],
                  on_change: Callable[[], None],

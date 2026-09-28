@@ -6,7 +6,6 @@ This script contains:
         * _MatrixFormat1D
 
     Public classes:
-        * BlockLayout, SplitBlock, RoundingInfo
         * TensorFormat1D
         * TT, TR, TTM, TRM
 
@@ -26,7 +25,6 @@ This script contains:
 import warnings
 from abc import abstractmethod
 from copy import copy
-from dataclasses import dataclass
 from math import isfinite, prod, sqrt
 from numbers import Number, Real
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
@@ -37,10 +35,10 @@ from tensorkrowch.utils import (_INTEGER_DTYPES, _validate_truncation,
                                truncated_svd)
 
 from tensorkrowch.formats.base import (_SafeList, RoundingInfo, SampleError,
-                                       BlockLayout, SplitBlock, TensorFormat)
+                                     BlockLayout, SplitBlock, TensorFormat)
 from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
-                                         MinimalCanonicalInfo)
+                                       MinimalCanonicalInfo)
 
 
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
@@ -293,8 +291,8 @@ def split_block(block: torch.Tensor,
 class TensorFormat1D(TensorFormat):
     """
     Compact format for tensors with a 1D layout, formed by a sequence of cores
-    and, possibly explicit bond factors.
-    
+    and, possibly, explicit bond factors.
+
     Serves as a base class for all 1D chain formats, such as :class:`TT`,
     :class:`TR`, :class:`TTM`, :class:`TRM`, and their quantized versions.
 

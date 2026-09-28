@@ -443,9 +443,12 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
         with pytest.raises(RuntimeError, match='at least 2 dimensions'):
             tk.utils.truncated_svd(torch.ones(3))
 
-    def test_truncated_svd_invalid_tensor_type(self):
-        with pytest.raises(TypeError, match='torch.Tensor type'):
-            tk.utils.truncated_svd([[1.0, 0.0], [0.0, 1.0]])
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('refine', [False, True])
+    def test_truncated_svd_invalid_tensor_type(self, method, refine):
+        with tk.svd_method(method, refine=refine):
+            with pytest.raises(TypeError, match='torch.Tensor type'):
+                tk.utils.truncated_svd([[1.0, 0.0], [0.0, 1.0]])
 
     def test_truncated_svd_invalid_return_info(self, diag_tensor):
         with pytest.raises(TypeError, match='`return_info` should be bool'):
@@ -616,11 +619,16 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
         gradient, = torch.autograd.grad(s.square().sum(), tensor)
         assert torch.allclose(gradient, 2 * tensor, rtol=1e-10, atol=1e-12)
 
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
     @pytest.mark.parametrize('tensor', [torch.empty(0, 3, 2),
-                                       torch.empty(2, 0, 3, 2)])
-    def test_empty_batch(self, tensor):
-        u, s, vh = tk.utils.accurate_svd(tensor)
+                                       torch.empty(2, 0, 3, 2),
+                                       torch.empty(0, 3), torch.empty(2, 0),
+                                       torch.empty(0, 0), torch.empty(2, 3, 0)])
+    def test_empty_dimensions(self, method, tensor):
+        with tk.svd_method(method):
+            u, s, vh = tk.utils.accurate_svd(tensor)
         assert _reconstruct_svd(u, s, vh).shape == tensor.shape
+        assert s.shape == tensor.shape[:-2] + (min(tensor.shape[-2:]),)
 
     @pytest.mark.parametrize('kwargs, error', [
         ({'recursion_threshold': 0}, ValueError),
@@ -638,15 +646,16 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
         with pytest.raises(error):
             tk.utils.accurate_svd(torch.eye(2), **kwargs)
 
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
     @pytest.mark.parametrize('tensor, error', [
-        ([[1.]], TypeError), (torch.ones(2, dtype=torch.int64), TypeError),
-        (torch.ones(2), ValueError), (torch.empty(2, 0), ValueError),
-        (torch.tensor([[float('nan')]]), ValueError),
-        (torch.tensor([[float('inf')]]), ValueError),
+        ([[1.]], TypeError), (torch.ones(2, 2, dtype=torch.int64), RuntimeError),
+        (torch.ones(2, 2, dtype=torch.bool), RuntimeError),
+        (torch.ones(2), RuntimeError), (torch.tensor(1.), RuntimeError),
     ])
-    def test_invalid_input(self, tensor, error):
-        with pytest.raises(error):
-            tk.utils.accurate_svd(tensor)
+    def test_invalid_input(self, method, tensor, error):
+        with tk.svd_method(method):
+            with pytest.raises(error):
+                tk.utils.accurate_svd(tensor)
 
     @pytest.mark.parametrize('device', [
         pytest.param('cuda', marks=pytest.mark.skipif(

@@ -463,8 +463,9 @@ def accurate_svd(tensor: Tensor,
     ----------
     tensor : torch.Tensor
         Finite floating-point or complex matrix with shape ``(*, m, n)``.
-        Matrix dimensions must be positive. Leading batch dimensions are
-        supported; each matrix may select a different refinement subspace.
+        Leading batch dimensions and empty matrix dimensions are supported;
+        each matrix may select a different refinement subspace. Dtype and
+        dimensionality validation is delegated to the PyTorch backend.
     recursion_threshold : float
         Relative threshold in ``(0, 1)`` for selecting the small-value tail
         at each level: refine values satisfying ``s[i] / s[0] < threshold``.
@@ -488,8 +489,10 @@ def accurate_svd(tensor: Tensor,
     TypeError
         If tensor or refinement controls have invalid types.
     ValueError
-        If the input is not a finite matrix or a refinement control is outside
-        its accepted interval.
+        If a refinement control is outside its accepted interval.
+    RuntimeError
+        If the PyTorch backend rejects the tensor's dtype or dimensions, or
+        the decomposition does not converge.
 
     Notes
     -----
@@ -509,12 +512,6 @@ def accurate_svd(tensor: Tensor,
     """
     if not isinstance(tensor, Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
-    if not (tensor.is_floating_point() or tensor.is_complex()):
-        raise TypeError('`tensor` should have a floating-point or complex dtype')
-    if (tensor.ndim < 2) or any(dim == 0 for dim in tensor.shape[-2:]):
-        raise ValueError('`tensor` should have two positive matrix dimensions')
-    if not torch.isfinite(tensor).all():
-        raise ValueError('`tensor` should contain finite values')
     if isinstance(recursion_threshold, bool) or \
             not isinstance(recursion_threshold, Real):
         raise TypeError('`recursion_threshold` should be a real number')
@@ -552,8 +549,6 @@ def _compact_svd(tensor: Tensor,
     if get_svd_refinement():
         with _svd_method_context(svd_method):
             return accurate_svd(tensor)
-    if not isinstance(tensor, Tensor):
-        raise TypeError('`tensor` should be torch.Tensor type')
     return _backend_svd(tensor, svd_method)
 
 
@@ -657,6 +652,8 @@ def truncated_svd(tensor: Tensor,
     >>> len(s)
     2
     """
+    if not isinstance(tensor, Tensor):
+        raise TypeError('`tensor` should be torch.Tensor type')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     _validate_truncation(

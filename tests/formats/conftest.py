@@ -29,8 +29,8 @@ def make_format():
                 if site == n_sites - 1:
                     core = core.squeeze(-2 if matrix else -1)
             cores.append(core)
-        classes = {'tt': tk.formats.TensorTrain, 'tr': tk.formats.TensorRing,
-                   'ttm': tk.formats.TensorTrainMatrix,
-                   'trm': tk.formats.TensorRingMatrix}
+        classes = {'tt': tk.formats.TT, 'tr': tk.formats.TR,
+                   'ttm': tk.formats.TTM,
+                   'trm': tk.formats.TRM}
         return classes[topology](cores, n_batches=n_batches)
     return build

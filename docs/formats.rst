@@ -118,7 +118,7 @@ For improved small-value accuracy, independently of the base SVD backend:
 
    import torch
    import tensorkrowch as tk
-   tt = tk.formats.TensorTrain([
+   tt = tk.formats.TT([
        torch.randn(2, 2, dtype=torch.float64),
        torch.randn(2, 2, 2, dtype=torch.float64),
        torch.randn(2, 2, 2, dtype=torch.float64),
@@ -217,10 +217,10 @@ coordinate meaning; reverse adapters return the ordinary numerical formats.
    import torch
    import tensorkrowch as tk
 
-   a = tk.formats.TensorTrainMatrix([
+   a = tk.formats.TTM([
        torch.eye(2).reshape(2, 1, 2),
        torch.eye(2).reshape(1, 2, 2)])
-   x = tk.formats.TensorTrain([torch.ones(2, 1), torch.ones(1, 2)])
+   x = tk.formats.TT([torch.ones(2, 1), torch.ones(1, 2)])
    residual = a @ x - x
    assert residual.norm() == 0
    x.rounding(rank=1)

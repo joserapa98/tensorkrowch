@@ -48,7 +48,7 @@ def test_independent_batches(make_format, topology):
 
 
 def test_core_replacement_and_cache():
-    network = tk.formats.TensorTrain([torch.ones(2, 3), torch.ones(3, 4)])
+    network = tk.formats.TT([torch.ones(2, 3), torch.ones(3, 4)])
     network.cores[:] = [torch.ones(2, 5), torch.ones(5, 4)]
     assert network.rank == [5]
     rank = network.rank
@@ -101,11 +101,11 @@ def test_invalid_construction_and_data(make_format):
     for cores in [[], [torch.empty(0)], [torch.ones(2), torch.ones(2)],
                   [torch.ones(2, 1), torch.ones(1, 3, dtype=torch.float64)]]:
         with pytest.raises(ValueError):
-            tk.formats.TensorTrain(cores)
+            tk.formats.TT(cores)
     with pytest.raises(TypeError):
-        tk.formats.TensorTrain([1])
+        tk.formats.TT([1])
     with pytest.raises(TypeError):
-        tk.formats.TensorTrain([torch.ones(2)], n_batches=True)
+        tk.formats.TT([torch.ones(2)], n_batches=True)
     with pytest.raises(ValueError):
         make_format('ttm', n_batches=1)
     network = make_format()
@@ -113,7 +113,7 @@ def test_invalid_construction_and_data(make_format):
         network.evaluate(torch.full((2, 3), -1, dtype=torch.long))
     with pytest.raises(ValueError):
         network.evaluate(torch.ones(2, 3, 2))
-    zero = tk.formats.TensorTrain([torch.zeros(2)])
+    zero = tk.formats.TT([torch.zeros(2)])
     assert zero.norm() == 0
     with pytest.raises(ValueError, match='zero-norm'):
         zero.normalized_overlap(zero)

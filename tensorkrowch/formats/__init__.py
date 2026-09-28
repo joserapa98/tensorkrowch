@@ -10,40 +10,37 @@ PyTorch operations support it; they do not detach inputs implicitly.
 
 This script contains:
     * TensorFormat, TensorFormat1D, TensorFormat2D
-    * TensorTrain, TensorRing
-    * TensorTrainMatrix, TensorRingMatrix
+    * TT, TR
+    * TTM, TRM
     * SampleError
     * BondFactors, VidalGauge, RoundingInfo
     * GaugeOrbit, TensorRingOrbit
     * BlockLayout, UnblockInfo, SplitBlock, split_block
     * QuantizedLayout, CoordinateMap and coordinate maps
-    * QuanticsTensorTrain, QuanticsTensorRing
-    * QuanticsTensorTrainMatrix, QuanticsTensorRingMatrix
+    * QTT, QTR
+    * QTTM, QTRM
     * QTTTucker, QTRTucker
 """
 
 from .base import TensorFormat, TensorFormat2D, SampleError
 from ._chain import TensorFormat1D
-from .tt import TensorTrain
-from .tr import TensorRing
-from .ttm import TensorTrainMatrix
-from .trm import TensorRingMatrix
+from .tt import TT
+from .tr import TR
+from .ttm import TTM
+from .trm import TRM
 from .bonds import BondFactors, VidalGauge
 from .rounding import RoundingInfo
 from .orbits import GaugeOrbit, TensorRingOrbit
 from .blocking import BlockLayout, UnblockInfo, SplitBlock, split_block
 from .quantization import (QuantizedLayout, CoordinateMap, UniformCoordinateMap,
                            WarpedCoordinateMap, ExplicitGridMap)
-from .quantics import (QuanticsTensorTrain, QuanticsTensorRing,
-                       QuanticsTensorTrainMatrix, QuanticsTensorRingMatrix)
+from .quantics import QTT, QTR, QTTM, QTRM
 from .tucker import QTTTucker, QTRTucker
 
-__all__ = ['TensorFormat', 'TensorFormat1D', 'TensorFormat2D', 'TensorTrain',
-           'TensorRing', 'TensorTrainMatrix', 'TensorRingMatrix', 'SampleError',
+__all__ = ['TensorFormat', 'TensorFormat1D', 'TensorFormat2D', 'TT',
+           'TR', 'TTM', 'TRM', 'SampleError',
            'BondFactors', 'VidalGauge', 'RoundingInfo', 'GaugeOrbit',
            'TensorRingOrbit', 'QuantizedLayout', 'CoordinateMap',
            'UniformCoordinateMap', 'WarpedCoordinateMap', 'ExplicitGridMap',
            'BlockLayout', 'UnblockInfo', 'SplitBlock', 'split_block',
-           'QuanticsTensorTrain', 'QuanticsTensorRing',
-           'QuanticsTensorTrainMatrix', 'QuanticsTensorRingMatrix',
-           'QTTTucker', 'QTRTucker']
+           'QTT', 'QTR', 'QTTM', 'QTRM', 'QTTTucker', 'QTRTucker']

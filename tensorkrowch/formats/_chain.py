@@ -896,7 +896,7 @@ class _MatrixFormat1D(TensorFormat1D):
         """Evaluates entries at paired input and output configurations.
 
         Both data groups follow the discrete/embedded conventions of
-        :meth:`TensorTrain.evaluate` and must share the same batch shape.
+        :meth:`TT.evaluate` and must share the same batch shape.
         This is equivalent to evaluating fused matrix cores as a tensor-vector
         decomposition on local tensor products of input and output vectors,
         without materializing those products.

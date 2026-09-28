@@ -364,28 +364,28 @@ class MPO(TensorNetwork):  # MARK: MPO
     # -------
     def to_ttm(self):
         """Returns a lightweight TTM from effective open-boundary tensors."""
-        from tensorkrowch.formats import TensorTrainMatrix
-        return TensorTrainMatrix.from_mpo(self)
+        from tensorkrowch.formats import TTM
+        return TTM.from_mpo(self)
 
     def to_trm(self):
         """Returns a lightweight TRM from effective periodic tensors."""
-        from tensorkrowch.formats import TensorRingMatrix
-        return TensorRingMatrix.from_mpo(self)
+        from tensorkrowch.formats import TRM
+        return TRM.from_mpo(self)
 
     @classmethod
     def from_ttm(cls, tensor_train_matrix, **kwargs):
         """Constructs MPO from an open matrix format."""
-        from tensorkrowch.formats import TensorTrainMatrix
-        if not isinstance(tensor_train_matrix, TensorTrainMatrix):
-            raise TypeError('`tensor_train_matrix` should be TensorTrainMatrix type')
+        from tensorkrowch.formats import TTM
+        if not isinstance(tensor_train_matrix, TTM):
+            raise TypeError('`tensor_train_matrix` should be TTM type')
         return tensor_train_matrix.to_mpo(**kwargs)
 
     @classmethod
     def from_trm(cls, tensor_ring_matrix, **kwargs):
         """Constructs MPO from a cyclic matrix format."""
-        from tensorkrowch.formats import TensorRingMatrix
-        if not isinstance(tensor_ring_matrix, TensorRingMatrix):
-            raise TypeError('`tensor_ring_matrix` should be TensorRingMatrix type')
+        from tensorkrowch.formats import TRM
+        if not isinstance(tensor_ring_matrix, TRM):
+            raise TypeError('`tensor_ring_matrix` should be TRM type')
         return tensor_ring_matrix.to_mpo(**kwargs)
 
     def _make_nodes(self, parameterized: bool = True) -> None:

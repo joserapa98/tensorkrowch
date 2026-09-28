@@ -1,11 +1,11 @@
-"""Raw-tensor TensorTrain format."""
+"""Raw-tensor TT format."""
 
 from typing import ClassVar, List, Optional, Sequence, Tuple
 import torch
 from ._chain import _VectorFormat1D, TensorFormat1D
 
 
-class TensorTrain(_VectorFormat1D):
+class TT(_VectorFormat1D):
     """Lightweight open raw-tensor network.
 
     With leading structural batch axes B, endpoint cores have shapes

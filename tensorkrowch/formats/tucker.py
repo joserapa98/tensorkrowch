@@ -4,8 +4,8 @@ from typing import ClassVar, Dict, List, Optional, Tuple, Type
 import torch
 from .base import TensorFormat
 from ._chain import TensorFormat1D
-from .tt import TensorTrain
-from .tr import TensorRing
+from .tt import TT
+from .tr import TR
 from .quantization import CoordinateMap, QuantizedLayout, _unit_to_indices
 from .quantics import _map_structure
 
@@ -31,8 +31,8 @@ class _QuantizedTuckerFormat(TensorFormat):
         self.layout = layout
         self.coordinate_map = coordinate_map
         self.domain = domain
-        if len(self.factors) != layout.n_variables or not all(isinstance(factor, TensorTrain) for factor in self.factors):
-            raise ValueError('There should be one TensorTrain factor per variable')
+        if len(self.factors) != layout.n_variables or not all(isinstance(factor, TT) for factor in self.factors):
+            raise ValueError('There should be one TT factor per variable')
         if variable_positions is None:
             if upper.n_sites != layout.n_variables:
                 raise ValueError('variable_positions is required when upper output sites are present')
@@ -354,10 +354,10 @@ class _QuantizedTuckerFormat(TensorFormat):
     def flatten(self):
         """Returns a Quantics TT/TR with grouped factor blocks and open outputs."""
         from .operations import _build_network
-        from .quantics import QuanticsTensorTrain, QuanticsTensorRing
+        from .quantics import QTT, QTR
         standard = self._flat_standard_cores()
         dimensions = self._flattened_in_dim()
-        cyclic = self._upper_type is TensorRing
+        cyclic = self._upper_type is TR
         base = _build_network(standard, dimensions, None, 0, cyclic)
         schedule = []
         positions = []
@@ -376,7 +376,7 @@ class _QuantizedTuckerFormat(TensorFormat):
                 column += 1
         layout = QuantizedLayout(self.layout.n_variables, self.layout.base, self.layout.level,
                                  ordering='custom', permutation=schedule)
-        cls = QuanticsTensorRing if cyclic else QuanticsTensorTrain
+        cls = QTR if cyclic else QTT
         return cls(base.cores, layout, self.coordinate_map, self.domain,
                    digit_positions=positions, computational_grid=self.computational_grid,
                    out_of_domain=self.out_of_domain)
@@ -386,9 +386,9 @@ class _QuantizedTuckerFormat(TensorFormat):
 
 
 class QTTTucker(_QuantizedTuckerFormat):
-    """Quantics factors connected to a TensorTrain upper network."""
+    """Quantics factors connected to a TT upper network."""
 
-    _upper_type = TensorTrain
+    _upper_type = TT
     _topology = 'qtt_tucker'
 
     def _contract_upper(self,
@@ -408,9 +408,9 @@ class QTTTucker(_QuantizedTuckerFormat):
 
 
 class QTRTucker(_QuantizedTuckerFormat):
-    """Quantics factors connected to a TensorRing upper network."""
+    """Quantics factors connected to a TR upper network."""
 
-    _upper_type = TensorRing
+    _upper_type = TR
     _topology = 'qtr_tucker'
 
     def _contract_upper(self,

@@ -1,11 +1,11 @@
-"""Raw-tensor TensorRing format."""
+"""Raw-tensor TR format."""
 
 from typing import ClassVar, List, Optional, Sequence, Tuple
 import torch
 from ._chain import _VectorFormat1D, TensorFormat1D
 
 
-class TensorRing(_VectorFormat1D):
+class TR(_VectorFormat1D):
     """Lightweight cyclic raw-tensor network.
 
     Cores use the reviewed decomposition layouts and retain tensor storage and

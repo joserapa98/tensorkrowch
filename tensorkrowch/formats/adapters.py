@@ -76,15 +76,15 @@ def to_mps(network, parameterized=False, **kwargs):
 def from_mps(model, cyclic):
     """Collects effective model tensors, including open boundary contractions."""
     from tensorkrowch.models import MPS, MPSData
-    from .tt import TensorTrain
-    from .tr import TensorRing
+    from .tt import TT
+    from .tr import TR
     if not isinstance(model, (MPS, MPSData)):
         raise TypeError('`model` should be MPS or MPSData type')
     boundary = 'pbc' if cyclic else 'obc'
     if model.boundary != boundary:
         raise ValueError(f'This adapter requires {boundary} boundaries')
     n_batches = model.n_batches if isinstance(model, MPSData) else 0
-    return (TensorRing if cyclic else TensorTrain)(model.tensors, n_batches=n_batches)
+    return (TR if cyclic else TT)(model.tensors, n_batches=n_batches)
 
 
 def to_mpo(network, parameterized=False, **kwargs):
@@ -105,11 +105,11 @@ def to_mpo(network, parameterized=False, **kwargs):
 def from_mpo(model, cyclic):
     """Collects effective MPO tensors, including open boundary contractions."""
     from tensorkrowch.models import MPO
-    from .ttm import TensorTrainMatrix
-    from .trm import TensorRingMatrix
+    from .ttm import TTM
+    from .trm import TRM
     if not isinstance(model, MPO):
         raise TypeError('`model` should be MPO type')
     boundary = 'pbc' if cyclic else 'obc'
     if model.boundary != boundary:
         raise ValueError(f'This adapter requires {boundary} boundaries')
-    return (TensorRingMatrix if cyclic else TensorTrainMatrix)(model.tensors)
+    return (TRM if cyclic else TTM)(model.tensors)

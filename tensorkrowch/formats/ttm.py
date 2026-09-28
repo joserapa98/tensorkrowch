@@ -1,12 +1,12 @@
-"""Raw-tensor TensorTrainMatrix format."""
+"""Raw-tensor TTM format."""
 
 from typing import ClassVar, List, Optional, Sequence, Tuple
 import torch
 from ._chain import _MatrixFormat1D
-from .tt import TensorTrain
+from .tt import TT
 
 
-class TensorTrainMatrix(_MatrixFormat1D):
+class TTM(_MatrixFormat1D):
     """Lightweight open raw-tensor network.
 
     Endpoint shapes are ``(input, right, output)`` and
@@ -109,7 +109,7 @@ class TensorTrainMatrix(_MatrixFormat1D):
     def _build_applied_decomposition(
             self,
             cores: List[torch.Tensor],
-            n_batches: int) -> TensorTrain:
+            n_batches: int) -> TT:
         batch_shape = cores[0].shape[:n_batches]
         if len(cores) == 1:
             cores[0] = cores[0].squeeze(-1).squeeze(-2)
@@ -117,6 +117,6 @@ class TensorTrainMatrix(_MatrixFormat1D):
             cores[0] = cores[0].squeeze(len(batch_shape))
             cores[-1] = cores[-1].squeeze(-1)
 
-        return TensorTrain(
+        return TT(
             cores=cores,
             n_batches=n_batches)

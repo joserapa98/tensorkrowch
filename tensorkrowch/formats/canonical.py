@@ -38,7 +38,7 @@ def materialize_bonds(network, oc=None):
     if network._bonds is None:
         return network
     cores = list(network._raw_standard_cores())
-    network._bonds.validate(cores, network._topology.startswith('tr'))
+    network._bonds.validate(cores, network._cyclic)
     if isinstance(network._bonds, VidalGauge):
         powers = [(0, 1) if site < oc else (1, 0)
                   for site in range(len(network._bonds.spectra))]
@@ -65,7 +65,7 @@ def canonicalize_vidal(network, mode, inverse_positions,
     from tensorkrowch.formats.operations import _build_network
 
     network._ensure_valid()
-    if network._topology.startswith('tr'):
+    if network._cyclic:
         raise ValueError('Global Vidal canonicalization requires an open chain')
     modes = {'explicit': (0, 0), 'implicit': (0.5, 0.5), 'inverse': (1, 1)}
     if mode not in modes or remaining_mode not in ('explicit', 'implicit'):

@@ -18,6 +18,7 @@ class TRM(_MatrixFormat1D):
     """
 
     _topology = 'trm'
+    _cyclic = True
 
     def to_mpo(self, parameterized: bool = False, **kwargs):
         """Builds a periodic MPO; batched MPO cores are explicitly unsupported."""

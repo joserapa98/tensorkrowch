@@ -60,6 +60,7 @@ class TensorFormat1D(TensorFormat):
 
     _family = 'tensor'
     _topology = 'tensor'
+    _cyclic = False
 
     def __init__(self, cores: Sequence[torch.Tensor], n_batches: int = 0) -> None:
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
@@ -132,7 +133,7 @@ class TensorFormat1D(TensorFormat):
 
         if self._bonds is not None:
             self._bonds.validate(self._raw_standard_cores(),
-                                 self._topology.startswith('tr'))
+                                 self._cyclic)
 
         return self
 
@@ -198,7 +199,7 @@ class TensorFormat1D(TensorFormat):
         self._ensure_valid()
         cores = self._raw_standard_cores()
         if self._bonds is not None:
-            self._bonds.validate(cores, self._topology.startswith('tr'))
+            self._bonds.validate(cores, self._cyclic)
             cores = list(cores)
             for site, value in enumerate(self._bonds.values):
                 if value is not None:
@@ -218,7 +219,7 @@ class TensorFormat1D(TensorFormat):
         if value is not None:
             if not isinstance(value, BondFactors):
                 raise TypeError('`bonds` should be BondFactors type or None')
-            value.validate(self._raw_standard_cores(), self._topology.startswith('tr'))
+            value.validate(self._raw_standard_cores(), self._cyclic)
         self._bonds = value
         self._orth_center = None
 
@@ -232,7 +233,7 @@ class TensorFormat1D(TensorFormat):
         from tensorkrowch.formats.operations import _build_network
 
         result = _build_network(cores, self._in_dim, self._out_dim,
-                                self._n_batches, self._topology.startswith('tr'))
+                                self._n_batches, self._cyclic)
         self._cores = _CoreList(result._cores, self)
         self._bonds = bonds
         self._dirty = True
@@ -858,7 +859,7 @@ class _MatrixFormat1D(TensorFormat1D):
             standard.append(core.reshape(*self._batch_shape,
                             core.shape[-4], -1, core.shape[-1]))
         result = _build_network(standard, self._out_dim, self._in_dim,
-                                self._n_batches, self._topology.startswith('tr'))
+                                self._n_batches, self._cyclic)
         result._bonds = self._bonds
         return result
 

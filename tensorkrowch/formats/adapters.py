@@ -9,7 +9,7 @@ from tensorkrowch.formats.operations import _build_network
 def rotate(network, first=0):
     """Rotates a ring so the selected site is first; dense axes rotate equally."""
     network._ensure_valid()
-    if not network._topology.startswith('tr'):
+    if not network._cyclic:
         raise ValueError('Rotation requires a cyclic network')
     if isinstance(first, bool) or not isinstance(first, int):
         raise TypeError('`first` should be int type')
@@ -35,7 +35,7 @@ def ring_to_train(network):
     constructed; matrix physical dimensions are fused only inside this kernel.
     """
     network._ensure_valid()
-    if not network._topology.startswith('tr'):
+    if not network._cyclic:
         raise ValueError('Conversion requires a cyclic network')
     cores = network._standard_cores()
     batch = network._batch_shape
@@ -68,7 +68,7 @@ def to_mps(network, parameterized: bool = False, **kwargs):
     if not isinstance(parameterized, bool):
         raise TypeError('`parameterized` should be bool type')
     effective = _build_network(network._standard_cores(), network._in_dim, None,
-                               network._n_batches, network._topology.startswith('tr'))
+                               network._n_batches, network._cyclic)
     if network._n_batches:
         if parameterized:
             raise ValueError('MPSData does not expose parameterized model cores')
@@ -105,7 +105,7 @@ def to_mpo(network, parameterized: bool = False, **kwargs):
     if not isinstance(parameterized, bool):
         raise TypeError('`parameterized` should be bool type')
     effective = _build_network(network._standard_cores(), network._in_dim,
-                               network._out_dim, 0, network._topology.startswith('tr'))
+                               network._out_dim, 0, network._cyclic)
     return MPO(tensors=list(effective.cores), parameterized=parameterized, **kwargs)
 
 

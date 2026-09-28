@@ -109,7 +109,7 @@ def _inherit_semantics(result, first, second=None, product=False):
     options = dict(n_batches=result.n_batches,
                    computational_grid=first.computational_grid,
                    out_of_domain=first.out_of_domain)
-    cyclic = result._topology.startswith('tr')
+    cyclic = result._cyclic
     if result._out_dim is not None:
         cls = QTRM if cyclic else QTTM
         inputs = second if product else first

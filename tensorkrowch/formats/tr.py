@@ -17,6 +17,7 @@ class TR(_VectorFormat1D):
     """
 
     _topology = 'tr'
+    _cyclic = True
 
     def to_mps(self, parameterized: bool = False, **kwargs):
         """Builds periodic MPS or MPSData from effective cores."""

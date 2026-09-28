@@ -71,7 +71,7 @@ class TensorRingOrbit(GaugeOrbit):
 
     def __init__(self, network) -> None:
         network._ensure_valid()
-        if not network._topology.startswith('tr'):
+        if not network._cyclic:
             raise ValueError('TensorRingOrbit requires a cyclic format')
         cores = network._standard_cores()
         super().__init__(cores, [(site, -1, (site + 1) % len(cores), -3)
@@ -110,7 +110,7 @@ def canonicalize_minimal(network, max_iter: int = 200, lr: float = 0.05,
         if not isfinite(value) or value <= 0:
             raise ValueError(f'`{name}` should be finite and positive')
     network._ensure_valid()
-    if not network._topology.startswith('tr'):
+    if not network._cyclic:
         network.canonicalize_vidal('implicit')
         return (network, MinimalCanonicalInfo(
             0, True, None)) if return_info else network

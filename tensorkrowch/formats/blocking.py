@@ -199,7 +199,7 @@ def block(network, groups: Sequence[int], return_info: bool = False):
             factors.append(network._bonds.values[last])
         first = last + 1
     result = _build_network(cores, tuple(in_dim), tuple(out_dim) if out_dim else None,
-                            network._n_batches, network._topology.startswith('tr'))
+                            network._n_batches, network._cyclic)
     if factors:
         result.bonds = BondFactors(factors)
     result._block_layout = info
@@ -239,7 +239,7 @@ def unblock(network, info=None, **kwargs):
             cores.append(core if factor is None else core * factor[..., None, None, :])
         first += size
     return _build_network(cores, info.in_dim, info.out_dim, network._n_batches,
-                          network._topology.startswith('tr'))
+                          network._cyclic)
 
 
 def replace_block(network, first, last, replacement):
@@ -278,7 +278,7 @@ def replace_block(network, first, last, replacement):
         raise ValueError('Replacement factors should match its internal bonds')
     factors[first:last] = values
     result = _build_network(cores, network._in_dim, network._out_dim,
-                            network._n_batches, network._topology.startswith('tr'))
+                            network._n_batches, network._cyclic)
     result.bonds = BondFactors(factors)
     network._set_standard_cores(cores, result.bonds)
     network._orth_center = None

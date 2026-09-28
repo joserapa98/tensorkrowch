@@ -55,7 +55,7 @@ def _binary_inputs(first, second, same_family=True):
     batch = first._batch_shape or second._batch_shape
     a = [core.expand(*batch, *core.shape[-3:]) for core in a]
     b = [core.expand(*batch, *core.shape[-3:]) for core in b]
-    cyclic = first._topology.startswith('tr') or second._topology.startswith('tr')
+    cyclic = first._cyclic or second._cyclic
     return a, b, batch, cyclic
 
 
@@ -134,7 +134,7 @@ def scale(network, coefficient):
     from tensorkrowch.formats.quantics import _inherit_semantics
 
     return _inherit_semantics(_build_network(cores, network._in_dim, network._out_dim,
-                                             network._n_batches, network._topology.startswith('tr')), network)
+                                             network._n_batches, network._cyclic), network)
 
 
 def apply(first, second):

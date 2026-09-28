@@ -33,7 +33,7 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
         if not isfinite(rel_error) or rel_error < 0:
             raise ValueError('`rel_error` should be finite and non-negative')
     network._ensure_valid()
-    cyclic = network._topology.startswith('tr')
+    cyclic = network._cyclic
     closing = network._raw_standard_cores()[0].shape[-3] if cyclic else 1
     norm = network.norm() if rel_error is not None else None
     work = _build_network(network._standard_cores(), network._in_dim,

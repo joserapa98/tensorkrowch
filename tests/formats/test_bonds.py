@@ -8,13 +8,13 @@ import tensorkrowch as tk
 @pytest.mark.parametrize('topology', ['tt', 'ttm'])
 @pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse'])
 def test_vidal_and_mixed_centers(make_format, topology, mode):
-    network = make_format(topology, 3, dtype=torch.complex128)
-    dense = network.contract_dense()
-    network.canonicalize_vidal(mode)
-    assert isinstance(network.bonds, tk.formats.VidalGauge)
-    assert torch.allclose(network.contract_dense(), dense)
-    for orth_center in range(network.n_sites):
-        mixed = network.clone().materialize_bonds(orth_center)
+    format = make_format(topology, 3, dtype=torch.complex128)
+    dense = format.contract_dense()
+    format.canonicalize_vidal(mode)
+    assert isinstance(format.bonds, tk.formats.VidalGauge)
+    assert torch.allclose(format.contract_dense(), dense)
+    for orth_center in range(format.n_sites):
+        mixed = format.clone().materialize_bonds(orth_center)
         assert mixed.bonds is None
         assert torch.allclose(mixed.contract_dense(), dense)
         for site, core in enumerate(mixed._standard_cores()):
@@ -28,16 +28,16 @@ def test_vidal_and_mixed_centers(make_format, topology, mode):
                 assert torch.allclose(matrix @ matrix.adjoint(),
                                       torch.eye(matrix.shape[-2], dtype=matrix.dtype),
                                       atol=1e-10, rtol=1e-10)
-    network.canonicalize_vidal('implicit').canonicalize_vidal('explicit')
-    assert torch.allclose(network.contract_dense(), dense)
+    format.canonicalize_vidal('implicit').canonicalize_vidal('explicit')
+    assert torch.allclose(format.contract_dense(), dense)
 
 
 def test_mixed_inverse_bonds_and_zero(make_format):
-    network = make_format('tt', 4)
-    dense = network.contract_dense()
-    network.canonicalize_vidal(inverse_positions=[1], remaining_mode='explicit')
-    assert network.bonds.powers == [(0, 0), (1, 1), (0, 0)]
-    assert torch.allclose(network.materialize_bonds(orth_center=2).contract_dense(), dense)
+    format = make_format('tt', 4)
+    dense = format.contract_dense()
+    format.canonicalize_vidal(inverse_positions=[1], remaining_mode='explicit')
+    assert format.bonds.powers == [(0, 0), (1, 1), (0, 0)]
+    assert torch.allclose(format.materialize_bonds(orth_center=2).contract_dense(), dense)
     zero = tk.formats.TT([torch.zeros(2, 2), torch.ones(2, 3)])
     for mode in ['explicit', 'implicit']:
         result = zero.clone().canonicalize_vidal(mode)
@@ -58,15 +58,15 @@ def test_vidal_validation(make_format):
 
 
 def test_local_redistribution_retains_other_interfaces(make_format):
-    network = make_format().canonicalize_vidal('implicit')
-    expected = network.contract_dense()
-    second = network.bonds.powers[1]
+    format = make_format().canonicalize_vidal('implicit')
+    expected = format.contract_dense()
+    second = format.bonds.powers[1]
     for mode, powers in [('inverse', (1, 1)), ('explicit', (0, 0)),
                          ('left', (1, 0)), ('right', (0, 1))]:
-        network.redistribute_bond(0, mode)
-        assert network.bonds.powers == [powers, second]
-        assert torch.allclose(network.contract_dense(), expected)
+        format.redistribute_bond(0, mode)
+        assert format.bonds.powers == [powers, second]
+        assert torch.allclose(format.contract_dense(), expected)
     with pytest.raises(ValueError):
-        network.redistribute_bond(0, 'unknown')
+        format.redistribute_bond(0, 'unknown')
     with pytest.raises(ValueError):
-        network.redistribute_bond(0, 'inverse', inverse_cutoff=1e20)
+        format.redistribute_bond(0, 'inverse', inverse_cutoff=1e20)

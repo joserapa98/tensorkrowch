@@ -16,11 +16,41 @@ Formats preserve PyTorch autograd where their operations support it; they do
 not detach inputs or manage training implicitly.
 
 The constructor copies the core container and shares tensor storage. Assigning
-``network.cores[i]`` or a same-length slice invalidates structural metadata;
-the next public access validates ranks, dimensions and runtime. Changing the
-number or order of sites requires the full ``cores`` setter or an explicit
-topology operation. ``rank`` returns a defensive list. Tensor ``resize_`` is
+``format.cores[i]`` or a same-length slice immediately validates ranks,
+dimensions and runtime and refreshes cached metadata. Invalid assignments
+restore the previous state; queries and contractions do not revalidate it.
+Changing the number or order of sites requires the full ``cores`` setter or
+an explicit topology operation. ``rank`` returns a defensive list. Tensor ``resize_`` is
 outside this contract; replace the tensor instead.
+
+Bond containers also belong to one format. Assigning ``format.bonds`` copies
+the container and shares its tensors. Element and same-length slice replacements
+in ``format.bonds.values`` validate immediately against the current cores.
+Replace adjacent cores together when changing a shared rank. Algorithms work
+with temporary lists and publish cores and bonds together at completion.
+Manual replacement of cores, factors, Vidal spectra or absorption powers
+invalidates canonical state. An invalidated Vidal gauge remains usable as
+diagonal factors; materialization and absorption use its stored factors,
+while spectrum redistribution requires a valid gauge. Recomputing
+``canonicalize_vidal`` restores valid Schmidt spectra. Tensor value changes
+are not intercepted; shape changes should use controlled replacement.
+
+.. doctest::
+
+   >>> format = tk.formats.TT([torch.ones(2, 2), torch.ones(2, 2)])
+   >>> format.cores[:] = [torch.ones(2, 3), torch.ones(3, 2)]
+   >>> format.rank
+   [3]
+   >>> format.bonds = tk.formats.BondFactors([torch.ones(3)])
+   >>> format.bonds.values[0] = torch.full((3,), 2.)
+   >>> torch.equal(format.contract_dense(), torch.full((2, 2), 6.))
+   True
+   >>> format.cores[0] = torch.ones(2, 4)
+   Traceback (most recent call last):
+       ...
+   ValueError: Adjacent TT ranks should match
+   >>> format.rank
+   [3]
 
 ``clone()`` clones structural tensors while retaining autograd. ``detach()``
 creates a separate container sharing storage, and ``detach_()`` replaces all

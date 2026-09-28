@@ -8,11 +8,11 @@ from tensorkrowch.formats.orbits import GaugeOrbit, TensorRingOrbit
 
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
 def test_ring_gauge_cancellation_and_balancing(make_format, dtype):
-    network = make_format('tr', 3, dtype=dtype)
-    dense = network.contract_dense()
-    orbit = TensorRingOrbit(network)
+    format = make_format('tr', 3, dtype=dtype)
+    dense = format.contract_dense()
+    orbit = TensorRingOrbit(format)
     gauges = [torch.diag(torch.linspace(1, 2, rank, dtype=torch.float64)).to(dtype)
-              for rank in network.rank]
+              for rank in format.rank]
     transformed = tk.formats.TR(orbit.apply(gauges))
     assert torch.allclose(transformed.contract_dense(), dense)
     transformed.cores[0].requires_grad_()
@@ -21,7 +21,7 @@ def test_ring_gauge_cancellation_and_balancing(make_format, dtype):
     after = sum(core.abs().square().sum() for core in transformed.cores)
     assert after < before
     assert torch.allclose(transformed.contract_dense(), dense, rtol=1e-9, atol=1e-10)
-    assert all(core.grad is None for core in network.cores)
+    assert all(core.grad is None for core in format.cores)
     assert transformed.dtype == dtype
 
 
@@ -36,18 +36,18 @@ def test_orbit_invalid_gauge():
 
 
 def test_minimal_train_route(make_format):
-    network = make_format()
-    dense = network.contract_dense()
-    network.canonicalize_minimal()
-    assert network.bonds.powers == [(0.5, 0.5)] * (network.n_sites - 1)
-    assert torch.allclose(network.contract_dense(), dense)
+    format = make_format()
+    dense = format.contract_dense()
+    format.canonicalize_minimal()
+    assert format.bonds.powers == [(0.5, 0.5)] * (format.n_sites - 1)
+    assert torch.allclose(format.contract_dense(), dense)
     with pytest.raises(ValueError):
-        network.canonicalize_minimal(max_iter=0)
+        format.canonicalize_minimal(max_iter=0)
 
 
 def test_minimal_optional_convergence_information(make_format):
-    network = make_format('tr', 3)
-    _, info = network.canonicalize_minimal(max_iter=1, return_info=True)
+    format = make_format('tr', 3)
+    _, info = format.canonicalize_minimal(max_iter=1, return_info=True)
     assert info.iterations == 1
     assert isinstance(info.converged, bool)
     assert torch.isfinite(info.balance_residual)

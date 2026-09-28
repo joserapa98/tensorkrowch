@@ -5,13 +5,8 @@ from numbers import Number
 import torch
 
 
-def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
+def _restore_cores(cores, in_dim, out_dim, n_batches, cyclic):
     """Restores public vector/matrix endpoints from standard fused cores."""
-    from tensorkrowch.formats.tr import TR
-    from tensorkrowch.formats.trm import TRM
-    from tensorkrowch.formats.tt import TT
-    from tensorkrowch.formats.ttm import TTM
-
     stored = []
     for site, core in enumerate(cores):
         if out_dim is not None:
@@ -24,6 +19,17 @@ def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
             if site == len(cores) - 1:
                 core = core.squeeze(-2 if out_dim is not None else -1)
         stored.append(core)
+    return stored
+
+
+def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
+    """Constructs a tensor network format from standard fused cores."""
+    from tensorkrowch.formats.tr import TR
+    from tensorkrowch.formats.trm import TRM
+    from tensorkrowch.formats.tt import TT
+    from tensorkrowch.formats.ttm import TTM
+
+    stored = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
     cls = (TRM if cyclic else TTM) if out_dim is not None else (
         TR if cyclic else TT)
     return cls(stored, n_batches=n_batches)
@@ -36,8 +42,6 @@ def _binary_inputs(first, second, same_family=True):
 
     if not isinstance(second, TensorFormat1D):
         raise TypeError('`other` should be TensorFormat1D type')
-    first._ensure_valid()
-    second._ensure_valid()
     _check_semantics(first, second, product=not same_family)
     if first.n_sites != second.n_sites:
         raise ValueError('Formats should have the same number of sites')
@@ -117,24 +121,23 @@ def hadamard(first, second):
         cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
-def scale(network, coefficient):
+def scale(format, coefficient):
     """Scales one core while preserving the represented network topology."""
     if isinstance(coefficient, torch.Tensor):
         if coefficient.ndim != 0:
             raise ValueError('The scaling tensor should be scalar')
-        if coefficient.device != network.device:
-            raise ValueError('The scaling tensor should share the network device')
+        if coefficient.device != format.device:
+            raise ValueError('The scaling tensor should share the format device')
     elif isinstance(coefficient, bool) or not isinstance(coefficient, Number):
         raise TypeError('The scaling coefficient should be a number or scalar tensor')
-    network._ensure_valid()
-    cores = list(network._standard_cores())
+    cores = list(format._standard_cores())
     cores[0] = cores[0] * coefficient
     dtype = cores[0].dtype
     cores = [core.to(dtype=dtype) for core in cores]
     from tensorkrowch.formats.quantics import _inherit_semantics
 
-    return _inherit_semantics(_build_network(cores, network._in_dim, network._out_dim,
-                                             network._n_batches, network._cyclic), network)
+    return _inherit_semantics(_build_network(cores, format._in_dim, format._out_dim,
+                                             format._n_batches, format._cyclic), format)
 
 
 def apply(first, second):

@@ -204,15 +204,14 @@ class _QuanticsVector:
 
     def validate(self):
         super().validate()
-        if 'digit_positions' in self.__dict__ and tuple(
-                self._in_dim[site] for site in self.digit_positions) != self.layout.in_dim:
-            self._dirty = True
+        if 'digit_positions' in self.__dict__ and (
+                any(site >= len(self._cores) for site in self.digit_positions) or
+                tuple(self._in_dim[site] for site in self.digit_positions) != self.layout.in_dim):
             raise ValueError('Digit core dimensions should match the quantized layout')
         return self
 
     def evaluate_digits(self, digits) -> torch.Tensor:
         """Evaluates scheduled digits; nondigit physical output sites remain open."""
-        self._ensure_valid()
         digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
         self.layout.decode_digits(digits)
         if self.digit_positions == tuple(range(self.n_sites)):
@@ -349,7 +348,6 @@ class _QuanticsMatrix:
     def validate(self):
         super().validate()
         if self._in_dim != self.in_layout.in_dim or self._out_dim != self.out_layout.in_dim:
-            self._dirty = True
             raise ValueError('Matrix core dimensions should match paired digit layouts')
         return self
 

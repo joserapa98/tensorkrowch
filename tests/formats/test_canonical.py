@@ -8,15 +8,15 @@ import torch
 @pytest.mark.parametrize('n_sites', [1, 2, 4])
 @pytest.mark.parametrize('renormalize', [False, True])
 def test_qr_gauges(make_format, topology, n_sites, renormalize, monkeypatch):
-    network = make_format(topology, n_sites, dtype=torch.complex128)
-    dense = network.contract_dense()
+    format = make_format(topology, n_sites, dtype=torch.complex128)
+    dense = format.contract_dense()
 
     def unexpected_svd(*args, **kwargs):
         raise AssertionError('QR canonicalization should not use SVD')
 
     monkeypatch.setattr(torch.linalg, 'svd', unexpected_svd)
     for orth_center in range(n_sites):
-        result = network.clone().canonicalize(orth_center=orth_center,
+        result = format.clone().canonicalize(orth_center=orth_center,
                                               renormalize=renormalize)
         assert torch.allclose(result.contract_dense(), dense, rtol=1e-10, atol=1e-12)
         for site, core in enumerate(result._standard_cores()):
@@ -31,14 +31,14 @@ def test_qr_gauges(make_format, topology, n_sites, renormalize, monkeypatch):
 
 
 def test_invalid_qr_and_zero(make_format):
-    network = make_format()
+    format = make_format()
     for orth_center in [-1, 3]:
         with pytest.raises(ValueError):
-            network.canonicalize(orth_center)
+            format.canonicalize(orth_center)
     with pytest.raises(TypeError):
-        network.canonicalize(True)
+        format.canonicalize(True)
     with pytest.raises(TypeError):
-        network.canonicalize(renormalize=1)
-    network.cores[0] = network.cores[0] * 0
-    network.canonicalize(renormalize=True)
-    assert network.norm() == 0
+        format.canonicalize(renormalize=1)
+    format.cores[0] = format.cores[0] * 0
+    format.canonicalize(renormalize=True)
+    assert format.norm() == 0

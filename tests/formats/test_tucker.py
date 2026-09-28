@@ -17,15 +17,15 @@ def test_tucker_factor_contraction_and_clone(cyclic):
     upper_cls = tk.formats.TR if cyclic else tk.formats.TT
     upper = upper_cls(engine(upper_dense, out_device=None))
     cls = tk.formats.QTRTucker if cyclic else tk.formats.QTTTucker
-    network = cls(upper, factors, tk.formats.QuantizedLayout(2, 2, 2),
+    format = cls(upper, factors, tk.formats.QuantizedLayout(2, 2, 2),
                   variable_positions=(0, 2))
     indices = torch.cartesian_prod(torch.arange(4), torch.arange(4))
     expected = torch.einsum('ag,goh,bh->abo', factor_values[0].reshape(4, 2),
                              upper_dense, factor_values[1].reshape(4, 2))
-    assert network.cores is network.upper.cores
-    assert torch.allclose(network.evaluate_indices(indices), expected.reshape(16, 3))
-    assert torch.allclose(network.flatten().evaluate_indices(indices), expected.reshape(16, 3))
-    copied = network.clone()
+    assert format.cores is format.upper.cores
+    assert torch.allclose(format.evaluate_indices(indices), expected.reshape(16, 3))
+    assert torch.allclose(format.flatten().evaluate_indices(indices), expected.reshape(16, 3))
+    copied = format.clone()
     assert copied.upper.cores[0].data_ptr() != upper.cores[0].data_ptr()
     assert copied.factors[0].cores[0].data_ptr() != factors[0].cores[0].data_ptr()
-    assert torch.allclose(network.norm(), expected.norm())
+    assert torch.allclose(format.norm(), expected.norm())

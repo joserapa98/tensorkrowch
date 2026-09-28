@@ -5,14 +5,14 @@ import torch
 import tensorkrowch as tk
 
 
-def _matrix(network):
-    dense = network.contract_dense()
-    n, b = network.n_sites, network.n_batches
+def _matrix(format):
+    dense = format.contract_dense()
+    n, b = format.n_sites, format.n_batches
     order = [*range(b), *range(b + 1, b + 2 * n, 2),
              *range(b, b + 2 * n, 2)]
-    return dense.permute(order).reshape(*network.batch_shape,
-                                       int(torch.tensor(network.out_dim).prod()),
-                                       int(torch.tensor(network.in_dim).prod()))
+    return dense.permute(order).reshape(*format.batch_shape,
+                                       int(torch.tensor(format.out_dim).prod()),
+                                       int(torch.tensor(format.in_dim).prod()))
 
 
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
@@ -80,6 +80,6 @@ def test_factored_operations(make_format, topology):
     assert torch.allclose(a.clone().materialize_bonds(orth_center=1).contract_dense(), dense)
     copied = a.clone()
     assert copied.bonds.values[0].data_ptr() != a.bonds.values[0].data_ptr()
-    a.bonds.values[0] = torch.ones(1)
     with pytest.raises(ValueError, match='factor dimensions'):
-        a.norm()
+        a.bonds.values[0] = torch.ones(1)
+    assert torch.allclose(a.contract_dense(), dense)

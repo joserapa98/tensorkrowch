@@ -7,7 +7,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 import torch
 
 from tensorkrowch.formats.base import TensorFormat, SampleError
-from tensorkrowch.formats.bonds import VidalGauge
+from tensorkrowch.formats.bonds import BondFactors, VidalGauge
 
 
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
@@ -22,7 +22,7 @@ _INTEGER_DTYPES = (
 
 
 class _CoreList(list):
-    """Fixed-length core container with invalidation on replacement."""
+    """Fixed-length core container with immediate validation on replacement."""
 
     def __init__(self, cores: Sequence[torch.Tensor], owner) -> None:
         super().__init__(cores)
@@ -36,14 +36,23 @@ class _CoreList(list):
         if isinstance(key, slice) and (len(values) != len(self[key])):
             raise ValueError('Core slice replacement should preserve length')
 
+        previous = self[key]
+        previous_state = self._owner.__dict__.copy()
         super().__setitem__(key, values if isinstance(key, slice) else value)
-        self._owner._dirty = True
+        try:
+            self._owner.validate()
+        except (TypeError, ValueError):
+            super().__setitem__(key, previous)
+            self._owner.__dict__.clear()
+            self._owner.__dict__.update(previous_state)
+            raise
+
         self._owner._orth_center = None
         if isinstance(self._owner._bonds, VidalGauge):
             self._owner._bonds._valid = False
 
     def _structural_error(self, *args, **kwargs):
-        raise TypeError('Use the full cores setter to change the network structure')
+        raise TypeError('Use the full cores setter to change the format structure')
 
     append = extend = insert = pop = remove = clear = _structural_error
     reverse = sort = __delitem__ = __iadd__ = __imul__ = _structural_error
@@ -53,9 +62,10 @@ class TensorFormat1D(TensorFormat):
     """Compact chain of raw cores, with cached dimensions and bond ranks.
 
     The constructor copies the container and shares tensor storage. Element
-    and same-length slice replacement invalidate structural metadata; the next
-    public access validates the complete network. Tensor value updates preserve
-    dimensions. Shape changes through ``tensor.resize_`` are outside this contract.
+    and same-length slice replacement validate immediately and refresh metadata.
+    Invalid replacements leave the format unchanged. Tensor value updates
+    preserve dimensions. Shape changes through ``tensor.resize_`` are outside
+    this contract.
     """
 
     _family = 'tensor'
@@ -69,7 +79,6 @@ class TensorFormat1D(TensorFormat):
             raise ValueError('`n_batches` should be non-negative')
 
         self._n_batches = n_batches
-        self._dirty = True
         self._orth_center = None
         self._bonds = None
         self.cores = cores
@@ -81,13 +90,19 @@ class TensorFormat1D(TensorFormat):
 
     @cores.setter
     def cores(self, cores: Sequence[torch.Tensor]):
+        self._replace_cores(cores, self._bonds)
+        if isinstance(self._bonds, VidalGauge):
+            self._bonds._valid = False
+
+    def _replace_cores(self, cores: Sequence[torch.Tensor], bonds):
+        """Replaces cores and bonds together, restoring state on invalid input."""
         if isinstance(cores, torch.Tensor):
             raise TypeError('`cores` should be a sequence of torch.Tensor objects')
 
         cores = list(cores)
         previous = self.__dict__.copy()
         self._cores = _CoreList(cores, self)
-        self._dirty = True
+        self._bonds = None if bonds is None else bonds._with_owner(self)
 
         try:
             self.validate()
@@ -110,7 +125,7 @@ class TensorFormat1D(TensorFormat):
         """Validates cores and returns rank, batch, input and output dims."""
 
     def validate(self):
-        """Validates the complete network and refreshes cached metadata."""
+        """Validates the complete format and refreshes cached metadata."""
         if not self._cores:
             raise ValueError('`cores` should contain at least one tensor')
         if not all(isinstance(core, torch.Tensor) for core in self._cores):
@@ -129,7 +144,6 @@ class TensorFormat1D(TensorFormat):
 
         self._rank = tuple(rank)
         self._batch_shape = batch_shape
-        self._dirty = False
 
         self._in_dim = in_dim
         self._out_dim = out_dim
@@ -137,22 +151,20 @@ class TensorFormat1D(TensorFormat):
         self._same_out_dim = out_dim is None or all(
             dim == out_dim[0] for dim in out_dim)
 
-        if self._bonds is not None:
-            self._bonds.validate(self._raw_standard_cores(),
-                                 self._cyclic)
-
+        self.validate_bonds()
         return self
 
-    def _ensure_valid(self):
-        if self._dirty:
-            self.validate()
+    def validate_bonds(self):
+        """Checks stored bond factors against the current core structure."""
+        if self._bonds is not None:
+            self._bonds.validate(self._raw_standard_cores(), self._cyclic)
+        return self
 
     def _map_tensors(self, function):
-        self._ensure_valid()
         result = copy(self)
         result._cores = _CoreList([function(core) for core in self._cores], result)
         if self._bonds is not None:
-            result._bonds = self._bonds._map_tensors(function)
+            result._bonds = self._bonds._map_tensors(function)._with_owner(result)
         return result
 
     def _same_aux_tensors(self, other):
@@ -187,7 +199,7 @@ class TensorFormat1D(TensorFormat):
         return result
 
     def clone(self):
-        """Returns a network with independent tensor storage, preserving autograd."""
+        """Returns a format with independent tensor storage, preserving autograd."""
         return self._map_tensors(lambda tensor: tensor.clone())
 
     def detach(self):
@@ -198,7 +210,8 @@ class TensorFormat1D(TensorFormat):
         """Detaches every core by replacing references, including tensor views."""
         self._cores = _CoreList([core.detach() for core in self._cores], self)
         if self._bonds is not None:
-            self._bonds = self._bonds._map_tensors(lambda tensor: tensor.detach())
+            self._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor.detach())._with_owner(self)
         return self
 
     @abstractmethod
@@ -206,10 +219,8 @@ class TensorFormat1D(TensorFormat):
         """Returns (*batch, left, physical, right) cores without bond factors."""
 
     def _standard_cores(self):
-        self._ensure_valid()
         cores = self._raw_standard_cores()
         if self._bonds is not None:
-            self._bonds.validate(cores, self._cyclic)
             cores = list(cores)
             for site, value in enumerate(self._bonds.values):
                 if value is not None:
@@ -218,19 +229,16 @@ class TensorFormat1D(TensorFormat):
 
     @property
     def bonds(self):
-        """Optional diagonal factors, with one entry per network bond."""
+        """Optional diagonal factors, with one entry per virtual bond."""
         return self._bonds
 
     @bonds.setter
     def bonds(self, value):
-        from tensorkrowch.formats.bonds import BondFactors
-
-        self._ensure_valid()
         if value is not None:
             if not isinstance(value, BondFactors):
                 raise TypeError('`bonds` should be BondFactors type or None')
             value.validate(self._raw_standard_cores(), self._cyclic)
-        self._bonds = value
+        self._bonds = None if value is None else value._with_owner(self)
         self._orth_center = None
 
     def materialize_bonds(self, orth_center: Optional[int] = None):
@@ -240,22 +248,20 @@ class TensorFormat1D(TensorFormat):
         return materialize_bonds(self, orth_center)
 
     def _set_standard_cores(self, cores: Sequence[torch.Tensor], bonds=None):
-        from tensorkrowch.formats.operations import _build_network
+        from tensorkrowch.formats.operations import _restore_cores
 
-        result = _build_network(cores, self._in_dim, self._out_dim,
-                                self._n_batches, self._cyclic)
-        self._cores = _CoreList(result._cores, self)
-        self._bonds = bonds
-        self._dirty = True
-        self.validate()
+        cores = _restore_cores(cores, self._in_dim, self._out_dim,
+                               self._n_batches, self._cyclic)
+        self._replace_cores(cores, bonds)
 
     def canonicalize(self,
                      orth_center: Optional[int] = None,
                      renormalize: bool = False):
         """QR/RQ sweeps in-place, preserving the tensor and its global scale.
 
-        orth_center defaults to the last site. On cyclic networks this is a local gauge
-        relative to the stored cut, without a global Schmidt interpretation.
+        orth_center defaults to the last site. On cyclic networks this is a
+        local gauge relative to the stored cut, without a global Schmidt
+        interpretation.
         """
         from tensorkrowch.formats.canonical import canonicalize
 
@@ -336,8 +342,6 @@ class TensorFormat1D(TensorFormat):
     def split_block(self, block: torch.Tensor, first, last, **kwargs):
         """Splits a local tensor into standard fused cores and internal factors."""
         from tensorkrowch.formats.blocking import split_block
-
-        self._ensure_valid()
         if any(isinstance(site, bool) or not isinstance(site, int)
                for site in (first, last)):
             raise TypeError('Block endpoints should be integers')
@@ -422,7 +426,6 @@ class TensorFormat1D(TensorFormat):
 
     def contract_dense(self) -> torch.Tensor:
         """Contracts a small dense tensor; matrix axes remain interleaved."""
-        self._ensure_valid()
         cores = self._standard_cores()
         closing = cores[0].shape[-3]
         result = cores[0]
@@ -448,31 +451,26 @@ class TensorFormat1D(TensorFormat):
     @property
     def device(self) -> torch.device:
         """Device shared by all cores."""
-        self._ensure_valid()
         return self.cores[0].device
 
     @property
     def dtype(self) -> torch.dtype:
         """Data type shared by all cores."""
-        self._ensure_valid()
         return self.cores[0].dtype
 
     @property
     def rank(self) -> List[int]:
         """Bond ranks inferred from the cores."""
-        self._ensure_valid()
         return list(self._rank)
 
     @property
     def batch_shape(self) -> Tuple[int, ...]:
         """Batch dimensions shared by the cores."""
-        self._ensure_valid()
         return self._batch_shape
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Input dimension associated with every site."""
-        self._ensure_valid()
         return self._in_dim
 
     @property
@@ -483,19 +481,16 @@ class TensorFormat1D(TensorFormat):
         counts its upper-network sites; :meth:`flatten` constructs a separate
         result whose sites include the digit factors.
         """
-        self._ensure_valid()
         return len(self.cores)
 
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
         """Output dimension per site, when the decomposition has one."""
-        self._ensure_valid()
         return self._out_dim
 
     @property
     def topology(self) -> str:
         """Topology identifier used in serialized result information."""
-        self._ensure_valid()
         return self._topology
 
     def _normalize_data(
@@ -506,7 +501,6 @@ class TensorFormat1D(TensorFormat):
             n_batches: int
     ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
         """Normalizes discrete indices or embedded vectors by site."""
-        self._ensure_valid()
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
@@ -602,10 +596,8 @@ class TensorFormat1D(TensorFormat):
     def _check_overlap_compatibility(
             self, other: 'TensorFormat1D') -> None:
         """Validates topology, shapes and runtime for an overlap."""
-        self._ensure_valid()
         if not isinstance(other, TensorFormat1D):
             raise TypeError('`other` should be TensorFormat1D type')
-        other._ensure_valid()
         if self._family != other._family:
             raise ValueError('The decomposition families are incompatible')
         if len(self.cores) != len(other.cores):
@@ -623,7 +615,6 @@ class TensorFormat1D(TensorFormat):
             self, other: 'TensorFormat1D') -> Tuple[torch.Tensor,
                                                     torch.Tensor]:
         """Returns overlap phase and log-magnitude using scaled environments."""
-        self._ensure_valid()
         self._check_overlap_compatibility(other)
         dtype = torch.promote_types(self.dtype, other.dtype)
         self_cores = self._standard_cores()
@@ -692,14 +683,12 @@ class TensorFormat1D(TensorFormat):
 
     def norm(self) -> torch.Tensor:
         """Returns the norm obtained by a scaled double-layer contraction."""
-        self._ensure_valid()
         _, log_squared_norm = self._log_overlap(self)
         return torch.exp(log_squared_norm / 2)
 
     def normalized_overlap(
             self, other: 'TensorFormat1D') -> torch.Tensor:
         """Returns ``<self, other> / (||self|| ||other||)`` with its phase."""
-        self._ensure_valid()
         phase, log_overlap = self._log_overlap(other)
         _, log_self = self._log_overlap(self)
         _, log_other = other._log_overlap(other)
@@ -714,7 +703,6 @@ class TensorFormat1D(TensorFormat):
 
     def fidelity(self, other: 'TensorFormat1D') -> torch.Tensor:
         """Returns ``abs(normalized_overlap(other)) ** 2``."""
-        self._ensure_valid()
         return self.normalized_overlap(other).abs().square()
 
 
@@ -775,7 +763,6 @@ class _VectorFormat1D(TensorFormat1D):
         cores. Both groups are preserved in the returned tensor, with core
         batches followed by input batches.
         """
-        self._ensure_valid()
         site_data, discrete, data_batch_shape = self._normalize_data(
             data, self._in_dim, self._same_in_dim, n_batches)
         matrices = self._local_matrices(
@@ -789,7 +776,6 @@ class _VectorFormat1D(TensorFormat1D):
               n_batches: int = 1,
               **kwargs: Any) -> SampleError:
         """Measures errors on samples, optionally using embedded inputs."""
-        self._ensure_valid()
         if not callable(function):
             raise TypeError('`function` should be callable')
         if not isinstance(samples, torch.Tensor):
@@ -842,7 +828,6 @@ class _MatrixFormat1D(TensorFormat1D):
     _family = 'matrix'
 
     def _operator_cores(self):
-        self._ensure_valid()
         return [core.reshape(*self._batch_shape, core.shape[-3],
                              self._in_dim[site], self._out_dim[site],
                              core.shape[-1]).transpose(-1, -2)
@@ -852,7 +837,6 @@ class _MatrixFormat1D(TensorFormat1D):
         """Swaps local input/output axes, preserving site and bond order."""
         from tensorkrowch.formats.operations import _build_network
 
-        self._ensure_valid()
         standard = []
         for site, core in enumerate(self._raw_standard_cores()):
             core = core.reshape(*self._batch_shape, core.shape[-3],
@@ -862,7 +846,7 @@ class _MatrixFormat1D(TensorFormat1D):
                             core.shape[-4], -1, core.shape[-1]))
         result = _build_network(standard, self._out_dim, self._in_dim,
                                 self._n_batches, self._cyclic)
-        result._bonds = self._bonds
+        result.bonds = self._bonds
         return result
 
     def adjoint(self):
@@ -881,7 +865,6 @@ class _MatrixFormat1D(TensorFormat1D):
 
     def trace(self) -> torch.Tensor:
         """Returns the trace; each local input/output dimension must match."""
-        self._ensure_valid()
         if self._in_dim != self._out_dim:
             raise ValueError('Trace requires matching local input/output dimensions')
         matrices = [core.diagonal(dim1=-3, dim2=-1).sum(-1)
@@ -972,7 +955,6 @@ class _MatrixFormat1D(TensorFormat1D):
         decomposition on local tensor products of input and output vectors,
         without materializing those products.
         """
-        self._ensure_valid()
         in_data_by_site, in_discrete, data_batch_shape = self._normalize_data(
             in_data, self._in_dim, self._same_in_dim, n_batches)
         out_data_by_site, out_discrete, out_batch_shape = self._normalize_data(
@@ -993,7 +975,6 @@ class _MatrixFormat1D(TensorFormat1D):
               data: EvaluationData,
               n_batches: int = 1) -> TensorFormat1D:
         """Applies the matrix to product inputs and returns a 1D result."""
-        self._ensure_valid()
         if isinstance(data, TensorFormat1D):
             from tensorkrowch.formats.operations import apply
 

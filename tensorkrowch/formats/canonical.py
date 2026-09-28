@@ -28,24 +28,22 @@ def _redistribute(cores, gauge, powers):
     return cores, VidalGauge(gauge.spectra, powers)
 
 
-def materialize_bonds(network, orth_center=None):
-    network._ensure_valid()
-    orth_center = network.n_sites - 1 if orth_center is None else orth_center
+def materialize_bonds(format, orth_center=None):
+    orth_center = format.n_sites - 1 if orth_center is None else orth_center
     if isinstance(orth_center, bool) or not isinstance(orth_center, int):
         raise TypeError('`orth_center` should be int type or None')
-    if not 0 <= orth_center < network.n_sites:
+    if not 0 <= orth_center < format.n_sites:
         raise ValueError('`orth_center` should select a valid site')
-    if network._bonds is None:
-        return network
-    cores = list(network._raw_standard_cores())
-    network._bonds.validate(cores, network._cyclic)
-    if isinstance(network._bonds, VidalGauge):
+    if format._bonds is None:
+        return format
+    cores = list(format._raw_standard_cores())
+    if isinstance(format._bonds, VidalGauge) and format._bonds._valid:
         powers = [(0, 1) if site < orth_center else (1, 0)
-                  for site in range(len(network._bonds.spectra))]
-        cores, _ = _redistribute(cores, network._bonds, powers)
-        network._set_standard_cores(cores)
-        return network
-    for site, value in enumerate(network._bonds.values):
+                  for site in range(len(format._bonds.spectra))]
+        cores, _ = _redistribute(cores, format._bonds, powers)
+        format._set_standard_cores(cores)
+        return format
+    for site, value in enumerate(format._bonds.values):
         if value is None:
             continue
         if site >= orth_center:
@@ -53,19 +51,17 @@ def materialize_bonds(network, orth_center=None):
         else:
             neighbour = (site + 1) % len(cores)
             cores[neighbour] = cores[neighbour] * value[..., :, None, None]
-    network._set_standard_cores(cores)
-    return network
+    format._set_standard_cores(cores)
+    return format
 
 
-def canonicalize_vidal(network, mode, inverse_positions,
+def canonicalize_vidal(format, mode, inverse_positions,
                        remaining_mode, inverse_cutoff):
     from math import isfinite
     from numbers import Real
 
     from tensorkrowch.formats.operations import _build_network
-
-    network._ensure_valid()
-    if network._cyclic:
+    if format._cyclic:
         raise ValueError('Global Vidal canonicalization requires an open chain')
     modes = {'explicit': (0, 0), 'implicit': (0.5, 0.5), 'inverse': (1, 1)}
     if mode not in modes or remaining_mode not in ('explicit', 'implicit'):
@@ -74,7 +70,7 @@ def canonicalize_vidal(network, mode, inverse_positions,
         raise TypeError('`inverse_cutoff` should be a real number')
     if not isfinite(inverse_cutoff) or inverse_cutoff < 0:
         raise ValueError('`inverse_cutoff` should be finite and non-negative')
-    count = network.n_sites - 1
+    count = format.n_sites - 1
     if inverse_positions is None:
         positions = set(range(count)) if mode == 'inverse' else set()
         powers = [modes[mode]] * count
@@ -91,16 +87,16 @@ def canonicalize_vidal(network, mode, inverse_positions,
         positions = set(positions_list)
         powers = [modes['inverse' if site in positions else remaining_mode]
                   for site in range(count)]
-    if isinstance(network._bonds, VidalGauge) and network._bonds._valid:
-        cores = list(network._raw_standard_cores())
-        gauge = network._bonds
+    if isinstance(format._bonds, VidalGauge) and format._bonds._valid:
+        cores = list(format._raw_standard_cores())
+        gauge = format._bonds
     else:
-        work = _build_network(network._standard_cores(), network._in_dim,
-                              network._out_dim, network._n_batches, False)
+        work = _build_network(format._standard_cores(), format._in_dim,
+                              format._out_dim, format._n_batches, False)
         work.canonicalize(orth_center=0)
         cores = list(work._standard_cores())
         spectra = []
-        batch = network._batch_shape
+        batch = format._batch_shape
         for site in range(count):
             core = cores[site]
             u, s, vh = truncated_svd(core.reshape(*batch, -1, core.shape[-1]))
@@ -125,23 +121,22 @@ def canonicalize_vidal(network, mode, inverse_positions,
             raise ValueError(
                 f'Inverse Vidal bond {site} has values at or below inverse_cutoff')
     cores, gauge = _redistribute(cores, gauge, powers)
-    network._set_standard_cores(cores, gauge)
-    return network
+    format._set_standard_cores(cores, gauge)
+    return format
 
 
-def canonicalize(network, orth_center=None, renormalize=False):
-    network._ensure_valid()
-    orth_center = network.n_sites - 1 if orth_center is None else orth_center
+def canonicalize(format, orth_center=None, renormalize=False):
+    orth_center = format.n_sites - 1 if orth_center is None else orth_center
     if isinstance(orth_center, bool) or not isinstance(orth_center, int):
         raise TypeError('`orth_center` should be int type or None')
-    if not 0 <= orth_center < network.n_sites:
+    if not 0 <= orth_center < format.n_sites:
         raise ValueError('`orth_center` should select a valid site')
     if not isinstance(renormalize, bool):
         raise TypeError('`renormalize` should be bool type')
-    cores = list(network._standard_cores())
+    cores = list(format._standard_cores())
     if not all(torch.isfinite(core).all() for core in cores):
         raise ValueError('Canonicalization requires finite cores')
-    batch = network._batch_shape
+    batch = format._batch_shape
     log_scale = cores[0].real.new_zeros(batch)
     for site in range(orth_center):
         core = cores[site]
@@ -169,6 +164,6 @@ def canonicalize(network, orth_center=None, renormalize=False):
         cores[site - 1] = cores[site - 1] @ r
     if renormalize:
         cores[orth_center] = cores[orth_center] * log_scale.exp()[..., None, None, None]
-    network._set_standard_cores(cores)
-    network._orth_center = orth_center
-    return network
+    format._set_standard_cores(cores)
+    format._orth_center = orth_center
+    return format

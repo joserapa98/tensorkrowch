@@ -69,11 +69,10 @@ class GaugeOrbit:
 class TensorRingOrbit(GaugeOrbit):
     """Finite-ring gauge orbit, with physical axes fused within each core."""
 
-    def __init__(self, network) -> None:
-        network._ensure_valid()
-        if not network._cyclic:
+    def __init__(self, format) -> None:
+        if not format._cyclic:
             raise ValueError('TensorRingOrbit requires a cyclic format')
-        cores = network._standard_cores()
+        cores = format._standard_cores()
         super().__init__(cores, [(site, -1, (site + 1) % len(cores), -3)
                                  for site in range(len(cores))])
 
@@ -89,7 +88,7 @@ class TensorRingOrbit(GaugeOrbit):
         return torch.stack(residuals).amax()
 
 
-def canonicalize_minimal(network, max_iter: int = 200, lr: float = 0.05,
+def canonicalize_minimal(format, max_iter: int = 200, lr: float = 0.05,
                          tol: float = 1e-8, return_info: bool = False):
     """Balances a finite ring through Hermitian exponential gauges.
 
@@ -109,21 +108,20 @@ def canonicalize_minimal(network, max_iter: int = 200, lr: float = 0.05,
             raise TypeError(f'`{name}` should be a real number')
         if not isfinite(value) or value <= 0:
             raise ValueError(f'`{name}` should be finite and positive')
-    network._ensure_valid()
-    if not network._cyclic:
-        network.canonicalize_vidal('implicit')
-        return (network, MinimalCanonicalInfo(
-            0, True, None)) if return_info else network
-    orbit = TensorRingOrbit(network)
+    if not format._cyclic:
+        format.canonicalize_vidal('implicit')
+        return (format, MinimalCanonicalInfo(
+            0, True, None)) if return_info else format
+    orbit = TensorRingOrbit(format)
     if not all(torch.isfinite(core).all() for core in orbit.cores):
         raise ValueError('Minimal canonicalization requires finite cores')
     detached = GaugeOrbit([core.detach() for core in orbit.cores], orbit.bonds)
-    best = [torch.eye(rank, dtype=network.dtype, device=network.device)
-            for rank in network._rank]
+    best = [torch.eye(rank, dtype=format.dtype, device=format.device)
+            for rank in format._rank]
     scale = max(core.abs().amax().item() for core in detached.cores)
     if scale == 0:
-        info = MinimalCanonicalInfo(0, True, network.cores[0].real.new_zeros(()))
-        return (network, info) if return_info else network
+        info = MinimalCanonicalInfo(0, True, format.cores[0].real.new_zeros(()))
+        return (format, info) if return_info else format
     detached.cores = tuple(core / scale for core in detached.cores)
     best_loss = detached.objective(best).item()
     converged, iterations = False, 0
@@ -156,9 +154,9 @@ def canonicalize_minimal(network, max_iter: int = 200, lr: float = 0.05,
                 converged = True
                 break
             optimizer.step()
-    network._set_standard_cores(orbit.apply(best))
+    format._set_standard_cores(orbit.apply(best))
     if return_info:
         info = MinimalCanonicalInfo(iterations, converged,
-                                    TensorRingOrbit(network).balance_residual())
-        return network, info
-    return network
+                                    TensorRingOrbit(format).balance_residual())
+        return format, info
+    return format

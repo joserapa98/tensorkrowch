@@ -21,7 +21,7 @@ class RoundingInfo(NamedTuple):
     bound_satisfied: Optional[bool]
 
 
-def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
+def rounding(format, rank, cutoff, atol, rtol, cum_percentage,
              renormalize, rel_error, return_info):
     _validate_truncation(rank, cutoff, atol, rtol, cum_percentage)
     for name, value in [('renormalize', renormalize), ('return_info', return_info)]:
@@ -32,15 +32,14 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
             raise TypeError('`rel_error` should be a real number')
         if not isfinite(rel_error) or rel_error < 0:
             raise ValueError('`rel_error` should be finite and non-negative')
-    network._ensure_valid()
-    cyclic = network._cyclic
-    closing = network._raw_standard_cores()[0].shape[-3] if cyclic else 1
-    norm = network.norm() if rel_error is not None else None
-    work = _build_network(network._standard_cores(), network._in_dim,
-                          network._out_dim, network._n_batches, cyclic)
+    cyclic = format._cyclic
+    closing = format._raw_standard_cores()[0].shape[-3] if cyclic else 1
+    norm = format.norm() if rel_error is not None else None
+    work = _build_network(format._standard_cores(), format._in_dim,
+                          format._out_dim, format._n_batches, cyclic)
     work.canonicalize(renormalize=renormalize)
     cores = list(work._standard_cores())
-    batch = network._batch_shape
+    batch = format._batch_shape
     cuts = len(cores) if cyclic else max(1, len(cores) - 1)
     delta = rel_error * norm / sqrt(cuts * closing) if norm is not None else None
     records = []
@@ -83,8 +82,8 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
         u, s, vh = split(core.reshape(*batch, core.shape[-3], -1))
         cores[site] = vh.reshape(*batch, s.shape[-1], core.shape[-2], core.shape[-1])
         cores[site - 1] = cores[site - 1] @ (u * s.unsqueeze(-2))
-    network._set_standard_cores(cores)
-    network._orth_center = None if cyclic else 0
+    format._set_standard_cores(cores)
+    format._orth_center = None if cyclic else 0
     satisfied = None
     if collect:
         if discarded_norms:
@@ -94,7 +93,7 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
             bound = torch.linalg.vector_norm(
                 errors / safe, dim=0) * scale * sqrt(closing)
         else:
-            bound = network.cores[0].real.new_zeros(batch)
+            bound = format.cores[0].real.new_zeros(batch)
         if rel_error is not None:
             satisfied = bool(torch.all(bound <= rel_error * norm +
                                        10 * torch.finfo(norm.dtype).eps * norm))
@@ -102,6 +101,6 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
                 warnings.warn('Truncation constraints exceed the requested global error budget',
                               UserWarning, stacklevel=2)
         if return_info:
-            return network, RoundingInfo(
-                tuple(network.rank), tuple(records), bound, satisfied)
-    return network
+            return format, RoundingInfo(
+                tuple(format.rank), tuple(records), bound, satisfied)
+    return format

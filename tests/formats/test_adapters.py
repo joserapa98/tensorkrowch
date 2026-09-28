@@ -9,13 +9,13 @@ import tensorkrowch as tk
 @pytest.mark.parametrize('n_sites', [1, 2, 4])
 @pytest.mark.parametrize('n_batches', [0, 1])
 def test_rotation_and_train_conversion(make_format, topology, n_sites, n_batches):
-    network = make_format(topology, n_sites, n_batches, torch.complex128)
-    network.bonds = tk.formats.BondFactors([
-        torch.arange(1, rank + 1, dtype=torch.float64) for rank in network.rank])
-    dense = network.contract_dense()
+    format = make_format(topology, n_sites, n_batches, torch.complex128)
+    format.bonds = tk.formats.BondFactors([
+        torch.arange(1, rank + 1, dtype=torch.float64) for rank in format.rank])
+    dense = format.contract_dense()
     b, width = n_batches, 2 if topology == 'trm' else 1
     for first in range(n_sites):
-        rotated = network.rotate(first)
+        rotated = format.rotate(first)
         axes = [*range(b), *range(b + first * width, b + n_sites * width),
                 *range(b, b + first * width)]
         assert torch.allclose(rotated.contract_dense(), dense.permute(axes))
@@ -42,13 +42,13 @@ def test_invalid_rotation(make_format):
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
 @pytest.mark.parametrize('n_sites', [1, 2, 4])
 def test_model_roundtrip(make_format, topology, n_sites):
-    network = make_format(topology, n_sites, dtype=torch.complex128)
-    dense = network.contract_dense()
+    format = make_format(topology, n_sites, dtype=torch.complex128)
+    dense = format.contract_dense()
     if topology.endswith('m'):
-        model = network.to_mpo()
+        model = format.to_mpo()
         restored = model.to_trm() if topology == 'trm' else model.to_ttm()
     else:
-        model = network.to_mps()
+        model = format.to_mps()
         restored = model.to_tr() if topology == 'tr' else model.to_tt()
     assert torch.allclose(restored.contract_dense(), dense)
 
@@ -56,9 +56,9 @@ def test_model_roundtrip(make_format, topology, n_sites):
 @pytest.mark.parametrize('topology', ['tt', 'tr'])
 @pytest.mark.parametrize('n_sites', [1, 2, 4])
 def test_mps_data_roundtrip(make_format, topology, n_sites):
-    network = make_format(topology, n_sites, n_batches=2)
-    model = network.to_mps()
+    format = make_format(topology, n_sites, n_batches=2)
+    model = format.to_mps()
     assert isinstance(model, tk.models.MPSData)
     restored = model.to_tt() if topology == 'tt' else model.to_tr()
     assert restored.batch_shape == (2, 2)
-    assert torch.allclose(restored.contract_dense(), network.contract_dense())
+    assert torch.allclose(restored.contract_dense(), format.contract_dense())

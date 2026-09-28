@@ -22,7 +22,7 @@ number or order of sites requires the full ``cores`` setter or an explicit
 topology operation. ``rank`` returns a defensive list. Tensor ``resize_`` is
 outside this contract; replace the tensor instead.
 
-``copy()`` clones structural tensors while retaining autograd. ``detach()``
+``clone()`` clones structural tensors while retaining autograd. ``detach()``
 creates a separate container sharing storage, and ``detach_()`` replaces all
 structural references in the current container. ``to`` preserves the concrete
 class and returns self when no conversion is needed. CUDA/MPS operations use
@@ -84,7 +84,7 @@ construction, whose redundancies can survive TR rounding.
 ``A.H``/``adjoint()`` additionally conjugate cores and factors. ``conj`` also
 works on vectors. ``trace`` requires equal input/output dimensions at every
 site; a globally square but locally incompatible tensorization is rejected.
-Views may share storage; use ``copy()`` for independent tensors.
+Views may share storage; use ``clone()`` for independent tensors.
 
 Gauges and compression
 ----------------------

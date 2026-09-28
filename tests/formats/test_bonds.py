@@ -14,7 +14,7 @@ def test_vidal_and_mixed_centers(make_format, topology, mode):
     assert isinstance(network.bonds, tk.formats.VidalGauge)
     assert torch.allclose(network.contract_dense(), dense)
     for oc in range(network.n_sites):
-        mixed = network.copy().materialize_bonds(oc)
+        mixed = network.clone().materialize_bonds(oc)
         assert mixed.bonds is None
         assert torch.allclose(mixed.contract_dense(), dense)
         for site, core in enumerate(mixed._standard_cores()):
@@ -40,7 +40,7 @@ def test_mixed_inverse_bonds_and_zero(make_format):
     assert torch.allclose(network.materialize_bonds(oc=2).contract_dense(), dense)
     zero = tk.formats.TT([torch.zeros(2, 2), torch.ones(2, 3)])
     for mode in ['explicit', 'implicit']:
-        result = zero.copy().canonicalize_vidal(mode)
+        result = zero.clone().canonicalize_vidal(mode)
         assert torch.isfinite(result.contract_dense()).all()
         assert result.norm() == 0
     with pytest.raises(ValueError, match='Inverse Vidal bond'):

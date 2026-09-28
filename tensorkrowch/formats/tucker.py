@@ -146,7 +146,8 @@ class _QuantizedTuckerFormat(TensorFormat):
                           variable_positions=self.variable_positions,
                           computational_grid=self.computational_grid, out_of_domain=self.out_of_domain)
 
-    def copy(self):
+    def clone(self):
+        """Clones upper cores, factors and coordinate tensors, preserving autograd."""
         return self._map_tensors(lambda tensor: tensor.clone())
 
     def detach(self):

@@ -6,7 +6,7 @@ import tensorkrowch as tk
 
 
 @pytest.mark.parametrize('cyclic', [False, True])
-def test_tucker_factor_contraction_and_copy(cyclic):
+def test_tucker_factor_contraction_and_clone(cyclic):
     generator = torch.Generator().manual_seed(20)
     dtype = torch.float64
     factor_values = [torch.randn(2, 2, 2, dtype=dtype, generator=generator) for _ in range(2)]
@@ -25,7 +25,7 @@ def test_tucker_factor_contraction_and_copy(cyclic):
     assert network.cores is network.upper.cores
     assert torch.allclose(network.evaluate_indices(indices), expected.reshape(16, 3))
     assert torch.allclose(network.flatten().evaluate_indices(indices), expected.reshape(16, 3))
-    copied = network.copy()
+    copied = network.clone()
     assert copied.upper.cores[0].data_ptr() != upper.cores[0].data_ptr()
     assert copied.factors[0].cores[0].data_ptr() != factors[0].cores[0].data_ptr()
     assert torch.allclose(network.norm(), expected.norm())

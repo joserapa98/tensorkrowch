@@ -179,7 +179,7 @@ class TensorFormat1D(TensorFormat):
         result.validate()
         return result
 
-    def copy(self):
+    def clone(self):
         """Returns a network with independent tensor storage, preserving autograd."""
         return self._map_tensors(lambda tensor: tensor.clone())
 

@@ -26,7 +26,7 @@ def test_quantized_grid_and_arithmetic(ordering):
     assert torch.allclose(network.as_tt().contract_dense(), tensor)
     with pytest.raises(ValueError, match='semantics'):
         network + network.as_tt()
-    detached = network.copy().detach()
+    detached = network.clone().detach()
     assert detached.domain.data_ptr() != network.domain.data_ptr()
     complex_network = network.to(dtype=torch.complex128)
     assert not complex_network.domain.is_complex()

@@ -16,7 +16,7 @@ def test_qr_gauges(make_format, topology, n_sites, renormalize, monkeypatch):
 
     monkeypatch.setattr(torch.linalg, 'svd', unexpected_svd)
     for oc in range(n_sites):
-        result = network.copy().canonicalize(oc, renormalize)
+        result = network.clone().canonicalize(oc, renormalize)
         assert torch.allclose(result.contract_dense(), dense, rtol=1e-10, atol=1e-12)
         for site, core in enumerate(result._standard_cores()):
             if site < oc:

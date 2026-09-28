@@ -82,11 +82,11 @@ def test_structural_mutations_rejected(make_format, operation):
 
 
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
-def test_copy_detach_and_conversion(make_format, topology):
+def test_clone_detach_and_conversion(make_format, topology):
     network = make_format(topology)
     network.cores[0].requires_grad_()
     assert network.to() is network and network.cpu() is network
-    copied, detached = network.copy(), network.detach()
+    copied, detached = network.clone(), network.detach()
     assert type(copied) is type(network)
     assert copied.cores[0].data_ptr() != network.cores[0].data_ptr()
     assert copied.cores[0].requires_grad

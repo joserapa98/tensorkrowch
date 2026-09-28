@@ -54,8 +54,8 @@ class TensorFormat(ABC):
         return self.to(device='mps')
 
     @abstractmethod
-    def copy(self):
-        """Returns an independent copy of all structural tensors."""
+    def clone(self):
+        """Clones all structural tensors, preserving autograd."""
 
     @abstractmethod
     def detach(self):

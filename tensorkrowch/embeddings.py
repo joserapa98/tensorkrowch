@@ -510,11 +510,11 @@ def fourier(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
     Examples
     --------
     >>> a = torch.rand(5)
-    >>> a
+    >>> a  # doctest: +SKIP
     tensor([0.1916, 0.9719, 0.7613, 0.6427, 0.6945])
     
     >>> emb_a = tk.embeddings.fourier(a, dim=6)
-    >>> emb_a
+    >>> emb_a  # doctest: +SKIP
     tensor([[ 1.0000,  0.5074,  1.3200, -1.0501,  0.9473, -1.2610],
             [ 1.0000,  1.3922, -0.2486,  1.3268, -0.4895,  1.2201],
             [ 1.0000,  0.1000, -1.4107, -1.4001, -0.1994, -0.2979],

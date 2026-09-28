@@ -18,8 +18,10 @@ class _BondList(list):
     def __setitem__(self, key, value):
         """Validates a controlled replacement before accepting it."""
         values = list(value) if isinstance(key, slice) else [value]
-        if isinstance(key, slice) and len(values) != len(self[key]):
+
+        if isinstance(key, slice) and (len(values) != len(self[key])):
             raise ValueError('Bond slice replacement should preserve length')
+
         replacement = list(self)
         replacement[key] = values if isinstance(key, slice) else value
         self._owner._replace_sequence(self._name, replacement)

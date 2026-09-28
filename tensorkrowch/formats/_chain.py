@@ -24,7 +24,7 @@ _INTEGER_DTYPES = (
 class _CoreList(list):
     """Fixed-length core container with immediate validation on replacement."""
 
-    def __init__(self, cores: Sequence[torch.Tensor], owner) -> None:
+    def __init__(self, cores: Sequence[torch.Tensor], owner: 'TensorFormat1D') -> None:
         """Stores core references and their owning format."""
         super().__init__(cores)
         self._owner = owner
@@ -38,15 +38,15 @@ class _CoreList(list):
         if isinstance(key, slice) and (len(values) != len(self[key])):
             raise ValueError('Core slice replacement should preserve length')
 
-        previous = self[key]
-        previous_state = self._owner.__dict__.copy()
+        previous_cores = self[key]
+        previous_owner = self._owner.__dict__.copy()
         super().__setitem__(key, values if isinstance(key, slice) else value)
         try:
             self._owner.validate()
         except (TypeError, ValueError):
-            super().__setitem__(key, previous)
+            super().__setitem__(key, previous_cores)
             self._owner.__dict__.clear()
-            self._owner.__dict__.update(previous_state)
+            self._owner.__dict__.update(previous_owner)
             raise
 
         self._owner._orth_center = None
@@ -113,7 +113,7 @@ class TensorFormat1D(TensorFormat):
         Parameters
         ----------
         cores : sequence of torch.Tensor
-            Raw cores in the endpoint layout of the concrete format. The
+            Raw cores with the shapes required by the concrete format. The
             container is copied and tensor storage is shared; inputs retain
             autograd.
         """

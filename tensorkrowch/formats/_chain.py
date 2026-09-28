@@ -491,6 +491,10 @@ class TensorFormat1D(TensorFormat):
                            Optional[Tuple[int, ...]]]:
         """Validates cores and returns rank, batch, input and output dims."""
 
+    @abstractmethod
+    def _raw_standard_cores(self) -> List[torch.Tensor]:
+        """Returns (*batch, left, physical, right) cores without bond factors."""
+
     def _normalize_data(
             self,
             data: EvaluationData,

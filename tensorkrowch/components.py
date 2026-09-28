@@ -1847,14 +1847,14 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         Examples
         --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
-        >>> node.tensor
+        >>> node.tensor  # doctest: +SKIP
         tensor([[-0.2799, -0.4383, -0.8387],
                 [ 1.6225, -0.3370, -1.2316]])
             
-        >>> node.sum()
+        >>> node.sum()  # doctest: +SKIP
         tensor(-1.5029)
         
-        >>> node.sum('left')
+        >>> node.sum('left')  # doctest: +SKIP
         tensor([ 1.3427, -0.7752, -2.0704])
         """
         axis_num = []
@@ -1889,14 +1889,14 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         Examples
         --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
-        >>> node.tensor
+        >>> node.tensor  # doctest: +SKIP
         tensor([[ 1.4005, -0.0521, -1.2091],
                 [ 1.9844,  0.3513, -0.5920]])
             
-        >>> node.mean()
+        >>> node.mean()  # doctest: +SKIP
         tensor(0.3139)
         
-        >>> node.mean('left')
+        >>> node.mean('left')  # doctest: +SKIP
         tensor([ 1.6925,  0.1496, -0.9006])
         """
         axis_num = []
@@ -1931,14 +1931,14 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         Examples
         --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
-        >>> node.tensor
+        >>> node.tensor  # doctest: +SKIP
         tensor([[ 0.2111, -0.9551, -0.7812],
                 [ 0.2254,  0.3381, -0.2461]])
             
-        >>> node.std()
+        >>> node.std()  # doctest: +SKIP
         tensor(0.5567)
         
-        >>> node.std('left')
+        >>> node.std('left')  # doctest: +SKIP
         tensor([0.0101, 0.9145, 0.3784])
         """
         axis_num = []
@@ -1981,14 +1981,14 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         Examples
         --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
-        >>> node.tensor
+        >>> node.tensor  # doctest: +SKIP
         tensor([[ 1.5570,  1.8441, -0.0743],
                 [ 0.4572,  0.7592,  0.6356]])
             
-        >>> node.norm()
+        >>> node.norm()  # doctest: +SKIP
         tensor(2.6495)
         
-        >>> node.norm(axis='left')
+        >>> node.norm(axis='left')  # doctest: +SKIP
         tensor([1.6227, 1.9942, 0.6399])
         """
         axis_num = []
@@ -2113,7 +2113,7 @@ class Node(AbstractNode):  # MARK: Node
     ...                init_method='randn',
     ...                mean=0.,
     ...                std=1.)
-    >>> node
+    >>> node  # doctest: +SKIP
     Node(
      	name: my_node
     	tensor:
@@ -2139,7 +2139,7 @@ class Node(AbstractNode):  # MARK: Node
     Also, one can use one of the :ref:`Initializers` to simplify:
     
     >>> node = tk.randn((2, 5, 2))
-    >>> node
+    >>> node  # doctest: +SKIP
     Node(
      	name: node
     	tensor:
@@ -2439,7 +2439,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
     ...                     init_method='randn',
     ...                     mean=0.,
     ...                     std=1.)
-    >>> node
+    >>> node  # doctest: +SKIP
     ParamNode(
      	name: my_paramnode
     	tensor:
@@ -2467,7 +2467,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
     
     >>> node = tk.randn((2, 5, 2),
     ...                 param_node=True)
-    >>> node
+    >>> node  # doctest: +SKIP
     ParamNode(
      	name: paramnode
     	tensor:
@@ -2545,7 +2545,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
         Examples
         --------
         >>> paramnode = tk.randn((2, 3), param_node=True)
-        >>> paramnode.tensor
+        >>> paramnode.tensor  # doctest: +SKIP
         Parameter containing:
         tensor([[-0.3340,  0.6811, -0.2866],
                 [ 1.3371,  1.4761,  0.6551]], requires_grad=True)

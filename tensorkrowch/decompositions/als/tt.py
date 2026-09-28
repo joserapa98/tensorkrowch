@@ -27,10 +27,17 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.formats.quantics import _QuanticsVector
+
+from tensorkrowch.formats import TensorTrain, QuantizedLayout
+
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TTDecomposition
+from tensorkrowch.decompositions.results import TTDecomposition, _quantics_result
+from tensorkrowch.decompositions.sources.quantization import (_prepare_quantized_source,
+                                                              _quantize_tensor,
+                                                              _quantized_observations)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  as_tensor_source)
 from tensorkrowch.decompositions.sources.base import _unravel_indices
@@ -65,10 +72,10 @@ def _standard_tt_cores(
         cores: Union[TTDecomposition, Sequence[torch.Tensor]],
         in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight or standard OBC core shapes."""
-    if isinstance(cores, TTDecomposition):
+    if isinstance(cores, TensorTrain):
         if cores.n_batches:
             raise ValueError('Batched TT cores are not supported by TT-ALS')
-        cores = cores.cores
+        cores = cores._standard_cores()
     elif isinstance(cores, torch.Tensor):
         raise TypeError(
             '`initial_cores` should be a TTDecomposition or a core sequence')
@@ -683,11 +690,32 @@ class TTALS:
                  source,
                  in_dim: Optional[Sequence[int]] = None,
                  *,
+                 weights: Optional[torch.Tensor] = None,
+                 quantization: Optional[QuantizedLayout] = None,
+                 source_space: Optional[str] = None,
+                 coordinate_map=None,
+                 domain=None,
+                 computational_grid: str = 'endpoints',
+                 out_of_domain: str = 'error',
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
                  batch_size: Optional[int] = None,
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
+        self._quantization = quantization
+        self._quantized_adapter = None
+        if quantization is not None:
+            source = _prepare_quantized_source(
+                source, quantization, in_dim=in_dim, dtype=dtype,
+                device=device, batch_size=batch_size, source_space=source_space,
+                coordinate_map=coordinate_map, domain=domain,
+                computational_grid=computational_grid, out_of_domain=out_of_domain)
+            self._quantized_adapter = source
+            if weights is not None:
+                weights = _quantize_tensor(weights, quantization)
+            in_dim = source.in_dim
+        elif source_space is not None or coordinate_map is not None or domain is not None:
+            raise ValueError('Coordinate options require quantization')
         self.source = as_tensor_source(
             source,
             in_dim=in_dim,
@@ -695,7 +723,7 @@ class TTALS:
             dtype=dtype,
             device=device,
             batch_size=batch_size)
-        self.problem = ALSProblem(source=self.source)
+        self.problem = ALSProblem(source=self.source, weights=weights)
         self.out_device = None if out_device is None \
             else torch.device(out_device)
         self._configurations = None
@@ -890,6 +918,11 @@ class TTALS:
                    in_dim: Optional[Sequence[int]] = None,
                    weights: Optional[torch.Tensor] = None,
                    *,
+                   quantization: Optional[QuantizedLayout] = None,
+                   sample_space: str = 'indices',
+                   coordinate_map=None, domain=None,
+                   computational_grid: str = 'endpoints',
+                   out_of_domain: str = 'error',
                    out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TTALS':
         """Creates TT-ALS for a permanently observed completion objective.
@@ -927,6 +960,16 @@ class TTALS:
         ...     indices, values, in_dim=(2, 2))
         >>> result = decomposition.fit(rank=2)
         """
+        adapter = None
+        if quantization is not None:
+            observations, adapter = _quantized_observations(
+                observations, values, in_dim, weights, quantization,
+                sample_space=sample_space, coordinate_map=coordinate_map,
+                domain=domain, computational_grid=computational_grid,
+                out_of_domain=out_of_domain)
+            values = in_dim = weights = None
+        elif sample_space != 'indices' or coordinate_map is not None or domain is not None:
+            raise ValueError('Coordinate options require quantization')
         if isinstance(observations, ObservedEntries):
             if (values is not None) or (in_dim is not None) or \
                     (weights is not None):
@@ -953,6 +996,8 @@ class TTALS:
                 'TT-ALS completion currently requires scalar observations')
 
         instance = cls.__new__(cls)
+        instance._quantization = quantization
+        instance._quantized_adapter = adapter
         instance.source = None
         instance.problem = ALSProblem(observations=observed_entries)
         instance.out_device = None if out_device is None \
@@ -1065,6 +1110,9 @@ class TTALS:
         >>> import tensorkrowch as tk
         >>> model = tk.models.MPS(tensors=result.cores)
         """
+        if isinstance(initial_cores, _QuanticsVector):
+            if initial_cores.layout != self._quantization or initial_cores.digit_positions != tuple(range(initial_cores.n_sites)):
+                raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
         if not isinstance(collect_metrics, bool):
@@ -1251,7 +1299,8 @@ class TTALS:
             })
         if fit_observer is not None:
             _report_als_result(result, fit_observer, 'TT-ALS')
-        return result
+        return _quantics_result(result, self._quantization,
+                                adapter=self._quantized_adapter)
 
 
 def tt_als(source,
@@ -1286,7 +1335,13 @@ def tt_als(source,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
-           return_info: bool = False):
+           return_info: bool = False,
+           return_result: bool = False,
+           quantization: Optional[QuantizedLayout] = None,
+           source_space: Optional[str] = None,
+           coordinate_map=None, domain=None,
+           computational_grid: str = 'endpoints',
+           out_of_domain: str = 'error'):
     """Approximates a scalar tensor source with tensor train ALS.
 
     This is the simple functional interface. ``source`` may be a dense tensor,
@@ -1368,6 +1423,19 @@ def tt_als(source,
     return_info : bool
         If ``True``, also returns metadata and structured ALS metrics.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+    quantization : QuantizedLayout or pair of layouts, optional
+        Raw variable-to-digit schedule. Matrix SVD requires an input/output
+        layout pair with matching numbers of digit sites. No padding is implicit.
+    source_space : str, optional
+        Physical coordinates, original indices, or explicitly described digits.
+    coordinate_map, domain : optional
+        Actual coordinate map and physical domains for quantized callables.
+    computational_grid, out_of_domain : str
+        Explicit grid-node and coordinate-boundary conventions.
+
     Returns
     -------
     list[torch.Tensor] or tuple
@@ -1381,6 +1449,10 @@ def tt_als(source,
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2)]
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     solver = LeastSquaresSolver(
@@ -1405,7 +1477,9 @@ def tt_als(source,
         dtype=dtype,
         device=device,
         batch_size=batch_size,
-        out_device=out_device).fit(
+        out_device=out_device, quantization=quantization,
+        source_space=source_space, coordinate_map=coordinate_map, domain=domain,
+        computational_grid=computational_grid, out_of_domain=out_of_domain).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,
@@ -1423,6 +1497,8 @@ def tt_als(source,
             generator=generator,
             collect_metrics=return_info,
             verbose=verbose)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores

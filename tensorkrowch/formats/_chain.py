@@ -1,7 +1,7 @@
 """Shared raw-tensor chain operations, independent of decomposition engines."""
 
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from abc import abstractmethod
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -11,10 +11,11 @@ from .bonds import VidalGauge
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
 _INTEGER_DTYPES = (torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
 
+
 class _CoreList(list):
     """Fixed-length core container with invalidation on replacement."""
 
-    def __init__(self, cores, owner):
+    def __init__(self, cores: Sequence[torch.Tensor], owner) -> None:
         super().__init__(cores)
         self._owner = owner
 
@@ -43,13 +44,13 @@ class TensorFormat1D(TensorFormat):
     The constructor copies the container and shares tensor storage. Element
     and same-length slice replacement invalidate structural metadata; the next
     public access validates the complete network. Tensor value updates preserve
-    dimensions. Shape changes through tensor.resize_ are outside this contract.
+    dimensions. Shape changes through ``tensor.resize_`` are outside this contract.
     """
 
     _family = 'tensor'
     _topology = 'tensor'
 
-    def __init__(self, cores, n_batches=0):
+    def __init__(self, cores: Sequence[torch.Tensor], n_batches: int = 0) -> None:
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
@@ -66,7 +67,7 @@ class TensorFormat1D(TensorFormat):
         return self._cores
 
     @cores.setter
-    def cores(self, cores):
+    def cores(self, cores: Sequence[torch.Tensor]):
         if isinstance(cores, torch.Tensor):
             raise TypeError('`cores` should be a sequence of torch.Tensor objects')
         cores = list(cores)
@@ -82,7 +83,7 @@ class TensorFormat1D(TensorFormat):
         self._orth_center = None
 
     @property
-    def n_batches(self):
+    def n_batches(self) -> int:
         """Number of leading structural batch axes."""
         return self._n_batches
 
@@ -106,9 +107,11 @@ class TensorFormat1D(TensorFormat):
         self._in_dim = in_dim
         self._out_dim = out_dim
         self._same_in_dim = all(dim == in_dim[0] for dim in in_dim)
-        self._same_out_dim = out_dim is None or all(dim == out_dim[0] for dim in out_dim)
+        self._same_out_dim = out_dim is None or all(
+            dim == out_dim[0] for dim in out_dim)
         if self._bonds is not None:
-            self._bonds.validate(self._raw_standard_cores(), self._topology.startswith('tr'))
+            self._bonds.validate(self._raw_standard_cores(),
+                                 self._topology.startswith('tr'))
         self._dirty = False
         return self
 
@@ -128,7 +131,8 @@ class TensorFormat1D(TensorFormat):
     def _same_auxiliary_tensors(self, other):
         return True
 
-    def to(self, device=None, dtype=None, copy=False):
+    def to(self, device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None, copy: bool = False):
         """Returns a conversion preserving the concrete class and autograd.
 
         With copy=False, a no-op conversion returns self. Unsupported device
@@ -138,10 +142,12 @@ class TensorFormat1D(TensorFormat):
             raise TypeError('`dtype` should be torch.dtype type')
         if not isinstance(copy, bool):
             raise TypeError('`copy` should be bool type')
-        result = self._map_tensors(lambda tensor: tensor.to(device=device, dtype=dtype, copy=copy))
+        result = self._map_tensors(lambda tensor: tensor.to(
+            device=device, dtype=dtype, copy=copy))
         same_bonds = self._bonds is None or all(
             new is old for new, old in zip(result._bonds.values, self._bonds.values))
-        if not copy and same_bonds and self._same_auxiliary_tensors(result) and all(new is old for new, old in zip(result._cores, self._cores)):
+        if not copy and same_bonds and self._same_auxiliary_tensors(result) and all(
+            new is old for new, old in zip(result._cores, self._cores)):
             return self
         result.validate()
         return result
@@ -188,12 +194,12 @@ class TensorFormat1D(TensorFormat):
         self._bonds = value
         self._orth_center = None
 
-    def materialize_bonds(self, oc=None):
+    def materialize_bonds(self, oc: Optional[int] = None):
         """Absorbs factors towards the selected orthogonality center in-place."""
         from .canonical import materialize_bonds
         return materialize_bonds(self, oc)
 
-    def _set_standard_cores(self, cores, bonds=None):
+    def _set_standard_cores(self, cores: Sequence[torch.Tensor], bonds=None):
         from .operations import _build_network
         result = _build_network(cores, self._in_dim, self._out_dim,
                                 self._n_batches, self._topology.startswith('tr'))
@@ -202,7 +208,7 @@ class TensorFormat1D(TensorFormat):
         self._dirty = True
         self.validate()
 
-    def canonicalize(self, oc=None, renormalize=False):
+    def canonicalize(self, oc: Optional[int] = None, renormalize: bool = False):
         """QR/RQ sweeps in-place, preserving the tensor and its global scale.
 
         oc defaults to the last site. On cyclic networks this is a local gauge
@@ -211,8 +217,11 @@ class TensorFormat1D(TensorFormat):
         from .canonical import canonicalize
         return canonicalize(self, oc, renormalize)
 
-    def canonicalize_vidal(self, mode='implicit', inverse_positions=None,
-                           remaining_mode='implicit', inverse_cutoff=0.0):
+    def canonicalize_vidal(self,
+                           mode: str = 'implicit',
+                           inverse_positions: Optional[Sequence[int]] = None,
+                           remaining_mode: str = 'implicit',
+                           inverse_cutoff: float = 0.0):
         """Builds or redistributes an open-chain Vidal gauge in-place.
 
         Inverse bonds require every retained Schmidt value to be strictly above
@@ -221,11 +230,18 @@ class TensorFormat1D(TensorFormat):
         """
         from .canonical import canonicalize_vidal
         return canonicalize_vidal(self, mode, inverse_positions,
-                                   remaining_mode, inverse_cutoff)
+                                  remaining_mode, inverse_cutoff)
 
-    def rounding(self, rank=None, cutoff=None, atol=None, rtol=None,
-                 cum_percentage=None, renormalize=False, *,
-                 rel_error=None, return_info=False):
+    def rounding(self,
+                 rank: Optional[int] = None,
+                 cutoff: Optional[float] = None,
+                 atol: Optional[float] = None,
+                 rtol: Optional[float] = None,
+                 cum_percentage: Optional[float] = None,
+                 renormalize: bool = False,
+                 *,
+                 rel_error: Optional[float] = None,
+                 return_info: bool = False):
         """Compresses ranks in-place with one QR/SVD execution.
 
         Open chains use left QR followed by sitewise right SVD. Cyclic chains
@@ -239,17 +255,20 @@ class TensorFormat1D(TensorFormat):
         return rounding(self, rank, cutoff, atol, rtol, cum_percentage,
                         renormalize, rel_error, return_info)
 
-    def canonicalize_minimal(self, max_iter=200, lr=0.05, tol=1e-8):
+    def canonicalize_minimal(self, max_iter: int = 200, lr: float = 0.05,
+                             tol: float = 1e-8, *, return_info: bool = False):
         """Uses implicit Vidal for trains or experimental gauge balancing for rings.
 
         Ring optimization preserves the best finite iterate and may stop before
         convergence. It optimizes temporary gauges without accumulating input
         core gradients; batched rings share one gauge per bond.
+        return_info returns (self, MinimalCanonicalInfo), reporting convergence
+        and the final Gram imbalance without creating a diagnostic history.
         """
         from .orbits import canonicalize_minimal
-        return canonicalize_minimal(self, max_iter, lr, tol)
+        return canonicalize_minimal(self, max_iter, lr, tol, return_info)
 
-    def block(self, groups, return_info=False):
+    def block(self, groups: Sequence[int], return_info: bool = False):
         """Returns a network of contiguous blocks with recoverable dimensions."""
         from .blocking import block
         return block(self, groups, return_info)
@@ -264,11 +283,12 @@ class TensorFormat1D(TensorFormat):
         from .blocking import contract_block
         return contract_block(self, first, last)
 
-    def split_block(self, block, first, last, **kwargs):
+    def split_block(self, block: torch.Tensor, first, last, **kwargs):
         """Splits a local tensor into standard fused cores and internal factors."""
         from .blocking import split_block
         self._ensure_valid()
-        if any(isinstance(site, bool) or not isinstance(site, int) for site in (first, last)):
+        if any(isinstance(site, bool) or not isinstance(site, int)
+               for site in (first, last)):
             raise TypeError('Block endpoints should be integers')
         if not 0 <= first <= last < self.n_sites:
             raise ValueError('Block endpoints should select an ordered region')
@@ -281,10 +301,21 @@ class TensorFormat1D(TensorFormat):
         from .blocking import replace_block
         return replace_block(self, first, last, replacement)
 
-    def absorb_bond(self, bond, side='left'):
+    def absorb_bond(self, bond, side: str = 'left'):
         """Moves one bond's diagonal weights into the selected neighbour."""
         from .blocking import absorb_bond
         return absorb_bond(self, bond, side)
+
+    def redistribute_bond(self, bond: int, mode: str = 'implicit',
+                          inverse_cutoff: float = 0.0):
+        """Changes one stored Vidal bond distribution without recomputing SVDs.
+
+        Modes are explicit, implicit, inverse, left and right. A locally split
+        block can use this operation even when its spectra are not globally
+        certified Schmidt values. The other bonds keep their distribution.
+        """
+        from .blocking import redistribute_bond
+        return redistribute_bond(self, bond, mode, inverse_cutoff)
 
     def add(self, other, method='stacked'):
         """Returns an exact sum; cyclic sums default to stacked endpoints."""
@@ -312,7 +343,8 @@ class TensorFormat1D(TensorFormat):
 
     def __mul__(self, other):
         from .operations import scale
-        return self.hadamard(other) if isinstance(other, TensorFormat1D) else scale(self, other)
+        return self.hadamard(other) if isinstance(
+            other, TensorFormat1D) else scale(self, other)
 
     def __rmul__(self, other):
         return self * other
@@ -329,7 +361,7 @@ class TensorFormat1D(TensorFormat):
         """Returns the conjugate format, preserving bond-factor conjugation."""
         return self._map_tensors(lambda tensor: tensor.conj())
 
-    def contract_dense(self):
+    def contract_dense(self) -> torch.Tensor:
         """Contracts a small dense tensor; matrix axes remain interleaved."""
         self._ensure_valid()
         cores = self._standard_cores()
@@ -340,14 +372,16 @@ class TensorFormat1D(TensorFormat):
             result = result.reshape(*self._batch_shape, closing, -1, result.shape[-1])
             result = torch.einsum('...apr,...rqb->...apqb', result, core)
             dimensions.append(core.shape[-2])
-        result = result.reshape(*self._batch_shape, closing, *dimensions, cores[-1].shape[-1])
+        result = result.reshape(*self._batch_shape, closing, *
+                                dimensions, cores[-1].shape[-1])
         result = result.diagonal(dim1=self._n_batches, dim2=-1).sum(-1)
         if self._out_dim is not None:
-            dimensions = [dim for pair in zip(self._in_dim, self._out_dim) for dim in pair]
+            dimensions = [dim for pair in zip(
+                self._in_dim, self._out_dim) for dim in pair]
             result = result.reshape(*self._batch_shape, *dimensions)
         return result
 
-    def inner(self, other):
+    def inner(self, other) -> torch.Tensor:
         """Contracts the conjugate of self with other using scaled environments."""
         phase, log_magnitude = self._log_overlap(other)
         return phase * log_magnitude.exp()
@@ -358,13 +392,11 @@ class TensorFormat1D(TensorFormat):
         self._ensure_valid()
         return self.cores[0].device
 
-
     @property
     def dtype(self) -> torch.dtype:
         """Data type shared by all cores."""
         self._ensure_valid()
         return self.cores[0].dtype
-
 
     @property
     def rank(self) -> List[int]:
@@ -372,20 +404,17 @@ class TensorFormat1D(TensorFormat):
         self._ensure_valid()
         return list(self._rank)
 
-
     @property
     def batch_shape(self) -> Tuple[int, ...]:
         """Batch dimensions shared by the cores."""
         self._ensure_valid()
         return self._batch_shape
 
-
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Input dimension associated with every site."""
         self._ensure_valid()
         return self._in_dim
-
 
     @property
     def n_sites(self) -> int:
@@ -398,13 +427,11 @@ class TensorFormat1D(TensorFormat):
         self._ensure_valid()
         return len(self.cores)
 
-
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
         """Output dimension per site, when the decomposition has one."""
         self._ensure_valid()
         return self._out_dim
-
 
     @property
     def topology(self) -> str:
@@ -412,13 +439,11 @@ class TensorFormat1D(TensorFormat):
         self._ensure_valid()
         return self._topology
 
-
     @abstractmethod
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
         """Validates cores and returns rank, batch, input and output dims."""
-
 
     def _normalize_data(
             self,
@@ -426,7 +451,7 @@ class TensorFormat1D(TensorFormat):
             dimensions: Sequence[int],
             same_dim: bool,
             n_batches: int
-            ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
+    ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
         """Normalizes discrete indices or embedded vectors by site."""
         self._ensure_valid()
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
@@ -512,7 +537,6 @@ class TensorFormat1D(TensorFormat):
 
         return site_data, discrete, batch_shape
 
-
     @staticmethod
     def _contract_open_chain(
             matrices: Sequence[torch.Tensor]) -> torch.Tensor:
@@ -521,7 +545,6 @@ class TensorFormat1D(TensorFormat):
         for matrix in matrices[1:]:
             result = result @ matrix
         return result
-
 
     def _check_overlap_compatibility(
             self, other: 'TensorFormat1D') -> None:
@@ -543,16 +566,15 @@ class TensorFormat1D(TensorFormat):
         if self.device != other.device:
             raise ValueError('Decompositions should be on the same device')
 
-
     def _log_overlap(
             self, other: 'TensorFormat1D') -> Tuple[torch.Tensor,
-                                                           torch.Tensor]:
+                                                    torch.Tensor]:
         """Returns overlap phase and log-magnitude using scaled environments."""
         self._ensure_valid()
         self._check_overlap_compatibility(other)
         dtype = torch.promote_types(self.dtype, other.dtype)
         self_cores = self._standard_cores()
-        other_cores = other._standard_cores()
+        other_cores = self_cores if other is self else other._standard_cores()
 
         self_eye = torch.eye(
             self_cores[0].shape[-3], device=self.device, dtype=dtype)
@@ -571,13 +593,18 @@ class TensorFormat1D(TensorFormat):
 
         for self_core, other_core in zip(self_cores, other_cores):
             self_core = self_core.to(dtype=dtype)
-            other_core = other_core.to(dtype=dtype)
             self_scale = self_core.abs().amax(dim=(-3, -2, -1))
-            other_scale = other_core.abs().amax(dim=(-3, -2, -1))
-            self_scale = torch.where(self_scale > 0, self_scale, torch.ones_like(self_scale))
-            other_scale = torch.where(other_scale > 0, other_scale, torch.ones_like(other_scale))
+            self_scale = torch.where(self_scale > 0, self_scale,
+                                     torch.ones_like(self_scale))
             self_core = self_core / self_scale[..., None, None, None]
-            other_core = other_core / other_scale[..., None, None, None]
+            if other is self:
+                other_scale, other_core = self_scale, self_core
+            else:
+                other_core = other_core.to(dtype=dtype)
+                other_scale = other_core.abs().amax(dim=(-3, -2, -1))
+                other_scale = torch.where(
+                    other_scale > 0, other_scale, torch.ones_like(other_scale))
+                other_core = other_core / other_scale[..., None, None, None]
             log_scale = log_scale + self_scale.log() + other_scale.log()
             environment = torch.einsum(
                 '...xyab,...apr->...xybpr',
@@ -610,13 +637,11 @@ class TensorFormat1D(TensorFormat):
             torch.full_like(log_scale, -torch.inf))
         return phase, log_magnitude
 
-
     def norm(self) -> torch.Tensor:
         """Returns the norm obtained by a scaled double-layer contraction."""
         self._ensure_valid()
         _, log_squared_norm = self._log_overlap(self)
         return torch.exp(log_squared_norm / 2)
-
 
     def normalized_overlap(
             self, other: 'TensorFormat1D') -> torch.Tensor:
@@ -634,7 +659,6 @@ class TensorFormat1D(TensorFormat):
         log_denominator = (log_self + log_other) / 2
         return phase * torch.exp(log_overlap - log_denominator)
 
-
     def fidelity(self, other: 'TensorFormat1D') -> torch.Tensor:
         """Returns ``abs(normalized_overlap(other)) ** 2``."""
         self._ensure_valid()
@@ -651,7 +675,6 @@ class _VectorFormat1D(TensorFormat1D):
                  n_batches: int = 1) -> torch.Tensor:
         """Calls :meth:`evaluate`."""
         return self.evaluate(data, n_batches=n_batches)
-
 
     def _local_matrices(
             self,
@@ -683,7 +706,6 @@ class _VectorFormat1D(TensorFormat1D):
 
         return matrices
 
-
     def evaluate(self,
                  data: EvaluationData,
                  n_batches: int = 1) -> torch.Tensor:
@@ -706,7 +728,6 @@ class _VectorFormat1D(TensorFormat1D):
         matrices = self._local_matrices(
             site_data, discrete, data_batch_shape)
         return self._contract_local_matrices(matrices)
-
 
     def error(self,
               function: Callable[..., torch.Tensor],
@@ -756,7 +777,6 @@ class _VectorFormat1D(TensorFormat1D):
             size=size,
             denominator=denominator)
 
-
     @abstractmethod
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
@@ -771,8 +791,8 @@ class _MatrixFormat1D(TensorFormat1D):
     def _operator_cores(self):
         self._ensure_valid()
         return [core.reshape(*self._batch_shape, core.shape[-3],
-                              self._in_dim[site], self._out_dim[site],
-                              core.shape[-1]).transpose(-1, -2)
+                             self._in_dim[site], self._out_dim[site],
+                             core.shape[-1]).transpose(-1, -2)
                 for site, core in enumerate(self._standard_cores())]
 
     def transpose(self):
@@ -784,7 +804,8 @@ class _MatrixFormat1D(TensorFormat1D):
             core = core.reshape(*self._batch_shape, core.shape[-3],
                                 self._in_dim[site], self._out_dim[site], core.shape[-1])
             core = core.transpose(-3, -2)
-            standard.append(core.reshape(*self._batch_shape, core.shape[-4], -1, core.shape[-1]))
+            standard.append(core.reshape(*self._batch_shape,
+                            core.shape[-4], -1, core.shape[-1]))
         result = _build_network(standard, self._out_dim, self._in_dim,
                                 self._n_batches, self._topology.startswith('tr'))
         result._bonds = self._bonds
@@ -804,7 +825,7 @@ class _MatrixFormat1D(TensorFormat1D):
         """Matrix adjoint, including conjugation of bond factors."""
         return self.adjoint()
 
-    def trace(self):
+    def trace(self) -> torch.Tensor:
         """Returns the trace; each local input/output dimension must match."""
         self._ensure_valid()
         if self._in_dim != self._out_dim:
@@ -818,18 +839,16 @@ class _MatrixFormat1D(TensorFormat1D):
             in_data: EvaluationData,
             out_data: Optional[EvaluationData] = None,
             n_batches: int = 1
-            ) -> Union[torch.Tensor, TensorFormat1D]:
+    ) -> Union[torch.Tensor, TensorFormat1D]:
         """Applies the matrix or evaluates it when outputs are provided."""
         if out_data is None:
             return self.apply(in_data, n_batches=n_batches)
         return self.evaluate(in_data, out_data, n_batches=n_batches)
 
-
     @abstractmethod
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         """Contracts entry-selected matrices with the topology closure."""
-
 
     @abstractmethod
     def _build_applied_decomposition(
@@ -837,7 +856,6 @@ class _MatrixFormat1D(TensorFormat1D):
             cores: List[torch.Tensor],
             n_batches: int) -> TensorFormat1D:
         """Builds the vector-like result produced by :meth:`apply`."""
-
 
     def _entry_matrices(
             self,
@@ -888,7 +906,6 @@ class _MatrixFormat1D(TensorFormat1D):
 
         return matrices
 
-
     def evaluate(self,
                  in_data: EvaluationData,
                  out_data: EvaluationData,
@@ -917,7 +934,6 @@ class _MatrixFormat1D(TensorFormat1D):
             out_discrete,
             data_batch_shape)
         return self._contract_local_matrices(matrices)
-
 
     def apply(self,
               data: EvaluationData,

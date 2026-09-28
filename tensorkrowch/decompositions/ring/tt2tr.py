@@ -54,6 +54,12 @@ def _as_tt_decomposition(tt) -> TTDecomposition:
         if tt.n_batches:
             raise ValueError('TT-to-TR does not support decomposition batches')
         result = tt
+        if tt.bonds is not None:
+            from tensorkrowch.formats.operations import _build_network
+            effective = _build_network(tt._standard_cores(), tt.in_dim,
+                                       None, 0, False)
+            result = TTDecomposition(effective.cores, metrics=tt.metrics,
+                                     metadata=tt.metadata)
     else:
         source = TTTensorSource(tt)
         compact_cores = list(source.cores)

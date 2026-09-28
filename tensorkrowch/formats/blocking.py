@@ -1,8 +1,10 @@
 """Blocking and local SVD splits retaining external virtual interfaces."""
 
+from typing import NamedTuple, Optional, Sequence, Tuple
 from dataclasses import dataclass
 from math import prod
-from typing import NamedTuple, Optional, Tuple
+from math import isfinite
+from numbers import Real
 
 import torch
 
@@ -62,13 +64,22 @@ def contract_block(network, first, last):
         dimensions.append(cores[site + 1].shape[-2])
     if network._out_dim is not None:
         dimensions = [dim for pair in zip(network._in_dim[first:last + 1],
-                                           network._out_dim[first:last + 1]) for dim in pair]
+                                          network._out_dim[first:last + 1]) for dim in pair]
     return result.reshape(*batch, left, *dimensions, cores[last].shape[-1])
 
 
-def split_block(block, in_dim, out_dim=None, n_batches=0, rank=None,
-                cutoff=None, atol=None, rtol=None, cum_percentage=None,
-                mode='right'):
+def split_block(block: torch.Tensor,
+                in_dim: Sequence[int],
+                out_dim: Optional[Sequence[int]] = None,
+                n_batches: int = 0,
+                rank: Optional[int] = None,
+                cutoff: Optional[float] = None,
+                atol: Optional[float] = None,
+                rtol: Optional[float] = None,
+                cum_percentage: Optional[float] = None,
+                mode: str = 'right',
+                renormalize: bool = False,
+                _svd_callback=None):
     """Splits a block sitewise; external ranks remain open and unchanged.
 
     Physical axes are interleaved for matrix blocks. Spectra refer to this local
@@ -82,33 +93,56 @@ def split_block(block, in_dim, out_dim=None, n_batches=0, rank=None,
     if n_batches < 0:
         raise ValueError('`n_batches` should be non-negative')
     in_dim = tuple(in_dim)
-    if not in_dim or any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1 for dim in in_dim):
+    if not in_dim or any(isinstance(dim, bool) or not isinstance(
+        dim, int) or dim < 1 for dim in in_dim):
         raise ValueError('Input dimensions should be positive integers')
     if out_dim is not None:
         out_dim = tuple(out_dim)
         if len(out_dim) != len(in_dim) or any(
                 isinstance(dim, bool) or not isinstance(dim, int) or dim < 1 for dim in out_dim):
-            raise ValueError('Output dimensions should match the positive site dimensions')
+            raise ValueError(
+                'Output dimensions should match the positive site dimensions')
     dimensions = in_dim if out_dim is None else tuple(
         dim for pair in zip(in_dim, out_dim) for dim in pair)
-    if block.ndim != n_batches + len(dimensions) + 2 or tuple(block.shape[n_batches + 1:-1]) != dimensions:
+    if block.ndim != n_batches + \
+        len(dimensions) + 2 or tuple(block.shape[n_batches + 1:-1]) != dimensions:
         raise ValueError('Block physical axes should match the requested dimensions')
     if block.shape[n_batches] < 1 or block.shape[-1] < 1:
         raise ValueError('External ranks should be positive')
     _validate_truncation(rank, cutoff, atol, rtol, cum_percentage)
+    if not isinstance(renormalize, bool):
+        raise TypeError('`renormalize` should be bool type')
     powers = {'explicit': (0, 0), 'implicit': (0.5, 0.5),
               'inverse': (1, 1), 'left': (1, 0), 'right': (0, 1)}
     if mode not in powers:
         raise ValueError('Invalid local bond distribution mode')
-    physical = in_dim if out_dim is None else tuple(a * b for a, b in zip(in_dim, out_dim))
+    physical = in_dim if out_dim is None else tuple(
+        a * b for a, b in zip(in_dim, out_dim))
     batch = block.shape[:n_batches]
     right = block.shape[-1]
     state = block.reshape(*batch, block.shape[n_batches], *physical, right)
     cores, spectra = [], []
-    for dimension in physical[:-1]:
+    for site, dimension in enumerate(physical[:-1]):
         left = state.shape[n_batches]
-        u, s, vh = truncated_svd(state.reshape(*batch, left * dimension, -1),
-                                 rank, cutoff, atol, rtol, cum_percentage)
+        matrix = state.reshape(*batch, left * dimension, -1)
+        scale = matrix.real.new_ones(batch)
+        local_cutoff, local_atol = cutoff, atol
+        if renormalize:
+            scale = matrix.abs().amax(dim=(-2, -1))
+            scale = torch.where(scale > 0, scale, torch.ones_like(scale))
+            matrix = matrix / scale[..., None, None]
+            # A common retained rank is selected across structural batches.
+            if cutoff is not None:
+                local_cutoff = cutoff / scale.max().item()
+            if atol is not None:
+                local_atol = atol / scale.max().item() ** 2
+        decomposition = truncated_svd(
+            matrix, rank, local_cutoff, local_atol, rtol, cum_percentage,
+            return_info=_svd_callback is not None)
+        u, s, vh = decomposition[:3]
+        if _svd_callback is not None:
+            _svd_callback(site, decomposition[3], s, scale.log())
+        s = s * scale.unsqueeze(-1)
         core = u.reshape(*batch, left, dimension, s.shape[-1])
         if spectra:
             previous = spectra[-1]
@@ -134,13 +168,14 @@ def split_block(block, in_dim, out_dim=None, n_batches=0, rank=None,
     return SplitBlock(tuple(cores), gauge, tuple(spectra))
 
 
-def block(network, groups, return_info=False):
+def block(network, groups: Sequence[int], return_info: bool = False):
     """Blocks consecutive sites, preserving matrix input/output axis groups."""
     network._ensure_valid()
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     groups = tuple(groups)
-    if not groups or any(isinstance(size, bool) or not isinstance(size, int) or size < 1 for size in groups):
+    if not groups or any(isinstance(size, bool) or not isinstance(
+        size, int) or size < 1 for size in groups):
         raise ValueError('Block sizes should be positive integers')
     if sum(groups) != network.n_sites:
         raise ValueError('Block sizes should sum to the number of sites')
@@ -184,7 +219,8 @@ def unblock(network, info=None, **kwargs):
         outputs = None if info.out_dim is None else info.out_dim[first:first + size]
         dimensions = inputs
         if outputs is not None:
-            value = value.reshape(*network._batch_shape, value.shape[-3], *inputs, *outputs, value.shape[-1])
+            value = value.reshape(*network._batch_shape,
+                                  value.shape[-3], *inputs, *outputs, value.shape[-1])
             b = network._n_batches
             order = [*range(b + 1)]
             for index in range(size):
@@ -197,7 +233,8 @@ def unblock(network, info=None, **kwargs):
         local = split_block(value, inputs, outputs, network._n_batches, **kwargs)
         # Restore the local representation with each factor absorbed once.
         for index, core in enumerate(local.cores):
-            factor = local.bonds.values[index] if index < len(local.bonds.values) else None
+            factor = local.bonds.values[index] if index < len(
+                local.bonds.values) else None
             cores.append(core if factor is None else core * factor[..., None, None, :])
         first += size
     return _build_network(cores, info.in_dim, info.out_dim, network._n_batches,
@@ -207,7 +244,8 @@ def unblock(network, info=None, **kwargs):
 def replace_block(network, first, last, replacement):
     """Installs local cores and internal factors atomically, preserving interfaces."""
     network._ensure_valid()
-    if any(isinstance(site, bool) or not isinstance(site, int) for site in (first, last)):
+    if any(isinstance(site, bool) or not isinstance(site, int)
+           for site in (first, last)):
         raise TypeError('Block endpoints should be integers')
     if not 0 <= first <= last < network.n_sites:
         raise ValueError('Block endpoints should select an ordered region')
@@ -219,17 +257,22 @@ def replace_block(network, first, last, replacement):
         if not isinstance(core, torch.Tensor):
             raise TypeError('Replacement cores should be tensors')
         site = first + offset
-        dimension = network._in_dim[site] * (network._out_dim[site] if network._out_dim else 1)
+        dimension = network._in_dim[site] * \
+            (network._out_dim[site] if network._out_dim else 1)
         if core.ndim != network._n_batches + 3 or core.shape[-2] != dimension:
-            raise ValueError('Replacement physical dimensions should match the selected sites')
+            raise ValueError(
+                'Replacement physical dimensions should match the selected sites')
     cores = list(network._raw_standard_cores())
     if replacement.cores[0].shape[-3] != cores[first].shape[-3] or \
             replacement.cores[-1].shape[-1] != cores[last].shape[-1]:
         raise ValueError('Replacement should preserve external block ranks')
     cores[first:last + 1] = replacement.cores
-    count = network.n_sites if network._topology.startswith('tr') else network.n_sites - 1
-    factors = list(network._bonds.values) if network._bonds is not None else [None] * count
-    values = [None] * (last - first) if replacement.bonds is None else replacement.bonds.values
+    count = network.n_sites if network._topology.startswith(
+        'tr') else network.n_sites - 1
+    factors = list(network._bonds.values) if network._bonds is not None else [
+        None] * count
+    values = [None] * \
+        (last - first) if replacement.bonds is None else replacement.bonds.values
     if len(values) != last - first:
         raise ValueError('Replacement factors should match its internal bonds')
     factors[first:last] = values
@@ -241,10 +284,11 @@ def replace_block(network, first, last, replacement):
     return network
 
 
-def absorb_bond(network, bond, side='left'):
+def absorb_bond(network, bond, side: str = 'left'):
     """Moves the selected diagonal/Schmidt weights to one neighbour in-place."""
     network._ensure_valid()
-    count = network.n_sites if network._topology.startswith('tr') else network.n_sites - 1
+    count = network.n_sites if network._topology.startswith(
+        'tr') else network.n_sites - 1
     if isinstance(bond, bool) or not isinstance(bond, int):
         raise TypeError('`bond` should be int type')
     if not 0 <= bond < count:
@@ -266,5 +310,33 @@ def absorb_bond(network, bond, side='left'):
             cores[site] = cores[site] * (value[..., None, None, :] if side == 'left'
                                          else value[..., :, None, None])
             factors.values[bond] = None
+    network._set_standard_cores(cores, factors)
+    return network
+
+
+def redistribute_bond(network, bond: int, mode: str = 'implicit',
+                      inverse_cutoff: float = 0.0):
+    """Redistributes one stored spectrum using its current absorption powers."""
+    network._ensure_valid()
+    if isinstance(bond, bool) or not isinstance(bond, int):
+        raise TypeError('`bond` should be int type')
+    if not isinstance(network._bonds, VidalGauge):
+        raise ValueError('Bond redistribution requires stored Vidal spectra')
+    if not 0 <= bond < len(network._bonds.spectra):
+        raise ValueError('`bond` should select a valid virtual bond')
+    modes = {'explicit': (0, 0), 'implicit': (0.5, 0.5),
+             'inverse': (1, 1), 'left': (1, 0), 'right': (0, 1)}
+    if mode not in modes:
+        raise ValueError('Invalid Vidal bond distribution mode')
+    if isinstance(inverse_cutoff, bool) or not isinstance(inverse_cutoff, Real):
+        raise TypeError('`inverse_cutoff` should be a real number')
+    if not isfinite(inverse_cutoff) or inverse_cutoff < 0:
+        raise ValueError('`inverse_cutoff` should be finite and non-negative')
+    if mode == 'inverse' and torch.any(network._bonds.spectra[bond] <= inverse_cutoff):
+        raise ValueError(f'Bond {bond} has non-invertible retained spectrum')
+    powers = list(network._bonds.powers)
+    powers[bond] = modes[mode]
+    cores, factors = _redistribute(
+    network._raw_standard_cores(), network._bonds, powers)
     network._set_standard_cores(cores, factors)
     return network

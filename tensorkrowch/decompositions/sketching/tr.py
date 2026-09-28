@@ -7,6 +7,8 @@ from typing import (Any, Dict, Mapping, Optional, Sequence, Tuple, Union)
 
 import torch
 
+from tensorkrowch.formats import TensorRing
+
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
@@ -625,7 +627,7 @@ class TRRSS(TTRSS):
             raise ValueError(
                 '`labels` should be a tensor with shape (batch_size,)')
         if warm_start is not None:
-            if not isinstance(warm_start, TRDecomposition):
+            if not isinstance(warm_start, TensorRing):
                 raise TypeError(
                     '`warm_start` should be TRDecomposition type or None')
             raise NotImplementedError(
@@ -1447,7 +1449,7 @@ class TRRS(TTRS):
         if len(self._source.in_dim) < 3:
             raise ValueError('TR-RS requires at least three sites')
         if warm_start is not None:
-            if not isinstance(warm_start, TRDecomposition):
+            if not isinstance(warm_start, TensorRing):
                 raise TypeError(
                     '`warm_start` should be TRDecomposition type or None')
             raise NotImplementedError(
@@ -1587,7 +1589,8 @@ def tr_rs(
         strict_system: bool = False,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
-        return_info: bool = False):
+        return_info: bool = False,
+        return_result: bool = False):
     """Projects a complete discrete source into TR cores with TR-RS.
 
     This simple interface constructs :class:`TRRS`, calls :meth:`TRRS.fit`
@@ -1602,6 +1605,10 @@ def tr_rs(
     >>> len(cores)
     3
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRRS(
@@ -1632,6 +1639,8 @@ def tr_rs(
             strict_system=strict_system,
             verbose=verbose,
             collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores
@@ -1784,7 +1793,8 @@ def qtr_rss(
         generator: Optional[torch.Generator] = None,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
-        return_info: bool = False):
+        return_info: bool = False,
+        return_result: bool = False):
     """Decomposes a multivariable physical function into QTR cores.
 
     This is the cyclic counterpart of :func:`qtt_rss`; it uses basis digit
@@ -1804,6 +1814,10 @@ def qtr_rss(
             raise ValueError(
                 '`n_variables` could not be inferred from sketch samples')
         n_variables = values.shape[1]
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     decomposer = TRRSS.quantized(
@@ -1846,6 +1860,8 @@ def qtr_rss(
         sample_space=sample_space,
         verbose=verbose,
         collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores
@@ -1877,7 +1893,8 @@ def tr_rss(function,
            generator: Optional[torch.Generator] = None,
            out_device: Device = 'cpu',
            verbose: Union[bool, int] = 0,
-           return_info: bool = False):
+           return_info: bool = False,
+        return_result: bool = False):
     r"""Decomposes a sampled function into Tensor Ring cores.
 
     This compatibility function constructs :class:`TRRSS`, calls
@@ -1955,6 +1972,10 @@ def tr_rss(function,
     return_info : bool, optional
         Whether to return ``(cores, info)`` with structured diagnostics.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+
     Returns
     -------
     list[torch.Tensor]
@@ -1974,6 +1995,10 @@ def tr_rss(function,
     >>> [tuple(core.shape) for core in cores]
     [(1, 2, 1), (1, 2, 1), (1, 2, 1)]
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRRSS(
@@ -2003,6 +2028,8 @@ def tr_rss(function,
             generator=generator,
             verbose=verbose,
             collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores

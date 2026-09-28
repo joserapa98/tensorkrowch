@@ -70,11 +70,14 @@ raises. The format callback restores core metadata on failure and clears
 canonical state only after a successful edit.
 
 ``BondFactors1D`` stores factors for open or cyclic chains. Bond containers
-also belong to one format. Assigning ``format.bonds`` copies
-the container and shares its tensors. Element and same-length slice replacements
+are constructed by their owning format, already bound to its callback.
+Pass a sequence of factors as ``TT(cores, bonds=values)`` or assign
+``format.bonds = values``; the format copies the sequence and shares its tensors. Element and same-length slice replacements
 in ``format.bonds.values`` validate immediately against the current cores.
 The container notifies its format through a callback; copies and conversions
-bind callbacks to their new containers.
+construct their containers with the destination callback. There is no separate
+attachment step. ``split_block`` returns raw factor tuples, which can be passed
+to ``replace_cores`` together with the replacement cores.
 Replace adjacent cores together when changing a shared rank. Algorithms work
 with temporary lists and publish cores and bonds together at completion.
 Manual replacement of cores, factors, Vidal spectra or absorption powers
@@ -90,7 +93,7 @@ are not intercepted; shape changes should use controlled replacement.
    >>> format.cores[:] = [torch.ones(2, 3), torch.ones(3, 2)]
    >>> format.rank
    [3]
-   >>> format.bonds = tk.formats.BondFactors1D([torch.ones(3)])
+   >>> format.bonds = [torch.ones(3)]
    >>> format.bonds.values[0] = torch.full((3,), 2.)
    >>> torch.equal(format.contract_dense(), torch.full((2, 2), 6.))
    True

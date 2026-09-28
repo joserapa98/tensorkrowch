@@ -10,8 +10,8 @@ import tensorkrowch as tk
 def test_block_roundtrip(make_format, topology, groups):
     format = make_format(topology, 4, dtype=torch.complex128)
     count = 4 if topology.startswith('tr') else 3
-    format.bonds = tk.formats.BondFactors1D([
-        torch.arange(1, rank + 1, dtype=torch.float64) for rank in format.rank[:count]])
+    format.bonds = [
+        torch.arange(1, rank + 1, dtype=torch.float64) for rank in format.rank[:count]]
     dense = format.contract_dense()
     in_dim, out_dim = format.in_dim, format.out_dim
     layout = format.block(groups)
@@ -111,9 +111,9 @@ def test_unblocking_failure_preserves_state(make_format, topology, failure):
 def test_coupled_core_and_bond_update(make_format, topology, mode, monkeypatch):
     format = make_format(topology, 4, dtype=torch.complex128)
     count = format.n_sites if topology.startswith('tr') else format.n_sites - 1
-    format.bonds = tk.formats.BondFactors1D([
+    format.bonds = [
         torch.arange(1, rank + 1, dtype=torch.float64)
-        for rank in format.rank[:count]])
+        for rank in format.rank[:count]]
     dense = format.contract_dense()
     factors = format.bonds.values
     block = format.contract_block(1, 2)
@@ -138,7 +138,7 @@ def test_coupled_core_and_bond_update(make_format, topology, mode, monkeypatch):
         format.bonds.values[0] = torch.ones(100, dtype=format.dtype)
     assert format.bonds.values[0] is factors[0]
     left, right = replacement.cores
-    factor = replacement.bonds.values[0]
+    factor = replacement.bonds[0]
     if factor is not None:
         left = left * factor[None, None, :]
     local = torch.einsum('aib,bjc->aijc', left, right).reshape(block.shape)
@@ -148,8 +148,8 @@ def test_coupled_core_and_bond_update(make_format, topology, mode, monkeypatch):
 @pytest.mark.parametrize('failure', ['rank', 'dtype', 'factor', 'batch'])
 def test_replacement_failure_preserves_cores_and_bonds(make_format, failure):
     format = make_format('tr', 4)
-    format.bonds = tk.formats.BondFactors1D([
-        torch.ones(rank, dtype=format.dtype) for rank in format.rank])
+    format.bonds = [
+        torch.ones(rank, dtype=format.dtype) for rank in format.rank]
     block = format.contract_block(1, 2)
     replacement = tk.formats.split_block(block, format.in_dim[1:3], mode='explicit')
     values = list(replacement.cores)
@@ -159,7 +159,7 @@ def test_replacement_failure_preserves_cores_and_bonds(make_format, failure):
     elif failure == 'dtype':
         values[0] = values[0].to(torch.float32)
     elif failure == 'factor':
-        bonds = tk.formats.BondFactors1D([torch.ones(100)])
+        bonds = [torch.ones(100)]
     else:
         values[0] = values[0].unsqueeze(0)
     cores, factors = format.cores, format.bonds

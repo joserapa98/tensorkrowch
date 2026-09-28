@@ -6,8 +6,7 @@ This script contains:
         * VidalGauge
 """
 
-from copy import copy
-from typing import Sequence
+from typing import Callable, Sequence
 
 import torch
 
@@ -18,7 +17,8 @@ class BondFactors1D:
     """
     Optional diagonals between adjacent cores, including a cyclic closure.
 
-    Each format owns a separate bond container, sharing the supplied tensors.
+    Created by the owning format from a sequence of factors, sharing tensors.
+    Supply factors through ``format.bonds`` or the format constructor.
     Element and same-length slice replacements validate against its cores
     immediately. Invalid replacements leave the container unchanged.
 
@@ -27,11 +27,15 @@ class BondFactors1D:
     values : sequence[torch.Tensor or None]
         One diagonal per stored bond. A diagonal has shape ``(rank,)`` or
         ``(*core_batch, rank)``. ``None`` denotes an identity without allocation.
+    on_change : callable
+        Owning format callback, called after manual replacement.
     """
 
-    def __init__(self, values) -> None:
-        self._on_change = None
-        self.values = values
+    def __init__(self, values, on_change: Callable[[], None]) -> None:
+        if isinstance(values, torch.Tensor):
+            raise TypeError('`values` should be a sequence of diagonals')
+        self._on_change = on_change
+        self._values = _SafeList(values, self._on_sequence_changed)
 
     @property
     def values(self):
@@ -55,15 +59,7 @@ class BondFactors1D:
         if not all(value is None or isinstance(value, torch.Tensor)
                    for value in self._values):
             raise TypeError('Bond factors should be tensors or None')
-        if self._on_change is not None:
-            self._on_change()
-
-    def _with_callback(self, on_change):
-        """Copies bond lists and binds their callback, preserving tensors."""
-        result = copy(self)
-        result._on_change = on_change
-        result._values = _SafeList(self._values, result._on_sequence_changed)
-        return result
+        self._on_change()
 
     def validate(self, cores: Sequence[torch.Tensor], cyclic: bool):
         r"""Checks compatibility of diagonal factors with standard fused cores.
@@ -98,10 +94,8 @@ class BondFactors1D:
             if torch.promote_types(value.dtype, core.dtype) != core.dtype:
                 raise ValueError('Bond factor dtype should be compatible with cores')
 
-    def _map_tensors(self, function):
-        """Maps stored tensors while preserving concrete container semantics."""
-        result = copy(self)
-        result._on_change = None
+    def _map_tensors(self, function, on_change):
+        """Maps factors into a container bound to the destination format."""
         values = []
         for value in self.values:
             if value is None:
@@ -111,8 +105,7 @@ class BondFactors1D:
             if not value.is_complex() and mapped.is_complex():
                 mapped = mapped.real
             values.append(mapped)
-        result._values = _SafeList(values, result._on_sequence_changed)
-        return result
+        return BondFactors1D(values, on_change)
 
 
 class VidalGauge(BondFactors1D):
@@ -128,34 +121,25 @@ class VidalGauge(BondFactors1D):
 
     Parameters
     ----------
+    values : sequence of torch.Tensor or None
+        Stored diagonal factors, preserved independently of the Vidal metadata.
     spectra : sequence of torch.Tensor
         Real, finite, non-negative singular-value vectors, optionally
         carrying structural batches.
     powers : sequence of tuple[float, float]
         Absorption powers at each bond: (0, 0), (0.5, 0.5), (1, 1), (1, 0)
         or (0, 1). Inverse powers require strictly nonzero spectra.
+    on_change : callable
+        Owning format callback, called after manual replacement.
+    valid : bool
+        Whether spectra and powers still describe the stored cores and factors.
     """
 
-    def __init__(self, spectra, powers) -> None:
-        """Initializes the stored tensor references and validates construction."""
+    def __init__(self, values, spectra, powers, on_change, valid=True) -> None:
+        super().__init__(values, on_change)
         self._spectra = _SafeList(spectra, self._on_sequence_changed)
         self._powers = _SafeList(powers, self._on_sequence_changed)
-        if len(self.spectra) != len(self.powers):
-            raise ValueError('Spectra and powers should have the same length')
-        values = []
-        for spectrum, (left, right) in zip(self.spectra, self.powers):
-            if not isinstance(spectrum, torch.Tensor) or spectrum.is_complex():
-                raise TypeError('Schmidt spectra should be real tensors')
-            if not torch.isfinite(spectrum).all() or torch.any(spectrum < 0):
-                raise ValueError('Schmidt spectra should be finite and non-negative')
-            if (left, right) not in ((0, 0), (0.5, 0.5), (1, 1), (1, 0), (0, 1)):
-                raise ValueError('Invalid Vidal absorption powers')
-            exponent = 1 - left - right
-            if exponent < 0 and torch.any(spectrum == 0):
-                raise ValueError('Inverse Vidal requires nonzero Schmidt spectra')
-            values.append(None if exponent == 0 else spectrum.pow(exponent))
-        super().__init__(values)
-        self._valid = True
+        self._valid = valid
 
     @property
     def spectra(self):
@@ -172,20 +156,14 @@ class VidalGauge(BondFactors1D):
         super()._on_sequence_changed()
         self._valid = False
 
-    def _with_callback(self, on_change):
-        """Copies bond lists and binds their callback, preserving tensors."""
-        result = super()._with_callback(on_change)
-        result._spectra = _SafeList(self._spectra, result._on_sequence_changed)
-        result._powers = _SafeList(self._powers, result._on_sequence_changed)
-        return result
+    def _map_tensors(self, function, on_change):
+        """Maps factors and spectra, preserving their stored interpretation."""
+        def map_real(tensor):
+            if tensor is None:
+                return None
+            mapped = function(tensor)
+            return mapped.real if not tensor.is_complex() and mapped.is_complex() else mapped
 
-    def _map_tensors(self, function):
-        """Maps stored tensors while preserving concrete container semantics."""
-        result = super()._map_tensors(function)
-        spectra = []
-        for spectrum in self.spectra:
-            mapped = function(spectrum)
-            spectra.append(mapped.real if mapped.is_complex() else mapped)
-        result._spectra = _SafeList(spectra, result._on_sequence_changed)
-        result._powers = _SafeList(self._powers, result._on_sequence_changed)
-        return result
+        return VidalGauge([map_real(value) for value in self.values],
+                          [map_real(spectrum) for spectrum in self.spectra],
+                          self.powers, on_change, valid=self._valid)

@@ -10,8 +10,8 @@ import tensorkrowch as tk
 @pytest.mark.parametrize('n_batches', [0, 1])
 def test_rotation_and_train_conversion(make_format, topology, n_sites, n_batches):
     format = make_format(topology, n_sites, n_batches, torch.complex128)
-    format.bonds = tk.formats.BondFactors1D([
-        torch.arange(1, rank + 1, dtype=torch.float64) for rank in format.rank])
+    format.bonds = [
+        torch.arange(1, rank + 1, dtype=torch.float64) for rank in format.rank]
     dense = format.contract_dense()
     b, width = n_batches, 2 if topology == 'trm' else 1
     for first in range(n_sites):

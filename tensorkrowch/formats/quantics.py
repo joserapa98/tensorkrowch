@@ -22,7 +22,6 @@ from typing import Optional, Sequence
 
 import torch
 
-from tensorkrowch.formats.bonds import BondFactors1D
 from tensorkrowch.formats.formats1d import TT, TR, TTM, TRM, _restore_cores
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
                                              _CompositeCoordinateMap,
@@ -183,7 +182,8 @@ class _QuanticsVector(_QuanticsFormat):
                  digit_positions: Optional[Sequence[int]] = None,
                  n_batches: int = 0,
                  computational_grid: str = 'endpoints',
-                 out_of_domain: str = 'error') -> None:
+                 out_of_domain: str = 'error',
+                 bonds=None) -> None:
         """Initializes the stored tensor references and validates construction."""
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
@@ -199,7 +199,7 @@ class _QuanticsVector(_QuanticsFormat):
         self.domain = domain
         self.computational_grid = computational_grid
         self.out_of_domain = out_of_domain
-        super().__init__(cores, n_batches=n_batches)
+        super().__init__(cores, n_batches=n_batches, bonds=bonds)
         positions = tuple(range(self.n_sites)
                           ) if digit_positions is None else tuple(digit_positions)
         if len(positions) != layout.n_sites or any(
@@ -362,7 +362,9 @@ class _QuanticsVector(_QuanticsFormat):
     def _as_vector(self, cls):
         """Drops coordinate metadata while retaining raw cores and factors."""
         result = cls(self.cores, n_batches=self._n_batches)
-        result.bonds = self._bonds
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, result._on_bonds_changed)
         return result
 
 
@@ -482,7 +484,7 @@ class QTR(_QuanticsVector, TR):
                                     out_of_domain=self.out_of_domain)
         if self._bonds is not None:
             values = self._bonds.values
-            result.bonds = BondFactors1D([*values[first:], *values[:first]])
+            result.bonds = [*values[first:], *values[:first]]
         return result
 
 
@@ -500,7 +502,8 @@ class _QuanticsMatrix(_QuanticsFormat):
                  *,
                  n_batches: int = 0,
                  computational_grid: str = 'endpoints',
-                 out_of_domain: str = 'error') -> None:
+                 out_of_domain: str = 'error',
+                 bonds=None) -> None:
         """Initializes the stored tensor references and validates construction."""
         if not isinstance(in_layout, QuantizedLayout) or not isinstance(
             out_layout, QuantizedLayout):
@@ -518,7 +521,7 @@ class _QuanticsMatrix(_QuanticsFormat):
         self.in_coordinate_map, self.out_coordinate_map = in_coordinate_map, out_coordinate_map
         self.in_domain, self.out_domain = in_domain, out_domain
         self.computational_grid, self.out_of_domain = computational_grid, out_of_domain
-        super().__init__(cores, n_batches=n_batches)
+        super().__init__(cores, n_batches=n_batches, bonds=bonds)
         if self._in_dim != in_layout.in_dim or self._out_dim != out_layout.in_dim:
             raise ValueError('Matrix core dimensions should match paired digit layouts')
 
@@ -687,7 +690,9 @@ class QTTM(_QuanticsMatrix, TTM):
             domains and digit-layout semantics are not retained.
         """
         result = TTM(self.cores, n_batches=self._n_batches)
-        result.bonds = self._bonds
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, result._on_bonds_changed)
         return result
 
 
@@ -734,7 +739,9 @@ class QTRM(_QuanticsMatrix, TRM):
             domains and digit-layout semantics are not retained.
         """
         result = TRM(self.cores, n_batches=self._n_batches)
-        result.bonds = self._bonds
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, result._on_bonds_changed)
         return result
 
 
@@ -773,5 +780,5 @@ class QTRM(_QuanticsMatrix, TRM):
                                           out_of_domain=self.out_of_domain)
         if self._bonds is not None:
             values = self._bonds.values
-            result.bonds = BondFactors1D([*values[first:], *values[:first]])
+            result.bonds = [*values[first:], *values[:first]]
         return result

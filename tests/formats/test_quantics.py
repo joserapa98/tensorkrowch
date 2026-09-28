@@ -136,7 +136,7 @@ def test_plain_conversion_owns_its_bonds(cyclic):
     else:
         format = tk.formats.QTT([torch.eye(2), torch.eye(2)], layout)
         plain = format.as_tt
-    format.bonds = tk.formats.BondFactors1D([torch.ones(2)] * (2 if cyclic else 1))
+    format.bonds = [torch.ones(2)] * (2 if cyclic else 1)
     converted = plain()
     assert converted.bonds is not format.bonds
     converted.bonds.values[0] = torch.full((2,), 2.)

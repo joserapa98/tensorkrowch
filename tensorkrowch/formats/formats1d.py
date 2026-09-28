@@ -93,7 +93,7 @@ class SplitBlock:
     cores : tuple[torch.Tensor, ...]
         Local cores in standard (*batch, left, physical, right) layout with
         physical axes fused for matrices.
-    bonds : BondFactors1D or None
+    bonds : sequence of torch.Tensor or None
         Factors internal to the local block; external interface factors are
         excluded.
     spectra : tuple[torch.Tensor, ...]
@@ -102,7 +102,7 @@ class SplitBlock:
     """
 
     cores: Tuple[torch.Tensor, ...]  # Standard fused core layout
-    bonds: Optional[BondFactors1D]  # Internal bond factors only
+    bonds: Optional[Sequence[Optional[torch.Tensor]]]  # Internal bond factors only
     spectra: Tuple[torch.Tensor, ...]  # Singular values of the local cuts
 
 
@@ -195,10 +195,10 @@ def _canonicalize_cores(cores, orth_center, renormalize):
     return cores
 
 
-def _redistribute(cores, gauge, powers):
+def _redistribute(cores, spectra, old_powers, powers):
     """Moves stored Schmidt powers between neighbours without another SVD."""
     for site, (spectrum, old, new) in enumerate(
-        zip(gauge.spectra, gauge.powers, powers)):
+        zip(spectra, old_powers, powers)):
         for neighbour, difference, left_axis in (
                 (site, new[0] - old[0], False),
                 (site + 1, new[1] - old[1], True)):
@@ -213,7 +213,13 @@ def _redistribute(cores, gauge, powers):
             factor = factor[..., :, None,
                             None] if left_axis else factor[..., None, None, :]
             cores[neighbour] = cores[neighbour] * factor
-    return cores, VidalGauge(gauge.spectra, powers)
+    values = []
+    for spectrum, (left, right) in zip(spectra, powers):
+        exponent = 1 - left - right
+        if exponent < 0 and torch.any(spectrum == 0):
+            raise ValueError('Inverse Vidal requires nonzero Schmidt spectra')
+        values.append(None if exponent == 0 else spectrum.pow(exponent))
+    return cores, values
 
 
 def split_block(block: torch.Tensor,
@@ -367,10 +373,9 @@ def split_block(block: torch.Tensor,
     cores.append(core)
     if mode == 'inverse' and any(torch.any(spectrum == 0) for spectrum in spectra):
         raise ValueError('Inverse local bonds require nonzero retained spectra')
-    gauge = VidalGauge(spectra, [(0, 0)] * len(spectra))
-    cores, gauge = _redistribute(cores, gauge, [powers[mode]] * len(spectra))
-    gauge._valid = False
-    return SplitBlock(tuple(cores), gauge, tuple(spectra))
+    cores, factors = _redistribute(cores, spectra, [(0, 0)] * len(spectra),
+                                   [powers[mode]] * len(spectra))
+    return SplitBlock(tuple(cores), tuple(factors), tuple(spectra))
 
 
 class TensorFormat1D(TensorFormat):
@@ -392,6 +397,9 @@ class TensorFormat1D(TensorFormat):
     n_batches : int
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
+    bonds : sequence of torch.Tensor or None, optional
+        Diagonal factors between cores. The format constructs its own container
+        and validates factors together with the cores; tensors are shared.
     """
 
     _family = 'tensor'
@@ -399,7 +407,8 @@ class TensorFormat1D(TensorFormat):
     _cyclic = False
     _quantized = False
 
-    def __init__(self, cores: Sequence[torch.Tensor], n_batches: int = 0) -> None:
+    def __init__(self, cores: Sequence[torch.Tensor], n_batches: int = 0,
+                 *, bonds=None) -> None:
         """Initializes the stored tensor references and validates construction."""
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
@@ -409,7 +418,7 @@ class TensorFormat1D(TensorFormat):
         self._n_batches = n_batches
         self._orth_center = None
         self._bonds = None
-        self.cores = cores
+        self._replace_cores(cores, bonds)
 
     @property
     def cores(self):
@@ -431,11 +440,18 @@ class TensorFormat1D(TensorFormat):
             container is copied and tensor storage is shared; inputs retain
             autograd.
         """
-        self._replace_cores(cores, self._bonds)
-        if isinstance(self._bonds, VidalGauge):
-            self._bonds._valid = False
+        if isinstance(cores, torch.Tensor):
+            raise TypeError('`cores` should be a sequence of torch.Tensor objects')
+        previous = self._cores
+        self._cores = _SafeList(cores, self._on_cores_changed)
+        try:
+            self._on_cores_changed()
+        except Exception:
+            self._cores = previous
+            raise
 
-    def _replace_cores(self, cores: Sequence[torch.Tensor], bonds):
+    def _replace_cores(self, cores: Sequence[torch.Tensor], bonds,
+                       *, spectra=None, powers=None):
         """Replaces cores and bonds together, restoring state on invalid input."""
         if isinstance(cores, torch.Tensor):
             raise TypeError('`cores` should be a sequence of torch.Tensor objects')
@@ -443,10 +459,12 @@ class TensorFormat1D(TensorFormat):
         cores = list(cores)
         previous = self.__dict__.copy()
         self._cores = _SafeList(cores, self._on_cores_changed)
-        self._bonds = None if bonds is None else bonds._with_callback(
-            self._on_bonds_changed)
-
         try:
+            if spectra is not None:
+                self._bonds = VidalGauge(bonds, spectra, powers, self._on_bonds_changed)
+            else:
+                self._bonds = None if bonds is None else BondFactors1D(
+                    bonds, self._on_bonds_changed)
             self.validate()
         except Exception:
             self.__dict__.clear()
@@ -547,8 +565,7 @@ class TensorFormat1D(TensorFormat):
         result._cores = _SafeList([function(core) for core in self._cores],
                                   result._on_cores_changed)
         if self._bonds is not None:
-            result._bonds = self._bonds._map_tensors(function)._with_callback(
-                result._on_bonds_changed)
+            result._bonds = self._bonds._map_tensors(function, result._on_bonds_changed)
         return result
 
     def _same_aux_tensors(self, other):
@@ -642,8 +659,7 @@ class TensorFormat1D(TensorFormat):
                                 self._on_cores_changed)
         if self._bonds is not None:
             self._bonds = self._bonds._map_tensors(
-                lambda tensor: tensor.detach())._with_callback(
-                    self._on_bonds_changed)
+                lambda tensor: tensor.detach(), self._on_bonds_changed)
         return self
 
     @abstractmethod
@@ -673,16 +689,14 @@ class TensorFormat1D(TensorFormat):
 
         Parameters
         ----------
-        value : BondFactors1D or None
-            Factors to attach, or None to remove them. A separate container is
+        value : sequence of torch.Tensor or None
+            Diagonal factors to store, or None to remove them. A separate container is
             owned by this format while tensor references are shared.
         """
-        if value is not None:
-            if not isinstance(value, BondFactors1D):
-                raise TypeError('`bonds` should be BondFactors1D type or None')
-            value.validate(self._raw_standard_cores(), self._cyclic)
-        self._bonds = None if value is None else value._with_callback(
-            self._on_bonds_changed)
+        bonds = None if value is None else BondFactors1D(value, self._on_bonds_changed)
+        if bonds is not None:
+            bonds.validate(self._raw_standard_cores(), self._cyclic)
+        self._bonds = bonds
         self._orth_center = None
 
     def materialize_bonds(self, orth_center: Optional[int] = None):
@@ -726,7 +740,7 @@ class TensorFormat1D(TensorFormat):
         if isinstance(self._bonds, VidalGauge) and self._bonds._valid:
             powers = [(0, 1) if site < orth_center else (1, 0)
                       for site in range(len(self._bonds.spectra))]
-            cores, _ = _redistribute(cores, self._bonds, powers)
+            cores, _ = _redistribute(cores, self._bonds.spectra, self._bonds.powers, powers)
             self._set_standard_cores(cores)
             return self
         for site, value in enumerate(self._bonds.values):
@@ -741,12 +755,12 @@ class TensorFormat1D(TensorFormat):
         return self
 
     def _set_standard_cores(self, cores: Sequence[torch.Tensor], bonds=None,
-                            in_dim=None, out_dim=None):
+                            in_dim=None, out_dim=None, *, spectra=None, powers=None):
         """Restores core layouts and publishes cores and factors together."""
         in_dim = self._in_dim if in_dim is None else in_dim
         out_dim = self._out_dim if out_dim is None else out_dim
         cores = _restore_cores(cores, in_dim, out_dim, self._n_batches, self._cyclic)
-        self._replace_cores(cores, bonds)
+        self._replace_cores(cores, bonds, spectra=spectra, powers=powers)
 
     def canonicalize(self,
                      orth_center: Optional[int] = None,
@@ -866,7 +880,8 @@ class TensorFormat1D(TensorFormat):
                       for site in range(count)]
         if isinstance(self._bonds, VidalGauge) and self._bonds._valid:
             cores = list(self._raw_standard_cores())
-            gauge = self._bonds
+            spectra = self._bonds.spectra
+            old_powers = self._bonds.powers
         else:
             cores = _canonicalize_cores(self._standard_cores(), 0, False)
             spectra = []
@@ -889,13 +904,13 @@ class TensorFormat1D(TensorFormat):
                 safe = torch.where(last > 0, last, torch.ones_like(last))
                 inverse = torch.where(last > 0, safe.reciprocal(), torch.zeros_like(last))
                 cores[-1] = cores[-1] * inverse[..., :, None, None]
-            gauge = VidalGauge(spectra, [(0, 0)] * count)
+            old_powers = [(0, 0)] * count
         for site in positions:
-            if torch.any(gauge.spectra[site] <= inverse_cutoff):
+            if torch.any(spectra[site] <= inverse_cutoff):
                 raise ValueError(
                     f'Inverse Vidal bond {site} has values at or below inverse_cutoff')
-        cores, gauge = _redistribute(cores, gauge, powers)
-        self._set_standard_cores(cores, gauge)
+        cores, factors = _redistribute(cores, spectra, old_powers, powers)
+        self._set_standard_cores(cores, factors, spectra=spectra, powers=powers)
         return self
 
     def rounding(self,
@@ -1206,7 +1221,7 @@ class TensorFormat1D(TensorFormat):
             if self._bonds is not None and last < len(self._bonds.values):
                 factors.append(self._bonds.values[last])
             first = last + 1
-        bonds = BondFactors1D(factors) if factors else None
+        bonds = factors if factors else None
         self._set_standard_cores(
             cores, bonds, in_dim=tuple(in_dim),
             out_dim=tuple(out_dim) if out_dim else None)
@@ -1262,8 +1277,8 @@ class TensorFormat1D(TensorFormat):
             local = split_block(value, inputs, outputs, self._n_batches, **kwargs)
             # Restore the local representation with each factor absorbed once.
             for index, core in enumerate(local.cores):
-                factor = local.bonds.values[index] if index < len(
-                    local.bonds.values) else None
+                factor = local.bonds[index] if index < len(
+                    local.bonds) else None
                 cores.append(core if factor is None else core * factor[..., None, None, :])
             first += size
         self._set_standard_cores(cores, in_dim=layout.in_dim, out_dim=layout.out_dim)
@@ -1308,7 +1323,7 @@ class TensorFormat1D(TensorFormat):
         return result.reshape(*batch, left, *dimensions, cores[last].shape[-1])
 
     def replace_cores(self, first: int, cores: Sequence[torch.Tensor],
-                      bonds: Optional[BondFactors1D] = None):
+                      bonds: Optional[Sequence[Optional[torch.Tensor]]] = None):
         r"""Installs consecutive standard cores and their internal factors in-place.
 
         Parameters
@@ -1320,7 +1335,7 @@ class TensorFormat1D(TensorFormat):
             Standard cores shaped (*batch, left, physical, right), with matrix
             physical axes fused. Physical dimensions and external ranks must
             match the selected region; its internal ranks may change.
-        bonds : BondFactors1D, optional
+        bonds : sequence of torch.Tensor or None, optional
             New factors between replacement cores. None uses identity factors.
             Factors outside the region are retained. Cores and factors are
             installed together, validating the complete candidate once.
@@ -1349,8 +1364,8 @@ class TensorFormat1D(TensorFormat):
         last = first + len(cores) - 1
         if not 0 <= first <= last < self.n_sites:
             raise ValueError('Replacement sites should lie inside the format')
-        if bonds is not None and not isinstance(bonds, BondFactors1D):
-            raise TypeError('Replacement bonds should be BondFactors1D or None')
+        if isinstance(bonds, torch.Tensor):
+            raise TypeError('Replacement bonds should be a sequence or None')
         for offset, core in enumerate(cores):
             if not isinstance(core, torch.Tensor):
                 raise TypeError('Replacement cores should be tensors')
@@ -1368,11 +1383,11 @@ class TensorFormat1D(TensorFormat):
         count = self.n_sites if self._cyclic else self.n_sites - 1
         factors = list(self._bonds.values) if self._bonds is not None else [
             None] * count
-        values = [None] * (last - first) if bonds is None else list(bonds.values)
+        values = [None] * (last - first) if bonds is None else list(bonds)
         if len(values) != last - first:
             raise ValueError('Replacement factors should match its internal bonds')
         factors[first:last] = values
-        factors = BondFactors1D(factors) if any(
+        factors = factors if any(
             value is not None for value in factors) else None
         self._set_standard_cores(stored, factors)
         return self
@@ -1405,19 +1420,21 @@ class TensorFormat1D(TensorFormat):
         if self._bonds is None:
             return self
         cores = list(self._raw_standard_cores())
+        spectra = powers = None
         if isinstance(self._bonds, VidalGauge) and self._bonds._valid:
+            spectra = self._bonds.spectra
             powers = list(self._bonds.powers)
             powers[bond] = (1, 0) if side == 'left' else (0, 1)
-            cores, factors = _redistribute(cores, self._bonds, powers)
+            cores, factors = _redistribute(cores, self._bonds.spectra, self._bonds.powers, powers)
         else:
-            factors = BondFactors1D(self._bonds.values)
-            value = factors.values[bond]
+            factors = list(self._bonds.values)
+            value = factors[bond]
             if value is not None:
                 site = bond if side == 'left' else (bond + 1) % self.n_sites
                 cores[site] = cores[site] * (value[..., None, None, :] if side == 'left'
                                              else value[..., :, None, None])
-                factors.values[bond] = None
-        self._set_standard_cores(cores, factors)
+                factors[bond] = None
+        self._set_standard_cores(cores, factors, spectra=spectra, powers=powers)
         return self
 
     def redistribute_bond(self, bond: int, mode: str = 'implicit',
@@ -1464,8 +1481,8 @@ class TensorFormat1D(TensorFormat):
         powers = list(self._bonds.powers)
         powers[bond] = modes[mode]
         cores, factors = _redistribute(
-            self._raw_standard_cores(), self._bonds, powers)
-        self._set_standard_cores(cores, factors)
+            self._raw_standard_cores(), self._bonds.spectra, self._bonds.powers, powers)
+        self._set_standard_cores(cores, factors, spectra=self._bonds.spectra, powers=powers)
         return self
 
     def _rotate(self, first):
@@ -1485,7 +1502,7 @@ class TensorFormat1D(TensorFormat):
             [cores[site] for site in order], in_dim, out_dim,
             self._n_batches, True)
         if self._bonds is not None:
-            result.bonds = BondFactors1D([self._bonds.values[site] for site in order])
+            result.bonds = [self._bonds.values[site] for site in order]
         return result
 
     def _to_open(self):
@@ -2395,7 +2412,9 @@ class _MatrixFormat1D(TensorFormat1D):
         result = self._new_from_standard_cores(
             standard, self._out_dim, self._in_dim,
             self._n_batches, self._cyclic, transpose=True)
-        result.bonds = self._bonds
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, result._on_bonds_changed)
         return result
 
     def adjoint(self):

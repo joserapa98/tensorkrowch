@@ -11,18 +11,71 @@ This script contains:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, Tuple, Sequence, Any
 
 import torch
 
 
+class _SafeList(list):
+    """Fixed-length list that validates replacements through a callback."""
+
+    def __init__(self, values: Any, on_change: Callable[[], None]) -> None:
+        super().__init__(values)
+        self._on_change = on_change
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        """Applies a replacement and restores the entries if validation fails."""
+        previous = self[key]
+        if isinstance(key, slice):
+            value = list(value)
+            if len(value) != len(previous):
+                raise ValueError('Slice replacement should preserve length')
+
+        super().__setitem__(key, value)
+        try:
+            self._on_change()
+        except Exception:
+            super().__setitem__(key, previous)
+            raise
+
+    def _structural_error(self, *args, **kwargs) -> None:
+        """Rejects changes that bypass controlled structural replacement."""
+        raise TypeError('Replace the complete container to change its structure')
+
+    append = extend = insert = pop = remove = clear = _structural_error
+    reverse = sort = __delitem__ = __iadd__ = __imul__ = _structural_error
+
+
+@dataclass(frozen=True)
+class RoundingInfo:
+    """
+    Truncation bound rather than a measured global approximation error.
+
+    Parameters
+    ----------
+    rank : tuple[int, ...]
+        Retained right-bond ranks after rounding.
+    discarded_sq_norm : tuple[torch.Tensor, ...]
+        Discarded squared singular-value mass at every processed cut,
+        resolved over structural batches.
+    error_bound : torch.Tensor
+        Absolute Frobenius error bound, resolved over structural batches. It
+        is not a measured error against an original dense tensor.
+    bound_satisfied : bool or None
+        Whether the requested relative budget was satisfied; ``None`` when no
+        ``rel_error`` was supplied.
+    """
+
+    rank: Tuple[int, ...]  # Final right-bond ranks
+    discarded_sq_norm: Tuple[torch.Tensor, ...]  # Discarded energy at each cut
+    error_bound: torch.Tensor  # Absolute Frobenius error bound, resolved by batch
+    bound_satisfied: Optional[bool]  # Whether the requested relative budget was met
+
+
 @dataclass(frozen=True)
 class SampleError:
-    r"""
+    """
     Stores sample errors while preserving tensor storage and autograd.
-
-    Frozen record: field references cannot be reassigned. Tensor contents and
-    autograd are preserved without copying or detaching.
 
     Parameters
     ----------
@@ -45,34 +98,56 @@ class SampleError:
     denominator: Optional[torch.Tensor] = None  # Norm used for relative error
 
 
-class _SafeList(list):
-    """Fixed-length list that validates replacements through a callback."""
+@dataclass(frozen=True)
+class BlockLayout:
+    """
+    Original site dimensions and contiguous group sizes.
 
-    def __init__(self, values, on_change: Callable[[], None]) -> None:
-        super().__init__(values)
-        self._on_change = on_change
+    Parameters
+    ----------
+    groups : tuple[int, ...]
+        Number of original consecutive sites in each block.
+    in_dim : tuple[int, ...]
+        Original input dimension of every site.
+    out_dim : tuple[int, ...], optional
+        Original matrix output dimensions; ``None`` for vectors.
+    """
 
-    def __setitem__(self, key, value):
-        """Applies a replacement and restores the entries if validation fails."""
-        previous = self[key]
-        if isinstance(key, slice):
-            value = list(value)
-            if len(value) != len(previous):
-                raise ValueError('Slice replacement should preserve length')
+    groups: Tuple[int, ...]  # Number of sites per block
+    in_dim: Tuple[int, ...]  # Original input dimensions
+    out_dim: Optional[Tuple[int, ...]] = None  # Original matrix output dimensions
 
-        super().__setitem__(key, value)
-        try:
-            self._on_change()
-        except Exception:
-            super().__setitem__(key, previous)
-            raise
+    def __post_init__(self) -> None:
+        """Validates block sizes and original site dimensions."""
+        if not self.groups or any(isinstance(size, bool) or not isinstance(size, int)
+                                  or size < 1 for size in self.groups):
+            raise ValueError('Block sizes should be positive integers')
+        if sum(self.groups) != len(self.in_dim):
+            raise ValueError('Block sizes should cover the original input dimensions')
+        if self.out_dim is not None and (len(self.out_dim) != len(self.in_dim)):
+            raise ValueError('Original matrix input/output sites should match')
 
-    def _structural_error(self, *args, **kwargs):
-        """Rejects changes that bypass controlled structural replacement."""
-        raise TypeError('Replace the complete container to change its structure')
 
-    append = extend = insert = pop = remove = clear = _structural_error
-    reverse = sort = __delitem__ = __iadd__ = __imul__ = _structural_error
+@dataclass(frozen=True)
+class SplitBlock:
+    """Local raw cores with open external ranks and optional internal factors.
+
+    Parameters
+    ----------
+    cores : tuple[torch.Tensor, ...]
+        Local cores in standard (*batch, left, physical, right) layout with
+        physical axes fused for matrices.
+    bonds : sequence of torch.Tensor or None
+        Factors internal to the local block; external interface factors are
+        excluded.
+    spectra : tuple[torch.Tensor, ...]
+        Singular values at the local SVD cuts. They are not certified global
+        Schmidt spectra.
+    """
+
+    cores: Tuple[torch.Tensor, ...]  # Standard fused core layout
+    bonds: Optional[Sequence[Optional[torch.Tensor]]]  # Internal bond factors only
+    spectra: Tuple[torch.Tensor, ...]  # Singular values of the local cuts
 
 
 class TensorFormat(ABC):
@@ -89,9 +164,11 @@ class TensorFormat(ABC):
         """Dtype of the represented tensors."""
 
     @abstractmethod
-    def to(self, device: Optional[Union[str, torch.device]] = None,
-           dtype: Optional[torch.dtype] = None, copy: bool = False):
-        r"""
+    def to(self,
+           device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None,
+           copy: bool = False) -> 'TensorFormat':
+        """
         Returns a device/dtype conversion, preserving the concrete format.
 
         PyTorch device errors propagate without a CPU fallback. Autograd is
@@ -123,8 +200,8 @@ class TensorFormat(ABC):
         True
         """
 
-    def cpu(self):
-        r"""
+    def cpu(self) -> 'TensorFormat':
+        """
         Returns the format on CPU.
 
         Returns
@@ -135,8 +212,8 @@ class TensorFormat(ABC):
         """
         return self.to(device='cpu')
 
-    def cuda(self, device: Optional[Union[int, str, torch.device]] = None):
-        r"""
+    def cuda(self, device: Optional[Union[int, str, torch.device]] = None) -> 'TensorFormat':
+        """
         Returns the format on a CUDA device.
 
         Parameters
@@ -158,8 +235,8 @@ class TensorFormat(ABC):
             raise ValueError('`device` should select a CUDA device')
         return self.to(device=target)
 
-    def mps(self):
-        r"""
+    def mps(self) -> 'TensorFormat':
+        """
         Returns the format on MPS.
 
         Returns
@@ -171,8 +248,8 @@ class TensorFormat(ABC):
         return self.to(device='mps')
 
     @abstractmethod
-    def clone(self):
-        r"""
+    def clone(self) -> 'TensorFormat':
+        """
         Clones the structural tensors, preserving autograd.
 
         Returns
@@ -182,8 +259,8 @@ class TensorFormat(ABC):
         """
 
     @abstractmethod
-    def detach(self):
-        r"""
+    def detach(self) -> 'TensorFormat':
+        """
         Returns a detached format sharing tensor storage.
 
         Returns
@@ -194,8 +271,8 @@ class TensorFormat(ABC):
         """
 
     @abstractmethod
-    def detach_(self):
-        r"""
+    def detach_(self) -> 'TensorFormat':
+        """
         Detaches structural tensors in-place by replacing references.
 
         Returns

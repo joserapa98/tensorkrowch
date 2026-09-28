@@ -21,7 +21,6 @@ This script contains:
 
     Aliases:
         * EvaluationData
-        * UnblockInfo
 """
 
 import warnings
@@ -37,101 +36,14 @@ import torch
 from tensorkrowch.utils import (_INTEGER_DTYPES, _validate_truncation,
                                truncated_svd)
 
-from tensorkrowch.formats.base import TensorFormat, SampleError, _SafeList
+from tensorkrowch.formats.base import (_SafeList, RoundingInfo, SampleError,
+                                       BlockLayout, SplitBlock, TensorFormat)
 from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
-                                       MinimalCanonicalInfo)
+                                         MinimalCanonicalInfo)
 
 
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
-
-
-@dataclass(frozen=True)
-class BlockLayout:
-    r"""Original site dimensions and contiguous group sizes.
-
-    Frozen record: field references cannot be reassigned. Tensor contents and
-    autograd are preserved without copying or detaching.
-
-    Parameters
-    ----------
-    groups : tuple[int, ...]
-        Number of original consecutive sites in each block.
-    in_dim : tuple[int, ...]
-        Original input dimension of every site.
-    out_dim : tuple[int, ...], optional
-        Original matrix output dimensions; None for vectors.
-    """
-
-    groups: Tuple[int, ...]  # Number of sites per block
-    in_dim: Tuple[int, ...]  # Original input dimensions
-    out_dim: Optional[Tuple[int, ...]] = None  # Original matrix output dimensions
-
-    def __post_init__(self):
-        """Validates block sizes and original site dimensions."""
-        if not self.groups or any(isinstance(size, bool) or not isinstance(size, int)
-                                  or size < 1 for size in self.groups):
-            raise ValueError('Block sizes should be positive integers')
-        if sum(self.groups) != len(self.in_dim):
-            raise ValueError('Block sizes should cover the original input dimensions')
-        if self.out_dim is not None and len(self.out_dim) != len(self.in_dim):
-            raise ValueError('Original matrix input/output sites should match')
-
-
-UnblockInfo = BlockLayout
-
-
-@dataclass(frozen=True)
-class SplitBlock:
-    r"""Local raw cores with open external ranks and optional internal factors.
-
-    Frozen record: field references cannot be reassigned. Tensor contents and
-    autograd are preserved without copying or detaching.
-
-    Parameters
-    ----------
-    cores : tuple[torch.Tensor, ...]
-        Local cores in standard (*batch, left, physical, right) layout with
-        physical axes fused for matrices.
-    bonds : sequence of torch.Tensor or None
-        Factors internal to the local block; external interface factors are
-        excluded.
-    spectra : tuple[torch.Tensor, ...]
-        Singular values at the local SVD cuts. They are not certified global
-        Schmidt spectra.
-    """
-
-    cores: Tuple[torch.Tensor, ...]  # Standard fused core layout
-    bonds: Optional[Sequence[Optional[torch.Tensor]]]  # Internal bond factors only
-    spectra: Tuple[torch.Tensor, ...]  # Singular values of the local cuts
-
-
-@dataclass(frozen=True)
-class RoundingInfo:
-    r"""Truncation bound rather than a measured global approximation error.
-
-    Frozen record: field references cannot be reassigned. Tensor contents and
-    autograd are preserved without copying or detaching.
-
-    Parameters
-    ----------
-    rank : tuple[int, ...]
-        Retained right-bond ranks after rounding.
-    discarded_sq_norm : tuple[torch.Tensor, ...]
-        Discarded squared singular-value mass at every processed cut,
-        resolved over structural batches.
-    error_bound : torch.Tensor
-        Absolute Frobenius error bound, resolved over structural batches. It
-        is not a measured error against an original dense tensor.
-    bound_satisfied : bool or None
-        Whether the requested relative budget was satisfied; None when no
-        rel_error was supplied.
-    """
-
-    rank: Tuple[int, ...]  # Final right-bond ranks
-    discarded_sq_norm: Tuple[torch.Tensor, ...]  # Discarded energy at each cut
-    error_bound: torch.Tensor  # Absolute Frobenius error bound, resolved by batch
-    bound_satisfied: Optional[bool]  # Whether the requested relative budget was met
 
 
 def _restore_cores(cores, in_dim, out_dim, n_batches, cyclic):
@@ -379,19 +291,17 @@ def split_block(block: torch.Tensor,
 
 
 class TensorFormat1D(TensorFormat):
-    r"""
-    Compact chain of raw cores, with cached dimensions and bond ranks.
-
-    The constructor copies the container and shares tensor storage. Element
-    and same-length slice replacement validate immediately and refresh metadata.
-    Invalid replacements leave the format unchanged. Tensor value updates
-    preserve dimensions. Shape changes through ``tensor.resize_`` are outside
-    this contract.
+    """
+    Compact format for tensors with a 1D layout, formed by a sequence of cores
+    and, possibly explicit bond factors.
+    
+    Serves as a base class for all 1D chain formats, such as :class:`TT`,
+    :class:`TR`, :class:`TTM`, :class:`TRM`, and their quantized versions.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Raw cores in the endpoint layout of the concrete format. The
+        Raw cores with the shapes required by the concrete format. The
         container is copied and tensor storage is shared; inputs retain
         autograd.
     n_batches : int
@@ -409,7 +319,6 @@ class TensorFormat1D(TensorFormat):
 
     def __init__(self, cores: Sequence[torch.Tensor], n_batches: int = 0,
                  *, bonds=None) -> None:
-        """Initializes the stored tensor references and validates construction."""
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
@@ -427,19 +336,6 @@ class TensorFormat1D(TensorFormat):
 
     @cores.setter
     def cores(self, cores: Sequence[torch.Tensor]):
-        r"""Replaces the complete core container, validating before acceptance.
-
-        Invalid structure restores previous cores and metadata. Valid manual
-        replacement clears canonical state. For coupled rank changes, replace
-        neighboring cores together.
-
-        Parameters
-        ----------
-        cores : sequence of torch.Tensor
-            Raw cores with the shapes required by the concrete format. The
-            container is copied and tensor storage is shared; inputs retain
-            autograd.
-        """
         if isinstance(cores, torch.Tensor):
             raise TypeError('`cores` should be a sequence of torch.Tensor objects')
         previous = self._cores

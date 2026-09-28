@@ -18,7 +18,7 @@ This module contains:
         * UniformCoordinateMap, WarpedCoordinateMap, ExplicitGridMap
 
     Blocks:
-        * BlockLayout, UnblockInfo, SplitBlock
+        * BlockLayout, SplitBlock
         * split_block
 
     Diagnostics:
@@ -33,10 +33,11 @@ Module flow:
     decompositions ─> formats + diagnostics
 """
 
-from tensorkrowch.formats.base import TensorFormat, SampleError
+from tensorkrowch.formats.base import (RoundingInfo, SampleError, BlockLayout,
+                                       SplitBlock, TensorFormat)
 from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
 from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
-                                         RoundingInfo, BlockLayout, UnblockInfo,
+                                         RoundingInfo, BlockLayout,
                                          SplitBlock, split_block)
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
                                        MinimalCanonicalInfo)
@@ -69,7 +70,6 @@ __all__ = [
     'RoundingInfo',
 
     'BlockLayout',
-    'UnblockInfo',
     'SplitBlock',
     'split_block',
 

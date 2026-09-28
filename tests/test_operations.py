@@ -2710,8 +2710,9 @@ class TestSplitRQ:  # MARK: TestSplitRQ
 class TestSVD:  # MARK: TestSVD
 
     @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('refine', [False, True])
     @pytest.mark.parametrize('operation', ['split', 'svd', 'svdr'])
-    def test_configured_svd_backend(self, operation, svd_method):
+    def test_configured_svd_backend(self, operation, svd_method, refine):
         generator = torch.Generator().manual_seed(1)
         if operation == 'split':
             tensor = torch.randn(
@@ -2719,7 +2720,7 @@ class TestSVD:  # MARK: TestSVD
             node = tk.Node(
                 tensor=tensor,
                 axes_names=('left', 'right'))
-            with tk.svd_method(svd_method):
+            with tk.svd_method(svd_method, refine=refine):
                 node1, node2 = node.split(
                     node1_axes=['left'],
                     node2_axes=['right'])
@@ -2737,7 +2738,7 @@ class TestSVD:  # MARK: TestSVD
                 axes_names=('rank', 'right'),
                 network=node1.network)
             edge = node1['rank'] ^ node2['rank']
-            with tk.svd_method(svd_method):
+            with tk.svd_method(svd_method, refine=refine):
                 if operation == 'svd':
                     node1, node2 = tk.svd(edge)
                 else:

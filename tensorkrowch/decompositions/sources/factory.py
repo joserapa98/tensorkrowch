@@ -10,7 +10,7 @@ from typing import Callable, Optional, Sequence, Union
 
 import torch
 
-from tensorkrowch.formats import TensorTrain
+from tensorkrowch.formats import TT
 
 from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sources.base import TensorSource
@@ -69,7 +69,7 @@ def as_tensor_source(
     """
     if in_features is not None and not isinstance(source, torch.Tensor):
         raise TypeError('`in_features` is only used for dense tensor sources')
-    if isinstance(source, TensorTrain):
+    if isinstance(source, TT):
         return TTTensorSource(source)
     if isinstance(source, (
             CallableTensorSource,

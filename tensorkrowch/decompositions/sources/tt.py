@@ -9,7 +9,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.formats import TensorTrain, TensorTrainMatrix
+from tensorkrowch.formats import TT, TTM
 
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
@@ -44,7 +44,7 @@ class TTTensorSource(_SourceEvaluationTracker):
                 raise ValueError(
                     'Only open-boundary MPS models can define TT sources')
             tensor = tensor.tensors
-        if isinstance(tensor, TensorTrain):
+        if isinstance(tensor, TT):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')
             cores = list(tensor._standard_cores())
@@ -414,7 +414,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         if not isinstance(conjugate_sketch, bool):
             raise TypeError('`conjugate_sketch` should be bool type')
 
-        if isinstance(sketch, TensorTrainMatrix):
+        if isinstance(sketch, TTM):
             if sketch.in_dim != self._in_dim:
                 raise ValueError(
                     'Source and sketch should have matching input dimensions')

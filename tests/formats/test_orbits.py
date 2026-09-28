@@ -51,7 +51,7 @@ def test_minimal_optional_convergence_information(make_format):
     assert info.iterations == 1
     assert isinstance(info.converged, bool)
     assert torch.isfinite(info.balance_residual)
-    zero = tk.formats.TensorRing([torch.zeros(1, 2, 1)])
+    zero = tk.formats.TR([torch.zeros(1, 2, 1)])
     _, info = zero.canonicalize_minimal(return_info=True)
     assert info.converged and info.iterations == 0
     assert info.balance_residual == 0

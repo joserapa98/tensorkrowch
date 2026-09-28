@@ -7,7 +7,7 @@ Formats and fit provenance
 --------------------------
 
 Results inherit the numerical representations documented in :doc:`formats`.
-``TTDecomposition`` is a ``TensorTrain``, and the TR/TTM/TRM families follow
+``TTDecomposition`` is a ``TT``, and the TR/TTM/TRM families follow
 the same relationship. Their additional ``metrics`` and ``metadata`` describe
 the original fit. Copying, detaching or moving a result preserves this history;
 editing or rounding its cores does not recompute historical errors. New exact

@@ -28,7 +28,7 @@ import torch
 
 from tensorkrowch.formats.quantics import _QuanticsVector
 
-from tensorkrowch.formats import TensorRing, QuantizedLayout
+from tensorkrowch.formats import TR, QuantizedLayout
 
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
@@ -71,7 +71,7 @@ def _standard_tr_cores(
         cores: Union[TRDecomposition, Sequence[torch.Tensor]],
         in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight TR cores to standard cyclic shapes."""
-    if isinstance(cores, TensorRing):
+    if isinstance(cores, TR):
         if cores.n_batches:
             raise ValueError('Batched TR cores are not supported by TR-ALS')
         cores = cores._standard_cores()

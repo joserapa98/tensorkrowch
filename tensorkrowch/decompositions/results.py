@@ -18,10 +18,8 @@ from typing import Any, Dict, List, Optional, Sequence
 import torch
 
 from tensorkrowch.formats import (
-    TensorFormat, TensorFormat1D, TensorFormat2D, TensorTrain, TensorRing,
-    TensorTrainMatrix, TensorRingMatrix, QuanticsTensorTrain,
-    QuanticsTensorRing, QuanticsTensorTrainMatrix, QuanticsTensorRingMatrix,
-    QTTTucker, QTRTucker, QuantizedLayout)
+    TensorFormat, TensorFormat1D, TensorFormat2D, TT, TR, TTM, TRM,
+    QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout)
 from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
 
 
@@ -96,15 +94,15 @@ class _ResultState:
         return ErrorRecord(**record._asdict())
 
 
-class TTDecomposition(_ResultState, TensorTrain, TensorDecomposition1D):
+class TTDecomposition(_ResultState, TT, TensorDecomposition1D):
     """TT format with decomposition metrics and algorithm metadata."""
 
 
-class TRDecomposition(_ResultState, TensorRing, TensorDecomposition1D):
+class TRDecomposition(_ResultState, TR, TensorDecomposition1D):
     """TR format with decomposition metrics and algorithm metadata."""
 
 
-class TTMDecomposition(_ResultState, TensorTrainMatrix, TensorDecomposition1D):
+class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):
     """TTM format with decomposition metrics and algorithm metadata."""
 
     def _build_applied_decomposition(self, cores: List[torch.Tensor],
@@ -114,7 +112,7 @@ class TTMDecomposition(_ResultState, TensorTrainMatrix, TensorDecomposition1D):
                                metadata={'operation': 'ttm_apply'})
 
 
-class TRMDecomposition(_ResultState, TensorRingMatrix, TensorDecomposition1D):
+class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):
     """TRM format with decomposition metrics and algorithm metadata."""
 
     def _build_applied_decomposition(self, cores: List[torch.Tensor],
@@ -139,7 +137,7 @@ class _QuanticsResultState:
 
 
 @dataclass(init=False)
-class QTTDecomposition(_QuanticsResultState, QuanticsTensorTrain, TTDecomposition):
+class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
     """Quantics TT retaining its actual digit layout and coordinate map."""
 
     layout: QuantizedLayout = field()  # Logical variable-to-digit schedule
@@ -151,7 +149,7 @@ class QTTDecomposition(_QuanticsResultState, QuanticsTensorTrain, TTDecompositio
 
 
 @dataclass(init=False)
-class QTRDecomposition(_QuanticsResultState, QuanticsTensorRing, TRDecomposition):
+class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):
     """Quantics TR retaining its actual digit layout and coordinate map."""
 
     layout: QuantizedLayout = field()  # Logical variable-to-digit schedule
@@ -163,7 +161,7 @@ class QTRDecomposition(_QuanticsResultState, QuanticsTensorRing, TRDecomposition
 
 
 @dataclass(init=False)
-class QTTMDecomposition(_QuanticsResultState, QuanticsTensorTrainMatrix,
+class QTTMDecomposition(_QuanticsResultState, QTTM,
                        TTMDecomposition):
     """Quantics TTM with separate input and output coordinate spaces."""
 
@@ -178,7 +176,7 @@ class QTTMDecomposition(_QuanticsResultState, QuanticsTensorTrainMatrix,
 
 
 @dataclass(init=False)
-class QTRMDecomposition(_QuanticsResultState, QuanticsTensorRingMatrix,
+class QTRMDecomposition(_QuanticsResultState, QTRM,
                        TRMDecomposition):
     """Quantics TRM with separate input and output coordinate spaces."""
 

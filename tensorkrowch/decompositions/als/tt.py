@@ -29,7 +29,7 @@ import torch
 
 from tensorkrowch.formats.quantics import _QuanticsVector
 
-from tensorkrowch.formats import TensorTrain, QuantizedLayout
+from tensorkrowch.formats import TT, QuantizedLayout
 
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
@@ -72,7 +72,7 @@ def _standard_tt_cores(
         cores: Union[TTDecomposition, Sequence[torch.Tensor]],
         in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight or standard OBC core shapes."""
-    if isinstance(cores, TensorTrain):
+    if isinstance(cores, TT):
         if cores.n_batches:
             raise ValueError('Batched TT cores are not supported by TT-ALS')
         cores = cores._standard_cores()

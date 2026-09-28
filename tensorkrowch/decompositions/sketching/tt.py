@@ -7,7 +7,7 @@ from typing import (Any, Callable, Dict, List, Optional, Sequence, Tuple, Union)
 
 import torch
 
-from tensorkrowch.formats import TensorTrain
+from tensorkrowch.formats import TT
 from tensorkrowch.decompositions.results import _quantics_result
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
@@ -735,7 +735,7 @@ class TTRSS(RecursiveSketching):
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
         if warm_start is not None:
-            if not isinstance(warm_start, TensorTrain):
+            if not isinstance(warm_start, TT):
                 raise TypeError(
                     '`warm_start` should be TTDecomposition type or None')
             raise NotImplementedError(
@@ -1781,7 +1781,7 @@ class TTRS:
         [1]
         """
         if warm_start is not None:
-            if not isinstance(warm_start, TensorTrain):
+            if not isinstance(warm_start, TT):
                 raise TypeError(
                     '`warm_start` should be TTDecomposition type or None')
             raise NotImplementedError(

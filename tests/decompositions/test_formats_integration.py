@@ -10,20 +10,20 @@ from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdap
 def test_results_inherit_formats_and_keep_historical_metrics():
     result = tk.decompositions.TTDecomposition(
         [torch.ones(2, 1), torch.ones(1, 3)], metadata={'fit': 'original'})
-    assert isinstance(result, tk.formats.TensorTrain)
+    assert isinstance(result, tk.formats.TT)
     replaced = replace(result, cores=[torch.zeros(2, 1), torch.ones(1, 3)])
     assert replaced.norm() == 0
     for transformed in [result.copy(), result.detach(), result.to(dtype=torch.float64)]:
         assert type(transformed) is type(result)
         assert transformed.metrics is result.metrics
         assert transformed.metadata == result.metadata
-    assert type(result + result) is tk.formats.TensorTrain
+    assert type(result + result) is tk.formats.TT
     assert QuantizedLayout is tk.formats.QuantizedLayout
     assert QuantizedSourceAdapter is tk.decompositions.QuantizedSourceAdapter
 
 
 def test_base_tt_source_absorbs_bonds_without_mutating_format():
-    result = tk.formats.TensorTrain([torch.ones(2, 2), torch.ones(2, 3)])
+    result = tk.formats.TT([torch.ones(2, 2), torch.ones(2, 3)])
     result.bonds = tk.formats.BondFactors([torch.tensor([2., 3.])])
     source = tk.decompositions.as_tensor_source(result)
     indices = torch.tensor([[0, 0], [1, 2]])
@@ -45,7 +45,7 @@ def test_quantized_svd_preserves_raw_grid_and_returns_generic_algebra(ordering, 
         data = data + 1j * data.flip(-1)
     result = getattr(tk.decompositions, method + '_svd')(
         data, rank=16, quantization=layout, return_result=True, out_device=None)
-    cls = tk.formats.QuanticsTensorTrain if method == 'tt' else tk.formats.QuanticsTensorRing
+    cls = tk.formats.QTT if method == 'tt' else tk.formats.QTR
     assert isinstance(result, cls)
     assert torch.allclose(result.to_dense_grid(), data, atol=1e-9)
     indices = torch.tensor([[0, 0], [7, 15], [3, 8]])
@@ -169,7 +169,7 @@ def test_quantized_rss_result_retains_coordinates_without_source():
     assert reference() is None
     expected = torch.stack([1 + points[:, 0], 2 + points[:, 1]], dim=-1)
     assert torch.allclose(result.evaluate_points(points), expected, atol=1e-9)
-    restored = tk.formats.QuanticsTensorTrain.from_mps(
+    restored = tk.formats.QTT.from_mps(
         result.to_mps(), layout=layout, coordinate_map=result.coordinate_map,
         domain=domain, digit_positions=result.digit_positions)
     assert torch.allclose(restored.evaluate_points(points), expected, atol=1e-9)

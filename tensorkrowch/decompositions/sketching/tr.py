@@ -7,7 +7,7 @@ from typing import (Any, Dict, Mapping, Optional, Sequence, Tuple, Union)
 
 import torch
 
-from tensorkrowch.formats import TensorRing
+from tensorkrowch.formats import TR
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -627,7 +627,7 @@ class TRRSS(TTRSS):
             raise ValueError(
                 '`labels` should be a tensor with shape (batch_size,)')
         if warm_start is not None:
-            if not isinstance(warm_start, TensorRing):
+            if not isinstance(warm_start, TR):
                 raise TypeError(
                     '`warm_start` should be TRDecomposition type or None')
             raise NotImplementedError(
@@ -1449,7 +1449,7 @@ class TRRS(TTRS):
         if len(self._source.in_dim) < 3:
             raise ValueError('TR-RS requires at least three sites')
         if warm_start is not None:
-            if not isinstance(warm_start, TensorRing):
+            if not isinstance(warm_start, TR):
                 raise TypeError(
                     '`warm_start` should be TRDecomposition type or None')
             raise NotImplementedError(

@@ -1,7 +1,7 @@
 """Topology-neutral interfaces for compact raw-tensor representations."""
 
+from typing import NamedTuple, Optional, Union
 from abc import ABC, abstractmethod
-from typing import NamedTuple, Optional
 
 import torch
 
@@ -21,23 +21,24 @@ class TensorFormat(ABC):
 
     @property
     @abstractmethod
-    def device(self):
+    def device(self) -> torch.device:
         """Device of the represented tensors."""
 
     @property
     @abstractmethod
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Dtype of the represented tensors."""
 
     @abstractmethod
-    def to(self, device=None, dtype=None, copy=False):
+    def to(self, device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None, copy: bool = False):
         """Returns a device/dtype conversion."""
 
     def cpu(self):
         """Returns the format on CPU."""
         return self.to(device='cpu')
 
-    def cuda(self, device=None):
+    def cuda(self, device: Optional[Union[int, str, torch.device]] = None):
         """Returns the format on the selected CUDA device."""
         target = 'cuda' if device is None else (
             torch.device('cuda', device) if isinstance(device, int) else device)

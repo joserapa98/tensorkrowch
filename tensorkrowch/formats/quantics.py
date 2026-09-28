@@ -1,5 +1,6 @@
 """Quantics formats add coordinate meaning to ordinary compact tensor chains."""
 
+from typing import Optional, Sequence
 from dataclasses import fields, is_dataclass, replace
 from math import prod
 
@@ -19,10 +20,11 @@ def _map_structure(value, function):
         result = function(value)
         return result.real if not value.is_complex() and result.is_complex() else result
     if isinstance(value, _CompositeCoordinateMap):
-        return _CompositeCoordinateMap([_map_structure(item, function) for item in value.maps])
+        return _CompositeCoordinateMap(
+            [_map_structure(item, function) for item in value.maps])
     if is_dataclass(value):
         return replace(value, **{field.name: _map_structure(getattr(value, field.name), function)
-                                for field in fields(value) if field.init})
+                                 for field in fields(value) if field.init})
     if isinstance(value, tuple):
         return tuple(_map_structure(item, function) for item in value)
     if isinstance(value, list):
@@ -44,7 +46,8 @@ def _equal_structure(first, second):
         return all(_equal_structure(getattr(first, field.name), getattr(second, field.name))
                    for field in fields(first))
     if isinstance(first, (list, tuple)):
-        return len(first) == len(second) and all(_equal_structure(a, b) for a, b in zip(first, second))
+        return len(first) == len(second) and all(_equal_structure(a, b)
+                   for a, b in zip(first, second))
     if callable(first):
         return False
     return first == second
@@ -71,9 +74,11 @@ def _check_semantics(first, second, product=False):
     if not (a or b):
         return
     if not (a and b):
-        raise ValueError('Quantics algebra requires compatible coordinate semantics; use as_tt/as_tr explicitly')
+        raise ValueError(
+            'Quantics algebra requires compatible coordinate semantics; use as_tt/as_tr explicitly')
     if product:
-        if not isinstance(first, _QuanticsMatrix) and not isinstance(second, _QuanticsMatrix):
+        if not isinstance(first, _QuanticsMatrix) and not isinstance(
+            second, _QuanticsMatrix):
             raise TypeError('At least one Quantics @ operand should be a matrix')
         if isinstance(first, _QuanticsMatrix):
             left = (first.in_layout, first.in_coordinate_map, first.in_domain)
@@ -88,9 +93,11 @@ def _check_semantics(first, second, product=False):
     else:
         names = ('layout', 'coordinate_map', 'domain', 'digit_positions') if isinstance(first, _QuanticsVector) else (
             'in_layout', 'out_layout', 'in_coordinate_map', 'out_coordinate_map', 'in_domain', 'out_domain')
-        if any(not _equal_structure(getattr(first, name), getattr(second, name, None)) for name in names):
+        if any(not _equal_structure(getattr(first, name), getattr(second, name, None))
+               for name in names):
             raise ValueError('Quantics layouts and coordinate maps should match')
-    if (first.computational_grid, first.out_of_domain) != (second.computational_grid, second.out_of_domain):
+    if (first.computational_grid, first.out_of_domain) != (
+        second.computational_grid, second.out_of_domain):
         raise ValueError('Quantics coordinate policies should match')
 
 
@@ -106,8 +113,8 @@ def _inherit_semantics(result, first, second=None, product=False):
         cls = QuanticsTensorRingMatrix if cyclic else QuanticsTensorTrainMatrix
         inputs = second if product else first
         wrapped = cls(result.cores, inputs.in_layout, first.out_layout,
-                       inputs.in_coordinate_map, first.out_coordinate_map,
-                       inputs.in_domain, first.out_domain, **options)
+                      inputs.in_coordinate_map, first.out_coordinate_map,
+                      inputs.in_domain, first.out_domain, **options)
     else:
         cls = QuanticsTensorRing if cyclic else QuanticsTensorTrain
         if product and isinstance(first, _QuanticsMatrix):
@@ -120,7 +127,7 @@ def _inherit_semantics(result, first, second=None, product=False):
             layout, coordinate_map, domain = first.layout, first.coordinate_map, first.domain
             positions = first.digit_positions
         wrapped = cls(result.cores, layout, coordinate_map, domain,
-                       digit_positions=positions, **options)
+                      digit_positions=positions, **options)
     wrapped._bonds = result.bonds
     return wrapped
 
@@ -138,7 +145,8 @@ def _points_to_indices(points, layout, coordinate_map, domain, grid, policy):
         return direct(points, layout.grid_size, domain, out_of_domain=policy)
     inverse = getattr(coordinate_map, 'inverse', None)
     if not callable(inverse):
-        raise NotImplementedError('Physical evaluation requires a coordinate-map inverse')
+        raise NotImplementedError(
+            'Physical evaluation requires a coordinate-map inverse')
     return _unit_to_indices(inverse(points, domain, out_of_domain=policy),
                             layout.grid_size, grid, policy)
 
@@ -146,16 +154,24 @@ def _points_to_indices(points, layout, coordinate_map, domain, grid, policy):
 class _QuanticsVector:
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
-    def __init__(self, cores, layout, coordinate_map=None, domain=None, *,
-                 digit_positions=None, n_batches=0, computational_grid='endpoints',
-                 out_of_domain='error'):
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
+                 layout,
+                 coordinate_map=None,
+                 domain=None,
+                 *,
+                 digit_positions: Optional[Sequence[int]] = None,
+                 n_batches: int = 0,
+                 computational_grid: str = 'endpoints',
+                 out_of_domain: str = 'error') -> None:
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
         if isinstance(coordinate_map, (list, tuple)):
             coordinate_map = _CompositeCoordinateMap(coordinate_map)
         if coordinate_map is not None and not isinstance(coordinate_map, CoordinateMap):
             raise TypeError('`coordinate_map` should implement CoordinateMap')
-        if computational_grid not in ('endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
+        if computational_grid not in (
+            'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
             raise ValueError('Invalid computational grid or out-of-domain policy')
         self.layout = layout
         self.coordinate_map = coordinate_map
@@ -163,11 +179,14 @@ class _QuanticsVector:
         self.computational_grid = computational_grid
         self.out_of_domain = out_of_domain
         super().__init__(cores, n_batches=n_batches)
-        positions = tuple(range(self.n_sites)) if digit_positions is None else tuple(digit_positions)
+        positions = tuple(range(self.n_sites)
+                          ) if digit_positions is None else tuple(digit_positions)
         if len(positions) != layout.n_sites or any(
-                isinstance(site, bool) or not isinstance(site, int) or not 0 <= site < self.n_sites
+                isinstance(site, bool) or not isinstance(
+                    site, int) or not 0 <= site < self.n_sites
                 for site in positions) or len(set(positions)) != len(positions):
-            raise ValueError('Digit positions should select every scheduled digit exactly once')
+            raise ValueError(
+                'Digit positions should select every scheduled digit exactly once')
         if tuple(self._in_dim[site] for site in positions) != layout.in_dim:
             raise ValueError('Digit core dimensions should match the quantized layout')
         self.digit_positions = positions
@@ -190,7 +209,7 @@ class _QuanticsVector:
             raise ValueError('Digit core dimensions should match the quantized layout')
         return self
 
-    def evaluate_digits(self, digits):
+    def evaluate_digits(self, digits) -> torch.Tensor:
         """Evaluates scheduled digits; nondigit physical output sites remain open."""
         self._ensure_valid()
         digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
@@ -218,19 +237,20 @@ class _QuanticsVector:
         value = state.diagonal(dim1=2, dim2=-1).sum(-1)
         return value.reshape(*self._batch_shape, *data_batch, *outputs)
 
-    def evaluate_indices(self, indices):
+    def evaluate_indices(self, indices) -> torch.Tensor:
         """Evaluates integer coordinates of the original raw grid."""
         return self.evaluate_digits(self.layout.encode_indices(indices))
 
-    def evaluate_points(self, points):
+    def evaluate_points(self, points) -> torch.Tensor:
         """Maps physical coordinates to grid indices and evaluates the format."""
         return self.evaluate_indices(_points_to_indices(
             points, self.layout, self.coordinate_map, self.domain,
             self.computational_grid, self.out_of_domain))
 
-    def to_dense_grid(self):
+    def to_dense_grid(self) -> torch.Tensor:
         """Explicit small-grid oracle in original variable order, then output sites."""
-        axes = [torch.arange(size, device=self.device) for size in self.layout.grid_size]
+        axes = [torch.arange(size, device=self.device)
+                for size in self.layout.grid_size]
         indices = torch.cartesian_prod(*axes).reshape(-1, self.layout.n_variables)
         values = self.evaluate_indices(indices)
         outputs = tuple(self._in_dim[site] for site in range(self.n_sites)
@@ -268,7 +288,8 @@ class QuanticsTensorRing(_QuanticsVector, TensorRing):
 
     def rotate(self, first=0):
         base = self.as_tr().rotate(first)
-        positions = tuple((site - first) % self.n_sites for site in self.digit_positions)
+        positions = tuple((site - first) %
+                          self.n_sites for site in self.digit_positions)
         result = QuanticsTensorRing(base.cores, self.layout, self.coordinate_map,
                                     self.domain, digit_positions=positions,
                                     n_batches=self._n_batches,
@@ -281,17 +302,29 @@ class QuanticsTensorRing(_QuanticsVector, TensorRing):
 class _QuanticsMatrix:
     """Paired input/output digit layouts of a tensorized operator."""
 
-    def __init__(self, cores, in_layout, out_layout, in_coordinate_map=None,
-                 out_coordinate_map=None, in_domain=None, out_domain=None, *,
-                 n_batches=0, computational_grid='endpoints', out_of_domain='error'):
-        if not isinstance(in_layout, QuantizedLayout) or not isinstance(out_layout, QuantizedLayout):
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
+                 in_layout,
+                 out_layout,
+                 in_coordinate_map=None,
+                 out_coordinate_map=None,
+                 in_domain=None,
+                 out_domain=None,
+                 *,
+                 n_batches: int = 0,
+                 computational_grid: str = 'endpoints',
+                 out_of_domain: str = 'error') -> None:
+        if not isinstance(in_layout, QuantizedLayout) or not isinstance(
+            out_layout, QuantizedLayout):
             raise TypeError('Matrix layouts should be QuantizedLayout objects')
         if in_layout.n_sites != out_layout.n_sites:
             raise ValueError('Matrix digit schedules should have equal lengths')
         for coordinate_map in (in_coordinate_map, out_coordinate_map):
-            if coordinate_map is not None and not isinstance(coordinate_map, CoordinateMap):
+            if coordinate_map is not None and not isinstance(
+                coordinate_map, CoordinateMap):
                 raise TypeError('Matrix coordinate maps should implement CoordinateMap')
-        if computational_grid not in ('endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
+        if computational_grid not in (
+            'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
             raise ValueError('Invalid computational grid or out-of-domain policy')
         self.in_layout, self.out_layout = in_layout, out_layout
         self.in_coordinate_map, self.out_coordinate_map = in_coordinate_map, out_coordinate_map
@@ -303,7 +336,8 @@ class _QuanticsMatrix:
 
     def _map_tensors(self, function):
         result = super()._map_tensors(function)
-        for name in ('in_coordinate_map', 'out_coordinate_map', 'in_domain', 'out_domain'):
+        for name in ('in_coordinate_map', 'out_coordinate_map',
+                     'in_domain', 'out_domain'):
             setattr(result, name, _map_structure(getattr(self, name), function))
         return result
 
@@ -318,35 +352,37 @@ class _QuanticsMatrix:
             raise ValueError('Matrix core dimensions should match paired digit layouts')
         return self
 
-    def evaluate_digits(self, in_digits, out_digits):
+    def evaluate_digits(self, in_digits, out_digits) -> torch.Tensor:
         self.in_layout.decode_digits(in_digits)
         self.out_layout.decode_digits(out_digits)
         return self.evaluate(in_digits, out_digits, n_batches=in_digits.ndim - 1)
 
-    def evaluate_indices(self, in_indices, out_indices):
+    def evaluate_indices(self, in_indices, out_indices) -> torch.Tensor:
         return self.evaluate_digits(self.in_layout.encode_indices(in_indices),
-                                     self.out_layout.encode_indices(out_indices))
+                                    self.out_layout.encode_indices(out_indices))
 
-    def evaluate_points(self, in_points, out_points):
+    def evaluate_points(self, in_points, out_points) -> torch.Tensor:
         inputs = _points_to_indices(in_points, self.in_layout, self.in_coordinate_map,
                                     self.in_domain, self.computational_grid, self.out_of_domain)
         outputs = _points_to_indices(out_points, self.out_layout, self.out_coordinate_map,
                                      self.out_domain, self.computational_grid, self.out_of_domain)
         return self.evaluate_indices(inputs, outputs)
 
-    def to_dense_grid(self):
+    def to_dense_grid(self) -> torch.Tensor:
         """Explicit oracle with original input grid axes followed by output axes."""
         inputs = torch.cartesian_prod(*[torch.arange(size, device=self.device)
-                                       for size in self.in_layout.grid_size]).reshape(-1, self.in_layout.n_variables)
+                                        for size in self.in_layout.grid_size]).reshape(-1, self.in_layout.n_variables)
         outputs = torch.cartesian_prod(*[torch.arange(size, device=self.device)
-                                        for size in self.out_layout.grid_size]).reshape(-1, self.out_layout.n_variables)
+                                         for size in self.out_layout.grid_size]).reshape(-1, self.out_layout.n_variables)
         values = self.evaluate_indices(inputs.repeat_interleave(outputs.shape[0], 0),
-                                        outputs.repeat(inputs.shape[0], 1))
-        return values.reshape(*self._batch_shape, *self.in_layout.grid_size, *self.out_layout.grid_size)
+                                       outputs.repeat(inputs.shape[0], 1))
+        return values.reshape(*self._batch_shape, * \
+                              self.in_layout.grid_size, *self.out_layout.grid_size)
 
     def transpose(self):
         base = super().transpose()
-        cls = QuanticsTensorRingMatrix if self._topology.startswith('tr') else QuanticsTensorTrainMatrix
+        cls = QuanticsTensorRingMatrix if self._topology.startswith(
+            'tr') else QuanticsTensorTrainMatrix
         result = cls(base.cores, self.out_layout, self.in_layout,
                      self.out_coordinate_map, self.in_coordinate_map,
                      self.out_domain, self.in_domain, n_batches=self._n_batches,
@@ -354,7 +390,7 @@ class _QuanticsMatrix:
         result._bonds = base.bonds
         return result
 
-    def apply(self, data, n_batches=1):
+    def apply(self, data, n_batches: int = 1):
         from ._chain import TensorFormat1D
         result = super().apply(data, n_batches=n_batches)
         if isinstance(data, TensorFormat1D):
@@ -389,6 +425,7 @@ class QuanticsTensorRingMatrix(_QuanticsMatrix, TensorRingMatrix):
 
     def rotate(self, first=0):
         base = self.as_trm().rotate(first)
+
         def rotated_layout(layout):
             schedule = layout.sites()
             return QuantizedLayout(layout.n_variables, layout.base, layout.level,

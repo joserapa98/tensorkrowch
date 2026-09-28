@@ -3,8 +3,7 @@
 from dataclasses import dataclass
 
 
-from typing import (Callable, Optional, Protocol, Sequence, Tuple, Union,
-                    runtime_checkable)
+from typing import Callable, Optional, Protocol, Sequence, Tuple, Union, runtime_checkable
 
 
 import torch
@@ -254,7 +253,7 @@ class QuantizedLayout:
             self,
             digits: torch.Tensor,
             target_ordering: Union[str, 'QuantizedLayout']
-            ) -> torch.Tensor:
+    ) -> torch.Tensor:
         """Reorders digit columns into another compatible layout."""
         if isinstance(target_ordering, str):
             target = QuantizedLayout(
@@ -771,4 +770,3 @@ class _CompositeCoordinateMap:
                     out_of_domain)
             values.append(value)
         return torch.cat(values, dim=-1)
-

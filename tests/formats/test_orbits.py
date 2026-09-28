@@ -43,3 +43,17 @@ def test_minimal_train_route(make_format):
     assert torch.allclose(network.contract_dense(), dense)
     with pytest.raises(ValueError):
         network.canonicalize_minimal(max_iter=0)
+
+
+def test_minimal_optional_convergence_information(make_format):
+    network = make_format('tr', 3)
+    _, info = network.canonicalize_minimal(max_iter=1, return_info=True)
+    assert info.iterations == 1
+    assert isinstance(info.converged, bool)
+    assert torch.isfinite(info.balance_residual)
+    zero = tk.formats.TensorRing([torch.zeros(1, 2, 1)])
+    _, info = zero.canonicalize_minimal(return_info=True)
+    assert info.converged and info.iterations == 0
+    assert info.balance_residual == 0
+    with pytest.raises(TypeError):
+        zero.canonicalize_minimal(return_info=1)

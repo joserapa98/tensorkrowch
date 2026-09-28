@@ -1,6 +1,6 @@
 """Raw-tensor TensorTrainMatrix format."""
 
-from typing import ClassVar, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 import torch
 from ._chain import _MatrixFormat1D
 from .tt import TensorTrain
@@ -18,16 +18,16 @@ class TensorTrainMatrix(_MatrixFormat1D):
 
     _topology = 'ttm'
 
-    def to_mpo(self, parameterized=False, **kwargs):
+    def to_mpo(self, parameterized: bool = False, **kwargs):
         """Builds an open-boundary MPO without detaching the effective cores."""
         from .adapters import to_mpo
         return to_mpo(self, parameterized, **kwargs)
 
     @classmethod
-    def from_mpo(cls, model):
+    def from_mpo(cls, model, **kwargs):
         """Collects effective open-boundary MPO tensors."""
         from .adapters import from_mpo
-        return cls(from_mpo(model, cyclic=False).cores)
+        return cls(from_mpo(model, cyclic=False).cores, **kwargs)
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -78,7 +78,6 @@ class TensorTrainMatrix(_MatrixFormat1D):
 
         return rank, (), tuple(in_dim), tuple(out_dim)
 
-
     def _raw_standard_cores(self) -> List[torch.Tensor]:
         if len(self.cores) == 1:
             core = self.cores[0]
@@ -97,14 +96,10 @@ class TensorTrainMatrix(_MatrixFormat1D):
         cores.append(last.reshape(last.shape[0], -1, 1))
         return cores
 
-
-
-
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         result = self._contract_open_chain(matrices)
         return result.squeeze(-1).squeeze(-1)
-
 
     def _build_applied_decomposition(
             self,

@@ -1,6 +1,6 @@
 """Raw-tensor TensorRingMatrix format."""
 
-from typing import ClassVar, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 import torch
 from ._chain import _MatrixFormat1D
 from .tr import TensorRing
@@ -9,22 +9,24 @@ from .tr import TensorRing
 class TensorRingMatrix(_MatrixFormat1D):
     """Lightweight cyclic raw-tensor network.
 
-    Cores use the reviewed decomposition layouts and retain tensor storage and
-    autograd. Numerical methods operate without TensorKrowch nodes or edges.
+    Every core has shape ``(*batch, left, input, right, output)`` and
+    adjacent ranks match through the cyclic closure. Structural batches are
+    independent of evaluation-data batches. Tensor storage and autograd are
+    retained without constructing TensorKrowch nodes or edges.
     """
 
     _topology = 'trm'
 
-    def to_mpo(self, parameterized=False, **kwargs):
+    def to_mpo(self, parameterized: bool = False, **kwargs):
         """Builds a periodic MPO; batched MPO cores are explicitly unsupported."""
         from .adapters import to_mpo
         return to_mpo(self, parameterized, **kwargs)
 
     @classmethod
-    def from_mpo(cls, model):
+    def from_mpo(cls, model, **kwargs):
         """Collects effective periodic MPO tensors."""
         from .adapters import from_mpo
-        return cls(from_mpo(model, cyclic=True).cores)
+        return cls(from_mpo(model, cyclic=True).cores, **kwargs)
 
     def rotate(self, first=0):
         """Returns a cyclic rotation with input/output pairs moving together."""
@@ -63,7 +65,6 @@ class TensorRingMatrix(_MatrixFormat1D):
                 'The last and first cyclic TRM ranks should match')
         return rank, batch_shape, tuple(in_dim), tuple(out_dim)
 
-
     def _raw_standard_cores(self) -> List[torch.Tensor]:
         cores = []
         for core in self.cores:
@@ -75,14 +76,10 @@ class TensorRingMatrix(_MatrixFormat1D):
                 core.shape[-1]))
         return cores
 
-
-
-
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         result = self._contract_open_chain(matrices)
         return result.diagonal(dim1=-2, dim2=-1).sum(-1)
-
 
     def _build_applied_decomposition(
             self,

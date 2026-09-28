@@ -8,7 +8,8 @@ from .bonds import VidalGauge
 
 def _redistribute(cores, gauge, powers):
     """Moves stored Schmidt powers between neighbours without another SVD."""
-    for site, (spectrum, old, new) in enumerate(zip(gauge.spectra, gauge.powers, powers)):
+    for site, (spectrum, old, new) in enumerate(
+        zip(gauge.spectra, gauge.powers, powers)):
         for neighbour, difference, left_axis in (
                 (site, new[0] - old[0], False),
                 (site + 1, new[1] - old[1], True)):
@@ -20,7 +21,8 @@ def _redistribute(cores, gauge, powers):
                                      torch.zeros_like(spectrum))
             else:
                 factor = spectrum.pow(difference)
-            factor = factor[..., :, None, None] if left_axis else factor[..., None, None, :]
+            factor = factor[..., :, None,
+                            None] if left_axis else factor[..., None, None, :]
             cores[neighbour] = cores[neighbour] * factor
     return cores, VidalGauge(gauge.spectra, powers)
 
@@ -54,7 +56,8 @@ def materialize_bonds(network, oc=None):
     return network
 
 
-def canonicalize_vidal(network, mode, inverse_positions, remaining_mode, inverse_cutoff):
+def canonicalize_vidal(network, mode, inverse_positions,
+                       remaining_mode, inverse_cutoff):
     from math import isfinite
     from numbers import Real
     from .operations import _build_network
@@ -76,7 +79,8 @@ def canonicalize_vidal(network, mode, inverse_positions, remaining_mode, inverse
         positions_list = list(inverse_positions)
         if mode == 'inverse':
             raise ValueError('Select either mode="inverse" or inverse_positions')
-        if any(isinstance(site, bool) or not isinstance(site, int) for site in positions_list):
+        if any(isinstance(site, bool) or not isinstance(site, int)
+               for site in positions_list):
             raise TypeError('Inverse bond positions should be integers')
         if len(set(positions_list)) != len(positions_list) or any(
                 site < 0 or site >= count for site in positions_list):
@@ -101,11 +105,12 @@ def canonicalize_vidal(network, mode, inverse_positions, remaining_mode, inverse
             if site:
                 previous = spectra[-1]
                 safe = torch.where(previous > 0, previous, torch.ones_like(previous))
-                inverse = torch.where(previous > 0, safe.reciprocal(), torch.zeros_like(previous))
+                inverse = torch.where(previous > 0, safe.reciprocal(),
+                                      torch.zeros_like(previous))
                 cores[site] = cores[site] * inverse[..., :, None, None]
             spectra.append(s)
             cores[site + 1] = torch.einsum('...ab,...bpr->...apr',
-                                         s.unsqueeze(-1) * vh, cores[site + 1])
+                                           s.unsqueeze(-1) * vh, cores[site + 1])
         if count:
             last = spectra[-1]
             safe = torch.where(last > 0, last, torch.ones_like(last))
@@ -114,7 +119,8 @@ def canonicalize_vidal(network, mode, inverse_positions, remaining_mode, inverse
         gauge = VidalGauge(spectra, [(0, 0)] * count)
     for site in positions:
         if torch.any(gauge.spectra[site] <= inverse_cutoff):
-            raise ValueError(f'Inverse Vidal bond {site} has values at or below inverse_cutoff')
+            raise ValueError(
+                f'Inverse Vidal bond {site} has values at or below inverse_cutoff')
     cores, gauge = _redistribute(cores, gauge, powers)
     network._set_standard_cores(cores, gauge)
     return network

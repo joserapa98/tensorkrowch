@@ -30,7 +30,7 @@ from .ttm import TensorTrainMatrix
 from .trm import TensorRingMatrix
 from .bonds import BondFactors, VidalGauge
 from .rounding import RoundingInfo
-from .orbits import GaugeOrbit, TensorRingOrbit
+from .orbits import GaugeOrbit, TensorRingOrbit, MinimalCanonicalInfo
 from .blocking import BlockLayout, UnblockInfo, SplitBlock, split_block
 from .quantization import (QuantizedLayout, CoordinateMap, UniformCoordinateMap,
                            WarpedCoordinateMap, ExplicitGridMap)
@@ -41,7 +41,7 @@ from .tucker import QTTTucker, QTRTucker
 __all__ = ['TensorFormat', 'TensorFormat1D', 'TensorFormat2D', 'TensorTrain',
            'TensorRing', 'TensorTrainMatrix', 'TensorRingMatrix', 'SampleError',
            'BondFactors', 'VidalGauge', 'RoundingInfo', 'GaugeOrbit',
-           'TensorRingOrbit', 'QuantizedLayout', 'CoordinateMap',
+           'TensorRingOrbit', 'MinimalCanonicalInfo', 'QuantizedLayout', 'CoordinateMap',
            'UniformCoordinateMap', 'WarpedCoordinateMap', 'ExplicitGridMap',
            'BlockLayout', 'UnblockInfo', 'SplitBlock', 'split_block',
            'QuanticsTensorTrain', 'QuanticsTensorRing',

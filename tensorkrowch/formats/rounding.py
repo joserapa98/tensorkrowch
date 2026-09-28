@@ -51,10 +51,12 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
         scale = torch.where(scale > 0, scale, torch.ones_like(scale))
         limit = torch.finfo(matrix.real.dtype).max
         local_cutoff = None if cutoff is None else min(cutoff / scale.item(), limit)
-        local_atol = None if atol is None else min(atol / scale.item() / scale.item(), limit)
+        local_atol = None if atol is None else min(
+            atol / scale.item() / scale.item(), limit)
         if delta is not None:
             value = (delta / scale).square().min().item()
-            local_atol = min(value, limit) if local_atol is None else min(local_atol, value)
+            local_atol = min(value, limit) if local_atol is None else min(
+                local_atol, value)
         result = truncated_svd(matrix / scale, rank=rank, cutoff=local_cutoff, atol=local_atol,
                                rtol=rtol, cum_percentage=cum_percentage,
                                return_info=collect)
@@ -88,7 +90,8 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
             errors = torch.stack(discarded_norms)
             scale = errors.amax(dim=0)
             safe = torch.where(scale > 0, scale, torch.ones_like(scale))
-            bound = torch.linalg.vector_norm(errors / safe, dim=0) * scale * sqrt(closing)
+            bound = torch.linalg.vector_norm(
+                errors / safe, dim=0) * scale * sqrt(closing)
         else:
             bound = network.cores[0].real.new_zeros(batch)
         if rel_error is not None:
@@ -98,5 +101,6 @@ def rounding(network, rank, cutoff, atol, rtol, cum_percentage,
                 warnings.warn('Truncation constraints exceed the requested global error budget',
                               UserWarning, stacklevel=2)
         if return_info:
-            return network, RoundingInfo(tuple(network.rank), tuple(records), bound, satisfied)
+            return network, RoundingInfo(
+                tuple(network.rank), tuple(records), bound, satisfied)
     return network

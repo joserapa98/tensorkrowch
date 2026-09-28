@@ -1,6 +1,6 @@
 """Raw-tensor TensorRing format."""
 
-from typing import ClassVar, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 import torch
 from ._chain import _VectorFormat1D, TensorFormat1D
 
@@ -8,23 +8,25 @@ from ._chain import _VectorFormat1D, TensorFormat1D
 class TensorRing(_VectorFormat1D):
     """Lightweight cyclic raw-tensor network.
 
-    Cores use the reviewed decomposition layouts and retain tensor storage and
-    autograd. Numerical methods operate without TensorKrowch nodes or edges.
+    Every core has shape ``(*batch, left, input, right)``. Adjacent ranks
+    match, including the last-to-first closure. A one-site ring is a trace
+    over its two virtual axes. Tensors retain storage and autograd without
+    constructing TensorKrowch nodes or edges.
     """
 
     _topology = 'tr'
 
-    def to_mps(self, parameterized=False, **kwargs):
+    def to_mps(self, parameterized: bool = False, **kwargs):
         """Builds periodic MPS or MPSData from effective cores."""
         from .adapters import to_mps
         return to_mps(self, parameterized, **kwargs)
 
     @classmethod
-    def from_mps(cls, model):
+    def from_mps(cls, model, **kwargs):
         """Collects effective periodic MPS/MPSData tensors."""
         from .adapters import from_mps
         result = from_mps(model, cyclic=True)
-        return cls(result.cores, n_batches=result.n_batches)
+        return cls(result.cores, n_batches=result.n_batches, **kwargs)
 
     def rotate(self, first=0):
         """Returns a cyclic rotation with the selected site first."""
@@ -59,10 +61,8 @@ class TensorRing(_VectorFormat1D):
             raise ValueError('The last and first cyclic TR ranks should match')
         return rank, batch_shape, tuple(in_dim), None
 
-
     def _raw_standard_cores(self) -> List[torch.Tensor]:
         return list(self.cores)
-
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:

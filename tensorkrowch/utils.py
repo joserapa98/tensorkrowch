@@ -340,48 +340,6 @@ def random_unitary(n,
     return q
 
 
-class _TruncatedSVDInfo(NamedTuple):
-    """Numerical diagnostics from one call to :func:`truncated_svd`."""
-
-    full_rank: int  # Rank available before truncation
-    selected_rank: int  # Rank retained after truncation
-    total_sq_norm: Tensor  # Total singular-value energy, optionally batched
-    discarded_sq_norm: Tensor  # Discarded energy, optionally batched
-    svd_method: Text  # Compact SVD implementation used
-
-
-def _validate_truncation(rank: Optional[int] = None,
-                         cutoff: Optional[float] = None,
-                         atol: Optional[float] = None,
-                         rtol: Optional[float] = None,
-                         cum_percentage: Optional[float] = None) -> None:
-    """Validates the truncation contract shared by SVD-based methods."""
-    if rank is not None:
-        if isinstance(rank, bool) or not isinstance(rank, int):
-            raise TypeError('`rank` should be int type')
-        if rank < 1:
-            raise ValueError('`rank` should be a positive integer')
-
-    for name, value in (('cutoff', cutoff), ('atol', atol)):
-        if value is None:
-            continue
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise TypeError(f'`{name}` should be a real number')
-        if (value < 0) or not isfinite(value):
-            raise ValueError(
-                f'`{name}` should be a finite non-negative number')
-
-    for name, value in (('rtol', rtol),
-                        ('cum_percentage', cum_percentage)):
-        if value is None:
-            continue
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise TypeError(f'`{name}` should be a real number')
-        if (value < 0) or (value > 1) or not isfinite(value):
-            raise ValueError(
-                f'`{name}` should be a finite number between 0 and 1')
-
-
 def _backend_svd(tensor: Tensor,
                  svd_method: Text) -> Tuple[Tensor, Tensor, Tensor]:
     """Computes an economy-size SVD without consulting refinement settings."""
@@ -450,6 +408,7 @@ def accurate_svd(tensor: Tensor,
     a smaller matrix, recomputes its SVD and updates the associated singular
     vectors. This repeats only when the smaller matrix still has a separated
     tail, up to the recursion limit.
+
     This can improve relative accuracy in the tail, but cannot recover values
     lost when forming the input or guarantee relative accuracy below its
     floating-point resolution. No singular values are truncated or inverted.
@@ -544,6 +503,48 @@ def accurate_svd(tensor: Tensor,
     return (torch.stack([item[0] for item in refined]).reshape(u.shape),
             torch.stack([item[1] for item in refined]).reshape(s.shape),
             torch.stack([item[2] for item in refined]).reshape(vh.shape))
+
+
+class _TruncatedSVDInfo(NamedTuple):
+    """Numerical diagnostics from one call to :func:`truncated_svd`."""
+
+    full_rank: int  # Rank available before truncation
+    selected_rank: int  # Rank retained after truncation
+    total_sq_norm: Tensor  # Total singular-value energy, optionally batched
+    discarded_sq_norm: Tensor  # Discarded energy, optionally batched
+    svd_method: Text  # Compact SVD implementation used
+
+
+def _validate_truncation(rank: Optional[int] = None,
+                         cutoff: Optional[float] = None,
+                         atol: Optional[float] = None,
+                         rtol: Optional[float] = None,
+                         cum_percentage: Optional[float] = None) -> None:
+    """Validates the truncation contract shared by SVD-based methods."""
+    if rank is not None:
+        if isinstance(rank, bool) or not isinstance(rank, int):
+            raise TypeError('`rank` should be int type')
+        if rank < 1:
+            raise ValueError('`rank` should be a positive integer')
+
+    for name, value in (('cutoff', cutoff), ('atol', atol)):
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f'`{name}` should be a real number')
+        if (value < 0) or not isfinite(value):
+            raise ValueError(
+                f'`{name}` should be a finite non-negative number')
+
+    for name, value in (('rtol', rtol),
+                        ('cum_percentage', cum_percentage)):
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f'`{name}` should be a real number')
+        if (value < 0) or (value > 1) or not isfinite(value):
+            raise ValueError(
+                f'`{name}` should be a finite number between 0 and 1')
 
 
 def _compact_svd(tensor: Tensor,

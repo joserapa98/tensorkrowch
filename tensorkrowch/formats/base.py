@@ -7,6 +7,34 @@ from typing import Callable, Optional, Union
 import torch
 
 
+@dataclass(frozen=True)
+class SampleError:
+    r"""Stores sample errors while preserving tensor storage and autograd.
+
+    Frozen record: field references cannot be reassigned. Tensor contents and
+    autograd are preserved without copying or detaching.
+
+    Parameters
+    ----------
+    kind : str
+        Target on which error was measured.
+    absolute : torch.Tensor
+        Absolute norm error, retaining tensor storage and autograd.
+    relative : torch.Tensor, optional
+        Relative norm error, when provided.
+    size : int, optional
+        Number of represented sample contributions.
+    denominator : torch.Tensor, optional
+        Norm used to normalize relative error.
+    """
+
+    kind: str  # Target on which the error was measured
+    absolute: torch.Tensor  # Absolute error, optionally resolved by batch
+    relative: Optional[torch.Tensor] = None  # Relative error with same shape
+    size: Optional[int] = None  # Number of contributions represented
+    denominator: Optional[torch.Tensor] = None  # Norm used for relative error
+
+
 class _SafeList(list):
     """Fixed-length list that validates replacements through a callback."""
 
@@ -36,34 +64,6 @@ class _SafeList(list):
 
     append = extend = insert = pop = remove = clear = _structural_error
     reverse = sort = __delitem__ = __iadd__ = __imul__ = _structural_error
-
-
-@dataclass(frozen=True)
-class SampleError:
-    r"""Stores sample errors while preserving tensor storage and autograd.
-
-    Frozen record: field references cannot be reassigned. Tensor contents and
-    autograd are preserved without copying or detaching.
-
-    Parameters
-    ----------
-    kind : str
-        Target on which error was measured.
-    absolute : torch.Tensor
-        Absolute norm error, retaining tensor storage and autograd.
-    relative : torch.Tensor, optional
-        Relative norm error, when provided.
-    size : int, optional
-        Number of represented sample contributions.
-    denominator : torch.Tensor, optional
-        Norm used to normalize relative error.
-    """
-
-    kind: str  # Target on which the error was measured
-    absolute: torch.Tensor  # Absolute error, optionally resolved by batch
-    relative: Optional[torch.Tensor] = None  # Relative error with same shape
-    size: Optional[int] = None  # Number of contributions represented
-    denominator: Optional[torch.Tensor] = None  # Norm used for relative error
 
 
 class TensorFormat(ABC):

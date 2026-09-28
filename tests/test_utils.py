@@ -455,6 +455,60 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
 class TestAccurateSVD:  # MARK: TestAccurateSVD
 
     @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64,
+                                      torch.complex64, torch.complex128])
+    @pytest.mark.parametrize('seed', [0, 1, 2])
+    def test_reconstruction_against_standard_svd(self, method, dtype, seed,
+                                                 record_property):
+        generator = torch.Generator().manual_seed(seed)
+        u = tk.utils.random_unitary(16, dtype=dtype, generator=generator)
+        v = tk.utils.random_unitary(16, dtype=dtype, generator=generator)
+        end = -7 if dtype in (torch.float32, torch.complex64) else -16
+        spectrum = torch.logspace(0, end, 16, dtype=u.real.dtype)
+        tensor = (u * spectrum) @ _adjoint(v)
+        ordinary = torch.linalg.svd(tensor, full_matrices=False)
+        with tk.svd_method(method):
+            refined = tk.utils.accurate_svd(tensor)
+
+        ordinary_error = (_reconstruct_svd(*ordinary) - tensor).norm() / tensor.norm()
+        refined_error = (_reconstruct_svd(*refined) - tensor).norm() / tensor.norm()
+        record_property('ordinary_reconstruction_error', ordinary_error.item())
+        record_property('refined_reconstruction_error', refined_error.item())
+        # Relative accuracy of the tail does not imply a smaller global residual.
+        tolerance = 32 * torch.finfo(spectrum.dtype).eps
+        assert ordinary_error < tolerance
+        assert refined_error < tolerance
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64,
+                                      torch.complex64, torch.complex128])
+    @pytest.mark.parametrize('seed', [0, 1, 2])
+    def test_prescribed_spectrum_against_standard_svd(self, method, dtype, seed,
+                                                     record_property):
+        generator = torch.Generator().manual_seed(seed)
+        u = tk.utils.random_unitary(16, dtype=dtype, generator=generator)
+        # Mix neighbouring scales only on the right to preserve tiny columns
+        # when forming the input, rather than burying them under rounding noise.
+        v = torch.block_diag(*[
+            tk.utils.random_unitary(2, dtype=dtype, generator=generator)
+            for _ in range(8)])
+        spectrum = torch.logspace(0, -28, 16, dtype=u.real.dtype)
+        tensor = (u * spectrum) @ _adjoint(v)
+        ordinary = torch.linalg.svdvals(tensor)
+        with tk.svd_method(method):
+            _, refined, _ = tk.utils.accurate_svd(tensor)
+
+        ordinary_error = ((ordinary - spectrum).abs() / spectrum).max()
+        refined_error = ((refined - spectrum).abs() / spectrum).max()
+        record_property('ordinary_spectrum_relative_error', ordinary_error.item())
+        record_property('refined_spectrum_relative_error', refined_error.item())
+        # Both errors are recorded: refinement is not guaranteed to improve
+        # an already accurate backend on every matrix or platform.
+        tolerance = 256 * torch.finfo(spectrum.dtype).eps
+        assert ordinary_error < tolerance
+        assert refined_error < tolerance
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
     def test_active_backend_and_refinement(self, method, monkeypatch):
         tensor = torch.diag(torch.tensor([1., 1e-6, 1e-12], dtype=torch.float64))
         original_backend = tk.utils._backend_svd

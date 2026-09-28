@@ -198,7 +198,7 @@ class _QuanticsVector:
         result.domain = _map_structure(self.domain, function)
         return result
 
-    def _same_auxiliary_tensors(self, other):
+    def _same_aux_tensors(self, other):
         return _same_references(self.coordinate_map, other.coordinate_map) and \
             _same_references(self.domain, other.domain)
 
@@ -342,7 +342,7 @@ class _QuanticsMatrix:
             setattr(result, name, _map_structure(getattr(self, name), function))
         return result
 
-    def _same_auxiliary_tensors(self, other):
+    def _same_aux_tensors(self, other):
         return all(_same_references(getattr(self, name), getattr(other, name)) for name in (
             'in_coordinate_map', 'out_coordinate_map', 'in_domain', 'out_domain'))
 

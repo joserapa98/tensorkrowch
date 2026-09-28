@@ -1,6 +1,7 @@
 """Shared raw-tensor chain operations, independent of decomposition engines."""
 
 from abc import abstractmethod
+from copy import copy
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import torch
@@ -8,8 +9,16 @@ import torch
 from tensorkrowch.formats.base import TensorFormat, SampleError
 from tensorkrowch.formats.bonds import VidalGauge
 
+
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
-_INTEGER_DTYPES = (torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
+
+_INTEGER_DTYPES = (
+    torch.uint8,
+    torch.int8,
+    torch.int16,
+    torch.int32,
+    torch.int64
+)
 
 
 class _CoreList(list):
@@ -21,10 +30,12 @@ class _CoreList(list):
 
     def __setitem__(self, key, value):
         values = list(value) if isinstance(key, slice) else [value]
+
         if not all(isinstance(core, torch.Tensor) for core in values):
             raise TypeError('`cores` should contain torch.Tensor objects')
-        if isinstance(key, slice) and len(values) != len(self[key]):
+        if isinstance(key, slice) and (len(values) != len(self[key])):
             raise ValueError('Core slice replacement should preserve length')
+
         super().__setitem__(key, values if isinstance(key, slice) else value)
         self._owner._dirty = True
         self._owner._orth_center = None
@@ -55,6 +66,7 @@ class TensorFormat1D(TensorFormat):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
             raise ValueError('`n_batches` should be non-negative')
+
         self._n_batches = n_batches
         self._dirty = True
         self._orth_center = None
@@ -70,16 +82,19 @@ class TensorFormat1D(TensorFormat):
     def cores(self, cores: Sequence[torch.Tensor]):
         if isinstance(cores, torch.Tensor):
             raise TypeError('`cores` should be a sequence of torch.Tensor objects')
+
         cores = list(cores)
         previous = self.__dict__.copy()
         self._cores = _CoreList(cores, self)
         self._dirty = True
+
         try:
             self.validate()
         except (TypeError, ValueError):
             self.__dict__.clear()
             self.__dict__.update(previous)
             raise
+
         self._orth_center = None
 
     @property
@@ -93,6 +108,7 @@ class TensorFormat1D(TensorFormat):
             raise ValueError('`cores` should contain at least one tensor')
         if not all(isinstance(core, torch.Tensor) for core in self._cores):
             raise TypeError('`cores` should contain torch.Tensor objects')
+
         device, dtype = self._cores[0].device, self._cores[0].dtype
         for core in self._cores:
             if any(dim < 1 for dim in core.shape):
@@ -101,18 +117,23 @@ class TensorFormat1D(TensorFormat):
                 raise ValueError('All cores should be on the same device')
             if core.dtype != dtype:
                 raise ValueError('All cores should have the same dtype')
+
         rank, batch_shape, in_dim, out_dim = self._validate_cores()
+
         self._rank = tuple(rank)
         self._batch_shape = batch_shape
+        self._dirty = False
+
         self._in_dim = in_dim
         self._out_dim = out_dim
         self._same_in_dim = all(dim == in_dim[0] for dim in in_dim)
         self._same_out_dim = out_dim is None or all(
             dim == out_dim[0] for dim in out_dim)
+
         if self._bonds is not None:
             self._bonds.validate(self._raw_standard_cores(),
                                  self._topology.startswith('tr'))
-        self._dirty = False
+
         return self
 
     def _ensure_valid(self):
@@ -120,8 +141,6 @@ class TensorFormat1D(TensorFormat):
             self.validate()
 
     def _map_tensors(self, function):
-        from copy import copy
-
         self._ensure_valid()
         result = copy(self)
         result._cores = _CoreList([function(core) for core in self._cores], result)
@@ -129,11 +148,13 @@ class TensorFormat1D(TensorFormat):
             result._bonds = self._bonds._map_tensors(function)
         return result
 
-    def _same_auxiliary_tensors(self, other):
+    def _same_aux_tensors(self, other):
         return True
 
-    def to(self, device: Optional[Union[str, torch.device]] = None,
-           dtype: Optional[torch.dtype] = None, copy: bool = False):
+    def to(self,
+           device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None,
+           copy: bool = False):
         """Returns a conversion preserving the concrete class and autograd.
 
         With copy=False, a no-op conversion returns self. Unsupported device
@@ -143,13 +164,18 @@ class TensorFormat1D(TensorFormat):
             raise TypeError('`dtype` should be torch.dtype type')
         if not isinstance(copy, bool):
             raise TypeError('`copy` should be bool type')
+
         result = self._map_tensors(lambda tensor: tensor.to(
             device=device, dtype=dtype, copy=copy))
+
+        same_cores = all(
+            new is old for new, old in zip(result._cores, self._cores))
         same_bonds = self._bonds is None or all(
             new is old for new, old in zip(result._bonds.values, self._bonds.values))
-        if not copy and same_bonds and self._same_auxiliary_tensors(result) and all(
-            new is old for new, old in zip(result._cores, self._cores)):
+
+        if not copy and same_cores and same_bonds and self._same_aux_tensors(result):
             return self
+
         result.validate()
         return result
 

@@ -38,7 +38,7 @@ def test_mixed_inverse_bonds_and_zero(make_format):
     network.canonicalize_vidal(inverse_positions=[1], remaining_mode='explicit')
     assert network.bonds.powers == [(0, 0), (1, 1), (0, 0)]
     assert torch.allclose(network.materialize_bonds(oc=2).contract_dense(), dense)
-    zero = tk.formats.TensorTrain([torch.zeros(2, 2), torch.ones(2, 3)])
+    zero = tk.formats.TT([torch.zeros(2, 2), torch.ones(2, 3)])
     for mode in ['explicit', 'implicit']:
         result = zero.copy().canonicalize_vidal(mode)
         assert torch.isfinite(result.contract_dense()).all()

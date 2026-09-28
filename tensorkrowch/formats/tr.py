@@ -1,11 +1,11 @@
-"""Raw-tensor TensorRing format."""
+"""Raw-tensor TR format."""
 
 from typing import List, Optional, Sequence, Tuple
 import torch
 from ._chain import _VectorFormat1D, TensorFormat1D
 
 
-class TensorRing(_VectorFormat1D):
+class TR(_VectorFormat1D):
     """Lightweight cyclic raw-tensor network.
 
     Every core has shape ``(*batch, left, input, right)``. Adjacent ranks

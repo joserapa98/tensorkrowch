@@ -1,12 +1,12 @@
-"""Raw-tensor TensorRingMatrix format."""
+"""Raw-tensor TRM format."""
 
 from typing import List, Optional, Sequence, Tuple
 import torch
 from ._chain import _MatrixFormat1D
-from .tr import TensorRing
+from .tr import TR
 
 
-class TensorRingMatrix(_MatrixFormat1D):
+class TRM(_MatrixFormat1D):
     """Lightweight cyclic raw-tensor network.
 
     Every core has shape ``(*batch, left, input, right, output)`` and
@@ -84,7 +84,7 @@ class TensorRingMatrix(_MatrixFormat1D):
     def _build_applied_decomposition(
             self,
             cores: List[torch.Tensor],
-            n_batches: int) -> TensorRing:
-        return TensorRing(
+            n_batches: int) -> TR:
+        return TR(
             cores=cores,
             n_batches=n_batches)

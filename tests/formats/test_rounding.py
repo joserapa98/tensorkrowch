@@ -21,16 +21,16 @@ def test_exact_rounding(make_format, topology, n_sites, method):
 
 def test_known_spectrum_and_budget():
     diagonal = torch.diag(torch.tensor([4., 2., 1., 0.1], dtype=torch.float64))
-    network = tk.formats.TensorTrain([diagonal, torch.eye(4, dtype=diagonal.dtype)])
+    network = tk.formats.TT([diagonal, torch.eye(4, dtype=diagonal.dtype)])
     expected = diagonal.clone()
     expected[2:, 2:] = 0
     network.rounding(rank=2)
     assert torch.allclose(network.contract_dense(), expected)
-    full = tk.formats.TensorTrain([diagonal, torch.eye(4, dtype=diagonal.dtype)])
+    full = tk.formats.TT([diagonal, torch.eye(4, dtype=diagonal.dtype)])
     _, info = full.rounding(rel_error=0.03, return_info=True)
     assert info.bound_satisfied
     assert (full.contract_dense() - diagonal).norm() <= 0.03 * diagonal.norm()
-    full = tk.formats.TensorTrain([diagonal, torch.eye(4, dtype=diagonal.dtype)])
+    full = tk.formats.TT([diagonal, torch.eye(4, dtype=diagonal.dtype)])
     with pytest.warns(UserWarning, match='budget'):
         _, info = full.rounding(rank=1, rel_error=1e-5, return_info=True)
     assert not info.bound_satisfied
@@ -52,7 +52,7 @@ def test_stacked_cyclic_sum_compresses(make_format):
 @pytest.mark.parametrize('scale', [1e-200, 1e200])
 def test_rounding_extreme_scales(scale):
     diagonal = torch.diag(torch.tensor([4., 2., 1., 0.1], dtype=torch.float64)) * scale
-    network = tk.formats.TensorTrain([diagonal, torch.eye(4, dtype=diagonal.dtype)])
+    network = tk.formats.TT([diagonal, torch.eye(4, dtype=diagonal.dtype)])
     _, info = network.rounding(rtol=0.001, rel_error=0.03, return_info=True)
     assert network.rank == [3]
     assert info.bound_satisfied
@@ -65,4 +65,4 @@ def test_rounding_extreme_scales(scale):
                                    {'cutoff': float('nan')}, {'return_info': 1}])
 def test_invalid_even_one_site(kwargs):
     with pytest.raises((TypeError, ValueError)):
-        tk.formats.TensorTrain([torch.ones(2)]).rounding(**kwargs)
+        tk.formats.TT([torch.ones(2)]).rounding(**kwargs)

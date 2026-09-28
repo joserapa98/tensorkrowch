@@ -309,20 +309,20 @@ class MPSData(TensorNetwork):  # MARK: MPSData
     # -------
     def to_tt(self):
         """Returns a lightweight batched TT from open data tensors."""
-        from tensorkrowch.formats import TensorTrain
-        return TensorTrain.from_mps(self)
+        from tensorkrowch.formats import TT
+        return TT.from_mps(self)
 
     def to_tr(self):
         """Returns a lightweight batched TR from periodic data tensors."""
-        from tensorkrowch.formats import TensorRing
-        return TensorRing.from_mps(self)
+        from tensorkrowch.formats import TR
+        return TR.from_mps(self)
 
     @classmethod
     def from_tt(cls, tensor_train, **kwargs):
         """Constructs MPSData from a batched open tensor format."""
-        from tensorkrowch.formats import TensorTrain
-        if not isinstance(tensor_train, TensorTrain):
-            raise TypeError('`tensor_train` should be TensorTrain type')
+        from tensorkrowch.formats import TT
+        if not isinstance(tensor_train, TT):
+            raise TypeError('`tensor_train` should be TT type')
         from tensorkrowch.formats.operations import _build_network
         effective = _build_network(tensor_train._standard_cores(),
                                    tensor_train.in_dim, None,
@@ -332,9 +332,9 @@ class MPSData(TensorNetwork):  # MARK: MPSData
     @classmethod
     def from_tr(cls, tensor_ring, **kwargs):
         """Constructs MPSData from a batched cyclic tensor format."""
-        from tensorkrowch.formats import TensorRing
-        if not isinstance(tensor_ring, TensorRing):
-            raise TypeError('`tensor_ring` should be TensorRing type')
+        from tensorkrowch.formats import TR
+        if not isinstance(tensor_ring, TR):
+            raise TypeError('`tensor_ring` should be TR type')
         from tensorkrowch.formats.operations import _build_network
         effective = _build_network(tensor_ring._standard_cores(),
                                    tensor_ring.in_dim, None,

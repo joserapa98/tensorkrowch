@@ -10,11 +10,11 @@ def test_tucker_factor_contraction_and_copy(cyclic):
     generator = torch.Generator().manual_seed(20)
     dtype = torch.float64
     factor_values = [torch.randn(2, 2, 2, dtype=dtype, generator=generator) for _ in range(2)]
-    factors = [tk.formats.TensorTrain(tk.decompositions.tt_svd(value, out_device=None))
+    factors = [tk.formats.TT(tk.decompositions.tt_svd(value, out_device=None))
                for value in factor_values]
     upper_dense = torch.randn(2, 3, 2, dtype=dtype, generator=generator)
     engine = tk.decompositions.tr_svd if cyclic else tk.decompositions.tt_svd
-    upper_cls = tk.formats.TensorRing if cyclic else tk.formats.TensorTrain
+    upper_cls = tk.formats.TR if cyclic else tk.formats.TT
     upper = upper_cls(engine(upper_dense, out_device=None))
     cls = tk.formats.QTRTucker if cyclic else tk.formats.QTTTucker
     network = cls(upper, factors, tk.formats.QuantizedLayout(2, 2, 2),

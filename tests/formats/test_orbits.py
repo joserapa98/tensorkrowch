@@ -13,7 +13,7 @@ def test_ring_gauge_cancellation_and_balancing(make_format, dtype):
     orbit = TensorRingOrbit(network)
     gauges = [torch.diag(torch.linspace(1, 2, rank, dtype=torch.float64)).to(dtype)
               for rank in network.rank]
-    transformed = tk.formats.TensorRing(orbit.apply(gauges))
+    transformed = tk.formats.TR(orbit.apply(gauges))
     assert torch.allclose(transformed.contract_dense(), dense)
     transformed.cores[0].requires_grad_()
     before = sum(core.abs().square().sum() for core in transformed.cores)

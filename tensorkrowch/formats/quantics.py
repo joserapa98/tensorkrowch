@@ -8,10 +8,10 @@ import torch
 
 from .quantization import (QuantizedLayout, CoordinateMap, _CompositeCoordinateMap,
                            _unit_to_indices)
-from .tt import TensorTrain
-from .tr import TensorRing
-from .ttm import TensorTrainMatrix
-from .trm import TensorRingMatrix
+from .tt import TT
+from .tr import TR
+from .ttm import TTM
+from .trm import TRM
 
 
 def _map_structure(value, function):
@@ -110,13 +110,13 @@ def _inherit_semantics(result, first, second=None, product=False):
                    out_of_domain=first.out_of_domain)
     cyclic = result._topology.startswith('tr')
     if result._out_dim is not None:
-        cls = QuanticsTensorRingMatrix if cyclic else QuanticsTensorTrainMatrix
+        cls = QTRM if cyclic else QTTM
         inputs = second if product else first
         wrapped = cls(result.cores, inputs.in_layout, first.out_layout,
                       inputs.in_coordinate_map, first.out_coordinate_map,
                       inputs.in_domain, first.out_domain, **options)
     else:
-        cls = QuanticsTensorRing if cyclic else QuanticsTensorTrain
+        cls = QTR if cyclic else QTT
         if product and isinstance(first, _QuanticsMatrix):
             layout, coordinate_map, domain = first.out_layout, first.out_coordinate_map, first.out_domain
             positions = None
@@ -263,24 +263,24 @@ class _QuanticsVector:
         return result
 
 
-class QuanticsTensorTrain(_QuanticsVector, TensorTrain):
+class QTT(_QuanticsVector, TT):
     """A tensor train plus the physical meaning of its digit sites."""
 
     def as_tt(self):
         """Drops coordinate semantics deliberately, retaining the raw network."""
-        return self._as_vector(TensorTrain)
+        return self._as_vector(TT)
 
 
-class QuanticsTensorRing(_QuanticsVector, TensorRing):
+class QTR(_QuanticsVector, TR):
     """A tensor ring plus the physical meaning of its digit sites."""
 
     def as_tr(self):
         """Drops coordinate semantics deliberately, retaining the raw network."""
-        return self._as_vector(TensorRing)
+        return self._as_vector(TR)
 
     def to_tt(self):
         base = self.as_tr().to_tt()
-        return QuanticsTensorTrain(base.cores, self.layout, self.coordinate_map,
+        return QTT(base.cores, self.layout, self.coordinate_map,
                                    self.domain, digit_positions=self.digit_positions,
                                    n_batches=self._n_batches,
                                    computational_grid=self.computational_grid,
@@ -290,7 +290,7 @@ class QuanticsTensorRing(_QuanticsVector, TensorRing):
         base = self.as_tr().rotate(first)
         positions = tuple((site - first) %
                           self.n_sites for site in self.digit_positions)
-        result = QuanticsTensorRing(base.cores, self.layout, self.coordinate_map,
+        result = QTR(base.cores, self.layout, self.coordinate_map,
                                     self.domain, digit_positions=positions,
                                     n_batches=self._n_batches,
                                     computational_grid=self.computational_grid,
@@ -381,8 +381,8 @@ class _QuanticsMatrix:
 
     def transpose(self):
         base = super().transpose()
-        cls = QuanticsTensorRingMatrix if self._topology.startswith(
-            'tr') else QuanticsTensorTrainMatrix
+        cls = QTRM if self._topology.startswith(
+            'tr') else QTTM
         result = cls(base.cores, self.out_layout, self.in_layout,
                      self.out_coordinate_map, self.in_coordinate_map,
                      self.out_domain, self.in_domain, n_batches=self._n_batches,
@@ -398,26 +398,26 @@ class _QuanticsMatrix:
         return _inherit_semantics(result, self, product=True)
 
 
-class QuanticsTensorTrainMatrix(_QuanticsMatrix, TensorTrainMatrix):
+class QTTM(_QuanticsMatrix, TTM):
     """Open-chain operator with separate input/output Quantics layouts."""
 
     def as_ttm(self):
-        result = TensorTrainMatrix(self.cores, n_batches=self._n_batches)
+        result = TTM(self.cores, n_batches=self._n_batches)
         result._bonds = self._bonds
         return result
 
 
-class QuanticsTensorRingMatrix(_QuanticsMatrix, TensorRingMatrix):
+class QTRM(_QuanticsMatrix, TRM):
     """Cyclic operator with separate input/output Quantics layouts."""
 
     def as_trm(self):
-        result = TensorRingMatrix(self.cores, n_batches=self._n_batches)
+        result = TRM(self.cores, n_batches=self._n_batches)
         result._bonds = self._bonds
         return result
 
     def to_ttm(self):
         base = self.as_trm().to_ttm()
-        return QuanticsTensorTrainMatrix(base.cores, self.in_layout, self.out_layout,
+        return QTTM(base.cores, self.in_layout, self.out_layout,
                                          self.in_coordinate_map, self.out_coordinate_map,
                                          self.in_domain, self.out_domain, n_batches=self._n_batches,
                                          computational_grid=self.computational_grid,
@@ -431,7 +431,7 @@ class QuanticsTensorRingMatrix(_QuanticsMatrix, TensorRingMatrix):
             return QuantizedLayout(layout.n_variables, layout.base, layout.level,
                                    ordering='custom', digit_order=layout.digit_order,
                                    permutation=(*schedule[first:], *schedule[:first]))
-        result = QuanticsTensorRingMatrix(base.cores, rotated_layout(self.in_layout),
+        result = QTRM(base.cores, rotated_layout(self.in_layout),
                                           rotated_layout(self.out_layout),
                                           self.in_coordinate_map, self.out_coordinate_map,
                                           self.in_domain, self.out_domain,

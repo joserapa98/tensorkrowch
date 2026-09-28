@@ -7,10 +7,10 @@ import torch
 
 def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
     """Restores public vector/matrix endpoints from standard fused cores."""
-    from .tt import TensorTrain
-    from .tr import TensorRing
-    from .ttm import TensorTrainMatrix
-    from .trm import TensorRingMatrix
+    from .tt import TT
+    from .tr import TR
+    from .ttm import TTM
+    from .trm import TRM
     stored = []
     for site, core in enumerate(cores):
         if out_dim is not None:
@@ -23,8 +23,8 @@ def _build_network(cores, in_dim, out_dim, n_batches, cyclic):
             if site == len(cores) - 1:
                 core = core.squeeze(-2 if out_dim is not None else -1)
         stored.append(core)
-    cls = (TensorRingMatrix if cyclic else TensorTrainMatrix) if out_dim is not None else (
-        TensorRing if cyclic else TensorTrain)
+    cls = (TRM if cyclic else TTM) if out_dim is not None else (
+        TR if cyclic else TT)
     return cls(stored, n_batches=n_batches)
 
 

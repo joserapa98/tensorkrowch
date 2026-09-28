@@ -1511,7 +1511,7 @@ def renormalize(
     --------
     >>> nodeA = tk.randn((3, 3))
     >>> renormA = tk.renormalize(nodeA)
-    >>> renormA.norm()  # doctest: +SKIP
+    >>> renormA.norm()
     tensor(1.)
     """
     return renormalize_op(node, p, axis)

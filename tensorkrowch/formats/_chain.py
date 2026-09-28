@@ -103,6 +103,12 @@ class TensorFormat1D(TensorFormat):
         """Number of leading structural batch axes."""
         return self._n_batches
 
+    @abstractmethod
+    def _validate_cores(
+            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
+                           Optional[Tuple[int, ...]]]:
+        """Validates cores and returns rank, batch, input and output dims."""
+
     def validate(self):
         """Validates the complete network and refreshes cached metadata."""
         if not self._cores:
@@ -194,6 +200,10 @@ class TensorFormat1D(TensorFormat):
         if self._bonds is not None:
             self._bonds = self._bonds._map_tensors(lambda tensor: tensor.detach())
         return self
+
+    @abstractmethod
+    def _raw_standard_cores(self) -> List[torch.Tensor]:
+        """Returns (*batch, left, physical, right) cores without bond factors."""
 
     def _standard_cores(self):
         self._ensure_valid()
@@ -485,16 +495,6 @@ class TensorFormat1D(TensorFormat):
         """Topology identifier used in serialized result information."""
         self._ensure_valid()
         return self._topology
-
-    @abstractmethod
-    def _validate_cores(
-            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
-                           Optional[Tuple[int, ...]]]:
-        """Validates cores and returns rank, batch, input and output dims."""
-
-    @abstractmethod
-    def _raw_standard_cores(self) -> List[torch.Tensor]:
-        """Returns (*batch, left, physical, right) cores without bond factors."""
 
     def _normalize_data(
             self,

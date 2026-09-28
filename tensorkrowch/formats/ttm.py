@@ -85,7 +85,7 @@ class TensorTrainMatrix(_MatrixFormat1D):
         return cores
 
 
-    def _operator_cores(self) -> List[torch.Tensor]:
+    def _raw_operator_cores(self) -> List[torch.Tensor]:
         """Returns cores with separate left, input, right and output axes."""
         if len(self.cores) == 1:
             return [self.cores[0].unsqueeze(0).unsqueeze(2)]

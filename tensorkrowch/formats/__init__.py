@@ -21,6 +21,8 @@ from .tt import TensorTrain
 from .tr import TensorRing
 from .ttm import TensorTrainMatrix
 from .trm import TensorRingMatrix
+from .bonds import BondFactors, VidalGauge
 
 __all__ = ['TensorFormat', 'TensorFormat1D', 'TensorFormat2D', 'TensorTrain',
-           'TensorRing', 'TensorTrainMatrix', 'TensorRingMatrix', 'SampleError']
+           'TensorRing', 'TensorTrainMatrix', 'TensorRingMatrix', 'SampleError',
+           'BondFactors', 'VidalGauge']

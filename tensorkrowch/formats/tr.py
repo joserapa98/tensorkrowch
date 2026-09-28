@@ -14,6 +14,16 @@ class TensorRing(_VectorFormat1D):
 
     _topology = 'tr'
 
+    def rotate(self, first=0):
+        """Returns a cyclic rotation with the selected site first."""
+        from .adapters import rotate
+        return rotate(self, first)
+
+    def to_tt(self):
+        """Returns an exact TT with the closing bond carried through identities."""
+        from .adapters import ring_to_train
+        return ring_to_train(self)
+
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
@@ -46,5 +56,4 @@ class TensorRing(_VectorFormat1D):
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         result = self._contract_open_chain(matrices)
         return result.diagonal(dim1=-2, dim2=-1).sum(-1)
-
 

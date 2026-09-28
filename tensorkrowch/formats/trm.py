@@ -16,6 +16,16 @@ class TensorRingMatrix(_MatrixFormat1D):
 
     _topology = 'trm'
 
+    def rotate(self, first=0):
+        """Returns a cyclic rotation with input/output pairs moving together."""
+        from .adapters import rotate
+        return rotate(self, first)
+
+    def to_ttm(self):
+        """Returns the exact open-chain matrix carrying the closing index."""
+        from .adapters import ring_to_train
+        return ring_to_train(self)
+
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
@@ -56,7 +66,7 @@ class TensorRingMatrix(_MatrixFormat1D):
         return cores
 
 
-    def _operator_cores(self) -> List[torch.Tensor]:
+    def _raw_operator_cores(self) -> List[torch.Tensor]:
         """Returns cores with separate left, input, right and output axes."""
         return list(self.cores)
 
@@ -74,5 +84,4 @@ class TensorRingMatrix(_MatrixFormat1D):
         return TensorRing(
             cores=cores,
             n_batches=n_batches)
-
 

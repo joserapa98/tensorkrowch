@@ -6,6 +6,7 @@ from typing import Any, Callable, ClassVar, Dict, List, Optional, Sequence, Tupl
 import torch
 
 from .base import TensorFormat, SampleError
+from .bonds import VidalGauge
 
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
 _INTEGER_DTYPES = (torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
@@ -26,6 +27,8 @@ class _CoreList(list):
         super().__setitem__(key, values if isinstance(key, slice) else value)
         self._owner._dirty = True
         self._owner._orth_center = None
+        if isinstance(self._owner._bonds, VidalGauge):
+            self._owner._bonds._valid = False
 
     def _structural_error(self, *args, **kwargs):
         raise TypeError('Use the full cores setter to change the network structure')
@@ -104,6 +107,8 @@ class TensorFormat1D(TensorFormat):
         self._out_dim = out_dim
         self._same_in_dim = all(dim == in_dim[0] for dim in in_dim)
         self._same_out_dim = out_dim is None or all(dim == out_dim[0] for dim in out_dim)
+        if self._bonds is not None:
+            self._bonds.validate(self._raw_standard_cores(), self._topology.startswith('tr'))
         self._dirty = False
         return self
 
@@ -116,6 +121,8 @@ class TensorFormat1D(TensorFormat):
         self._ensure_valid()
         result = copy(self)
         result._cores = _CoreList([function(core) for core in self._cores], result)
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(function)
         return result
 
     def to(self, device=None, dtype=None, copy=False):
@@ -129,7 +136,9 @@ class TensorFormat1D(TensorFormat):
         if not isinstance(copy, bool):
             raise TypeError('`copy` should be bool type')
         result = self._map_tensors(lambda tensor: tensor.to(device=device, dtype=dtype, copy=copy))
-        if not copy and all(new is old for new, old in zip(result._cores, self._cores)):
+        same_bonds = self._bonds is None or all(
+            new is old for new, old in zip(result._bonds.values, self._bonds.values))
+        if not copy and same_bonds and all(new is old for new, old in zip(result._cores, self._cores)):
             return self
         result.validate()
         return result
@@ -145,11 +154,130 @@ class TensorFormat1D(TensorFormat):
     def detach_(self):
         """Detaches every core by replacing references, including tensor views."""
         self._cores = _CoreList([core.detach() for core in self._cores], self)
+        if self._bonds is not None:
+            self._bonds = self._bonds._map_tensors(lambda tensor: tensor.detach())
         return self
 
     def _standard_cores(self):
         self._ensure_valid()
-        return self._raw_standard_cores()
+        cores = self._raw_standard_cores()
+        if self._bonds is not None:
+            self._bonds.validate(cores, self._topology.startswith('tr'))
+            cores = list(cores)
+            for site, value in enumerate(self._bonds.values):
+                if value is not None:
+                    cores[site] = cores[site] * value[..., None, None, :]
+        return cores
+
+    @property
+    def bonds(self):
+        """Optional diagonal factors, with one entry per network bond."""
+        return self._bonds
+
+    @bonds.setter
+    def bonds(self, value):
+        from .bonds import BondFactors
+        self._ensure_valid()
+        if value is not None:
+            if not isinstance(value, BondFactors):
+                raise TypeError('`bonds` should be BondFactors type or None')
+            value.validate(self._raw_standard_cores(), self._topology.startswith('tr'))
+        self._bonds = value
+        self._orth_center = None
+
+    def materialize_bonds(self, oc=None):
+        """Absorbs factors towards the selected orthogonality center in-place."""
+        from .canonical import materialize_bonds
+        return materialize_bonds(self, oc)
+
+    def _set_standard_cores(self, cores, bonds=None):
+        from .operations import _build_network
+        result = _build_network(cores, self._in_dim, self._out_dim,
+                                self._n_batches, self._topology.startswith('tr'))
+        self._cores = _CoreList(result._cores, self)
+        self._bonds = bonds
+        self._dirty = True
+        self.validate()
+
+    def canonicalize(self, oc=None, renormalize=False):
+        """QR/RQ sweeps in-place, preserving the tensor and its global scale.
+
+        oc defaults to the last site. On cyclic networks this is a local gauge
+        relative to the stored cut, without a global Schmidt interpretation.
+        """
+        from .canonical import canonicalize
+        return canonicalize(self, oc, renormalize)
+
+    def canonicalize_vidal(self, mode='implicit', inverse_positions=None,
+                           remaining_mode='implicit', inverse_cutoff=0.0):
+        """Builds or redistributes an open-chain Vidal gauge in-place.
+
+        Inverse bonds require every retained Schmidt value to be strictly above
+        inverse_cutoff. No truncation is performed to manufacture an inverse.
+        Cyclic networks do not admit this global open-chain Schmidt gauge.
+        """
+        from .canonical import canonicalize_vidal
+        return canonicalize_vidal(self, mode, inverse_positions,
+                                   remaining_mode, inverse_cutoff)
+
+    def rounding(self, rank=None, cutoff=None, atol=None, rtol=None,
+                 cum_percentage=None, renormalize=False, *,
+                 rel_error=None, return_info=False):
+        """Compresses ranks in-place with one QR/SVD execution.
+
+        Open chains use left QR followed by sitewise right SVD. Cyclic chains
+        implement Algorithm 4 of Mickelin and Karaman,
+        https://arxiv.org/pdf/1807.02513, including the closure reduction.
+        TR ranks need not become minimal, especially after block-diagonal sums
+        or products. rel_error specifies a global norm-error budget; rtol keeps
+        the squared-tail-energy meaning of utils.truncated_svd.
+        """
+        from .rounding import rounding
+        return rounding(self, rank, cutoff, atol, rtol, cum_percentage,
+                        renormalize, rel_error, return_info)
+
+    def add(self, other, method='stacked'):
+        """Returns an exact sum; cyclic sums default to stacked endpoints."""
+        from .operations import add
+        return add(self, other, method=method)
+
+    def sub(self, other, method='stacked'):
+        """Returns an exact difference with the chosen cyclic sum construction."""
+        from .operations import add
+        return add(self, other, method=method, coefficient=-1)
+
+    def hadamard(self, other):
+        """Returns the element-wise product with another compatible format."""
+        from .operations import hadamard
+        return hadamard(self, other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def __neg__(self):
+        return self * -1
+
+    def __mul__(self, other):
+        from .operations import scale
+        return self.hadamard(other) if isinstance(other, TensorFormat1D) else scale(self, other)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __matmul__(self, other):
+        from .operations import apply
+        return apply(self, other)
+
+    def apply(self, other):
+        """Returns self @ other for vector-matrix application."""
+        return self @ other
+
+    def conj(self):
+        """Returns the conjugate format, preserving bond-factor conjugation."""
+        return self._map_tensors(lambda tensor: tensor.conj())
 
     def contract_dense(self):
         """Contracts a small dense tensor; matrix axes remain interleaved."""
@@ -394,6 +522,13 @@ class TensorFormat1D(TensorFormat):
         for self_core, other_core in zip(self_cores, other_cores):
             self_core = self_core.to(dtype=dtype)
             other_core = other_core.to(dtype=dtype)
+            self_scale = self_core.abs().amax(dim=(-3, -2, -1))
+            other_scale = other_core.abs().amax(dim=(-3, -2, -1))
+            self_scale = torch.where(self_scale > 0, self_scale, torch.ones_like(self_scale))
+            other_scale = torch.where(other_scale > 0, other_scale, torch.ones_like(other_scale))
+            self_core = self_core / self_scale[..., None, None, None]
+            other_core = other_core / other_scale[..., None, None, None]
+            log_scale = log_scale + self_scale.log() + other_scale.log()
             environment = torch.einsum(
                 '...xyab,...apr->...xybpr',
                 environment,
@@ -548,7 +683,7 @@ class _VectorFormat1D(TensorFormat1D):
             raise TypeError('`function` should return a torch.Tensor')
         target = target.to(device=approximation.device,
                            dtype=approximation.dtype)
-        target = target.reshape(*samples.shape[:n_batches])
+        target = target.reshape(samples.shape[:n_batches])
         if self.n_batches:
             target = target.reshape(
                 *((1,) * self.n_batches), *target.shape)
@@ -583,6 +718,51 @@ class _MatrixFormat1D(TensorFormat1D):
 
     _family = 'matrix'
 
+    def _operator_cores(self):
+        self._ensure_valid()
+        return [core.reshape(*self._batch_shape, core.shape[-3],
+                              self._in_dim[site], self._out_dim[site],
+                              core.shape[-1]).transpose(-1, -2)
+                for site, core in enumerate(self._standard_cores())]
+
+    def transpose(self):
+        """Swaps local input/output axes, preserving site and bond order."""
+        from .operations import _build_network
+        self._ensure_valid()
+        standard = []
+        for site, core in enumerate(self._raw_standard_cores()):
+            core = core.reshape(*self._batch_shape, core.shape[-3],
+                                self._in_dim[site], self._out_dim[site], core.shape[-1])
+            core = core.transpose(-3, -2)
+            standard.append(core.reshape(*self._batch_shape, core.shape[-4], -1, core.shape[-1]))
+        result = _build_network(standard, self._out_dim, self._in_dim,
+                                self._n_batches, self._topology.startswith('tr'))
+        result._bonds = self._bonds
+        return result
+
+    def adjoint(self):
+        """Returns the conjugate transpose."""
+        return self.transpose().conj()
+
+    @property
+    def T(self):
+        """Matrix transpose, without reversing the chain."""
+        return self.transpose()
+
+    @property
+    def H(self):
+        """Matrix adjoint, including conjugation of bond factors."""
+        return self.adjoint()
+
+    def trace(self):
+        """Returns the trace; each local input/output dimension must match."""
+        self._ensure_valid()
+        if self._in_dim != self._out_dim:
+            raise ValueError('Trace requires matching local input/output dimensions')
+        matrices = [core.diagonal(dim1=-3, dim2=-1).sum(-1)
+                    for core in self._operator_cores()]
+        return self._contract_open_chain(matrices).diagonal(dim1=-2, dim2=-1).sum(-1)
+
     def __call__(
             self,
             in_data: EvaluationData,
@@ -593,11 +773,6 @@ class _MatrixFormat1D(TensorFormat1D):
         if out_data is None:
             return self.apply(in_data, n_batches=n_batches)
         return self.evaluate(in_data, out_data, n_batches=n_batches)
-
-
-    @abstractmethod
-    def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns cores with left, input, right and output axes."""
 
 
     @abstractmethod
@@ -699,6 +874,9 @@ class _MatrixFormat1D(TensorFormat1D):
               n_batches: int = 1) -> TensorFormat1D:
         """Applies the matrix to product inputs and returns a 1D result."""
         self._ensure_valid()
+        if isinstance(data, TensorFormat1D):
+            from .operations import apply
+            return apply(self, data)
         site_data, discrete, data_batch_shape = self._normalize_data(
             data, self._in_dim, self._same_in_dim, n_batches)
         core_batch_size = int(torch.Size(self._batch_shape).numel())
@@ -727,5 +905,3 @@ class _MatrixFormat1D(TensorFormat1D):
         # NOTE: A future `apply_tt` could apply the matrix to a general TT
         return self._build_applied_decomposition(
             output_cores, self.n_batches + n_batches)
-
-

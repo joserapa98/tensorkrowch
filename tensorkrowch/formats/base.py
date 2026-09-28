@@ -188,7 +188,3 @@ class TensorFormat(ABC):
             The current format. Tensor shapes and canonical metadata are
             preserved.
         """
-
-
-class TensorFormat2D(TensorFormat, ABC):
-    """Reserved 2D interface; PEPS/PEPO implementations are deferred."""

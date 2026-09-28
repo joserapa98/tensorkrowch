@@ -6,6 +6,8 @@ from typing import (Callable, Optional, Protocol, Sequence, Tuple, Union,
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
+
 
 IntegerSpec = Union[int, Sequence[int]]
 
@@ -204,9 +206,7 @@ class QuantizedLayout:
         """Validates one integer tensor without changing its device."""
         if not isinstance(values, torch.Tensor):
             raise TypeError(f'`{name}` should be torch.Tensor type')
-        if values.ndim < 1 or values.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64):
+        if values.ndim < 1 or values.dtype not in _INTEGER_DTYPES:
             raise TypeError(f'`{name}` should be an integer tensor')
         return values.to(dtype=torch.long)
 
@@ -404,9 +404,7 @@ def _indices_to_unit(indices: torch.Tensor,
                      dtype: Optional[torch.dtype] = None) -> torch.Tensor:
     """Maps integer grid indices to computational coordinates."""
     if not isinstance(indices, torch.Tensor) or indices.ndim < 1 or \
-            indices.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64):
+            indices.dtype not in _INTEGER_DTYPES:
         raise TypeError('`indices` should be an integer tensor')
     grid_size = tuple(grid_size)
     if indices.shape[-1] != len(grid_size):
@@ -923,9 +921,7 @@ class ExplicitGridMap:
         if domain is not None:
             raise ValueError('`domain` is not used by ExplicitGridMap')
         if not isinstance(indices, torch.Tensor) or indices.ndim < 1 or \
-                indices.dtype not in (
-                    torch.uint8, torch.int8, torch.int16, torch.int32,
-                    torch.int64):
+                indices.dtype not in _INTEGER_DTYPES:
             raise TypeError('`indices` should be an integer tensor')
         grids = self._grids(indices.shape[-1])
         if grid_size is not None and tuple(grid_size) != tuple(

@@ -60,7 +60,7 @@ def test_shared_rank_replacement_is_atomic(make_format, topology):
 @pytest.mark.parametrize('invalid', ['rank', 'dtype', 'device', 'type', 'length'])
 def test_invalid_bonds_restore_state(make_format, topology, invalid):
     format = make_format(topology, 2)
-    format.bonds = tk.formats.BondFactors([
+    format.bonds = tk.formats.BondFactors1D([
         torch.ones(rank, dtype=format.dtype) for rank in format.rank])
     format._orth_center = 0
     bonds = format.bonds
@@ -91,7 +91,7 @@ def test_invalid_bonds_restore_state(make_format, topology, invalid):
                                                ('ttm', 0), ('trm', 2)])
 def test_bond_slices_and_batch_validation(make_format, topology, n_batches):
     format = make_format(topology, 4, n_batches=n_batches)
-    format.bonds = tk.formats.BondFactors([None] * len(format.rank))
+    format.bonds = tk.formats.BondFactors1D([None] * len(format.rank))
     dense = format.contract_dense()
     values = format.bonds.values
     values[:2] = [torch.full((*format.batch_shape, format.rank[0]), 2.,
@@ -114,7 +114,7 @@ def test_bond_slices_and_batch_validation(make_format, topology, n_batches):
                                       'sort', 'delete', 'extend', 'iadd'])
 def test_bond_structure_changes_are_rejected(make_format, operation):
     format = make_format()
-    format.bonds = tk.formats.BondFactors([None] * len(format.rank))
+    format.bonds = tk.formats.BondFactors1D([None] * len(format.rank))
     values = format.bonds.values
     with pytest.raises(TypeError):
         if operation == 'delete':
@@ -131,7 +131,7 @@ def test_bond_structure_changes_are_rejected(make_format, operation):
 
 
 @pytest.mark.parametrize('copy_method', ['clone', 'detach', 'detach_', 'to', 'T', 'H'])
-def test_bond_owners_are_independent(make_format, copy_method):
+def test_bond_callbacks_are_independent(make_format, copy_method):
     format = make_format('ttm', 3).canonicalize_vidal('explicit')
     original = format.contract_dense()
     shared = format.bonds
@@ -146,12 +146,18 @@ def test_bond_owners_are_independent(make_format, copy_method):
         result = getattr(format, copy_method)
     else:
         result = getattr(format, copy_method)()
-    assert result.bonds._owner is result
+    result._orth_center = 0
+    peer._orth_center = 0
+    if result is not format:
+        format._orth_center = 0
     result.bonds.values[0] = None
     assert not result.bonds._valid
+    assert result._orth_center is None
     assert peer.bonds._valid
+    assert peer._orth_center == 0
     if result is not format:
         assert format.bonds is shared and shared._valid
+        assert format._orth_center == 0
         assert torch.allclose(format.contract_dense(), original)
 
 
@@ -201,7 +207,7 @@ def test_failed_replacement_preserves_vidal(make_format):
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
 def test_read_operations_do_not_validate(make_format, topology, monkeypatch):
     format = make_format(topology)
-    format.bonds = tk.formats.BondFactors([None] * len(format.rank))
+    format.bonds = tk.formats.BondFactors1D([None] * len(format.rank))
     dense = format.contract_dense()
 
     def unexpected_validation(*args, **kwargs):
@@ -235,7 +241,7 @@ def test_manual_rank_change_discards_vidal_spectrum_use(make_format):
 def test_core_replacement_checks_existing_bonds(make_format):
     format = make_format('tt', 2)
     original_rank = format.rank
-    format.bonds = tk.formats.BondFactors([
+    format.bonds = tk.formats.BondFactors1D([
         torch.ones(original_rank[0], dtype=format.dtype)])
     cores, bonds = format.cores, format.bonds
     previous = tuple(cores)
@@ -265,3 +271,142 @@ def test_quantics_replacement_restores_layout_and_metadata():
         matrix.cores[0] = torch.ones(4, 3, 2)
     assert matrix.cores[0] is previous
     assert matrix.in_dim == matrix.out_dim == layout.in_dim
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('step', [2, -2])
+@pytest.mark.parametrize('container', ['cores', 'bonds'])
+def test_extended_slice_generators_preserve_identity(make_format, topology,
+                                                     step, container):
+    format = make_format(topology, 4).canonicalize(orth_center=0)
+    if container == 'bonds':
+        format.bonds = tk.formats.BondFactors1D([
+            torch.ones(rank, dtype=format.dtype) for rank in format.rank])
+    format._orth_center = 0
+    values = format.cores if container == 'cores' else format.bonds.values
+    previous = tuple(values)
+    dense = format.contract_dense()
+    key = slice(None, None, step)
+    indices = range(len(values))[key]
+    values[key] = (2 * value for value in values[key])
+
+    stored = format.cores if container == 'cores' else format.bonds.values
+    assert stored is values
+    assert format._orth_center is None
+    for index, value in enumerate(values):
+        if index in indices:
+            assert torch.equal(value, 2 * previous[index])
+        else:
+            assert value is previous[index]
+    assert torch.allclose(format.contract_dense(), 2 ** len(indices) * dense)
+
+
+@pytest.mark.parametrize('sequence', ['spectra', 'powers'])
+def test_vidal_extended_slices_invalidate_only_the_certificate(make_format,
+                                                             sequence):
+    format = make_format('tt', 4).canonicalize_vidal('explicit')
+    format._orth_center = 0
+    values = getattr(format.bonds, sequence)
+    previous = tuple(values)
+    dense = format.contract_dense()
+    values[::-2] = (value for value in values[::-2])
+    assert getattr(format.bonds, sequence) is values
+    assert all(new is old for new, old in zip(values, previous))
+    assert not format.bonds._valid and format._orth_center is None
+    assert torch.equal(format.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('copy_method', ['clone', 'detach', 'detach_', 'to'])
+def test_core_callbacks_are_independent(make_format, topology, copy_method):
+    format = make_format(topology).canonicalize(orth_center=0)
+    dense = format.contract_dense()
+    result = (format.to(dtype=torch.complex128) if copy_method == 'to' else
+              getattr(format, copy_method)())
+    cores = result.cores
+    cores[0] = 2 * cores[0]
+    assert result.cores is cores and result._orth_center is None
+    assert torch.allclose(result.contract_dense(), (2 * dense).to(result.dtype))
+    if result is not format:
+        assert format._orth_center == 0
+        assert torch.equal(format.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('replacement', ['element', 'slice', 'full'])
+def test_unexpected_core_validation_error_restores_metadata(make_format,
+                                                           replacement,
+                                                           monkeypatch):
+    format = make_format('tt', 2).canonicalize_vidal('explicit')
+    format._orth_center = 0
+    cores, bonds = format.cores, format.bonds
+    previous = tuple(cores)
+    dimensions, rank = format.in_dim, format.rank
+    same_in_dim = format._same_in_dim
+    dense = format.contract_dense()
+    validate = format.validate
+
+    def fail_after_validation():
+        validate()
+        raise RuntimeError('Validation failed after refreshing metadata')
+
+    monkeypatch.setattr(format, 'validate', fail_after_validation)
+    value = torch.cat([cores[0], cores[0][:1]], dim=0)
+    with pytest.raises(RuntimeError, match='refreshing metadata'):
+        if replacement == 'element':
+            cores[0] = value
+        elif replacement == 'slice':
+            cores[:1] = [value]
+        else:
+            format.cores = [value, *cores[1:]]
+    assert format.cores is cores and format.bonds is bonds
+    assert all(new is old for new, old in zip(cores, previous))
+    assert format.in_dim == dimensions and format.rank == rank
+    assert format._same_in_dim == same_in_dim
+    assert format._orth_center == 0 and bonds._valid
+    assert torch.equal(format.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('replacement', ['element', 'slice', 'full'])
+def test_unexpected_bond_validation_error_restores_state(make_format,
+                                                        replacement,
+                                                        monkeypatch):
+    format = make_format().canonicalize_vidal('explicit')
+    format._orth_center = 0
+    bonds = format.bonds
+    values = bonds.values
+    previous = tuple(values)
+    dense = format.contract_dense()
+    validate = format.validate_bonds
+
+    def fail_after_validation():
+        validate()
+        raise RuntimeError('Validation failed after checking factors')
+
+    monkeypatch.setattr(format, 'validate_bonds', fail_after_validation)
+    with pytest.raises(RuntimeError, match='checking factors'):
+        if replacement == 'element':
+            values[0] = 2 * values[0]
+        elif replacement == 'slice':
+            values[:1] = [2 * values[0]]
+        else:
+            bonds.values = [2 * values[0], *values[1:]]
+    assert format.bonds is bonds and bonds.values is values
+    assert all(new is old for new, old in zip(values, previous))
+    assert format._orth_center == 0 and bonds._valid
+    assert torch.equal(format.contract_dense(), dense)
+
+
+def test_standalone_bonds_validate_replacements():
+    first = torch.ones(2)
+    factors = tk.formats.BondFactors1D([first, None])
+    values = factors.values
+    values[1] = torch.ones(3)
+    previous = tuple(values)
+    with pytest.raises(TypeError, match='tensors or None'):
+        values[::-1] = [None, object()]
+    with pytest.raises(TypeError, match='tensors or None'):
+        factors.values = [1, None]
+    assert factors.values is values
+    assert all(new is old for new, old in zip(values, previous))
+    values[:] = (value for value in [None, first])
+    assert factors.values is values and values[0] is None and values[1] is first

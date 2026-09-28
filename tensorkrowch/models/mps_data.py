@@ -323,11 +323,11 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         from tensorkrowch.formats import TT
         if not isinstance(tensor_train, TT):
             raise TypeError('`tensor_train` should be TT type')
-        from tensorkrowch.formats.operations import _build_network
-        effective = _build_network(tensor_train._standard_cores(),
-                                   tensor_train.in_dim, None,
-                                   tensor_train.n_batches, False)
-        return cls(tensors=list(effective.cores), n_batches=effective.n_batches, **kwargs)
+        from tensorkrowch.formats.formats1d import _restore_cores
+        cores = _restore_cores(tensor_train._standard_cores(),
+                               tensor_train.in_dim, None,
+                               tensor_train.n_batches, False)
+        return cls(tensors=cores, n_batches=tensor_train.n_batches, **kwargs)
 
     @classmethod
     def from_tr(cls, tensor_ring, **kwargs):
@@ -335,11 +335,11 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         from tensorkrowch.formats import TR
         if not isinstance(tensor_ring, TR):
             raise TypeError('`tensor_ring` should be TR type')
-        from tensorkrowch.formats.operations import _build_network
-        effective = _build_network(tensor_ring._standard_cores(),
-                                   tensor_ring.in_dim, None,
-                                   tensor_ring.n_batches, True)
-        return cls(tensors=list(effective.cores), n_batches=effective.n_batches, **kwargs)
+        from tensorkrowch.formats.formats1d import _restore_cores
+        cores = _restore_cores(tensor_ring._standard_cores(),
+                               tensor_ring.in_dim, None,
+                               tensor_ring.n_batches, True)
+        return cls(tensors=cores, n_batches=tensor_ring.n_batches, **kwargs)
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""

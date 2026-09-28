@@ -1,8 +1,6 @@
 """Gauge actions by tensor axes and experimental finite-ring norm balancing."""
 
 from dataclasses import dataclass
-from math import isfinite
-from numbers import Real
 from typing import Optional, Sequence
 
 import torch
@@ -164,78 +162,3 @@ class TensorRingOrbit(GaugeOrbit):
             residuals.append((a.transpose(-2, -1).conj() @ a -
                               b @ b.transpose(-2, -1).conj()).norm())
         return torch.stack(residuals).amax()
-
-
-def canonicalize_minimal(format, max_iter: int = 200, lr: float = 0.05,
-                         tol: float = 1e-8, return_info: bool = False):
-    r"""Balances a finite ring through Hermitian exponential gauges.
-
-    This is an experimental finite, nonuniform-ring adaptation of the gauge
-    norm objective, inspired by Acuaviva et al.,
-    https://arxiv.org/pdf/2209.14358.
-    It does not assert the uniform-network theorems or uniqueness of a minimum.
-    Batched cores use a common gauge minimizing their summed objective.
-    """
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
-    if isinstance(max_iter, bool) or not isinstance(max_iter, int):
-        raise TypeError('`max_iter` should be int type')
-    if max_iter < 1:
-        raise ValueError('`max_iter` should be positive')
-    for name, value in [('lr', lr), ('tol', tol)]:
-        if isinstance(value, bool) or not isinstance(value, Real):
-            raise TypeError(f'`{name}` should be a real number')
-        if not isfinite(value) or value <= 0:
-            raise ValueError(f'`{name}` should be finite and positive')
-    if not format._cyclic:
-        format.canonicalize_vidal('implicit')
-        return (format, MinimalCanonicalInfo(
-            0, True, None)) if return_info else format
-    orbit = TensorRingOrbit(format)
-    if not all(torch.isfinite(core).all() for core in orbit.cores):
-        raise ValueError('Minimal canonicalization requires finite cores')
-    detached = GaugeOrbit([core.detach() for core in orbit.cores], orbit.bonds)
-    best = [torch.eye(rank, dtype=format.dtype, device=format.device)
-            for rank in format._rank]
-    scale = max(core.abs().amax().item() for core in detached.cores)
-    if scale == 0:
-        info = MinimalCanonicalInfo(0, True, format.cores[0].real.new_zeros(()))
-        return (format, info) if return_info else format
-    detached.cores = tuple(core / scale for core in detached.cores)
-    best_loss = detached.objective(best).item()
-    converged, iterations = False, 0
-    with torch.enable_grad():
-        parameters = [torch.zeros_like(gauge, requires_grad=True) for gauge in best]
-        optimizer = torch.optim.Adam(parameters, lr=lr)
-        for _ in range(max_iter):
-            iterations += 1
-            optimizer.zero_grad()
-            gauges = [torch.matrix_exp((parameter + parameter.transpose(-2, -1).conj()) / 2)
-                      for parameter in parameters]
-            if not all(torch.isfinite(gauge).all() for gauge in gauges):
-                break
-            try:
-                loss = detached.objective(gauges)
-            except torch.linalg.LinAlgError:
-                break
-            if not torch.isfinite(loss):
-                break
-            value = loss.item()
-            if value < best_loss:
-                best_loss = value
-                best = [gauge.detach() for gauge in gauges]
-            loss.backward()
-            if not all(torch.isfinite(parameter.grad).all()
-                       for parameter in parameters):
-                break
-            if max(parameter.grad.abs().amax().item()
-                   for parameter in parameters) <= tol:
-                converged = True
-                break
-            optimizer.step()
-    format._set_standard_cores(orbit.apply(best))
-    if return_info:
-        info = MinimalCanonicalInfo(iterations, converged,
-                                    TensorRingOrbit(format).balance_residual())
-        return format, info
-    return format

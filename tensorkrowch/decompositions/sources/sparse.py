@@ -10,6 +10,7 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
@@ -45,9 +46,7 @@ class SparseTensorSource(_SourceEvaluationTracker):
             raise TypeError('`indices` should be torch.Tensor type')
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
-        if (indices.ndim != 2) or (indices.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64)):
+        if (indices.ndim != 2) or (indices.dtype not in _INTEGER_DTYPES):
             raise TypeError(
                 '`indices` should be a two-dimensional integer tensor')
         if values.ndim < 1:
@@ -171,9 +170,7 @@ class EmpiricalDistribution(SparseTensorSource):
                  dtype: Optional[torch.dtype] = None) -> None:
         if not isinstance(dataset, torch.Tensor):
             raise TypeError('`dataset` should be torch.Tensor type')
-        if (dataset.ndim != 2) or (dataset.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64)):
+        if (dataset.ndim != 2) or (dataset.dtype not in _INTEGER_DTYPES):
             raise TypeError(
                 '`dataset` should be a two-dimensional integer tensor')
         if dataset.shape[0] < 1:

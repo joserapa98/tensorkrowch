@@ -28,19 +28,11 @@ from typing import (Optional,
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.metrics import EvaluationStats
 
 
 ConfigurationValues = Union[torch.Tensor, Sequence[torch.Tensor]]
-
-
-_INTEGER_DTYPES = (
-    torch.uint8,
-    torch.int8,
-    torch.int16,
-    torch.int32,
-    torch.int64,
-)
 
 
 @dataclass(frozen=True)

@@ -6,13 +6,11 @@ from typing import Optional, Sequence
 
 import torch
 
+from tensorkrowch.formats.bonds import BondFactors1D
+from tensorkrowch.formats.formats1d import TT, TR, TTM, TRM, _restore_cores
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
-                                               _CompositeCoordinateMap,
-                                               _unit_to_indices)
-from tensorkrowch.formats.tr import TR
-from tensorkrowch.formats.trm import TRM
-from tensorkrowch.formats.tt import TT
-from tensorkrowch.formats.ttm import TTM
+                                             _CompositeCoordinateMap,
+                                             _unit_to_indices)
 
 
 def _map_structure(value, function):
@@ -68,69 +66,74 @@ def _same_references(first, second):
     return True
 
 
-def _check_semantics(first, second, product=False):
-    """Checks physical compatibility before core algebra on Quantics networks."""
-    quantics = (_QuanticsVector, _QuanticsMatrix)
-    a, b = isinstance(first, quantics), isinstance(second, quantics)
-    if not (a or b):
-        return
-    if not (a and b):
-        raise ValueError(
-            'Quantics algebra requires compatible coordinate semantics; use as_tt/as_tr explicitly')
-    if product:
-        if not isinstance(first, _QuanticsMatrix) and not isinstance(
-            second, _QuanticsMatrix):
-            raise TypeError('At least one Quantics @ operand should be a matrix')
-        if isinstance(first, _QuanticsMatrix):
-            left = (first.in_layout, first.in_coordinate_map, first.in_domain)
-            right = ((second.out_layout, second.out_coordinate_map, second.out_domain)
-                     if isinstance(second, _QuanticsMatrix) else
-                     (second.layout, second.coordinate_map, second.domain))
+class _QuanticsFormat:
+    """Coordinate compatibility and direct construction of Quantics results."""
+
+    _quantized = True
+
+    def _check_semantics(self, other, product=False):
+        """Checks layouts, coordinate maps and contracted coordinate spaces."""
+        super()._check_semantics(other, product=product)
+        if product:
+            if not isinstance(self, _QuanticsMatrix) and not isinstance(
+                other, _QuanticsMatrix):
+                raise TypeError('At least one Quantics @ operand should be a matrix')
+            if isinstance(self, _QuanticsMatrix):
+                left = (self.in_layout, self.in_coordinate_map, self.in_domain)
+                right = ((other.out_layout, other.out_coordinate_map, other.out_domain)
+                         if isinstance(other, _QuanticsMatrix) else
+                         (other.layout, other.coordinate_map, other.domain))
+            else:
+                left = (self.layout, self.coordinate_map, self.domain)
+                right = (other.out_layout, other.out_coordinate_map, other.out_domain)
+            if not _equal_structure(left, right):
+                raise ValueError('Contracted Quantics coordinate spaces should match')
         else:
-            left = (first.layout, first.coordinate_map, first.domain)
-            right = (second.out_layout, second.out_coordinate_map, second.out_domain)
-        if not _equal_structure(left, right):
-            raise ValueError('Contracted Quantics coordinate spaces should match')
-    else:
-        names = ('layout', 'coordinate_map', 'domain', 'digit_positions') if isinstance(first, _QuanticsVector) else (
-            'in_layout', 'out_layout', 'in_coordinate_map', 'out_coordinate_map', 'in_domain', 'out_domain')
-        if any(not _equal_structure(getattr(first, name), getattr(second, name, None))
-               for name in names):
-            raise ValueError('Quantics layouts and coordinate maps should match')
-    if (first.computational_grid, first.out_of_domain) != (
-        second.computational_grid, second.out_of_domain):
-        raise ValueError('Quantics coordinate policies should match')
+            names = (('layout', 'coordinate_map', 'domain', 'digit_positions')
+                     if isinstance(self, _QuanticsVector) else
+                     ('in_layout', 'out_layout', 'in_coordinate_map',
+                      'out_coordinate_map', 'in_domain', 'out_domain'))
+            if any(not _equal_structure(getattr(self, name), getattr(other, name, None))
+                   for name in names):
+                raise ValueError('Quantics layouts and coordinate maps should match')
+        if (self.computational_grid, self.out_of_domain) != (
+            other.computational_grid, other.out_of_domain):
+            raise ValueError('Quantics coordinate policies should match')
 
-
-def _inherit_semantics(result, first, second=None, product=False):
-    """Wraps an algebra result with the corresponding coordinate layouts."""
-    if not isinstance(first, (_QuanticsVector, _QuanticsMatrix)):
-        return result
-    options = dict(n_batches=result.n_batches,
-                   computational_grid=first.computational_grid,
-                   out_of_domain=first.out_of_domain)
-    cyclic = result._cyclic
-    if result._out_dim is not None:
-        cls = QTRM if cyclic else QTTM
-        inputs = second if product else first
-        wrapped = cls(result.cores, inputs.in_layout, first.out_layout,
-                      inputs.in_coordinate_map, first.out_coordinate_map,
-                      inputs.in_domain, first.out_domain, **options)
-    else:
+    def _new_from_standard_cores(self, cores, in_dim, out_dim, n_batches,
+                                 cyclic, other=None, product=False,
+                                 transpose=False):
+        """Constructs the matching Quantics result directly from its cores."""
+        cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
+        options = dict(n_batches=n_batches,
+                       computational_grid=self.computational_grid,
+                       out_of_domain=self.out_of_domain)
+        if out_dim is not None:
+            cls = QTRM if cyclic else QTTM
+            if transpose:
+                return cls(
+                    cores, self.out_layout, self.in_layout,
+                    self.out_coordinate_map, self.in_coordinate_map,
+                    self.out_domain, self.in_domain, **options)
+            inputs = other if product else self
+            return cls(
+                cores, inputs.in_layout, self.out_layout,
+                inputs.in_coordinate_map, self.out_coordinate_map,
+                inputs.in_domain, self.out_domain, **options)
         cls = QTR if cyclic else QTT
-        if product and isinstance(first, _QuanticsMatrix):
-            layout, coordinate_map, domain = first.out_layout, first.out_coordinate_map, first.out_domain
+        if product and isinstance(self, _QuanticsMatrix):
+            layout, coordinate_map, domain = (
+                self.out_layout, self.out_coordinate_map, self.out_domain)
             positions = None
         elif product:
-            layout, coordinate_map, domain = second.in_layout, second.in_coordinate_map, second.in_domain
+            layout, coordinate_map, domain = (
+                other.in_layout, other.in_coordinate_map, other.in_domain)
             positions = None
         else:
-            layout, coordinate_map, domain = first.layout, first.coordinate_map, first.domain
-            positions = first.digit_positions
-        wrapped = cls(result.cores, layout, coordinate_map, domain,
-                      digit_positions=positions, **options)
-    wrapped._bonds = result.bonds
-    return wrapped
+            layout, coordinate_map, domain = self.layout, self.coordinate_map, self.domain
+            positions = self.digit_positions
+        return cls(cores, layout, coordinate_map, domain,
+                   digit_positions=positions, **options)
 
 
 def _points_to_indices(points, layout, coordinate_map, domain, grid, policy):
@@ -152,7 +155,7 @@ def _points_to_indices(points, layout, coordinate_map, domain, grid, policy):
                             layout.grid_size, grid, policy)
 
 
-class _QuanticsVector:
+class _QuanticsVector(_QuanticsFormat):
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
     def __init__(self,
@@ -343,7 +346,7 @@ class _QuanticsVector:
     def _as_vector(self, cls):
         """Drops coordinate metadata while retaining raw cores and factors."""
         result = cls(self.cores, n_batches=self._n_batches)
-        result._bonds = self._bonds
+        result.bonds = self._bonds
         return result
 
 
@@ -434,21 +437,6 @@ class QTR(_QuanticsVector, TR):
         """
         return self._as_vector(TR)
 
-    def to_tt(self):
-        r"""Opens the ring exactly while preserving Quantics metadata.
-
-        Returns
-        -------
-        QTT
-            Open format with closure rank carried through intermediate
-            identities and the same physical evaluations.
-        """
-        base = self.as_tr().to_tt()
-        return QTT(base.cores, self.layout, self.coordinate_map,
-                                   self.domain, digit_positions=self.digit_positions,
-                                   n_batches=self._n_batches,
-                                   computational_grid=self.computational_grid,
-                                   out_of_domain=self.out_of_domain)
 
     def rotate(self, first=0):
         r"""Rotates ring sites and updates the Quantics digit schedules.
@@ -464,19 +452,25 @@ class QTR(_QuanticsVector, TR):
             Rotated format preserving evaluations in original physical-variable
             coordinates. Dense digit axes rotate with the core order.
         """
-        base = self.as_tr().rotate(first)
+        if isinstance(first, bool) or not isinstance(first, int):
+            raise TypeError('The first rotation site should be an integer')
+        if not 0 <= first < self.n_sites:
+            raise ValueError('The first rotation site should lie inside the format')
+        cores = [*self._cores[first:], *self._cores[:first]]
         positions = tuple((site - first) %
                           self.n_sites for site in self.digit_positions)
-        result = QTR(base.cores, self.layout, self.coordinate_map,
+        result = QTR(cores, self.layout, self.coordinate_map,
                                     self.domain, digit_positions=positions,
                                     n_batches=self._n_batches,
                                     computational_grid=self.computational_grid,
                                     out_of_domain=self.out_of_domain)
-        result._bonds = base.bonds
+        if self._bonds is not None:
+            values = self._bonds.values
+            result.bonds = BondFactors1D([*values[first:], *values[:first]])
         return result
 
 
-class _QuanticsMatrix:
+class _QuanticsMatrix(_QuanticsFormat):
     """Paired input/output digit layouts of a tensorized operator."""
 
     def __init__(self,
@@ -631,64 +625,6 @@ class _QuanticsMatrix:
         return values.reshape(*self._batch_shape, * \
                               self.in_layout.grid_size, *self.out_layout.grid_size)
 
-    def transpose(self):
-        r"""Swaps local matrix input/output axes without reversing sites.
-
-        Returns
-        -------
-        TTM or TRM
-            Separate matrix format; tensor views may share storage. Quantics
-            subclasses exchange input/output coordinate semantics.
-        """
-        base = super().transpose()
-        cls = QTRM if self._topology.startswith(
-            'tr') else QTTM
-        result = cls(base.cores, self.out_layout, self.in_layout,
-                     self.out_coordinate_map, self.in_coordinate_map,
-                     self.out_domain, self.in_domain, n_batches=self._n_batches,
-                     computational_grid=self.computational_grid, out_of_domain=self.out_of_domain)
-        result._bonds = base.bonds
-        return result
-
-    def apply(self, data, n_batches: int = 1):
-        r"""Applies the operator to product data or another format.
-
-        Parameters
-        ----------
-        data : torch.Tensor, sequence of torch.Tensor or TensorFormat1D
-            Product input data accepted by vector evaluate(), or a TT/TR vector
-            or TTM/TRM matrix. With a vector, contracts in_dim; with a matrix,
-            contracts self.in_dim with data.out_dim.
-        n_batches : int
-            Number of leading data batch axes. These are independent of
-            structural batch axes stored in the cores.
-
-        Returns
-        -------
-        TensorFormat1D
-            Vector or matrix format, according to the operand. Cyclic if either
-            operand is cyclic. Product data become structural batches in the
-            returned vector; applying a global dense vector does not
-            automatically factor it into TT cores.
-
-        Examples
-        --------
-        >>> operator = tk.formats.TTM([torch.eye(2)])
-        >>> vector = tk.formats.TT([torch.tensor([2., 3.])])
-        >>> torch.equal((operator @ vector).contract_dense(), vector.contract_dense())
-        True
-        >>> operator.apply(torch.tensor([[0], [1]])).contract_dense().tolist()
-        [[1.0, 0.0], [0.0, 1.0]]
-        >>> torch.equal((operator @ operator).contract_dense(), torch.eye(2))
-        True
-        """
-        from tensorkrowch.formats._chain import TensorFormat1D
-
-        result = super().apply(data, n_batches=n_batches)
-        if isinstance(data, TensorFormat1D):
-            return result
-        return _inherit_semantics(result, self, product=True)
-
 
 class QTTM(_QuanticsMatrix, TTM):
     r"""Open-chain operator with separate input/output Quantics layouts.
@@ -735,7 +671,7 @@ class QTTM(_QuanticsMatrix, TTM):
             domains and digit-layout semantics are not retained.
         """
         result = TTM(self.cores, n_batches=self._n_batches)
-        result._bonds = self._bonds
+        result.bonds = self._bonds
         return result
 
 
@@ -782,27 +718,9 @@ class QTRM(_QuanticsMatrix, TRM):
             domains and digit-layout semantics are not retained.
         """
         result = TRM(self.cores, n_batches=self._n_batches)
-        result._bonds = self._bonds
+        result.bonds = self._bonds
         return result
 
-    def to_ttm(self):
-        r"""Opens the ring exactly while preserving Quantics metadata.
-
-        Batched ring matrices are unsupported because QTTM inherits the
-        unbatched TTM contract.
-
-        Returns
-        -------
-        QTTM
-            Open format with closure rank carried through intermediate
-            identities and the same physical evaluations.
-        """
-        base = self.as_trm().to_ttm()
-        return QTTM(base.cores, self.in_layout, self.out_layout,
-                                         self.in_coordinate_map, self.out_coordinate_map,
-                                         self.in_domain, self.out_domain, n_batches=self._n_batches,
-                                         computational_grid=self.computational_grid,
-                                         out_of_domain=self.out_of_domain)
 
     def rotate(self, first=0):
         r"""Rotates ring sites and updates the Quantics digit schedules.
@@ -818,7 +736,11 @@ class QTRM(_QuanticsMatrix, TRM):
             Rotated format preserving evaluations in original physical-variable
             coordinates. Dense digit axes rotate with the core order.
         """
-        base = self.as_trm().rotate(first)
+        if isinstance(first, bool) or not isinstance(first, int):
+            raise TypeError('The first rotation site should be an integer')
+        if not 0 <= first < self.n_sites:
+            raise ValueError('The first rotation site should lie inside the format')
+        cores = [*self._cores[first:], *self._cores[:first]]
 
         def rotated_layout(layout):
             """Rotates a digit schedule consistently with the ring cores."""
@@ -826,12 +748,14 @@ class QTRM(_QuanticsMatrix, TRM):
             return QuantizedLayout(layout.n_variables, layout.base, layout.level,
                                    ordering='custom', digit_order=layout.digit_order,
                                    permutation=(*schedule[first:], *schedule[:first]))
-        result = QTRM(base.cores, rotated_layout(self.in_layout),
+        result = QTRM(cores, rotated_layout(self.in_layout),
                                           rotated_layout(self.out_layout),
                                           self.in_coordinate_map, self.out_coordinate_map,
                                           self.in_domain, self.out_domain,
                                           n_batches=self._n_batches,
                                           computational_grid=self.computational_grid,
                                           out_of_domain=self.out_of_domain)
-        result._bonds = base.bonds
+        if self._bonds is not None:
+            values = self._bonds.values
+            result.bonds = BondFactors1D([*values[first:], *values[:first]])
         return result

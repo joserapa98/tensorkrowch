@@ -69,3 +69,78 @@ def test_quantized_matrix_transpose_apply():
     assert matrix.T.in_layout == matrix.out_layout
     assert torch.allclose(matrix.H.H.contract_dense(), dense)
     assert isinstance(matrix.apply(torch.tensor([[0, 0]])), tk.formats.QTT)
+
+
+@pytest.mark.parametrize('operation', ['sum', 'scale', 'hadamard', 'apply', 'transpose'])
+def test_quantics_constructs_results_directly(operation, monkeypatch):
+    from tensorkrowch.formats.formats1d import TensorFormat1D
+
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    matrix = tk.formats.QTTM([torch.eye(2).unsqueeze(1), torch.eye(2).unsqueeze(0)],
+                            layout, layout)
+    vector = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], layout)
+    calls = []
+    validate = TensorFormat1D.validate
+
+    def counted_validate(self):
+        calls.append(type(self))
+        return validate(self)
+
+    monkeypatch.setattr(TensorFormat1D, 'validate', counted_validate)
+    if operation == 'sum':
+        result = vector + vector
+    elif operation == 'scale':
+        result = vector * 2
+    elif operation == 'hadamard':
+        result = vector * vector
+    elif operation == 'apply':
+        result = matrix @ vector
+    else:
+        result = matrix.T
+    assert len(calls) == 1
+    assert isinstance(result, tk.formats.QTTM if operation == 'transpose' else tk.formats.QTT)
+
+
+def test_plain_operands_reject_quantics_in_both_orders():
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    quantics = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], layout)
+    plain = quantics.as_tt()
+    for first, second in [(plain, quantics), (quantics, plain)]:
+        with pytest.raises(ValueError, match='semantics'):
+            first + second
+        with pytest.raises(ValueError, match='semantics'):
+            first * second
+
+
+def test_quantics_blocking_preserves_coordinate_contract():
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    format = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], layout)
+    cores = format.cores
+    with pytest.raises(ValueError, match='layout'):
+        format.block([2])
+    assert format.cores is cores
+    assert format.layout is layout
+    assert format.in_dim == (2, 2)
+    plain = format.as_tt()
+    grouped = plain.block([2])
+    plain.unblock(grouped)
+    assert torch.allclose(plain.contract_dense(), format.contract_dense())
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_plain_conversion_owns_its_bonds(cyclic):
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    if cyclic:
+        format = tk.formats.QTR([torch.ones(2, 2, 2)] * 2, layout)
+        plain = format.as_tr
+    else:
+        format = tk.formats.QTT([torch.eye(2), torch.eye(2)], layout)
+        plain = format.as_tt
+    format.bonds = tk.formats.BondFactors1D([torch.ones(2)] * (2 if cyclic else 1))
+    converted = plain()
+    assert converted.bonds is not format.bonds
+    converted.bonds.values[0] = torch.full((2,), 2.)
+    assert torch.equal(format.bonds.values[0], torch.ones(2))
+    with pytest.raises(ValueError, match='factor dimensions'):
+        converted.bonds.values[0] = torch.ones(3)
+    assert torch.equal(converted.bonds.values[0], torch.full((2,), 2.))

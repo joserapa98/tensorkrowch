@@ -20,6 +20,7 @@ import torch
 from tensorkrowch.formats import (
     TensorFormat, TensorFormat1D, TensorFormat2D, TT, TR, TTM, TRM,
     QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout)
+from tensorkrowch.formats.formats1d import _restore_cores
 from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
 
 
@@ -91,7 +92,22 @@ class _ResultState:
     def error(self, *args: Any, **kwargs: Any) -> ErrorRecord:
         """Collects a sample error using the shared numerical format kernel."""
         record = super().error(*args, **kwargs)
-        return ErrorRecord(**record._asdict())
+        return ErrorRecord(kind=record.kind, absolute=record.absolute,
+                           relative=record.relative, size=record.size,
+                           denominator=record.denominator)
+
+    def _new_from_standard_cores(self, cores, in_dim, out_dim, n_batches,
+                                 cyclic, other=None, product=False,
+                                 transpose=False):
+        """Preserves the result contract when applying an operator to data."""
+        if self._family == 'matrix' and product and other is None:
+            cls = TRDecomposition if cyclic else TTDecomposition
+            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
+            return cls(cores, n_batches=n_batches, metadata={
+                'operation': 'trm_apply' if cyclic else 'ttm_apply'})
+        return super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic, other=other,
+            product=product, transpose=transpose)
 
 
 class TTDecomposition(_ResultState, TT, TensorDecomposition1D):
@@ -105,20 +121,9 @@ class TRDecomposition(_ResultState, TR, TensorDecomposition1D):
 class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):
     """TTM format with decomposition metrics and algorithm metadata."""
 
-    def _build_applied_decomposition(self, cores: List[torch.Tensor],
-                                     n_batches: int) -> TTDecomposition:
-        result = super()._build_applied_decomposition(cores, n_batches)
-        return TTDecomposition(result.cores, n_batches=n_batches,
-                               metadata={'operation': 'ttm_apply'})
-
 
 class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):
     """TRM format with decomposition metrics and algorithm metadata."""
-
-    def _build_applied_decomposition(self, cores: List[torch.Tensor],
-                                     n_batches: int) -> TRDecomposition:
-        return TRDecomposition(cores, n_batches=n_batches,
-                               metadata={'operation': 'trm_apply'})
 
 
 class _QuanticsResultState:

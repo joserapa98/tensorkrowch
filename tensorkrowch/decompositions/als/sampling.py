@@ -30,21 +30,13 @@ from typing import Callable, Optional, Protocol, Sequence, Tuple
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
                                                       _ravel_indices,
                                                       _unravel_indices)
 
 from tensorkrowch.decompositions.als.problem import ObservedEntries
-
-
-_INTEGER_DTYPES = (
-    torch.uint8,
-    torch.int8,
-    torch.int16,
-    torch.int32,
-    torch.int64,
-)
 
 
 @dataclass(frozen=True)

@@ -70,7 +70,7 @@ def test_mixed_sum_batches_and_errors(make_format):
 def test_factored_operations(make_format, topology):
     a = make_format(topology, dtype=torch.complex128)
     count = a.n_sites if topology.startswith('tr') else a.n_sites - 1
-    a.bonds = tk.formats.BondFactors([
+    a.bonds = tk.formats.BondFactors1D([
         torch.linspace(1, 2, a.rank[site], dtype=torch.float64) * (1 + 0.1j)
         for site in range(count)])
     dense = a.contract_dense()

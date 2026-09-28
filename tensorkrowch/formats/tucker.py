@@ -4,13 +4,12 @@ from typing import ClassVar, Dict, List, Optional, Tuple, Type, Union
 
 import torch
 
-from tensorkrowch.formats._chain import TensorFormat1D
 from tensorkrowch.formats.base import TensorFormat
-from tensorkrowch.formats.quantics import _map_structure
+from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR,
+                                         _from_standard_cores)
+from tensorkrowch.formats.quantics import QTT, QTR, _map_structure
 from tensorkrowch.formats.quantization import (CoordinateMap, QuantizedLayout,
-                                               _unit_to_indices)
-from tensorkrowch.formats.tr import TR
-from tensorkrowch.formats.tt import TT
+                                             _unit_to_indices)
 
 
 class _QuantizedTuckerFormat(TensorFormat):
@@ -550,13 +549,10 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> torch.allclose(flat.evaluate_indices(indices), format.evaluate_indices(indices))
         True
         """
-        from tensorkrowch.formats.operations import _build_network
-        from tensorkrowch.formats.quantics import QTT, QTR
-
         standard = self._flat_standard_cores()
         dimensions = self._flattened_in_dim()
         cyclic = self._upper_type is TR
-        base = _build_network(standard, dimensions, None, 0, cyclic)
+        base = _from_standard_cores(standard, dimensions, None, 0, cyclic)
         schedule = []
         positions = []
         column = 0

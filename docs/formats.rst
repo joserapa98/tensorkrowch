@@ -15,6 +15,46 @@ when learning functions from data. Explicit adapters connect both layers.
 Formats preserve PyTorch autograd where their operations support it; they do
 not detach inputs or manage training implicitly.
 
+Implementation and review order
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The implementation follows a one-way dependency flow:
+
+.. code-block:: text
+
+   base.py
+      |
+      v
+   bonds.py    orbits.py
+         \      /
+          v    v
+           formats1d.py             quantization.py
+                |                        |
+                +----------+-------------+
+                           v
+                       quantics.py
+                           |
+                           v
+                        tucker.py
+
+``formats1d.py`` contains the shared container, the vector/matrix bases,
+TT/TR/TTM/TRM, numerical operations and model adapters. Review it from top to
+bottom: records and numerical helpers, controlled core mutations, gauges and
+rounding, blocks, algebra, evaluation, adapters, then concrete core layouts.
+The helpers restore tensor shapes or run reused numerical phases; they do not
+import concrete format classes from other modules.
+
+In-place algorithms compute local core/factor lists and install them together
+through ``_set_standard_cores``, validating the final state once. Operations
+that produce a separate format use ``_new_from_standard_cores``: ordinary
+formats construct TT/TR/TTM/TRM directly, and Quantics overrides that step to
+preserve coordinate metadata without an intermediate ordinary format.
+Model imports occur only in the adapters. Decomposition results inherit the
+formats and attach metrics and provenance; formats do not import decompositions.
+
+Controlled mutations and tensor ownership
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The constructor copies the core container and shares tensor storage. Assigning
 ``format.cores[i]`` or a same-length slice immediately validates ranks,
 dimensions and runtime and refreshes cached metadata. Invalid assignments
@@ -23,9 +63,18 @@ Changing the number or order of sites requires the full ``cores`` setter or
 an explicit topology operation. ``rank`` returns a defensive list. Tensor ``resize_`` is
 outside this contract; replace the tensor instead.
 
-Bond containers also belong to one format. Assigning ``format.bonds`` copies
+``cores``, bond factors, Vidal spectra and absorption powers share the private
+``_SafeList`` implementation in ``base.py``. It preserves list identity on
+element/slice replacement and restores entries when a validation callback
+raises. The format callback restores core metadata on failure and clears
+canonical state only after a successful edit.
+
+``BondFactors1D`` stores factors for open or cyclic chains. Bond containers
+also belong to one format. Assigning ``format.bonds`` copies
 the container and shares its tensors. Element and same-length slice replacements
 in ``format.bonds.values`` validate immediately against the current cores.
+The container notifies its format through a callback; copies and conversions
+bind callbacks to their new containers.
 Replace adjacent cores together when changing a shared rank. Algorithms work
 with temporary lists and publish cores and bonds together at completion.
 Manual replacement of cores, factors, Vidal spectra or absorption powers
@@ -41,7 +90,7 @@ are not intercepted; shape changes should use controlled replacement.
    >>> format.cores[:] = [torch.ones(2, 3), torch.ones(3, 2)]
    >>> format.rank
    [3]
-   >>> format.bonds = tk.formats.BondFactors([torch.ones(3)])
+   >>> format.bonds = tk.formats.BondFactors1D([torch.ones(3)])
    >>> format.bonds.values[0] = torch.full((3,), 2.)
    >>> torch.equal(format.contract_dense(), torch.full((2, 2), 6.))
    True
@@ -87,11 +136,11 @@ vector into a TT.
 
 Core and data batches are independent, with output axes
 ``(*core_batch, *data_batch, ...)``, even if their sizes coincide. Binary
-network operations require matching structural batches or one unbatched
-operand. They do not silently form a Cartesian product of network batches.
+format operations require matching structural batches or one unbatched
+operand. They do not silently form a Cartesian product of structural batches.
 Norm and overlap use scaled contractions. ``inner`` conjugates its first
 operand; normalized overlap retains its complex phase, and fidelity is its
-squared magnitude. Normalized overlap with a zero-norm network raises an error.
+squared magnitude. Normalized overlap with a zero-norm format raises an error.
 
 Exact algebra
 -------------
@@ -193,14 +242,33 @@ no PEPS orbit or PEPS implementation is provided yet.
 Blocks and topology conversions
 -------------------------------
 
-``block(groups)`` contracts contiguous sites and stores ``BlockLayout`` for
-``unblock``. Matrices retain separate grouped input/output dimensions.
+``block(groups)`` contracts contiguous sites in-place and returns a
+``BlockLayout`` describing the original dimensions. ``unblock(layout, ...)``
+restores those sites in-place, optionally truncating ranks inside each group.
+The layout can also be applied to a solver result with matching blocked
+dimensions; it need not belong to the same object. Matrices retain separate
+grouped input/output dimensions. Clone a format before blocking to retain its
+original structure. Quantics layouts must remain compatible with the cores;
+use an explicit ``as_tt``/``as_tr``/``as_ttm``/``as_trm`` conversion to group
+arbitrary digit sites without coordinate metadata.
 ``contract_block(first, last)`` leaves external ranks open and includes internal
 factors only. ``split_block`` returns standard fused local cores, cut spectra
 and internal factors; these spectra are local factorization values rather
-than certified global Schmidt spectra. ``replace_block`` installs a compatible
-replacement atomically, preserving external ranks. Crossing a stored cyclic
+than certified global Schmidt spectra. ``replace_cores(first, cores, bonds=...)``
+installs consecutive standard cores and internal factors together, preserving
+external ranks and factors. This also supports regional algorithms that update
+cores without contracting their whole region. Solver caches and messages remain
+the responsibility of the algorithm. Crossing a stored cyclic
 cut is expressed explicitly by rotating the ring first.
+
+.. doctest::
+
+   >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
+   >>> layout = format.block([2])
+   >>> solution = tk.formats.TT([2 * format.cores[0]])
+   >>> _ = solution.unblock(layout)
+   >>> torch.allclose(solution.contract_dense(), 2 * torch.eye(2))
+   True
 
 ``tr.rotate(first=k)`` preserves circular order and rotates the dense axes.
 ``tr.to_tt()`` carries the closing index through identities in every interior

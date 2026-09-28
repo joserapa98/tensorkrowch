@@ -5,6 +5,7 @@ from typing import (Hashable, Optional, Protocol, Sequence, Tuple, Union,
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.metrics import EvaluationStats
 from tensorkrowch.decompositions.sketching.evaluations import (
     _EvaluationPlanBuilder,
@@ -42,8 +43,7 @@ def _normalize_selection(
             index_selection.shape[-1] != n_components:
         raise ValueError(
             'The last `index_selection` dimension should match Phi axes')
-    if index_selection.dtype not in (
-            torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64):
+    if index_selection.dtype not in _INTEGER_DTYPES:
         raise TypeError('`index_selection` should contain integers')
     selection = index_selection.to(device=device, dtype=torch.long)
     flat = selection.reshape(-1, n_components)
@@ -81,9 +81,7 @@ def _fiber_selection(
         if fixed_indices.ndim < 1 or fixed_indices.shape[-1] != n_fixed:
             raise ValueError(
                 'The last `fixed_indices` dimension should match fixed axes')
-        if fixed_indices.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64):
+        if fixed_indices.dtype not in _INTEGER_DTYPES:
             raise TypeError('`fixed_indices` should contain integers')
         fixed_indices = fixed_indices.to(device=device, dtype=torch.long)
         fixed_shape = tuple(fixed_indices.shape[:-1])
@@ -342,10 +340,8 @@ class PhiOperator:
         values_by_site = self._values_from_selection(selection)
         input_values = tuple(values_by_site[site] for site in self.input_sites)
         if self.input_kind is None:
-            integer_dtypes = (
-                torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
             kind = 'indices' if all(
-                value.ndim == 1 and value.dtype in integer_dtypes
+                value.ndim == 1 and value.dtype in _INTEGER_DTYPES
                 for value in input_values) else 'features'
         else:
             kind = self.input_kind

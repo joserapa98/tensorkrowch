@@ -7,6 +7,7 @@ from typing import (Any, Callable, Mapping, Optional, Protocol, Sequence, Tuple,
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (InputFitRecord,
                                                  TruncationRecord)
@@ -370,10 +371,8 @@ class BasisFitter:
         """Validates basis labels and resolves the complete input dimension."""
         if not isinstance(domain, torch.Tensor):
             raise TypeError('`domain` should be torch.Tensor type')
-        integer_dtypes = (
-            torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
         if domain.ndim != 1 or domain.shape[0] < 1 or \
-                domain.dtype not in integer_dtypes:
+                domain.dtype not in _INTEGER_DTYPES:
             raise ValueError(
                 '`domain` should be a non-empty integer vector of basis labels')
         labels = domain.to(torch.long)

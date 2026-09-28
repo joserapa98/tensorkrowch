@@ -5,38 +5,10 @@ from typing import Sequence
 
 import torch
 
-
-class _BondList(list):
-    """Fixed-length bond sequence with validation on element replacement."""
-
-    def __init__(self, values, owner, name: str) -> None:
-        """Stores bond entries and their owning factor container."""
-        super().__init__(values)
-        self._owner = owner
-        self._name = name
-
-    def __setitem__(self, key, value):
-        """Validates a controlled replacement before accepting it."""
-        values = list(value) if isinstance(key, slice) else [value]
-
-        if isinstance(key, slice) and (len(values) != len(self[key])):
-            raise ValueError('Bond slice replacement should preserve length')
-
-        replacement = list(self)
-        replacement[key] = values if isinstance(key, slice) else value
-        self._owner._replace_sequence(self._name, replacement)
-        super().__setitem__(key, values if isinstance(key, slice) else value)
-        setattr(self._owner, '_' + self._name, self)
-
-    def _structural_error(self, *args, **kwargs):
-        """Rejects changes that bypass controlled structural replacement."""
-        raise TypeError('Replace the bond object to change its structure')
-
-    append = extend = insert = pop = remove = clear = _structural_error
-    reverse = sort = __delitem__ = __iadd__ = __imul__ = _structural_error
+from tensorkrowch.formats.base import _SafeList
 
 
-class BondFactors:
+class BondFactors1D:
     """Optional diagonals between adjacent cores, including a cyclic closure.
 
     Each format owns a separate bond container, sharing the supplied tensors.
@@ -53,32 +25,19 @@ class BondFactors:
 
     def __init__(self, values) -> None:
         """Initializes the stored tensor references and validates construction."""
-        self._owner = None
+        self._on_change = None
         self.values = values
 
-    def _replace_sequence(self, name, values):
-        """Validates a replacement and invalidates manually edited Vidal state."""
-        if isinstance(values, torch.Tensor):
-            raise TypeError('`values` should be a sequence of diagonals')
-        values = list(values)
-        if name == 'values' and not all(
+    def _on_sequence_changed(self):
+        """Validates factors, notifies the format and invalidates Vidal state."""
+        if not all(
                 value is None or isinstance(value, torch.Tensor)
-                for value in values):
+                for value in self._values):
             raise TypeError('Bond factors should be tensors or None')
-        attribute = '_' + name
-        previous = getattr(self, attribute, None)
-        setattr(self, attribute, _BondList(values, self, name))
-        try:
-            if self._owner is not None:
-                self._owner.validate_bonds()
-        except (TypeError, ValueError):
-            setattr(self, attribute, previous)
-            raise
-
+        if self._on_change is not None:
+            self._on_change()
         if hasattr(self, '_valid'):
             self._valid = False
-        if self._owner is not None:
-            self._owner._orth_center = None
 
     @property
     def values(self):
@@ -96,19 +55,27 @@ class BondFactors:
         ----------
         values : sequence of torch.Tensor or None
             One compatible factor per stored bond. Attached containers validate
-            against their owner immediately. None entries denote identity
+            against their format immediately. None entries denote identity
             factors.
         """
-        self._replace_sequence('values', values)
+        if isinstance(values, torch.Tensor):
+            raise TypeError('`values` should be a sequence of diagonals')
+        previous = getattr(self, '_values', None)
+        self._values = _SafeList(values, self._on_sequence_changed)
+        try:
+            self._on_sequence_changed()
+        except Exception:
+            self._values = previous
+            raise
 
-    def _with_owner(self, owner):
-        """Copies bond containers for a format, preserving tensor references."""
+    def _with_callback(self, on_change):
+        """Copies bond lists and binds their callback, preserving tensors."""
         result = copy(self)
-        result._owner = owner
-        result._values = _BondList(self._values, result, 'values')
+        result._on_change = on_change
+        result._values = _SafeList(self._values, result._on_sequence_changed)
         if isinstance(self, VidalGauge):
-            result._spectra = _BondList(self._spectra, result, 'spectra')
-            result._powers = _BondList(self._powers, result, 'powers')
+            result._spectra = _SafeList(self._spectra, result._on_sequence_changed)
+            result._powers = _SafeList(self._powers, result._on_sequence_changed)
         return result
 
     def validate(self, cores: Sequence[torch.Tensor], cyclic: bool):
@@ -147,7 +114,7 @@ class BondFactors:
     def _map_tensors(self, function):
         """Maps stored tensors while preserving concrete container semantics."""
         result = copy(self)
-        result._owner = None
+        result._on_change = None
         values = []
         for value in self.values:
             if value is None:
@@ -157,11 +124,11 @@ class BondFactors:
             if not value.is_complex() and mapped.is_complex():
                 mapped = mapped.real
             values.append(mapped)
-        result._values = _BondList(values, result, 'values')
+        result._values = _SafeList(values, result._on_sequence_changed)
         return result
 
 
-class VidalGauge(BondFactors):
+class VidalGauge(BondFactors1D):
     r"""Schmidt spectra and their current absorption into neighbouring cores.
 
     Powers (0, 0), (0.5, 0.5), and (1, 1) represent explicit, implicit and
@@ -184,8 +151,8 @@ class VidalGauge(BondFactors):
 
     def __init__(self, spectra, powers) -> None:
         """Initializes the stored tensor references and validates construction."""
-        self._spectra = _BondList(spectra, self, 'spectra')
-        self._powers = _BondList(powers, self, 'powers')
+        self._spectra = _SafeList(spectra, self._on_sequence_changed)
+        self._powers = _SafeList(powers, self._on_sequence_changed)
         if len(self.spectra) != len(self.powers):
             raise ValueError('Spectra and powers should have the same length')
         values = []
@@ -220,6 +187,6 @@ class VidalGauge(BondFactors):
         for spectrum in self.spectra:
             mapped = function(spectrum)
             spectra.append(mapped.real if mapped.is_complex() else mapped)
-        result._spectra = _BondList(spectra, result, 'spectra')
-        result._powers = _BondList(self._powers, result, 'powers')
+        result._spectra = _SafeList(spectra, result._on_sequence_changed)
+        result._powers = _SafeList(self._powers, result._on_sequence_changed)
         return result

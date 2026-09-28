@@ -2,9 +2,40 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
+
+
+class _SafeList(list):
+    """Fixed-length list that validates replacements through a callback."""
+
+    def __init__(self, values, on_change: Callable[[], None]) -> None:
+        """Stores references and the callback for controlled replacements."""
+        super().__init__(values)
+        self._on_change = on_change
+
+    def __setitem__(self, key, value):
+        """Applies a replacement and restores the entries if validation fails."""
+        previous = self[key]
+        if isinstance(key, slice):
+            value = list(value)
+            if len(value) != len(previous):
+                raise ValueError('Slice replacement should preserve length')
+
+        super().__setitem__(key, value)
+        try:
+            self._on_change()
+        except Exception:
+            super().__setitem__(key, previous)
+            raise
+
+    def _structural_error(self, *args, **kwargs):
+        """Rejects changes that bypass controlled structural replacement."""
+        raise TypeError('Replace the complete container to change its structure')
+
+    append = extend = insert = pop = remove = clear = _structural_error
+    reverse = sort = __delitem__ = __iadd__ = __imul__ = _structural_error
 
 
 @dataclass(frozen=True)

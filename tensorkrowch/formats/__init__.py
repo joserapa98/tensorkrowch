@@ -13,7 +13,7 @@ This script contains:
     * TT, TR
     * TTM, TRM
     * SampleError
-    * BondFactors, VidalGauge, RoundingInfo
+    * BondFactors1D, VidalGauge, RoundingInfo
     * GaugeOrbit, TensorRingOrbit
     * BlockLayout, UnblockInfo, SplitBlock, split_block
     * QuantizedLayout, CoordinateMap and coordinate maps
@@ -23,22 +23,17 @@ This script contains:
 """
 
 from tensorkrowch.formats.base import TensorFormat, TensorFormat2D, SampleError
-from tensorkrowch.formats._chain import TensorFormat1D
-from tensorkrowch.formats.blocking import (BlockLayout, UnblockInfo,
-                                           SplitBlock, split_block)
-from tensorkrowch.formats.bonds import BondFactors, VidalGauge
+from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
+from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
+                                         RoundingInfo, BlockLayout, UnblockInfo,
+                                         SplitBlock, split_block)
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
-                                         MinimalCanonicalInfo)
+                                       MinimalCanonicalInfo)
 from tensorkrowch.formats.quantics import QTT, QTR, QTTM, QTRM
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
-                                               UniformCoordinateMap,
-                                               WarpedCoordinateMap,
-                                               ExplicitGridMap)
-from tensorkrowch.formats.rounding import RoundingInfo
-from tensorkrowch.formats.tr import TR
-from tensorkrowch.formats.trm import TRM
-from tensorkrowch.formats.tt import TT
-from tensorkrowch.formats.ttm import TTM
+                                             UniformCoordinateMap,
+                                             WarpedCoordinateMap,
+                                             ExplicitGridMap)
 from tensorkrowch.formats.tucker import QTTTucker, QTRTucker
 
 
@@ -59,7 +54,7 @@ __all__ = [
     'QTTTucker',
     'QTRTucker',
 
-    'BondFactors',
+    'BondFactors1D',
     'VidalGauge',
     'RoundingInfo',
 

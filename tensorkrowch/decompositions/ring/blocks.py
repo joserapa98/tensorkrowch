@@ -27,7 +27,7 @@ import torch
 
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
-from tensorkrowch.formats.blocking import split_block
+from tensorkrowch.formats.formats1d import split_block
 from tensorkrowch.decompositions.metrics import ErrorRecord, TruncationRecord, TimingRecord
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 

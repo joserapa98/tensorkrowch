@@ -27,7 +27,9 @@ import torch
 
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
-from tensorkrowch.decompositions.svd.tt import TTSVD
+from tensorkrowch.formats.blocking import split_block
+from tensorkrowch.decompositions.metrics import ErrorRecord, TruncationRecord, TimingRecord
+from tensorkrowch.decompositions._runtime import _RuntimePolicy
 
 
 _Rank = Union[int, Sequence[int]]
@@ -653,22 +655,36 @@ def split_block_ttsvd(
 
     left_rank = block.shape[0]
     right_rank = block.shape[-1]
-    fused_in_dim = (
-        left_rank * in_dim[0],
-        *in_dim[1:-1],
-        in_dim[-1] * right_rank)
-    tensor = block.reshape(fused_in_dim)
-    result = TTSVD(tensor, out_device=out_device)._fit_validated(
-        truncation=truncation,
-        renormalize=renormalize,
-        collect_metrics=collect_metrics)
+    metrics = DecompositionMetrics()
+    norm = block.norm() if collect_metrics else None
 
-    cores = list(result.cores)
-    cores[0] = cores[0].reshape(
-        left_rank, in_dim[0], cores[0].shape[-1])
-    cores[-1] = cores[-1].reshape(
-        cores[-1].shape[0], in_dim[-1], right_rank)
-    effective_rank = tuple(result.rank)
+    def record_cut(site, info, singular_values, log_scale):
+        metrics.truncations.append(TruncationRecord.from_svd_info(
+            info, site=site, log_scale=log_scale, global_norm=norm,
+            singular_values=singular_values))
+
+    runtime = _RuntimePolicy.from_tensor(block, out_device=out_device)
+    timer = runtime.timer() if collect_metrics else None
+    if timer is not None:
+        timer.__enter__()
+    try:
+        split = split_block(
+            block, in_dim, **truncation.as_kwargs(), mode='right',
+            renormalize=renormalize,
+            _svd_callback=record_cut if collect_metrics else None)
+    finally:
+        if timer is not None:
+            timer.__exit__(None, None, None)
+    # Right-absorbed local factors are already contained in the raw cores.
+    cores = [runtime.finalize(core) for core in split.cores]
+    effective_rank = tuple(core.shape[-1] for core in cores[:-1])
+    if collect_metrics:
+        absolute = torch.stack([record.local_abs_error for record in metrics.truncations]).norm()
+        relative = torch.where(norm > 0, absolute / norm, torch.zeros_like(norm))
+        metrics.errors.append(ErrorRecord(kind='truncation', absolute=absolute,
+                                          relative=relative, denominator=norm,
+                                          size=len(metrics.truncations)))
+        metrics.timings.append(TimingRecord(name='fit', elapsed=timer.elapsed))
     padding = tuple(0 for _ in effective_rank)
     if pad_rank:
         padding = tuple(rank - value for value in effective_rank)
@@ -682,7 +698,7 @@ def split_block_ttsvd(
         rank=actual_rank,
         requested_rank=rank,
         padding=padding,
-        metrics=result.metrics,
+        metrics=metrics,
         metadata={
             'algorithm': 'block_ttsvd',
             'pad_rank': pad_rank,

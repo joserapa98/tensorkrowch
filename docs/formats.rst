@@ -153,6 +153,9 @@ complex Hermitian exponential gauges, preserving the best finite iterate.
 This finite, nonuniform-ring objective is inspired by
 `Acuaviva et al. <https://arxiv.org/pdf/2209.14358>`_; it does not claim the
 uniform-network theorems or uniqueness, and finite iteration may not converge.
+``return_info=True`` returns ``MinimalCanonicalInfo`` with the iteration count,
+convergence flag and final virtual-bond Gram imbalance. The default stores no
+diagnostic history.
 Batched rings share gauges minimizing their aggregate objective. ``GaugeOrbit``
 defines cancellation by virtual tensor axes without assuming a geometry;
 no PEPS orbit or PEPS implementation is provided yet.

@@ -1,6 +1,7 @@
 """Diagonal bond factors and explicit records of Vidal absorption."""
 
 from copy import copy
+from typing import Sequence
 
 import torch
 
@@ -15,12 +16,12 @@ class BondFactors:
         ``(*core_batch, rank)``. None denotes an identity without allocation.
     """
 
-    def __init__(self, values):
+    def __init__(self, values) -> None:
         if isinstance(values, torch.Tensor):
             raise TypeError('`values` should be a sequence of diagonals')
         self.values = list(values)
 
-    def validate(self, cores, cyclic):
+    def validate(self, cores: Sequence[torch.Tensor], cyclic: bool):
         count = len(cores) if cyclic else len(cores) - 1
         if len(self.values) != count:
             raise ValueError('There should be one factor per bond')
@@ -60,7 +61,7 @@ class VidalGauge(BondFactors):
     ``1 - left_power - right_power``. Spectra are real and non-negative.
     """
 
-    def __init__(self, spectra, powers):
+    def __init__(self, spectra, powers) -> None:
         self.spectra = list(spectra)
         self.powers = list(powers)
         self._valid = True

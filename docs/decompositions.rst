@@ -3,6 +3,67 @@ Decompositions
 
 .. currentmodule:: tensorkrowch.decompositions
 
+Formats and fit provenance
+--------------------------
+
+Results inherit the numerical representations documented in :doc:`formats`.
+``TTDecomposition`` is a ``TT``, and the TR/TTM/TRM families follow
+the same relationship. Their additional ``metrics`` and ``metadata`` describe
+the original fit. Copying, detaching or moving a result preserves this history;
+editing or rounding its cores does not recompute historical errors. New exact
+algebra returns numerical formats without attaching a fictitious fit history.
+The compatibility aliases ``input_dim``/``output_dim`` and ``as_info`` remain.
+
+Quantics preparation
+--------------------
+
+``quantization=QuantizedLayout(...)`` reshapes raw discrete variable axes into
+digits and orders them according to the actual schedule. TT/TR SVD and ALS
+reuse their existing engines. Matrix SVD uses
+``quantization=(in_layout, out_layout)`` with equally many input/output digit
+sites and raw dimensions matching each grid. No padding or interpolation is
+implicit. Ranks and fixed cores refer to the digit network. The current TR-SVD
+and Matrix engines retain their existing restrictions on structural batches.
+
+Advanced ``fit`` returns a QTT/QTR/QTTM/QTRM result when quantization is
+selected. Direct SVD, ALS and RS/RSS functions continue to return core lists
+by default. ``return_result=True`` retains the object and its coordinate
+meaning without enabling metrics. Combining it with ``return_info=True`` is
+an error. Tucker wrappers retain their existing hierarchical object return.
+
+.. code-block:: python
+
+   import torch
+   import tensorkrowch as tk
+
+   layout = tk.formats.QuantizedLayout(
+       2, base=2, level=(3, 4), ordering='interleaved')
+   data = torch.arange(128, dtype=torch.float64).reshape(8, 16)
+   qtt = tk.decompositions.tt_svd(
+       data, rank=16, quantization=layout, return_result=True)
+   assert torch.allclose(qtt.to_dense_grid(), data, atol=1e-9)
+   fitted = tk.decompositions.tt_als(
+       data, quantization=layout, initial_cores=qtt,
+       max_sweeps=1, return_result=True)
+   assert fitted.layout == layout
+   model = fitted.to_mps()
+
+ALS accepts raw dense/discrete sources, compatible Quantics TT sources, or
+physical callables with an actual coordinate map and domain. ``source_space``
+distinguishes physical, original indices and already encoded digits. Physical
+functions are approximated on the chosen grid; scalar ALS is not extended to
+tensor-valued outputs or Matrix ALS. Exact ALS still enumerates its target.
+Dense weights use the same digit ordering as the target. Completion encodes
+indices while preserving values and weights; physical samples require
+``sample_space='physical'``. Conflicting observations that quantize to the
+same digit configuration raise an error instead of being silently averaged.
+
+RSS ``.quantized`` and ``qtt_rss``/``qtr_rss`` use the same source adapter and
+return formats containing the fitted layout, coordinate map and output-site
+positions. ``evaluate_indices`` and ``evaluate_points`` remain usable after
+the source and fitter are released. Layout/map compatibility is checked
+before Quantics algebra or use as an ALS initializer.
+
 SVD decompositions
 ------------------
 
@@ -40,6 +101,14 @@ TRM-SVD
 
 Lightweight results
 -------------------
+
+.. autoclass:: QTTDecomposition
+
+.. autoclass:: QTRDecomposition
+
+.. autoclass:: QTTMDecomposition
+
+.. autoclass:: QTRMDecomposition
 
 .. autoclass:: TTDecomposition
    :members:
@@ -146,15 +215,19 @@ original variable coordinates for both layouts.
 
 .. autoclass:: QuantizedLayout
    :members:
+   :noindex:
 
 .. autoclass:: UniformCoordinateMap
    :members:
+   :noindex:
 
 .. autoclass:: WarpedCoordinateMap
    :members:
+   :noindex:
 
 .. autoclass:: ExplicitGridMap
    :members:
+   :noindex:
 
 .. autofunction:: qtt_rss
 
@@ -250,7 +323,7 @@ Sparse and TT-backed sources:
    indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
    values = torch.tensor([1., 2., 3.])
    sparse = tk.decompositions.SparseTensorSource(
-       indices, values, input_dim=(2, 2))
+       indices, values, in_dim=(2, 2))
    sparse_result = tk.decompositions.TTRS(sparse).fit(rank=2)
 
    tt_source = tk.decompositions.TTTensorSource(sparse_result)

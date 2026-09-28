@@ -14,9 +14,13 @@ This script contains:
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from math import prod
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
+
+from tensorkrowch.formats import QuantizedLayout
+from tensorkrowch.decompositions.results import _quantics_result
+from tensorkrowch.decompositions.sources.quantization import _quantize_tensor
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
@@ -83,8 +87,15 @@ class TRSVD:
                  tensor: torch.Tensor,
                  center: Optional[int] = None,
                  *,
+                 quantization: Optional[QuantizedLayout] = None,
+                 in_features: Optional[Sequence[int]] = None,
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
+        self._quantization = quantization
+        if quantization is not None:
+            tensor = _quantize_tensor(tensor, quantization, 0, in_features)
+        elif in_features is not None:
+            raise ValueError("in_features requires quantization")
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if tensor.ndim < 2:
@@ -483,7 +494,7 @@ class TRSVD:
         Fix a tensor and compare shared rank caps at the middle cut:
 
         >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-        >>> decomposer = TRSVD(tensor)
+        >>> decomposer = tk.decompositions.TRSVD(tensor)
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2)
         >>> max(rank_one.rank)
@@ -571,7 +582,9 @@ class TRSVD:
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return result
+        return _quantics_result(
+            result, self._quantization,
+            digit_positions=None if self._quantization is None else range(self._quantization.n_sites))
 
 
 def tr_svd(tensor: torch.Tensor,
@@ -584,7 +597,10 @@ def tr_svd(tensor: torch.Tensor,
            renormalize: bool = False,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
-           return_info: bool = False):
+           return_info: bool = False,
+           return_result: bool = False,
+           quantization: Optional[QuantizedLayout] = None,
+           in_features: Optional[Sequence[int]] = None):
     r"""Decomposes a dense tensor into TR cores through an interior SVD.
 
     This is the simple functional interface. Use :class:`TRSVD` to repeat
@@ -664,6 +680,16 @@ def tr_svd(tensor: torch.Tensor,
         ``verbose=0``, diagnostic norm reductions, records and synchronized
         timings are skipped.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+    quantization : QuantizedLayout or pair of layouts, optional
+        Raw variable-to-digit schedule. Matrix SVD requires an input/output
+        layout pair with matching numbers of digit sites. No padding is implicit.
+    in_features : sequence[int], optional
+        Raw non-batch input axes to quantize. Other axes remain output sites
+        after the digit network. Requires quantization.
+
     Returns
     -------
     list[torch.Tensor] or tuple
@@ -675,26 +701,31 @@ def tr_svd(tensor: torch.Tensor,
     Decompose a four-site tensor with a shared rank cap:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tr_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tr_svd(tensor, rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2), (2, 2, 2), (2, 2, 2)]
 
     Inspect the initial padding required by a shared rank cap:
 
     >>> singular_values = torch.tensor([5., 3., 1., 0.])
-    >>> _, info = tr_svd(torch.diag(singular_values),
-    ...                  rank=2, return_info=True)
+    >>> _, info = tk.decompositions.tr_svd(torch.diag(singular_values),
+    ...                                  rank=2, cutoff=0, return_info=True)
     >>> info['rank']
     [2, 2]
     >>> info['metadata']['initial_padding']
     1
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRSVD(
         tensor=tensor,
         center=center,
-        out_device=out_device).fit(
+        out_device=out_device, quantization=quantization,
+        in_features=in_features).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
@@ -703,6 +734,8 @@ def tr_svd(tensor: torch.Tensor,
             renormalize=renormalize,
             collect_metrics=return_info,
             verbose=verbose)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores

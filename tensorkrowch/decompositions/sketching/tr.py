@@ -7,6 +7,8 @@ from typing import (Any, Dict, Mapping, Optional, Sequence, Tuple, Union)
 
 import torch
 
+from tensorkrowch.formats import TR
+
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
@@ -416,7 +418,7 @@ class TRRSS(TTRSS):
     ...     return (1 + data).prod(dim=1)
     >>> def embedding(values):
     ...     return torch.stack((1 - values, values), dim=-1)
-    >>> decomposer = TRRSS(function, embedding, domain=domain)
+    >>> decomposer = tk.decompositions.TRRSS(function, embedding, domain=domain)
     >>> result = decomposer.fit(samples, rank=1)
     >>> result.rank
     [1, 1, 1, 1]
@@ -613,7 +615,7 @@ class TRRSS(TTRSS):
         >>> function = lambda data: (1 + data).prod(dim=1)
         >>> embedding = lambda values: torch.stack(
         ...     (1 - values, values), dim=-1)
-        >>> result = TRRSS(
+        >>> result = tk.decompositions.TRRSS(
         ...     function, embedding, domain=domain).fit(samples, rank=1)
         >>> len(result.cores)
         3
@@ -625,7 +627,7 @@ class TRRSS(TTRSS):
             raise ValueError(
                 '`labels` should be a tensor with shape (batch_size,)')
         if warm_start is not None:
-            if not isinstance(warm_start, TRDecomposition):
+            if not isinstance(warm_start, TR):
                 raise TypeError(
                     '`warm_start` should be TRDecomposition type or None')
             raise NotImplementedError(
@@ -1330,7 +1332,7 @@ class TRRS(TTRS):
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> decomposer = TRRS(dataset=dataset, in_dim=(2, 2, 2))
+    >>> decomposer = tk.decompositions.TRRS(dataset=dataset, in_dim=(2, 2, 2))
     >>> result = decomposer.fit(rank=1)
     >>> result.rank
     [1, 1, 1]
@@ -1447,7 +1449,7 @@ class TRRS(TTRS):
         if len(self._source.in_dim) < 3:
             raise ValueError('TR-RS requires at least three sites')
         if warm_start is not None:
-            if not isinstance(warm_start, TRDecomposition):
+            if not isinstance(warm_start, TR):
                 raise TypeError(
                     '`warm_start` should be TRDecomposition type or None')
             raise NotImplementedError(
@@ -1587,7 +1589,8 @@ def tr_rs(
         strict_system: bool = False,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
-        return_info: bool = False):
+        return_info: bool = False,
+        return_result: bool = False):
     """Projects a complete discrete source into TR cores with TR-RS.
 
     This simple interface constructs :class:`TRRS`, calls :meth:`TRRS.fit`
@@ -1598,10 +1601,14 @@ def tr_rs(
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> cores = tr_rs(dataset=dataset, in_dim=(2, 2, 2), rank=1)
+    >>> cores = tk.decompositions.tr_rs(dataset=dataset, in_dim=(2, 2, 2), rank=1)
     >>> len(cores)
     3
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRRS(
@@ -1632,6 +1639,8 @@ def tr_rs(
             strict_system=strict_system,
             verbose=verbose,
             collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores
@@ -1784,7 +1793,8 @@ def qtr_rss(
         generator: Optional[torch.Generator] = None,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
-        return_info: bool = False):
+        return_info: bool = False,
+        return_result: bool = False):
     """Decomposes a multivariable physical function into QTR cores.
 
     This is the cyclic counterpart of :func:`qtt_rss`; it uses basis digit
@@ -1804,6 +1814,10 @@ def qtr_rss(
             raise ValueError(
                 '`n_variables` could not be inferred from sketch samples')
         n_variables = values.shape[1]
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     decomposer = TRRSS.quantized(
@@ -1846,6 +1860,8 @@ def qtr_rss(
         sample_space=sample_space,
         verbose=verbose,
         collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores
@@ -1877,7 +1893,8 @@ def tr_rss(function,
            generator: Optional[torch.Generator] = None,
            out_device: Device = 'cpu',
            verbose: Union[bool, int] = 0,
-           return_info: bool = False):
+           return_info: bool = False,
+        return_result: bool = False):
     r"""Decomposes a sampled function into Tensor Ring cores.
 
     This compatibility function constructs :class:`TRRSS`, calls
@@ -1955,6 +1972,10 @@ def tr_rss(function,
     return_info : bool, optional
         Whether to return ``(cores, info)`` with structured diagnostics.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+
     Returns
     -------
     list[torch.Tensor]
@@ -1969,11 +1990,15 @@ def tr_rss(function,
     >>> function = lambda data: (1 + data).prod(dim=1)
     >>> embedding = lambda values: torch.stack(
     ...     (1 - values, values), dim=-1)
-    >>> cores = tr_rss(
+    >>> cores = tk.decompositions.tr_rss(
     ...     function, embedding, samples, domain=domain, rank=1)
     >>> [tuple(core.shape) for core in cores]
     [(1, 2, 1), (1, 2, 1), (1, 2, 1)]
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRRSS(
@@ -2003,6 +2028,8 @@ def tr_rss(function,
             generator=generator,
             verbose=verbose,
             collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores

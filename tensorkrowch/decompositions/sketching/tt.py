@@ -7,6 +7,9 @@ from typing import (Any, Callable, Dict, List, Optional, Sequence, Tuple, Union)
 
 import torch
 
+from tensorkrowch.formats import TT
+from tensorkrowch.decompositions.results import _quantics_result
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (ErrorRecord,
@@ -732,7 +735,7 @@ class TTRSS(RecursiveSketching):
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
         if warm_start is not None:
-            if not isinstance(warm_start, TTDecomposition):
+            if not isinstance(warm_start, TT):
                 raise TypeError(
                     '`warm_start` should be TTDecomposition type or None')
             raise NotImplementedError(
@@ -1258,7 +1261,9 @@ class _QuantizedRSSMixin:
             'sample_space': active_space,
         }
         result.metadata['algorithm'] = self._quantized_algorithm
-        return result
+        return _quantics_result(result, self.quantized_layout,
+                                adapter=self.quantized_adapter,
+                                digit_positions=self.outputs.input_positions)
 
 
 class _QuantizedTTRSS(_QuantizedRSSMixin, TTRSS):
@@ -1343,7 +1348,7 @@ class QTTTuckerRSS:
     >>> grid = torch.linspace(0, 1, 4)
     >>> samples = torch.cartesian_prod(grid, grid)
     >>> function = lambda values: (1 + values).prod(dim=1)
-    >>> result = QTTTuckerRSS(
+    >>> result = tk.decompositions.QTTTuckerRSS(
     ...     function, n_variables=2, base=2, level=2,
     ...     domain=torch.tensor([0., 1.])).fit(
     ...         samples, rank=2, connector_rank=2)
@@ -1644,7 +1649,7 @@ class TTRS:
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> decomposer = TTRS(dataset=dataset, in_dim=(2, 2))
+    >>> decomposer = tk.decompositions.TTRS(dataset=dataset, in_dim=(2, 2))
     >>> result = decomposer.fit(rank=2)
     >>> result.in_dim
     (2, 2)
@@ -1769,14 +1774,14 @@ class TTRS:
         >>> values = torch.tensor([1., 2., 2., 4.])
         >>> source = tk.decompositions.SparseTensorSource(
         ...     indices, values, in_dim=(2, 2))
-        >>> result = TTRS(
+        >>> result = tk.decompositions.TTRS(
         ...     source,
         ...     sketch_operator=tk.decompositions.SampledSketch()).fit(rank=1)
         >>> result.rank
         [1]
         """
         if warm_start is not None:
-            if not isinstance(warm_start, TTDecomposition):
+            if not isinstance(warm_start, TT):
                 raise TypeError(
                     '`warm_start` should be TTDecomposition type or None')
             raise NotImplementedError(
@@ -1905,7 +1910,8 @@ def tt_rs(
         strict_system: bool = False,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
-        return_info: bool = False):
+        return_info: bool = False,
+        return_result: bool = False):
     """Projects a complete discrete source into TT cores with TT-RS.
 
     This simple interface constructs :class:`TTRS`, calls :meth:`TTRS.fit`
@@ -1916,10 +1922,14 @@ def tt_rs(
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> cores = tt_rs(dataset=dataset, in_dim=(2, 2), rank=2)
+    >>> cores = tk.decompositions.tt_rs(dataset=dataset, in_dim=(2, 2), rank=2)
     >>> len(cores)
     2
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TTRS(
@@ -1941,6 +1951,8 @@ def tt_rs(
             strict_system=strict_system,
             verbose=verbose,
             collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores
@@ -2100,7 +2112,8 @@ def qtt_rss(
         legacy_projection: bool = True,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 0,
-        return_info: bool = False):
+        return_info: bool = False,
+        return_result: bool = False):
     """Decomposes a multivariable physical function into QTT cores.
 
     Digit sites always use the corresponding basis embedding, so this API has
@@ -2113,7 +2126,7 @@ def qtt_rss(
     Examples
     --------
     >>> samples = torch.tensor([[0.], [1 / 3], [2 / 3], [1.]])
-    >>> cores = qtt_rss(
+    >>> cores = tk.decompositions.qtt_rss(
     ...     lambda x: 1 + x[:, 0],
     ...     samples,
     ...     n_variables=1,
@@ -2137,6 +2150,10 @@ def qtt_rss(
             raise ValueError(
                 '`n_variables` could not be inferred from sketch samples')
         n_variables = values.shape[1]
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     decomposer = TTRSS.quantized(
@@ -2178,6 +2195,8 @@ def qtt_rss(
         sample_space=sample_space,
         verbose=verbose,
         collect_metrics=return_info)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores
@@ -2209,7 +2228,8 @@ def tt_rss(
         legacy_projection: bool = True,
         out_device: Device = 'cpu',
         verbose: Union[bool, int] = 1,
-        return_info: bool = False
+        return_info: bool = False,
+        return_result: bool = False
         ) -> Union[List[torch.Tensor], Tuple[List[torch.Tensor], dict]]:
     r"""Decomposes a sampled scalar or tensor-valued function into a TT.
 
@@ -2296,6 +2316,10 @@ def tt_rss(
         Also returns legacy ``total_time`` and ``val_eps`` keys together with
         structured result information.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+
     Returns
     -------
     list[torch.Tensor]
@@ -2320,6 +2344,10 @@ def tt_rss(
     >>> len(tensors)
     3
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     start = perf_counter() if return_info else None
@@ -2350,6 +2378,8 @@ def tt_rss(
         legacy_projection=legacy_projection,
         verbose=verbose,
         collect_metrics=return_info)
+    if return_result:
+        return result
     if not return_info:
         return result.cores
 

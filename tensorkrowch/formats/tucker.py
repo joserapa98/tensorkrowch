@@ -1,6 +1,6 @@
 """Two-level Quantics Tucker representations without algorithm provenance."""
 
-from typing import ClassVar, Dict, List, Optional, Tuple, Type
+from typing import ClassVar, Dict, List, Optional, Tuple, Type, Union
 
 import torch
 
@@ -19,30 +19,42 @@ class _QuantizedTuckerFormat(TensorFormat):
     _upper_type: ClassVar[Type[TensorFormat1D]]
     _family = 'quantized_tucker'
 
-    def __init__(self, upper, factors, layout, coordinate_map=None, domain=None, *,
-                 variable_positions=None, computational_grid='endpoints', out_of_domain='error'):
+    def __init__(self,
+                 upper,
+                 factors,
+                 layout,
+                 coordinate_map=None,
+                 domain=None,
+                 *,
+                 variable_positions=None,
+                 computational_grid: str = 'endpoints',
+                 out_of_domain: str = 'error') -> None:
         if not isinstance(upper, self._upper_type):
             raise TypeError(f'`upper` should be {self._upper_type.__name__} type')
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
         if coordinate_map is not None and not isinstance(coordinate_map, CoordinateMap):
             raise TypeError('`coordinate_map` should implement CoordinateMap')
-        if computational_grid not in ('endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
+        if computational_grid not in (
+            'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
             raise ValueError('Invalid computational grid or coordinate policy')
         self.upper = upper
         self.factors = tuple(factors)
         self.layout = layout
         self.coordinate_map = coordinate_map
         self.domain = domain
-        if len(self.factors) != layout.n_variables or not all(isinstance(factor, TT) for factor in self.factors):
+        if len(self.factors) != layout.n_variables or not all(
+            isinstance(factor, TT) for factor in self.factors):
             raise ValueError('There should be one TT factor per variable')
         if variable_positions is None:
             if upper.n_sites != layout.n_variables:
-                raise ValueError('variable_positions is required when upper output sites are present')
+                raise ValueError(
+                    'variable_positions is required when upper output sites are present')
             variable_positions = range(layout.n_variables)
         self.variable_positions = tuple(variable_positions)
         positions = self.variable_positions
-        if len(positions) != layout.n_variables or any(isinstance(site, bool) or not isinstance(site, int) or not 0 <= site < upper.n_sites for site in positions):
+        if len(positions) != layout.n_variables or any(isinstance(site, bool) or not isinstance(
+            site, int) or not 0 <= site < upper.n_sites for site in positions):
             raise ValueError('Variable positions should select valid upper sites')
         if any(a >= b for a, b in zip(positions, positions[1:])):
             raise ValueError('Variable positions should be strictly increasing')
@@ -60,39 +72,39 @@ class _QuantizedTuckerFormat(TensorFormat):
         self.upper.cores = values
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         return self.upper.device
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         return self.upper.dtype
 
     @property
-    def n_sites(self):
+    def n_sites(self) -> int:
         return self.upper.n_sites
 
     @property
-    def n_batches(self):
+    def n_batches(self) -> int:
         return 0
 
     @property
-    def batch_shape(self):
+    def batch_shape(self) -> Tuple[int, ...]:
         return ()
 
     @property
-    def rank(self):
+    def rank(self) -> List[int]:
         return self.upper.rank
 
     @property
-    def topology(self):
+    def topology(self) -> str:
         return self._topology
 
     @property
-    def in_dim(self):
+    def in_dim(self) -> Tuple[int, ...]:
         return self._flattened_in_dim()
 
     @property
-    def out_dim(self):
+    def out_dim(self) -> Optional[Tuple[int, ...]]:
         return None
 
     def validate(self):
@@ -111,7 +123,8 @@ class _QuantizedTuckerFormat(TensorFormat):
                           computational_grid=self.computational_grid,
                           out_of_domain=self.out_of_domain)
 
-    def to(self, device=None, dtype=None, copy=False):
+    def to(self, device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None, copy: bool = False):
         if dtype is not None and not isinstance(dtype, torch.dtype):
             raise TypeError('dtype should be torch.dtype type')
         if not isinstance(copy, bool):
@@ -119,8 +132,10 @@ class _QuantizedTuckerFormat(TensorFormat):
         from tensorkrowch.formats.quantics import _same_references
 
         upper = self.upper.to(device=device, dtype=dtype, copy=copy)
-        factors = [factor.to(device=device, dtype=dtype, copy=copy) for factor in self.factors]
-        function = lambda tensor: tensor.to(device=device, dtype=dtype, copy=copy)
+        factors = [factor.to(device=device, dtype=dtype, copy=copy)
+                   for factor in self.factors]
+
+        def function(tensor): return tensor.to(device=device, dtype=dtype, copy=copy)
         coordinate_map = _map_structure(self.coordinate_map, function)
         domain = _map_structure(self.domain, function)
         if not copy and upper is self.upper and all(
@@ -151,12 +166,10 @@ class _QuantizedTuckerFormat(TensorFormat):
             for site, dimension in enumerate(self.upper.in_dim)
             if site not in variable_positions)
 
-
     @property
     def factor_rank(self) -> Tuple[Tuple[int, ...], ...]:
         """TT ranks internal to every local quantized factor."""
         return tuple(tuple(factor.rank) for factor in self.factors)
-
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -182,7 +195,6 @@ class _QuantizedTuckerFormat(TensorFormat):
                     'Upper cores and factors should share device and dtype')
         return upper.rank, (), upper.in_dim, None
 
-
     def _flattened_in_dim(self) -> Tuple[int, ...]:
         """Expands each upper connector into its factor digit dimensions."""
         variable_by_position = {
@@ -197,10 +209,8 @@ class _QuantizedTuckerFormat(TensorFormat):
                 dimensions.extend(self.factors[variable].in_dim[:-1])
         return tuple(dimensions)
 
-
     def _standard_cores(self) -> List[torch.Tensor]:
         return self.flatten()._standard_cores()
-
 
     def _physical_to_indices(self, points: torch.Tensor) -> torch.Tensor:
         """Maps physical points to grid indices without retaining the source."""
@@ -233,7 +243,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             self.computational_grid,
             self.out_of_domain)
 
-
     def _factor_vectors(self, digits: torch.Tensor) -> List[torch.Tensor]:
         """Contracts every local factor while leaving gamma open."""
         schedule = self.layout.sites()
@@ -255,7 +264,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             vectors.append((state @ connector).squeeze(-2))
         return vectors
 
-
     def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
         """Evaluates scheduled digit configurations through both levels."""
         digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
@@ -269,7 +277,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             for variable, position in enumerate(self.variable_positions)}
         return self._contract_upper(vectors_by_position, digits.shape[0])
 
-
     def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """Evaluates one integer grid index per original variable."""
         indices = self.layout._integer_tensor(indices, 'indices')
@@ -278,17 +285,14 @@ class _QuantizedTuckerFormat(TensorFormat):
                 '`indices` should have shape (batch_size, n_variables)')
         return self.evaluate_digits(self.layout.encode_indices(indices))
 
-
     def evaluate(self, points: torch.Tensor) -> torch.Tensor:
         """Quantizes physical points and contracts factors with the upper TN."""
         return self.evaluate_indices(self._physical_to_indices(points))
-
 
     def _contract_upper(self,
                         vectors: Dict[int, torch.Tensor],
                         batch_size: int) -> torch.Tensor:
         raise NotImplementedError
-
 
     @staticmethod
     def _carry_upper_rank(core: torch.Tensor,
@@ -301,7 +305,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             upper_rank * core.shape[0],
             core.shape[1],
             upper_rank * core.shape[2])
-
 
     def _flat_standard_cores(self) -> List[torch.Tensor]:
         """Substitutes every gamma site by its local factor TT block."""
@@ -333,15 +336,12 @@ class _QuantizedTuckerFormat(TensorFormat):
                 upper_core.shape[-1]))
         return flat
 
-
     def contract_dense(self) -> torch.Tensor:
         """Contracts the explicit flattened network for small-grid oracles."""
         return self.flatten().contract_dense()
 
-
     def norm(self) -> torch.Tensor:
         return self.flatten().norm()
-
 
     def normalized_overlap(
             self, other: TensorFormat1D) -> torch.Tensor:
@@ -350,10 +350,8 @@ class _QuantizedTuckerFormat(TensorFormat):
                 '`other` should be a quantized Tucker decomposition')
         return self.flatten().normalized_overlap(other.flatten())
 
-
     def fidelity(self, other: TensorFormat1D) -> torch.Tensor:
         return self.normalized_overlap(other).abs().square()
-
 
     def flatten(self):
         """Returns a Quantics TT/TR with grouped factor blocks and open outputs."""
@@ -367,7 +365,8 @@ class _QuantizedTuckerFormat(TensorFormat):
         schedule = []
         positions = []
         column = 0
-        by_position = {site: variable for variable, site in enumerate(self.variable_positions)}
+        by_position = {site: variable for variable,
+                       site in enumerate(self.variable_positions)}
         for site in range(self.upper.n_sites):
             if site not in by_position:
                 column += 1
@@ -386,7 +385,7 @@ class _QuantizedTuckerFormat(TensorFormat):
                    digit_positions=positions, computational_grid=self.computational_grid,
                    out_of_domain=self.out_of_domain)
 
-    def evaluate_points(self, points):
+    def evaluate_points(self, points) -> torch.Tensor:
         return self.evaluate(points)
 
 
@@ -409,7 +408,6 @@ class QTTTucker(_QuantizedTuckerFormat):
                 state = torch.einsum(
                     'b...l,lpr->b...pr', state, core)
         return state.squeeze(-1)
-
 
 
 class QTRTucker(_QuantizedTuckerFormat):

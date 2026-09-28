@@ -27,7 +27,8 @@ from tensorkrowch.formats._chain import TensorFormat1D
 from tensorkrowch.formats.blocking import (BlockLayout, UnblockInfo,
                                            SplitBlock, split_block)
 from tensorkrowch.formats.bonds import BondFactors, VidalGauge
-from tensorkrowch.formats.orbits import GaugeOrbit, TensorRingOrbit
+from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
+                                         MinimalCanonicalInfo)
 from tensorkrowch.formats.quantics import QTT, QTR, QTTM, QTRM
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
                                                UniformCoordinateMap,
@@ -69,6 +70,7 @@ __all__ = [
 
     'GaugeOrbit',
     'TensorRingOrbit',
+    'MinimalCanonicalInfo',
 
     'QuantizedLayout',
     'CoordinateMap',

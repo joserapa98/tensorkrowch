@@ -18,7 +18,8 @@ def rotate(network, first=0):
     order = [*range(first, network.n_sites), *range(first)]
     cores = network._raw_standard_cores()
     in_dim = tuple(network._in_dim[site] for site in order)
-    out_dim = None if network._out_dim is None else tuple(network._out_dim[site] for site in order)
+    out_dim = None if network._out_dim is None else tuple(
+        network._out_dim[site] for site in order)
     result = _build_network([cores[site] for site in order], in_dim, out_dim,
                             network._n_batches, True)
     if network._bonds is not None:
@@ -40,7 +41,8 @@ def ring_to_train(network):
     batch = network._batch_shape
     closing = cores[0].shape[-3]
     if len(cores) == 1:
-        result = [cores[0].diagonal(dim1=-3, dim2=-1).sum(-1).unsqueeze(-2).unsqueeze(-1)]
+        result = [cores[0].diagonal(
+            dim1=-3, dim2=-1).sum(-1).unsqueeze(-2).unsqueeze(-1)]
     else:
         first = cores[0].transpose(-3, -2).reshape(*batch, 1, cores[0].shape[-2], -1)
         result = [first]
@@ -48,7 +50,7 @@ def ring_to_train(network):
         for core in cores[1:-1]:
             combined = torch.einsum('st,...aib->...saitb', identity, core)
             result.append(combined.reshape(*batch, closing * core.shape[-3],
-                                            core.shape[-2], closing * core.shape[-1]))
+                                           core.shape[-2], closing * core.shape[-1]))
         last = cores[-1].movedim(-1, -3)
         result.append(last.reshape(*batch, closing * cores[-1].shape[-3],
                                    cores[-1].shape[-2], 1))
@@ -56,7 +58,7 @@ def ring_to_train(network):
                           network._n_batches, False)
 
 
-def to_mps(network, parameterized=False, **kwargs):
+def to_mps(network, parameterized: bool = False, **kwargs):
     """Builds MPS or MPSData from effective vector cores, without detaching."""
     from tensorkrowch.models import MPS, MPSData
 
@@ -70,11 +72,12 @@ def to_mps(network, parameterized=False, **kwargs):
     if network._n_batches:
         if parameterized:
             raise ValueError('MPSData does not expose parameterized model cores')
-        return MPSData(tensors=list(effective.cores), n_batches=network._n_batches, **kwargs)
+        return MPSData(tensors=list(effective.cores),
+                       n_batches=network._n_batches, **kwargs)
     return MPS(tensors=list(effective.cores), parameterized=parameterized, **kwargs)
 
 
-def from_mps(model, cyclic):
+def from_mps(model, cyclic: bool):
     """Collects effective model tensors, including open boundary contractions."""
     from tensorkrowch.models import MPS, MPSData
 
@@ -90,7 +93,7 @@ def from_mps(model, cyclic):
     return (TR if cyclic else TT)(model.tensors, n_batches=n_batches)
 
 
-def to_mpo(network, parameterized=False, **kwargs):
+def to_mpo(network, parameterized: bool = False, **kwargs):
     """Builds an MPO from effective matrix cores without modifying the format."""
     from tensorkrowch.models import MPO
 
@@ -106,7 +109,7 @@ def to_mpo(network, parameterized=False, **kwargs):
     return MPO(tensors=list(effective.cores), parameterized=parameterized, **kwargs)
 
 
-def from_mpo(model, cyclic):
+def from_mpo(model, cyclic: bool):
     """Collects effective MPO tensors, including open boundary contractions."""
     from tensorkrowch.models import MPO
 

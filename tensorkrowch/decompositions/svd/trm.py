@@ -12,6 +12,10 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.formats import QuantizedLayout
+from tensorkrowch.decompositions.results import _quantics_result
+from tensorkrowch.decompositions.sources.quantization import _quantize_matrix
+
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import _ratio_from_log_norms
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
@@ -72,6 +76,7 @@ class TRMSVD:
                  center: Optional[int] = None,
                  *,
                  layout: str = 'interleaved',
+                 quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
         matrix_input = _prepare_matrix_input(
@@ -80,6 +85,10 @@ class TRMSVD:
             out_dim=out_dim,
             layout=layout,
             family='TRM')
+        self._quantization = quantization
+        if quantization is not None:
+            matrix_input = _quantize_matrix(
+                tensor, in_dim, out_dim, layout, quantization, 'TRM')
         if len(matrix_input.in_dim) < 2:
             raise ValueError('TRM-SVD requires at least two sites')
 
@@ -235,7 +244,7 @@ class TRMSVD:
         Fix a tensor and compare decompositions with two shared rank caps:
 
         >>> tensor = torch.arange(36.).reshape(2, 3, 2, 3)
-        >>> decomposer = TRMSVD(tensor)
+        >>> decomposer = tk.decompositions.TRMSVD(tensor)
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2)
         >>> rank_one.rank
@@ -334,7 +343,7 @@ class TRMSVD:
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return result
+        return _quantics_result(result, self._quantization)
 
 
 def trm_svd(tensor: torch.Tensor,
@@ -351,7 +360,9 @@ def trm_svd(tensor: torch.Tensor,
             renormalize: bool = False,
             out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
-            return_info: bool = False):
+            return_info: bool = False,
+           return_result: bool = False,
+           quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None):
     r"""Decomposes a dense tensor or matrix into cyclic TRM cores.
 
     This is the simple functional interface. Use :class:`TRMSVD` to repeat
@@ -434,6 +445,13 @@ def trm_svd(tensor: torch.Tensor,
         ``verbose=0``, diagnostic norm reductions, records and synchronized
         timings are skipped.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+    quantization : QuantizedLayout or pair of layouts, optional
+        Raw variable-to-digit schedule. Matrix SVD requires an input/output
+        layout pair with matching numbers of digit sites. No padding is implicit.
+
     Returns
     -------
     list[torch.Tensor] or tuple
@@ -445,18 +463,22 @@ def trm_svd(tensor: torch.Tensor,
     Decompose a grouped two-site tensor with a shared rank cap:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = trm_svd(tensor, layout='grouped', rank=2)
+    >>> cores = tk.decompositions.trm_svd(tensor, layout='grouped', rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2, 3), (2, 2, 2, 3)]
 
     Tensorize an ordinary matrix with heterogeneous site dimensions:
 
     >>> matrix = torch.arange(144.).reshape(12, 12)
-    >>> cores = trm_svd(
+    >>> cores = tk.decompositions.trm_svd(
     ...     matrix, in_dim=(3, 4), out_dim=(2, 6), rank=3)
     >>> len(cores)
     2
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRMSVD(
@@ -465,7 +487,7 @@ def trm_svd(tensor: torch.Tensor,
         out_dim=out_dim,
         center=center,
         layout=layout,
-        out_device=out_device).fit(
+        out_device=out_device, quantization=quantization).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
@@ -474,6 +496,8 @@ def trm_svd(tensor: torch.Tensor,
             renormalize=renormalize,
             collect_metrics=return_info,
             verbose=verbose)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores

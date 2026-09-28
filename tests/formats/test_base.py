@@ -117,3 +117,17 @@ def test_invalid_construction_and_data(make_format):
     assert zero.norm() == 0
     with pytest.raises(ValueError, match='zero-norm'):
         zero.normalized_overlap(zero)
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_scaled_norm_preserves_core_gradients(make_format, dtype):
+    network = make_format('tt', 2, dtype=dtype)
+    for core in network.cores:
+        core.requires_grad_()
+    expected = network.contract_dense().norm()
+    actual = network.norm()
+    expected_grad = torch.autograd.grad(expected, network.cores, retain_graph=True)
+    actual_grad = torch.autograd.grad(actual, network.cores)
+    assert torch.allclose(actual, expected)
+    assert all(torch.allclose(a, b, rtol=1e-9, atol=1e-10)
+               for a, b in zip(actual_grad, expected_grad))

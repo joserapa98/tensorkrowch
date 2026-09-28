@@ -1,6 +1,6 @@
 """Raw-tensor TT format."""
 
-from typing import ClassVar, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import torch
 
@@ -19,19 +19,19 @@ class TT(_VectorFormat1D):
 
     _topology = 'tt'
 
-    def to_mps(self, parameterized=False, **kwargs):
+    def to_mps(self, parameterized: bool = False, **kwargs):
         """Builds MPS or MPSData from these cores without detaching."""
         from tensorkrowch.formats.adapters import to_mps
 
         return to_mps(self, parameterized, **kwargs)
 
     @classmethod
-    def from_mps(cls, model):
+    def from_mps(cls, model, **kwargs):
         """Collects effective open-boundary MPS/MPSData tensors."""
         from tensorkrowch.formats.adapters import from_mps
 
         result = from_mps(model, cyclic=False)
-        return cls(result.cores, n_batches=result.n_batches)
+        return cls(result.cores, n_batches=result.n_batches, **kwargs)
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -79,7 +79,6 @@ class TT(_VectorFormat1D):
 
         return rank, batch_shape, tuple(in_dim), None
 
-
     def _raw_standard_cores(self) -> List[torch.Tensor]:
         if len(self.cores) == 1:
             return [self.cores[0].unsqueeze(self.n_batches).unsqueeze(-1)]
@@ -88,7 +87,6 @@ class TT(_VectorFormat1D):
         cores.extend(self.cores[1:-1])
         cores.append(self.cores[-1].unsqueeze(-1))
         return cores
-
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:

@@ -289,7 +289,7 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
     Example
     -------
     >>> sequence = [1, 2, 3, 5, 6, 7, 10, 11, 13]
-    >>> split_sequence_into_regions(sequence)
+    >>> tk.utils.split_sequence_into_regions(sequence)
     [[1, 2, 3], [5, 6, 7], [10, 11], [13]]
     """
     if not isinstance(lst, Sequence) or not all(isinstance(x, int) for x in lst):   #TODO: use this in my code
@@ -340,48 +340,6 @@ def random_unitary(n,
     return q
 
 
-class _TruncatedSVDInfo(NamedTuple):
-    """Numerical diagnostics from one call to :func:`truncated_svd`."""
-
-    full_rank: int  # Rank available before truncation
-    selected_rank: int  # Rank retained after truncation
-    total_sq_norm: Tensor  # Total singular-value energy, optionally batched
-    discarded_sq_norm: Tensor  # Discarded energy, optionally batched
-    svd_method: Text  # Compact SVD implementation used
-
-
-def _validate_truncation(rank: Optional[int] = None,
-                         cutoff: Optional[float] = None,
-                         atol: Optional[float] = None,
-                         rtol: Optional[float] = None,
-                         cum_percentage: Optional[float] = None) -> None:
-    """Validates the truncation contract shared by SVD-based methods."""
-    if rank is not None:
-        if isinstance(rank, bool) or not isinstance(rank, int):
-            raise TypeError('`rank` should be int type')
-        if rank < 1:
-            raise ValueError('`rank` should be a positive integer')
-
-    for name, value in (('cutoff', cutoff), ('atol', atol)):
-        if value is None:
-            continue
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise TypeError(f'`{name}` should be a real number')
-        if (value < 0) or not isfinite(value):
-            raise ValueError(
-                f'`{name}` should be a finite non-negative number')
-
-    for name, value in (('rtol', rtol),
-                        ('cum_percentage', cum_percentage)):
-        if value is None:
-            continue
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise TypeError(f'`{name}` should be a real number')
-        if (value < 0) or (value > 1) or not isfinite(value):
-            raise ValueError(
-                f'`{name}` should be a finite number between 0 and 1')
-
-
 def _backend_svd(tensor: Tensor,
                  svd_method: Text) -> Tuple[Tensor, Tensor, Tensor]:
     """Computes an economy-size SVD without consulting refinement settings."""
@@ -418,18 +376,22 @@ def _refine_svd(tensor: Tensor,
     """Refines the small-singular-value subspace of one matrix recursively."""
     if (s.numel() < 2) or (max_depth == 0) or (s[0] == 0):
         return u, s, vh
+
     small = torch.nonzero(s / s[0] < recursion_threshold).flatten()
     if not small.numel():
         return u, s, vh
+
     split = small[0].item()
     u_tail = u[:, split:]
     vh_tail = vh[split:, :]
     projected = u_tail.transpose(-2, -1).conj() @ tensor @ \
         vh_tail.transpose(-2, -1).conj()
+
     u_ref, s_ref, vh_ref = _backend_svd(projected, svd_method)
     u_ref, s_ref, vh_ref = _refine_svd(
         projected, u_ref, s_ref, vh_ref, svd_method,
         recursion_threshold, max_depth - 1)
+
     return (torch.cat((u[:, :split], u_tail @ u_ref), dim=-1),
             torch.cat((s[:split], s_ref)),
             torch.cat((vh[:split, :], vh_ref @ vh_tail), dim=-2))
@@ -450,6 +412,7 @@ def accurate_svd(tensor: Tensor,
     a smaller matrix, recomputes its SVD and updates the associated singular
     vectors. This repeats only when the smaller matrix still has a separated
     tail, up to the recursion limit.
+
     This can improve relative accuracy in the tail, but cannot recover values
     lost when forming the input or guarantee relative accuracy below its
     floating-point resolution. No singular values are truncated or inverted.
@@ -521,26 +484,74 @@ def accurate_svd(tensor: Tensor,
         raise TypeError('`max_depth` should be int type')
     if max_depth < 0:
         raise ValueError('`max_depth` should be non-negative')
+
     svd_method = get_svd_method()
     u, s, vh = _backend_svd(tensor, svd_method)
+
     if max_depth == 0:
         return u, s, vh
     if tensor.ndim == 2:
         return _refine_svd(tensor, u, s, vh, svd_method,
                            recursion_threshold, max_depth)
+
     if s.numel() == 0:
         return u, s, vh
+
     matrices = tensor.reshape(-1, *tensor.shape[-2:])
     u_batch = u.reshape(-1, *u.shape[-2:])
     s_batch = s.reshape(-1, s.shape[-1])
     vh_batch = vh.reshape(-1, *vh.shape[-2:])
+
     refined = [_refine_svd(matrix, u_i, s_i, vh_i, svd_method,
                             recursion_threshold, max_depth)
                for matrix, u_i, s_i, vh_i in
                zip(matrices, u_batch, s_batch, vh_batch)]
+
     return (torch.stack([item[0] for item in refined]).reshape(u.shape),
             torch.stack([item[1] for item in refined]).reshape(s.shape),
             torch.stack([item[2] for item in refined]).reshape(vh.shape))
+
+
+class _TruncatedSVDInfo(NamedTuple):
+    """Numerical diagnostics from one call to :func:`truncated_svd`."""
+
+    full_rank: int  # Rank available before truncation
+    selected_rank: int  # Rank retained after truncation
+    total_sq_norm: Tensor  # Total singular-value energy, optionally batched
+    discarded_sq_norm: Tensor  # Discarded energy, optionally batched
+    svd_method: Text  # Compact SVD implementation used
+
+
+def _validate_truncation(rank: Optional[int] = None,
+                         cutoff: Optional[float] = None,
+                         atol: Optional[float] = None,
+                         rtol: Optional[float] = None,
+                         cum_percentage: Optional[float] = None) -> None:
+    """Validates the truncation contract shared by SVD-based methods."""
+    if rank is not None:
+        if isinstance(rank, bool) or not isinstance(rank, int):
+            raise TypeError('`rank` should be int type')
+        if rank < 1:
+            raise ValueError('`rank` should be a positive integer')
+
+    for name, value in (('cutoff', cutoff), ('atol', atol)):
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f'`{name}` should be a real number')
+        if (value < 0) or not isfinite(value):
+            raise ValueError(
+                f'`{name}` should be a finite non-negative number')
+
+    for name, value in (('rtol', rtol),
+                        ('cum_percentage', cum_percentage)):
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError(f'`{name}` should be a real number')
+        if (value < 0) or (value > 1) or not isfinite(value):
+            raise ValueError(
+                f'`{name}` should be a finite number between 0 and 1')
 
 
 def _compact_svd(tensor: Tensor,
@@ -648,7 +659,7 @@ def truncated_svd(tensor: Tensor,
     Examples
     --------
     >>> tensor = torch.randn(4, 4)
-    >>> u, s, vh = truncated_svd(tensor, rank=2)
+    >>> u, s, vh = tk.utils.truncated_svd(tensor, rank=2)
     >>> len(s)
     2
     """
@@ -656,6 +667,7 @@ def truncated_svd(tensor: Tensor,
         raise TypeError('`tensor` should be torch.Tensor type')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
+
     _validate_truncation(
         rank=rank,
         cutoff=cutoff,

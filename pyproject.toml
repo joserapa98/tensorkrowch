@@ -61,6 +61,7 @@ packages = [
     "tensorkrowch.decompositions",
     "tensorkrowch.decompositions.als",
     "tensorkrowch.decompositions.ring",
+    "tensorkrowch.decompositions.sketching",
     "tensorkrowch.decompositions.sources",
     "tensorkrowch.decompositions.svd"
 ]

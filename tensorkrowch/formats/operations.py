@@ -44,8 +44,10 @@ def _binary_inputs(first, second, same_family=True):
     if first.device != second.device:
         raise ValueError('Formats should share device')
     if first._batch_shape and second._batch_shape and first._batch_shape != second._batch_shape:
-        raise ValueError('Structural batches should match or one operand should be unbatched')
-    if same_family and (first._in_dim != second._in_dim or first._out_dim != second._out_dim):
+        raise ValueError(
+            'Structural batches should match or one operand should be unbatched')
+    if same_family and (
+        first._in_dim != second._in_dim or first._out_dim != second._out_dim):
         raise ValueError('Formats should have matching input and output dimensions')
     dtype = torch.promote_types(first.dtype, second.dtype)
     a = [core.to(dtype=dtype) for core in first._standard_cores()]
@@ -97,7 +99,8 @@ def add(first, second, method='stacked', coefficient=1):
             cores.append(core)
     from tensorkrowch.formats.quantics import _inherit_semantics
 
-    return _inherit_semantics(_build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
+    return _inherit_semantics(_build_network(
+        cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
 def hadamard(first, second):
@@ -110,7 +113,8 @@ def hadamard(first, second):
                                   x.shape[-2], x.shape[-1] * y.shape[-1]))
     from tensorkrowch.formats.quantics import _inherit_semantics
 
-    return _inherit_semantics(_build_network(cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
+    return _inherit_semantics(_build_network(
+        cores, first._in_dim, first._out_dim, len(batch), cyclic), first)
 
 
 def scale(network, coefficient):
@@ -130,7 +134,7 @@ def scale(network, coefficient):
     from tensorkrowch.formats.quantics import _inherit_semantics
 
     return _inherit_semantics(_build_network(cores, network._in_dim, network._out_dim,
-                                            network._n_batches, network._topology.startswith('tr')), network)
+                                             network._n_batches, network._topology.startswith('tr')), network)
 
 
 def apply(first, second):

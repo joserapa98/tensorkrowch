@@ -81,7 +81,7 @@ class QuantizedLayout:
 
     Examples
     --------
-    >>> layout = QuantizedLayout(
+    >>> layout = tk.formats.QuantizedLayout(
     ...     n_variables=2, base=2, level=3, ordering='interleaved')
     >>> digits = layout.encode_indices(torch.tensor([[3, 5]]))
     >>> torch.equal(layout.decode_digits(digits), torch.tensor([[3, 5]]))
@@ -251,7 +251,7 @@ class QuantizedLayout:
             self,
             digits: torch.Tensor,
             target_ordering: Union[str, 'QuantizedLayout']
-            ) -> torch.Tensor:
+    ) -> torch.Tensor:
         """Reorders digit columns into another compatible layout."""
         if isinstance(target_ordering, str):
             target = QuantizedLayout(
@@ -768,4 +768,3 @@ class _CompositeCoordinateMap:
                     out_of_domain)
             values.append(value)
         return torch.cat(values, dim=-1)
-

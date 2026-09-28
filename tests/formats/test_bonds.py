@@ -55,3 +55,18 @@ def test_vidal_validation(make_format):
                    {'inverse_positions': [3]}, {'inverse_cutoff': -1}]:
         with pytest.raises(ValueError):
             make_format().canonicalize_vidal(**kwargs)
+
+
+def test_local_redistribution_retains_other_interfaces(make_format):
+    network = make_format().canonicalize_vidal('implicit')
+    expected = network.contract_dense()
+    second = network.bonds.powers[1]
+    for mode, powers in [('inverse', (1, 1)), ('explicit', (0, 0)),
+                         ('left', (1, 0)), ('right', (0, 1))]:
+        network.redistribute_bond(0, mode)
+        assert network.bonds.powers == [powers, second]
+        assert torch.allclose(network.contract_dense(), expected)
+    with pytest.raises(ValueError):
+        network.redistribute_bond(0, 'unknown')
+    with pytest.raises(ValueError):
+        network.redistribute_bond(0, 'inverse', inverse_cutoff=1e20)

@@ -2,8 +2,17 @@
 
 from math import isfinite
 from numbers import Real
+from typing import NamedTuple, Optional, Sequence
 
 import torch
+
+
+class MinimalCanonicalInfo(NamedTuple):
+    """Optional convergence information for finite-ring gauge optimization."""
+
+    iterations: int
+    converged: bool
+    balance_residual: Optional[torch.Tensor]
 
 
 class GaugeOrbit:
@@ -14,16 +23,19 @@ class GaugeOrbit:
     endpoint via solve. This axis-based action does not assume a 1D geometry.
     """
 
-    def __init__(self, cores, bonds):
+    def __init__(self, cores: Sequence[torch.Tensor], bonds) -> None:
         self.cores = tuple(cores)
         self.bonds = tuple(bonds)
-        if not self.cores or not all(isinstance(core, torch.Tensor) for core in self.cores):
+        if not self.cores or not all(isinstance(core, torch.Tensor)
+                                     for core in self.cores):
             raise TypeError('`cores` should be a nonempty tensor sequence')
         for left, left_axis, right, right_axis in self.bonds:
             for site, axis in [(left, left_axis), (right, right_axis)]:
-                if isinstance(site, bool) or not isinstance(site, int) or not 0 <= site < len(self.cores):
+                if isinstance(site, bool) or not isinstance(
+                    site, int) or not 0 <= site < len(self.cores):
                     raise ValueError('Gauge endpoints should select valid tensor sites')
-                if isinstance(axis, bool) or not isinstance(axis, int) or not -self.cores[site].ndim <= axis < self.cores[site].ndim:
+                if isinstance(axis, bool) or not isinstance(axis, int) or not - \
+                              self.cores[site].ndim <= axis < self.cores[site].ndim:
                     raise ValueError('Gauge endpoints should select valid tensor axes')
             if self.cores[left].shape[left_axis] != self.cores[right].shape[right_axis]:
                 raise ValueError('Gauge endpoint dimensions should match')
@@ -57,26 +69,28 @@ class GaugeOrbit:
 class TensorRingOrbit(GaugeOrbit):
     """Finite-ring gauge orbit, with physical axes fused within each core."""
 
-    def __init__(self, network):
+    def __init__(self, network) -> None:
         network._ensure_valid()
         if not network._topology.startswith('tr'):
             raise ValueError('TensorRingOrbit requires a cyclic format')
         cores = network._standard_cores()
         super().__init__(cores, [(site, -1, (site + 1) % len(cores), -3)
-                                for site in range(len(cores))])
+                                 for site in range(len(cores))])
 
     def balance_residual(self):
         """Returns the maximum virtual-bond Gram imbalance."""
         residuals = []
         for left, _, right, _ in self.bonds:
             a = self.cores[left].reshape(-1, self.cores[left].shape[-1])
-            b = self.cores[right].movedim(-3, 0).reshape(self.cores[right].shape[-3], -1)
+            b = self.cores[right].movedim(-3,
+                                          0).reshape(self.cores[right].shape[-3], -1)
             residuals.append((a.transpose(-2, -1).conj() @ a -
                               b @ b.transpose(-2, -1).conj()).norm())
         return torch.stack(residuals).amax()
 
 
-def canonicalize_minimal(network, max_iter=200, lr=0.05, tol=1e-8):
+def canonicalize_minimal(network, max_iter: int = 200, lr: float = 0.05,
+                         tol: float = 1e-8, return_info: bool = False):
     """Balances a finite ring through Hermitian exponential gauges.
 
     This is an experimental finite, nonuniform-ring adaptation of the gauge
@@ -84,6 +98,8 @@ def canonicalize_minimal(network, max_iter=200, lr=0.05, tol=1e-8):
     It does not assert the uniform-network theorems or uniqueness of a minimum.
     Batched cores use a common gauge minimizing their summed objective.
     """
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
     if isinstance(max_iter, bool) or not isinstance(max_iter, int):
         raise TypeError('`max_iter` should be int type')
     if max_iter < 1:
@@ -95,21 +111,27 @@ def canonicalize_minimal(network, max_iter=200, lr=0.05, tol=1e-8):
             raise ValueError(f'`{name}` should be finite and positive')
     network._ensure_valid()
     if not network._topology.startswith('tr'):
-        return network.canonicalize_vidal('implicit')
+        network.canonicalize_vidal('implicit')
+        return (network, MinimalCanonicalInfo(
+            0, True, None)) if return_info else network
     orbit = TensorRingOrbit(network)
     if not all(torch.isfinite(core).all() for core in orbit.cores):
         raise ValueError('Minimal canonicalization requires finite cores')
     detached = GaugeOrbit([core.detach() for core in orbit.cores], orbit.bonds)
-    best = [torch.eye(rank, dtype=network.dtype, device=network.device) for rank in network._rank]
+    best = [torch.eye(rank, dtype=network.dtype, device=network.device)
+            for rank in network._rank]
     scale = max(core.abs().amax().item() for core in detached.cores)
     if scale == 0:
-        return network
+        info = MinimalCanonicalInfo(0, True, network.cores[0].real.new_zeros(()))
+        return (network, info) if return_info else network
     detached.cores = tuple(core / scale for core in detached.cores)
     best_loss = detached.objective(best).item()
+    converged, iterations = False, 0
     with torch.enable_grad():
         parameters = [torch.zeros_like(gauge, requires_grad=True) for gauge in best]
         optimizer = torch.optim.Adam(parameters, lr=lr)
         for _ in range(max_iter):
+            iterations += 1
             optimizer.zero_grad()
             gauges = [torch.matrix_exp((parameter + parameter.transpose(-2, -1).conj()) / 2)
                       for parameter in parameters]
@@ -126,10 +148,17 @@ def canonicalize_minimal(network, max_iter=200, lr=0.05, tol=1e-8):
                 best_loss = value
                 best = [gauge.detach() for gauge in gauges]
             loss.backward()
-            if not all(torch.isfinite(parameter.grad).all() for parameter in parameters):
+            if not all(torch.isfinite(parameter.grad).all()
+                       for parameter in parameters):
                 break
-            if max(parameter.grad.abs().amax().item() for parameter in parameters) <= tol:
+            if max(parameter.grad.abs().amax().item()
+                   for parameter in parameters) <= tol:
+                converged = True
                 break
             optimizer.step()
     network._set_standard_cores(orbit.apply(best))
+    if return_info:
+        info = MinimalCanonicalInfo(iterations, converged,
+                                    TensorRingOrbit(network).balance_residual())
+        return network, info
     return network

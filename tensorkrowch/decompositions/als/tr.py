@@ -26,10 +26,14 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.formats.quantics import _QuanticsVector
+
+from tensorkrowch.formats import TR, QuantizedLayout
+
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import TRDecomposition, _quantics_result
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  FiberTensorSource)
 from tensorkrowch.decompositions.sources.base import _unravel_indices
@@ -67,10 +71,10 @@ def _standard_tr_cores(
         cores: Union[TRDecomposition, Sequence[torch.Tensor]],
         in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight TR cores to standard cyclic shapes."""
-    if isinstance(cores, TRDecomposition):
+    if isinstance(cores, TR):
         if cores.n_batches:
             raise ValueError('Batched TR cores are not supported by TR-ALS')
-        cores = cores.cores
+        cores = cores._standard_cores()
     elif isinstance(cores, torch.Tensor):
         raise TypeError(
             '`initial_cores` should be a TRDecomposition or a core sequence')
@@ -766,6 +770,11 @@ class TRALS(TTALS):
                    in_dim: Optional[Sequence[int]] = None,
                    weights: Optional[torch.Tensor] = None,
                    *,
+                   quantization: Optional[QuantizedLayout] = None,
+                   sample_space: str = 'indices',
+                   coordinate_map=None, domain=None,
+                   computational_grid: str = 'endpoints',
+                   out_of_domain: str = 'error',
                    out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TRALS':
         """Creates TR-ALS for a permanently observed completion objective.
@@ -799,7 +808,7 @@ class TRALS(TTALS):
         --------
         >>> indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
         >>> values = torch.tensor([1., 2., 4.])
-        >>> decomposition = TRALS.completion(
+        >>> decomposition = tk.decompositions.TRALS.completion(
         ...     indices, values, in_dim=(2, 2))
         >>> result = decomposition.fit(rank=2)
         """
@@ -808,7 +817,10 @@ class TRALS(TTALS):
             values=values,
             in_dim=in_dim,
             weights=weights,
-            out_device=out_device)
+            out_device=out_device, quantization=quantization,
+            sample_space=sample_space, coordinate_map=coordinate_map,
+            domain=domain, computational_grid=computational_grid,
+            out_of_domain=out_of_domain)
 
     def fit(self,
             rank: _Rank = None,
@@ -911,9 +923,9 @@ class TRALS(TTALS):
         Examples
         --------
         >>> tensor = torch.randn(2, 3, 2)
-        >>> result = TRALS(tensor).fit(
+        >>> result = tk.decompositions.TRALS(tensor).fit(
         ...     rank=(2, 2, 2),
-        ...     convergence=ConvergencePolicy(max_sweeps=2))
+        ...     convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2))
         >>> [tuple(core.shape) for core in result.cores]
         [(2, 2, 2), (2, 3, 2), (2, 2, 2)]
         >>> import tensorkrowch as tk
@@ -921,6 +933,9 @@ class TRALS(TTALS):
         >>> model.boundary
         'pbc'
         """
+        if isinstance(initial_cores, _QuanticsVector):
+            if initial_cores.layout != self._quantization or initial_cores.digit_positions != tuple(range(initial_cores.n_sites)):
+                raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
         if not isinstance(normalize, bool):
@@ -1108,7 +1123,8 @@ class TRALS(TTALS):
             })
         if fit_observer is not None:
             _report_als_result(result, fit_observer, 'TR-ALS')
-        return result
+        return _quantics_result(result, self._quantization,
+                                adapter=self._quantized_adapter)
 
 
 def tr_als(source,
@@ -1145,7 +1161,13 @@ def tr_als(source,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
-           return_info: bool = False):
+           return_info: bool = False,
+           return_result: bool = False,
+           quantization: Optional[QuantizedLayout] = None,
+           source_space: Optional[str] = None,
+           coordinate_map=None, domain=None,
+           computational_grid: str = 'endpoints',
+           out_of_domain: str = 'error'):
     """Approximates a scalar tensor source with cyclic TR-ALS.
 
     This functional interface returns a core list. Use :class:`TRALS` for
@@ -1244,12 +1266,29 @@ def tr_als(source,
     return_info : bool
         If ``True``, also returns metadata and structured ALS metrics.
 
+    return_result : bool
+        Returns the numerical result object, preserving Quantics layouts when
+        present. It does not enable metrics and is incompatible with return_info.
+    quantization : QuantizedLayout or pair of layouts, optional
+        Raw variable-to-digit schedule. Matrix SVD requires an input/output
+        layout pair with matching numbers of digit sites. No padding is implicit.
+    source_space : str, optional
+        Physical coordinates, original indices, or explicitly described digits.
+    coordinate_map, domain : optional
+        Actual coordinate map and physical domains for quantized callables.
+    computational_grid, out_of_domain : str
+        Explicit grid-node and coordinate-boundary conventions.
+
     Returns
     -------
     list[torch.Tensor] or tuple
         Cores in original site order, or ``(cores, info)`` with
         ``return_info=True``.
     """
+    if not isinstance(return_result, bool):
+        raise TypeError('`return_result` should be bool type')
+    if return_info and return_result:
+        raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     solver = LeastSquaresSolver(
@@ -1274,7 +1313,9 @@ def tr_als(source,
         dtype=dtype,
         device=device,
         batch_size=batch_size,
-        out_device=out_device).fit(
+        out_device=out_device, quantization=quantization,
+        source_space=source_space, coordinate_map=coordinate_map, domain=domain,
+        computational_grid=computational_grid, out_of_domain=out_of_domain).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,
@@ -1294,6 +1335,8 @@ def tr_als(source,
             generator=generator,
             collect_metrics=return_info,
             verbose=verbose)
+    if return_result:
+        return result
     if return_info:
         return result.cores, result.as_info()
     return result.cores

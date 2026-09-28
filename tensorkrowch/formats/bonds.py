@@ -6,7 +6,7 @@ This script contains:
         * VidalGauge
 """
 
-from typing import Callable, Sequence
+from typing import Callable, Sequence, Tuple
 
 import torch
 
@@ -15,7 +15,7 @@ from tensorkrowch.formats.base import _SafeList
 
 class BondFactors1D:
     """
-    Optional diagonals between adjacent cores, including a cyclic closure.
+    Optional diagonals between adjacent cores, possibly including a cyclic closure.
 
     Created by the owning format from a sequence of factors, sharing tensors.
     Supply factors through ``format.bonds`` or the format constructor.
@@ -31,7 +31,9 @@ class BondFactors1D:
         Owning format callback, called after manual replacement.
     """
 
-    def __init__(self, values, on_change: Callable[[], None]) -> None:
+    def __init__(self,
+                 values: Sequence[torch.Tensor],
+                 on_change: Callable[[], None]) -> None:
         if isinstance(values, torch.Tensor):
             raise TypeError('`values` should be a sequence of diagonals')
         self._on_change = on_change
@@ -43,7 +45,7 @@ class BondFactors1D:
         return self._values
 
     @values.setter
-    def values(self, values):
+    def values(self, values: Sequence[torch.Tensor]) -> None:
         if isinstance(values, torch.Tensor):
             raise TypeError('`values` should be a sequence of diagonals')
         previous = getattr(self, '_values', None)
@@ -61,8 +63,9 @@ class BondFactors1D:
             raise TypeError('Bond factors should be tensors or None')
         self._on_change()
 
-    def validate(self, cores: Sequence[torch.Tensor], cyclic: bool):
-        r"""Checks compatibility of diagonal factors with standard fused cores.
+    def validate(self, cores: Sequence[torch.Tensor], cyclic: bool) -> None:
+        """
+        Checks compatibility of diagonal factors with standard fused cores.
 
         Raises TypeError or ValueError for incompatible factor count, shapes,
         runtime or dtype. This validates stored factors, not the canonical
@@ -78,13 +81,15 @@ class BondFactors1D:
             one factor per core; open formats require one fewer.
         """
         count = len(cores) if cyclic else len(cores) - 1
-        if len(self.values) != count:
+        if len(self._values) != count:
             raise ValueError('There should be one factor per bond')
-        for core, value in zip(cores, self.values):
+
+        for core, value in zip(cores, self._values):
             if value is None:
                 continue
             if not isinstance(value, torch.Tensor):
                 raise TypeError('Bond factors should be tensors or None')
+
             batch = core.shape[:-3]
             if value.shape not in (torch.Size([core.shape[-1]]),
                                    torch.Size((*batch, core.shape[-1]))):
@@ -94,25 +99,22 @@ class BondFactors1D:
             if torch.promote_types(value.dtype, core.dtype) != core.dtype:
                 raise ValueError('Bond factor dtype should be compatible with cores')
 
-    def _map_tensors(self, function, on_change):
+    def _map_tensors(self,
+                     function: Callable[[torch.Tensor], torch.Tensor],
+                     on_change: Callable[[], None]) -> 'BondFactors1D':
         """Maps factors into a container bound to the destination format."""
-        values = []
-        for value in self.values:
-            if value is None:
-                values.append(None)
-                continue
-            mapped = function(value)
-            if not value.is_complex() and mapped.is_complex():
-                mapped = mapped.real
-            values.append(mapped)
+        values = [None if value is None else function(value) for value in self._values]
         return BondFactors1D(values, on_change)
 
 
 class VidalGauge(BondFactors1D):
-    r"""Schmidt spectra and their current absorption into neighbouring cores.
+    r"""
+    Schmidt spectra and their current absorption powers into neighbouring cores.
+    That is, ``powers`` represents how :math:`\Lambda` factors are split into
+    a product of powers of it that are then absorbed in their neighbours.
 
     Powers (0, 0), (0.5, 0.5), and (1, 1) represent explicit, implicit and
-    inverse Vidal respectively. The remaining bond factor has power
+    inverse Vidal forms, respectively. The remaining bond factor has power
     ``1 - left_power - right_power``. Spectra are real and non-negative.
 
     Manual element or slice replacement of factors, spectra or powers
@@ -135,7 +137,12 @@ class VidalGauge(BondFactors1D):
         Whether spectra and powers still describe the stored cores and factors.
     """
 
-    def __init__(self, values, spectra, powers, on_change, valid=True) -> None:
+    def __init__(self,
+                 values: Sequence[torch.Tensor],
+                 spectra: Sequence[torch.Tensor],
+                 powers: Sequence[Tuple[float, float]],
+                 on_change: Callable[[], None],
+                 valid: bool = True) -> None:
         super().__init__(values, on_change)
         self._spectra = _SafeList(spectra, self._on_sequence_changed)
         self._powers = _SafeList(powers, self._on_sequence_changed)
@@ -156,14 +163,13 @@ class VidalGauge(BondFactors1D):
         super()._on_sequence_changed()
         self._valid = False
 
-    def _map_tensors(self, function, on_change):
+    def _map_tensors(self,
+                     function: Callable[[torch.Tensor], torch.Tensor],
+                     on_change: Callable[[], None]) -> 'VidalGauge':
         """Maps factors and spectra, preserving their stored interpretation."""
-        def map_real(tensor):
-            if tensor is None:
-                return None
-            mapped = function(tensor)
-            return mapped.real if not tensor.is_complex() and mapped.is_complex() else mapped
-
-        return VidalGauge([map_real(value) for value in self.values],
-                          [map_real(spectrum) for spectrum in self.spectra],
-                          self.powers, on_change, valid=self._valid)
+        values = [None if value is None else function(value) for value in self._values]
+        spectra = []
+        for spectrum in self._spectra:
+            mapped = function(spectrum)
+            spectra.append(mapped.real if mapped.is_complex() else mapped)
+        return VidalGauge(values, spectra, self._powers, on_change, valid=self._valid)

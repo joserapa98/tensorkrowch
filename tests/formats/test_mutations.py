@@ -412,3 +412,50 @@ def test_owned_bonds_validate_replacements():
     assert all(new is old for new, old in zip(values, previous))
     values[:] = (value for value in [None, first])
     assert factors.values is values and values[0] is None and values[1] is first
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('n_sites', [1, 3])
+def test_constructor_owns_bonds(make_format, topology, n_sites):
+    source = make_format(topology, n_sites)
+    values = [torch.ones(rank, dtype=source.dtype) for rank in source.rank]
+    format = type(source)(source.cores, bonds=values)
+    assert format.bonds.values is not values
+    assert all(new is old for new, old in zip(format.bonds.values, values))
+    assert torch.allclose(format.contract_dense(), source.contract_dense())
+    with pytest.raises(ValueError, match='one factor per bond'):
+        type(source)(source.cores, bonds=[*values, None])
+    with pytest.raises(TypeError):
+        type(source)(source.cores, bonds=torch.ones(2))
+    if values:
+        previous = format.bonds.values[0]
+        with pytest.raises(ValueError, match='dimensions'):
+            format.bonds.values[0] = torch.ones(100, dtype=source.dtype)
+        assert format.bonds.values[0] is previous
+
+
+@pytest.mark.parametrize('vidal', [False, True])
+def test_complex_conversion_preserves_factors_and_real_spectra(make_format, vidal):
+    format = make_format('tt', 3)
+    if vidal:
+        format.canonicalize_vidal('explicit')
+    else:
+        format.bonds = [torch.ones(rank, dtype=format.dtype) for rank in format.rank]
+    result = format.to(dtype=torch.complex128)
+    assert all(value.dtype == torch.complex128 for value in result.bonds.values)
+    assert torch.allclose(result.contract_dense(), format.contract_dense().to(torch.complex128))
+    if vidal:
+        assert all(spectrum.dtype == torch.float64 for spectrum in result.bonds.spectra)
+        assert result.bonds._valid
+    result.bonds.values[0] = result.bonds.values[0] * 1j
+    assert torch.allclose(result.contract_dense(), 1j * format.contract_dense())
+
+
+def test_copy_invalid_vidal_preserves_stored_factors(make_format):
+    format = make_format('tt', 3).canonicalize_vidal('inverse')
+    format.bonds.values[0] = 2 * format.bonds.values[0]
+    result = format.clone()
+    assert not result.bonds._valid
+    assert torch.allclose(result.contract_dense(), format.contract_dense())
+    result.materialize_bonds()
+    assert torch.allclose(result.contract_dense(), format.contract_dense())

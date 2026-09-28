@@ -9,6 +9,7 @@ Tensor Networks with PyTorch
 __version__ = '1.1.6'
 
 # Runtime configuration
+import tensorkrowch.formats as formats
 import tensorkrowch.config as config
 from tensorkrowch.config import (get_svd_method, set_svd_method,
                                 get_svd_refinement, set_svd_refinement,

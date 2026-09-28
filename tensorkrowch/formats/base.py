@@ -1,19 +1,21 @@
 """Topology-neutral interfaces for compact raw-tensor representations."""
 
 from abc import ABC, abstractmethod
-from typing import NamedTuple, Optional
+from dataclasses import dataclass
+from typing import Optional
 
 import torch
 
 
-class SampleError(NamedTuple):
-    """Numerical sample error, without decomposition provenance or CPU copies."""
+@dataclass(frozen=True)
+class SampleError:
+    """Stores sample errors while preserving tensor storage and autograd."""
 
-    kind: str
-    absolute: torch.Tensor
-    relative: Optional[torch.Tensor] = None
-    size: Optional[int] = None
-    denominator: Optional[torch.Tensor] = None
+    kind: str  # Target on which the error was measured
+    absolute: torch.Tensor  # Absolute error, optionally resolved by batch
+    relative: Optional[torch.Tensor] = None  # Relative error with same shape
+    size: Optional[int] = None  # Number of contributions represented
+    denominator: Optional[torch.Tensor] = None  # Norm used for relative error
 
 
 class TensorFormat(ABC):

@@ -1,4 +1,13 @@
-"""Two-level Quantics Tucker representations without algorithm provenance."""
+"""
+This script contains:
+
+    Internal classes:
+        * _QuantizedTuckerFormat
+
+    Public classes:
+        * QTTTucker
+        * QTRTucker
+"""
 
 from typing import ClassVar, Dict, List, Optional, Tuple, Type, Union
 

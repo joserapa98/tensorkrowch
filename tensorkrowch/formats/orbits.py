@@ -1,4 +1,11 @@
-"""Gauge actions by tensor axes and experimental finite-ring norm balancing."""
+"""
+This script contains:
+
+    Public classes:
+        * MinimalCanonicalInfo
+        * GaugeOrbit
+        * TensorRingOrbit
+"""
 
 from dataclasses import dataclass
 from typing import Optional, Sequence

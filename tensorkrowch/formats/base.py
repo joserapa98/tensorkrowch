@@ -1,4 +1,13 @@
-"""Topology-neutral interfaces for compact raw-tensor representations."""
+"""
+This script contains:
+
+    Internal classes:
+        * _SafeList
+
+    Public classes:
+        * SampleError
+        * TensorFormat
+"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

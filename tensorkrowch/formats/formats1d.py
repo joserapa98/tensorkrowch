@@ -1,10 +1,27 @@
-"""Compact one-dimensional formats and their raw-tensor algorithms.
+"""
+This script contains:
 
-The shared container owns validation and controlled mutations. Its methods
-implement algebra, gauges, rounding and block transformations directly.
-Vector/matrix bases supply evaluation and model adapters; TT/TR/TTM/TRM define
-the open/cyclic core layouts. Numerical helpers operate on local core lists
-without constructing temporary formats or importing coordinate extensions.
+    Internal classes:
+        * _VectorFormat1D
+        * _MatrixFormat1D
+
+    Public classes:
+        * BlockLayout, SplitBlock, RoundingInfo
+        * TensorFormat1D
+        * TT, TR, TTM, TRM
+
+    Internal functions:
+        * _restore_cores
+        * _from_standard_cores
+        * _canonicalize_cores
+        * _redistribute
+
+    Public functions:
+        * split_block
+
+    Aliases:
+        * EvaluationData
+        * UnblockInfo
 """
 
 import warnings

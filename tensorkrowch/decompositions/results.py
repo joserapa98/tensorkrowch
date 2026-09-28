@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import torch
 
 from tensorkrowch.formats import (
-    TensorFormat, TensorFormat1D, TensorFormat2D, TT, TR, TTM, TRM,
+    TensorFormat, TensorFormat1D, TT, TR, TTM, TRM,
     QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout)
 from tensorkrowch.formats.formats1d import _restore_cores
 from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
@@ -40,7 +40,7 @@ class TensorDecomposition1D(TensorFormat1D, TensorDecomposition, ABC):
     """Compatibility interface for raw-core 1D decomposition results."""
 
 
-class TensorDecomposition2D(TensorFormat2D, TensorDecomposition, ABC):
+class TensorDecomposition2D(TensorDecomposition, ABC):
     """Reserved provenance interface for future 2D results."""
 
 

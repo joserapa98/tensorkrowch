@@ -1,4 +1,10 @@
-"""Diagonal bond factors and explicit records of Vidal absorption."""
+"""
+This script contains:
+
+    Public classes:
+        * BondFactors1D
+        * VidalGauge
+"""
 
 from copy import copy
 from typing import Sequence

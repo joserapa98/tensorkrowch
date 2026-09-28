@@ -1,4 +1,20 @@
-"""Quantics formats add coordinate meaning to ordinary compact tensor chains."""
+"""
+This script contains:
+
+    Internal classes:
+        * _QuanticsFormat
+        * _QuanticsVector
+        * _QuanticsMatrix
+
+    Public classes:
+        * QTT, QTR, QTTM, QTRM
+
+    Internal functions:
+        * _map_structure
+        * _equal_structure
+        * _same_references
+        * _points_to_indices
+"""
 
 from dataclasses import fields, is_dataclass, replace
 from math import prod

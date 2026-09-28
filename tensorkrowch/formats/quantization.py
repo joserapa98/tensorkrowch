@@ -1,4 +1,27 @@
-"""Quantized index layouts and physical coordinate maps, without source engines."""
+"""
+This script contains:
+
+    Internal classes:
+        * _CompositeCoordinateMap
+
+    Public classes:
+        * QuantizedLayout
+        * CoordinateMap
+        * UniformCoordinateMap
+        * WarpedCoordinateMap
+        * ExplicitGridMap
+
+    Internal functions:
+        * _integer_spec
+        * _coordinate_tensor
+        * _domain_tensor
+        * _out_of_domain
+        * _indices_to_unit
+        * _unit_to_indices
+
+    Aliases:
+        * IntegerSpec, DigitSite, Domain
+"""
 
 from dataclasses import dataclass
 from typing import (Callable, Optional, Protocol, Sequence, Tuple, Union,

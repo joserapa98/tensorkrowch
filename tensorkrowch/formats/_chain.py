@@ -1,12 +1,12 @@
 """Shared raw-tensor chain operations, independent of decomposition engines."""
 
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from abc import abstractmethod
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import torch
 
-from .base import TensorFormat, SampleError
-from .bonds import VidalGauge
+from tensorkrowch.formats.base import TensorFormat, SampleError
+from tensorkrowch.formats.bonds import VidalGauge
 
 EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
 _INTEGER_DTYPES = (torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64)
@@ -121,6 +121,7 @@ class TensorFormat1D(TensorFormat):
 
     def _map_tensors(self, function):
         from copy import copy
+
         self._ensure_valid()
         result = copy(self)
         result._cores = _CoreList([function(core) for core in self._cores], result)
@@ -185,7 +186,8 @@ class TensorFormat1D(TensorFormat):
 
     @bonds.setter
     def bonds(self, value):
-        from .bonds import BondFactors
+        from tensorkrowch.formats.bonds import BondFactors
+
         self._ensure_valid()
         if value is not None:
             if not isinstance(value, BondFactors):
@@ -196,11 +198,13 @@ class TensorFormat1D(TensorFormat):
 
     def materialize_bonds(self, oc: Optional[int] = None):
         """Absorbs factors towards the selected orthogonality center in-place."""
-        from .canonical import materialize_bonds
+        from tensorkrowch.formats.canonical import materialize_bonds
+
         return materialize_bonds(self, oc)
 
     def _set_standard_cores(self, cores: Sequence[torch.Tensor], bonds=None):
-        from .operations import _build_network
+        from tensorkrowch.formats.operations import _build_network
+
         result = _build_network(cores, self._in_dim, self._out_dim,
                                 self._n_batches, self._topology.startswith('tr'))
         self._cores = _CoreList(result._cores, self)
@@ -214,7 +218,8 @@ class TensorFormat1D(TensorFormat):
         oc defaults to the last site. On cyclic networks this is a local gauge
         relative to the stored cut, without a global Schmidt interpretation.
         """
-        from .canonical import canonicalize
+        from tensorkrowch.formats.canonical import canonicalize
+
         return canonicalize(self, oc, renormalize)
 
     def canonicalize_vidal(self,
@@ -228,7 +233,8 @@ class TensorFormat1D(TensorFormat):
         inverse_cutoff. No truncation is performed to manufacture an inverse.
         Cyclic networks do not admit this global open-chain Schmidt gauge.
         """
-        from .canonical import canonicalize_vidal
+        from tensorkrowch.formats.canonical import canonicalize_vidal
+
         return canonicalize_vidal(self, mode, inverse_positions,
                                   remaining_mode, inverse_cutoff)
 
@@ -251,7 +257,8 @@ class TensorFormat1D(TensorFormat):
         or products. rel_error specifies a global norm-error budget; rtol keeps
         the squared-tail-energy meaning of utils.truncated_svd.
         """
-        from .rounding import rounding
+        from tensorkrowch.formats.rounding import rounding
+
         return rounding(self, rank, cutoff, atol, rtol, cum_percentage,
                         renormalize, rel_error, return_info)
 
@@ -265,27 +272,32 @@ class TensorFormat1D(TensorFormat):
         return_info returns (self, MinimalCanonicalInfo), reporting convergence
         and the final Gram imbalance without creating a diagnostic history.
         """
-        from .orbits import canonicalize_minimal
+        from tensorkrowch.formats.orbits import canonicalize_minimal
+
         return canonicalize_minimal(self, max_iter, lr, tol, return_info)
 
     def block(self, groups: Sequence[int], return_info: bool = False):
         """Returns a network of contiguous blocks with recoverable dimensions."""
-        from .blocking import block
+        from tensorkrowch.formats.blocking import block
+
         return block(self, groups, return_info)
 
     def unblock(self, info=None, **kwargs):
         """Returns the original site layout, optionally truncating local splits."""
-        from .blocking import unblock
+        from tensorkrowch.formats.blocking import unblock
+
         return unblock(self, info, **kwargs)
 
     def contract_block(self, first, last):
         """Returns a local tensor with both external ranks left open."""
-        from .blocking import contract_block
+        from tensorkrowch.formats.blocking import contract_block
+
         return contract_block(self, first, last)
 
     def split_block(self, block: torch.Tensor, first, last, **kwargs):
         """Splits a local tensor into standard fused cores and internal factors."""
-        from .blocking import split_block
+        from tensorkrowch.formats.blocking import split_block
+
         self._ensure_valid()
         if any(isinstance(site, bool) or not isinstance(site, int)
                for site in (first, last)):
@@ -298,12 +310,14 @@ class TensorFormat1D(TensorFormat):
 
     def replace_block(self, first, last, replacement):
         """Replaces a region atomically, preserving external interfaces."""
-        from .blocking import replace_block
+        from tensorkrowch.formats.blocking import replace_block
+
         return replace_block(self, first, last, replacement)
 
     def absorb_bond(self, bond, side: str = 'left'):
         """Moves one bond's diagonal weights into the selected neighbour."""
-        from .blocking import absorb_bond
+        from tensorkrowch.formats.blocking import absorb_bond
+
         return absorb_bond(self, bond, side)
 
     def redistribute_bond(self, bond: int, mode: str = 'implicit',
@@ -314,22 +328,26 @@ class TensorFormat1D(TensorFormat):
         block can use this operation even when its spectra are not globally
         certified Schmidt values. The other bonds keep their distribution.
         """
-        from .blocking import redistribute_bond
+        from tensorkrowch.formats.blocking import redistribute_bond
+
         return redistribute_bond(self, bond, mode, inverse_cutoff)
 
     def add(self, other, method='stacked'):
         """Returns an exact sum; cyclic sums default to stacked endpoints."""
-        from .operations import add
+        from tensorkrowch.formats.operations import add
+
         return add(self, other, method=method)
 
     def sub(self, other, method='stacked'):
         """Returns an exact difference with the chosen cyclic sum construction."""
-        from .operations import add
+        from tensorkrowch.formats.operations import add
+
         return add(self, other, method=method, coefficient=-1)
 
     def hadamard(self, other):
         """Returns the element-wise product with another compatible format."""
-        from .operations import hadamard
+        from tensorkrowch.formats.operations import hadamard
+
         return hadamard(self, other)
 
     def __add__(self, other):
@@ -342,7 +360,8 @@ class TensorFormat1D(TensorFormat):
         return self * -1
 
     def __mul__(self, other):
-        from .operations import scale
+        from tensorkrowch.formats.operations import scale
+
         return self.hadamard(other) if isinstance(
             other, TensorFormat1D) else scale(self, other)
 
@@ -350,7 +369,8 @@ class TensorFormat1D(TensorFormat):
         return self * other
 
     def __matmul__(self, other):
-        from .operations import apply
+        from tensorkrowch.formats.operations import apply
+
         return apply(self, other)
 
     def apply(self, other):
@@ -797,7 +817,8 @@ class _MatrixFormat1D(TensorFormat1D):
 
     def transpose(self):
         """Swaps local input/output axes, preserving site and bond order."""
-        from .operations import _build_network
+        from tensorkrowch.formats.operations import _build_network
+
         self._ensure_valid()
         standard = []
         for site, core in enumerate(self._raw_standard_cores()):
@@ -941,7 +962,8 @@ class _MatrixFormat1D(TensorFormat1D):
         """Applies the matrix to product inputs and returns a 1D result."""
         self._ensure_valid()
         if isinstance(data, TensorFormat1D):
-            from .operations import apply
+            from tensorkrowch.formats.operations import apply
+
             return apply(self, data)
         site_data, discrete, data_batch_shape = self._normalize_data(
             data, self._in_dim, self._same_in_dim, n_batches)

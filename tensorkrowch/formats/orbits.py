@@ -1,8 +1,8 @@
 """Gauge actions by tensor axes and experimental finite-ring norm balancing."""
 
-from typing import NamedTuple, Optional, Sequence
 from math import isfinite
 from numbers import Real
+from typing import NamedTuple, Optional, Sequence
 
 import torch
 

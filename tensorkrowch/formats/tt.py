@@ -1,8 +1,10 @@
 """Raw-tensor TT format."""
 
 from typing import List, Optional, Sequence, Tuple
+
 import torch
-from ._chain import _VectorFormat1D, TensorFormat1D
+
+from tensorkrowch.formats._chain import _VectorFormat1D, TensorFormat1D
 
 
 class TT(_VectorFormat1D):
@@ -19,13 +21,15 @@ class TT(_VectorFormat1D):
 
     def to_mps(self, parameterized: bool = False, **kwargs):
         """Builds MPS or MPSData from these cores without detaching."""
-        from .adapters import to_mps
+        from tensorkrowch.formats.adapters import to_mps
+
         return to_mps(self, parameterized, **kwargs)
 
     @classmethod
     def from_mps(cls, model, **kwargs):
         """Collects effective open-boundary MPS/MPSData tensors."""
-        from .adapters import from_mps
+        from tensorkrowch.formats.adapters import from_mps
+
         result = from_mps(model, cyclic=False)
         return cls(result.cores, n_batches=result.n_batches, **kwargs)
 

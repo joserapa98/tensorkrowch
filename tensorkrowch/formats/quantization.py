@@ -1,10 +1,8 @@
 """Quantized index layouts and physical coordinate maps, without source engines."""
 
 from dataclasses import dataclass
-
-
-from typing import Callable, Optional, Protocol, Sequence, Tuple, Union, runtime_checkable
-
+from typing import (Callable, Optional, Protocol, Sequence, Tuple, Union,
+                    runtime_checkable)
 
 import torch
 

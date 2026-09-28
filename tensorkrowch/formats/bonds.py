@@ -1,7 +1,7 @@
 """Diagonal bond factors and explicit records of Vidal absorption."""
 
-from typing import Sequence
 from copy import copy
+from typing import Sequence
 
 import torch
 

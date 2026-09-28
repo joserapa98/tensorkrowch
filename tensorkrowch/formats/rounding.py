@@ -1,14 +1,15 @@
 """Sitewise open-chain rounding and the published cyclic rounding algorithm."""
 
+import warnings
 from math import isfinite, sqrt
 from numbers import Real
 from typing import NamedTuple, Optional, Tuple
-import warnings
 
 import torch
 
 from tensorkrowch.utils import _validate_truncation, truncated_svd
-from .operations import _build_network
+
+from tensorkrowch.formats.operations import _build_network
 
 
 class RoundingInfo(NamedTuple):

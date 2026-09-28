@@ -1,8 +1,10 @@
 """Raw-tensor TR format."""
 
 from typing import List, Optional, Sequence, Tuple
+
 import torch
-from ._chain import _VectorFormat1D, TensorFormat1D
+
+from tensorkrowch.formats._chain import _VectorFormat1D, TensorFormat1D
 
 
 class TR(_VectorFormat1D):
@@ -18,24 +20,28 @@ class TR(_VectorFormat1D):
 
     def to_mps(self, parameterized: bool = False, **kwargs):
         """Builds periodic MPS or MPSData from effective cores."""
-        from .adapters import to_mps
+        from tensorkrowch.formats.adapters import to_mps
+
         return to_mps(self, parameterized, **kwargs)
 
     @classmethod
     def from_mps(cls, model, **kwargs):
         """Collects effective periodic MPS/MPSData tensors."""
-        from .adapters import from_mps
+        from tensorkrowch.formats.adapters import from_mps
+
         result = from_mps(model, cyclic=True)
         return cls(result.cores, n_batches=result.n_batches, **kwargs)
 
     def rotate(self, first=0):
         """Returns a cyclic rotation with the selected site first."""
-        from .adapters import rotate
+        from tensorkrowch.formats.adapters import rotate
+
         return rotate(self, first)
 
     def to_tt(self):
         """Returns an exact TT with the closing bond carried through identities."""
-        from .adapters import ring_to_train
+        from tensorkrowch.formats.adapters import ring_to_train
+
         return ring_to_train(self)
 
     def _validate_cores(

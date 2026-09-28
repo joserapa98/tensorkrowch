@@ -3,7 +3,8 @@
 import torch
 
 from tensorkrowch.utils import truncated_svd
-from .bonds import VidalGauge
+
+from tensorkrowch.formats.bonds import VidalGauge
 
 
 def _redistribute(cores, gauge, powers):
@@ -60,7 +61,9 @@ def canonicalize_vidal(network, mode, inverse_positions,
                        remaining_mode, inverse_cutoff):
     from math import isfinite
     from numbers import Real
-    from .operations import _build_network
+
+    from tensorkrowch.formats.operations import _build_network
+
     network._ensure_valid()
     if network._topology.startswith('tr'):
         raise ValueError('Global Vidal canonicalization requires an open chain')

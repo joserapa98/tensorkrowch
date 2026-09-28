@@ -1,13 +1,16 @@
 """Two-level Quantics Tucker representations without algorithm provenance."""
 
 from typing import ClassVar, Dict, List, Optional, Tuple, Type, Union
+
 import torch
-from .base import TensorFormat
-from ._chain import TensorFormat1D
-from .tt import TT
-from .tr import TR
-from .quantization import CoordinateMap, QuantizedLayout, _unit_to_indices
-from .quantics import _map_structure
+
+from tensorkrowch.formats._chain import TensorFormat1D
+from tensorkrowch.formats.base import TensorFormat
+from tensorkrowch.formats.quantics import _map_structure
+from tensorkrowch.formats.quantization import (CoordinateMap, QuantizedLayout,
+                                               _unit_to_indices)
+from tensorkrowch.formats.tr import TR
+from tensorkrowch.formats.tt import TT
 
 
 class _QuantizedTuckerFormat(TensorFormat):
@@ -126,7 +129,8 @@ class _QuantizedTuckerFormat(TensorFormat):
             raise TypeError('dtype should be torch.dtype type')
         if not isinstance(copy, bool):
             raise TypeError('copy should be bool type')
-        from .quantics import _same_references
+        from tensorkrowch.formats.quantics import _same_references
+
         upper = self.upper.to(device=device, dtype=dtype, copy=copy)
         factors = [factor.to(device=device, dtype=dtype, copy=copy)
                    for factor in self.factors]
@@ -351,8 +355,9 @@ class _QuantizedTuckerFormat(TensorFormat):
 
     def flatten(self):
         """Returns a Quantics TT/TR with grouped factor blocks and open outputs."""
-        from .operations import _build_network
-        from .quantics import QTT, QTR
+        from tensorkrowch.formats.operations import _build_network
+        from tensorkrowch.formats.quantics import QTT, QTR
+
         standard = self._flat_standard_cores()
         dimensions = self._flattened_in_dim()
         cyclic = self._upper_type is TR

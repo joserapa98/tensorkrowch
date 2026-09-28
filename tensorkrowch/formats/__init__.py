@@ -22,25 +22,59 @@ This script contains:
     * QTTTucker, QTRTucker
 """
 
-from .base import TensorFormat, TensorFormat2D, SampleError
-from ._chain import TensorFormat1D
-from .tt import TT
-from .tr import TR
-from .ttm import TTM
-from .trm import TRM
-from .bonds import BondFactors, VidalGauge
-from .rounding import RoundingInfo
-from .orbits import GaugeOrbit, TensorRingOrbit, MinimalCanonicalInfo
-from .blocking import BlockLayout, UnblockInfo, SplitBlock, split_block
-from .quantization import (QuantizedLayout, CoordinateMap, UniformCoordinateMap,
-                           WarpedCoordinateMap, ExplicitGridMap)
-from .quantics import QTT, QTR, QTTM, QTRM
-from .tucker import QTTTucker, QTRTucker
+from tensorkrowch.formats.base import TensorFormat, TensorFormat2D, SampleError
+from tensorkrowch.formats._chain import TensorFormat1D
+from tensorkrowch.formats.blocking import (BlockLayout, UnblockInfo,
+                                           SplitBlock, split_block)
+from tensorkrowch.formats.bonds import BondFactors, VidalGauge
+from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
+                                         MinimalCanonicalInfo)
+from tensorkrowch.formats.quantics import QTT, QTR, QTTM, QTRM
+from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
+                                               UniformCoordinateMap,
+                                               WarpedCoordinateMap,
+                                               ExplicitGridMap)
+from tensorkrowch.formats.rounding import RoundingInfo
+from tensorkrowch.formats.tr import TR
+from tensorkrowch.formats.trm import TRM
+from tensorkrowch.formats.tt import TT
+from tensorkrowch.formats.ttm import TTM
+from tensorkrowch.formats.tucker import QTTTucker, QTRTucker
 
-__all__ = ['TensorFormat', 'TensorFormat1D', 'TensorFormat2D', 'TT',
-           'TR', 'TTM', 'TRM', 'SampleError',
-           'BondFactors', 'VidalGauge', 'RoundingInfo', 'GaugeOrbit',
-           'TensorRingOrbit', 'MinimalCanonicalInfo', 'QuantizedLayout', 'CoordinateMap',
-           'UniformCoordinateMap', 'WarpedCoordinateMap', 'ExplicitGridMap',
-           'BlockLayout', 'UnblockInfo', 'SplitBlock', 'split_block',
-           'QTT', 'QTR', 'QTTM', 'QTRM', 'QTTTucker', 'QTRTucker']
+
+__all__ = [
+    'TensorFormat',
+    'TensorFormat1D',
+    'TensorFormat2D',
+    'SampleError',
+
+    'TT',
+    'TR',
+    'TTM',
+    'TRM',
+    'QTT',
+    'QTR',
+    'QTTM',
+    'QTRM',
+    'QTTTucker',
+    'QTRTucker',
+
+    'BondFactors',
+    'VidalGauge',
+    'RoundingInfo',
+
+    'BlockLayout',
+    'UnblockInfo',
+    'SplitBlock',
+    'split_block',
+
+    'GaugeOrbit',
+    'TensorRingOrbit',
+    'MinimalCanonicalInfo',
+
+    'QuantizedLayout',
+    'CoordinateMap',
+    'UniformCoordinateMap',
+    'WarpedCoordinateMap',
+    'ExplicitGridMap',
+]

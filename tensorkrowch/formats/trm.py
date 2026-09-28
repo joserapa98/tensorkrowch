@@ -1,9 +1,11 @@
 """Raw-tensor TRM format."""
 
 from typing import List, Optional, Sequence, Tuple
+
 import torch
-from ._chain import _MatrixFormat1D
-from .tr import TR
+
+from tensorkrowch.formats._chain import _MatrixFormat1D
+from tensorkrowch.formats.tr import TR
 
 
 class TRM(_MatrixFormat1D):
@@ -19,23 +21,27 @@ class TRM(_MatrixFormat1D):
 
     def to_mpo(self, parameterized: bool = False, **kwargs):
         """Builds a periodic MPO; batched MPO cores are explicitly unsupported."""
-        from .adapters import to_mpo
+        from tensorkrowch.formats.adapters import to_mpo
+
         return to_mpo(self, parameterized, **kwargs)
 
     @classmethod
     def from_mpo(cls, model, **kwargs):
         """Collects effective periodic MPO tensors."""
-        from .adapters import from_mpo
+        from tensorkrowch.formats.adapters import from_mpo
+
         return cls(from_mpo(model, cyclic=True).cores, **kwargs)
 
     def rotate(self, first=0):
         """Returns a cyclic rotation with input/output pairs moving together."""
-        from .adapters import rotate
+        from tensorkrowch.formats.adapters import rotate
+
         return rotate(self, first)
 
     def to_ttm(self):
         """Returns the exact open-chain matrix carrying the closing index."""
-        from .adapters import ring_to_train
+        from tensorkrowch.formats.adapters import ring_to_train
+
         return ring_to_train(self)
 
     def _validate_cores(

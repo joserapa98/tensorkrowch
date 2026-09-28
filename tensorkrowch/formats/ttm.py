@@ -1,9 +1,11 @@
 """Raw-tensor TTM format."""
 
 from typing import List, Optional, Sequence, Tuple
+
 import torch
-from ._chain import _MatrixFormat1D
-from .tt import TT
+
+from tensorkrowch.formats._chain import _MatrixFormat1D
+from tensorkrowch.formats.tt import TT
 
 
 class TTM(_MatrixFormat1D):
@@ -20,13 +22,15 @@ class TTM(_MatrixFormat1D):
 
     def to_mpo(self, parameterized: bool = False, **kwargs):
         """Builds an open-boundary MPO without detaching the effective cores."""
-        from .adapters import to_mpo
+        from tensorkrowch.formats.adapters import to_mpo
+
         return to_mpo(self, parameterized, **kwargs)
 
     @classmethod
     def from_mpo(cls, model, **kwargs):
         """Collects effective open-boundary MPO tensors."""
-        from .adapters import from_mpo
+        from tensorkrowch.formats.adapters import from_mpo
+
         return cls(from_mpo(model, cyclic=False).cores, **kwargs)
 
     def _validate_cores(

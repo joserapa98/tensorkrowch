@@ -1,7 +1,7 @@
 """Topology-neutral interfaces for compact raw-tensor representations."""
 
-from typing import NamedTuple, Optional, Union
 from abc import ABC, abstractmethod
+from typing import NamedTuple, Optional, Union
 
 import torch
 

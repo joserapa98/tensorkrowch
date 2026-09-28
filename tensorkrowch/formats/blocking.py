@@ -1,17 +1,18 @@
 """Blocking and local SVD splits retaining external virtual interfaces."""
 
-from typing import NamedTuple, Optional, Sequence, Tuple
 from dataclasses import dataclass
 from math import prod
 from math import isfinite
 from numbers import Real
+from typing import NamedTuple, Optional, Sequence, Tuple
 
 import torch
 
 from tensorkrowch.utils import _validate_truncation, truncated_svd
-from .bonds import BondFactors, VidalGauge
-from .canonical import _redistribute
-from .operations import _build_network
+
+from tensorkrowch.formats.bonds import BondFactors, VidalGauge
+from tensorkrowch.formats.canonical import _redistribute
+from tensorkrowch.formats.operations import _build_network
 
 
 @dataclass(frozen=True)

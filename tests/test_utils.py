@@ -2,6 +2,7 @@
 This script contains tests for utils:
 
     * TestTruncatedSVD
+    * TestAccurateSVD
 """
 
 import pytest
@@ -449,3 +450,131 @@ class TestTruncatedSVD:  # MARK: TestTruncatedSVD
     def test_truncated_svd_invalid_return_info(self, diag_tensor):
         with pytest.raises(TypeError, match='`return_info` should be bool'):
             tk.utils.truncated_svd(diag_tensor, return_info=1)
+
+
+class TestAccurateSVD:  # MARK: TestAccurateSVD
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('shape', [(7, 4), (4, 7), (4, 4), (1, 1),
+                                      (2, 3, 7, 4), (2, 3, 4, 7)])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64,
+                                      torch.complex64, torch.complex128])
+    def test_reconstruction_and_orthogonality(self, method, shape, dtype):
+        tensor = _controlled_spectrum_matrix(shape, dtype)
+        u, s, vh = tk.utils.accurate_svd(
+            tensor, svd_method=method, recursion_threshold=0.5)
+        rtol, atol = _svd_tolerances(dtype)
+        identity = torch.eye(min(shape[-2:]), dtype=dtype)
+        assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
+                              rtol=rtol, atol=atol)
+        assert torch.allclose(_adjoint(u) @ u, identity, rtol=rtol, atol=atol)
+        assert torch.allclose(vh @ _adjoint(vh), identity, rtol=rtol, atol=atol)
+        assert u.dtype == dtype and vh.dtype == dtype
+        assert s.dtype == tensor.real.dtype
+        assert u.device == tensor.device and s.device == tensor.device
+        assert vh.device == tensor.device
+        assert torch.all(s[..., :-1] >= s[..., 1:])
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_multilevel_resolvable_spectrum(self, method, dtype):
+        spectrum = torch.tensor([1., 0.4, 1e-6, 4e-7, 1e-12, 4e-13,
+                                  1e-18, 4e-19], dtype=torch.float64)
+        rotation = torch.tensor([[0.6, -0.8], [0.8, 0.6]], dtype=dtype)
+        blocks = [rotation @ torch.diag(pair).to(dtype) @ _adjoint(rotation)
+                  for pair in spectrum.reshape(-1, 2)]
+        tensor = torch.block_diag(*blocks)
+        if tensor.is_complex():
+            tensor = tensor * (0.6 + 0.8j)
+        u, s, vh = tk.utils.accurate_svd(tensor, svd_method=method)
+        assert torch.allclose(s, spectrum, rtol=1e-12, atol=0)
+        assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
+                              rtol=1e-12, atol=1e-30)
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    def test_zero_rank_deficient_and_mixed_batches(self, method):
+        tensor = torch.stack([torch.zeros(4, 4),
+                               torch.diag(torch.tensor([1., 1e-6, 0., 0.])),
+                               torch.eye(4)]).to(torch.complex128)
+        u, s, vh = tk.utils.accurate_svd(tensor, svd_method=method)
+        assert torch.isfinite(s).all()
+        assert torch.equal(s[0], torch.zeros_like(s[0]))
+        assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
+                              rtol=1e-12, atol=1e-15)
+
+    @pytest.mark.parametrize('depth', [0, 1, 2])
+    def test_recursion_limit(self, depth, monkeypatch):
+        tensor = torch.diag(torch.tensor([1., 1e-6, 1e-12, 1e-18],
+                                         dtype=torch.float64))
+        original_svd = torch.linalg.svd
+        shapes = []
+
+        def recording_svd(matrix, **kwargs):
+            shapes.append(matrix.shape)
+            return original_svd(matrix, **kwargs)
+
+        monkeypatch.setattr(torch.linalg, 'svd', recording_svd)
+        u, s, vh = tk.utils.accurate_svd(tensor, svd_method='svd',
+                                        max_depth=depth)
+        assert len(shapes) == depth + 1
+        assert torch.allclose(_reconstruct_svd(u, s, vh), tensor)
+
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    def test_autograd(self, method):
+        tensor = _controlled_spectrum_matrix((5, 3), torch.float64)
+        tensor.requires_grad_()
+        _, s, _ = tk.utils.accurate_svd(tensor, svd_method=method,
+                                       recursion_threshold=0.5)
+        gradient, = torch.autograd.grad(s.square().sum(), tensor)
+        assert torch.allclose(gradient, 2 * tensor, rtol=1e-10, atol=1e-12)
+
+    @pytest.mark.parametrize('tensor', [torch.empty(0, 3, 2),
+                                       torch.empty(2, 0, 3, 2)])
+    def test_empty_batch(self, tensor):
+        u, s, vh = tk.utils.accurate_svd(tensor)
+        assert _reconstruct_svd(u, s, vh).shape == tensor.shape
+
+    @pytest.mark.parametrize('kwargs, error', [
+        ({'recursion_threshold': 0}, ValueError),
+        ({'recursion_threshold': 1}, ValueError),
+        ({'recursion_threshold': -0.1}, ValueError),
+        ({'recursion_threshold': float('nan')}, ValueError),
+        ({'recursion_threshold': float('inf')}, ValueError),
+        ({'recursion_threshold': True}, TypeError),
+        ({'recursion_threshold': 'small'}, TypeError),
+        ({'max_depth': -1}, ValueError),
+        ({'max_depth': True}, TypeError),
+        ({'max_depth': 1.5}, TypeError),
+        ({'svd_method': 'invalid'}, ValueError),
+        ({'svd_method': 1}, TypeError),
+    ])
+    def test_invalid_controls(self, kwargs, error):
+        with pytest.raises(error):
+            tk.utils.accurate_svd(torch.eye(2), **kwargs)
+
+    @pytest.mark.parametrize('tensor, error', [
+        ([[1.]], TypeError), (torch.ones(2, dtype=torch.int64), TypeError),
+        (torch.ones(2), ValueError), (torch.empty(2, 0), ValueError),
+        (torch.tensor([[float('nan')]]), ValueError),
+        (torch.tensor([[float('inf')]]), ValueError),
+    ])
+    def test_invalid_input(self, tensor, error):
+        with pytest.raises(error):
+            tk.utils.accurate_svd(tensor)
+
+    @pytest.mark.parametrize('device', [
+        pytest.param('cuda', marks=pytest.mark.skipif(
+            not torch.cuda.is_available(), reason='CUDA is not available')),
+        pytest.param('mps', marks=pytest.mark.skipif(
+            not (hasattr(torch.backends, 'mps') and
+                 torch.backends.mps.is_available()),
+            reason='MPS is not available')),
+    ])
+    @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
+    def test_accelerator(self, method, device):
+        tensor = torch.diag(torch.tensor([1., 1e-5, 1e-10], device=device))
+        u, s, vh = tk.utils.accurate_svd(tensor, svd_method=method)
+        assert u.device == tensor.device and s.device == tensor.device
+        assert vh.device == tensor.device
+        assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
+                              rtol=2e-4, atol=1e-12)

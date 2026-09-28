@@ -348,6 +348,9 @@ class MPO(TensorNetwork):  # MARK: MPO
         """Returns the list of MPO tensors."""
         mpo_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
+            if len(mpo_tensors) == 1:
+                return [torch.einsum('l,liro,r->io', self._left_node.tensor,
+                                      mpo_tensors[0], self._right_node.tensor)]
             mpo_tensors[0] = torch.einsum('l,liro->iro',
                                           self._left_node.tensor,
                                           mpo_tensors[0])
@@ -359,6 +362,32 @@ class MPO(TensorNetwork):  # MARK: MPO
     # -------
     # Methods
     # -------
+    def to_ttm(self):
+        """Returns a lightweight TTM from effective open-boundary tensors."""
+        from tensorkrowch.formats import TensorTrainMatrix
+        return TensorTrainMatrix.from_mpo(self)
+
+    def to_trm(self):
+        """Returns a lightweight TRM from effective periodic tensors."""
+        from tensorkrowch.formats import TensorRingMatrix
+        return TensorRingMatrix.from_mpo(self)
+
+    @classmethod
+    def from_ttm(cls, tensor_train_matrix, **kwargs):
+        """Constructs MPO from an open matrix format."""
+        from tensorkrowch.formats import TensorTrainMatrix
+        if not isinstance(tensor_train_matrix, TensorTrainMatrix):
+            raise TypeError('`tensor_train_matrix` should be TensorTrainMatrix type')
+        return tensor_train_matrix.to_mpo(**kwargs)
+
+    @classmethod
+    def from_trm(cls, tensor_ring_matrix, **kwargs):
+        """Constructs MPO from a cyclic matrix format."""
+        from tensorkrowch.formats import TensorRingMatrix
+        if not isinstance(tensor_ring_matrix, TensorRingMatrix):
+            raise TypeError('`tensor_ring_matrix` should be TensorRingMatrix type')
+        return tensor_ring_matrix.to_mpo(**kwargs)
+
     def _make_nodes(self, parameterized: bool = True) -> None:
         """Creates all the nodes of the MPO."""
         if self._leaf_nodes:

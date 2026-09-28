@@ -9,26 +9,73 @@ from tensorkrowch.formats.tt import TT
 
 
 class TTM(_MatrixFormat1D):
-    """Lightweight open raw-tensor network.
+    r"""Lightweight open raw-tensor network.
 
     Endpoint shapes are ``(input, right, output)`` and
     ``(left, input, output)``; interiors are
     ``(left, input, right, output)``. A single core is ``(input, output)``.
     Structural batches are currently unsupported. Tensor storage and autograd
     are retained without constructing TensorKrowch nodes or edges.
+
+    TTM currently requires n_batches=0; batched operator formats use TRM.
+
+    Parameters
+    ----------
+    cores : sequence of torch.Tensor
+        Raw cores in the endpoint layout of the concrete format. The
+        container is copied and tensor storage is shared; inputs retain
+        autograd.
+    n_batches : int
+        Number of leading structural batch axes shared by all cores.
+        Independent of data batches during evaluation.
     """
 
     _topology = 'ttm'
 
     def to_mpo(self, parameterized: bool = False, **kwargs):
-        """Builds an open-boundary MPO without detaching the effective cores."""
+        r"""Builds a open-boundary MPO from effective cores.
+
+        MPO conversion requires unbatched cores. The model may share effective
+        tensor storage with the format.
+
+        Parameters
+        ----------
+        parameterized : bool
+            Whether the constructed model uses trainable parameter nodes. Inputs
+            are not detached implicitly.
+        **kwargs : keyword arguments
+            Additional model constructor options. Tensor cores and boundary are
+            supplied by the adapter.
+
+        Returns
+        -------
+        MPO
+            New graph model. Stored factors are materialized in temporary
+            tensors; the source format is unchanged.
+        """
         from tensorkrowch.formats.adapters import to_mpo
 
         return to_mpo(self, parameterized, **kwargs)
 
     @classmethod
     def from_mpo(cls, model, **kwargs):
-        """Collects effective open-boundary MPO tensors."""
+        r"""Collects effective open-boundary MPO tensors.
+
+        Parameters
+        ----------
+        model : MPO
+            Source model with open boundaries. Public tensors include boundary
+            contractions where applicable.
+        **kwargs : keyword arguments
+            Additional options for the concrete format constructor, such as
+            Quantics metadata on a subclass.
+
+        Returns
+        -------
+        TTM
+            Format sharing the effective tensor storage. Graph nodes and fit
+            metrics are not retained.
+        """
         from tensorkrowch.formats.adapters import from_mpo
 
         return cls(from_mpo(model, cyclic=False).cores, **kwargs)
@@ -36,6 +83,7 @@ class TTM(_MatrixFormat1D):
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
+        """Validates core layouts and returns structural dimensions and ranks."""
         if self.n_batches:
             raise ValueError('TTM decomposition batches are not supported')
 
@@ -83,6 +131,7 @@ class TTM(_MatrixFormat1D):
         return rank, (), tuple(in_dim), tuple(out_dim)
 
     def _raw_standard_cores(self) -> List[torch.Tensor]:
+        """Returns standard fused cores without explicit bond factors."""
         if len(self.cores) == 1:
             core = self.cores[0]
             return [core.reshape(1, core.numel(), 1)]
@@ -102,6 +151,7 @@ class TTM(_MatrixFormat1D):
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts selected local matrices across the stored virtual ranks."""
         result = self._contract_open_chain(matrices)
         return result.squeeze(-1).squeeze(-1)
 
@@ -109,6 +159,7 @@ class TTM(_MatrixFormat1D):
             self,
             cores: List[torch.Tensor],
             n_batches: int) -> TT:
+        """Builds a vector format from applied matrix cores and their batches."""
         batch_shape = cores[0].shape[:n_batches]
         if len(cores) == 1:
             cores[0] = cores[0].squeeze(-1).squeeze(-2)

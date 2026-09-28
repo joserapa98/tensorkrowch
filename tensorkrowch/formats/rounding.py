@@ -1,9 +1,10 @@
 """Sitewise open-chain rounding and the published cyclic rounding algorithm."""
 
 import warnings
+from dataclasses import dataclass
 from math import isfinite, sqrt
 from numbers import Real
-from typing import NamedTuple, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
 
@@ -12,17 +13,37 @@ from tensorkrowch.utils import _validate_truncation, truncated_svd
 from tensorkrowch.formats.operations import _build_network
 
 
-class RoundingInfo(NamedTuple):
-    """Truncation bound rather than a measured global approximation error."""
+@dataclass(frozen=True)
+class RoundingInfo:
+    r"""Truncation bound rather than a measured global approximation error.
 
-    rank: Tuple[int, ...]
-    discarded_sq_norm: Tuple[torch.Tensor, ...]
-    error_bound: torch.Tensor
-    bound_satisfied: Optional[bool]
+    Frozen record: field references cannot be reassigned. Tensor contents and
+    autograd are preserved without copying or detaching.
+
+    Parameters
+    ----------
+    rank : tuple[int, ...]
+        Retained right-bond ranks after rounding.
+    discarded_sq_norm : tuple[torch.Tensor, ...]
+        Discarded squared singular-value mass at every processed cut,
+        resolved over structural batches.
+    error_bound : torch.Tensor
+        Absolute Frobenius error bound, resolved over structural batches. It
+        is not a measured error against an original dense tensor.
+    bound_satisfied : bool or None
+        Whether the requested relative budget was satisfied; None when no
+        rel_error was supplied.
+    """
+
+    rank: Tuple[int, ...]  # Final right-bond ranks
+    discarded_sq_norm: Tuple[torch.Tensor, ...]  # Discarded energy at each cut
+    error_bound: torch.Tensor  # Absolute Frobenius error bound, resolved by batch
+    bound_satisfied: Optional[bool]  # Whether the requested relative budget was met
 
 
 def rounding(format, rank, cutoff, atol, rtol, cum_percentage,
              renormalize, rel_error, return_info):
+    """Performs rounding on the supplied format."""
     _validate_truncation(rank, cutoff, atol, rtol, cum_percentage)
     for name, value in [('renormalize', renormalize), ('return_info', return_info)]:
         if not isinstance(value, bool):
@@ -47,6 +68,7 @@ def rounding(format, rank, cutoff, atol, rtol, cum_percentage,
     collect = return_info or rel_error is not None
 
     def split(matrix):
+        """Performs split on the supplied format."""
         scale = matrix.abs().amax()
         scale = torch.where(scale > 0, scale, torch.ones_like(scale))
         limit = torch.finfo(matrix.real.dtype).max

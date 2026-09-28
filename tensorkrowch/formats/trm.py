@@ -9,38 +9,107 @@ from tensorkrowch.formats.tr import TR
 
 
 class TRM(_MatrixFormat1D):
-    """Lightweight cyclic raw-tensor network.
+    r"""Lightweight cyclic raw-tensor network.
 
     Every core has shape ``(*batch, left, input, right, output)`` and
     adjacent ranks match through the cyclic closure. Structural batches are
     independent of evaluation-data batches. Tensor storage and autograd are
     retained without constructing TensorKrowch nodes or edges.
+
+    Parameters
+    ----------
+    cores : sequence of torch.Tensor
+        Raw cores in the endpoint layout of the concrete format. The
+        container is copied and tensor storage is shared; inputs retain
+        autograd.
+    n_batches : int
+        Number of leading structural batch axes shared by all cores.
+        Independent of data batches during evaluation.
     """
 
     _topology = 'trm'
     _cyclic = True
 
     def to_mpo(self, parameterized: bool = False, **kwargs):
-        """Builds a periodic MPO; batched MPO cores are explicitly unsupported."""
+        r"""Builds a periodic-boundary MPO from effective cores.
+
+        MPO conversion requires unbatched cores. The model may share effective
+        tensor storage with the format.
+
+        Parameters
+        ----------
+        parameterized : bool
+            Whether the constructed model uses trainable parameter nodes. Inputs
+            are not detached implicitly.
+        **kwargs : keyword arguments
+            Additional model constructor options. Tensor cores and boundary are
+            supplied by the adapter.
+
+        Returns
+        -------
+        MPO
+            New graph model. Stored factors are materialized in temporary
+            tensors; the source format is unchanged.
+        """
         from tensorkrowch.formats.adapters import to_mpo
 
         return to_mpo(self, parameterized, **kwargs)
 
     @classmethod
     def from_mpo(cls, model, **kwargs):
-        """Collects effective periodic MPO tensors."""
+        r"""Collects effective periodic-boundary MPO tensors.
+
+        Parameters
+        ----------
+        model : MPO
+            Source model with periodic boundaries. Public tensors include
+            boundary contractions where applicable.
+        **kwargs : keyword arguments
+            Additional options for the concrete format constructor, such as
+            Quantics metadata on a subclass.
+
+        Returns
+        -------
+        TRM
+            Format sharing the effective tensor storage. Graph nodes and fit
+            metrics are not retained.
+        """
         from tensorkrowch.formats.adapters import from_mpo
 
         return cls(from_mpo(model, cyclic=True).cores, **kwargs)
 
     def rotate(self, first=0):
-        """Returns a cyclic rotation with input/output pairs moving together."""
+        r"""Rotates the stored ring cut to start at a selected site.
+
+        Parameters
+        ----------
+        first : int
+            Site that becomes index zero, in [0, n_sites - 1]. No arbitrary site
+            permutation is performed.
+
+        Returns
+        -------
+        TRM
+            Separate format with rotated cores, physical dimensions and factors.
+            Dense physical axes undergo the same cyclic rotation.
+        """
         from tensorkrowch.formats.adapters import rotate
 
         return rotate(self, first)
 
     def to_ttm(self):
-        """Returns the exact open-chain matrix carrying the closing index."""
+        r"""Opens the ring exactly by carrying the closure index through all sites.
+
+        A batched ring matrix cannot be converted because TTM does not support
+        structural batches.
+
+        Returns
+        -------
+        TTM
+            Open format with the same dense tensor. Endpoint ranks incorporate
+            the closure rank; intermediate cores carry an identity on that
+            index. No truncation or densification is performed.
+        """
         from tensorkrowch.formats.adapters import ring_to_train
 
         return ring_to_train(self)
@@ -48,6 +117,7 @@ class TRM(_MatrixFormat1D):
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
+        """Validates core layouts and returns structural dimensions and ranks."""
         batch_shape = tuple(self.cores[0].shape[:self.n_batches])
         rank = []
         in_dim = []
@@ -73,6 +143,7 @@ class TRM(_MatrixFormat1D):
         return rank, batch_shape, tuple(in_dim), tuple(out_dim)
 
     def _raw_standard_cores(self) -> List[torch.Tensor]:
+        """Returns standard fused cores without explicit bond factors."""
         cores = []
         for core in self.cores:
             core = core.movedim(-1, -2)
@@ -85,6 +156,7 @@ class TRM(_MatrixFormat1D):
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts selected local matrices across the stored virtual ranks."""
         result = self._contract_open_chain(matrices)
         return result.diagonal(dim1=-2, dim2=-1).sum(-1)
 
@@ -92,6 +164,7 @@ class TRM(_MatrixFormat1D):
             self,
             cores: List[torch.Tensor],
             n_batches: int) -> TR:
+        """Builds a vector format from applied matrix cores and their batches."""
         return TR(
             cores=cores,
             n_batches=n_batches)

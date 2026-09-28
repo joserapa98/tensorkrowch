@@ -1,29 +1,56 @@
 """Gauge actions by tensor axes and experimental finite-ring norm balancing."""
 
+from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
-from typing import NamedTuple, Optional, Sequence
+from typing import Optional, Sequence
 
 import torch
 
 
-class MinimalCanonicalInfo(NamedTuple):
-    """Optional convergence information for finite-ring gauge optimization."""
+@dataclass(frozen=True)
+class MinimalCanonicalInfo:
+    r"""Optional convergence information for finite-ring gauge optimization.
 
-    iterations: int
-    converged: bool
-    balance_residual: Optional[torch.Tensor]
+    Frozen record: field references cannot be reassigned. Tensor contents and
+    autograd are preserved without copying or detaching.
+
+    Parameters
+    ----------
+    iterations : int
+        Number of optimization iterations executed; zero for the direct
+        train path.
+    converged : bool
+        Whether the ring optimizer met its gradient tolerance; True for the
+        direct train path.
+    balance_residual : torch.Tensor or None
+        Largest final ring Gram imbalance; None for the direct train path.
+    """
+
+    iterations: int  # Number of optimization iterations executed
+    converged: bool  # Whether the gauge gradient met the stopping tolerance
+    balance_residual: Optional[torch.Tensor]  # Final Gram imbalance for rings
 
 
 class GaugeOrbit:
-    """Invertible gauge action on arbitrary pairs of virtual tensor axes.
+    r"""Invertible gauge action on arbitrary pairs of virtual tensor axes.
 
     bonds contains ``(left_site, left_axis, right_site, right_axis)`` entries.
     A gauge multiplies the left endpoint; its inverse acts on the right
     endpoint via solve. This axis-based action does not assume a 1D geometry.
+
+    Parameters
+    ----------
+    cores : sequence of torch.Tensor
+        Nonempty collection of tensors. Containers are copied and tensor
+        references retained.
+    bonds : sequence of tuple[int, int, int, int]
+        Virtual interfaces (left_site, left_axis, right_site, right_axis).
+        Endpoint axis dimensions should match. Negative axes are accepted.
     """
 
     def __init__(self, cores: Sequence[torch.Tensor], bonds) -> None:
+        """Stores tensor references and validates gauge interfaces."""
         self.cores = tuple(cores)
         self.bonds = tuple(bonds)
         if not self.cores or not all(isinstance(core, torch.Tensor)
@@ -41,7 +68,29 @@ class GaugeOrbit:
                 raise ValueError('Gauge endpoint dimensions should match')
 
     def apply(self, gauges):
-        """Applies matching square gauges; singular solves propagate an error."""
+        r"""Applies invertible gauges at the configured virtual interfaces.
+
+        Parameters
+        ----------
+        gauges : sequence of torch.Tensor
+            One square invertible gauge per configured bond, matching its rank
+            and the endpoint dtype/device. The left endpoint is multiplied by
+            the gauge; the inverse acts on the right endpoint via solve.
+
+        Returns
+        -------
+        list[torch.Tensor]
+            Transformed cores. Multiplication and inverse solve preserve the
+            contracted tensor. Singular gauges propagate a linear algebra error.
+
+        Examples
+        --------
+        >>> orbit = tk.formats.GaugeOrbit([torch.eye(2), torch.eye(2)],
+        ...     [(0, 1, 1, 0)])
+        >>> cores = orbit.apply([2 * torch.eye(2)])
+        >>> torch.allclose(cores[0] @ cores[1], torch.eye(2))
+        True
+        """
         gauges = list(gauges)
         if len(gauges) != len(self.bonds):
             raise ValueError('There should be one gauge per virtual bond')
@@ -62,14 +111,35 @@ class GaugeOrbit:
         return cores
 
     def objective(self, gauges):
-        """Returns half the sum of squared core Frobenius norms."""
+        r"""Returns half the sum of squared gauged core Frobenius norms.
+
+        Parameters
+        ----------
+        gauges : sequence of torch.Tensor
+            One square invertible gauge per configured bond, matching its rank
+            and the endpoint dtype/device. The left endpoint is multiplied by
+            the gauge; the inverse acts on the right endpoint via solve.
+
+        Returns
+        -------
+        torch.Tensor
+            Real scalar objective retaining gradients through gauges.
+        """
         return sum(core.abs().square().sum() / 2 for core in self.apply(gauges))
 
 
 class TensorRingOrbit(GaugeOrbit):
-    """Finite-ring gauge orbit, with physical axes fused within each core."""
+    r"""Finite-ring gauge orbit, with physical axes fused within each core.
+
+    Parameters
+    ----------
+    format : TR or TRM
+        Cyclic format supplying effective standard cores, including diagonal
+        factors. Matrix physical axes are fused for the gauge action.
+    """
 
     def __init__(self, format) -> None:
+        """Builds cyclic gauge interfaces from effective format cores."""
         if not format._cyclic:
             raise ValueError('TensorRingOrbit requires a cyclic format')
         cores = format._standard_cores()
@@ -77,7 +147,15 @@ class TensorRingOrbit(GaugeOrbit):
                                  for site in range(len(cores))])
 
     def balance_residual(self):
-        """Returns the maximum virtual-bond Gram imbalance."""
+        r"""Returns the largest virtual-bond Gram imbalance.
+
+        Returns
+        -------
+        torch.Tensor
+            Maximum Frobenius norm of left Gram minus right Gram across
+            configured bonds. Structural batches are included in the Gram
+            contractions; this is not a relative convergence tolerance.
+        """
         residuals = []
         for left, _, right, _ in self.bonds:
             a = self.cores[left].reshape(-1, self.cores[left].shape[-1])
@@ -90,10 +168,11 @@ class TensorRingOrbit(GaugeOrbit):
 
 def canonicalize_minimal(format, max_iter: int = 200, lr: float = 0.05,
                          tol: float = 1e-8, return_info: bool = False):
-    """Balances a finite ring through Hermitian exponential gauges.
+    r"""Balances a finite ring through Hermitian exponential gauges.
 
     This is an experimental finite, nonuniform-ring adaptation of the gauge
-    norm objective, inspired by Acuaviva et al., https://arxiv.org/pdf/2209.14358.
+    norm objective, inspired by Acuaviva et al.,
+    https://arxiv.org/pdf/2209.14358.
     It does not assert the uniform-network theorems or uniqueness of a minimum.
     Batched cores use a common gauge minimizing their summed objective.
     """

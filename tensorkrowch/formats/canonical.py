@@ -29,6 +29,7 @@ def _redistribute(cores, gauge, powers):
 
 
 def materialize_bonds(format, orth_center=None):
+    """Performs materialize bonds on the supplied format."""
     orth_center = format.n_sites - 1 if orth_center is None else orth_center
     if isinstance(orth_center, bool) or not isinstance(orth_center, int):
         raise TypeError('`orth_center` should be int type or None')
@@ -57,6 +58,7 @@ def materialize_bonds(format, orth_center=None):
 
 def canonicalize_vidal(format, mode, inverse_positions,
                        remaining_mode, inverse_cutoff):
+    """Performs canonicalize vidal on the supplied format."""
     from math import isfinite
     from numbers import Real
 
@@ -126,6 +128,7 @@ def canonicalize_vidal(format, mode, inverse_positions,
 
 
 def canonicalize(format, orth_center=None, renormalize=False):
+    """Performs canonicalize on the supplied format."""
     orth_center = format.n_sites - 1 if orth_center is None else orth_center
     if isinstance(orth_center, bool) or not isinstance(orth_center, int):
         raise TypeError('`orth_center` should be int type or None')

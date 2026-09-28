@@ -10,11 +10,13 @@ class _BondList(list):
     """Fixed-length bond sequence with validation on element replacement."""
 
     def __init__(self, values, owner, name: str) -> None:
+        """Stores bond entries and their owning factor container."""
         super().__init__(values)
         self._owner = owner
         self._name = name
 
     def __setitem__(self, key, value):
+        """Validates a controlled replacement before accepting it."""
         values = list(value) if isinstance(key, slice) else [value]
         if isinstance(key, slice) and len(values) != len(self[key]):
             raise ValueError('Bond slice replacement should preserve length')
@@ -25,6 +27,7 @@ class _BondList(list):
         setattr(self._owner, '_' + self._name, self)
 
     def _structural_error(self, *args, **kwargs):
+        """Rejects changes that bypass controlled structural replacement."""
         raise TypeError('Replace the bond object to change its structure')
 
     append = extend = insert = pop = remove = clear = _structural_error
@@ -47,6 +50,7 @@ class BondFactors:
     """
 
     def __init__(self, values) -> None:
+        """Initializes the stored tensor references and validates construction."""
         self._owner = None
         self.values = values
 
@@ -81,6 +85,18 @@ class BondFactors:
 
     @values.setter
     def values(self, values):
+        r"""Replaces all stored diagonal factors.
+
+        Invalid replacement preserves the previous sequence. Manual replacement
+        invalidates Vidal metadata.
+
+        Parameters
+        ----------
+        values : sequence of torch.Tensor or None
+            One compatible factor per stored bond. Attached containers validate
+            against their owner immediately. None entries denote identity
+            factors.
+        """
         self._replace_sequence('values', values)
 
     def _with_owner(self, owner):
@@ -94,6 +110,21 @@ class BondFactors:
         return result
 
     def validate(self, cores: Sequence[torch.Tensor], cyclic: bool):
+        r"""Checks compatibility of diagonal factors with standard fused cores.
+
+        Raises TypeError or ValueError for incompatible factor count, shapes,
+        runtime or dtype. This validates stored factors, not the canonical
+        interpretation of Vidal spectra.
+
+        Parameters
+        ----------
+        cores : sequence of torch.Tensor
+            Standard cores with shape (*core_batch, left, physical, right).
+            Matrix physical dimensions should already be fused.
+        cyclic : bool
+            Whether the last core closes onto the first. Cyclic formats require
+            one factor per core; open formats require one fewer.
+        """
         count = len(cores) if cyclic else len(cores) - 1
         if len(self.values) != count:
             raise ValueError('There should be one factor per bond')
@@ -112,6 +143,7 @@ class BondFactors:
                 raise ValueError('Bond factor dtype should be compatible with cores')
 
     def _map_tensors(self, function):
+        """Maps stored tensors while preserving concrete container semantics."""
         result = copy(self)
         result._owner = None
         values = []
@@ -128,14 +160,28 @@ class BondFactors:
 
 
 class VidalGauge(BondFactors):
-    """Schmidt spectra and their current absorption into neighbouring cores.
+    r"""Schmidt spectra and their current absorption into neighbouring cores.
 
     Powers (0, 0), (0.5, 0.5), and (1, 1) represent explicit, implicit and
     inverse Vidal respectively. The remaining bond factor has power
     ``1 - left_power - right_power``. Spectra are real and non-negative.
+
+    Manual element or slice replacement of factors, spectra or powers
+    invalidates the Vidal flag. Such records remain usable as stored diagonal
+    factors; no automatic consistency repair is attempted.
+
+    Parameters
+    ----------
+    spectra : sequence of torch.Tensor
+        Real, finite, non-negative singular-value vectors, optionally
+        carrying structural batches.
+    powers : sequence of tuple[float, float]
+        Absorption powers at each bond: (0, 0), (0.5, 0.5), (1, 1), (1, 0)
+        or (0, 1). Inverse powers require strictly nonzero spectra.
     """
 
     def __init__(self, spectra, powers) -> None:
+        """Initializes the stored tensor references and validates construction."""
         self._spectra = _BondList(spectra, self, 'spectra')
         self._powers = _BondList(powers, self, 'powers')
         if len(self.spectra) != len(self.powers):
@@ -166,6 +212,7 @@ class VidalGauge(BondFactors):
         return self._powers
 
     def _map_tensors(self, function):
+        """Maps stored tensors while preserving concrete container semantics."""
         result = super()._map_tensors(function)
         spectra = []
         for spectrum in self.spectra:

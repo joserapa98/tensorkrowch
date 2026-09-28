@@ -8,26 +8,79 @@ from tensorkrowch.formats._chain import _VectorFormat1D, TensorFormat1D
 
 
 class TT(_VectorFormat1D):
-    """Lightweight open raw-tensor network.
+    r"""Lightweight open raw-tensor network.
 
     With leading structural batch axes B, endpoint cores have shapes
     ``(*B, input, right)`` and ``(*B, left, input)``; interiors use
     ``(*B, left, input, right)``. A single core is ``(*B, input)``.
     The constructor shares tensors and copies their container. No nodes or
     edges are constructed, and input tensors retain autograd.
+
+    Parameters
+    ----------
+    cores : sequence of torch.Tensor
+        Raw cores in the endpoint layout of the concrete format. The
+        container is copied and tensor storage is shared; inputs retain
+        autograd.
+    n_batches : int
+        Number of leading structural batch axes shared by all cores.
+        Independent of data batches during evaluation.
     """
 
     _topology = 'tt'
 
     def to_mps(self, parameterized: bool = False, **kwargs):
-        """Builds MPS or MPSData from these cores without detaching."""
+        r"""Builds a open-boundary MPS or MPSData from effective cores.
+
+        Batched vectors produce MPSData and reject parameterized=True. Batched
+        matrices cannot be converted to MPO.
+
+        Parameters
+        ----------
+        parameterized : bool
+            Whether the constructed model uses trainable parameter nodes. Inputs
+            are not detached implicitly.
+        **kwargs : keyword arguments
+            Additional model constructor options. Tensor cores and boundary are
+            supplied by the adapter.
+
+        Returns
+        -------
+        MPS or MPSData
+            New graph model. Stored factors are materialized in temporary
+            tensors; the source format is unchanged.
+
+        Examples
+        --------
+        >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
+        >>> model = format.to_mps()
+        >>> restored = tk.formats.TT.from_mps(model)
+        >>> torch.allclose(restored.contract_dense(), format.contract_dense())
+        True
+        """
         from tensorkrowch.formats.adapters import to_mps
 
         return to_mps(self, parameterized, **kwargs)
 
     @classmethod
     def from_mps(cls, model, **kwargs):
-        """Collects effective open-boundary MPS/MPSData tensors."""
+        r"""Collects effective open-boundary MPS or MPSData tensors.
+
+        Parameters
+        ----------
+        model : MPS or MPSData
+            Source model with open boundaries. Public tensors include boundary
+            contractions where applicable.
+        **kwargs : keyword arguments
+            Additional options for the concrete format constructor, such as
+            Quantics metadata on a subclass.
+
+        Returns
+        -------
+        TT
+            Format sharing the effective tensor storage. Graph nodes and fit
+            metrics are not retained.
+        """
         from tensorkrowch.formats.adapters import from_mps
 
         result = from_mps(model, cyclic=False)
@@ -36,6 +89,7 @@ class TT(_VectorFormat1D):
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
+        """Validates core layouts and returns structural dimensions and ranks."""
         n_sites = len(self.cores)
         batch_shape = tuple(self.cores[0].shape[:self.n_batches])
         in_dim = []
@@ -80,6 +134,7 @@ class TT(_VectorFormat1D):
         return rank, batch_shape, tuple(in_dim), None
 
     def _raw_standard_cores(self) -> List[torch.Tensor]:
+        """Returns standard fused cores without explicit bond factors."""
         if len(self.cores) == 1:
             return [self.cores[0].unsqueeze(self.n_batches).unsqueeze(-1)]
 
@@ -90,5 +145,6 @@ class TT(_VectorFormat1D):
 
     def _contract_local_matrices(
             self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts selected local matrices across the stored virtual ranks."""
         result = self._contract_open_chain(matrices)
         return result.squeeze(-1).squeeze(-1)

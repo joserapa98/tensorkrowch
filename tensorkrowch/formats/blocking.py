@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import prod
 from math import isfinite
 from numbers import Real
-from typing import NamedTuple, Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 import torch
 
@@ -17,13 +17,27 @@ from tensorkrowch.formats.operations import _build_network
 
 @dataclass(frozen=True)
 class BlockLayout:
-    """Original site dimensions and contiguous group sizes."""
+    r"""Original site dimensions and contiguous group sizes.
+
+    Frozen record: field references cannot be reassigned. Tensor contents and
+    autograd are preserved without copying or detaching.
+
+    Parameters
+    ----------
+    groups : tuple[int, ...]
+        Number of original consecutive sites in each block.
+    in_dim : tuple[int, ...]
+        Original input dimension of every site.
+    out_dim : tuple[int, ...], optional
+        Original matrix output dimensions; None for vectors.
+    """
 
     groups: Tuple[int, ...]  # Number of sites per block
     in_dim: Tuple[int, ...]  # Original input dimensions
     out_dim: Optional[Tuple[int, ...]] = None  # Original matrix output dimensions
 
     def __post_init__(self):
+        """Validates block sizes and original site dimensions."""
         if not self.groups or any(isinstance(size, bool) or not isinstance(size, int)
                                   or size < 1 for size in self.groups):
             raise ValueError('Block sizes should be positive integers')
@@ -36,8 +50,25 @@ class BlockLayout:
 UnblockInfo = BlockLayout
 
 
-class SplitBlock(NamedTuple):
-    """Local raw cores with open external ranks and optional internal factors."""
+@dataclass(frozen=True)
+class SplitBlock:
+    r"""Local raw cores with open external ranks and optional internal factors.
+
+    Frozen record: field references cannot be reassigned. Tensor contents and
+    autograd are preserved without copying or detaching.
+
+    Parameters
+    ----------
+    cores : tuple[torch.Tensor, ...]
+        Local cores in standard (*batch, left, physical, right) layout with
+        physical axes fused for matrices.
+    bonds : BondFactors or None
+        Factors internal to the local block; external interface factors are
+        excluded.
+    spectra : tuple[torch.Tensor, ...]
+        Singular values at the local SVD cuts. They are not certified global
+        Schmidt spectra.
+    """
 
     cores: Tuple[torch.Tensor, ...]  # Standard fused core layout
     bonds: Optional[BondFactors]  # Internal bond factors only
@@ -80,11 +111,68 @@ def split_block(block: torch.Tensor,
                 mode: str = 'right',
                 renormalize: bool = False,
                 _svd_callback=None):
-    """Splits a block sitewise; external ranks remain open and unchanged.
+    r"""Splits a local tensor sitewise with both external ranks preserved.
 
-    Physical axes are interleaved for matrix blocks. Spectra refer to this local
-    factorization; they are not certified global Schmidt spectra. No source,
-    metric collection, graph construction or decomposition engine is involved.
+    Only internal bonds are truncated. External ranks remain unchanged, and
+    structural batches share retained ranks. Inverse mode rejects retained zero
+    singular values. Multiple truncation criteria select the most restrictive
+    retained rank.
+
+    Parameters
+    ----------
+    block : torch.Tensor
+        Local tensor shaped (*core_batch, left, *physical, right). Matrix
+        physical axes are interleaved by site.
+    in_dim : sequence of int
+        Positive physical input dimension for each local site.
+    out_dim : sequence of int, optional
+        Matrix output dimensions paired with in_dim. None treats the block
+        as a vector format.
+    n_batches : int
+        Number of leading structural batch axes in block.
+    rank : int, optional
+        Maximum number of singular values to keep.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values <= cutoff are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded
+        while the accumulated sum of squares is <= atol. It must be finite
+        and non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded
+        while the tail sum of squares divided by the total sum of squares is
+        <= rtol. It must be finite and in [0, 1].
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent
+        to setting rtol = 1 - cum_percentage. It must be finite and in [0,
+        1].
+    mode : {"explicit", "implicit", "inverse", "left", "right"}
+        Distribution of each local spectrum between its neighboring cores.
+        These select powers (0, 0), (0.5, 0.5), (1, 1), (1, 0) and (0, 1),
+        respectively.
+    renormalize : bool
+        Rescales intermediate factors to reduce numerical overflow or
+        underflow and restores the accumulated scale in the final cores. The
+        represented tensor retains its global scale.
+
+    Returns
+    -------
+    SplitBlock
+        Local standard fused cores, diagonal factors and local singular
+        values. No graph or decomposition engine is constructed. Local
+        spectra are not certified global Schmidt values.
+
+    Examples
+    --------
+    >>> block = torch.eye(2).reshape(1, 2, 2, 1)
+    >>> local = tk.formats.split_block(block, in_dim=(2, 2))
+    >>> format = tk.formats.TT([torch.zeros(2, 1), torch.zeros(1, 2)])
+    >>> _ = format.replace_block(0, 1, local)
+    >>> torch.allclose(format.contract_dense(), torch.eye(2))
+    True
     """
     if not isinstance(block, torch.Tensor):
         raise TypeError('`block` should be torch.Tensor type')

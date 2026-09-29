@@ -163,8 +163,12 @@ Exact algebra
 between compatible formats, or scalar scaling. Vectors represent kets:
 ``A @ x`` applies an operator, ``x.T @ A`` applies a vector row from the left,
 and ``A @ B`` composes operators. Local inputs of the left operand contract
-with local outputs of the right operand. ``x.T`` shares its ket without
-conjugation; ``x.H`` is its conjugate row. Thus ``x.T @ y`` is bilinear,
+with local outputs of the right operand. ``x.T`` and ``x.H`` retain the vector's
+format class and full API, with independent core and bond containers sharing
+tensor storage. ``T`` changes row/column orientation; ``H`` also conjugates the
+coefficients. Stored core shapes and coefficient evaluation are unchanged.
+Replacing a core or bond in the transposed format does not replace it in the
+original. Thus ``x.T @ y`` is bilinear,
 ``x.H @ y`` is Hermitian, and ``x @ y.H`` forms an outer-product matrix.
 ``x @ y`` and ``x @ A`` are undefined for kets. The existing ``x.apply(A)``
 returns the ket coefficients of ``(x.T @ A).T``.

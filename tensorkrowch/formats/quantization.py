@@ -199,13 +199,6 @@ class QuantizedLayout:
         return tuple(self.base[variable] for variable, _ in self.sites())
 
 
-    def _variable_digits(self, variable: int) -> Tuple[int, ...]:
-        """Canonical digit ids in the requested within-variable direction."""
-        digits = tuple(range(self.level[variable]))
-        return digits if self.digit_order == 'coarse_to_fine' \
-            else tuple(reversed(digits))
-
-
     def sites(self) -> Tuple[DigitSite, ...]:
         """Returns the scheduled canonical digit-site pairs.
 
@@ -218,8 +211,9 @@ class QuantizedLayout:
         if self.ordering == 'custom':
             return tuple(self.permutation)
         variable_digits = tuple(
-            self._variable_digits(variable)
-            for variable in range(self.n_variables))
+            range(level) if self.digit_order == 'coarse_to_fine'
+            else range(level - 1, -1, -1)
+            for level in self.level)
         if self.ordering == 'grouped':
             return tuple(
                 (variable, digit)

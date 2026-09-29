@@ -18,10 +18,9 @@ from tensorkrowch.formats.base import TensorFormat
 from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR,
                                          _restore_cores)
 from tensorkrowch.formats.quantics import (QTT, QTR, _map_structure,
-                                         _same_references)
+                                         _points_to_indices, _same_references)
 from tensorkrowch.formats.quantization import (CoordinateMap, QuantizedLayout,
-                                             Domain,
-                                             _unit_to_indices)
+                                             Domain)
 
 
 class _QuantizedTuckerFormat(TensorFormat):
@@ -179,10 +178,8 @@ class _QuantizedTuckerFormat(TensorFormat):
         return self
 
 
-    def _validate_cores(
-            self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
-                           Optional[Tuple[int, ...]]]:
-        """Validates core layouts and returns structural dimensions and ranks."""
+    def _validate_cores(self) -> None:
+        """Checks dimensions and runtime shared by the upper format and factors."""
         upper = self.upper
         if upper.n_batches:
             raise ValueError(
@@ -202,7 +199,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             if factor.device != upper.device or factor.dtype != upper.dtype:
                 raise ValueError(
                     'Upper cores and factors should share device and dtype')
-        return upper.rank, (), upper.in_dim, None
 
 
     def _map_tensors(self,
@@ -330,24 +326,6 @@ class _QuantizedTuckerFormat(TensorFormat):
 
 
     def _effective_cores(self) -> List[torch.Tensor]:
-        """Returns flattened standard cores with bond factors absorbed."""
-        return self.flatten()._effective_cores()
-
-
-    @staticmethod
-    def _carry_upper_rank(core: torch.Tensor,
-                          upper_rank: int) -> torch.Tensor:
-        """Carries an upper rank unchanged through one factor digit core."""
-        identity = torch.eye(
-            upper_rank, device=core.device, dtype=core.dtype)
-        combined = torch.einsum('ab,lpr->alpbr', identity, core)
-        return combined.reshape(
-            upper_rank * core.shape[0],
-            core.shape[1],
-            upper_rank * core.shape[2])
-
-
-    def _flat_effective_cores(self) -> List[torch.Tensor]:
         """Replaces upper input sites by their factors with bonds absorbed."""
         variable_by_position = {
             position: variable
@@ -363,9 +341,13 @@ class _QuantizedTuckerFormat(TensorFormat):
             digit_cores = factor_cores[:-1]
             connector = factor_cores[-1].squeeze(-1)
             upper_left = upper_core.shape[0]
-            for digit_core in digit_cores[:-1]:
-                flat.append(self._carry_upper_rank(
-                    digit_core, upper_left))
+            if len(digit_cores) > 1:
+                identity = torch.eye(upper_left, device=self.device, dtype=self.dtype)
+                for digit_core in digit_cores[:-1]:
+                    combined = torch.einsum('ab,lpr->alpbr', identity, digit_core)
+                    flat.append(combined.reshape(
+                        upper_left * digit_core.shape[0], digit_core.shape[1],
+                        upper_left * digit_core.shape[2]))
             last = torch.einsum(
                 'lpr,rg,agb->alpb',
                 digit_cores[-1],
@@ -399,7 +381,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> torch.allclose(flat.evaluate_indices(indices), format.evaluate_indices(indices))
         True
         """
-        effective_cores = self._flat_effective_cores()
+        effective_cores = self._effective_cores()
         dimensions = self._flattened_in_dim()
         cyclic = self._upper_type is TR
         cores = _restore_cores(effective_cores, dimensions, None, 0, cyclic)
@@ -431,38 +413,6 @@ class _QuantizedTuckerFormat(TensorFormat):
                    out_of_domain=self.out_of_domain)
 
 
-    def _physical_to_indices(self, points: torch.Tensor) -> torch.Tensor:
-        """Maps physical points to grid indices on this format's device."""
-        if self.coordinate_map is None:
-            raise ValueError("Physical evaluation requires a coordinate map")
-        if not isinstance(points, torch.Tensor):
-            raise TypeError('`points` should be torch.Tensor type')
-        if points.ndim < 1 or points.shape[-1] != self.layout.n_variables:
-            raise ValueError(
-                'The last `points` dimension should match layout variables')
-        points = points.to(device=self.device)
-        direct = getattr(self.coordinate_map, 'to_indices', None)
-        if callable(direct):
-            return direct(
-                points,
-                self.layout.grid_size,
-                self.domain,
-                out_of_domain=self.out_of_domain)
-        inverse = getattr(self.coordinate_map, 'inverse', None)
-        if not callable(inverse):
-            raise NotImplementedError(
-                'Physical evaluation requires a coordinate-map inverse')
-        unit = inverse(
-            points,
-            self.domain,
-            out_of_domain=self.out_of_domain)
-        return _unit_to_indices(
-            unit,
-            self.layout.grid_size,
-            self.computational_grid,
-            self.out_of_domain)
-
-
     def _factor_vectors(self, digits: torch.Tensor) -> List[torch.Tensor]:
         """Returns each factor's connector vector for the scheduled digits."""
         schedule = self.layout.sites()
@@ -489,7 +439,18 @@ class _QuantizedTuckerFormat(TensorFormat):
                         vectors: Dict[int, torch.Tensor],
                         batch_size: int) -> torch.Tensor:
         """Contracts upper cores with local factor vectors, retaining output sites."""
-        raise NotImplementedError
+        cores = self.upper._effective_cores()
+        closing = cores[0].shape[-3]
+        # Open chains use the same contraction with a unit closing bond.
+        state = torch.eye(closing, device=self.device, dtype=self.dtype)
+        state = state.expand(batch_size, -1, -1)
+        for site, core in enumerate(cores):
+            if site in vectors:
+                local = torch.einsum('bp,lpr->blr', vectors[site], core)
+                state = torch.einsum('ba...l,blr->ba...r', state, local)
+            else:
+                state = torch.einsum('ba...l,lpr->ba...pr', state, core)
+        return state.diagonal(dim1=1, dim2=-1).sum(-1)
 
 
     def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
@@ -574,7 +535,12 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> format.evaluate(torch.tensor([[0.], [1.]])).tolist()
         [2.0, 3.0]
         """
-        return self.evaluate_indices(self._physical_to_indices(points))
+        if isinstance(points, torch.Tensor):
+            points = points.to(device=self.device)
+        indices = _points_to_indices(
+            points, self.layout, self.coordinate_map, self.domain,
+            self.computational_grid, self.out_of_domain)
+        return self.evaluate_indices(indices)
 
 
     def evaluate_points(self, points: torch.Tensor) -> torch.Tensor:
@@ -699,21 +665,6 @@ class QTTTucker(_QuantizedTuckerFormat):
     _upper_type = TT
     _topology = 'qtt_tucker'
 
-    def _contract_upper(self,
-                        vectors: Dict[int, torch.Tensor],
-                        batch_size: int) -> torch.Tensor:
-        """Contracts upper cores with local factor vectors, retaining output sites."""
-        state = self.cores[0].new_ones(batch_size, 1)
-        for site, core in enumerate(self.upper._effective_cores()):
-            if site in vectors:
-                local = torch.einsum(
-                    'bp,lpr->blr', vectors[site], core)
-                state = torch.einsum('b...l,blr->b...r', state, local)
-            else:
-                state = torch.einsum(
-                    'b...l,lpr->b...pr', state, core)
-        return state.squeeze(-1)
-
 
 class QTRTucker(_QuantizedTuckerFormat):
     """Quantics factors connected to an upper tensor ring.
@@ -749,23 +700,3 @@ class QTRTucker(_QuantizedTuckerFormat):
 
     _upper_type = TR
     _topology = 'qtr_tucker'
-
-    def _contract_upper(self,
-                        vectors: Dict[int, torch.Tensor],
-                        batch_size: int) -> torch.Tensor:
-        """Contracts upper cores with local factor vectors, retaining output sites."""
-        cyclic_rank = self.upper.cores[0].shape[0]
-        state = torch.eye(
-            cyclic_rank,
-            device=self.device,
-            dtype=self.dtype).expand(batch_size, -1, -1)
-        for site, core in enumerate(self.upper._effective_cores()):
-            if site in vectors:
-                local = torch.einsum(
-                    'bp,lpr->blr', vectors[site], core)
-                state = torch.einsum(
-                    'ba...l,blr->ba...r', state, local)
-            else:
-                state = torch.einsum(
-                    'ba...l,lpr->ba...pr', state, core)
-        return state.diagonal(dim1=1, dim2=-1).sum(-1)

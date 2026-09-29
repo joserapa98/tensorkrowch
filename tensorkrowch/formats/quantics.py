@@ -23,7 +23,7 @@ from typing import Any, Callable, Optional, Sequence, Type, Union
 import torch
 
 from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
-                                         _RowVector1D,
+                                         _VectorFormat1D,
                                          _restore_cores)
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
                                              Domain,
@@ -137,6 +137,8 @@ class _QuanticsFormat:
         if self._bonds is not None:
             result._bonds = self._bonds._map_tensors(
                 lambda tensor: tensor, result._on_bonds_changed)
+        if self._out_dim is None:
+            result._is_row = self._is_row
         return result
 
 
@@ -144,17 +146,11 @@ class _QuanticsFormat:
         """Checks layouts, coordinate maps and contracted coordinate spaces."""
         super()._check_semantics(other, product=product)
         if product:
-            if not isinstance(self, _QuanticsMatrix) and not isinstance(
-                other, _QuanticsMatrix):
-                raise TypeError('At least one Quantics @ operand should be a matrix')
-            if isinstance(self, _QuanticsMatrix):
-                left = (self.in_layout, self.in_coordinate_map, self.in_domain)
-                right = ((other.out_layout, other.out_coordinate_map, other.out_domain)
-                         if isinstance(other, _QuanticsMatrix) else
-                         (other.layout, other.coordinate_map, other.domain))
-            else:
-                left = (self.layout, self.coordinate_map, self.domain)
-                right = (other.out_layout, other.out_coordinate_map, other.out_domain)
+            # Operator products are constructed by the matrix operand.
+            left = (self.in_layout, self.in_coordinate_map, self.in_domain)
+            right = ((other.out_layout, other.out_coordinate_map, other.out_domain)
+                     if isinstance(other, _QuanticsMatrix) else
+                     (other.layout, other.coordinate_map, other.domain))
             if not _equal_structure(left, right):
                 raise ValueError('Contracted Quantics coordinate spaces should match')
         else:
@@ -177,8 +173,7 @@ class _QuanticsFormat:
                                  n_batches: int,
                                  cyclic: bool,
                                  other: Optional[TensorFormat1D] = None,
-                                 product: bool = False,
-                                 transpose: bool = False) -> TensorFormat1D:
+                                 product: bool = False) -> TensorFormat1D:
         """Constructs the matching Quantics result directly from its cores."""
         cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
         options = dict(n_batches=n_batches,
@@ -186,30 +181,24 @@ class _QuanticsFormat:
                        out_of_domain=self.out_of_domain)
         if out_dim is not None:
             cls = QTRM if cyclic else QTTM
-            if transpose:
-                return cls(
-                    cores, self.out_layout, self.in_layout,
-                    self.out_coordinate_map, self.in_coordinate_map,
-                    self.out_domain, self.in_domain, **options)
             input_format = other if product else self
             return cls(
                 cores, input_format.in_layout, self.out_layout,
                 input_format.in_coordinate_map, self.out_coordinate_map,
                 input_format.in_domain, self.out_domain, **options)
         cls = QTR if cyclic else QTT
-        if product and isinstance(self, _QuanticsMatrix):
+        if product:
             layout, coordinate_map, domain = (
                 self.out_layout, self.out_coordinate_map, self.out_domain)
-            positions = None
-        elif product:
-            layout, coordinate_map, domain = (
-                other.in_layout, other.in_coordinate_map, other.in_domain)
             positions = None
         else:
             layout, coordinate_map, domain = self.layout, self.coordinate_map, self.domain
             positions = self.digit_positions
-        return cls(cores, layout, coordinate_map, domain,
-                   digit_positions=positions, **options)
+        result = cls(cores, layout, coordinate_map, domain,
+                     digit_positions=positions, **options)
+        if not product:
+            result._is_row = self._is_row
+        return result
 
 
 class _QuanticsVector(_QuanticsFormat):
@@ -277,25 +266,24 @@ class _QuanticsVector(_QuanticsFormat):
 
     def _new_outer_product(self,
                            cores: Sequence[torch.Tensor],
-                           other: _RowVector1D,
+                           other: _VectorFormat1D,
                            n_batches: int,
                            cyclic: bool) -> Union['QTTM', 'QTRM']:
         """Builds an operator with the row's inputs and this ket's outputs."""
-        vector = other._vector
         if any(format.digit_positions != tuple(range(format.n_sites))
-               for format in (self, vector)):
+               for format in (self, other)):
             raise ValueError('Quantics outer products require only digit sites')
         if (self.computational_grid, self.out_of_domain) != (
-                vector.computational_grid, vector.out_of_domain):
+                other.computational_grid, other.out_of_domain):
             raise ValueError('Quantics coordinate policies should match')
 
         cores = _restore_cores(
-            cores, vector._in_dim, self._in_dim, n_batches, cyclic)
+            cores, other._in_dim, self._in_dim, n_batches, cyclic)
         cls = QTRM if cyclic else QTTM
         return cls(
-            cores, vector.layout, self.layout,
-            vector.coordinate_map, self.coordinate_map,
-            vector.domain, self.domain, n_batches=n_batches,
+            cores, other.layout, self.layout,
+            other.coordinate_map, self.coordinate_map,
+            other.domain, self.domain, n_batches=n_batches,
             computational_grid=self.computational_grid,
             out_of_domain=self.out_of_domain)
 
@@ -542,6 +530,7 @@ class QTR(_QuanticsVector, TR):
             digit_positions=positions, n_batches=self._n_batches,
             computational_grid=self.computational_grid,
             out_of_domain=self.out_of_domain)
+        result._is_row = self._is_row
         if self._bonds is not None:
             values = self._bonds.values
             result.bonds = [*values[first:], *values[:first]]
@@ -589,8 +578,6 @@ class _QuanticsMatrix(_QuanticsFormat):
         self.out_of_domain = out_of_domain
 
         super().__init__(cores, n_batches=n_batches, bonds=bonds)
-        if self._in_dim != in_layout.in_dim or self._out_dim != out_layout.in_dim:
-            raise ValueError('Matrix core dimensions should match paired digit layouts')
 
 
     def validate(self) -> TensorFormat1D:
@@ -606,6 +593,22 @@ class _QuanticsMatrix(_QuanticsFormat):
         if self._in_dim != self.in_layout.in_dim or self._out_dim != self.out_layout.in_dim:
             raise ValueError('Matrix core dimensions should match paired digit layouts')
         return self
+
+
+    def transpose(self) -> Union['QTTM', 'QTRM']:
+        """Transposes matrix cores and exchanges input/output coordinate spaces.
+
+        Returns
+        -------
+        QTTM or QTRM
+            Separate format sharing tensor storage. Sites retain their order.
+        """
+        result = super().transpose()
+        result.in_layout, result.out_layout = self.out_layout, self.in_layout
+        result.in_coordinate_map, result.out_coordinate_map = (
+            self.out_coordinate_map, self.in_coordinate_map)
+        result.in_domain, result.out_domain = self.out_domain, self.in_domain
+        return result
 
 
     def evaluate_digits(self, in_digits: torch.Tensor, out_digits: torch.Tensor) -> torch.Tensor:

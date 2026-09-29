@@ -30,6 +30,10 @@ def test_quantized_grid_and_arithmetic(ordering):
     assert detached.domain.data_ptr() != format.domain.data_ptr()
     complex_format = format.to(dtype=torch.complex128)
     assert not complex_format.domain.is_complex()
+    row = format.H
+    assert isinstance(row, tk.formats.QTT)
+    assert row.layout is layout
+    assert torch.allclose(row.as_tt() @ format.as_tt(), tensor.square().sum())
 
 
 def test_ring_coordinate_rotation_and_conversion():
@@ -40,8 +44,10 @@ def test_ring_coordinate_rotation_and_conversion():
     indices = torch.arange(8).reshape(-1, 1)
     values = format.evaluate_indices(indices)
     assert torch.allclose(format.to_tt().evaluate_indices(indices), values)
+    assert torch.allclose(format.H.to_tt() @ format.to_tt(), values.square().sum())
     for first in range(3):
         assert torch.allclose(format.rotate(first).evaluate_indices(indices), values)
+        assert torch.allclose(format.H.rotate(first) @ format.rotate(first), values.square().sum())
 
 
 def test_quantized_output_sites():
@@ -129,7 +135,7 @@ def test_quantics_constructs_results_directly(operation, monkeypatch):
         result = matrix @ vector
     else:
         result = matrix.T
-    assert len(calls) == 1
+    assert len(calls) == (0 if operation == 'transpose' else 1)
     assert isinstance(result, tk.formats.QTTM if operation == 'transpose' else tk.formats.QTT)
 
 

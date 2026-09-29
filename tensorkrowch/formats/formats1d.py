@@ -2,7 +2,6 @@
 This script contains:
 
     Internal classes:
-        * _RowVector1D
         * _OpenFormat1D
         * _CyclicFormat1D
         * _VectorFormat1D
@@ -554,7 +553,6 @@ class TensorFormat1D(TensorFormat):
         """Returns standard cores with explicit bond factors absorbed."""
         cores = self._standard_cores()
         if self._bonds is not None:
-            cores = list(cores)
             for site, value in enumerate(self._bonds.values):
                 if value is not None:
                     cores[site] = cores[site] * value[..., None, None, :]
@@ -637,7 +635,7 @@ class TensorFormat1D(TensorFormat):
             if core.ndim != self._n_batches + 3 or core.shape[-2] != dimension:
                 raise ValueError(
                     'Replacement physical dimensions should match the selected sites')
-        stored = list(self._standard_cores())
+        stored = self._standard_cores()
         if cores[0].shape[-3] != stored[first].shape[-3] or \
                 cores[-1].shape[-1] != stored[last].shape[-1]:
             raise ValueError('Replacement should preserve external ranks')
@@ -661,11 +659,13 @@ class TensorFormat1D(TensorFormat):
                                  out_dim: Optional[Sequence[int]],
                                  n_batches: int,
                                  cyclic: bool,
-                                 other: 'TensorFormat1D' = None,
-                                 product: bool = False,
-                                 transpose: bool = False) -> 'TensorFormat1D':
+                                 other: Optional['TensorFormat1D'] = None,
+                                 product: bool = False) -> 'TensorFormat1D':
         """Builds an algebra result with the operand coordinate semantics."""
-        return _from_standard_cores(cores, in_dim, out_dim, n_batches, cyclic)
+        result = _from_standard_cores(cores, in_dim, out_dim, n_batches, cyclic)
+        if out_dim is None and not product:
+            result._is_row = self._is_row
+        return result
 
 
     @property
@@ -1058,7 +1058,7 @@ class TensorFormat1D(TensorFormat):
 
         # Prepare a left-canonical chain and the per-cut error budget.
         cyclic = self._cyclic
-        closing = self._standard_cores()[0].shape[-3] if cyclic else 1
+        closing = self._rank[-1] if cyclic else 1
         norm = self.norm() if rel_error is not None else None
         cores = _canonicalize_cores(
             self._effective_cores(), self.n_sites - 1, renormalize)
@@ -1130,7 +1130,7 @@ class TensorFormat1D(TensorFormat):
                                   UserWarning, stacklevel=2)
             if return_info:
                 return self, RoundingInfo(
-                    tuple(self.rank), tuple(records), bound, satisfied)
+                    self._rank, tuple(records), bound, satisfied)
         return self
 
 
@@ -1315,6 +1315,8 @@ class TensorFormat1D(TensorFormat):
                 'Structural batches should match or one operand should be unbatched')
         if self._in_dim != other._in_dim or self._out_dim != other._out_dim:
             raise ValueError('Formats should have matching input and output dimensions')
+        if self._out_dim is None and self._is_row != other._is_row:
+            raise ValueError('Vectors should have the same row or column orientation')
 
         # Promote tensors and align structural batches before the local algebra.
         dtype = torch.promote_types(self.dtype, other.dtype)
@@ -1475,7 +1477,7 @@ class TensorFormat1D(TensorFormat):
                 raise ValueError('The scaling tensor should share the format device')
         elif isinstance(other, bool) or not isinstance(other, Number):
             raise TypeError('The scaling other should be a number or scalar tensor')
-        cores = list(self._effective_cores())
+        cores = self._effective_cores()
         cores[0] = cores[0] * other
         dtype = cores[0].dtype
         cores = [core.to(dtype=dtype) for core in cores]
@@ -1490,20 +1492,19 @@ class TensorFormat1D(TensorFormat):
 
 
     def _product_cores(self,
-                       other: Union['TensorFormat1D', '_RowVector1D']
+                       other: 'TensorFormat1D'
                        ) -> Tuple[List[torch.Tensor], int, bool]:
         """Contracts operator cores with matching input and output spaces."""
-        other_format = other._vector if isinstance(other, _RowVector1D) else other
-        if self.n_sites != other_format.n_sites:
+        if self.n_sites != other.n_sites:
             raise ValueError('Formats should have the same number of sites')
-        if self.device != other_format.device:
+        if self.device != other.device:
             raise ValueError('Formats should share device')
-        if self._batch_shape and other_format._batch_shape and \
-                self._batch_shape != other_format._batch_shape:
+        if self._batch_shape and other._batch_shape and \
+                self._batch_shape != other._batch_shape:
             raise ValueError('Structural batches should match or one operand should be unbatched')
 
-        batch_shape = self._batch_shape or other_format._batch_shape
-        dtype = torch.promote_types(self.dtype, other_format.dtype)
+        batch_shape = self._batch_shape or other._batch_shape
+        dtype = torch.promote_types(self.dtype, other.dtype)
         left_cores = self._operator_cores()
         right_cores = other._operator_cores()
         if any(left.shape[-3] != right.shape[-1]
@@ -1521,7 +1522,7 @@ class TensorFormat1D(TensorFormat):
                 right.shape[-3] * left.shape[-1],
                 left.shape[-2] * right.shape[-2]))
 
-        return cores, len(batch_shape), self._cyclic or other_format._cyclic
+        return cores, len(batch_shape), self._cyclic or other._cyclic
 
 
     def contract_dense(self) -> torch.Tensor:
@@ -1562,6 +1563,11 @@ class TensorFormat1D(TensorFormat):
         return result
 
 
+    @abstractmethod
+    def _contract_local_matrices(self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Contracts local matrices according to the open or cyclic topology."""
+
+
     def _check_overlap_compatibility(
             self, other: 'TensorFormat1D') -> None:
         """Validates topology, shapes and runtime for an overlap."""
@@ -1569,7 +1575,7 @@ class TensorFormat1D(TensorFormat):
             raise TypeError('`other` should be TensorFormat1D type')
         if self._family != other._family:
             raise ValueError('The format families are incompatible')
-        if len(self._cores) != len(other.cores):
+        if len(self._cores) != len(other._cores):
             raise ValueError('Formats should have the same number of sites')
         if self._in_dim != other._in_dim:
             raise ValueError('Formats should have matching input dimensions')
@@ -1825,150 +1831,127 @@ class TensorFormat1D(TensorFormat):
         return site_data, discrete, batch_shape
 
 
-class _RowVector1D:
-    """Transposed or adjoint vector view sharing its underlying ket."""
-
-    def __init__(self, vector: '_VectorFormat1D', conjugate: bool) -> None:
-        self._vector = vector
-        self._conjugate = conjugate
-
-
-    def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns effective row cores with a scalar output axis."""
-        cores = [core.transpose(-3, -1) for core in self._vector._operator_cores()]
-        return [core.conj() for core in cores] if self._conjugate else cores
-
-
-    def __matmul__(self,
-                   other: Union['_VectorFormat1D', '_MatrixFormat1D']) -> Union[
-            torch.Tensor,
-            '_RowVector1D']:
-        """Contracts a row with a ket or applies it to an operator."""
-        if isinstance(other, _VectorFormat1D):
-            self._vector._check_semantics(other)
-            left = self._vector if self._conjugate else self._vector.conj()
-            return left.inner(other)
-        if isinstance(other, _MatrixFormat1D):
-            if self._conjugate:
-                return (other.H @ self._vector).H
-            return (other.T @ self._vector).T
-        raise TypeError('A vector row can multiply a ket or an operator')
-
-
-    @property
-    def T(self) -> '_VectorFormat1D':
-        """Ket obtained by transposing the row without conjugation."""
-        return self._vector.conj() if self._conjugate else self._vector
-
-
-    @property
-    def H(self) -> '_VectorFormat1D':
-        """Ket obtained by taking the row's adjoint."""
-        return self._vector if self._conjugate else self._vector.conj()
-
-
-    def contract_dense(self) -> torch.Tensor:
-        """Returns row coefficients with the physical shape of the vector.
-
-        Returns
-        -------
-        torch.Tensor
-            Coefficients conjugated for an adjoint view. Structural batch and
-            physical axes retain the ordering of the underlying vector.
-        """
-        tensor = self._vector.contract_dense()
-        return tensor.conj() if self._conjugate else tensor
-
-
 class _VectorFormat1D(TensorFormat1D):
     """Shared raw-tensor vector operations."""
 
     _family = 'state'
+    _is_row = False
+
+    def _standard_cores(self) -> List[torch.Tensor]:
+        """Adds unit boundary axes to open cores without absorbing bond factors."""
+        cores = list(self._cores)
+        if not self._cyclic:
+            cores[0] = cores[0].unsqueeze(self._n_batches)
+            cores[-1] = cores[-1].unsqueeze(-1)
+        return cores
+
 
     def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns effective ket cores with a scalar input axis."""
-        return [core.transpose(-2, -1).unsqueeze(-3)
-                for core in self._effective_cores()]
+        """Returns effective operator cores according to the vector orientation."""
+        cores = self._effective_cores()
+        if self._is_row:
+            return [core.unsqueeze(-1) for core in cores]
+        return [core.transpose(-2, -1).unsqueeze(-3) for core in cores]
 
 
-    def __matmul__(self, other: '_RowVector1D') -> '_MatrixFormat1D':
-        """Forms an operator from this ket and a vector row.
+    def __matmul__(self,
+                   other: Union['_VectorFormat1D', '_MatrixFormat1D']
+                   ) -> Union[torch.Tensor, 'TensorFormat1D']:
+        """Contracts vectors and operators according to row/column orientation.
 
         Parameters
         ----------
-        other : vector row
-            A transposed or adjoint TT/TR, obtained with ``y.T`` or ``y.H``.
-            The two vectors should have the same number of sites. Their local
-            dimensions may differ, giving a rectangular operator.
+        other : TT, TR, TTM or TRM
+            A row can multiply a column or an operator; a column can multiply
+            a row. Use ``T`` or ``H`` to change a vector's orientation. Two
+            vectors should have the same number of sites; outer products allow
+            different local dimensions.
 
         Returns
         -------
-        TTM or TRM
-            Outer product, cyclic when either vector is cyclic. Its inputs
-            come from the row and its outputs from this ket. Two kets cannot
-            multiply directly; use ``x.T @ y`` or ``x.H @ y`` for an overlap.
+        torch.Tensor, TT, TR, TTM or TRM
+            Row-column products return scalar overlaps, resolved by structural
+            batch. Column-row products return operators with the row's inputs
+            and the column's outputs. Row-operator products return rows. A
+            cyclic operand gives a cyclic format. Two columns or two rows
+            cannot multiply directly.
         """
-        if not isinstance(other, _RowVector1D):
-            raise TypeError('A ket can multiply a vector row; use x.T or x.H')
-        vector = other._vector
-        TensorFormat1D._check_semantics(self, vector)
-        cores, n_batches, cyclic = self._product_cores(other)
-        return self._new_outer_product(cores, other, n_batches, cyclic)
+        if isinstance(other, _VectorFormat1D):
+            if self._is_row == other._is_row:
+                raise TypeError('Vector products require a row and a column; use T or H')
+            if self._is_row:
+                self._check_semantics(other)
+                return self.conj().inner(other)
+            TensorFormat1D._check_semantics(self, other)
+            cores, n_batches, cyclic = self._product_cores(other)
+            return self._new_outer_product(cores, other, n_batches, cyclic)
+        if isinstance(other, _MatrixFormat1D) and self._is_row:
+            return (other.T @ self.T).T
+        raise TypeError('A column can multiply a row; a row can multiply a column or operator')
 
 
     def _new_outer_product(self,
                            cores: Sequence[torch.Tensor],
-                           other: '_RowVector1D',
+                           other: '_VectorFormat1D',
                            n_batches: int,
                            cyclic: bool) -> '_MatrixFormat1D':
         """Builds the operator represented by a ket-bra product."""
         return _from_standard_cores(
-            cores, other._vector._in_dim, self._in_dim, n_batches, cyclic)
+            cores, other._in_dim, self._in_dim, n_batches, cyclic)
 
 
-    def transpose(self) -> _RowVector1D:
-        """Returns a vector row without conjugating its coefficients.
+    def transpose(self) -> '_VectorFormat1D':
+        """Changes row/column orientation without conjugating coefficients.
 
-        The row shares this ket and can multiply another ket or an operator.
-        Use :meth:`adjoint` for a complex bra.
+        The result keeps the concrete format class and its methods. Its core
+        and bond containers are independent, sharing tensor storage. Core
+        shapes and coefficient evaluation are unchanged. Operator core views
+        and products respect the selected orientation.
 
         Returns
         -------
-        vector row
-            Transposed view of this vector.
+        TT or TR
+            Row for a column input, or column for a row input, including the
+            corresponding Quantics class when applicable.
         """
-        return _RowVector1D(self, conjugate=False)
+        result = self._map_tensors(lambda tensor: tensor)
+        result._is_row = not self._is_row
+        return result
 
 
-    def adjoint(self) -> _RowVector1D:
-        """Returns the conjugate vector row representing this ket's bra.
+    def adjoint(self) -> '_VectorFormat1D':
+        """Changes row/column orientation and conjugates cores and bond factors.
 
         Returns
         -------
-        vector row
-            Adjoint view, sharing the original vector.
+        TT or TR
+            Conjugate row (bra) for a column input, or conjugate column for a
+            row input. Containers are independent and tensors may share storage.
+            The concrete format class and its methods are preserved.
 
         Examples
         --------
         >>> x = tk.formats.TT([torch.tensor([1., 2.])])
-        >>> (x.H @ x).item()
-        5.0
+        >>> torch.allclose(x.H @ x, torch.tensor(5.))
+        True
         >>> outer = x @ x.H
         >>> torch.equal(outer.contract_dense(), torch.tensor([[1., 2.], [2., 4.]]))
         True
         """
-        return _RowVector1D(self, conjugate=True)
+        result = self.conj()
+        result._is_row = not self._is_row
+        return result
 
 
     @property
-    def T(self) -> _RowVector1D:
-        """Vector row without conjugation, suitable for x.T @ y."""
+    def T(self) -> '_VectorFormat1D':
+        """Vector transpose, changing orientation without conjugation."""
         return self.transpose()
 
 
     @property
-    def H(self) -> _RowVector1D:
-        """Conjugate vector row, suitable for x.H @ A @ x."""
+    def H(self) -> '_VectorFormat1D':
+        """Vector adjoint, changing orientation and conjugating coefficients."""
         return self.adjoint()
 
 
@@ -1983,11 +1966,12 @@ class _VectorFormat1D(TensorFormat1D):
         Returns
         -------
         TT or TR
-            Ket containing the coefficients of ``(self.T @ other).T``.
+            Vector with the original orientation. Columns contain the
+            coefficients of ``(self.T @ other).T``; rows return ``self @ other``.
         """
         if not isinstance(other, _MatrixFormat1D):
             raise TypeError('`other` should be a matrix format')
-        return (self.T @ other).T
+        return self @ other if self._is_row else (self.T @ other).T
 
 
     def __call__(self,
@@ -2171,12 +2155,6 @@ class _VectorFormat1D(TensorFormat1D):
             denominator=denominator)
 
 
-    @abstractmethod
-    def _contract_local_matrices(
-            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
-        """Contracts input-selected local matrices along the ranks."""
-
-
     def to_mps(self, parameterized: bool = False, **kwargs) -> Union['MPS', 'MPSData']:
         """Builds an open or periodic MPS or MPSData from effective cores.
 
@@ -2254,6 +2232,15 @@ class _MatrixFormat1D(TensorFormat1D):
 
     _family = 'matrix'
 
+    def _standard_cores(self) -> List[torch.Tensor]:
+        """Adds unit boundary axes and combines matrix input/output axes."""
+        cores = list(self._cores)
+        if not self._cyclic:
+            cores[0] = cores[0].unsqueeze(self._n_batches)
+            cores[-1] = cores[-1].unsqueeze(-2)
+        return [core.movedim(-1, -2).flatten(-3, -2) for core in cores]
+
+
     def _operator_cores(self) -> List[torch.Tensor]:
         """Returns effective cores with separate input and output axes."""
         cores = list(self._cores)
@@ -2285,6 +2272,8 @@ class _MatrixFormat1D(TensorFormat1D):
         """
         if not isinstance(other, (_VectorFormat1D, _MatrixFormat1D)):
             raise TypeError('An operator can multiply a ket or another operator')
+        if isinstance(other, _VectorFormat1D) and other._is_row:
+            raise TypeError('An operator can multiply a column, not a row')
         self._check_semantics(other, product=True)
         cores, n_batches, cyclic = self._product_cores(other)
         if isinstance(other, _VectorFormat1D):
@@ -2304,19 +2293,18 @@ class _MatrixFormat1D(TensorFormat1D):
             Separate matrix format; tensor views may share storage. Quantics
             subclasses exchange input/output coordinate semantics.
         """
-        standard = []
-        for site, core in enumerate(self._standard_cores()):
-            core = core.reshape(*self._batch_shape, core.shape[-3],
-                                self._in_dim[site], self._out_dim[site], core.shape[-1])
-            core = core.transpose(-3, -2)
-            standard.append(core.reshape(*self._batch_shape,
-                            core.shape[-4], -1, core.shape[-1]))
-        result = self._new_from_standard_cores(
-            standard, self._out_dim, self._in_dim,
-            self._n_batches, self._cyclic, transpose=True)
+        result = copy(self)
+        # The final open core omits its right bond axis.
+        last_in_axis = -3 if self._cyclic else -2
+        result._cores = _SafeList([
+            core.transpose(last_in_axis if site == self.n_sites - 1 else -3, -1)
+            for site, core in enumerate(self._cores)], result._on_cores_changed)
         if self._bonds is not None:
             result._bonds = self._bonds._map_tensors(
                 lambda tensor: tensor, result._on_bonds_changed)
+        result._in_dim, result._out_dim = self._out_dim, self._in_dim
+        result._same_in_dim, result._same_out_dim = (
+            self._same_out_dim, self._same_in_dim)
         return result
 
 
@@ -2393,12 +2381,6 @@ class _MatrixFormat1D(TensorFormat1D):
         if out_data is None:
             return self.apply(in_data, n_batches=n_batches)
         return self.evaluate(in_data, out_data, n_batches=n_batches)
-
-
-    @abstractmethod
-    def _contract_local_matrices(
-            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
-        """Contracts entry-selected matrices with the topology closure."""
 
 
     def _entry_matrices(
@@ -3056,17 +3038,6 @@ class TT(_OpenFormat1D, _VectorFormat1D):
         return rank, batch_shape, tuple(in_dim), None
 
 
-    def _standard_cores(self) -> List[torch.Tensor]:
-        """Returns standard cores without explicit bond factors."""
-        if len(self._cores) == 1:
-            return [self._cores[0].unsqueeze(self._n_batches).unsqueeze(-1)]
-
-        cores = [self._cores[0].unsqueeze(self._n_batches)]
-        cores.extend(self._cores[1:-1])
-        cores.append(self._cores[-1].unsqueeze(-1))
-        return cores
-
-
 class TR(_CyclicFormat1D, _VectorFormat1D):
     """Tensor ring represented by a sequence of cores.
 
@@ -3133,11 +3104,6 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
         if self._cores[-1].shape[-1] != self._cores[0].shape[-3]:
             raise ValueError('The last and first cyclic TR ranks should match')
         return rank, batch_shape, tuple(in_dim), None
-
-
-    def _standard_cores(self) -> List[torch.Tensor]:
-        """Returns standard cores without explicit bond factors."""
-        return list(self._cores)
 
 
 class TTM(_OpenFormat1D, _MatrixFormat1D):
@@ -3215,26 +3181,6 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
         return rank, (), tuple(in_dim), tuple(out_dim)
 
 
-    def _standard_cores(self) -> List[torch.Tensor]:
-        """Returns standard cores without explicit bond factors."""
-        if len(self._cores) == 1:
-            core = self._cores[0]
-            return [core.reshape(1, core.numel(), 1)]
-
-        cores = []
-        first = self._cores[0].permute(0, 2, 1)
-        cores.append(first.reshape(1, first.shape[0] * first.shape[1],
-                                   first.shape[2]))
-        for core in self._cores[1:-1]:
-            core = core.permute(0, 1, 3, 2)
-            cores.append(core.reshape(core.shape[0],
-                                      core.shape[1] * core.shape[2],
-                                      core.shape[3]))
-        last = self._cores[-1]
-        cores.append(last.reshape(last.shape[0], -1, 1))
-        return cores
-
-
 class TRM(_CyclicFormat1D, _MatrixFormat1D):
     """Tensor ring operator with local input and output dimensions.
 
@@ -3301,16 +3247,3 @@ class TRM(_CyclicFormat1D, _MatrixFormat1D):
             raise ValueError(
                 'The last and first cyclic TRM ranks should match')
         return rank, batch_shape, tuple(in_dim), tuple(out_dim)
-
-
-    def _standard_cores(self) -> List[torch.Tensor]:
-        """Returns standard cores without explicit bond factors."""
-        cores = []
-        for core in self._cores:
-            core = core.movedim(-1, -2)
-            cores.append(core.reshape(
-                *self._batch_shape,
-                core.shape[-4],
-                core.shape[-3] * core.shape[-2],
-                core.shape[-1]))
-        return cores

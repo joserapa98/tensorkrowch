@@ -97,8 +97,7 @@ class _ResultState:
                            denominator=record.denominator)
 
     def _new_from_standard_cores(self, cores, in_dim, out_dim, n_batches,
-                                 cyclic, other=None, product=False,
-                                 transpose=False):
+                                 cyclic, other=None, product=False):
         """Preserves the result contract when applying an operator to data."""
         if self._family == 'matrix' and product and other is None:
             cls = TRDecomposition if cyclic else TTDecomposition
@@ -107,7 +106,7 @@ class _ResultState:
                 'operation': 'trm_apply' if cyclic else 'ttm_apply'})
         return super()._new_from_standard_cores(
             cores, in_dim, out_dim, n_batches, cyclic, other=other,
-            product=product, transpose=transpose)
+            product=product)
 
 
 class TTDecomposition(_ResultState, TT, TensorDecomposition1D):

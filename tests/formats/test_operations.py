@@ -68,8 +68,10 @@ def test_kets_rows_and_outer_products(make_format, left_topology,
 
     assert torch.allclose(x.T @ y, torch.dot(x_dense, y_dense))
     assert torch.allclose(x.H @ y, torch.vdot(x_dense, y_dense))
-    assert x.T.T is x
-    assert x.H.H is x
+    assert type(x.T) is type(x)
+    assert type(x.H) is type(x)
+    assert torch.equal(x.T.T.contract_dense(), x.contract_dense())
+    assert torch.equal(x.H.H.contract_dense(), x.contract_dense())
     assert torch.equal(x.T.contract_dense(), x.contract_dense())
     assert torch.equal(x.H.contract_dense(), x.contract_dense().conj())
 
@@ -98,6 +100,42 @@ def test_rectangular_outer_product_and_energy():
         with pytest.raises(TypeError):
             left @ right
     assert (x.H @ (x * 0)).item() == 0
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr'])
+def test_vector_rows_keep_format_operations_and_own_containers(make_format, topology):
+    x = make_format(topology, dtype=torch.complex128)
+    count = x.n_sites if x._cyclic else x.n_sites - 1
+    x.bonds = [torch.ones(rank, dtype=torch.float64) for rank in x.rank[:count]]
+    dense = x.contract_dense()
+    row = x.H
+    assert row.cores is not x.cores
+    assert row.bonds is not x.bonds
+    assert row.cores[0].data_ptr() == x.cores[0].data_ptr()
+    assert torch.allclose(row.norm(), dense.norm())
+
+    rows = [row.clone(), row.detach(), row.to(copy=True), row.conj(),
+            row * 2, row + row, row * row,
+            row.clone().canonicalize(orth_center=1), row.clone().rounding()]
+    rows.append(row.to_tt() if x._cyclic else row.clone().canonicalize_minimal())
+    for transformed in rows:
+        assert torch.allclose(transformed @ x,
+                              torch.dot(transformed.contract_dense().flatten(), dense.flatten()))
+    with pytest.raises(ValueError, match='orientation'):
+        x + row
+    with pytest.raises(ValueError, match='orientation'):
+        x * row
+
+    with pytest.raises(ValueError):
+        row.cores[0] = torch.ones(1, dtype=x.dtype)
+    with pytest.raises(ValueError, match='factor dimensions'):
+        row.bonds.values[0] = torch.ones(1)
+    assert torch.allclose(row.contract_dense(), dense.conj())
+
+    row.cores[0] = row.cores[0] * 2
+    row.bonds.values[0] = row.bonds.values[0] * 3
+    assert torch.allclose(row.contract_dense(), 6 * dense.conj())
+    assert torch.equal(x.contract_dense(), dense)
 
 
 def test_outer_product_structural_batches(make_format):

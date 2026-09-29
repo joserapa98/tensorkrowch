@@ -18,18 +18,20 @@ This script contains:
 
 from dataclasses import fields, is_dataclass, replace
 from math import prod
-from typing import Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Type, Union
 
 import torch
 
-from tensorkrowch.formats.formats1d import (TT, TR, TTM, TRM, _RowVector1D,
+from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
+                                         _RowVector1D,
                                          _restore_cores)
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
+                                             Domain,
                                              _CompositeCoordinateMap,
                                              _unit_to_indices)
 
 
-def _map_structure(value, function):
+def _map_structure(value: Any, function: Callable[[torch.Tensor], torch.Tensor]) -> Any:
     """Maps stored coordinate tensors without casting real grids to complex."""
     if isinstance(value, torch.Tensor):
         result = function(value)
@@ -38,8 +40,9 @@ def _map_structure(value, function):
         return _CompositeCoordinateMap(
             [_map_structure(item, function) for item in value.maps])
     if is_dataclass(value):
-        return replace(value, **{field.name: _map_structure(getattr(value, field.name), function)
-                                 for field in fields(value) if field.init})
+        mapped = {field.name: _map_structure(getattr(value, field.name), function)
+                  for field in fields(value) if field.init}
+        return replace(value, **mapped)
     if isinstance(value, tuple):
         return tuple(_map_structure(item, function) for item in value)
     if isinstance(value, list):
@@ -47,7 +50,7 @@ def _map_structure(value, function):
     return value
 
 
-def _equal_structure(first, second):
+def _equal_structure(first: Any, second: Any) -> bool:
     """Compares coordinate meaning without tensor truth-value ambiguities."""
     if first is second:
         return True
@@ -61,14 +64,14 @@ def _equal_structure(first, second):
         return all(_equal_structure(getattr(first, field.name), getattr(second, field.name))
                    for field in fields(first))
     if isinstance(first, (list, tuple)):
-        return len(first) == len(second) and all(_equal_structure(a, b)
-                   for a, b in zip(first, second))
+        return len(first) == len(second) and all(
+            _equal_structure(left, right) for left, right in zip(first, second))
     if callable(first):
         return False
     return first == second
 
 
-def _same_references(first, second):
+def _same_references(first: Any, second: Any) -> bool:
     """Compares storage references to decide whether a conversion was a no-op."""
     if isinstance(first, torch.Tensor):
         return first is second
@@ -78,16 +81,66 @@ def _same_references(first, second):
         return all(_same_references(getattr(first, field.name), getattr(second, field.name))
                    for field in fields(first))
     if isinstance(first, (list, tuple)):
-        return all(_same_references(a, b) for a, b in zip(first, second))
+        return all(_same_references(left, right)
+                   for left, right in zip(first, second))
     return True
+
+
+def _points_to_indices(points: torch.Tensor,
+                       layout: QuantizedLayout,
+                       coordinate_map: Optional[CoordinateMap],
+                       domain: Domain,
+                       grid: str,
+                       policy: str) -> torch.Tensor:
+    """Converts physical points using the actual stored coordinate map."""
+    if coordinate_map is None:
+        raise ValueError('Physical evaluation requires a coordinate map')
+    if not isinstance(points, torch.Tensor):
+        raise TypeError('`points` should be torch.Tensor type')
+    if points.ndim < 1 or points.shape[-1] != layout.n_variables:
+        raise ValueError('Point coordinates should match the layout variables')
+    direct = getattr(coordinate_map, 'to_indices', None)
+    if callable(direct):
+        return direct(points, layout.grid_size, domain, out_of_domain=policy)
+    inverse = getattr(coordinate_map, 'inverse', None)
+    if not callable(inverse):
+        raise NotImplementedError(
+            'Physical evaluation requires a coordinate-map inverse')
+    return _unit_to_indices(inverse(points, domain, out_of_domain=policy),
+                            layout.grid_size, grid, policy)
 
 
 class _QuanticsFormat:
     """Coordinate compatibility and direct construction of Quantics results."""
 
     _quantized = True
+    _coordinate_names = ()
 
-    def _check_semantics(self, other, product=False):
+    def _map_tensors(self,
+                     function: Callable[[torch.Tensor], torch.Tensor]) -> TensorFormat1D:
+        """Maps cores, factors and tensors stored in coordinate metadata."""
+        result = super()._map_tensors(function)
+        for name in self._coordinate_names:
+            setattr(result, name, _map_structure(getattr(self, name), function))
+        return result
+
+
+    def _same_aux_tensors(self, other: TensorFormat1D) -> bool:
+        """Checks whether coordinate tensors retain their original references."""
+        return all(_same_references(getattr(self, name), getattr(other, name))
+                   for name in self._coordinate_names)
+
+
+    def _as_format(self, cls: Type[TensorFormat1D]) -> TensorFormat1D:
+        """Drops coordinate metadata while retaining cores and bond factors."""
+        result = cls(self._cores, n_batches=self._n_batches)
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, result._on_bonds_changed)
+        return result
+
+
+    def _check_semantics(self, other: TensorFormat1D, product: bool = False) -> None:
         """Checks layouts, coordinate maps and contracted coordinate spaces."""
         super()._check_semantics(other, product=product)
         if product:
@@ -116,9 +169,16 @@ class _QuanticsFormat:
             other.computational_grid, other.out_of_domain):
             raise ValueError('Quantics coordinate policies should match')
 
-    def _new_from_standard_cores(self, cores, in_dim, out_dim, n_batches,
-                                 cyclic, other=None, product=False,
-                                 transpose=False):
+
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Sequence[int],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional[TensorFormat1D] = None,
+                                 product: bool = False,
+                                 transpose: bool = False) -> TensorFormat1D:
         """Constructs the matching Quantics result directly from its cores."""
         cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
         options = dict(n_batches=n_batches,
@@ -131,11 +191,11 @@ class _QuanticsFormat:
                     cores, self.out_layout, self.in_layout,
                     self.out_coordinate_map, self.in_coordinate_map,
                     self.out_domain, self.in_domain, **options)
-            inputs = other if product else self
+            input_format = other if product else self
             return cls(
-                cores, inputs.in_layout, self.out_layout,
-                inputs.in_coordinate_map, self.out_coordinate_map,
-                inputs.in_domain, self.out_domain, **options)
+                cores, input_format.in_layout, self.out_layout,
+                input_format.in_coordinate_map, self.out_coordinate_map,
+                input_format.in_domain, self.out_domain, **options)
         cls = QTR if cyclic else QTT
         if product and isinstance(self, _QuanticsMatrix):
             layout, coordinate_map, domain = (
@@ -152,27 +212,68 @@ class _QuanticsFormat:
                    digit_positions=positions, **options)
 
 
-def _points_to_indices(points, layout, coordinate_map, domain, grid, policy):
-    """Converts physical points using the actual stored coordinate map."""
-    if coordinate_map is None:
-        raise ValueError('Physical evaluation requires a coordinate map')
-    if not isinstance(points, torch.Tensor):
-        raise TypeError('`points` should be torch.Tensor type')
-    if points.ndim < 1 or points.shape[-1] != layout.n_variables:
-        raise ValueError('Point coordinates should match the layout variables')
-    direct = getattr(coordinate_map, 'to_indices', None)
-    if callable(direct):
-        return direct(points, layout.grid_size, domain, out_of_domain=policy)
-    inverse = getattr(coordinate_map, 'inverse', None)
-    if not callable(inverse):
-        raise NotImplementedError(
-            'Physical evaluation requires a coordinate-map inverse')
-    return _unit_to_indices(inverse(points, domain, out_of_domain=policy),
-                            layout.grid_size, grid, policy)
-
-
 class _QuanticsVector(_QuanticsFormat):
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
+
+    _coordinate_names = ('coordinate_map', 'domain')
+
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
+                 layout: QuantizedLayout,
+                 coordinate_map: Optional[Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+                 domain: Domain = None,
+                 *,
+                 digit_positions: Optional[Sequence[int]] = None,
+                 n_batches: int = 0,
+                 computational_grid: str = 'endpoints',
+                 out_of_domain: str = 'error',
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
+        if not isinstance(layout, QuantizedLayout):
+            raise TypeError('`layout` should be QuantizedLayout type')
+        if isinstance(coordinate_map, (list, tuple)):
+            coordinate_map = _CompositeCoordinateMap(coordinate_map)
+        if coordinate_map is not None and not isinstance(coordinate_map, CoordinateMap):
+            raise TypeError('`coordinate_map` should implement CoordinateMap')
+        if computational_grid not in (
+            'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
+            raise ValueError('Invalid computational grid or out-of-domain policy')
+        self.layout = layout
+        self.coordinate_map = coordinate_map
+        self.domain = domain
+        self.computational_grid = computational_grid
+        self.out_of_domain = out_of_domain
+        super().__init__(cores, n_batches=n_batches, bonds=bonds)
+
+        # Digit sites carry inputs; any remaining physical sites stay open.
+        positions = (tuple(range(self.n_sites)) if digit_positions is None
+                     else tuple(digit_positions))
+        if len(positions) != layout.n_sites or any(
+                isinstance(site, bool) or not isinstance(
+                    site, int) or not 0 <= site < self.n_sites
+                for site in positions) or len(set(positions)) != len(positions):
+            raise ValueError(
+                'Digit positions should select every scheduled digit exactly once')
+        if tuple(self._in_dim[site] for site in positions) != layout.in_dim:
+            raise ValueError('Digit core dimensions should match the quantized layout')
+        self.digit_positions = positions
+
+
+    def validate(self) -> TensorFormat1D:
+        """Validates cores and their Quantics digit-layout dimensions.
+
+        Returns
+        -------
+        TensorFormat1D
+            The current format. Invalid controlled replacement restores prior
+            metadata.
+        """
+        super().validate()
+        if 'digit_positions' in self.__dict__ and (
+                any(site >= len(self._cores) for site in self.digit_positions) or
+                tuple(self._in_dim[site] for site in self.digit_positions) != self.layout.in_dim):
+            raise ValueError('Digit core dimensions should match the quantized layout')
+        return self
+
 
     def _new_outer_product(self,
                            cores: Sequence[torch.Tensor],
@@ -198,75 +299,9 @@ class _QuanticsVector(_QuanticsFormat):
             computational_grid=self.computational_grid,
             out_of_domain=self.out_of_domain)
 
-    def __init__(self,
-                 cores: Sequence[torch.Tensor],
-                 layout,
-                 coordinate_map=None,
-                 domain=None,
-                 *,
-                 digit_positions: Optional[Sequence[int]] = None,
-                 n_batches: int = 0,
-                 computational_grid: str = 'endpoints',
-                 out_of_domain: str = 'error',
-                 bonds=None) -> None:
-        """Initializes the stored tensor references and validates construction."""
-        if not isinstance(layout, QuantizedLayout):
-            raise TypeError('`layout` should be QuantizedLayout type')
-        if isinstance(coordinate_map, (list, tuple)):
-            coordinate_map = _CompositeCoordinateMap(coordinate_map)
-        if coordinate_map is not None and not isinstance(coordinate_map, CoordinateMap):
-            raise TypeError('`coordinate_map` should implement CoordinateMap')
-        if computational_grid not in (
-            'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
-            raise ValueError('Invalid computational grid or out-of-domain policy')
-        self.layout = layout
-        self.coordinate_map = coordinate_map
-        self.domain = domain
-        self.computational_grid = computational_grid
-        self.out_of_domain = out_of_domain
-        super().__init__(cores, n_batches=n_batches, bonds=bonds)
-        positions = tuple(range(self.n_sites)
-                          ) if digit_positions is None else tuple(digit_positions)
-        if len(positions) != layout.n_sites or any(
-                isinstance(site, bool) or not isinstance(
-                    site, int) or not 0 <= site < self.n_sites
-                for site in positions) or len(set(positions)) != len(positions):
-            raise ValueError(
-                'Digit positions should select every scheduled digit exactly once')
-        if tuple(self._in_dim[site] for site in positions) != layout.in_dim:
-            raise ValueError('Digit core dimensions should match the quantized layout')
-        self.digit_positions = positions
 
-    def _map_tensors(self, function):
-        """Maps stored tensors while preserving concrete container semantics."""
-        result = super()._map_tensors(function)
-        result.coordinate_map = _map_structure(self.coordinate_map, function)
-        result.domain = _map_structure(self.domain, function)
-        return result
-
-    def _same_aux_tensors(self, other):
-        """Checks whether auxiliary tensor references are unchanged."""
-        return _same_references(self.coordinate_map, other.coordinate_map) and \
-            _same_references(self.domain, other.domain)
-
-    def validate(self):
-        r"""Validates cores and their Quantics digit-layout dimensions.
-
-        Returns
-        -------
-        TensorFormat1D
-            The current format. Invalid controlled replacement restores prior
-            metadata.
-        """
-        super().validate()
-        if 'digit_positions' in self.__dict__ and (
-                any(site >= len(self._cores) for site in self.digit_positions) or
-                tuple(self._in_dim[site] for site in self.digit_positions) != self.layout.in_dim):
-            raise ValueError('Digit core dimensions should match the quantized layout')
-        return self
-
-    def evaluate_digits(self, digits) -> torch.Tensor:
-        r"""Evaluates scheduled digit configurations.
+    def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
+        """Evaluates scheduled digit configurations.
 
         Parameters
         ----------
@@ -285,29 +320,32 @@ class _QuanticsVector(_QuanticsFormat):
         self.layout.decode_digits(digits)
         if self.digit_positions == tuple(range(self.n_sites)):
             return self.evaluate(digits, n_batches=digits.ndim - 1)
-        data_batch = digits.shape[:-1]
-        count = prod(data_batch)
-        core_count = prod(self._batch_shape)
-        digits = digits.reshape(count, -1)
+
+        # Contract digit sites while retaining output and structural batch axes.
+        data_batch_shape = digits.shape[:-1]
+        data_batch_size = prod(data_batch_shape)
+        core_batch_size = prod(self._batch_shape)
+        digits = digits.reshape(data_batch_size, -1)
         cores = self._effective_cores()
         closing = cores[0].shape[-3]
         state = torch.eye(closing, device=self.device, dtype=self.dtype)
-        state = state.expand(core_count, count, closing, closing)
+        state = state.expand(core_batch_size, data_batch_size, closing, closing)
         columns = {site: column for column, site in enumerate(self.digit_positions)}
-        outputs = []
+        output_shape = []
         for site, core in enumerate(cores):
-            core = core.reshape(core_count, *core.shape[-3:])
+            core = core.reshape(core_batch_size, *core.shape[-3:])
             if site in columns:
                 local = core[:, :, digits[:, columns[site]], :].permute(0, 2, 1, 3)
                 state = torch.einsum('cds...l,cdlr->cds...r', state, local)
             else:
                 state = torch.einsum('cds...l,clpr->cds...pr', state, core)
-                outputs.append(core.shape[-2])
+                output_shape.append(core.shape[-2])
         value = state.diagonal(dim1=2, dim2=-1).sum(-1)
-        return value.reshape(*self._batch_shape, *data_batch, *outputs)
+        return value.reshape(*self._batch_shape, *data_batch_shape, *output_shape)
 
-    def evaluate_indices(self, indices) -> torch.Tensor:
-        r"""Evaluates original variable index configurations.
+
+    def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
+        """Evaluates original variable index configurations.
 
         Parameters
         ----------
@@ -330,8 +368,9 @@ class _QuanticsVector(_QuanticsFormat):
         """
         return self.evaluate_digits(self.layout.encode_indices(indices))
 
-    def evaluate_points(self, points) -> torch.Tensor:
-        r"""Evaluates physical coordinate configurations.
+
+    def evaluate_points(self, points: torch.Tensor) -> torch.Tensor:
+        """Evaluates physical coordinate configurations.
 
         Physical coordinates require a coordinate map with an inverse or
         grid-index lookup. The computational_grid and out_of_domain policies
@@ -363,8 +402,9 @@ class _QuanticsVector(_QuanticsFormat):
             points, self.layout, self.coordinate_map, self.domain,
             self.computational_grid, self.out_of_domain))
 
+
     def to_dense_grid(self) -> torch.Tensor:
-        r"""Evaluates every original variable index on a small grid.
+        """Evaluates every original variable index on a small grid.
 
         Explicitly allocates and evaluates the full grid, independent of
         digit-site scheduling.
@@ -372,36 +412,26 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Dense values in original variable order, after structural batch
-            axes. Vector output sites follow variable axes; matrix axes are all
-            input variables followed by all output variables.
+            Values with shape (*core_batch, *grid_size, *output_sites), in
+            original variable order.
         """
         axes = [torch.arange(size, device=self.device)
                 for size in self.layout.grid_size]
         indices = torch.cartesian_prod(*axes).reshape(-1, self.layout.n_variables)
         values = self.evaluate_indices(indices)
-        outputs = tuple(self._in_dim[site] for site in range(self.n_sites)
+        output_shape = tuple(self._in_dim[site] for site in range(self.n_sites)
                         if site not in self.digit_positions)
-        return values.reshape(*self._batch_shape, *self.layout.grid_size, *outputs)
-
-    def _as_vector(self, cls):
-        """Drops coordinate metadata while retaining raw cores and factors."""
-        result = cls(self.cores, n_batches=self._n_batches)
-        if self._bonds is not None:
-            result._bonds = self._bonds._map_tensors(
-                lambda tensor: tensor, result._on_bonds_changed)
-        return result
+        return values.reshape(*self._batch_shape, *self.layout.grid_size, *output_shape)
 
 
 class QTT(_QuanticsVector, TT):
-    r"""A tensor train plus the physical meaning of its digit sites.
+    """A tensor train plus the physical meaning of its digit sites.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Raw cores in the endpoint layout of the concrete format. The
-        container is copied and tensor storage is shared; inputs retain
-        autograd.
+        Core tensors with the shapes described in :class:`TT`. The
+        container is copied and tensors retain storage and autograd.
     layout : QuantizedLayout
         Digit bases, levels and site schedule. Scheduled core input
         dimensions should match the layout.
@@ -410,13 +440,16 @@ class QTT(_QuanticsVector, TT):
         inverse or direct grid-index lookup.
     domain : torch.Tensor or sequence of torch.Tensor, optional
         Physical intervals as (2,) for a shared interval or (n_variables, 2)
-        for separate intervals. None uses [0, 1] for each variable.
+        for separate intervals. Interval-based maps require a domain; maps with
+        their own physical grid or geometry can use None.
     digit_positions : sequence of int, optional
         Core position for each scheduled digit column, in layout order. None
         uses every core. Other sites are open tensor outputs.
     n_batches : int
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
+    bonds : sequence of torch.Tensor or None, optional
+        Diagonal factors between cores, as in the corresponding plain format.
     computational_grid : {"endpoints", "cell_centers"}
         Uniform computational positions used when the coordinate map does
         not provide direct index lookup.
@@ -425,8 +458,8 @@ class QTT(_QuanticsVector, TT):
         clipped to the domain boundary.
     """
 
-    def as_tt(self):
-        r"""Drops Quantics metadata while retaining the represented tensor.
+    def as_tt(self) -> TT:
+        """Drops Quantics metadata while retaining the represented tensor.
 
         Returns
         -------
@@ -434,18 +467,17 @@ class QTT(_QuanticsVector, TT):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        return self._as_vector(TT)
+        return self._as_format(TT)
 
 
 class QTR(_QuanticsVector, TR):
-    r"""A tensor ring plus the physical meaning of its digit sites.
+    """A tensor ring plus the physical meaning of its digit sites.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Raw cores in the endpoint layout of the concrete format. The
-        container is copied and tensor storage is shared; inputs retain
-        autograd.
+        Core tensors with the shapes described in :class:`TR`. The
+        container is copied and tensors retain storage and autograd.
     layout : QuantizedLayout
         Digit bases, levels and site schedule. Scheduled core input
         dimensions should match the layout.
@@ -454,13 +486,16 @@ class QTR(_QuanticsVector, TR):
         inverse or direct grid-index lookup.
     domain : torch.Tensor or sequence of torch.Tensor, optional
         Physical intervals as (2,) for a shared interval or (n_variables, 2)
-        for separate intervals. None uses [0, 1] for each variable.
+        for separate intervals. Interval-based maps require a domain; maps with
+        their own physical grid or geometry can use None.
     digit_positions : sequence of int, optional
         Core position for each scheduled digit column, in layout order. None
         uses every core. Other sites are open tensor outputs.
     n_batches : int
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
+    bonds : sequence of torch.Tensor or None, optional
+        Diagonal factors between cores, as in the corresponding plain format.
     computational_grid : {"endpoints", "cell_centers"}
         Uniform computational positions used when the coordinate map does
         not provide direct index lookup.
@@ -469,8 +504,8 @@ class QTR(_QuanticsVector, TR):
         clipped to the domain boundary.
     """
 
-    def as_tr(self):
-        r"""Drops Quantics metadata while retaining the represented tensor.
+    def as_tr(self) -> TR:
+        """Drops Quantics metadata while retaining the represented tensor.
 
         Returns
         -------
@@ -478,11 +513,11 @@ class QTR(_QuanticsVector, TR):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        return self._as_vector(TR)
+        return self._as_format(TR)
 
 
-    def rotate(self, first=0):
-        r"""Rotates ring sites and updates the Quantics digit schedules.
+    def rotate(self, first: int = 0) -> 'QTR':
+        """Rotates ring sites and updates the Quantics digit schedules.
 
         Parameters
         ----------
@@ -502,11 +537,11 @@ class QTR(_QuanticsVector, TR):
         cores = [*self._cores[first:], *self._cores[:first]]
         positions = tuple((site - first) %
                           self.n_sites for site in self.digit_positions)
-        result = QTR(cores, self.layout, self.coordinate_map,
-                                    self.domain, digit_positions=positions,
-                                    n_batches=self._n_batches,
-                                    computational_grid=self.computational_grid,
-                                    out_of_domain=self.out_of_domain)
+        result = QTR(
+            cores, self.layout, self.coordinate_map, self.domain,
+            digit_positions=positions, n_batches=self._n_batches,
+            computational_grid=self.computational_grid,
+            out_of_domain=self.out_of_domain)
         if self._bonds is not None:
             values = self._bonds.values
             result.bonds = [*values[first:], *values[:first]]
@@ -516,20 +551,22 @@ class QTR(_QuanticsVector, TR):
 class _QuanticsMatrix(_QuanticsFormat):
     """Paired input/output digit layouts of a tensorized operator."""
 
+    _coordinate_names = ('in_coordinate_map', 'out_coordinate_map',
+                         'in_domain', 'out_domain')
+
     def __init__(self,
                  cores: Sequence[torch.Tensor],
-                 in_layout,
-                 out_layout,
-                 in_coordinate_map=None,
-                 out_coordinate_map=None,
-                 in_domain=None,
-                 out_domain=None,
+                 in_layout: QuantizedLayout,
+                 out_layout: QuantizedLayout,
+                 in_coordinate_map: Optional[CoordinateMap] = None,
+                 out_coordinate_map: Optional[CoordinateMap] = None,
+                 in_domain: Domain = None,
+                 out_domain: Domain = None,
                  *,
                  n_batches: int = 0,
                  computational_grid: str = 'endpoints',
                  out_of_domain: str = 'error',
-                 bonds=None) -> None:
-        """Initializes the stored tensor references and validates construction."""
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
         if not isinstance(in_layout, QuantizedLayout) or not isinstance(
             out_layout, QuantizedLayout):
             raise TypeError('Matrix layouts should be QuantizedLayout objects')
@@ -542,29 +579,22 @@ class _QuanticsMatrix(_QuanticsFormat):
         if computational_grid not in (
             'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
             raise ValueError('Invalid computational grid or out-of-domain policy')
-        self.in_layout, self.out_layout = in_layout, out_layout
-        self.in_coordinate_map, self.out_coordinate_map = in_coordinate_map, out_coordinate_map
-        self.in_domain, self.out_domain = in_domain, out_domain
-        self.computational_grid, self.out_of_domain = computational_grid, out_of_domain
+        self.in_layout = in_layout
+        self.out_layout = out_layout
+        self.in_coordinate_map = in_coordinate_map
+        self.out_coordinate_map = out_coordinate_map
+        self.in_domain = in_domain
+        self.out_domain = out_domain
+        self.computational_grid = computational_grid
+        self.out_of_domain = out_of_domain
+
         super().__init__(cores, n_batches=n_batches, bonds=bonds)
         if self._in_dim != in_layout.in_dim or self._out_dim != out_layout.in_dim:
             raise ValueError('Matrix core dimensions should match paired digit layouts')
 
-    def _map_tensors(self, function):
-        """Maps stored tensors while preserving concrete container semantics."""
-        result = super()._map_tensors(function)
-        for name in ('in_coordinate_map', 'out_coordinate_map',
-                     'in_domain', 'out_domain'):
-            setattr(result, name, _map_structure(getattr(self, name), function))
-        return result
 
-    def _same_aux_tensors(self, other):
-        """Checks whether auxiliary tensor references are unchanged."""
-        return all(_same_references(getattr(self, name), getattr(other, name)) for name in (
-            'in_coordinate_map', 'out_coordinate_map', 'in_domain', 'out_domain'))
-
-    def validate(self):
-        r"""Validates cores and their Quantics digit-layout dimensions.
+    def validate(self) -> TensorFormat1D:
+        """Validates cores and their Quantics digit-layout dimensions.
 
         Returns
         -------
@@ -577,62 +607,65 @@ class _QuanticsMatrix(_QuanticsFormat):
             raise ValueError('Matrix core dimensions should match paired digit layouts')
         return self
 
-    def evaluate_digits(self, in_digits, out_digits) -> torch.Tensor:
-        r"""Evaluates matrix entries using paired digits.
+
+    def evaluate_digits(self, in_digits: torch.Tensor, out_digits: torch.Tensor) -> torch.Tensor:
+        """Evaluates matrix entries using paired digits.
 
         Parameters
         ----------
         in_digits : torch.Tensor
             Input digits with shape (*data_batch, in_layout.n_sites). Values
-            follow the input digit schedule or coordinate metadata.
+            follow the input digit schedule and should lie within each site base.
         out_digits : torch.Tensor
-            Output digits with matching data batches, following out_layout and
-            its coordinate metadata.
+            Output digits with shape (*data_batch, out_layout.n_sites), within
+            the output site bases. Data batches match the inputs.
 
         Returns
         -------
         torch.Tensor
-            Entries with shape (*core_batch, *data_batch). Physical evaluation
-            quantizes both coordinate groups; it does not interpolate matrix
-            entries.
+            Matrix entries with shape (*core_batch, *data_batch).
         """
         self.in_layout.decode_digits(in_digits)
         self.out_layout.decode_digits(out_digits)
         return self.evaluate(in_digits, out_digits, n_batches=in_digits.ndim - 1)
 
-    def evaluate_indices(self, in_indices, out_indices) -> torch.Tensor:
-        r"""Evaluates matrix entries using paired indices.
+
+    def evaluate_indices(self,
+                         in_indices: torch.Tensor,
+                         out_indices: torch.Tensor) -> torch.Tensor:
+        """Evaluates matrix entries using paired indices.
 
         Parameters
         ----------
         in_indices : torch.Tensor
             Input indices with shape (*data_batch, in_layout.n_variables).
-            Values follow the input digit schedule or coordinate metadata.
+            Indices lie within the grid bounds of each original input variable.
         out_indices : torch.Tensor
-            Output indices with matching data batches, following out_layout and
-            its coordinate metadata.
+            Output indices with shape (*data_batch, out_layout.n_variables),
+            within the output grid bounds. Data batches match the inputs.
 
         Returns
         -------
         torch.Tensor
-            Entries with shape (*core_batch, *data_batch). Physical evaluation
-            quantizes both coordinate groups; it does not interpolate matrix
-            entries.
+            Matrix entries with shape (*core_batch, *data_batch).
         """
         return self.evaluate_digits(self.in_layout.encode_indices(in_indices),
                                     self.out_layout.encode_indices(out_indices))
 
-    def evaluate_points(self, in_points, out_points) -> torch.Tensor:
-        r"""Evaluates matrix entries using paired points.
+
+    def evaluate_points(self, in_points: torch.Tensor, out_points: torch.Tensor) -> torch.Tensor:
+        """Evaluates matrix entries using paired points.
 
         Parameters
         ----------
         in_points : torch.Tensor
-            Input points with shape (*data_batch, in_layout.n_variables). Values
-            follow the input digit schedule or coordinate metadata.
+            Finite floating input points with shape
+            (*data_batch, in_layout.n_variables). An input coordinate map
+            with an inverse or grid lookup is required.
         out_points : torch.Tensor
-            Output points with matching data batches, following out_layout and
-            its coordinate metadata.
+            Finite floating output points with shape
+            (*data_batch, out_layout.n_variables), with matching data batches.
+            An output coordinate map with an inverse or grid lookup is required.
 
         Returns
         -------
@@ -641,14 +674,17 @@ class _QuanticsMatrix(_QuanticsFormat):
             quantizes both coordinate groups; it does not interpolate matrix
             entries.
         """
-        inputs = _points_to_indices(in_points, self.in_layout, self.in_coordinate_map,
-                                    self.in_domain, self.computational_grid, self.out_of_domain)
-        outputs = _points_to_indices(out_points, self.out_layout, self.out_coordinate_map,
-                                     self.out_domain, self.computational_grid, self.out_of_domain)
-        return self.evaluate_indices(inputs, outputs)
+        in_indices = _points_to_indices(
+            in_points, self.in_layout, self.in_coordinate_map,
+            self.in_domain, self.computational_grid, self.out_of_domain)
+        out_indices = _points_to_indices(
+            out_points, self.out_layout, self.out_coordinate_map,
+            self.out_domain, self.computational_grid, self.out_of_domain)
+        return self.evaluate_indices(in_indices, out_indices)
+
 
     def to_dense_grid(self) -> torch.Tensor:
-        r"""Evaluates every original variable index on a small grid.
+        """Evaluates every original variable index on a small grid.
 
         Explicitly allocates and evaluates the full grid, independent of
         digit-site scheduling.
@@ -656,31 +692,34 @@ class _QuanticsMatrix(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Dense values in original variable order, after structural batch
-            axes. Vector output sites follow variable axes; matrix axes are all
-            input variables followed by all output variables.
+            Values with shape (*core_batch, *input_grid_size, *output_grid_size),
+            placing all input variables before all output variables.
         """
-        inputs = torch.cartesian_prod(*[torch.arange(size, device=self.device)
-                                        for size in self.in_layout.grid_size]).reshape(-1, self.in_layout.n_variables)
-        outputs = torch.cartesian_prod(*[torch.arange(size, device=self.device)
-                                         for size in self.out_layout.grid_size]).reshape(-1, self.out_layout.n_variables)
-        values = self.evaluate_indices(inputs.repeat_interleave(outputs.shape[0], 0),
-                                       outputs.repeat(inputs.shape[0], 1))
-        return values.reshape(*self._batch_shape, * \
-                              self.in_layout.grid_size, *self.out_layout.grid_size)
+        input_axes = [torch.arange(size, device=self.device)
+                      for size in self.in_layout.grid_size]
+        output_axes = [torch.arange(size, device=self.device)
+                       for size in self.out_layout.grid_size]
+        in_indices = torch.cartesian_prod(*input_axes).reshape(-1, self.in_layout.n_variables)
+        out_indices = torch.cartesian_prod(*output_axes).reshape(-1, self.out_layout.n_variables)
+
+        # Evaluate the Cartesian product of input and output configurations.
+        values = self.evaluate_indices(
+            in_indices.repeat_interleave(out_indices.shape[0], 0),
+            out_indices.repeat(in_indices.shape[0], 1))
+        return values.reshape(*self._batch_shape,
+                              *self.in_layout.grid_size, *self.out_layout.grid_size)
 
 
 class QTTM(_QuanticsMatrix, TTM):
-    r"""Open-chain operator with separate input/output Quantics layouts.
+    """Open-chain operator with separate input/output Quantics layouts.
 
     QTTM requires unbatched cores.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Raw cores in the endpoint layout of the concrete format. The
-        container is copied and tensor storage is shared; inputs retain
-        autograd.
+        Core tensors with the shapes described in :class:`TTM`. The
+        container is copied and tensors retain storage and autograd.
     in_layout : QuantizedLayout
         Digit layout of input/column indices.
     out_layout : QuantizedLayout
@@ -695,8 +734,9 @@ class QTTM(_QuanticsMatrix, TTM):
     out_domain : torch.Tensor or sequence of torch.Tensor, optional
         Physical intervals for output coordinates.
     n_batches : int
-        Number of leading structural batch axes shared by all cores.
-        Independent of data batches during evaluation.
+        Number of leading structural batch axes. Only zero is supported.
+    bonds : sequence of torch.Tensor or None, optional
+        Diagonal factors between cores, as in the corresponding plain format.
     computational_grid : {"endpoints", "cell_centers"}
         Computational grid convention used when a coordinate map lacks
         direct index lookup.
@@ -705,8 +745,8 @@ class QTTM(_QuanticsMatrix, TTM):
         clipped to the domain boundary.
     """
 
-    def as_ttm(self):
-        r"""Drops Quantics metadata while retaining the represented tensor.
+    def as_ttm(self) -> TTM:
+        """Drops Quantics metadata while retaining the represented tensor.
 
         Returns
         -------
@@ -714,22 +754,17 @@ class QTTM(_QuanticsMatrix, TTM):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        result = TTM(self.cores, n_batches=self._n_batches)
-        if self._bonds is not None:
-            result._bonds = self._bonds._map_tensors(
-                lambda tensor: tensor, result._on_bonds_changed)
-        return result
+        return self._as_format(TTM)
 
 
 class QTRM(_QuanticsMatrix, TRM):
-    r"""Cyclic operator with separate input/output Quantics layouts.
+    """Cyclic operator with separate input/output Quantics layouts.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Raw cores in the endpoint layout of the concrete format. The
-        container is copied and tensor storage is shared; inputs retain
-        autograd.
+        Core tensors with the shapes described in :class:`TRM`. The
+        container is copied and tensors retain storage and autograd.
     in_layout : QuantizedLayout
         Digit layout of input/column indices.
     out_layout : QuantizedLayout
@@ -746,6 +781,8 @@ class QTRM(_QuanticsMatrix, TRM):
     n_batches : int
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
+    bonds : sequence of torch.Tensor or None, optional
+        Diagonal factors between cores, as in the corresponding plain format.
     computational_grid : {"endpoints", "cell_centers"}
         Computational grid convention used when a coordinate map lacks
         direct index lookup.
@@ -754,8 +791,8 @@ class QTRM(_QuanticsMatrix, TRM):
         clipped to the domain boundary.
     """
 
-    def as_trm(self):
-        r"""Drops Quantics metadata while retaining the represented tensor.
+    def as_trm(self) -> TRM:
+        """Drops Quantics metadata while retaining the represented tensor.
 
         Returns
         -------
@@ -763,15 +800,11 @@ class QTRM(_QuanticsMatrix, TRM):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        result = TRM(self.cores, n_batches=self._n_batches)
-        if self._bonds is not None:
-            result._bonds = self._bonds._map_tensors(
-                lambda tensor: tensor, result._on_bonds_changed)
-        return result
+        return self._as_format(TRM)
 
 
-    def rotate(self, first=0):
-        r"""Rotates ring sites and updates the Quantics digit schedules.
+    def rotate(self, first: int = 0) -> 'QTRM':
+        """Rotates ring sites and updates the Quantics digit schedules.
 
         Parameters
         ----------
@@ -790,19 +823,19 @@ class QTRM(_QuanticsMatrix, TRM):
             raise ValueError('The first rotation site should lie inside the format')
         cores = [*self._cores[first:], *self._cores[:first]]
 
-        def rotated_layout(layout):
+        def rotated_layout(layout: QuantizedLayout) -> QuantizedLayout:
             """Rotates a digit schedule consistently with the ring cores."""
             schedule = layout.sites()
             return QuantizedLayout(layout.n_variables, layout.base, layout.level,
                                    ordering='custom', digit_order=layout.digit_order,
                                    permutation=(*schedule[first:], *schedule[:first]))
-        result = QTRM(cores, rotated_layout(self.in_layout),
-                                          rotated_layout(self.out_layout),
-                                          self.in_coordinate_map, self.out_coordinate_map,
-                                          self.in_domain, self.out_domain,
-                                          n_batches=self._n_batches,
-                                          computational_grid=self.computational_grid,
-                                          out_of_domain=self.out_of_domain)
+
+        result = QTRM(
+            cores, rotated_layout(self.in_layout), rotated_layout(self.out_layout),
+            self.in_coordinate_map, self.out_coordinate_map,
+            self.in_domain, self.out_domain, n_batches=self._n_batches,
+            computational_grid=self.computational_grid,
+            out_of_domain=self.out_of_domain)
         if self._bonds is not None:
             values = self._bonds.values
             result.bonds = [*values[first:], *values[:first]]

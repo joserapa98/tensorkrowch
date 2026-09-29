@@ -8,28 +8,27 @@ This script contains:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple, Union
 
 import torch
 
 
+if TYPE_CHECKING:
+    from tensorkrowch.formats.formats1d import TR, TRM
+
+
 @dataclass(frozen=True)
 class MinimalCanonicalInfo:
-    r"""Optional convergence information for finite-ring gauge optimization.
-
-    Frozen record: field references cannot be reassigned. Tensor contents and
-    autograd are preserved without copying or detaching.
+    """Convergence information returned by minimal canonicalization.
 
     Parameters
     ----------
     iterations : int
-        Number of optimization iterations executed; zero for the direct
-        train path.
+        Number of gauge optimization iterations; zero for TT/TTM.
     converged : bool
-        Whether the ring optimizer met its gradient tolerance; True for the
-        direct train path.
+        Whether the ring optimizer met its gradient tolerance; True for TT/TTM.
     balance_residual : torch.Tensor or None
-        Largest final ring Gram imbalance; None for the direct train path.
+        Largest final ring Gram imbalance; None for TT/TTM.
     """
 
     iterations: int  # Number of optimization iterations executed
@@ -38,11 +37,13 @@ class MinimalCanonicalInfo:
 
 
 class GaugeOrbit:
-    r"""Invertible gauge action on arbitrary pairs of virtual tensor axes.
+    """Tensor representations related by invertible virtual gauge transforms.
 
-    bonds contains ``(left_site, left_axis, right_site, right_axis)`` entries.
-    A gauge multiplies the left endpoint; its inverse acts on the right
-    endpoint via solve. This axis-based action does not assume a 1D geometry.
+    Each bond identifies two tensor axes joined in the represented contraction.
+    A gauge multiplies the first core and its inverse acts on the second, so
+    the contracted tensor stays unchanged. Cores and gauges may be real or
+    complex. The action accepts arbitrary tensor axes, allowing geometries
+    beyond chains.
 
     Parameters
     ----------
@@ -51,36 +52,38 @@ class GaugeOrbit:
         references retained.
     bonds : sequence of tuple[int, int, int, int]
         Virtual interfaces (left_site, left_axis, right_site, right_axis).
-        Endpoint axis dimensions should match. Negative axes are accepted.
+        Joined axis dimensions should match. Negative axes are accepted.
     """
 
-    def __init__(self, cores: Sequence[torch.Tensor], bonds) -> None:
-        """Stores tensor references and validates gauge interfaces."""
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
+                 bonds: Sequence[Tuple[int, int, int, int]]) -> None:
         self.cores = tuple(cores)
         self.bonds = tuple(bonds)
         if not self.cores or not all(isinstance(core, torch.Tensor)
                                      for core in self.cores):
             raise TypeError('`cores` should be a nonempty tensor sequence')
-        for left, left_axis, right, right_axis in self.bonds:
-            for site, axis in [(left, left_axis), (right, right_axis)]:
+        for left_site, left_axis, right_site, right_axis in self.bonds:
+            for site, axis in [(left_site, left_axis), (right_site, right_axis)]:
                 if isinstance(site, bool) or not isinstance(
                     site, int) or not 0 <= site < len(self.cores):
-                    raise ValueError('Gauge endpoints should select valid tensor sites')
-                if isinstance(axis, bool) or not isinstance(axis, int) or not - \
-                              self.cores[site].ndim <= axis < self.cores[site].ndim:
-                    raise ValueError('Gauge endpoints should select valid tensor axes')
-            if self.cores[left].shape[left_axis] != self.cores[right].shape[right_axis]:
-                raise ValueError('Gauge endpoint dimensions should match')
+                    raise ValueError('Gauge bonds should select valid tensor sites')
+                if isinstance(axis, bool) or not isinstance(axis, int) or not (
+                        -self.cores[site].ndim <= axis < self.cores[site].ndim):
+                    raise ValueError('Gauge bonds should select valid tensor axes')
+            if self.cores[left_site].shape[left_axis] != self.cores[right_site].shape[right_axis]:
+                raise ValueError('Gauge bond dimensions should match')
 
-    def apply(self, gauges):
-        r"""Applies invertible gauges at the configured virtual interfaces.
+
+    def apply(self, gauges: Sequence[torch.Tensor]) -> List[torch.Tensor]:
+        """Applies invertible gauges at the configured virtual interfaces.
 
         Parameters
         ----------
         gauges : sequence of torch.Tensor
             One square invertible gauge per configured bond, matching its rank
-            and the endpoint dtype/device. The left endpoint is multiplied by
-            the gauge; the inverse acts on the right endpoint via solve.
+            and core dtype/device. The first core is multiplied by the gauge;
+            its inverse acts on the second core through a linear solve.
 
         Returns
         -------
@@ -95,35 +98,44 @@ class GaugeOrbit:
         >>> cores = orbit.apply([2 * torch.eye(2)])
         >>> torch.allclose(cores[0] @ cores[1], torch.eye(2))
         True
+        >>> identity = torch.eye(2, dtype=torch.complex128)
+        >>> orbit = tk.formats.GaugeOrbit([identity, identity], [(0, 1, 1, 0)])
+        >>> gauge = torch.matrix_exp(1j * identity)
+        >>> cores = orbit.apply([gauge])
+        >>> torch.allclose(cores[0] @ cores[1], identity)
+        True
         """
         gauges = list(gauges)
         if len(gauges) != len(self.bonds):
             raise ValueError('There should be one gauge per virtual bond')
+
         cores = list(self.cores)
-        for gauge, (left, left_axis, right, right_axis) in zip(gauges, self.bonds):
-            rank = cores[left].shape[left_axis]
+        for gauge, (left_site, left_axis, right_site, right_axis) in zip(gauges, self.bonds):
+            rank = cores[left_site].shape[left_axis]
             if not isinstance(gauge, torch.Tensor):
                 raise TypeError('Gauges should be tensors')
             if gauge.shape != (rank, rank):
                 raise ValueError('Gauge dimensions should match the virtual bond')
-            if gauge.device != cores[left].device or gauge.dtype != cores[left].dtype:
+            if gauge.device != cores[left_site].device or gauge.dtype != cores[left_site].dtype:
                 raise ValueError('Gauges and cores should share device and dtype')
-            value = cores[left].movedim(left_axis, -1)
-            cores[left] = (value @ gauge).movedim(-1, left_axis)
-            value = cores[right].movedim(right_axis, 0)
-            transformed = torch.linalg.solve(gauge, value.reshape(rank, -1))
-            cores[right] = transformed.reshape(value.shape).movedim(0, right_axis)
+            # Apply the gauge and its inverse at the joined virtual axes.
+            left_core = cores[left_site].movedim(left_axis, -1)
+            cores[left_site] = (left_core @ gauge).movedim(-1, left_axis)
+
+            right_core = cores[right_site].movedim(right_axis, 0)
+            transformed = torch.linalg.solve(gauge, right_core.reshape(rank, -1))
+            cores[right_site] = transformed.reshape(right_core.shape).movedim(0, right_axis)
         return cores
 
-    def objective(self, gauges):
-        r"""Returns half the sum of squared gauged core Frobenius norms.
+
+    def objective(self, gauges: Sequence[torch.Tensor]) -> torch.Tensor:
+        """Returns half the sum of squared gauged core Frobenius norms.
 
         Parameters
         ----------
         gauges : sequence of torch.Tensor
             One square invertible gauge per configured bond, matching its rank
-            and the endpoint dtype/device. The left endpoint is multiplied by
-            the gauge; the inverse acts on the right endpoint via solve.
+            and core dtype/device, as in :meth:`apply`.
 
         Returns
         -------
@@ -134,25 +146,28 @@ class GaugeOrbit:
 
 
 class TensorRingOrbit(GaugeOrbit):
-    r"""Finite-ring gauge orbit, with physical axes fused within each core.
+    """Gauge-related representations of a finite tensor ring.
+
+    Gauges act on adjacent virtual axes, including the closing bond. The
+    objective and balance residual support both real and complex cores.
 
     Parameters
     ----------
     format : TR or TRM
-        Cyclic format supplying effective standard cores, including diagonal
-        factors. Matrix physical axes are fused for the gauge action.
+        Cyclic format supplying cores with explicit bond factors absorbed.
+        Matrix input/output axes are combined for the gauge action.
     """
 
-    def __init__(self, format) -> None:
-        """Builds cyclic gauge interfaces from effective format cores."""
+    def __init__(self, format: Union['TR', 'TRM']) -> None:
         if not format._cyclic:
             raise ValueError('TensorRingOrbit requires a cyclic format')
         cores = format._effective_cores()
         super().__init__(cores, [(site, -1, (site + 1) % len(cores), -3)
                                  for site in range(len(cores))])
 
-    def balance_residual(self):
-        r"""Returns the largest virtual-bond Gram imbalance.
+
+    def balance_residual(self) -> torch.Tensor:
+        """Returns the largest virtual-bond Gram imbalance.
 
         Returns
         -------
@@ -162,10 +177,11 @@ class TensorRingOrbit(GaugeOrbit):
             contractions; this is not a relative convergence tolerance.
         """
         residuals = []
-        for left, _, right, _ in self.bonds:
-            a = self.cores[left].reshape(-1, self.cores[left].shape[-1])
-            b = self.cores[right].movedim(-3,
-                                          0).reshape(self.cores[right].shape[-3], -1)
-            residuals.append((a.transpose(-2, -1).conj() @ a -
-                              b @ b.transpose(-2, -1).conj()).norm())
+        for left_site, _, right_site, _ in self.bonds:
+            left_core, right_core = self.cores[left_site], self.cores[right_site]
+            left_matrix = left_core.reshape(-1, left_core.shape[-1])
+            right_matrix = right_core.movedim(-3, 0).reshape(right_core.shape[-3], -1)
+            left_gram = left_matrix.transpose(-2, -1).conj() @ left_matrix
+            right_gram = right_matrix @ right_matrix.transpose(-2, -1).conj()
+            residuals.append((left_gram - right_gram).norm())
         return torch.stack(residuals).amax()

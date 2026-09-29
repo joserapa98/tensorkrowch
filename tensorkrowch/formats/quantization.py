@@ -145,6 +145,7 @@ class QuantizedLayout:
                 raise OverflowError(
                     f'Quantized variable {variable} exceeds int64 indices')
 
+        # Canonical digit identities stay fixed when the site order changes.
         canonical = tuple(
             (variable, digit)
             for variable, variable_level in enumerate(level)
@@ -173,14 +174,17 @@ class QuantizedLayout:
         else:
             permutation = None
 
+        # Freeze normalized specifications rather than the original containers.
         object.__setattr__(self, 'base', base)
         object.__setattr__(self, 'level', level)
         object.__setattr__(self, 'permutation', permutation)
+
 
     @property
     def n_sites(self) -> int:
         """Total number of digit sites."""
         return sum(self.level)
+
 
     @property
     def grid_size(self) -> Tuple[int, ...]:
@@ -188,10 +192,12 @@ class QuantizedLayout:
         return tuple(site_base ** site_level for site_base, site_level in zip(
             self.base, self.level))
 
+
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Basis input dimension of every digit site in schedule order."""
         return tuple(self.base[variable] for variable, _ in self.sites())
+
 
     def _variable_digits(self, variable: int) -> Tuple[int, ...]:
         """Canonical digit ids in the requested within-variable direction."""
@@ -199,8 +205,9 @@ class QuantizedLayout:
         return digits if self.digit_order == 'coarse_to_fine' \
             else tuple(reversed(digits))
 
+
     def sites(self) -> Tuple[DigitSite, ...]:
-        r"""Returns the scheduled canonical digit-site pairs.
+        """Returns the scheduled canonical digit-site pairs.
 
         Returns
         -------
@@ -224,6 +231,7 @@ class QuantizedLayout:
             for variable, digits in enumerate(variable_digits)
             if depth < len(digits))
 
+
     @staticmethod
     def _integer_tensor(values: torch.Tensor, name: str) -> torch.Tensor:
         """Validates one integer tensor without changing its device."""
@@ -233,8 +241,9 @@ class QuantizedLayout:
             raise TypeError(f'`{name}` should be an integer tensor')
         return values.to(dtype=torch.long)
 
+
     def encode_indices(self, indices: torch.Tensor) -> torch.Tensor:
-        r"""Expands integer grid indices into scheduled digit columns.
+        """Expands integer grid indices into scheduled digit columns.
 
         Parameters
         ----------
@@ -257,6 +266,8 @@ class QuantizedLayout:
         if indices.shape[-1] != self.n_variables:
             raise ValueError(
                 'The last `indices` dimension should match `n_variables`')
+
+        # Expand each index, then arrange its digits in the chosen site order.
         canonical = {}
         for variable, (site_base, site_level, size) in enumerate(zip(
                 self.base, self.level, self.grid_size)):
@@ -272,8 +283,9 @@ class QuantizedLayout:
         return torch.stack(
             [canonical[site] for site in self.sites()], dim=-1)
 
+
     def decode_digits(self, digits: torch.Tensor) -> torch.Tensor:
-        r"""Combines scheduled digits into original variable indices.
+        """Combines scheduled digits into original variable indices.
 
         Parameters
         ----------
@@ -292,6 +304,7 @@ class QuantizedLayout:
         if digits.shape[-1] != self.n_sites:
             raise ValueError(
                 'The last `digits` dimension should match the layout sites')
+
         canonical = {}
         for column, site in enumerate(self.sites()):
             variable, _ = site
@@ -300,6 +313,7 @@ class QuantizedLayout:
                 raise ValueError(
                     f'`digits` is out of bounds at site {column}')
             canonical[site] = values
+        # Combine digits by significance, independently of their site order.
         indices = []
         for variable, (site_base, site_level) in enumerate(zip(
                 self.base, self.level)):
@@ -310,12 +324,13 @@ class QuantizedLayout:
             indices.append(value)
         return torch.stack(indices, dim=-1)
 
+
     def reorder_configurations(
             self,
             digits: torch.Tensor,
             target_ordering: Union[str, 'QuantizedLayout']
     ) -> torch.Tensor:
-        r"""Reorders digit columns without modifying any format cores.
+        """Reorders digit columns without modifying any format cores.
 
         Parameters
         ----------
@@ -483,7 +498,7 @@ class CoordinateMap(Protocol):
     def forward(self,
                 unit_coordinates: torch.Tensor,
                 domain: Domain = None) -> torch.Tensor:
-        r"""Maps computational coordinates into physical space.
+        """Maps computational coordinates into physical space.
 
         Implementations preserve the coordinate shape. Inverse and grid-index
         methods are optional capabilities used for physical evaluation.
@@ -507,7 +522,7 @@ class CoordinateMap(Protocol):
 
 @dataclass(frozen=True)
 class UniformCoordinateMap:
-    r"""Affine map between a uniform computational grid and physical domains.
+    """Affine map between a uniform computational grid and physical domains.
 
     Parameters
     ----------
@@ -524,10 +539,11 @@ class UniformCoordinateMap:
             raise ValueError(
                 "`grid` should be 'endpoints' or 'cell_centers'")
 
+
     def forward(self,
                 unit_coordinates: torch.Tensor,
                 domain: Domain = None) -> torch.Tensor:
-        r"""Maps computational coordinates into physical space.
+        """Maps computational coordinates into physical space.
 
         Uniform maps use an affine transformation of each physical interval.
 
@@ -538,7 +554,8 @@ class UniformCoordinateMap:
             expressed in the unit computational domain.
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. None uses [0, 1] for each variable.
+            for separate intervals. Required for this affine map; None raises
+            ValueError.
 
         Returns
         -------
@@ -550,11 +567,12 @@ class UniformCoordinateMap:
             domain, unit.shape[-1], unit.device, unit.dtype)
         return intervals[:, 0] + unit * (intervals[:, 1] - intervals[:, 0])
 
+
     def inverse(self,
                 physical_coordinates: torch.Tensor,
                 domain: Domain = None,
                 out_of_domain: str = 'error') -> torch.Tensor:
-        r"""Maps physical coordinates back to the unit computational domain.
+        """Maps physical coordinates back to the unit computational domain.
 
         Uses the inverse affine interval transformation.
 
@@ -565,7 +583,8 @@ class UniformCoordinateMap:
             n_variables).
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. None uses [0, 1] for each variable.
+            for separate intervals. Required for this affine map; None raises
+            ValueError.
         out_of_domain : {"error", "clip"}
             Whether coordinates outside the domain raise ValueError or are
             clipped to the domain boundary.
@@ -588,11 +607,12 @@ class UniformCoordinateMap:
             raise ValueError('Coordinates lie outside the physical domain')
         return unit.clamp(0, 1) if policy == 'clip' else unit
 
+
     def from_indices(self,
                      indices: torch.Tensor,
                      grid_size: Sequence[int],
                      domain: Domain = None) -> torch.Tensor:
-        r"""Maps integer grid indices to physical point values.
+        """Maps integer grid indices to physical point values.
 
         The grid policy chooses endpoint positions i / (size - 1) or cell
         centers (i + 0.5) / size.
@@ -606,14 +626,14 @@ class UniformCoordinateMap:
             Number of grid points per physical variable.
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. None uses [0, 1] for each variable.
+            for separate intervals. Required for this affine map; None raises
+            ValueError.
 
         Returns
         -------
         torch.Tensor
-            Physical values with shape (*batch, n_variables). Explicit maps
-            retain the stored grid dtype; uniform maps use the domain dtype when
-            available.
+            Physical values with shape (*batch, n_variables), using the domain
+            dtype when available and otherwise the default floating dtype.
         """
         dtype = None
         if isinstance(domain, torch.Tensor) and domain.is_floating_point():
@@ -626,12 +646,13 @@ class UniformCoordinateMap:
             indices, grid_size, self.grid, dtype=dtype)
         return self.forward(unit, domain)
 
+
     def to_indices(self,
                    physical_coordinates: torch.Tensor,
                    grid_size: Sequence[int],
                    domain: Domain = None,
                    out_of_domain: str = 'error') -> torch.Tensor:
-        r"""Quantizes physical coordinates to nearest grid indices.
+        """Quantizes physical coordinates to nearest grid indices.
 
         Parameters
         ----------
@@ -642,7 +663,8 @@ class UniformCoordinateMap:
             Number of grid points per physical variable.
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. None uses [0, 1] for each variable.
+            for separate intervals. Required for this affine map; None raises
+            ValueError.
         out_of_domain : {"error", "clip"}
             Whether coordinates outside the domain raise ValueError or are
             clipped to the domain boundary.
@@ -670,7 +692,7 @@ class UniformCoordinateMap:
 
 @dataclass(frozen=True)
 class WarpedCoordinateMap:
-    r"""User-defined separable or coupled computational-coordinate map.
+    """User-defined separable or coupled computational-coordinate map.
 
     Callables receive ``(coordinates, domain)`` and should preserve the input
     shape. ``domain`` may be ``None`` when the callable already contains the
@@ -685,10 +707,19 @@ class WarpedCoordinateMap:
         Function (physical_coordinates, domain) returning unit coordinates
         of unchanged shape. Without it, inverse evaluation raises
         NotImplementedError.
+
+    Examples
+    --------
+    >>> coordinate_map = tk.formats.WarpedCoordinateMap(
+    ...     lambda unit, domain: unit.square(),
+    ...     lambda physical, domain: physical.sqrt())
+    >>> unit = torch.tensor([[0.5]])
+    >>> torch.equal(coordinate_map.inverse(coordinate_map.forward(unit)), unit)
+    True
     """
 
-    forward_function: Callable
-    inverse_function: Optional[Callable] = None
+    forward_function: Callable[[torch.Tensor, Domain], torch.Tensor]
+    inverse_function: Optional[Callable[[torch.Tensor, Domain], torch.Tensor]] = None
 
     def __post_init__(self) -> None:
         """Checks that forward and optional inverse functions are callable."""
@@ -697,6 +728,7 @@ class WarpedCoordinateMap:
         if self.inverse_function is not None and not callable(
                 self.inverse_function):
             raise TypeError('`inverse_function` should be callable or None')
+
 
     @staticmethod
     def _validate_result(result: torch.Tensor,
@@ -711,10 +743,11 @@ class WarpedCoordinateMap:
             raise ValueError(f'`{name}` should return finite floating values')
         return result
 
+
     def forward(self,
                 unit_coordinates: torch.Tensor,
                 domain: Domain = None) -> torch.Tensor:
-        r"""Maps computational coordinates into physical space.
+        """Maps computational coordinates into physical space.
 
         Calls forward_function(coordinates, domain) and requires finite floating
         outputs of unchanged shape.
@@ -738,11 +771,12 @@ class WarpedCoordinateMap:
         return self._validate_result(
             self.forward_function(unit, domain), unit, 'forward_function')
 
+
     def inverse(self,
                 physical_coordinates: torch.Tensor,
                 domain: Domain = None,
                 out_of_domain: str = 'error') -> torch.Tensor:
-        r"""Maps physical coordinates back to the unit computational domain.
+        """Maps physical coordinates back to the unit computational domain.
 
         Requires inverse_function; otherwise raises NotImplementedError. No
         numerical inverse is inferred.
@@ -783,7 +817,11 @@ class WarpedCoordinateMap:
 
 
 class ExplicitGridMap:
-    r"""Maps unit coordinates through arbitrary monotonic point grids.
+    """Maps unit coordinates through arbitrary monotonic point grids.
+
+    The forward map interpolates linearly between stored points. Inverse
+    evaluation selects the nearest stored point, with ties resolved by its
+    lower index. Increasing and decreasing grids are both supported.
 
     Parameters
     ----------
@@ -796,7 +834,6 @@ class ExplicitGridMap:
 
     def __init__(self,
                  points: Union[torch.Tensor, Sequence[torch.Tensor]]) -> None:
-        """Initializes the stored tensor references and validates construction."""
         if isinstance(points, torch.Tensor):
             grids = (points,)
             self.shared = True
@@ -822,6 +859,7 @@ class ExplicitGridMap:
                 raise ValueError('Every explicit grid should be monotonic')
         self.points = grids
 
+
     def _grids(self, n_variables: int) -> Tuple[torch.Tensor, ...]:
         """Broadcasts one shared grid or validates per-variable grids."""
         if self.shared:
@@ -830,15 +868,17 @@ class ExplicitGridMap:
             raise ValueError('`points` should contain one grid per variable')
         return self.points
 
+
     @property
     def grid_size(self) -> Tuple[int, ...]:
         """Stored point count per explicit grid before shared broadcasting."""
         return tuple(grid.shape[0] for grid in self.points)
 
+
     def forward(self,
                 unit_coordinates: torch.Tensor,
                 domain: Domain = None) -> torch.Tensor:
-        r"""Interpolates explicit grid points at unit coordinates.
+        """Interpolates explicit grid points at unit coordinates.
 
         Explicit grids are linearly interpolated; unit values should lie in [0,
         1].
@@ -872,11 +912,12 @@ class ExplicitGridMap:
                 grid[lower] * (1 - fraction) + grid[upper] * fraction)
         return torch.stack(values, dim=-1)
 
+
     def inverse(self,
                 physical_coordinates: torch.Tensor,
                 domain: Domain = None,
                 out_of_domain: str = 'error') -> torch.Tensor:
-        r"""Finds nearest explicit grid points and returns their unit positions.
+        """Finds nearest explicit grid points and returns their unit positions.
 
         Ties choose the lower stored index, also on descending grids.
 
@@ -917,11 +958,12 @@ class ExplicitGridMap:
             values.append(index.to(physical.dtype) / (grid.shape[0] - 1))
         return torch.stack(values, dim=-1)
 
+
     def from_indices(self,
                      indices: torch.Tensor,
                      grid_size: Optional[Sequence[int]] = None,
                      domain: Domain = None) -> torch.Tensor:
-        r"""Maps integer grid indices to physical point values.
+        """Maps integer grid indices to physical point values.
 
         Parameters
         ----------
@@ -937,9 +979,8 @@ class ExplicitGridMap:
         Returns
         -------
         torch.Tensor
-            Physical values with shape (*batch, n_variables). Explicit maps
-            retain the stored grid dtype; uniform maps use the domain dtype when
-            available.
+            Physical values with shape (*batch, n_variables), retaining the
+            stored grid dtype.
         """
         if domain is not None:
             raise ValueError('`domain` is not used by ExplicitGridMap')
@@ -958,12 +999,13 @@ class ExplicitGridMap:
             values.append(grid.to(indices.device)[index])
         return torch.stack(values, dim=-1)
 
+
     def to_indices(self,
                    physical_coordinates: torch.Tensor,
                    grid_size: Optional[Sequence[int]] = None,
                    domain: Domain = None,
                    out_of_domain: str = 'error') -> torch.Tensor:
-        r"""Quantizes physical coordinates to nearest grid indices.
+        """Quantizes physical coordinates to nearest grid indices.
 
         Parameters
         ----------
@@ -1007,12 +1049,12 @@ class _CompositeCoordinateMap:
     """Applies one independent coordinate map per physical variable."""
 
     def __init__(self, maps: Sequence[CoordinateMap]) -> None:
-        """Initializes the stored tensor references and validates construction."""
         self.maps = tuple(maps)
         if not self.maps or not all(
                 isinstance(coordinate_map, CoordinateMap)
                 for coordinate_map in self.maps):
             raise TypeError('Every coordinate map should implement CoordinateMap')
+
 
     @staticmethod
     def _domains(domain: Domain, n_variables: int) -> Tuple[Domain, ...]:
@@ -1030,6 +1072,7 @@ class _CompositeCoordinateMap:
             raise ValueError('`domain` should contain one entry per variable')
         return values
 
+
     def forward(self,
                 unit_coordinates: torch.Tensor,
                 domain: Domain = None) -> torch.Tensor:
@@ -1044,6 +1087,7 @@ class _CompositeCoordinateMap:
             for variable, coordinate_map in enumerate(self.maps)
         ]
         return torch.cat(values, dim=-1)
+
 
     def inverse(self,
                 physical_coordinates: torch.Tensor,
@@ -1067,6 +1111,7 @@ class _CompositeCoordinateMap:
                 out_of_domain=out_of_domain))
         return torch.cat(values, dim=-1)
 
+
     def from_indices(self,
                      indices: torch.Tensor,
                      grid_size: Sequence[int],
@@ -1089,6 +1134,7 @@ class _CompositeCoordinateMap:
                 value = coordinate_map.forward(unit, domains[variable])
             values.append(value)
         return torch.cat(values, dim=-1)
+
 
     def to_indices(self,
                    physical_coordinates: torch.Tensor,

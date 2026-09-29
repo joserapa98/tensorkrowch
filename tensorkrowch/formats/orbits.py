@@ -147,7 +147,7 @@ class TensorRingOrbit(GaugeOrbit):
         """Builds cyclic gauge interfaces from effective format cores."""
         if not format._cyclic:
             raise ValueError('TensorRingOrbit requires a cyclic format')
-        cores = format._standard_cores()
+        cores = format._effective_cores()
         super().__init__(cores, [(site, -1, (site + 1) % len(cores), -3)
                                  for site in range(len(cores))])
 

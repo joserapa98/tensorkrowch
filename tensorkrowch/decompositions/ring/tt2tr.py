@@ -57,7 +57,7 @@ def _as_tt_decomposition(tt) -> TTDecomposition:
             raise ValueError('TT-to-TR does not support decomposition batches')
         result = tt
         if tt.bonds is not None:
-            cores = _restore_cores(tt._standard_cores(), tt.in_dim,
+            cores = _restore_cores(tt._effective_cores(), tt.in_dim,
                                    None, 0, False)
             result = TTDecomposition(cores, metrics=tt.metrics,
                                      metadata=tt.metadata)

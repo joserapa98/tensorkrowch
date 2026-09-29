@@ -74,7 +74,7 @@ def _standard_tr_cores(
     if isinstance(cores, TR):
         if cores.n_batches:
             raise ValueError('Batched TR cores are not supported by TR-ALS')
-        cores = cores._standard_cores()
+        cores = cores._effective_cores()
     elif isinstance(cores, torch.Tensor):
         raise TypeError(
             '`initial_cores` should be a TRDecomposition or a core sequence')

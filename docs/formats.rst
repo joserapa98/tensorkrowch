@@ -37,10 +37,12 @@ The implementation follows a one-way dependency flow:
                            v
                         tucker.py
 
-``formats1d.py`` contains the shared container, the vector/matrix bases,
-TT/TR/TTM/TRM, numerical operations and model adapters. Review it from top to
-bottom: records and numerical helpers, controlled core mutations, gauges and
-rounding, blocks, algebra, evaluation, adapters, then concrete core layouts.
+``formats1d.py`` contains the shared container, vector/matrix and open/cyclic
+bases, TT/TR/TTM/TRM, numerical operations and model adapters. Review it from
+top to bottom: numerical helpers, core and bond management, conversions,
+canonicalization, blocks and algebra. The vector and matrix bases then provide
+their evaluation and adapters; the open and cyclic bases provide their gauges
+and topology operations. Concrete classes define core layouts and validation.
 The helpers restore tensor shapes or run reused numerical phases; they do not
 import concrete format classes from other modules.
 
@@ -119,6 +121,15 @@ first, interior and final sites. A one-site TT is ``(in,)``. TR cores all use
 ``(left, in, right)``, with the last right rank equal to the first left rank.
 Leading structural batch axes precede these dimensions.
 
+The public ``cores`` retain these shapes. Internally, ``_standard_cores()``
+adds unit virtual axes to open chains and combines matrix input/output into a
+single physical axis, leaving explicit bond factors separate.
+``_effective_cores()`` has the same shapes with those factors absorbed.
+``_operator_cores()`` also absorbs factors, but keeps input and output separate
+as ``(*batch, left, input, right, output)``. A ket has input dimension one;
+a vector row has output dimension one. These temporary views leave the stored
+cores unchanged.
+
 TTM cores use ``(in, right, out)``, ``(left, in, right, out)``, and
 ``(left, in, out)``; a one-site TTM is ``(in, out)``. TRM cores all use
 ``(left, in, right, out)``. The initial TTM contract rejects structural
@@ -149,12 +160,24 @@ Exact algebra
 -------------
 
 ``+`` and ``-`` form exact sums/differences; ``*`` is Hadamard multiplication
-between compatible formats, or scalar scaling. ``@`` and ``apply`` implement
-matrix-vector, vector-matrix and matrix-matrix products. ``A @ x`` contracts
-``A.in_dim`` and ``x.in_dim``; ``x @ A`` contracts ``x.in_dim`` and
-``A.out_dim``. ``A @ B`` contracts ``A.in_dim`` with ``B.out_dim``. A cyclic
-operand produces a cyclic result, including a closing rank of one. Operations
-do not densify, mutate operands or perform hidden rounding.
+between compatible formats, or scalar scaling. Vectors represent kets:
+``A @ x`` applies an operator, ``x.T @ A`` applies a vector row from the left,
+and ``A @ B`` composes operators. Local inputs of the left operand contract
+with local outputs of the right operand. ``x.T`` shares its ket without
+conjugation; ``x.H`` is its conjugate row. Thus ``x.T @ y`` is bilinear,
+``x.H @ y`` is Hermitian, and ``x @ y.H`` forms an outer-product matrix.
+``x @ y`` and ``x @ A`` are undefined for kets. The existing ``x.apply(A)``
+returns the ket coefficients of ``(x.T @ A).T``.
+A cyclic operand produces a cyclic result, including a closing rank of one.
+Operations do not densify, mutate operands or perform hidden rounding.
+
+.. doctest::
+
+   >>> x = tk.formats.TT([torch.tensor([1., 2.])])
+   >>> a = tk.formats.TTM([torch.diag(torch.tensor([1., 2.]))])
+   >>> energy = (x.H @ a @ x) / (x.H @ x)
+   >>> torch.allclose(energy, torch.tensor(1.8))
+   True
 
 TR/TRM sums default to stacked endpoints from Mickelin and Karaman,
 `Section 3.2 <https://arxiv.org/pdf/1807.02513>`_. This construction facilitates

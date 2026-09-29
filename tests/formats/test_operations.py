@@ -41,14 +41,95 @@ def test_apply_and_matrix_products(make_format, matrix_topology, vector_topology
     assert torch.allclose(a.apply(x).contract_dense(), y.contract_dense())
     assert y.topology == ('tr' if 'tr' in (matrix_topology, vector_topology) or
                          matrix_topology == 'trm' else 'tt')
-    right = y @ a
+    right = y.T @ a
     assert torch.allclose(right.contract_dense().flatten(), (matrix @ vector) @ matrix)
+    assert torch.allclose(y.apply(a).contract_dense(), right.T.contract_dense())
+    assert torch.allclose((y.H @ a).contract_dense().flatten(),
+                          (matrix @ vector).conj() @ matrix)
     assert torch.allclose(_matrix(a @ a.H), matrix @ matrix.adjoint())
     assert torch.allclose(_matrix(a.T), matrix.T)
     assert torch.allclose(_matrix(a.H), matrix.adjoint())
     assert torch.allclose((a @ a.H).trace(), torch.trace(matrix @ matrix.adjoint()))
     assert torch.allclose(((a @ a.H) @ a).contract_dense(),
                           (a @ (a.H @ a)).contract_dense())
+
+
+@pytest.mark.parametrize('left_topology', ['tt', 'tr'])
+@pytest.mark.parametrize('right_topology', ['tt', 'tr'])
+@pytest.mark.parametrize('n_sites', [1, 3])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_kets_rows_and_outer_products(make_format, left_topology,
+                                     right_topology, n_sites, dtype):
+    x = make_format(left_topology, n_sites, dtype=dtype)
+    y = make_format(right_topology, n_sites, dtype=dtype) * (1 + 2j)
+    x_dense = x.contract_dense().flatten()
+    y_dense = y.contract_dense().flatten()
+    x_dense = x_dense.to(y_dense.dtype)
+
+    assert torch.allclose(x.T @ y, torch.dot(x_dense, y_dense))
+    assert torch.allclose(x.H @ y, torch.vdot(x_dense, y_dense))
+    assert x.T.T is x
+    assert x.H.H is x
+    assert torch.equal(x.T.contract_dense(), x.contract_dense())
+    assert torch.equal(x.H.contract_dense(), x.contract_dense().conj())
+
+    outer = x @ y.H
+    assert torch.allclose(_matrix(outer), torch.outer(x_dense, y_dense.conj()))
+    assert torch.allclose(_matrix(x @ y.T), torch.outer(x_dense, y_dense))
+    cyclic = left_topology == 'tr' or right_topology == 'tr'
+    assert isinstance(outer, tk.formats.TRM if cyclic else tk.formats.TTM)
+
+
+def test_rectangular_outer_product_and_energy():
+    x = tk.formats.TT([torch.tensor([1 + 2j, 3 - 1j], dtype=torch.complex128)])
+    y = tk.formats.TT([torch.tensor([2 - 1j, 4j, 1], dtype=torch.complex128)])
+    outer = x @ y.H
+    assert outer.in_dim == (3,)
+    assert outer.out_dim == (2,)
+    assert torch.allclose(_matrix(outer),
+                          torch.outer(x.contract_dense(), y.contract_dense().conj()))
+    a = tk.formats.TTM([torch.diag(torch.tensor([2., 5.], dtype=torch.complex128))])
+    dense = x.contract_dense()
+    energy = (x.H @ a @ x) / (x.H @ x)
+    expected = torch.vdot(dense, _matrix(a) @ dense) / torch.vdot(dense, dense)
+    assert torch.allclose(energy, expected)
+
+    for left, right in [(x, x), (x, a), (x.T, x.H), (a, x.H)]:
+        with pytest.raises(TypeError):
+            left @ right
+    assert (x.H @ (x * 0)).item() == 0
+
+
+def test_outer_product_structural_batches(make_format):
+    x = make_format('tr', n_batches=1)
+    y = make_format('tt')
+    outer = x @ y.H
+    dense_x, dense_y = x.contract_dense().reshape(2, -1), y.contract_dense().flatten()
+    assert outer.n_batches == 1
+    assert torch.allclose(_matrix(outer), dense_x.unsqueeze(-1) * dense_y.unsqueeze(0))
+    with pytest.raises(ValueError, match='TTM structural batches'):
+        make_format('tt', n_batches=1) @ y.T
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('n_sites', [1, 3])
+def test_core_views_and_factored_products(make_format, topology, n_sites):
+    format = make_format(topology, n_sites, dtype=torch.complex128)
+    count = n_sites if format._cyclic else n_sites - 1
+    format.bonds = [torch.full((format.rank[site],), 2 + 1j) for site in range(count)]
+    standard, effective, operator = (
+        format._standard_cores(), format._effective_cores(), format._operator_cores())
+    for site in range(n_sites):
+        expected = standard[site] * (2 + 1j) if site < count else standard[site]
+        assert torch.equal(effective[site], expected)
+        assert operator[site].shape[-4] == standard[site].shape[-3]
+        assert operator[site].shape[-2] == standard[site].shape[-1]
+    if topology.endswith('m'):
+        assert torch.allclose(_matrix(format @ format.H),
+                              _matrix(format) @ _matrix(format).adjoint())
+    else:
+        dense = format.contract_dense().flatten()
+        assert torch.allclose(_matrix(format @ format.H), torch.outer(dense, dense.conj()))
 
 
 def test_mixed_sum_batches_and_errors(make_format):

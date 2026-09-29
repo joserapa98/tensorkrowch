@@ -19,7 +19,7 @@ def test_qr_gauges(make_format, topology, n_sites, renormalize, monkeypatch):
         result = format.clone().canonicalize(orth_center=orth_center,
                                               renormalize=renormalize)
         assert torch.allclose(result.contract_dense(), dense, rtol=1e-10, atol=1e-12)
-        for site, core in enumerate(result._standard_cores()):
+        for site, core in enumerate(result._effective_cores()):
             if site < orth_center:
                 matrix = core.reshape(-1, core.shape[-1])
                 assert torch.allclose(matrix.adjoint() @ matrix,

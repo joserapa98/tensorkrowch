@@ -785,12 +785,12 @@ class QTTInputFitter:
             digits: torch.Tensor) -> torch.Tensor:
         """Contracts digit sites while leaving the final gamma axis open."""
         state = None
-        for site, core in enumerate(factor._standard_cores()[:-1]):
+        for site, core in enumerate(factor._effective_cores()[:-1]):
             vector = torch.nn.functional.one_hot(
                 digits[:, site], num_classes=core.shape[-2]).to(factor.dtype)
             local = torch.einsum('bp,lpr->blr', vector, core)
             state = local if state is None else state @ local
-        connector = factor._standard_cores()[-1].squeeze(-1)
+        connector = factor._effective_cores()[-1].squeeze(-1)
         return (state @ connector).squeeze(-2)
 
     def _split_local_factor(
@@ -802,7 +802,7 @@ class QTTInputFitter:
             ) -> Tuple[TTDecomposition, torch.Tensor,
                        Optional[TruncationRecord]]:
         """Separates digit and environment blocks through a small interface."""
-        standard = full_factor._standard_cores()
+        standard = full_factor._effective_cores()
         digit_cores = []
         carry = None
         for site in range(self.layout.n_sites):
@@ -1013,12 +1013,12 @@ class QTTInputFitter:
             device=factor.device)
         digits = adapter.physical_to_digits(flat)
         state = None
-        for site, core in enumerate(factor._standard_cores()[:-1]):
+        for site, core in enumerate(factor._effective_cores()[:-1]):
             vector = torch.nn.functional.one_hot(
                 digits[:, site], num_classes=core.shape[-2]).to(factor.dtype)
             local = torch.einsum('bp,lpr->blr', vector, core)
             state = local if state is None else state @ local
-        connector = factor._standard_cores()[-1].squeeze(-1)
+        connector = factor._effective_cores()[-1].squeeze(-1)
         result = (state @ connector).squeeze(-2)
         result = result.reshape(*values.shape, result.shape[-1])
         return result if dtype is None else result.to(dtype=dtype)

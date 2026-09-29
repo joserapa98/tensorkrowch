@@ -324,7 +324,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         if not isinstance(tensor_train, TT):
             raise TypeError('`tensor_train` should be TT type')
         from tensorkrowch.formats.formats1d import _restore_cores
-        cores = _restore_cores(tensor_train._standard_cores(),
+        cores = _restore_cores(tensor_train._effective_cores(),
                                tensor_train.in_dim, None,
                                tensor_train.n_batches, False)
         return cls(tensors=cores, n_batches=tensor_train.n_batches, **kwargs)
@@ -336,7 +336,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         if not isinstance(tensor_ring, TR):
             raise TypeError('`tensor_ring` should be TR type')
         from tensorkrowch.formats.formats1d import _restore_cores
-        cores = _restore_cores(tensor_ring._standard_cores(),
+        cores = _restore_cores(tensor_ring._effective_cores(),
                                tensor_ring.in_dim, None,
                                tensor_ring.n_batches, True)
         return cls(tensors=cores, n_batches=tensor_ring.n_batches, **kwargs)

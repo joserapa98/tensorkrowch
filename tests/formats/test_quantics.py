@@ -71,6 +71,38 @@ def test_quantized_matrix_transpose_apply():
     assert isinstance(matrix.apply(torch.tensor([[0, 0]])), tk.formats.QTT)
 
 
+def test_quantized_outer_product_preserves_coordinate_spaces():
+    output_layout = tk.formats.QuantizedLayout(1, 2, 1)
+    input_layout = tk.formats.QuantizedLayout(1, 3, 1)
+    coordinate_map = tk.formats.UniformCoordinateMap()
+    x = tk.formats.QTT([torch.tensor([1., 2.])], output_layout,
+                      coordinate_map, domain=torch.tensor([[0., 1.]]))
+    y = tk.formats.QTT([torch.tensor([2., 3., 4.])], input_layout,
+                      coordinate_map, domain=torch.tensor([[-1., 1.]]))
+    outer = x @ y.H
+    assert isinstance(outer, tk.formats.QTTM)
+    assert outer.in_layout is input_layout
+    assert outer.out_layout is output_layout
+    assert outer.in_domain is y.domain
+    assert outer.out_domain is x.domain
+    assert torch.equal(outer.contract_dense(), torch.outer(
+        y.contract_dense(), x.contract_dense()))
+    assert torch.allclose((x.H @ outer).T.contract_dense(),
+                          (x.H @ x) * y.contract_dense())
+    with pytest.raises(ValueError, match='layouts'):
+        x.H @ tk.formats.QTT(x.cores, output_layout)
+    with pytest.raises(ValueError, match='semantics'):
+        x @ y.as_tt().H
+
+
+def test_quantized_outer_product_rejects_extra_output_sites():
+    layout = tk.formats.QuantizedLayout(1, 2, 1)
+    x = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 3)], layout,
+                      digit_positions=(0,))
+    with pytest.raises(ValueError, match='only digit sites'):
+        x @ x.T
+
+
 @pytest.mark.parametrize('operation', ['sum', 'scale', 'hadamard', 'apply', 'transpose'])
 def test_quantics_constructs_results_directly(operation, monkeypatch):
     from tensorkrowch.formats.formats1d import TensorFormat1D

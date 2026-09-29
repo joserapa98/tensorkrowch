@@ -48,7 +48,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         if isinstance(tensor, TT):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')
-            cores = list(tensor._standard_cores())
+            cores = list(tensor._effective_cores())
         else:
             if isinstance(tensor, torch.Tensor):
                 raise TypeError(

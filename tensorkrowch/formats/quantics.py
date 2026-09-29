@@ -18,11 +18,12 @@ This script contains:
 
 from dataclasses import fields, is_dataclass, replace
 from math import prod
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import torch
 
-from tensorkrowch.formats.formats1d import TT, TR, TTM, TRM, _restore_cores
+from tensorkrowch.formats.formats1d import (TT, TR, TTM, TRM, _RowVector1D,
+                                         _restore_cores)
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
                                              _CompositeCoordinateMap,
                                              _unit_to_indices)
@@ -173,6 +174,30 @@ def _points_to_indices(points, layout, coordinate_map, domain, grid, policy):
 class _QuanticsVector(_QuanticsFormat):
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
+    def _new_outer_product(self,
+                           cores: Sequence[torch.Tensor],
+                           other: _RowVector1D,
+                           n_batches: int,
+                           cyclic: bool) -> Union['QTTM', 'QTRM']:
+        """Builds an operator with the row's inputs and this ket's outputs."""
+        vector = other._vector
+        if any(format.digit_positions != tuple(range(format.n_sites))
+               for format in (self, vector)):
+            raise ValueError('Quantics outer products require only digit sites')
+        if (self.computational_grid, self.out_of_domain) != (
+                vector.computational_grid, vector.out_of_domain):
+            raise ValueError('Quantics coordinate policies should match')
+
+        cores = _restore_cores(
+            cores, vector._in_dim, self._in_dim, n_batches, cyclic)
+        cls = QTRM if cyclic else QTTM
+        return cls(
+            cores, vector.layout, self.layout,
+            vector.coordinate_map, self.coordinate_map,
+            vector.domain, self.domain, n_batches=n_batches,
+            computational_grid=self.computational_grid,
+            out_of_domain=self.out_of_domain)
+
     def __init__(self,
                  cores: Sequence[torch.Tensor],
                  layout,
@@ -264,7 +289,7 @@ class _QuanticsVector(_QuanticsFormat):
         count = prod(data_batch)
         core_count = prod(self._batch_shape)
         digits = digits.reshape(count, -1)
-        cores = self._standard_cores()
+        cores = self._effective_cores()
         closing = cores[0].shape[-3]
         state = torch.eye(closing, device=self.device, dtype=self.dtype)
         state = state.expand(core_count, count, closing, closing)

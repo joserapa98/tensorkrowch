@@ -306,9 +306,9 @@ class _QuantizedTuckerFormat(TensorFormat):
                 dimensions.extend(self.factors[variable].in_dim[:-1])
         return tuple(dimensions)
 
-    def _standard_cores(self) -> List[torch.Tensor]:
+    def _effective_cores(self) -> List[torch.Tensor]:
         """Returns standard fused cores including stored diagonal factors."""
-        return self.flatten()._standard_cores()
+        return self.flatten()._effective_cores()
 
     def _physical_to_indices(self, points: torch.Tensor) -> torch.Tensor:
         """Maps physical points to grid indices without retaining the source."""
@@ -354,7 +354,7 @@ class _QuantizedTuckerFormat(TensorFormat):
                 -1,
                 torch.tensor(columns, device=digits.device))
             state = None
-            factor_cores = factor._standard_cores()
+            factor_cores = factor._effective_cores()
             for site, core in enumerate(factor_cores[:-1]):
                 local = core[:, variable_digits[..., site], :].movedim(0, -2)
                 state = local if state is None else state @ local
@@ -450,19 +450,19 @@ class _QuantizedTuckerFormat(TensorFormat):
             core.shape[1],
             upper_rank * core.shape[2])
 
-    def _flat_standard_cores(self) -> List[torch.Tensor]:
+    def _flat_effective_cores(self) -> List[torch.Tensor]:
         """Substitutes every gamma site by its local factor TT block."""
         variable_by_position = {
             position: variable
             for variable, position in enumerate(self.variable_positions)}
         flat = []
-        for site, upper_core in enumerate(self.upper._standard_cores()):
+        for site, upper_core in enumerate(self.upper._effective_cores()):
             variable = variable_by_position.get(site)
             if variable is None:
                 flat.append(upper_core)
                 continue
 
-            factor_cores = self.factors[variable]._standard_cores()
+            factor_cores = self.factors[variable]._effective_cores()
             digit_cores = factor_cores[:-1]
             connector = factor_cores[-1].squeeze(-1)
             upper_left = upper_core.shape[0]
@@ -558,7 +558,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> torch.allclose(flat.evaluate_indices(indices), format.evaluate_indices(indices))
         True
         """
-        standard = self._flat_standard_cores()
+        standard = self._flat_effective_cores()
         dimensions = self._flattened_in_dim()
         cyclic = self._upper_type is TR
         base = _from_standard_cores(standard, dimensions, None, 0, cyclic)
@@ -647,7 +647,7 @@ class QTTTucker(_QuantizedTuckerFormat):
                         batch_size: int) -> torch.Tensor:
         """Contracts upper cores with local factor vectors, retaining output sites."""
         state = self.cores[0].new_ones(batch_size, 1)
-        for site, core in enumerate(self.upper._standard_cores()):
+        for site, core in enumerate(self.upper._effective_cores()):
             if site in vectors:
                 local = torch.einsum(
                     'bp,lpr->blr', vectors[site], core)
@@ -701,7 +701,7 @@ class QTRTucker(_QuantizedTuckerFormat):
             cyclic_rank,
             device=self.device,
             dtype=self.dtype).expand(batch_size, -1, -1)
-        for site, core in enumerate(self.upper._standard_cores()):
+        for site, core in enumerate(self.upper._effective_cores()):
             if site in vectors:
                 local = torch.einsum(
                     'bp,lpr->blr', vectors[site], core)

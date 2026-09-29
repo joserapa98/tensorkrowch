@@ -17,7 +17,7 @@ def test_vidal_and_mixed_centers(make_format, topology, mode):
         mixed = format.clone().materialize_bonds(orth_center)
         assert mixed.bonds is None
         assert torch.allclose(mixed.contract_dense(), dense)
-        for site, core in enumerate(mixed._standard_cores()):
+        for site, core in enumerate(mixed._effective_cores()):
             if site < orth_center:
                 matrix = core.reshape(-1, core.shape[-1])
                 assert torch.allclose(matrix.adjoint() @ matrix,
@@ -49,8 +49,7 @@ def test_mixed_inverse_bonds_and_zero(make_format):
 
 
 def test_vidal_validation(make_format):
-    with pytest.raises(ValueError, match='open chain'):
-        make_format('tr').canonicalize_vidal()
+    assert not hasattr(make_format('tr'), 'canonicalize_vidal')
     for kwargs in [{'mode': 'invalid'}, {'inverse_positions': [0, 0]},
                    {'inverse_positions': [3]}, {'inverse_cutoff': -1}]:
         with pytest.raises(ValueError):

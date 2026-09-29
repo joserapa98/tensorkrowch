@@ -133,7 +133,8 @@ class BlockLayout:
 
 @dataclass(frozen=True)
 class SplitBlock:
-    """Local raw cores with open external ranks and optional internal factors.
+    """
+    Local raw cores with open external ranks and optional internal factors.
 
     Parameters
     ----------

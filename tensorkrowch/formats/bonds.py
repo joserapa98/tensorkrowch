@@ -118,7 +118,8 @@ class VidalGauge(BondFactors1D):
 
     Powers (0, 0), (0.5, 0.5), and (1, 1) represent explicit, implicit and
     inverse Vidal forms, respectively. The remaining bond factor has power
-    ``1 - left_power - right_power``. Spectra are real and non-negative.
+    ``1 - left_power - right_power``. Negative powers use a pseudoinverse:
+    exact zero values remain zero. Spectra are real and non-negative.
 
     Manual element or slice replacement of factors, spectra or powers
     invalidates the Vidal flag. Such records remain usable as stored diagonal
@@ -133,7 +134,7 @@ class VidalGauge(BondFactors1D):
         carrying structural batches.
     powers : sequence of tuple[float, float]
         Absorption powers at each bond: (0, 0), (0.5, 0.5), (1, 1), (1, 0)
-        or (0, 1). Inverse powers require strictly nonzero spectra.
+        or (0, 1).
     on_change : callable
         Owning format callback, called after manual replacement.
     valid : bool

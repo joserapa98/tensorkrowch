@@ -1,16 +1,6 @@
 """
 This script contains:
 
-    Internal classes:
-        * _OpenFormat1D
-        * _CyclicFormat1D
-        * _VectorFormat1D
-        * _MatrixFormat1D
-
-    Public classes:
-        * TensorFormat1D
-        * TT, TR, TTM, TRM
-
     Internal functions:
         * _restore_cores
         * _from_standard_cores
@@ -21,8 +11,29 @@ This script contains:
     Public functions:
         * split_block
 
+    Internal classes:
+        * _OpenFormat1D
+        * _CyclicFormat1D
+        * _VectorFormat1D
+        * _MatrixFormat1D
+
+    Public classes:
+        * TensorFormat1D
+        * TT, TR, TTM, TRM
+
     Aliases:
         * EvaluationData
+
+Core names used in this module:
+
+    * ``cores`` / ``_cores``: stored cores in the shapes of the concrete format;
+      open chains omit unit boundary axes and matrices keep input/output axes.
+    * ``standard_cores``: cores with explicit boundary axes and a single input
+      axis; matrix input/output dimensions are combined. Bond factors remain
+      separate.
+    * ``effective_cores``: standard cores with bond factors absorbed.
+    * ``operator_cores``: effective cores with separate input/output axes;
+      vectors use a unit axis according to their row or column orientation.
 """
 
 import warnings
@@ -35,13 +46,13 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple, Uni
 import torch
 
 from tensorkrowch.utils import (_INTEGER_DTYPES, _validate_truncation,
-                               truncated_svd)
+                                truncated_svd)
 
 from tensorkrowch.formats.base import (_SafeList, RoundingInfo, SampleError,
-                                     BlockLayout, SplitBlock, TensorFormat)
+                                       BlockLayout, SplitBlock, TensorFormat)
 from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
-                                       MinimalCanonicalInfo)
+                                         MinimalCanonicalInfo)
 
 
 if TYPE_CHECKING:
@@ -53,7 +64,7 @@ EvaluationData = Union[torch.Tensor, Sequence[torch.Tensor]]
 
 
 ###############################################################################
-#                                GENERAL METHODS                              #
+#                              INTERNAL FUNCTIONS                             #
 ###############################################################################
 def _restore_cores(cores: Sequence[torch.Tensor],
                    in_dim: Sequence[int],
@@ -83,8 +94,10 @@ def _from_standard_cores(cores: Sequence[torch.Tensor],
                          cyclic: bool) -> 'TensorFormat1D':
     """Constructs a plain 1D format from standard cores."""
     cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
-    cls = (TRM if cyclic else TTM) if out_dim is not None else (
-        TR if cyclic else TT)
+    if out_dim is None:
+        cls = TR if cyclic else TT
+    else:
+        cls = TRM if cyclic else TTM
     return cls(cores, n_batches=n_batches)
 
 
@@ -95,38 +108,44 @@ def _canonicalize_cores(cores: Sequence[torch.Tensor],
     cores = list(cores)
     if not all(torch.isfinite(core).all() for core in cores):
         raise ValueError('Canonicalization requires finite cores')
-    batch = cores[0].shape[:-3]
-    log_scale = cores[0].real.new_zeros(batch)
+
+    batch_shape = cores[0].shape[:-3]
+    log_scale = cores[0].real.new_zeros(batch_shape)
 
     # Move the orthogonality center from both sides.
     for site in range(orth_center):
         core = cores[site]
-        matrix = core.reshape(*batch, -1, core.shape[-1])
+        matrix = core.reshape(*batch_shape, -1, core.shape[-1])
         q, r = torch.linalg.qr(matrix, mode='reduced')
         if renormalize:
             scale = torch.linalg.vector_norm(r, dim=(-2, -1))
             scale = torch.where(scale > 0, scale, torch.ones_like(scale))
             r = r / scale[..., None, None]
             log_scale = log_scale + scale.log()
-        cores[site] = q.reshape(*batch, core.shape[-3], core.shape[-2], q.shape[-1])
-        cores[site + 1] = torch.einsum('...ab,...bpr->...apr', r, cores[site + 1])
+        cores[site] = q.reshape(*batch_shape,
+                                core.shape[-3], core.shape[-2], q.shape[-1])
+        cores[site + 1] = torch.einsum('...ab,...bpr->...apr',
+                                       r, cores[site + 1])
 
     for site in range(len(cores) - 1, orth_center, -1):
         core = cores[site]
-        matrix = core.reshape(*batch, core.shape[-3], -1)
-        q, r = torch.linalg.qr(matrix.transpose(-2, -1).conj(), mode='reduced')
-        r = r.transpose(-2, -1).conj()
+        matrix = core.reshape(*batch_shape, core.shape[-3], -1)
+        q, r = torch.linalg.qr(matrix.transpose(-2, -1), mode='reduced')
+        r, q = r.transpose(-2, -1), q.transpose(-2, -1)
         if renormalize:
             scale = torch.linalg.vector_norm(r, dim=(-2, -1))
             scale = torch.where(scale > 0, scale, torch.ones_like(scale))
             r = r / scale[..., None, None]
             log_scale = log_scale + scale.log()
-        cores[site] = q.transpose(-2, -1).conj().reshape(
-            *batch, q.shape[-1], core.shape[-2], core.shape[-1])
-        cores[site - 1] = cores[site - 1] @ r
+        cores[site] = q.reshape(*batch_shape,
+                                q.shape[-2], core.shape[-2], core.shape[-1])
+        cores[site - 1] = torch.einsum('...apb,...bc->...apc',
+                                       cores[site - 1], r)
 
     if renormalize:
-        cores[orth_center] = cores[orth_center] * log_scale.exp()[..., None, None, None]
+        rescale = (log_scale / len(cores)).exp()[..., None, None, None]
+        cores = [core * rescale for core in cores]
+
     return cores
 
 
@@ -136,32 +155,55 @@ def _redistribute(cores: List[torch.Tensor],
                   powers: Sequence[Tuple[float, float]]
                   ) -> Tuple[List[torch.Tensor], List[Optional[torch.Tensor]]]:
     """Moves stored Schmidt powers between neighbours without another SVD."""
-    for site, (spectrum, old, new) in enumerate(
-        zip(spectra, old_powers, powers)):
-        for neighbour, difference, left_axis in (
-                (site, new[0] - old[0], False),
-                (site + 1, new[1] - old[1], True)):
+    for site, (spectrum, old, new) in enumerate(zip(spectra, old_powers, powers)):
+        negative_power = min(new[0] - old[0], new[1] - old[1],
+                             1 - new[0] - new[1])
+        if negative_power < 0:
+            positive = spectrum > 0
+            cutoff = torch.finfo(spectrum.dtype).eps * spectrum.amax(dim=-1,
+                                                                     keepdim=True)
+            safe = torch.where(positive, spectrum, torch.ones_like(spectrum))
+            if torch.any(positive & (spectrum <= cutoff)) or not torch.all(
+                    torch.isfinite(safe.pow(negative_power))):
+                raise ValueError(
+                    f'Bond {site} has singular values too small for stable '
+                    'inverse powers; use rounding with a cutoff first')
+
+        for neighbour, difference, left_core in ((site, new[0] - old[0], True),
+                                                 (site + 1, new[1] - old[1], False)):
             if difference == 0:
                 continue
             if difference < 0:
                 safe = torch.where(spectrum > 0, spectrum, torch.ones_like(spectrum))
-                factor = torch.where(spectrum > 0, safe.pow(difference),
+                factor = torch.where(spectrum > 0,
+                                     safe.pow(difference),
                                      torch.zeros_like(spectrum))
             else:
                 factor = spectrum.pow(difference)
-            factor = factor[..., :, None,
-                            None] if left_axis else factor[..., None, None, :]
+
+            factor = factor[..., None, None, :] if left_core \
+                else factor[..., :, None, None]
             cores[neighbour] = cores[neighbour] * factor
-    values = []
+
+    bond_factors = []
     for spectrum, (left, right) in zip(spectra, powers):
         exponent = 1 - left - right
-        if exponent < 0 and torch.any(spectrum == 0):
-            raise ValueError('Inverse Vidal requires nonzero Schmidt spectra')
-        values.append(None if exponent == 0 else spectrum.pow(exponent))
-    return cores, values
+        if exponent < 0:
+            safe = torch.where(spectrum > 0, spectrum, torch.ones_like(spectrum))
+            factor = torch.where(spectrum > 0,
+                                 safe.pow(exponent),
+                                 torch.zeros_like(spectrum))
+        else:
+            factor = spectrum.pow(exponent)
+        bond_factors.append(None if exponent == 0 else factor)
+
+    return cores, bond_factors
 
 
-def _validate_minimal_options(max_iter: int, lr: float, tol: float, return_info: bool) -> None:
+def _validate_minimal_options(max_iter: int,
+                              lr: float,
+                              tol: float,
+                              return_info: bool) -> None:
     """Checks the options shared by minimal canonicalization methods."""
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
@@ -176,6 +218,9 @@ def _validate_minimal_options(max_iter: int, lr: float, tol: float, return_info:
             raise ValueError(f'`{name}` should be finite and positive')
 
 
+###############################################################################
+#                               PUBLIC FUNCTIONS                              #
+###############################################################################
 def split_block(block: torch.Tensor,
                 in_dim: Sequence[int],
                 out_dim: Optional[Sequence[int]] = None,
@@ -188,24 +233,30 @@ def split_block(block: torch.Tensor,
                 mode: str = 'right',
                 renormalize: bool = False,
                 _svd_callback: Optional[Callable[
-                    [int, '_TruncatedSVDInfo', torch.Tensor, torch.Tensor], None]] = None
+                    [int, '_TruncatedSVDInfo',
+                     torch.Tensor, torch.Tensor], None]] = None
                 ) -> SplitBlock:
-    """Splits a local tensor sitewise with both external ranks preserved.
+    """
+    Splits a local tensor sitewise with both external ranks preserved.
 
     Only internal bonds are truncated. External ranks remain unchanged, and
-    structural batches share retained ranks. Inverse mode rejects retained zero
-    singular values. Multiple truncation criteria select the most restrictive
-    retained rank.
+    structural batches share retained ranks. In inverse mode, each singular
+    value is absorbed in both neighbouring cores and its pseudoinverse remains
+    on the bond: zeros stay zero, while positive values too small to invert
+    stably raise an error. Multiple truncation criteria select the most
+    restrictive retained rank.
 
     Parameters
     ----------
     block : torch.Tensor
-        Local tensor shaped (*core_batch, left, *physical, right). Matrix
-        physical axes are interleaved by site.
+        Local tensor shaped ``(*core_batch, left, *physical, right)``. For
+        vectors, ``physical`` contains one ``in_dim`` axis per site. For
+        matrices, it contains interleaved ``in_dim`` and ``out_dim`` axes;
+        each pair is combined internally into a dimension ``in_dim * out_dim``.
     in_dim : sequence of int
-        Positive physical input dimension for each local site.
+        Input dimension for each local site.
     out_dim : sequence of int, optional
-        Matrix output dimensions paired with in_dim. None treats the block
+        Matrix output dimensions paired with ``in_dim``. ``None`` treats the block
         as a vector format.
     n_batches : int
         Number of leading structural batch axes in block.
@@ -230,12 +281,16 @@ def split_block(block: torch.Tensor,
         1].
     mode : {"explicit", "implicit", "inverse", "left", "right"}
         Distribution of each local spectrum between its neighboring cores.
-        These select powers (0, 0), (0.5, 0.5), (1, 1), (1, 0) and (0, 1),
-        respectively.
+        These select ``powers`` (0, 0), (0.5, 0.5), (1, 1), (1, 0) and (0, 1),
+        respectively; see :class:`VidalGauge` for how these powers are applied.
+        ``"left"`` and ``"right"`` name the core absorbing the spectrum, not
+        the canonical direction: absorbing it on the left leaves the right
+        core right-isometric, and vice versa.
     renormalize : bool
-        Rescales intermediate factors to reduce numerical overflow or
-        underflow and restores the accumulated scale in the final cores. The
-        represented tensor retains its global scale.
+        Temporarily divides each local matrix by its largest absolute entry
+        before SVD, then restores that scale to its singular values. This
+        stabilizes each SVD without redistributing the block's overall scale
+        among the returned cores.
 
     Returns
     -------
@@ -259,78 +314,98 @@ def split_block(block: torch.Tensor,
         raise TypeError('`n_batches` should be int type')
     if n_batches < 0:
         raise ValueError('`n_batches` should be non-negative')
+
     in_dim = tuple(in_dim)
-    if not in_dim or any(isinstance(dim, bool) or not isinstance(
-        dim, int) or dim < 1 for dim in in_dim):
+    if not in_dim or any(isinstance(dim, bool) or \
+        not isinstance(dim, int) or (dim < 1) for dim in in_dim):
         raise ValueError('Input dimensions should be positive integers')
+
     if out_dim is not None:
         out_dim = tuple(out_dim)
-        if len(out_dim) != len(in_dim) or any(
-                isinstance(dim, bool) or not isinstance(dim, int) or dim < 1 for dim in out_dim):
+        if (len(out_dim) != len(in_dim)) or any(isinstance(dim, bool) or \
+            not isinstance(dim, int) or (dim < 1) for dim in out_dim):
             raise ValueError(
                 'Output dimensions should match the positive site dimensions')
+
     dimensions = in_dim if out_dim is None else tuple(
         dim for pair in zip(in_dim, out_dim) for dim in pair)
-    if block.ndim != n_batches + \
-        len(dimensions) + 2 or tuple(block.shape[n_batches + 1:-1]) != dimensions:
-        raise ValueError('Block physical axes should match the requested dimensions')
-    if block.shape[n_batches] < 1 or block.shape[-1] < 1:
+
+    if (block.ndim != n_batches + len(dimensions) + 2) or (
+        tuple(block.shape[n_batches + 1:-1]) != dimensions):
+        raise ValueError(
+            'Block physical axes should match the requested dimensions')
+    if (block.shape[n_batches] < 1) or (block.shape[-1] < 1):
         raise ValueError('External ranks should be positive')
+
     _validate_truncation(rank, cutoff, atol, rtol, cum_percentage)
+
     if not isinstance(renormalize, bool):
         raise TypeError('`renormalize` should be bool type')
-    powers = {'explicit': (0, 0), 'implicit': (0.5, 0.5),
-              'inverse': (1, 1), 'left': (1, 0), 'right': (0, 1)}
+
+    powers = {'explicit': (0, 0),
+              'implicit': (0.5, 0.5),
+              'inverse': (1, 1),
+              'left': (1, 0),
+              'right': (0, 1)}
     if mode not in powers:
         raise ValueError('Invalid local bond distribution mode')
+
+    # Reshape block
+    batch_shape = block.shape[:n_batches]
+    left = block.shape[n_batches]
     physical = in_dim if out_dim is None else tuple(
-        a * b for a, b in zip(in_dim, out_dim))
-    batch = block.shape[:n_batches]
+            a * b for a, b in zip(in_dim, out_dim))
     right = block.shape[-1]
-    state = block.reshape(*batch, block.shape[n_batches], *physical, right)
+
+    state = block.reshape(*batch_shape, left, *physical, right)
+
+    # SVD sweep
     cores, spectra = [], []
-    for site, dimension in enumerate(physical[:-1]):
+    for site, site_dim in enumerate(physical[:-1]):
         left = state.shape[n_batches]
-        matrix = state.reshape(*batch, left * dimension, -1)
-        scale = matrix.real.new_ones(batch)
-        local_cutoff, local_atol = cutoff, atol
+        matrix = state.reshape(*batch_shape, left * site_dim, -1)
+
+        scale = matrix.real.new_ones(batch_shape)
+        scaled_cutoff, scaled_atol = cutoff, atol
         if renormalize:
             scale = matrix.abs().amax(dim=(-2, -1))
             scale = torch.where(scale > 0, scale, torch.ones_like(scale))
             matrix = matrix / scale[..., None, None]
+
             # A common retained rank is selected across structural batches.
             if cutoff is not None:
-                local_cutoff = cutoff / scale.max().item()
+                scaled_cutoff = cutoff / scale.max().item()
             if atol is not None:
-                local_atol = atol / scale.max().item() ** 2
-        decomposition = truncated_svd(
-            matrix, rank, local_cutoff, local_atol, rtol, cum_percentage,
-            return_info=_svd_callback is not None)
+                scaled_atol = atol / scale.max().item() ** 2
+
+        decomposition = truncated_svd(tensor=matrix,
+                                      rank=rank,
+                                      cutoff=scaled_cutoff,
+                                      atol=scaled_atol,
+                                      rtol=rtol,
+                                      cum_percentage=cum_percentage,
+                                      return_info=_svd_callback is not None)
         u, s, vh = decomposition[:3]
+
         if _svd_callback is not None:
             _svd_callback(site, decomposition[3], s, scale.log())
+
         s = s * scale.unsqueeze(-1)
-        core = u.reshape(*batch, left, dimension, s.shape[-1])
-        if spectra:
-            previous = spectra[-1]
-            safe = torch.where(previous > 0, previous, torch.ones_like(previous))
-            core = core * torch.where(previous > 0, safe.reciprocal(),
-                                      torch.zeros_like(previous))[..., :, None, None]
+        core = u.reshape(*batch_shape, left, site_dim, s.shape[-1])
+
         cores.append(core)
         spectra.append(s)
         state = s.unsqueeze(-1) * vh
-    left = state.shape[-2] if spectra else block.shape[n_batches]
-    core = state.reshape(*batch, left, physical[-1], right)
-    if spectra:
-        previous = spectra[-1]
-        safe = torch.where(previous > 0, previous, torch.ones_like(previous))
-        core = core * torch.where(previous > 0, safe.reciprocal(),
-                                  torch.zeros_like(previous))[..., :, None, None]
+
+    left = state.shape[n_batches]
+    core = state.reshape(*batch_shape, left, physical[-1], right)
+
     cores.append(core)
-    if mode == 'inverse' and any(torch.any(spectrum == 0) for spectrum in spectra):
-        raise ValueError('Inverse local bonds require nonzero retained spectra')
-    cores, factors = _redistribute(cores, spectra, [(0, 0)] * len(spectra),
-                                   [powers[mode]] * len(spectra))
+    cores, factors = _redistribute(cores=cores,
+                                   spectra=spectra,
+                                   old_powers=[(0, 1)] * len(spectra),
+                                   powers=[powers[mode]] * len(spectra))
+
     return SplitBlock(tuple(cores), tuple(factors), tuple(spectra))
 
 
@@ -946,8 +1021,8 @@ class TensorFormat1D(TensorFormat):
             site.
         renormalize : bool
             Rescales intermediate factors to reduce numerical overflow or
-            underflow and restores the accumulated scale in the final cores. The
-            represented tensor retains its global scale.
+            underflow. Their accumulated scale is divided equally among all
+            cores, preserving the represented tensor's global scale.
 
         Returns
         -------
@@ -1018,9 +1093,9 @@ class TensorFormat1D(TensorFormat):
             to setting rtol = 1 - cum_percentage. It must be finite and in [0,
             1].
         renormalize : bool
-            Rescales intermediate factors to reduce numerical overflow or
-            underflow and restores the accumulated scale in the final cores. The
-            represented tensor retains its global scale.
+            Rescales factors during the initial canonicalization to reduce
+            numerical overflow or underflow, then divides their accumulated
+            scale equally among all cores before truncation.
         rel_error : float, optional
             Finite non-negative relative Frobenius error budget. It is
             distributed over local cuts. Other truncation constraints can exceed
@@ -1108,7 +1183,8 @@ class TensorFormat1D(TensorFormat):
             core = cores[site]
             u, s, vh = split(core.reshape(*batch, core.shape[-3], -1))
             cores[site] = vh.reshape(*batch, s.shape[-1], core.shape[-2], core.shape[-1])
-            cores[site - 1] = cores[site - 1] @ (u * s.unsqueeze(-2))
+            cores[site - 1] = torch.einsum('...apb,...bc->...apc',
+                                           cores[site - 1], u * s.unsqueeze(-2))
 
         self._set_standard_cores(cores)
         self._orth_center = None if cyclic else 0
@@ -2637,9 +2713,9 @@ class _OpenFormat1D(TensorFormat1D):
         remaining_mode : {"implicit", "explicit"}
             Distribution for bonds not selected by inverse_positions.
         inverse_cutoff : float
-            Finite non-negative threshold. Every spectrum value used in an
-            inverse should be strictly greater than this value; values are not
-            truncated to create an inverse.
+            Finite non-negative threshold. Positive spectrum values used in an
+            inverse should exceed it; exact zeros use the pseudoinverse and
+            remain zero. Values are not truncated to create an inverse.
 
         Returns
         -------
@@ -2714,7 +2790,8 @@ class _OpenFormat1D(TensorFormat1D):
                 cores[-1] = cores[-1] * inverse[..., :, None, None]
             old_powers = [(0, 0)] * count
         for site in positions:
-            if torch.any(spectra[site] <= inverse_cutoff):
+            spectrum = spectra[site]
+            if torch.any((spectrum > 0) & (spectrum <= inverse_cutoff)):
                 raise ValueError(
                     f'Inverse Vidal bond {site} has values at or below inverse_cutoff')
         cores, factors = _redistribute(cores, spectra, old_powers, powers)
@@ -2737,9 +2814,9 @@ class _OpenFormat1D(TensorFormat1D):
             New powers absorbed into the left/right neighbors: (0.5, 0.5), (0,
             0), (1, 1), (1, 0) or (0, 1), respectively.
         inverse_cutoff : float
-            Finite non-negative threshold. Every spectrum value used in an
-            inverse should be strictly greater than this value; values are not
-            truncated to create an inverse.
+            Finite non-negative threshold. Positive spectrum values used in an
+            inverse should exceed it; exact zeros use the pseudoinverse and
+            remain zero. Values are not truncated to create an inverse.
 
         Returns
         -------
@@ -2760,8 +2837,10 @@ class _OpenFormat1D(TensorFormat1D):
             raise TypeError('`inverse_cutoff` should be a real number')
         if not isfinite(inverse_cutoff) or inverse_cutoff < 0:
             raise ValueError('`inverse_cutoff` should be finite and non-negative')
-        if mode == 'inverse' and torch.any(self._bonds.spectra[bond] <= inverse_cutoff):
-            raise ValueError(f'Bond {bond} has non-invertible retained spectrum')
+        if mode == 'inverse':
+            spectrum = self._bonds.spectra[bond]
+            if torch.any((spectrum > 0) & (spectrum <= inverse_cutoff)):
+                raise ValueError(f'Bond {bond} has values at or below inverse_cutoff')
         powers = list(self._bonds.powers)
         powers[bond] = modes[mode]
         cores, factors = _redistribute(

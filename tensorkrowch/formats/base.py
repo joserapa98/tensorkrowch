@@ -200,8 +200,8 @@ class TensorFormat(ABC):
         >>> format = tk.formats.TT([torch.ones(2)])
         >>> format.to() is format
         True
-        >>> format.to(dtype=torch.float64).dtype == torch.float64
-        True
+        >>> format.to(dtype=torch.float64).dtype
+        torch.float64
         """
 
     def cpu(self) -> 'TensorFormat':

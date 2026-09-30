@@ -52,21 +52,31 @@ class _SafeList(list):
 @dataclass(frozen=True)
 class RoundingInfo:
     """
-    Truncation bound rather than a measured global approximation error.
+    Information returned by ``TensorFormat1D.rounding(return_info=True)``.
+
+    ``rank`` gives the resulting representation size, while
+    ``discarded_sq_norm`` records the squared Frobenius error at each local
+    truncation. ``error_bound`` combines these local errors into an absolute
+    bound for the full tensor or matrix (including the closing-rank factor for
+    rings). It is not a measured reconstruction error. ``bound_satisfied``
+    compares that bound with the requested relative budget; ``False`` does not
+    imply that the actual error exceeds the budget.
+
+    For more detail on the error bound, see
+    :meth:`~tensorkrowch.formats.formats1d.TensorFormat1D.rounding`.
 
     Parameters
     ----------
     rank : tuple[int, ...]
-        Retained right-bond ranks after rounding.
+        Final bond ranks, including the closing bond for rings.
     discarded_sq_norm : tuple[torch.Tensor, ...]
-        Discarded squared singular-value mass at every processed cut,
-        resolved over structural batches.
+        Discarded squared singular-value mass at each processed cut, resolved
+        over structural batches.
     error_bound : torch.Tensor
-        Absolute Frobenius error bound, resolved over structural batches. It
-        is not a measured error against an original dense tensor.
+        Absolute global Frobenius error bound, resolved over structural batches.
     bound_satisfied : bool or None
-        Whether the requested relative budget was satisfied; ``None`` when no
-        ``rel_error`` was supplied.
+        Whether the bound meets ``rel_error`` for all structural batches;
+        ``None`` when ``rel_error`` was not supplied.
     """
 
     rank: Tuple[int, ...]  # Final right-bond ranks
@@ -122,11 +132,13 @@ class BlockLayout:
 
     def __post_init__(self) -> None:
         """Validates block sizes and original site dimensions."""
-        if not self.groups or any(isinstance(size, bool) or not isinstance(size, int)
-                                  or size < 1 for size in self.groups):
+        if not self.groups or any(isinstance(size, bool) or
+                                  not isinstance(size, int) or
+                                  size < 1 for size in self.groups):
             raise ValueError('Block sizes should be positive integers')
         if sum(self.groups) != len(self.in_dim):
-            raise ValueError('Block sizes should cover the original input dimensions')
+            raise ValueError(
+                'Block sizes should cover the original input dimensions')
         if self.out_dim is not None and (len(self.out_dim) != len(self.in_dim)):
             raise ValueError('Original matrix input/output sites should match')
 
@@ -139,7 +151,7 @@ class SplitBlock:
     Parameters
     ----------
     cores : tuple[torch.Tensor, ...]
-        Local cores in standard (*batch, left, physical, right) layout with
+        Local cores in standard ``(*batch, left, physical, right)`` layout with
         physical axes fused for matrices.
     bonds : sequence[torch.Tensor or None] or None
         Factors internal to the local block; external interface factors are
@@ -182,19 +194,19 @@ class TensorFormat(ABC):
         Parameters
         ----------
         device : str or torch.device, optional
-            Target device. None preserves the current device.
+            Target device. ``None`` preserves the current device.
         dtype : torch.dtype, optional
-            Target dtype. None preserves the current dtype. Coordinate grids and
-            Schmidt spectra remain real when cores are complex.
+            Target dtype. ``None`` preserves the current dtype. Coordinate
+            grids and Schmidt spectra remain real when cores are complex.
         copy : bool
-            If True, copies tensors even when device and dtype are unchanged. If
-            False, an unchanged conversion may return self.
+            If ``True``, copies tensors even when device and dtype are unchanged.
+            If ``False``, an unchanged conversion may return ``self``.
 
         Returns
         -------
         TensorFormat
-            Converted format; self when no conversion is needed and copy is
-            False.
+            Converted format; ``self`` when no conversion is needed and ``copy``
+            is ``False``.
 
         Examples
         --------
@@ -212,26 +224,28 @@ class TensorFormat(ABC):
         Returns
         -------
         TensorFormat
-            Converted format, or self when already on the target device. No
+            Converted format, or ``self`` when already on the target device. No
             fallback device is selected.
         """
         return self.to(device='cpu')
 
-    def cuda(self, device: Optional[Union[int, str, torch.device]] = None) -> 'TensorFormat':
+    def cuda(self,
+             device: Optional[Union[int, str, torch.device]] = None
+             ) -> 'TensorFormat':
         """
         Returns the format on a CUDA device.
 
         Parameters
         ----------
         device : int, str or torch.device, optional
-            CUDA device index or device specification. None selects the default
-            CUDA device.
+            CUDA device index or device specification. ``None`` selects the
+            default CUDA device.
 
         Returns
         -------
         TensorFormat
-            Converted format, preserving autograd. Unsupported device operations
-            propagate PyTorch errors.
+            Converted format, preserving autograd. Unsupported device
+            operations propagate PyTorch errors.
         """
         target = 'cuda' if device is None else (
             torch.device('cuda', device) if isinstance(device, int) else device)
@@ -247,7 +261,7 @@ class TensorFormat(ABC):
         Returns
         -------
         TensorFormat
-            Converted format, or self when already on the target device. No
+            Converted format, or ``self`` when already on the target device. No
             fallback device is selected.
         """
         return self.to(device='mps')

@@ -205,8 +205,8 @@ class QuantizedLayout:
         Returns
         -------
         tuple[tuple[int, int], ...]
-            Pairs (variable, canonical_digit). Canonical digit zero is most
-            significant; digit_order changes only the site schedule.
+            Pairs ``(variable, canonical_digit)``. Canonical digit zero is most
+            significant; ``digit_order`` changes only the site schedule.
         """
         if self.ordering == 'custom':
             return tuple(self.permutation)
@@ -242,13 +242,13 @@ class QuantizedLayout:
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape (*batch, n_variables), in [0,
-            grid_size[variable] - 1].
+            Integer grid indices with shape ``(*batch, n_variables)``; each value lies in
+            ``[0, grid_size[variable] - 1]``.
 
         Returns
         -------
         torch.Tensor
-            torch.long digits with shape (*batch, n_sites), on the input device.
+            ``torch.long`` digits with shape ``(*batch, n_sites)``, on the input device.
 
         Examples
         --------
@@ -285,13 +285,13 @@ class QuantizedLayout:
         ----------
         digits : torch.Tensor
             Integer digit configurations in layout schedule order, with shape
-            (*data_batch, layout.n_sites). Every digit should lie within its
+            ``(*data_batch, layout.n_sites)``. Every digit should lie within its
             site base.
 
         Returns
         -------
         torch.Tensor
-            torch.long indices with shape (*batch, n_variables), on the input
+            ``torch.long`` indices with shape ``(*batch, n_variables)``, on the input
             device.
         """
         digits = self._integer_tensor(digits, 'digits')
@@ -330,7 +330,7 @@ class QuantizedLayout:
         ----------
         digits : torch.Tensor
             Integer digit configurations in layout schedule order, with shape
-            (*data_batch, layout.n_sites). Every digit should lie within its
+            ``(*data_batch, layout.n_sites)``. Every digit should lie within its
             site base.
         target_ordering : str or QuantizedLayout
             Grouped/interleaved ordering name or a layout with the same
@@ -500,12 +500,12 @@ class CoordinateMap(Protocol):
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape (*batch, n_variables),
+            Finite floating coordinates with shape ``(*batch, n_variables)``,
             expressed in the unit computational domain.
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Domain metadata understood by the implementation. Interval-based
-            maps use (2,) for a shared interval or (n_variables, 2) for separate
-            intervals. The meaning of None depends on the concrete map.
+            maps use ``(2,)`` for a shared interval or ``(n_variables, 2)`` for separate
+            intervals. The meaning of ``None`` depends on the concrete map.
 
         Returns
         -------
@@ -521,7 +521,7 @@ class UniformCoordinateMap:
     Parameters
     ----------
     grid : {"endpoints", "cell_centers"}
-        Grid convention used by from_indices and to_indices. Coordinate
+        Grid convention used by ``from_indices()`` and ``to_indices()``. Coordinate
         forward/inverse mappings remain affine for both conventions.
     """
 
@@ -544,12 +544,12 @@ class UniformCoordinateMap:
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape (*batch, n_variables),
+            Finite floating coordinates with shape ``(*batch, n_variables)``,
             expressed in the unit computational domain.
         domain : torch.Tensor or sequence of torch.Tensor, optional
-            Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. Required for this affine map; None raises
-            ValueError.
+            Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
+            for separate intervals. Required for this affine map; ``None`` raises
+            ``ValueError``.
 
         Returns
         -------
@@ -573,14 +573,13 @@ class UniformCoordinateMap:
         Parameters
         ----------
         physical_coordinates : torch.Tensor
-            Finite floating physical coordinates with shape (*batch,
-            n_variables).
+            Finite floating physical coordinates with shape ``(*batch, n_variables)``.
         domain : torch.Tensor or sequence of torch.Tensor, optional
-            Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. Required for this affine map; None raises
-            ValueError.
+            Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
+            for separate intervals. Required for this affine map; ``None`` raises
+            ``ValueError``.
         out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ValueError or are
+            Whether coordinates outside the domain raise ``ValueError`` or are
             clipped to the domain boundary.
 
         Returns
@@ -614,19 +613,19 @@ class UniformCoordinateMap:
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape (*batch, n_variables), in [0,
-            grid_size[variable] - 1].
+            Integer grid indices with shape ``(*batch, n_variables)``; each value lies in
+            ``[0, grid_size[variable] - 1]``.
         grid_size : sequence of int
             Number of grid points per physical variable.
         domain : torch.Tensor or sequence of torch.Tensor, optional
-            Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. Required for this affine map; None raises
-            ValueError.
+            Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
+            for separate intervals. Required for this affine map; ``None`` raises
+            ``ValueError``.
 
         Returns
         -------
         torch.Tensor
-            Physical values with shape (*batch, n_variables), using the domain
+            Physical values with shape ``(*batch, n_variables)``, using the domain
             dtype when available and otherwise the default floating dtype.
         """
         dtype = None
@@ -651,22 +650,21 @@ class UniformCoordinateMap:
         Parameters
         ----------
         physical_coordinates : torch.Tensor
-            Finite floating physical coordinates with shape (*batch,
-            n_variables).
+            Finite floating physical coordinates with shape ``(*batch, n_variables)``.
         grid_size : sequence of int
             Number of grid points per physical variable.
         domain : torch.Tensor or sequence of torch.Tensor, optional
-            Physical intervals as (2,) for a shared interval or (n_variables, 2)
-            for separate intervals. Required for this affine map; None raises
-            ValueError.
+            Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
+            for separate intervals. Required for this affine map; ``None`` raises
+            ``ValueError``.
         out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ValueError or are
+            Whether coordinates outside the domain raise ``ValueError`` or are
             clipped to the domain boundary.
 
         Returns
         -------
         torch.Tensor
-            torch.long indices with shape (*batch, n_variables). Exact ties
+            ``torch.long`` indices with shape ``(*batch, n_variables)``. Exact ties
             select the lower index.
 
         Examples
@@ -695,12 +693,12 @@ class WarpedCoordinateMap:
     Parameters
     ----------
     forward_function : callable
-        Function (unit_coordinates, domain) returning finite floating
+        Function ``(unit_coordinates, domain)`` returning finite floating
         physical coordinates of unchanged shape.
     inverse_function : callable, optional
-        Function (physical_coordinates, domain) returning unit coordinates
+        Function ``(physical_coordinates, domain)`` returning unit coordinates
         of unchanged shape. Without it, inverse evaluation raises
-        NotImplementedError.
+        ``NotImplementedError``.
 
     Examples
     --------
@@ -743,17 +741,17 @@ class WarpedCoordinateMap:
                 domain: Domain = None) -> torch.Tensor:
         """Maps computational coordinates into physical space.
 
-        Calls forward_function(coordinates, domain) and requires finite floating
-        outputs of unchanged shape.
+        Calls ``forward_function(coordinates, domain)`` and requires finite
+        floating outputs of unchanged shape.
 
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape (*batch, n_variables),
+            Finite floating coordinates with shape ``(*batch, n_variables)``,
             expressed in the unit computational domain.
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Domain metadata understood by the implementation. Warped maps pass
-            it unchanged to the supplied callable; None may leave the physical
+            it unchanged to the supplied callable; ``None`` may leave the physical
             geometry entirely within that callable.
 
         Returns
@@ -772,20 +770,19 @@ class WarpedCoordinateMap:
                 out_of_domain: str = 'error') -> torch.Tensor:
         """Maps physical coordinates back to the unit computational domain.
 
-        Requires inverse_function; otherwise raises NotImplementedError. No
+        Requires ``inverse_function``; otherwise raises ``NotImplementedError``. No
         numerical inverse is inferred.
 
         Parameters
         ----------
         physical_coordinates : torch.Tensor
-            Finite floating physical coordinates with shape (*batch,
-            n_variables).
+            Finite floating physical coordinates with shape ``(*batch, n_variables)``.
         domain : torch.Tensor or sequence of torch.Tensor, optional
             Domain metadata understood by the implementation. Warped maps pass
-            it unchanged to the supplied callable; None may leave the physical
+            it unchanged to the supplied callable; ``None`` may leave the physical
             geometry entirely within that callable.
         out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ValueError or are
+            Whether coordinates outside the domain raise ``ValueError`` or are
             clipped to the domain boundary.
 
         Returns
@@ -823,7 +820,7 @@ class ExplicitGridMap:
         A shared strictly monotonic floating vector, or one per variable.
         Each grid should be finite and have at least two points. Physical
         intervals are specified by these points, so domain arguments should
-        be None.
+        be ``None``.
     """
 
     def __init__(self,
@@ -880,10 +877,10 @@ class ExplicitGridMap:
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape (*batch, n_variables),
+            Finite floating coordinates with shape ``(*batch, n_variables)``,
             expressed in the unit computational domain.
         domain : None, optional
-            Should be None: the physical grid points already define the domain.
+            Should be ``None``: the physical grid points already define the domain.
 
         Returns
         -------
@@ -918,12 +915,11 @@ class ExplicitGridMap:
         Parameters
         ----------
         physical_coordinates : torch.Tensor
-            Finite floating physical coordinates with shape (*batch,
-            n_variables).
+            Finite floating physical coordinates with shape ``(*batch, n_variables)``.
         domain : None, optional
-            Should be None: the physical grid points already define the domain.
+            Should be ``None``: the physical grid points already define the domain.
         out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ValueError or are
+            Whether coordinates outside the domain raise ``ValueError`` or are
             clipped to the domain boundary.
 
         Returns
@@ -962,18 +958,18 @@ class ExplicitGridMap:
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape (*batch, n_variables), in [0,
-            grid_size[variable] - 1].
+            Integer grid indices with shape ``(*batch, n_variables)``; each value lies in
+            ``[0, grid_size[variable] - 1]``.
         grid_size : sequence of int, optional
-            Expected number of grid points per variable. None uses stored point
+            Expected number of grid points per variable. ``None`` uses stored point
             counts; a supplied value should match them.
         domain : None, optional
-            Should be None: the physical grid points already define the domain.
+            Should be ``None``: the physical grid points already define the domain.
 
         Returns
         -------
         torch.Tensor
-            Physical values with shape (*batch, n_variables), retaining the
+            Physical values with shape ``(*batch, n_variables)``, retaining the
             stored grid dtype.
         """
         if domain is not None:
@@ -1004,21 +1000,20 @@ class ExplicitGridMap:
         Parameters
         ----------
         physical_coordinates : torch.Tensor
-            Finite floating physical coordinates with shape (*batch,
-            n_variables).
+            Finite floating physical coordinates with shape ``(*batch, n_variables)``.
         grid_size : sequence of int, optional
-            Expected number of grid points per variable. None uses stored point
+            Expected number of grid points per variable. ``None`` uses stored point
             counts; a supplied value should match them.
         domain : None, optional
-            Should be None: the physical grid points already define the domain.
+            Should be ``None``: the physical grid points already define the domain.
         out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ValueError or are
+            Whether coordinates outside the domain raise ``ValueError`` or are
             clipped to the domain boundary.
 
         Returns
         -------
         torch.Tensor
-            torch.long indices with shape (*batch, n_variables). Exact ties
+            ``torch.long`` indices with shape ``(*batch, n_variables)``. Exact ties
             select the lower index.
 
         Examples

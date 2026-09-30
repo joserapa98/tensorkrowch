@@ -27,7 +27,8 @@ class MinimalCanonicalInfo:
     iterations : int
         Number of gauge optimization iterations; zero for TT/TTM.
     converged : bool
-        Whether the ring optimizer met its gradient tolerance; ``True`` for TT/TTM.
+        Whether the ring optimizer met its gradient tolerance; ``True`` for
+        TT/TTM.
     balance_residual : torch.Tensor or None
         Largest final ring Gram imbalance; ``None`` for TT/TTM.
     """
@@ -48,8 +49,8 @@ class GaugeOrbit:
     beyond chains.
 
     Each bond is described by ``(left_site, left_axis, right_site, right_axis)``.
-    ``left_site`` and ``right_site`` index the two cores, while ``left_axis`` and
-    ``right_axis`` select their connected axes. For cores shaped
+    ``left_site`` and ``right_site`` index the two cores, while ``left_axis``
+    and ``right_axis`` select their connected axes. For cores shaped
     ``(left_rank, in_dim, right_rank)``, the bond ``(0, -1, 1, -3)`` connects
     the right rank of core 0 to the left rank of core 1.
 
@@ -77,10 +78,12 @@ class GaugeOrbit:
             for site, axis in [(left_site, left_axis), (right_site, right_axis)]:
                 if isinstance(site, bool) or not isinstance(site, int) or not (
                     0 <= site < len(self.cores)):
-                    raise ValueError('Gauge bonds should select valid tensor sites')
+                    raise ValueError(
+                        'Gauge bonds should select valid tensor sites')
                 if isinstance(axis, bool) or not isinstance(axis, int) or not (
                         -self.cores[site].ndim <= axis < self.cores[site].ndim):
-                    raise ValueError('Gauge bonds should select valid tensor axes')
+                    raise ValueError(
+                        'Gauge bonds should select valid tensor axes')
             if left_site == right_site:
                 ndim = self.cores[left_site].ndim
                 if (left_axis % ndim) == (right_axis % ndim):
@@ -147,7 +150,8 @@ class GaugeOrbit:
 
             right_core = cores[right_site].movedim(right_axis, 0)
             transformed = torch.linalg.solve(gauge, right_core.reshape(rank, -1))
-            cores[right_site] = transformed.reshape(right_core.shape).movedim(0, right_axis)
+            cores[right_site] = transformed.reshape(right_core.shape).\
+                movedim(0, right_axis)
 
         return cores
 

@@ -15,7 +15,8 @@ from tensorkrowch.formats.base import _SafeList
 
 class BondFactors1D:
     """
-    Optional diagonals between adjacent cores, possibly including a cyclic closure.
+    Optional diagonals between adjacent cores, possibly including a cyclic
+    closure.
 
     Created by the owning format from a sequence of factors, sharing tensors.
     Supply factors through ``format.bonds`` or the format constructor.
@@ -26,7 +27,8 @@ class BondFactors1D:
     ----------
     values : sequence[torch.Tensor or None]
         One diagonal per stored bond. A diagonal has shape ``(rank,)`` or
-        ``(*core_batch, rank)``. ``None`` denotes an identity without allocation.
+        ``(*core_batch, rank)``. ``None`` denotes an identity without
+        allocation.
     on_change : callable
         Owning format callback, called after manual replacement.
     """
@@ -70,14 +72,14 @@ class BondFactors1D:
         """
         Checks compatibility of diagonal factors with standard fused cores.
 
-        Raises TypeError or ValueError for incompatible factor count, shapes,
-        runtime or dtype. This validates stored factors, not the canonical
-        interpretation of Vidal spectra.
+        Raises ``TypeError`` or ``ValueError`` for incompatible factor count,
+        shapes, runtime or dtype. This validates stored factors, not the
+        canonical interpretation of Vidal spectra.
 
         Parameters
         ----------
         cores : sequence of torch.Tensor
-            Standard cores with shape (*core_batch, left, physical, right).
+            Standard cores with shape ``(*core_batch, left, physical, right)``.
             Matrix physical dimensions should already be fused.
         cyclic : bool
             Whether the last core closes onto the first. Cyclic formats require
@@ -96,17 +98,20 @@ class BondFactors1D:
             batch = core.shape[:-3]
             if value.shape not in (torch.Size([core.shape[-1]]),
                                    torch.Size((*batch, core.shape[-1]))):
-                raise ValueError('Bond factor dimensions should match the cores')
+                raise ValueError(
+                    'Bond factor dimensions should match the cores')
             if value.device != core.device:
                 raise ValueError('Bond factors and cores should share device')
             if torch.promote_types(value.dtype, core.dtype) != core.dtype:
-                raise ValueError('Bond factor dtype should be compatible with cores')
+                raise ValueError(
+                    'Bond factor dtype should be compatible with cores')
 
     def _map_tensors(self,
                      function: Callable[[torch.Tensor], torch.Tensor],
                      on_change: Callable[[], None]) -> 'BondFactors1D':
         """Maps factors into a container bound to the destination format."""
-        values = [None if value is None else function(value) for value in self._values]
+        values = [None if value is None else function(value)
+                  for value in self._values]
         return BondFactors1D(values, on_change)
 
 
@@ -116,10 +121,11 @@ class VidalGauge(BondFactors1D):
     That is, ``powers`` represents how :math:`\Lambda` factors are split into
     a product of powers of it that are then absorbed in their neighbours.
 
-    Powers (0, 0), (0.5, 0.5), and (1, 1) represent explicit, implicit and
-    inverse Vidal forms, respectively. The remaining bond factor has power
-    ``1 - left_power - right_power``. Negative powers use a pseudoinverse:
-    exact zero values remain zero. Spectra are real and non-negative.
+    Powers ``(0, 0)``, ``(0.5, 0.5)``, and ``(1, 1)`` represent explicit,
+    implicit and inverse Vidal forms, respectively. The remaining bond factor
+    has power ``1 - left_power - right_power``. Negative powers use a
+    pseudoinverse: exact zero values remain zero. Spectra are real and
+    non-negative.
 
     Manual element or slice replacement of factors, spectra or powers
     invalidates the Vidal flag. Such records remain usable as stored diagonal
@@ -133,8 +139,8 @@ class VidalGauge(BondFactors1D):
         Real, finite, non-negative singular-value vectors, optionally
         carrying structural batches.
     powers : sequence of tuple[float, float]
-        Absorption powers at each bond: (0, 0), (0.5, 0.5), (1, 1), (1, 0)
-        or (0, 1).
+        Absorption powers at each bond: ``(0, 0)``, ``(0.5, 0.5)``, ``(1, 1)``,
+        ``(1, 0)`` or ``(0, 1)``.
     on_change : callable
         Owning format callback, called after manual replacement.
     valid : bool
@@ -171,9 +177,10 @@ class VidalGauge(BondFactors1D):
                      function: Callable[[torch.Tensor], torch.Tensor],
                      on_change: Callable[[], None]) -> 'VidalGauge':
         """Maps factors and spectra, preserving their stored interpretation."""
-        values = [None if value is None else function(value) for value in self._values]
+        values = [None if value is None else function(value)
+                  for value in self._values]
         spectra = []
         for spectrum in self._spectra:
             mapped = function(spectrum)
             spectra.append(mapped.real if mapped.is_complex() else mapped)
-        return VidalGauge(values, spectra, self._powers, on_change, valid=self._valid)
+        return VidalGauge(values, spectra, self._powers, on_change, self._valid)

@@ -148,7 +148,7 @@ class _QuantizedTuckerFormat(TensorFormat):
 
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
-        """Dedicated matrix output dimensions; None for vector Tucker formats."""
+        """Dedicated matrix output dimensions; ``None`` for vector Tucker formats."""
         return None
 
 
@@ -223,19 +223,19 @@ class _QuantizedTuckerFormat(TensorFormat):
         Parameters
         ----------
         device : str or torch.device, optional
-            Target device. None preserves the current device.
+            Target device. ``None`` preserves the current device.
         dtype : torch.dtype, optional
-            Target dtype. None preserves the current dtype. Coordinate grids and
+            Target dtype. ``None`` preserves the current dtype. Coordinate grids and
             Schmidt spectra remain real when cores are complex.
         copy : bool
-            If True, copies tensors even when device and dtype are unchanged. If
-            False, an unchanged conversion may return self.
+            If ``True``, copies tensors even when device and dtype are unchanged. If
+            ``False``, an unchanged conversion may return ``self``.
 
         Returns
         -------
         QTTTucker or QTRTucker
-            Converted format; self when no conversion is needed and copy is
-            False.
+            Converted format; ``self`` when no conversion is needed and ``copy`` is
+            ``False``.
 
         Examples
         --------
@@ -460,14 +460,14 @@ class _QuantizedTuckerFormat(TensorFormat):
         ----------
         digits : torch.Tensor
             Integer digit configurations in layout schedule order, with shape
-            (batch_size, layout.n_sites). Every digit should lie within its site
+            ``(batch_size, layout.n_sites)``. Every digit should lie within its site
             base.
 
         Returns
         -------
         torch.Tensor
-            Values with shape (batch_size, *out_shape). Upper sites outside
-            variable_positions remain open.
+            Values with shape ``(batch_size, *out_shape)``. Upper sites outside
+            ``variable_positions`` remain open.
         """
         digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
         if digits.ndim != 2 or digits.shape[-1] != self.layout.n_sites:
@@ -489,14 +489,14 @@ class _QuantizedTuckerFormat(TensorFormat):
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape (batch_size, n_variables), in [0,
-            grid_size[variable] - 1].
+            Integer grid indices with shape ``(batch_size, n_variables)``; each value lies in
+            ``[0, grid_size[variable] - 1]``.
 
         Returns
         -------
         torch.Tensor
-            Values with shape (batch_size, *out_shape). Upper sites outside
-            variable_positions remain open.
+            Values with shape ``(batch_size, *out_shape)``. Upper sites outside
+            ``variable_positions`` remain open.
         """
         indices = self.layout._integer_tensor(indices, 'indices')
         if indices.ndim != 2 or indices.shape[-1] != self.layout.n_variables:
@@ -514,7 +514,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         Parameters
         ----------
         points : torch.Tensor
-            Finite physical coordinates with shape (batch_size, n_variables). A
+            Finite physical coordinates with shape ``(batch_size, n_variables)``. A
             coordinate map is required. Coordinates are quantized to the
             computational grid; no interpolation of the represented function is
             performed.
@@ -522,8 +522,8 @@ class _QuantizedTuckerFormat(TensorFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape (batch_size, *out_shape). Upper sites outside
-            variable_positions remain open.
+            Values with shape ``(batch_size, *out_shape)``. Upper sites outside
+            ``variable_positions`` remain open.
 
         Examples
         --------
@@ -552,7 +552,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         Parameters
         ----------
         points : torch.Tensor
-            Finite physical coordinates with shape (batch_size, n_variables). A
+            Finite physical coordinates with shape ``(batch_size, n_variables)``. A
             coordinate map is required. Coordinates are quantized to the
             computational grid; no interpolation of the represented function is
             performed.
@@ -560,8 +560,8 @@ class _QuantizedTuckerFormat(TensorFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape (batch_size, *out_shape). Upper sites outside
-            variable_positions remain open.
+            Values with shape ``(batch_size, *out_shape)``. Upper sites outside
+            ``variable_positions`` remain open.
         """
         return self.evaluate(points)
 
@@ -605,7 +605,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         -------
         torch.Tensor
             Scalar normalized overlap, retaining its complex phase. Zero-norm
-            operands raise ValueError.
+            operands raise ``ValueError``.
         """
         if not isinstance(other, _QuantizedTuckerFormat):
             raise TypeError(
@@ -625,7 +625,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         Returns
         -------
         torch.Tensor
-            Real scalar fidelity. Zero-norm operands raise ValueError.
+            Real scalar fidelity. Zero-norm operands raise ``ValueError``.
         """
         return self.normalized_overlap(other).abs().square()
 
@@ -648,9 +648,9 @@ class QTTTucker(_QuantizedTuckerFormat):
         Map used to quantize physical inputs. Integer and digit evaluation
         do not require one.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Physical intervals as (2,) for a shared interval or (n_variables, 2)
+        Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
         for separate intervals. Interval-based maps require a domain; maps with
-        their own physical grid or geometry can use None.
+        their own physical grid or geometry can use ``None``.
     variable_positions : sequence of int, optional
         Strictly increasing upper sites receiving factor connectors. Other
         upper sites remain output axes. Required when upper contains output
@@ -658,7 +658,7 @@ class QTTTucker(_QuantizedTuckerFormat):
     computational_grid : {"endpoints", "cell_centers"}
         Computational grid convention for physical input quantization.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ValueError or are
+        Whether coordinates outside the domain raise ``ValueError`` or are
         clipped to the domain boundary.
     """
 
@@ -684,9 +684,9 @@ class QTRTucker(_QuantizedTuckerFormat):
         Map used to quantize physical inputs. Integer and digit evaluation
         do not require one.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Physical intervals as (2,) for a shared interval or (n_variables, 2)
+        Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
         for separate intervals. Interval-based maps require a domain; maps with
-        their own physical grid or geometry can use None.
+        their own physical grid or geometry can use ``None``.
     variable_positions : sequence of int, optional
         Strictly increasing upper sites receiving factor connectors. Other
         upper sites remain output axes. Required when upper contains output
@@ -694,7 +694,7 @@ class QTRTucker(_QuantizedTuckerFormat):
     computational_grid : {"endpoints", "cell_centers"}
         Computational grid convention for physical input quantization.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ValueError or are
+        Whether coordinates outside the domain raise ``ValueError`` or are
         clipped to the domain boundary.
     """
 

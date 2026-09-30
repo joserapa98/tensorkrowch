@@ -249,9 +249,15 @@ fully block-diagonal sums. There is no ``n_sweeps`` parameter.
 
 Local ``rank``, ``cutoff``, ``atol``, ``rtol`` and ``cum_percentage`` retain
 ``utils.truncated_svd`` semantics; ``atol`` and ``rtol`` concern squared tail
-energy. The separate ``rel_error`` requests a global relative norm-error
-budget. Hard rank caps or more restrictive criteria can exceed it, in which
-case rounding warns and optional ``RoundingInfo.bound_satisfied`` is False.
+energy. The separate ``rel_error`` sets a budget for the global Frobenius
+reconstruction error of the full tensor or matrix:
+``||X - X_round||_F <= rel_error * ||X||_F``, where ``X`` is the original.
+For example, ``rel_error=0.03`` requests an error of at most 3% of its norm,
+separately for each structural batch. Rounding distributes this budget over
+local cuts; ``rtol`` instead applies to the squared singular-value mass at each
+local SVD. Hard rank caps or more restrictive criteria can exceed the global
+budget. In that case, rounding warns and optional
+``RoundingInfo.bound_satisfied`` is False.
 ``error_bound`` is a bound, not a measured dense error. No diagnostic history
 is stored when it is not requested. Squared-energy records may underflow or
 overflow at extreme scales even when the norm-error bound remains representable.

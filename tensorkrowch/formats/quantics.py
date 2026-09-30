@@ -194,17 +194,30 @@ class _QuanticsFormat:
         else:
             layout, coordinate_map, domain = self.layout, self.coordinate_map, self.domain
             positions = self.digit_positions
-        result = cls(cores, layout, coordinate_map, domain,
-                     digit_positions=positions, **options)
-        if not product:
-            result._is_row = self._is_row
-        return result
+        return cls(cores, layout, coordinate_map, domain,
+                   digit_positions=positions, **options)
 
 
 class _QuanticsVector(_QuanticsFormat):
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
     _coordinate_names = ('coordinate_map', 'domain')
+
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Sequence[int],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional[TensorFormat1D] = None,
+                                 product: bool = False) -> TensorFormat1D:
+        """Preserves Quantics vector orientation in algebra results."""
+        result = super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic, other=other,
+            product=product)
+        if not product:
+            result._is_row = self._is_row
+        return result
 
     def __init__(self,
                  cores: Sequence[torch.Tensor],
@@ -295,14 +308,14 @@ class _QuanticsVector(_QuanticsFormat):
         ----------
         digits : torch.Tensor
             Integer digit configurations in layout schedule order, with shape
-            (*data_batch, layout.n_sites). Every digit should lie within its
+            ``(*data_batch, layout.n_sites)``. Every digit should lie within its
             site base.
 
         Returns
         -------
         torch.Tensor
-            Values with shape (*core_batch, *data_batch, *output_sites). Sites
-            outside digit_positions remain open.
+            Values with shape ``(*core_batch, *data_batch, *output_sites)``. Sites
+            outside ``digit_positions`` remain open.
         """
         digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
         self.layout.decode_digits(digits)
@@ -338,14 +351,14 @@ class _QuanticsVector(_QuanticsFormat):
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape (*batch, n_variables), in [0,
-            grid_size[variable] - 1].
+            Integer grid indices with shape ``(*batch, n_variables)``; each value lies in
+            ``[0, grid_size[variable] - 1]``.
 
         Returns
         -------
         torch.Tensor
-            Values with shape (*core_batch, *data_batch, *output_sites). Sites
-            outside digit_positions remain open.
+            Values with shape ``(*core_batch, *data_batch, *output_sites)``. Sites
+            outside ``digit_positions`` remain open.
 
         Examples
         --------
@@ -361,13 +374,13 @@ class _QuanticsVector(_QuanticsFormat):
         """Evaluates physical coordinate configurations.
 
         Physical coordinates require a coordinate map with an inverse or
-        grid-index lookup. The computational_grid and out_of_domain policies
+        grid-index lookup. The ``computational_grid`` and ``out_of_domain`` policies
         determine quantization.
 
         Parameters
         ----------
         points : torch.Tensor
-            Finite physical coordinates with shape (*data_batch, n_variables). A
+            Finite physical coordinates with shape ``(*data_batch, n_variables)``. A
             coordinate map is required. Coordinates are quantized to the
             computational grid; no interpolation of the represented function is
             performed.
@@ -375,8 +388,8 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape (*core_batch, *data_batch, *output_sites). Sites
-            outside digit_positions remain open.
+            Values with shape ``(*core_batch, *data_batch, *output_sites)``. Sites
+            outside ``digit_positions`` remain open.
 
         Examples
         --------
@@ -400,7 +413,7 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape (*core_batch, *grid_size, *output_sites), in
+            Values with shape ``(*core_batch, *grid_size, *output_sites)``, in
             original variable order.
         """
         axes = [torch.arange(size, device=self.device)
@@ -427,11 +440,11 @@ class QTT(_QuanticsVector, TT):
         Physical-coordinate map. Evaluation at physical points requires an
         inverse or direct grid-index lookup.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Physical intervals as (2,) for a shared interval or (n_variables, 2)
+        Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
         for separate intervals. Interval-based maps require a domain; maps with
-        their own physical grid or geometry can use None.
+        their own physical grid or geometry can use ``None``.
     digit_positions : sequence of int, optional
-        Core position for each scheduled digit column, in layout order. None
+        Core position for each scheduled digit column, in layout order. ``None``
         uses every core. Other sites are open tensor outputs.
     n_batches : int
         Number of leading structural batch axes shared by all cores.
@@ -442,7 +455,7 @@ class QTT(_QuanticsVector, TT):
         Uniform computational positions used when the coordinate map does
         not provide direct index lookup.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ValueError or are
+        Whether coordinates outside the domain raise ``ValueError`` or are
         clipped to the domain boundary.
     """
 
@@ -473,11 +486,11 @@ class QTR(_QuanticsVector, TR):
         Physical-coordinate map. Evaluation at physical points requires an
         inverse or direct grid-index lookup.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Physical intervals as (2,) for a shared interval or (n_variables, 2)
+        Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
         for separate intervals. Interval-based maps require a domain; maps with
-        their own physical grid or geometry can use None.
+        their own physical grid or geometry can use ``None``.
     digit_positions : sequence of int, optional
-        Core position for each scheduled digit column, in layout order. None
+        Core position for each scheduled digit column, in layout order. ``None``
         uses every core. Other sites are open tensor outputs.
     n_batches : int
         Number of leading structural batch axes shared by all cores.
@@ -488,7 +501,7 @@ class QTR(_QuanticsVector, TR):
         Uniform computational positions used when the coordinate map does
         not provide direct index lookup.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ValueError or are
+        Whether coordinates outside the domain raise ``ValueError`` or are
         clipped to the domain boundary.
     """
 
@@ -510,7 +523,7 @@ class QTR(_QuanticsVector, TR):
         Parameters
         ----------
         first : int
-            Site that becomes index zero, in [0, n_sites - 1].
+            Site that becomes index zero, in ``[0, n_sites - 1]``.
 
         Returns
         -------
@@ -617,16 +630,16 @@ class _QuanticsMatrix(_QuanticsFormat):
         Parameters
         ----------
         in_digits : torch.Tensor
-            Input digits with shape (*data_batch, in_layout.n_sites). Values
+            Input digits with shape ``(*data_batch, in_layout.n_sites)``. Values
             follow the input digit schedule and should lie within each site base.
         out_digits : torch.Tensor
-            Output digits with shape (*data_batch, out_layout.n_sites), within
+            Output digits with shape ``(*data_batch, out_layout.n_sites)``, within
             the output site bases. Data batches match the inputs.
 
         Returns
         -------
         torch.Tensor
-            Matrix entries with shape (*core_batch, *data_batch).
+            Matrix entries with shape ``(*core_batch, *data_batch)``.
         """
         self.in_layout.decode_digits(in_digits)
         self.out_layout.decode_digits(out_digits)
@@ -641,16 +654,16 @@ class _QuanticsMatrix(_QuanticsFormat):
         Parameters
         ----------
         in_indices : torch.Tensor
-            Input indices with shape (*data_batch, in_layout.n_variables).
+            Input indices with shape ``(*data_batch, in_layout.n_variables)``.
             Indices lie within the grid bounds of each original input variable.
         out_indices : torch.Tensor
-            Output indices with shape (*data_batch, out_layout.n_variables),
+            Output indices with shape ``(*data_batch, out_layout.n_variables)``,
             within the output grid bounds. Data batches match the inputs.
 
         Returns
         -------
         torch.Tensor
-            Matrix entries with shape (*core_batch, *data_batch).
+            Matrix entries with shape ``(*core_batch, *data_batch)``.
         """
         return self.evaluate_digits(self.in_layout.encode_indices(in_indices),
                                     self.out_layout.encode_indices(out_indices))
@@ -663,17 +676,17 @@ class _QuanticsMatrix(_QuanticsFormat):
         ----------
         in_points : torch.Tensor
             Finite floating input points with shape
-            (*data_batch, in_layout.n_variables). An input coordinate map
+            ``(*data_batch, in_layout.n_variables)``. An input coordinate map
             with an inverse or grid lookup is required.
         out_points : torch.Tensor
             Finite floating output points with shape
-            (*data_batch, out_layout.n_variables), with matching data batches.
+            ``(*data_batch, out_layout.n_variables)``, with matching data batches.
             An output coordinate map with an inverse or grid lookup is required.
 
         Returns
         -------
         torch.Tensor
-            Entries with shape (*core_batch, *data_batch). Physical evaluation
+            Entries with shape ``(*core_batch, *data_batch)``. Physical evaluation
             quantizes both coordinate groups; it does not interpolate matrix
             entries.
         """
@@ -695,7 +708,7 @@ class _QuanticsMatrix(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape (*core_batch, *input_grid_size, *output_grid_size),
+            Values with shape ``(*core_batch, *input_grid_size, *output_grid_size)``,
             placing all input variables before all output variables.
         """
         input_axes = [torch.arange(size, device=self.device)
@@ -744,7 +757,7 @@ class QTTM(_QuanticsMatrix, TTM):
         Computational grid convention used when a coordinate map lacks
         direct index lookup.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ValueError or are
+        Whether coordinates outside the domain raise ``ValueError`` or are
         clipped to the domain boundary.
     """
 
@@ -790,7 +803,7 @@ class QTRM(_QuanticsMatrix, TRM):
         Computational grid convention used when a coordinate map lacks
         direct index lookup.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ValueError or are
+        Whether coordinates outside the domain raise ``ValueError`` or are
         clipped to the domain boundary.
     """
 
@@ -812,7 +825,7 @@ class QTRM(_QuanticsMatrix, TRM):
         Parameters
         ----------
         first : int
-            Site that becomes index zero, in [0, n_sites - 1].
+            Site that becomes index zero, in ``[0, n_sites - 1]``.
 
         Returns
         -------

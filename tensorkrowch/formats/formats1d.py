@@ -458,34 +458,9 @@ class TensorFormat1D(TensorFormat):
         self._set_cores(cores, bonds)
 
     @property
-    def n_batches(self) -> int:
-        """Number of leading structural batch axes."""
-        return self._n_batches
-
-    @property
     def n_sites(self) -> int:
         """Number of sites represented by the stored cores."""
         return len(self._cores)
-
-    @property
-    def device(self) -> torch.device:
-        """Device shared by all cores."""
-        return self._cores[0].device
-
-    @property
-    def dtype(self) -> torch.dtype:
-        """Data type shared by all cores."""
-        return self._cores[0].dtype
-
-    @property
-    def rank(self) -> List[int]:
-        """Bond ranks inferred from the cores."""
-        return list(self._rank)
-
-    @property
-    def batch_shape(self) -> Tuple[int, ...]:
-        """Batch dimensions shared by the cores."""
-        return self._batch_shape
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -498,9 +473,45 @@ class TensorFormat1D(TensorFormat):
         return self._out_dim
 
     @property
+    def rank(self) -> List[int]:
+        """Bond ranks inferred from the cores."""
+        return list(self._rank)
+
+    @property
+    def n_batches(self) -> int:
+        """Number of leading structural batch axes."""
+        return self._n_batches
+
+    @property
+    def batch_shape(self) -> Tuple[int, ...]:
+        """Batch dimensions shared by the cores."""
+        return self._batch_shape
+
+    @property
+    def device(self) -> torch.device:
+        """Device shared by all cores."""
+        return self._cores[0].device
+
+    @property
+    def dtype(self) -> torch.dtype:
+        """Data type shared by all cores."""
+        return self._cores[0].dtype
+
+    @property
     def topology(self) -> str:
         """Topology identifier used in serialized result information."""
         return self._topology
+
+    @property
+    def orth_center(self) -> Optional[int]:
+        """
+        Recorded orthogonality center, or ``None`` when unavailable.
+
+        For rings this is only a local gauge. With ``renormalize=True``,
+        canonicalization distributes scale across the cores, so the center
+        core's norm need not equal the represented tensor's norm.
+        """
+        return self._orth_center
 
     @property
     def cores(self) -> List[torch.Tensor]:
@@ -1072,6 +1083,103 @@ class TensorFormat1D(TensorFormat):
         self._orth_center = orth_center
         return self
 
+    def normalize(self) -> 'TensorFormat1D':
+        """
+        Scales the represented tensor or matrix to unit Frobenius norm in-place.
+
+        Structural batches are normalized independently. Zero-norm batches
+        raise ``ValueError``. A valid Vidal gauge is preserved when its
+        rescaled tensors remain finite. Otherwise, a recorded center receives
+        the scale when possible; without one, the scale is distributed among
+        the cores. Autograd is preserved.
+
+        Returns
+        -------
+        TensorFormat1D
+            The current format with unit norm in every structural batch.
+        """
+        _, log_squared_norm = self._log_overlap(self)
+
+        if torch.any(torch.isneginf(log_squared_norm)):
+            raise ValueError('Cannot normalize a zero-norm format')
+        if not torch.all(torch.isfinite(log_squared_norm)):
+            raise ValueError('Cannot normalize a format with a non-finite norm')
+
+        log_norm = log_squared_norm / 2
+
+        def rescale(tensor: torch.Tensor,
+                    exponent: float,
+                    local_axes: int) -> torch.Tensor:
+            if exponent == 0:
+                return tensor
+            factor = (-exponent * log_norm).exp().reshape(
+                *self._batch_shape, *((1,) * local_axes))
+            return tensor * factor
+
+        # If bonds in Vidal gauge, divides each spectra by the norm
+        # and adds it to equilibrate the total normalization
+        bonds = self._bonds
+        if isinstance(bonds, VidalGauge) and bonds._valid:
+            powers = list(bonds.powers)
+            cores = []
+            for site, core in enumerate(self._cores):
+                if self.n_sites == 1:
+                    exponent = 1
+                else:
+                    left = powers[site - 1][1] if site else 0
+                    right = powers[site][0] if site < (self.n_sites - 1) else 0
+                    exponent = left + right - int(0 < site < (self.n_sites - 1))
+                cores.append(rescale(core, exponent,
+                                     core.ndim - self._n_batches))
+
+            factors = [None if factor is None else rescale(
+                factor, 1 - left - right, 1)
+                for factor, (left, right) in zip(bonds.values, powers)]
+            spectra = [rescale(spectrum, 1, 1)
+                       for spectrum in bonds.spectra]
+            all_tensors = (cores +
+                           [value for value in factors if value is not None] +
+                           spectra)
+            if all(torch.all(torch.isfinite(tensor)) for tensor in all_tensors):
+                self._set_cores(cores, factors, spectra=spectra, powers=powers)
+                return self
+
+        # If bonds in mixed canonical form, tries to normalize the center,
+        # unless normalizing only the center runs into over-/underflow
+        center = self._orth_center
+        if center is not None:
+            cores = list(self._cores)
+            cores[center] = rescale(cores[center], 1,
+                                    cores[center].ndim - self._n_batches)
+            if not torch.all(torch.isfinite(cores[center])) or \
+                    torch.any((-log_norm).exp() == 0):
+                center = None
+
+        # Spreads the normalization constant across all cores
+        if center is None:
+            if torch.any((-log_norm / self.n_sites).exp() == 0):
+                raise ValueError('Normalization scale is not representable')
+            cores = [rescale(core, 1 / self.n_sites,
+                             core.ndim - self._n_batches)
+                     for core in self._cores]
+
+        if not all(torch.all(torch.isfinite(core)) for core in cores):
+            raise ValueError('Normalization would produce non-finite cores')
+
+        if bonds is None:
+            self._set_cores(cores, None)
+        elif isinstance(bonds, VidalGauge):
+            self._set_cores(cores,
+                            list(bonds.values),
+                            spectra=list(bonds.spectra),
+                            powers=list(bonds.powers))
+            self._bonds._valid = False
+        else:
+            self._set_cores(cores, list(bonds.values))
+        self._orth_center = center
+
+        return self
+
     def rounding(self,
                  rank: Optional[int] = None,
                  cutoff: Optional[float] = None,
@@ -1161,10 +1269,7 @@ class TensorFormat1D(TensorFormat):
         >>> original = tk.formats.TT([
         ...     torch.diag(torch.tensor([4., 1.])), torch.eye(2)])
         >>> rounded = original.clone().rounding(rank=1)
-        >>> original_norm = original.norm()
-        >>> squared_error = (original_norm.square() + rounded.norm().square()
-        ...                  - 2 * original.inner(rounded).real)
-        >>> relative_error = squared_error.clamp_min(0).sqrt() / original_norm
+        >>> relative_error = original.distance(rounded) / original.norm()
         >>> round(relative_error.item(), 4)
         0.2425
         """
@@ -1195,8 +1300,9 @@ class TensorFormat1D(TensorFormat):
         discarded_norms = []
         collect = return_info or rel_error is not None
 
-        def split(matrix: torch.Tensor
-                  ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        def split(matrix: torch.Tensor) -> Tuple[torch.Tensor,
+                                                 torch.Tensor,
+                                                 torch.Tensor]:
             """Truncates a scaled matrix and collects its discarded mass."""
             scale = matrix.abs().amax()
             scale = torch.where(scale > 0, scale, torch.ones_like(scale))
@@ -1832,6 +1938,33 @@ class TensorFormat1D(TensorFormat):
         """
         _, log_squared_norm = self._log_overlap(self)
         return torch.exp(log_squared_norm / 2)
+
+    def distance(self, other: 'TensorFormat1D') -> torch.Tensor:
+        """
+        Returns the absolute Frobenius distance to another format.
+
+        The exact format difference is QR-canonicalized before taking its norm
+        to reduce cancellation when the operands are close. The inputs are
+        unchanged; the temporary difference may have larger bond ranks.
+        Structural batches are resolved independently. Divide by a reference
+        format's :meth:`norm` for a relative error.
+
+        Parameters
+        ----------
+        other : TensorFormat1D
+            Compatible format to compare with this one.
+
+        Returns
+        -------
+        torch.Tensor
+            Absolute Frobenius distance, with shape ``core_batch``.
+        """
+        if other is self:
+            return self._cores[0].real.new_zeros(self._batch_shape)
+        difference = self - other
+        difference.canonicalize(orth_center=difference.n_sites - 1,
+                                renormalize=True)
+        return difference.norm()
 
 
     def normalized_overlap(

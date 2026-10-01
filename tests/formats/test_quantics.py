@@ -177,8 +177,8 @@ def test_plain_conversion_owns_its_bonds(cyclic):
     format.bonds = [torch.ones(2)] * (2 if cyclic else 1)
     converted = plain()
     assert converted.bonds is not format.bonds
-    converted.bonds.values[0] = torch.full((2,), 2.)
-    assert torch.equal(format.bonds.values[0], torch.ones(2))
+    converted.bonds.factors[0] = torch.full((2,), 2.)
+    assert torch.equal(format.bonds.factors[0], torch.ones(2))
     with pytest.raises(ValueError, match='factor dimensions'):
-        converted.bonds.values[0] = torch.ones(3)
-    assert torch.equal(converted.bonds.values[0], torch.full((2,), 2.))
+        converted.bonds.factors[0] = torch.ones(3)
+    assert torch.equal(converted.bonds.factors[0], torch.full((2,), 2.))

@@ -129,11 +129,11 @@ def test_vector_rows_keep_format_operations_and_own_containers(make_format, topo
     with pytest.raises(ValueError):
         row.cores[0] = torch.ones(1, dtype=x.dtype)
     with pytest.raises(ValueError, match='factor dimensions'):
-        row.bonds.values[0] = torch.ones(1)
+        row.bonds.factors[0] = torch.ones(1)
     assert torch.allclose(row.contract_dense(), dense.conj())
 
     row.cores[0] = row.cores[0] * 2
-    row.bonds.values[0] = row.bonds.values[0] * 3
+    row.bonds.factors[0] = row.bonds.factors[0] * 3
     assert torch.allclose(row.contract_dense(), 6 * dense.conj())
     assert torch.equal(x.contract_dense(), dense)
 
@@ -198,7 +198,7 @@ def test_factored_operations(make_format, topology):
     assert torch.allclose(a.conj().contract_dense(), dense.conj())
     assert torch.allclose(a.clone().materialize_bonds(orth_center=1).contract_dense(), dense)
     copied = a.clone()
-    assert copied.bonds.values[0].data_ptr() != a.bonds.values[0].data_ptr()
+    assert copied.bonds.factors[0].data_ptr() != a.bonds.factors[0].data_ptr()
     with pytest.raises(ValueError, match='factor dimensions'):
-        a.bonds.values[0] = torch.ones(1)
+        a.bonds.factors[0] = torch.ones(1)
     assert torch.allclose(a.contract_dense(), dense)

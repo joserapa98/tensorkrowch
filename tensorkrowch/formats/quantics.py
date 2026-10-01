@@ -545,8 +545,8 @@ class QTR(_QuanticsVector, TR):
             out_of_domain=self.out_of_domain)
         result._is_row = self._is_row
         if self._bonds is not None:
-            values = self._bonds.values
-            result.bonds = [*values[first:], *values[:first]]
+            factors = self._bonds.factors
+            result.bonds = [*factors[first:], *factors[:first]]
         return result
 
 
@@ -853,6 +853,6 @@ class QTRM(_QuanticsMatrix, TRM):
             computational_grid=self.computational_grid,
             out_of_domain=self.out_of_domain)
         if self._bonds is not None:
-            values = self._bonds.values
-            result.bonds = [*values[first:], *values[:first]]
+            factors = self._bonds.factors
+            result.bonds = [*factors[first:], *factors[:first]]
         return result

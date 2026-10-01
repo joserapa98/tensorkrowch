@@ -73,9 +73,10 @@ canonical state only after a successful edit.
 
 ``BondFactors1D`` stores factors for open or cyclic chains. Bond containers
 are constructed by their owning format, already bound to its callback.
-Pass a sequence of factors as ``TT(cores, bonds=values)`` or assign
-``format.bonds = values``; the format copies the sequence and shares its tensors. Element and same-length slice replacements
-in ``format.bonds.values`` validate immediately against the current cores.
+Pass a sequence of factors as ``TT(cores, bonds=factors)`` or assign
+``format.bonds = factors``; the format copies the sequence and shares its
+tensors. Element and same-length slice replacements in
+``format.bonds.factors`` validate immediately against the current cores.
 The container notifies its format through a callback; copies and conversions
 construct their containers with the destination callback. There is no separate
 attachment step. ``split_block`` returns raw factor tuples, which can be passed
@@ -96,7 +97,7 @@ are not intercepted; shape changes should use controlled replacement.
    >>> format.rank
    [3]
    >>> format.bonds = [torch.ones(3)]
-   >>> format.bonds.values[0] = torch.full((3,), 2.)
+   >>> format.bonds.factors[0] = torch.full((3,), 2.)
    >>> torch.equal(format.contract_dense(), torch.full((2, 2), 6.))
    True
    >>> format.cores[0] = torch.ones(2, 4)

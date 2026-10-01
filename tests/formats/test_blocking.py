@@ -115,7 +115,7 @@ def test_coupled_core_and_bond_update(make_format, topology, mode, monkeypatch):
         torch.arange(1, rank + 1, dtype=torch.float64)
         for rank in format.rank[:count]]
     dense = format.contract_dense()
-    factors = format.bonds.values
+    factors = format.bonds.factors
     block = format.contract_block(1, 2)
     outputs = None if format.out_dim is None else format.out_dim[1:3]
     replacement = tk.formats.split_block(
@@ -131,12 +131,12 @@ def test_coupled_core_and_bond_update(make_format, topology, mode, monkeypatch):
     assert format.replace_cores(1, replacement.cores, bonds=replacement.bonds) is format
     assert len(calls) == 1
     assert format.rank[1] == 1
-    assert format.bonds.values[0] is factors[0]
-    assert format.bonds.values[2] is factors[2]
+    assert format.bonds.factors[0] is factors[0]
+    assert format.bonds.factors[2] is factors[2]
     assert format.contract_dense().shape == dense.shape
     with pytest.raises(ValueError, match='factor dimensions'):
-        format.bonds.values[0] = torch.ones(100, dtype=format.dtype)
-    assert format.bonds.values[0] is factors[0]
+        format.bonds.factors[0] = torch.ones(100, dtype=format.dtype)
+    assert format.bonds.factors[0] is factors[0]
     left, right = replacement.cores
     factor = replacement.bonds[0]
     if factor is not None:
@@ -162,11 +162,11 @@ def test_replacement_failure_preserves_cores_and_bonds(make_format, failure):
         bonds = [torch.ones(100)]
     else:
         values[0] = values[0].unsqueeze(0)
-    cores, factors = format.cores, format.bonds
+    cores, bond_container = format.cores, format.bonds
     dense = format.contract_dense()
     with pytest.raises(ValueError):
         format.replace_cores(1, values, bonds=bonds)
-    assert format.cores is cores and format.bonds is factors
+    assert format.cores is cores and format.bonds is bond_container
     with pytest.raises(ValueError, match='factor dimensions'):
-        factors.values[0] = torch.ones(100, dtype=format.dtype)
+        bond_container.factors[0] = torch.ones(100, dtype=format.dtype)
     assert torch.equal(format.contract_dense(), dense)

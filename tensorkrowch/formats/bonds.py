@@ -25,7 +25,7 @@ class BondFactors1D:
 
     Parameters
     ----------
-    values : sequence[torch.Tensor or None]
+    factors : sequence[torch.Tensor or None]
         One diagonal per stored bond. A diagonal has shape ``(rank,)`` or
         ``(*core_batch, rank)``. ``None`` denotes an identity without
         allocation.
@@ -34,37 +34,37 @@ class BondFactors1D:
     """
 
     def __init__(self,
-                 values: Sequence[Optional[torch.Tensor]],
+                 factors: Sequence[Optional[torch.Tensor]],
                  on_change: Callable[[], None]) -> None:
-        if isinstance(values, torch.Tensor):
-            raise TypeError('`values` should be a sequence of diagonals')
+        if isinstance(factors, torch.Tensor):
+            raise TypeError('`factors` should be a sequence of diagonals')
         self._on_change = on_change
-        self._values = _SafeList(values, self._on_sequence_changed)
+        self._factors = _SafeList(factors, self._on_sequence_changed)
 
     @property
-    def values(self):
+    def factors(self):
         """
         Diagonal factors at the bonds of the owning
         :class:`1D format <tensorkrowch.formats.TensorFormat1D>`.
         """
-        return self._values
+        return self._factors
 
-    @values.setter
-    def values(self, values: Sequence[Optional[torch.Tensor]]) -> None:
-        if isinstance(values, torch.Tensor):
-            raise TypeError('`values` should be a sequence of diagonals')
-        previous = getattr(self, '_values', None)
-        self._values = _SafeList(values, self._on_sequence_changed)
+    @factors.setter
+    def factors(self, factors: Sequence[Optional[torch.Tensor]]) -> None:
+        if isinstance(factors, torch.Tensor):
+            raise TypeError('`factors` should be a sequence of diagonals')
+        previous = getattr(self, '_factors', None)
+        self._factors = _SafeList(factors, self._on_sequence_changed)
         try:
             self._on_sequence_changed()
         except Exception:
-            self._values = previous
+            self._factors = previous
             raise
 
     def _on_sequence_changed(self):
         """Validates factors and notifies the format."""
-        if not all(value is None or isinstance(value, torch.Tensor)
-                   for value in self._values):
+        if not all(factor is None or isinstance(factor, torch.Tensor)
+                   for factor in self._factors):
             raise TypeError('Bond factors should be tensors or None')
         self._on_change()
 
@@ -86,23 +86,23 @@ class BondFactors1D:
             one factor per core; open formats require one fewer.
         """
         count = len(cores) if cyclic else len(cores) - 1
-        if len(self._values) != count:
+        if len(self._factors) != count:
             raise ValueError('There should be one factor per bond')
 
-        for core, value in zip(cores, self._values):
-            if value is None:
+        for core, factor in zip(cores, self._factors):
+            if factor is None:
                 continue
-            if not isinstance(value, torch.Tensor):
+            if not isinstance(factor, torch.Tensor):
                 raise TypeError('Bond factors should be tensors or None')
 
             batch = core.shape[:-3]
-            if value.shape not in (torch.Size([core.shape[-1]]),
+            if factor.shape not in (torch.Size([core.shape[-1]]),
                                    torch.Size((*batch, core.shape[-1]))):
                 raise ValueError(
                     'Bond factor dimensions should match the cores')
-            if value.device != core.device:
+            if factor.device != core.device:
                 raise ValueError('Bond factors and cores should share device')
-            if torch.promote_types(value.dtype, core.dtype) != core.dtype:
+            if torch.promote_types(factor.dtype, core.dtype) != core.dtype:
                 raise ValueError(
                     'Bond factor dtype should be compatible with cores')
 
@@ -110,9 +110,9 @@ class BondFactors1D:
                      function: Callable[[torch.Tensor], torch.Tensor],
                      on_change: Callable[[], None]) -> 'BondFactors1D':
         """Maps factors into a container bound to the destination format."""
-        values = [None if value is None else function(value)
-                  for value in self._values]
-        return BondFactors1D(values, on_change)
+        factors = [None if factor is None else function(factor)
+                   for factor in self._factors]
+        return BondFactors1D(factors, on_change)
 
 
 class VidalGauge(BondFactors1D):
@@ -133,7 +133,7 @@ class VidalGauge(BondFactors1D):
 
     Parameters
     ----------
-    values : sequence[torch.Tensor or None]
+    factors : sequence[torch.Tensor or None]
         Stored diagonal factors, preserved independently of the Vidal metadata.
     spectra : sequence of torch.Tensor
         Real, finite, non-negative singular-value vectors, optionally
@@ -148,12 +148,12 @@ class VidalGauge(BondFactors1D):
     """
 
     def __init__(self,
-                 values: Sequence[Optional[torch.Tensor]],
+                 factors: Sequence[Optional[torch.Tensor]],
                  spectra: Sequence[torch.Tensor],
                  powers: Sequence[Tuple[float, float]],
                  on_change: Callable[[], None],
                  valid: bool = True) -> None:
-        super().__init__(values, on_change)
+        super().__init__(factors, on_change)
         self._spectra = _SafeList(spectra, self._on_sequence_changed)
         self._powers = _SafeList(powers, self._on_sequence_changed)
         self._valid = valid
@@ -177,10 +177,10 @@ class VidalGauge(BondFactors1D):
                      function: Callable[[torch.Tensor], torch.Tensor],
                      on_change: Callable[[], None]) -> 'VidalGauge':
         """Maps factors and spectra, preserving their stored interpretation."""
-        values = [None if value is None else function(value)
-                  for value in self._values]
+        factors = [None if factor is None else function(factor)
+                   for factor in self._factors]
         spectra = []
         for spectrum in self._spectra:
             mapped = function(spectrum)
             spectra.append(mapped.real if mapped.is_complex() else mapped)
-        return VidalGauge(values, spectra, self._powers, on_change, self._valid)
+        return VidalGauge(factors, spectra, self._powers, on_change, self._valid)

@@ -64,12 +64,12 @@ def test_invalid_bonds_restore_state(make_format, topology, invalid):
         torch.ones(rank, dtype=format.dtype) for rank in format.rank]
     format._orth_center = 0
     bonds = format.bonds
-    values = bonds.values
-    previous = tuple(values)
+    factors = bonds.factors
+    previous = tuple(factors)
     dense = format.contract_dense()
-    invalid_value = {
+    invalid_factor = {
         'rank': torch.ones(format.rank[0] + 1, dtype=format.dtype),
-        'dtype': values[0].to(torch.complex128),
+        'dtype': factors[0].to(torch.complex128),
         'device': torch.empty(format.rank[0], dtype=format.dtype, device='meta'),
         'type': 1,
         'length': None
@@ -77,12 +77,12 @@ def test_invalid_bonds_restore_state(make_format, topology, invalid):
 
     with pytest.raises(TypeError if invalid == 'type' else ValueError):
         if invalid == 'length':
-            bonds.values = []
+            bonds.factors = []
         else:
-            values[0] = invalid_value
+            factors[0] = invalid_factor
 
-    assert format.bonds is bonds and bonds.values is values
-    assert all(new is old for new, old in zip(values, previous))
+    assert format.bonds is bonds and bonds.factors is factors
+    assert all(new is old for new, old in zip(factors, previous))
     assert format._orth_center == 0
     assert torch.allclose(format.contract_dense(), dense)
 
@@ -93,20 +93,20 @@ def test_bond_slices_and_batch_validation(make_format, topology, n_batches):
     format = make_format(topology, 4, n_batches=n_batches)
     format.bonds = [None] * len(format.rank)
     dense = format.contract_dense()
-    values = format.bonds.values
-    values[:2] = [torch.full((*format.batch_shape, format.rank[0]), 2.,
+    factors = format.bonds.factors
+    factors[:2] = [torch.full((*format.batch_shape, format.rank[0]), 2.,
                             dtype=format.dtype),
                   torch.full((format.rank[1],), 3., dtype=format.dtype)]
-    assert format.bonds.values is values
+    assert format.bonds.factors is factors
     assert torch.allclose(format.contract_dense(), 6 * dense)
     with pytest.raises(ValueError):
-        values[:2] = [values[0]]
+        factors[:2] = [factors[0]]
     with pytest.raises(ValueError):
-        values[0] = torch.ones(3, format.rank[0], dtype=format.dtype)
+        factors[0] = torch.ones(3, format.rank[0], dtype=format.dtype)
     assert torch.allclose(format.contract_dense(), 6 * dense)
-    values[::2] = [None] * len(values[::2])
+    factors[::2] = [None] * len(factors[::2])
     assert torch.allclose(format.contract_dense(), 3 * dense)
-    format.bonds.values = [None] * len(format.rank)
+    format.bonds.factors = [None] * len(format.rank)
     assert torch.allclose(format.contract_dense(), dense)
 
 
@@ -115,19 +115,19 @@ def test_bond_slices_and_batch_validation(make_format, topology, n_batches):
 def test_bond_structure_changes_are_rejected(make_format, operation):
     format = make_format()
     format.bonds = [None] * len(format.rank)
-    values = format.bonds.values
+    factors = format.bonds.factors
     with pytest.raises(TypeError):
         if operation == 'delete':
-            del values[0]
+            del factors[0]
         elif operation == 'append':
-            values.append(None)
+            factors.append(None)
         elif operation == 'extend':
-            values.extend([None])
+            factors.extend([None])
         elif operation == 'iadd':
-            values += [None]
+            factors += [None]
         else:
-            getattr(values, operation)()
-    assert len(values) == len(format.rank)
+            getattr(factors, operation)()
+    assert len(factors) == len(format.rank)
 
 
 @pytest.mark.parametrize('copy_method', ['clone', 'detach', 'detach_', 'to', 'T', 'H'])
@@ -136,9 +136,9 @@ def test_bond_callbacks_are_independent(make_format, copy_method):
     original = format.contract_dense()
     shared = format.bonds
     peer = make_format('ttm', 3)
-    peer.bonds = shared.values
+    peer.bonds = shared.factors
     assert peer.bonds is not shared
-    assert peer.bonds.values[0] is shared.values[0]
+    assert peer.bonds.factors[0] is shared.factors[0]
 
     if copy_method == 'to':
         result = format.to(dtype=torch.complex128)
@@ -150,10 +150,10 @@ def test_bond_callbacks_are_independent(make_format, copy_method):
     peer._orth_center = 0
     if result is not format:
         format._orth_center = 0
-    result.bonds.values[0] = None
+    result.bonds.factors[0] = None
     assert not result.bonds._valid
     assert result._orth_center is None
-    assert peer.bonds.values[0] is shared.values[0]
+    assert peer.bonds.factors[0] is shared.factors[0]
     assert peer._orth_center == 0
     if result is not format:
         assert format.bonds is shared and shared._valid
@@ -162,20 +162,20 @@ def test_bond_callbacks_are_independent(make_format, copy_method):
 
 
 @pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse'])
-@pytest.mark.parametrize('replacement', ['core', 'cores', 'values', 'value_slice',
-                                        'all_values', 'spectrum', 'power'])
+@pytest.mark.parametrize('replacement', ['core', 'cores', 'factor', 'factor_slice',
+                                        'all_factors', 'spectrum', 'power'])
 def test_manual_replacement_invalidates_vidal(make_format, mode, replacement):
     format = make_format('tt', 3).canonicalize_vidal(mode)
     if replacement == 'core':
         format.cores[0] = 2 * format.cores[0]
     elif replacement == 'cores':
         format.cores = [2 * format.cores[0], *format.cores[1:]]
-    elif replacement == 'values':
-        format.bonds.values[0] = None
-    elif replacement == 'value_slice':
-        format.bonds.values[:1] = [None]
-    elif replacement == 'all_values':
-        format.bonds.values = [None] * len(format.rank)
+    elif replacement == 'factor':
+        format.bonds.factors[0] = None
+    elif replacement == 'factor_slice':
+        format.bonds.factors[:1] = [None]
+    elif replacement == 'all_factors':
+        format.bonds.factors = [None] * len(format.rank)
     elif replacement == 'spectrum':
         format.bonds.spectra[0] = torch.ones(1)
     else:
@@ -199,7 +199,7 @@ def test_failed_replacement_preserves_vidal(make_format):
     with pytest.raises(ValueError):
         format.cores = [core.to(torch.complex128) for core in cores[:1]] + cores[1:]
     with pytest.raises(ValueError):
-        bonds.values[0] = torch.ones(100)
+        bonds.factors[0] = torch.ones(100)
     assert format.bonds is bonds and bonds._valid
     assert format.cores is cores
 
@@ -283,14 +283,14 @@ def test_extended_slice_generators_preserve_identity(make_format, topology,
         format.bonds = [
             torch.ones(rank, dtype=format.dtype) for rank in format.rank]
     format._orth_center = 0
-    values = format.cores if container == 'cores' else format.bonds.values
+    values = format.cores if container == 'cores' else format.bonds.factors
     previous = tuple(values)
     dense = format.contract_dense()
     key = slice(None, None, step)
     indices = range(len(values))[key]
     values[key] = (2 * value for value in values[key])
 
-    stored = format.cores if container == 'cores' else format.bonds.values
+    stored = format.cores if container == 'cores' else format.bonds.factors
     assert stored is values
     assert format._orth_center is None
     for index, value in enumerate(values):
@@ -373,8 +373,8 @@ def test_unexpected_bond_validation_error_restores_state(make_format,
     format = make_format().canonicalize_vidal('explicit')
     format._orth_center = 0
     bonds = format.bonds
-    values = bonds.values
-    previous = tuple(values)
+    factors = bonds.factors
+    previous = tuple(factors)
     dense = format.contract_dense()
     validate = format.validate_bonds
 
@@ -385,13 +385,13 @@ def test_unexpected_bond_validation_error_restores_state(make_format,
     monkeypatch.setattr(format, 'validate_bonds', fail_after_validation)
     with pytest.raises(RuntimeError, match='checking factors'):
         if replacement == 'element':
-            values[0] = 2 * values[0]
+            factors[0] = 2 * factors[0]
         elif replacement == 'slice':
-            values[:1] = [2 * values[0]]
+            factors[:1] = [2 * factors[0]]
         else:
-            bonds.values = [2 * values[0], *values[1:]]
-    assert format.bonds is bonds and bonds.values is values
-    assert all(new is old for new, old in zip(values, previous))
+            bonds.factors = [2 * factors[0], *factors[1:]]
+    assert format.bonds is bonds and bonds.factors is factors
+    assert all(new is old for new, old in zip(factors, previous))
     assert format._orth_center == 0 and bonds._valid
     assert torch.equal(format.contract_dense(), dense)
 
@@ -400,38 +400,38 @@ def test_owned_bonds_validate_replacements():
     first = torch.ones(2)
     format = tk.formats.TT([torch.ones(2, 2), torch.ones(2, 2, 2),
                             torch.ones(2, 2)], bonds=[first, None])
-    factors = format.bonds
-    values = factors.values
-    values[1] = torch.ones(2)
-    previous = tuple(values)
+    bonds = format.bonds
+    factors = bonds.factors
+    factors[1] = torch.ones(2)
+    previous = tuple(factors)
     with pytest.raises(TypeError, match='tensors or None'):
-        values[::-1] = [None, object()]
+        factors[::-1] = [None, object()]
     with pytest.raises(TypeError, match='tensors or None'):
-        factors.values = [1, None]
-    assert factors.values is values
-    assert all(new is old for new, old in zip(values, previous))
-    values[:] = (value for value in [None, first])
-    assert factors.values is values and values[0] is None and values[1] is first
+        bonds.factors = [1, None]
+    assert bonds.factors is factors
+    assert all(new is old for new, old in zip(factors, previous))
+    factors[:] = (factor for factor in [None, first])
+    assert bonds.factors is factors and factors[0] is None and factors[1] is first
 
 
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
 @pytest.mark.parametrize('n_sites', [1, 3])
 def test_constructor_owns_bonds(make_format, topology, n_sites):
     source = make_format(topology, n_sites)
-    values = [torch.ones(rank, dtype=source.dtype) for rank in source.rank]
-    format = type(source)(source.cores, bonds=values)
-    assert format.bonds.values is not values
-    assert all(new is old for new, old in zip(format.bonds.values, values))
+    factors = [torch.ones(rank, dtype=source.dtype) for rank in source.rank]
+    format = type(source)(source.cores, bonds=factors)
+    assert format.bonds.factors is not factors
+    assert all(new is old for new, old in zip(format.bonds.factors, factors))
     assert torch.allclose(format.contract_dense(), source.contract_dense())
     with pytest.raises(ValueError, match='one factor per bond'):
-        type(source)(source.cores, bonds=[*values, None])
+        type(source)(source.cores, bonds=[*factors, None])
     with pytest.raises(TypeError):
         type(source)(source.cores, bonds=torch.ones(2))
-    if values:
-        previous = format.bonds.values[0]
+    if factors:
+        previous = format.bonds.factors[0]
         with pytest.raises(ValueError, match='dimensions'):
-            format.bonds.values[0] = torch.ones(100, dtype=source.dtype)
-        assert format.bonds.values[0] is previous
+            format.bonds.factors[0] = torch.ones(100, dtype=source.dtype)
+        assert format.bonds.factors[0] is previous
 
 
 @pytest.mark.parametrize('vidal', [False, True])
@@ -442,18 +442,18 @@ def test_complex_conversion_preserves_factors_and_real_spectra(make_format, vida
     else:
         format.bonds = [torch.ones(rank, dtype=format.dtype) for rank in format.rank]
     result = format.to(dtype=torch.complex128)
-    assert all(value.dtype == torch.complex128 for value in result.bonds.values)
+    assert all(factor.dtype == torch.complex128 for factor in result.bonds.factors)
     assert torch.allclose(result.contract_dense(), format.contract_dense().to(torch.complex128))
     if vidal:
         assert all(spectrum.dtype == torch.float64 for spectrum in result.bonds.spectra)
         assert result.bonds._valid
-    result.bonds.values[0] = result.bonds.values[0] * 1j
+    result.bonds.factors[0] = result.bonds.factors[0] * 1j
     assert torch.allclose(result.contract_dense(), 1j * format.contract_dense())
 
 
 def test_copy_invalid_vidal_preserves_stored_factors(make_format):
     format = make_format('tt', 3).canonicalize_vidal('inverse')
-    format.bonds.values[0] = 2 * format.bonds.values[0]
+    format.bonds.factors[0] = 2 * format.bonds.factors[0]
     result = format.clone()
     assert not result.bonds._valid
     assert torch.allclose(result.contract_dense(), format.contract_dense())

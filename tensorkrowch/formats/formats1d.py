@@ -636,9 +636,9 @@ class TensorFormat1D(TensorFormat):
         """Returns standard cores with explicit bond factors absorbed."""
         cores = self._standard_cores()
         if self._bonds is not None:
-            for site, value in enumerate(self._bonds.values):
-                if value is not None:
-                    cores[site] = cores[site] * value[..., None, None, :]
+            for site, factor in enumerate(self._bonds.factors):
+                if factor is not None:
+                    cores[site] = cores[site] * factor[..., None, None, :]
         return cores
 
     @abstractmethod
@@ -736,14 +736,14 @@ class TensorFormat1D(TensorFormat):
         stored[first:(last + 1)] = cores
 
         count = self.n_sites if self._cyclic else (self.n_sites - 1)
-        factors = list(self._bonds.values) if self._bonds is not None \
+        factors = list(self._bonds.factors) if self._bonds is not None \
             else [None] * count
-        values = [None] * (last - first) if bonds is None else list(bonds)
-        if len(values) != (last - first):
+        replacement_factors = [None] * (last - first) if bonds is None else list(bonds)
+        if len(replacement_factors) != (last - first):
             raise ValueError(
                 'Replacement factors should match its internal bonds')
-        factors[first:last] = values
-        factors = factors if any(value is not None for value in factors) else None
+        factors[first:last] = replacement_factors
+        factors = factors if any(factor is not None for factor in factors) else None
 
         self._set_standard_cores(stored, factors)
         return self
@@ -765,9 +765,9 @@ class TensorFormat1D(TensorFormat):
         return self._bonds
 
     @bonds.setter
-    def bonds(self, value: Optional[Sequence[Optional[torch.Tensor]]]) -> None:
-        bonds = None if value is None else BondFactors1D(value,
-                                                         self._on_bonds_changed)
+    def bonds(self, factors: Optional[Sequence[Optional[torch.Tensor]]]) -> None:
+        bonds = None if factors is None else BondFactors1D(
+            factors, self._on_bonds_changed)
         if bonds is not None:
             bonds.validate(self._standard_cores(), self._cyclic)
         self._bonds = bonds
@@ -848,13 +848,13 @@ class TensorFormat1D(TensorFormat):
             self._set_standard_cores(cores)
             return self
 
-        for site, value in enumerate(self._bonds.values):
-            if value is None:
+        for site, factor in enumerate(self._bonds.factors):
+            if factor is None:
                 continue
             if site < orth_center:
-                cores[site + 1] = value[..., :, None, None] * cores[site + 1]
+                cores[site + 1] = factor[..., :, None, None] * cores[site + 1]
             else:
-                cores[site] = cores[site] * value[..., None, None, :]
+                cores[site] = cores[site] * factor[..., None, None, :]
         self._set_standard_cores(cores)
         return self
 
@@ -899,13 +899,13 @@ class TensorFormat1D(TensorFormat):
                                            old_powers=self._bonds.powers,
                                            powers=powers)
         else:
-            factors = list(self._bonds.values)
-            value = factors[bond]
-            if value is not None:
+            factors = list(self._bonds.factors)
+            factor = factors[bond]
+            if factor is not None:
                 site = bond if (side == 'left') else (bond + 1) % self.n_sites
                 cores[site] = cores[site] * (
-                    value[..., None, None, :] if (side == 'left')
-                    else value[..., :, None, None])
+                    factor[..., None, None, :] if (side == 'left')
+                    else factor[..., :, None, None])
                 factors[bond] = None
         self._set_standard_cores(cores, factors, spectra=spectra, powers=powers)
         return self
@@ -974,8 +974,8 @@ class TensorFormat1D(TensorFormat):
         same_cores = all(
             new is old for new, old in zip(result._cores, self._cores))
         same_bonds = self._bonds is None or all(
-            new is old for new, old in zip(result._bonds.values,
-                                           self._bonds.values))
+            new is old for new, old in zip(result._bonds.factors,
+                                           self._bonds.factors))
 
         if not copy and same_cores and same_bonds and self._same_aux_tensors(result):
             return self
@@ -1134,11 +1134,11 @@ class TensorFormat1D(TensorFormat):
 
             factors = [None if factor is None else rescale(
                 factor, 1 - left - right, 1)
-                for factor, (left, right) in zip(bonds.values, powers)]
+                for factor, (left, right) in zip(bonds.factors, powers)]
             spectra = [rescale(spectrum, 1, 1)
                        for spectrum in bonds.spectra]
             all_tensors = (cores +
-                           [value for value in factors if value is not None] +
+                           [factor for factor in factors if factor is not None] +
                            spectra)
             if all(torch.all(torch.isfinite(tensor)) for tensor in all_tensors):
                 self._set_cores(cores, factors, spectra=spectra, powers=powers)
@@ -1170,12 +1170,12 @@ class TensorFormat1D(TensorFormat):
             self._set_cores(cores, None)
         elif isinstance(bonds, VidalGauge):
             self._set_cores(cores,
-                            list(bonds.values),
+                            list(bonds.factors),
                             spectra=list(bonds.spectra),
                             powers=list(bonds.powers))
             self._bonds._valid = False
         else:
-            self._set_cores(cores, list(bonds.values))
+            self._set_cores(cores, list(bonds.factors))
         self._orth_center = center
 
         return self
@@ -1412,8 +1412,8 @@ class TensorFormat1D(TensorFormat):
         batch = self._batch_shape
         left = result.shape[-3]
         for site in range(first, last):
-            if self._bonds is not None and self._bonds.values[site] is not None:
-                result = result * self._bonds.values[site][..., None, None, :]
+            if self._bonds is not None and self._bonds.factors[site] is not None:
+                result = result * self._bonds.factors[site][..., None, None, :]
             result = result.reshape(*batch, left, -1, result.shape[-1])
             result = torch.einsum('...apr,...rqb->...apqb', result, cores[site + 1])
             dimensions.append(cores[site + 1].shape[-2])
@@ -1473,8 +1473,8 @@ class TensorFormat1D(TensorFormat):
                 value = value.permute(order)
             cores.append(value.reshape(*self._batch_shape, value.shape[self._n_batches],
                                        -1, value.shape[-1]))
-            if self._bonds is not None and last < len(self._bonds.values):
-                factors.append(self._bonds.values[last])
+            if self._bonds is not None and last < len(self._bonds.factors):
+                factors.append(self._bonds.factors[last])
             first = last + 1
         bonds = factors if factors else None
         self._set_standard_cores(
@@ -2542,7 +2542,7 @@ class _MatrixFormat1D(TensorFormat1D):
             cores[-1] = cores[-1].unsqueeze(-2)
 
         if self._bonds is not None:
-            for site, factor in enumerate(self._bonds.values):
+            for site, factor in enumerate(self._bonds.factors):
                 if factor is not None:
                     cores[site] = cores[site] * factor[..., None, :, None]
         return cores
@@ -3140,7 +3140,7 @@ class _CyclicFormat1D(TensorFormat1D):
             [cores[site] for site in order], in_dim, out_dim,
             self._n_batches, True)
         if self._bonds is not None:
-            result.bonds = [self._bonds.values[site] for site in order]
+            result.bonds = [self._bonds.factors[site] for site in order]
         return result
 
 

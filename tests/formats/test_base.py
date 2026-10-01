@@ -121,6 +121,40 @@ def test_invalid_construction_and_data(make_format):
         zero.normalized_overlap(zero)
 
 
+def test_embedded_inputs_promote_dtype():
+    vector = tk.formats.TT([torch.tensor([1., 2.])])
+    real_values = vector.evaluate(
+        torch.tensor([[[1., 2.]]], dtype=torch.float64))
+    assert real_values.dtype == torch.float64
+    embedded = torch.tensor([[[1 + 1j, 2 - 1j]]], dtype=torch.complex128)
+    values = vector.evaluate(embedded)
+    assert values.dtype == torch.complex128
+    assert torch.equal(values, torch.tensor([5 - 1j], dtype=values.dtype))
+
+    vector = tk.formats.TT([
+        torch.tensor([[1.], [2.]]), torch.tensor([[3., 4.]])])
+    first = torch.tensor([[1 + 1j, 2 - 1j]], dtype=torch.complex64)
+    second = torch.tensor([[1., 2.]], dtype=torch.float64)
+    values = vector.evaluate([first, second])
+    assert values.dtype == torch.complex128
+    assert torch.equal(values, torch.tensor([55 - 11j], dtype=values.dtype))
+
+    matrix = tk.formats.TTM([torch.eye(2)])
+    output = torch.tensor([[[3., 4.]]], dtype=torch.float64)
+    values = matrix.evaluate(embedded, output)
+    assert values.dtype == torch.complex128
+    assert torch.equal(values, torch.tensor([11 - 1j], dtype=values.dtype))
+    assert matrix.evaluate(embedded, torch.tensor([[1]])).dtype == \
+        torch.complex128
+    assert matrix.evaluate(torch.tensor([[1]]), embedded).dtype == \
+        torch.complex128
+
+    applied = matrix.apply(embedded)
+    assert applied.dtype == torch.complex128
+    assert torch.equal(applied.evaluate(torch.tensor([[0], [1]])),
+                       embedded.squeeze(0))
+
+
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
 def test_scaled_norm_preserves_core_gradients(make_format, dtype):
     format = make_format('tt', 2, dtype=dtype)

@@ -49,8 +49,8 @@ import torch
 from tensorkrowch.utils import (_INTEGER_DTYPES, _validate_truncation,
                                 truncated_svd)
 
-from tensorkrowch.formats.base import (_SafeList, RoundingInfo, SampleError,
-                                       BlockLayout, SplitBlock, TensorFormat)
+from tensorkrowch.formats.base import (_SafeList, RoundingInfo, SplitBlock,
+                                       BlockLayout, SampleError, TensorFormat)
 from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
 from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
                                          MinimalCanonicalInfo)
@@ -416,8 +416,12 @@ def split_block(block: torch.Tensor,
 
 class TensorFormat1D(TensorFormat):
     """
-    Compact format for tensors with a 1D layout, formed by a sequence of cores
-    and, possibly, explicit bond factors.
+    Compact format for tensors with a 1D chain layout, formed by a sequence of
+    cores and, possibly, explicit bond factors. Vector formats have one local
+    input dimension per core; matrix formats have local input and output
+    dimensions. These local dimensions are called physical dimensions. For a
+    matrix core, the input and output dimensions may be kept as separate axes
+    or fused into one axis of size ``in_dim * out_dim``.
 
     Serves as a base class for all 1D chain formats, such as :class:`TT`,
     :class:`TR`, :class:`TTM`, :class:`TRM`, and their quantized versions.
@@ -446,7 +450,8 @@ class TensorFormat1D(TensorFormat):
                  cores: Sequence[torch.Tensor],
                  n_batches: int = 0,
                  *,
-                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None
+                 ) -> None:
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
@@ -599,12 +604,12 @@ class TensorFormat1D(TensorFormat):
             self._bonds._valid = False
 
     def _set_cores(
-        self,
-        cores: Sequence[torch.Tensor],
-        bonds: Optional[Sequence[Optional[torch.Tensor]]],
-        *,
-        spectra: Optional[Sequence[torch.Tensor]] = None,
-        powers: Optional[Sequence[Tuple[float, float]]] = None
+            self,
+            cores: Sequence[torch.Tensor],
+            bonds: Optional[Sequence[Optional[torch.Tensor]]],
+            *,
+            spectra: Optional[Sequence[torch.Tensor]] = None,
+            powers: Optional[Sequence[Tuple[float, float]]] = None
         ) -> None:
         """Replaces cores and bonds together, restoring state on invalid input."""
         if isinstance(cores, torch.Tensor):
@@ -646,14 +651,14 @@ class TensorFormat1D(TensorFormat):
         """Returns effective ``(*batch, left, input, right, output)`` cores."""
 
     def _set_standard_cores(
-        self,
-        cores: Sequence[torch.Tensor],
-        bonds: Optional[Sequence[Optional[torch.Tensor]]] = None,
-        in_dim: Optional[Sequence[int]] = None,
-        out_dim: Optional[Sequence[int]] = None,
-        *,
-        spectra: Optional[Sequence[torch.Tensor]] = None,
-        powers: Optional[Sequence[Tuple[float, float]]] = None
+            self,
+            cores: Sequence[torch.Tensor],
+            bonds: Optional[Sequence[Optional[torch.Tensor]]] = None,
+            in_dim: Optional[Sequence[int]] = None,
+            out_dim: Optional[Sequence[int]] = None,
+            *,
+            spectra: Optional[Sequence[torch.Tensor]] = None,
+            powers: Optional[Sequence[Tuple[float, float]]] = None
         ) -> None:
         """Restores core layouts and publishes cores and factors together."""
         in_dim = self._in_dim if in_dim is None else in_dim
@@ -1116,8 +1121,8 @@ class TensorFormat1D(TensorFormat):
                 *self._batch_shape, *((1,) * local_axes))
             return tensor * factor
 
-        # If bonds in Vidal gauge, divides each spectra by the norm
-        # and adds it to equilibrate the total normalization
+        # In a valid Vidal gauge, divide each spectrum by the norm and adjust
+        # the cores and factors to preserve the gauge
         bonds = self._bonds
         if isinstance(bonds, VidalGauge) and bonds._valid:
             powers = list(bonds.powers)
@@ -1144,8 +1149,8 @@ class TensorFormat1D(TensorFormat):
                 self._set_cores(cores, factors, spectra=spectra, powers=powers)
                 return self
 
-        # If bonds in mixed canonical form, tries to normalize the center,
-        # unless normalizing only the center runs into over-/underflow
+        # If a center is recorded, scale its core unless that overflows or
+        # underflows
         center = self._orth_center
         if center is not None:
             cores = list(self._cores)
@@ -1155,7 +1160,7 @@ class TensorFormat1D(TensorFormat):
                     torch.any((-log_norm).exp() == 0):
                 center = None
 
-        # Spreads the normalization constant across all cores
+        # Otherwise, spread the normalization factor across all cores
         if center is None:
             if torch.any((-log_norm / self.n_sites).exp() == 0):
                 raise ValueError('Normalization scale is not representable')
@@ -1392,7 +1397,7 @@ class TensorFormat1D(TensorFormat):
         first : int
             First site of the region, included.
         last : int
-            Last site of the region, included. Should be at least first.
+            Last site of the region, included. Should be at least ``first``.
 
         Returns
         -------
@@ -1400,47 +1405,68 @@ class TensorFormat1D(TensorFormat):
             Tensor with shape ``(*core_batch, left, *physical, right)``. Matrix
             physical axes are interleaved. Internal factors are included and
             external factors excluded.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([
+        ...     torch.ones(2, 3, 4), torch.ones(3, 5, 6)])
+        >>> matrix.contract_block(0, 1).shape
+        torch.Size([1, 2, 4, 5, 6, 1])
         """
         for site in (first, last):
             if isinstance(site, bool) or not isinstance(site, int):
                 raise TypeError('Block limits should be integers')
         if not 0 <= first <= last < self.n_sites:
-            raise ValueError('Block limits should select an ordered contiguous region')
+            raise ValueError(
+                'Block limits should select an ordered contiguous region')
+
         cores = self._standard_cores()
         result = cores[first]
-        dimensions = [cores[first].shape[-2]]
-        batch = self._batch_shape
+
+        batch_shape = self._batch_shape
         left = result.shape[-3]
+        physical = [result.shape[-2]]
+
         for site in range(first, last):
             if self._bonds is not None and self._bonds.factors[site] is not None:
                 result = result * self._bonds.factors[site][..., None, None, :]
-            result = result.reshape(*batch, left, -1, result.shape[-1])
-            result = torch.einsum('...apr,...rqb->...apqb', result, cores[site + 1])
-            dimensions.append(cores[site + 1].shape[-2])
-        if self._out_dim is not None:
-            dimensions = [dim for pair in zip(self._in_dim[first:last + 1],
-                                              self._out_dim[first:last + 1]) for dim in pair]
-        return result.reshape(*batch, left, *dimensions, cores[last].shape[-1])
 
+            result = result.reshape(*batch_shape, left, -1, result.shape[-1])
+            result = torch.einsum('...apr,...rqb->...apqb',
+                                  result, cores[site + 1])
+            physical.append(cores[site + 1].shape[-2])
+
+        if self._out_dim is not None:
+            physical = [dim for pair in zip(
+                self._in_dim[first:last + 1],
+                self._out_dim[first:last + 1]) for dim in pair]
+
+        return result.reshape(*batch_shape, left, *physical, cores[last].shape[-1])
 
     def block(self, groups: Sequence[int]) -> BlockLayout:
-        """Contracts consecutive groups into effective sites in-place.
+        """
+        Contracts consecutive groups into effective sites in-place.
 
         Parameters
         ----------
         groups : sequence of int
-            Positive group sizes whose sum is ``n_sites``. Physical dimensions are
-            multiplied within each group; matrix inputs and outputs stay separate.
-            Internal factors are absorbed and factors between groups are retained.
+            Positive group sizes whose sum is ``n_sites``. Physical dimensions
+            are multiplied within each group; matrix inputs and outputs stay
+            separate. Internal factors are absorbed and factors between groups
+            are retained.
 
         Returns
         -------
         BlockLayout
-            Original dimensions and group sizes. Pass it to :meth:`unblock` on this
-            format or a solver result with the same effective dimensions.
+            Original dimensions and group sizes. Pass it to :meth:`unblock` on
+            this format or a solver result with the same effective dimensions.
             Clone the format first to retain its original structure. Quantics
-            layouts must remain compatible; use ``as_tt()``/``as_tr()`` or
-            ``as_ttm()``/``as_trm()`` to group arbitrary digits in a plain format.
+            layouts must remain compatible; use
+            :meth:`~tensorkrowch.formats.QTT.as_tt` /
+            :meth:`~tensorkrowch.formats.QTR.as_tr` or
+            :meth:`~tensorkrowch.formats.QTTM.as_ttm` /
+            :meth:`~tensorkrowch.formats.QTRM.as_trm` to group arbitrary
+            digits in a plain format.
 
         Examples
         --------
@@ -1454,104 +1480,135 @@ class TensorFormat1D(TensorFormat):
         """
         groups = tuple(groups)
         if not groups or any(isinstance(size, bool) or not isinstance(
-            size, int) or size < 1 for size in groups):
+            size, int) or (size < 1) for size in groups):
             raise ValueError('Block sizes should be positive integers')
         if sum(groups) != self.n_sites:
             raise ValueError('Block sizes should sum to the number of sites')
+
         layout = BlockLayout(groups, self._in_dim, self._out_dim)
         cores, in_dim, out_dim, factors = [], [], [], []
         first = 0
         for size in groups:
-            last = first + size - 1
-            value = self.contract_block(first, last)
-            in_dim.append(prod(self._in_dim[first:last + 1]))
+            last = first + (size - 1)
+            block = self.contract_block(first, last)
+
+            in_dim.append(prod(self._in_dim[first:(last + 1)]))
             if self._out_dim is not None:
-                out_dim.append(prod(self._out_dim[first:last + 1]))
+                out_dim.append(prod(self._out_dim[first:(last + 1)]))
                 b = self._n_batches
                 order = [*range(b + 1), *range(b + 1, b + 1 + 2 * size, 2),
-                         *range(b + 2, b + 1 + 2 * size, 2), value.ndim - 1]
-                value = value.permute(order)
-            cores.append(value.reshape(*self._batch_shape, value.shape[self._n_batches],
-                                       -1, value.shape[-1]))
-            if self._bonds is not None and last < len(self._bonds.factors):
+                         *range(b + 2, b + 1 + 2 * size, 2), block.ndim - 1]
+                block = block.permute(order)
+
+            cores.append(block.reshape(*self._batch_shape,
+                                       block.shape[self._n_batches],
+                                       -1,
+                                       block.shape[-1]))
+
+            if self._bonds is not None and (last < len(self._bonds.factors)):
                 factors.append(self._bonds.factors[last])
+
             first = last + 1
+
         bonds = factors if factors else None
-        self._set_standard_cores(
-            cores, bonds, in_dim=tuple(in_dim),
-            out_dim=tuple(out_dim) if out_dim else None)
+        self._set_standard_cores(cores, bonds,
+                                 in_dim=tuple(in_dim),
+                                 out_dim=tuple(out_dim) if out_dim else None)
         return layout
 
-
     def unblock(self, layout: BlockLayout, **kwargs) -> 'TensorFormat1D':
-        """Restores the sites described by a blocking layout in-place.
+        """
+        Restores the sites described by a blocking layout in-place.
 
         Parameters
         ----------
         layout : BlockLayout
-            Original dimensions and group sizes returned by :meth:`block`. Its grouped
-            dimensions must match the current format. It can describe another
-            object, such as an initial guess used to produce a solver result.
+            Original dimensions and group sizes returned by :meth:`block`. Its
+            grouped dimensions must match the current format. It can describe
+            another object, such as an initial guess used to produce a solver
+            result.
         **kwargs : keyword arguments
-            Options passed to :func:`split_block`: ``rank``, ``cutoff``, ``atol``,
-            ``rtol``, ``cum_percentage``, ``mode`` and ``renormalize``. Only bonds
-            inside groups are truncated; ranks between groups remain unchanged.
+            Options passed to :func:`split_block`: ``rank``, ``cutoff``,
+            ``atol``, ``rtol``, ``cum_percentage``, ``mode`` and
+            ``renormalize``. Only bonds inside groups are truncated; ranks
+            between groups remain unchanged.
 
         Returns
         -------
         TensorFormat1D
             The current format. Without truncation the represented tensor is
-            recovered up to numerical precision; original core gauges may differ.
-            Invalid input leaves the current format unchanged.
+            recovered up to numerical precision; original core gauges may
+            differ. Invalid input leaves the current format unchanged.
         """
-        if not isinstance(layout, BlockLayout) or len(layout.groups) != self.n_sites:
+        if not isinstance(layout, BlockLayout) or (
+            len(layout.groups) != self.n_sites):
             raise ValueError('Unblocking requires a matching BlockLayout')
         if (self._out_dim is None) != (layout.out_dim is None):
-            raise ValueError('Blocked vector/matrix family should match the layout')
+            raise ValueError(
+                'Blocked vector/matrix family should match the layout')
+
         cores, first = [], 0
         effective_cores = self._effective_cores()
         for site, size in enumerate(layout.groups):
-            value = effective_cores[site]
-            inputs = layout.in_dim[first:first + size]
-            outputs = None if layout.out_dim is None else layout.out_dim[first:first + size]
-            if self._in_dim[site] != prod(inputs) or (
-                    outputs is not None and self._out_dim[site] != prod(outputs)):
+            block = effective_cores[site]
+            inputs = layout.in_dim[first:(first + size)]
+            outputs = None if layout.out_dim is None else \
+                layout.out_dim[first:(first + size)]
+
+            if (self._in_dim[site] != prod(inputs)) or (
+                    outputs is not None and (
+                        self._out_dim[site] != prod(outputs))):
                 raise ValueError('Blocked dimensions should match the layout')
+
             dimensions = inputs
             if outputs is not None:
-                value = value.reshape(*self._batch_shape,
-                                      value.shape[-3], *inputs, *outputs, value.shape[-1])
+                block = block.reshape(
+                    *self._batch_shape, block.shape[-3],
+                    *inputs, *outputs, block.shape[-1])
                 b = self._n_batches
                 order = [*range(b + 1)]
                 for index in range(size):
                     order.extend([b + 1 + index, b + 1 + size + index])
-                order.append(value.ndim - 1)
-                value = value.permute(order)
-                dimensions = tuple(dim for pair in zip(inputs, outputs) for dim in pair)
-            value = value.reshape(*self._batch_shape, value.shape[self._n_batches],
-                                  *dimensions, value.shape[-1])
-            local = split_block(value, inputs, outputs, self._n_batches, **kwargs)
+                order.append(block.ndim - 1)
+                block = block.permute(order)
+                dimensions = tuple(dim for pair in zip(inputs, outputs)
+                                   for dim in pair)
+
+            block = block.reshape(*self._batch_shape,
+                                  block.shape[self._n_batches],
+                                  *dimensions,
+                                  block.shape[-1])
+            local = split_block(block, inputs, outputs,
+                                self._n_batches, **kwargs)
+
             # Restore the local representation with each factor absorbed once.
             for index, core in enumerate(local.cores):
-                factor = local.bonds[index] if index < len(
-                    local.bonds) else None
-                cores.append(core if factor is None else core * factor[..., None, None, :])
+                factor = local.bonds[index] if (
+                    index < len(local.bonds)) else None
+                cores.append(core if factor is None else \
+                    core * factor[..., None, None, :])
+
             first += size
-        self._set_standard_cores(cores, in_dim=layout.in_dim, out_dim=layout.out_dim)
+
+        self._set_standard_cores(cores,
+                                 in_dim=layout.in_dim,
+                                 out_dim=layout.out_dim)
         return self
 
-
-    def _check_semantics(self, other: 'TensorFormat1D', product: bool = False) -> None:
+    def _check_semantics(self,
+                         other: 'TensorFormat1D',
+                         product: bool = False) -> None:
         """Checks whether operands share their coordinate interpretation."""
         if self._quantized != other._quantized:
             raise ValueError(
                 'Quantics algebra requires compatible coordinate semantics; '
                 'use as_tt/as_tr/as_ttm/as_trm explicitly')
 
-
-    def _binary_inputs(self,
-                       other: 'TensorFormat1D'
-                       ) -> Tuple[List[torch.Tensor], List[torch.Tensor], Tuple[int, ...], bool]:
+    def _prepare_binary_operands(
+            self,
+            other: 'TensorFormat1D'
+        ) -> Tuple[List[torch.Tensor], List[torch.Tensor],
+                   Tuple[int, ...], bool]:
         """Prepares compatible effective cores and structural batches."""
         if not isinstance(other, TensorFormat1D):
             raise TypeError('`other` should be TensorFormat1D type')
@@ -1560,56 +1617,72 @@ class TensorFormat1D(TensorFormat):
             raise ValueError('Formats should have the same number of sites')
         if self.device != other.device:
             raise ValueError('Formats should share device')
-        if self._batch_shape and other._batch_shape and self._batch_shape != other._batch_shape:
+        if self._batch_shape and other._batch_shape and (
+            self._batch_shape != other._batch_shape):
             raise ValueError(
-                'Structural batches should match or one operand should be unbatched')
-        if self._in_dim != other._in_dim or self._out_dim != other._out_dim:
-            raise ValueError('Formats should have matching input and output dimensions')
-        if self._out_dim is None and self._is_row != other._is_row:
-            raise ValueError('Vectors should have the same row or column orientation')
+                'Structural batches should match or one operand should '
+                'be unbatched')
+        if (self._in_dim != other._in_dim) or (self._out_dim != other._out_dim):
+            raise ValueError(
+                'Formats should have matching input and output dimensions')
+        if self._out_dim is None and (self._is_row != other._is_row):
+            raise ValueError(
+                'Vectors should have the same row or column orientation')
 
         # Promote tensors and align structural batches before the local algebra.
         dtype = torch.promote_types(self.dtype, other.dtype)
+        batch_shape = self._batch_shape or other._batch_shape
+        cyclic = self._cyclic or other._cyclic
+        
         left_cores = [core.to(dtype=dtype) for core in self._effective_cores()]
         right_cores = [core.to(dtype=dtype) for core in other._effective_cores()]
-        batch_shape = self._batch_shape or other._batch_shape
+
         left_cores = [core.expand(*batch_shape, *core.shape[-3:])
                       for core in left_cores]
         right_cores = [core.expand(*batch_shape, *core.shape[-3:])
                        for core in right_cores]
-        cyclic = self._cyclic or other._cyclic
+
         return left_cores, right_cores, batch_shape, cyclic
 
-
-    def _sum(self, other: 'TensorFormat1D', method: str, coefficient: Number) -> 'TensorFormat1D':
+    def _sum(self,
+             other: 'TensorFormat1D',
+             method: str,
+             coefficient: Number) -> 'TensorFormat1D':
         """Builds an exact stacked or block-diagonal sum or difference."""
         if method not in ('stacked', 'block_diagonal'):
             raise ValueError('`method` should be "stacked" or "block_diagonal"')
-        left_cores, right_cores, batch_shape, cyclic = self._binary_inputs(other)
+
+        left_cores, right_cores, batch_shape, cyclic = \
+            self._prepare_binary_operands(other)
         right_cores[0] = right_cores[0] * coefficient
 
         if len(left_cores) == 1:
-            value = left_cores[0].diagonal(dim1=-3, dim2=-1).sum(-1) + \
+            sum_core = left_cores[0].diagonal(dim1=-3, dim2=-1).sum(-1) + \
                 right_cores[0].diagonal(dim1=-3, dim2=-1).sum(-1)
-            cores = [value.unsqueeze(-2).unsqueeze(-1)]
+            cores = [sum_core.unsqueeze(-2).unsqueeze(-1)]
         else:
             # Stacked sums share a closing space at the first and last sites.
-            if method == 'stacked' or not cyclic:
+            if (method == 'stacked') or not cyclic:
                 closing = max(left_cores[0].shape[-3], right_cores[0].shape[-3])
                 for group in (left_cores, right_cores):
                     first, last = group[0], group[-1]
-                    padded = first.new_zeros(*batch_shape, closing, *first.shape[-2:])
+
+                    padded = first.new_zeros(*batch_shape,
+                                             closing, *first.shape[-2:])
                     padded[..., :first.shape[-3], :, :] = first
                     group[0] = padded
-                    padded = last.new_zeros(*batch_shape, *last.shape[-3:-1], closing)
+
+                    padded = last.new_zeros(*batch_shape,
+                                            *last.shape[-3:-1], closing)
                     padded[..., :last.shape[-1]] = last
                     group[-1] = padded
 
             cores = []
             for site, (left, right) in enumerate(zip(left_cores, right_cores)):
-                if (method == 'stacked' or not cyclic) and site == 0:
+                if ((method == 'stacked') or not cyclic) and (site == 0):
                     core = torch.cat((left, right), dim=-1)
-                elif (method == 'stacked' or not cyclic) and site == len(left_cores) - 1:
+                elif ((method == 'stacked') or not cyclic) and (
+                    site == len(left_cores) - 1):
                     core = torch.cat((left, right), dim=-3)
                 else:
                     core = left.new_zeros(
@@ -1620,11 +1693,18 @@ class TensorFormat1D(TensorFormat):
                 cores.append(core)
 
         return self._new_from_standard_cores(
-            cores, self._in_dim, self._out_dim, len(batch_shape), cyclic, other=other)
+            cores, self._in_dim, self._out_dim,
+            len(batch_shape), cyclic, other=other)
 
+    def add(self,
+            other: 'TensorFormat1D',
+            method: str = 'stacked') -> 'TensorFormat1D':
+        """
+        Returns the exact sum of compatible formats.
 
-    def add(self, other: 'TensorFormat1D', method: str = 'stacked') -> 'TensorFormat1D':
-        """Returns the exact sum of compatible formats.
+        For two or more sites, the construction adds the operands' internal
+        bond ranks. For cyclic results, ``method='block_diagonal'`` also adds
+        the closing ranks, while ``method='stacked'`` uses their maximum.
 
         Parameters
         ----------
@@ -1632,101 +1712,139 @@ class TensorFormat1D(TensorFormat):
             Other format with compatible local input/output dimensions,
             structural batches and device.
         method : {"stacked", "block_diagonal"}
-            Cyclic sum construction. Stacked first and last cores favor subsequent
-            compression; ``"block_diagonal"`` uses the usual construction at every
-            site. For open chains both choices use the ordinary first/last-core
-            construction.
+            Cyclic sum construction. Stacked first and last cores favor
+            subsequent compression; ``"block_diagonal"`` uses the usual
+            construction at every site. For open chains both choices use the
+            ordinary first/last-core construction.
 
         Returns
         -------
         TensorFormat1D
             New format without implicit truncation. Either cyclic operand
             produces a cyclic result. Inputs are unchanged.
-        """
-        return self._sum(other, method, 1)
-
-
-    def sub(self, other: 'TensorFormat1D', method: str = 'stacked') -> 'TensorFormat1D':
-        """Returns the exact difference of compatible formats.
-
-        Parameters
-        ----------
-        other : TensorFormat1D
-            Other format with compatible local input/output dimensions,
-            structural batches and device.
-        method : {"stacked", "block_diagonal"}
-            Cyclic sum construction. Stacked first and last cores favor subsequent
-            compression; ``"block_diagonal"`` uses the usual construction at every
-            site. For open chains both choices use the ordinary first/last-core
-            construction.
-
-        Returns
-        -------
-        TensorFormat1D
-            New format without implicit truncation. Either cyclic operand
-            produces a cyclic result. Inputs are unchanged.
-        """
-        return self._sum(other, method, -1)
-
-
-    def hadamard(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
-        """Returns an exact element-wise product.
-
-        Parameters
-        ----------
-        other : TensorFormat1D
-            Other format with compatible local input/output dimensions,
-            structural batches and device.
-
-        Returns
-        -------
-        TensorFormat1D
-            New format with product bond ranks, before any explicit rounding. A
-            cyclic operand produces a cyclic result.
 
         Examples
         --------
-        >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
-        >>> torch.equal((format * format).contract_dense(), torch.eye(2))
+        >>> left = tk.formats.TT([torch.eye(2), torch.eye(2)])
+        >>> right = tk.formats.TT([2 * torch.eye(2), torch.eye(2)])
+        >>> result = left.add(right)
+        >>> result.rank
+        [4]
+        >>> torch.allclose(result.contract_dense(), 3 * torch.eye(2))
         True
         """
-        left_cores, right_cores, batch_shape, cyclic = self._binary_inputs(other)
+        return self._sum(other, method, 1)
+
+    def sub(self,
+            other: 'TensorFormat1D',
+            method: str = 'stacked') -> 'TensorFormat1D':
+        """
+        Returns the exact difference of compatible formats.
+
+        For two or more sites, the construction adds the operands' internal
+        bond ranks. For cyclic results, ``method='block_diagonal'`` also adds
+        the closing ranks, while ``method='stacked'`` uses their maximum.
+
+        Parameters
+        ----------
+        other : TensorFormat1D
+            Other format with compatible local input/output dimensions,
+            structural batches and device.
+        method : {"stacked", "block_diagonal"}
+            Cyclic sum construction. Stacked first and last cores favor
+            subsequent compression; ``"block_diagonal"`` uses the usual
+            construction at every site. For open chains both choices use the
+            ordinary first/last-core construction.
+
+        Returns
+        -------
+        TensorFormat1D
+            New format without implicit truncation. Either cyclic operand
+            produces a cyclic result. Inputs are unchanged.
+
+        Examples
+        --------
+        >>> left = tk.formats.TT([2 * torch.eye(2), torch.eye(2)])
+        >>> right = tk.formats.TT([torch.eye(2), torch.eye(2)])
+        >>> result = left.sub(right)
+        >>> result.rank
+        [4]
+        >>> torch.allclose(result.contract_dense(), torch.eye(2))
+        True
+        """
+        return self._sum(other, method, -1)
+
+    def hadamard(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
+        """
+        Returns an exact element-wise product.
+
+        The construction multiplies the operands' bond ranks at each bond,
+        including the closing bond for cyclic results.
+
+        Parameters
+        ----------
+        other : TensorFormat1D
+            Other format with compatible local input/output dimensions,
+            structural batches and device.
+
+        Returns
+        -------
+        TensorFormat1D
+            New format with product bond ranks, before any explicit rounding.
+            A cyclic operand produces a cyclic result.
+
+        Examples
+        --------
+        >>> left = tk.formats.TT([
+        ...     torch.tensor([[1., 2.], [3., 4.]]), torch.eye(2)])
+        >>> right = tk.formats.TT([
+        ...     torch.tensor([[2., 3.], [4., 5.]]), torch.eye(2)])
+        >>> product = left.hadamard(right)
+        >>> product.rank
+        [4]
+        >>> product.contract_dense()
+        torch.tensor([[2., 6.], [12., 20.]])
+        """
+        left_cores, right_cores, batch_shape, cyclic = \
+            self._prepare_binary_operands(other)
+
         cores = []
         for left, right in zip(left_cores, right_cores):
             core = torch.einsum('...lpr,...aps->...laprs', left, right)
-            cores.append(core.reshape(*batch_shape, left.shape[-3] * right.shape[-3],
-                                      left.shape[-2], left.shape[-1] * right.shape[-1]))
+            cores.append(core.reshape(*batch_shape,
+                                      left.shape[-3] * right.shape[-3],
+                                      left.shape[-2],
+                                      left.shape[-1] * right.shape[-1]))
 
         return self._new_from_standard_cores(
-            cores, self._in_dim, self._out_dim, len(batch_shape), cyclic, other=other)
-
+            cores, self._in_dim, self._out_dim,
+            len(batch_shape), cyclic, other=other)
 
     def __add__(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
         """Returns the exact sum with another format."""
         return self.add(other)
 
-
     def __sub__(self, other: 'TensorFormat1D') -> 'TensorFormat1D':
         """Returns the exact difference with another format."""
         return self.sub(other)
 
-
-    def __neg__(self) -> 'TensorFormat1D':
-        """Returns the format with its represented tensor negated."""
-        return self * -1
-
-
-    def __mul__(self, other: Union['TensorFormat1D', torch.Tensor, Number]) -> 'TensorFormat1D':
+    def __mul__(self,
+                other: Union['TensorFormat1D', torch.Tensor, Number]
+                ) -> 'TensorFormat1D':
         """Returns a Hadamard product or scalar-scaled format."""
         if isinstance(other, TensorFormat1D):
             return self.hadamard(other)
+
         if isinstance(other, torch.Tensor):
             if other.ndim != 0:
                 raise ValueError('The scaling tensor should be scalar')
             if other.device != self.device:
-                raise ValueError('The scaling tensor should share the format device')
+                raise ValueError(
+                    'The scaling tensor should share the format device')
         elif isinstance(other, bool) or not isinstance(other, Number):
-            raise TypeError('The scaling other should be a number or scalar tensor')
+            raise TypeError(
+                'The scaling `other` should be a number or scalar tensor')
+
         cores = self._effective_cores()
         cores[0] = cores[0] * other
         dtype = cores[0].dtype
@@ -1735,11 +1853,15 @@ class TensorFormat1D(TensorFormat):
         return self._new_from_standard_cores(
             cores, self._in_dim, self._out_dim, self._n_batches, self._cyclic)
 
-
-    def __rmul__(self, other: Union['TensorFormat1D', torch.Tensor, Number]) -> 'TensorFormat1D':
+    def __rmul__(self,
+                 other: Union['TensorFormat1D', torch.Tensor, Number]
+                 ) -> 'TensorFormat1D':
         """Returns a scalar-scaled format or Hadamard product."""
         return self * other
 
+    def __neg__(self) -> 'TensorFormat1D':
+        """Returns the format with its represented tensor negated."""
+        return self * -1
 
     def _product_cores(self,
                        other: 'TensorFormat1D'
@@ -1749,12 +1871,14 @@ class TensorFormat1D(TensorFormat):
             raise ValueError('Formats should have the same number of sites')
         if self.device != other.device:
             raise ValueError('Formats should share device')
-        if self._batch_shape and other._batch_shape and \
-                self._batch_shape != other._batch_shape:
-            raise ValueError('Structural batches should match or one operand should be unbatched')
+        if self._batch_shape and other._batch_shape and (
+            self._batch_shape != other._batch_shape):
+            raise ValueError(
+                'Structural batches should match or one operand should '
+                'be unbatched')
 
-        batch_shape = self._batch_shape or other._batch_shape
         dtype = torch.promote_types(self.dtype, other.dtype)
+        batch_shape = self._batch_shape or other._batch_shape
         left_cores = self._operator_cores()
         right_cores = other._operator_cores()
         if any(left.shape[-3] != right.shape[-1]
@@ -1774,34 +1898,36 @@ class TensorFormat1D(TensorFormat):
 
         return cores, len(batch_shape), self._cyclic or other._cyclic
 
-
     def contract_dense(self) -> torch.Tensor:
-        """Contracts the full represented tensor explicitly.
+        """
+        Contracts the full represented tensor explicitly.
 
         Returns
         -------
         torch.Tensor
             Dense tensor with shape ``(*core_batch, *in_dim)`` for vectors and
-            interleaved ``(in_0, out_0, ...)`` axes for matrices. Intended for
-            small tensors, not large-grid evaluation.
+            interleaved ``in_dim`` and ``out_dim`` axes for matrices. Intended
+            for small tensors, not large-grid evaluation.
         """
         cores = self._effective_cores()
         closing = cores[0].shape[-3]
         result = cores[0]
         dimensions = [result.shape[-2]]
         for core in cores[1:]:
-            result = result.reshape(*self._batch_shape, closing, -1, result.shape[-1])
+            result = result.reshape(*self._batch_shape,
+                                    closing, -1, result.shape[-1])
             result = torch.einsum('...apr,...rqb->...apqb', result, core)
             dimensions.append(core.shape[-2])
-        result = result.reshape(*self._batch_shape, closing, *
-                                dimensions, cores[-1].shape[-1])
+
+        result = result.reshape(*self._batch_shape, closing,
+                                *dimensions, cores[-1].shape[-1])
         result = result.diagonal(dim1=self._n_batches, dim2=-1).sum(-1)
         if self._out_dim is not None:
             dimensions = [dim for pair in zip(
                 self._in_dim, self._out_dim) for dim in pair]
             result = result.reshape(*self._batch_shape, *dimensions)
-        return result
 
+        return result
 
     @staticmethod
     def _contract_open_chain(
@@ -1812,11 +1938,10 @@ class TensorFormat1D(TensorFormat):
             result = result @ matrix
         return result
 
-
     @abstractmethod
-    def _contract_local_matrices(self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         """Contracts local matrices according to the open or cyclic topology."""
-
 
     def _check_overlap_compatibility(
             self, other: 'TensorFormat1D') -> None:
@@ -1835,7 +1960,6 @@ class TensorFormat1D(TensorFormat):
             raise ValueError('Formats should have matching batch shapes')
         if self.device != other.device:
             raise ValueError('Formats should be on the same device')
-
 
     def _log_overlap(
             self, other: 'TensorFormat1D') -> Tuple[torch.Tensor,
@@ -1864,7 +1988,8 @@ class TensorFormat1D(TensorFormat):
         for self_core, other_core in zip(self_cores, other_cores):
             self_core = self_core.to(dtype=dtype)
             self_scale = self_core.abs().amax(dim=(-3, -2, -1))
-            self_scale = torch.where(self_scale > 0, self_scale,
+            self_scale = torch.where(self_scale > 0,
+                                     self_scale,
                                      torch.ones_like(self_scale))
             self_core = self_core / self_scale[..., None, None, None]
             if other is self:
@@ -1872,44 +1997,42 @@ class TensorFormat1D(TensorFormat):
             else:
                 other_core = other_core.to(dtype=dtype)
                 other_scale = other_core.abs().amax(dim=(-3, -2, -1))
-                other_scale = torch.where(
-                    other_scale > 0, other_scale, torch.ones_like(other_scale))
+                other_scale = torch.where(other_scale > 0,
+                                          other_scale,
+                                          torch.ones_like(other_scale))
                 other_core = other_core / other_scale[..., None, None, None]
             log_scale = log_scale + self_scale.log() + other_scale.log()
-            environment = torch.einsum(
-                '...xyab,...apr->...xybpr',
-                environment,
-                self_core.conj())
-            environment = torch.einsum(
-                '...xybpr,...bps->...xyrs',
-                environment,
-                other_core)
+
+            environment = torch.einsum('...xyab,...apr->...xybpr',
+                                       environment,
+                                       self_core.conj())
+            environment = torch.einsum('...xybpr,...bps->...xyrs',
+                                       environment,
+                                       other_core)
 
             scale = torch.linalg.vector_norm(
                 environment, dim=(-4, -3, -2, -1))
-            nonzero = scale > 0
-            safe_scale = torch.where(nonzero, scale, torch.ones_like(scale))
+            safe_scale = torch.where(scale > 0, scale, torch.ones_like(scale))
             environment = environment / safe_scale[..., None, None, None, None]
-            log_scale = log_scale + torch.where(
-                nonzero, safe_scale.log(), torch.zeros_like(safe_scale))
+            log_scale = log_scale + safe_scale.log()
 
         overlap = torch.einsum('...ijij->...', environment)
         magnitude = overlap.abs()
         nonzero = magnitude > 0
-        safe_magnitude = torch.where(
-            nonzero, magnitude, torch.ones_like(magnitude))
+        safe_magnitude = torch.where(nonzero,
+                                     magnitude,
+                                     torch.ones_like(magnitude))
         phase = torch.where(nonzero,
                             overlap / safe_magnitude,
                             torch.zeros_like(overlap))
-        log_magnitude = torch.where(
-            nonzero,
-            safe_magnitude.log() + log_scale,
-            torch.full_like(log_scale, -torch.inf))
+        log_magnitude = torch.where(nonzero,
+                                    safe_magnitude.log() + log_scale,
+                                    torch.full_like(log_scale, -torch.inf))
         return phase, log_magnitude
 
-
     def inner(self, other: 'TensorFormat1D') -> torch.Tensor:
-        """Contracts the conjugate of ``self`` with another format.
+        """
+        Contracts the conjugate of ``self`` with another format.
 
         Parameters
         ----------
@@ -1926,9 +2049,9 @@ class TensorFormat1D(TensorFormat):
         phase, log_magnitude = self._log_overlap(other)
         return phase * log_magnitude.exp()
 
-
     def norm(self) -> torch.Tensor:
-        """Returns the Frobenius norm using scaled double-layer contractions.
+        """
+        Returns the Frobenius norm using scaled double-layer contractions.
 
         Returns
         -------
@@ -1966,10 +2089,10 @@ class TensorFormat1D(TensorFormat):
                                 renormalize=True)
         return difference.norm()
 
-
     def normalized_overlap(
             self, other: 'TensorFormat1D') -> torch.Tensor:
-        """Returns ``<self, other> / (||self|| ||other||)``, preserving phase.
+        """
+        Returns ``<self, other> / (||self|| ||other||)``, preserving phase.
 
         Parameters
         ----------
@@ -1996,9 +2119,9 @@ class TensorFormat1D(TensorFormat):
         log_denominator = (log_self + log_other) / 2
         return phase * torch.exp(log_overlap - log_denominator)
 
-
     def fidelity(self, other: 'TensorFormat1D') -> torch.Tensor:
-        """Returns the squared magnitude of the normalized overlap.
+        """
+        Returns the squared magnitude of :meth:`normalized_overlap`.
 
         Parameters
         ----------
@@ -2015,14 +2138,13 @@ class TensorFormat1D(TensorFormat):
         """
         return self.normalized_overlap(other).abs().square()
 
-
     def _normalize_data(
             self,
             data: EvaluationData,
             dimensions: Sequence[int],
             same_dim: bool,
             n_batches: int
-    ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
+        ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
         """Normalizes discrete indices or embedded vectors by site."""
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
@@ -2049,8 +2171,9 @@ class TensorFormat1D(TensorFormat):
                 if data.shape[-2:] != (n_sites, dimensions[0]):
                     raise ValueError(
                         'Embedded inputs should end in `(n_sites, site_dim)`')
+                target_dtype = torch.promote_types(self.dtype, data.dtype)
                 site_data = list(
-                    data.to(device=self.device, dtype=self.dtype).unbind(-2))
+                    data.to(device=self.device, dtype=target_dtype).unbind(-2))
                 discrete = False
             else:
                 raise ValueError(
@@ -2088,11 +2211,13 @@ class TensorFormat1D(TensorFormat):
                     'Site inputs should all be discrete indices or embedded '
                     'vectors')
 
-            target_dtype = None if discrete else self.dtype
-            site_data = [
-                item.to(device=self.device, dtype=target_dtype)
-                for item in site_data
-            ]
+            target_dtype = None
+            if not discrete:
+                target_dtype = self.dtype
+                for item in site_data:
+                    target_dtype = torch.promote_types(target_dtype, item.dtype)
+            site_data = [item.to(device=self.device, dtype=target_dtype)
+                         for item in site_data]
 
         batch_shape = tuple(site_data[0].shape[:n_batches])
         if any(tuple(item.shape[:n_batches]) != batch_shape
@@ -2322,7 +2447,8 @@ class _VectorFormat1D(TensorFormat1D):
                 matrix = core[:, :, indices, :].permute(0, 2, 1, 3)
             else:
                 vectors = site_value.reshape(data_batch_size, site_in_dim)
-                matrix = torch.einsum('dp,clpr->cdlr', vectors, core)
+                matrix = torch.einsum('dp,clpr->cdlr',
+                                      vectors, core.to(dtype=vectors.dtype))
 
             matrices.append(matrix.reshape(
                 *self._batch_shape,
@@ -2646,7 +2772,7 @@ class _MatrixFormat1D(TensorFormat1D):
             in_data: Union[EvaluationData, TensorFormat1D],
             out_data: Optional[EvaluationData] = None,
             n_batches: int = 1
-    ) -> Union[torch.Tensor, TensorFormat1D]:
+        ) -> Union[torch.Tensor, TensorFormat1D]:
         """Evaluates matrix entries or applies the operator to product data.
 
         Parameters
@@ -2705,18 +2831,20 @@ class _MatrixFormat1D(TensorFormat1D):
             elif in_discrete:
                 indices = in_site_data.reshape(data_batch_size).to(torch.long)
                 vectors = out_site_data.reshape(data_batch_size, out_dim)
-                selected = core.index_select(2, indices)
+                selected = core.index_select(2, indices).to(dtype=vectors.dtype)
                 matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
             elif out_discrete:
                 indices = out_site_data.reshape(data_batch_size).to(torch.long)
                 vectors = in_site_data.reshape(data_batch_size, in_dim)
-                selected = core.index_select(4, indices)
+                selected = core.index_select(4, indices).to(dtype=vectors.dtype)
                 matrix = torch.einsum('clird,di->cdlr', selected, vectors)
             else:
                 in_vectors = in_site_data.reshape(data_batch_size, in_dim)
                 out_vectors = out_site_data.reshape(data_batch_size, out_dim)
+                dtype = torch.promote_types(in_vectors.dtype, out_vectors.dtype)
                 matrix = torch.einsum(
-                    'di,do,cliro->cdlr', in_vectors, out_vectors, core)
+                    'di,do,cliro->cdlr', in_vectors.to(dtype=dtype),
+                    out_vectors.to(dtype=dtype), core.to(dtype=dtype))
 
             matrices.append(matrix.reshape(
                 *self._batch_shape,
@@ -2825,7 +2953,7 @@ class _MatrixFormat1D(TensorFormat1D):
             else:
                 vectors = site_value.reshape(data_batch_size, in_dim)
                 output_core = torch.einsum(
-                    'di,cliro->cdlor', vectors, core)
+                    'di,cliro->cdlor', vectors, core.to(dtype=vectors.dtype))
             output_cores.append(output_core.reshape(
                 *self._batch_shape,
                 *data_batch_shape,

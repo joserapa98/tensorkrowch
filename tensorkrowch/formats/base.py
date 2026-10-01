@@ -6,9 +6,9 @@ This script contains:
 
     Public classes:
         * RoundingInfo
-        * SampleError
-        * BlockLayout
         * SplitBlock
+        * BlockLayout
+        * SampleError
         * TensorFormat
 """
 
@@ -86,29 +86,27 @@ class RoundingInfo:
 
 
 @dataclass(frozen=True)
-class SampleError:
+class SplitBlock:
     """
-    Stores sample errors while preserving tensor storage and autograd.
+    Local raw cores with open external ranks and optional internal factors.
 
     Parameters
     ----------
-    kind : str
-        Target on which error was measured.
-    absolute : torch.Tensor
-        Absolute norm error, retaining tensor storage and autograd.
-    relative : torch.Tensor, optional
-        Relative norm error, when provided.
-    size : int, optional
-        Number of represented sample contributions.
-    denominator : torch.Tensor, optional
-        Norm used to normalize relative error.
+    cores : tuple[torch.Tensor, ...]
+        Local cores in standard ``(*batch, left, physical, right)`` layout with
+        physical axes fused for matrices.
+    bonds : sequence[torch.Tensor or None] or None
+        Factors internal to the local block; external interface factors are
+        excluded. ``None`` denotes an identity factor or, for the complete
+        sequence, the absence of explicit factors.
+    spectra : tuple[torch.Tensor, ...]
+        Singular values at the local SVD cuts. They are not certified global
+        Schmidt spectra.
     """
 
-    kind: str  # Target on which the error was measured
-    absolute: torch.Tensor  # Absolute error, optionally resolved by batch
-    relative: Optional[torch.Tensor] = None  # Relative error with same shape
-    size: Optional[int] = None  # Number of contributions represented
-    denominator: Optional[torch.Tensor] = None  # Norm used for relative error
+    cores: Tuple[torch.Tensor, ...]  # Standard fused core layout
+    bonds: Optional[Sequence[Optional[torch.Tensor]]]  # Internal bond factors only
+    spectra: Tuple[torch.Tensor, ...]  # Singular values of the local cuts
 
 
 @dataclass(frozen=True)
@@ -144,27 +142,29 @@ class BlockLayout:
 
 
 @dataclass(frozen=True)
-class SplitBlock:
+class SampleError:
     """
-    Local raw cores with open external ranks and optional internal factors.
+    Stores sample errors while preserving tensor storage and autograd.
 
     Parameters
     ----------
-    cores : tuple[torch.Tensor, ...]
-        Local cores in standard ``(*batch, left, physical, right)`` layout with
-        physical axes fused for matrices.
-    bonds : sequence[torch.Tensor or None] or None
-        Factors internal to the local block; external interface factors are
-        excluded. ``None`` denotes an identity factor or, for the complete
-        sequence, the absence of explicit factors.
-    spectra : tuple[torch.Tensor, ...]
-        Singular values at the local SVD cuts. They are not certified global
-        Schmidt spectra.
+    kind : str
+        Target on which error was measured.
+    absolute : torch.Tensor
+        Absolute norm error, retaining tensor storage and autograd.
+    relative : torch.Tensor, optional
+        Relative norm error, when provided.
+    size : int, optional
+        Number of represented sample contributions.
+    denominator : torch.Tensor, optional
+        Norm used to normalize relative error.
     """
 
-    cores: Tuple[torch.Tensor, ...]  # Standard fused core layout
-    bonds: Optional[Sequence[Optional[torch.Tensor]]]  # Internal bond factors only
-    spectra: Tuple[torch.Tensor, ...]  # Singular values of the local cuts
+    kind: str  # Target on which the error was measured
+    absolute: torch.Tensor  # Absolute error, optionally resolved by batch
+    relative: Optional[torch.Tensor] = None  # Relative error with same shape
+    size: Optional[int] = None  # Number of contributions represented
+    denominator: Optional[torch.Tensor] = None  # Norm used for relative error
 
 
 class TensorFormat(ABC):

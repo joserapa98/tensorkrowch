@@ -207,16 +207,20 @@ def _redistribute(cores: List[torch.Tensor],
 
 def _validate_minimal_options(max_iter: int,
                               lr: float,
-                              tol: float,
+                              rtol: float,
+                              stagnation_rtol: float,
+                              patience: int,
                               return_info: bool) -> None:
     """Checks the options shared by minimal canonicalization methods."""
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
-    if isinstance(max_iter, bool) or not isinstance(max_iter, int):
-        raise TypeError('`max_iter` should be int type')
-    if max_iter < 1:
-        raise ValueError('`max_iter` should be positive')
-    for name, value in [('lr', lr), ('tol', tol)]:
+    for name, value in [('max_iter', max_iter), ('patience', patience)]:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(f'`{name}` should be int type')
+        if value < 1:
+            raise ValueError(f'`{name}` should be positive')
+    for name, value in [('lr', lr), ('rtol', rtol),
+                        ('stagnation_rtol', stagnation_rtol)]:
         if isinstance(value, bool) or not isinstance(value, Real):
             raise TypeError(f'`{name}` should be a real number')
         if not isfinite(value) or value <= 0:
@@ -3385,14 +3389,17 @@ class _OpenFormat1D(TensorFormat1D):
             cores, factors, spectra=self._bonds.spectra, powers=powers)
         return self
 
-    def canonicalize_minimal(self,
-                             max_iter: int = 200,
-                             lr: float = 0.05,
-                             tol: float = 1e-8,
-                             *,
-                             return_info: bool = False) -> Union[
-            'TensorFormat1D',
-            Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
+    def canonicalize_minimal(
+            self,
+            max_iter: int = 200,
+            lr: float = 0.05,
+            rtol: float = 1e-8,
+            *,
+            stagnation_rtol: float = 1e-6,
+            patience: int = 5,
+            return_info: bool = False
+        ) -> Union['TensorFormat1D',
+                   Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
         """
         Computes the minimal canonical form of an open chain in-place.
 
@@ -3411,8 +3418,12 @@ class _OpenFormat1D(TensorFormat1D):
             Open chains do not perform iterative optimization.
         lr : float
             Positive learning rate, used only by cyclic formats.
-        tol : float
-            Positive convergence tolerance, used only by cyclic formats.
+        rtol : float
+            Positive relative Gram-imbalance tolerance, used only by rings.
+        stagnation_rtol : float
+            Positive relative error-change tolerance, used only by rings.
+        patience : int
+            Positive number of consecutive stagnant steps, used only by rings.
         return_info : bool
             Whether to return the canonicalization information with the format.
 
@@ -3423,6 +3434,7 @@ class _OpenFormat1D(TensorFormat1D):
             convergence of the direct Vidal construction. ``gram_imbalance``
             is ``None`` because that diagnostic compares neighboring cores,
             rather than the subchains used by the open-chain condition.
+            ``stop_reason`` is ``'vidal'``.
 
         Examples
         --------
@@ -3431,10 +3443,11 @@ class _OpenFormat1D(TensorFormat1D):
         >>> info.iterations, info.converged
         (0, True)
         """
-        _validate_minimal_options(max_iter, lr, tol, return_info)
+        _validate_minimal_options(max_iter, lr, rtol, stagnation_rtol,
+                                  patience, return_info)
         self.canonicalize_vidal('implicit')
         if return_info:
-            return self, MinimalCanonicalInfo(0, True, None)
+            return self, MinimalCanonicalInfo(0, True, None, 'vidal')
         return self
 
 
@@ -3519,8 +3532,10 @@ class _CyclicFormat1D(TensorFormat1D):
             self,
             max_iter: int = 200,
             lr: float = 0.05,
-            tol: float = 1e-8,
+            rtol: float = 1e-8,
             *,
+            stagnation_rtol: float = 1e-6,
+            patience: int = 5,
             return_info: bool = False
         ) -> Union['TensorFormat1D',
                    Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
@@ -3532,8 +3547,11 @@ class _CyclicFormat1D(TensorFormat1D):
         and its inverse act on neighboring cores, preserving the represented
         tensor. At a minimum, neighboring bond Gram matrices are equal.
 
-        Returns the best finite iterate, even if optimization stops before
-        convergence. This implements the minimization objective discussed in
+        Stops when the relative Gram imbalance reaches ``rtol`` or its
+        relative change stays below ``stagnation_rtol`` for ``patience``
+        consecutive steps. Returns that iterate on convergence, or the finite
+        iterate with lowest objective on an iteration limit or numerical
+        failure. This implements the minimization objective discussed in
         `The minimal canonical form of a tensor network
         <https://arxiv.org/pdf/2209.14358>`_, but not its first- or second-order
         algorithms; their convergence guarantees do not apply here.
@@ -3546,10 +3564,19 @@ class _CyclicFormat1D(TensorFormat1D):
             Positive maximum number of gauge optimization iterations for a ring.
         lr : float
             Finite positive learning rate of the Adam gauge optimizer.
-        tol : float
-            Finite positive stopping tolerance for the largest absolute
-            gradient entry of the Hermitian gauge parameters. This does not
-            bound :meth:`~tensorkrowch.formats.GaugeOrbit.gram_imbalance`.
+        rtol : float
+            Finite positive tolerance for
+            :meth:`~tensorkrowch.formats.GaugeOrbit.gram_imbalance` with
+            ``relative=True``. The joint Frobenius norm of the bond Gram
+            differences is divided by the sum of squared core norms.
+        stagnation_rtol : float
+            Finite positive tolerance for the relative change of consecutive
+            errors: ``abs(error - previous) / max(error, previous, eps)``,
+            where ``eps`` is machine epsilon of the real core dtype.
+            This measures stagnation, which can occur at a large imbalance.
+        patience : int
+            Positive number of consecutive steps satisfying
+            ``stagnation_rtol``. The counter resets on a larger change.
         return_info : bool
             If ``True``, returns the format together with the operation-specific
             information record.
@@ -3558,8 +3585,11 @@ class _CyclicFormat1D(TensorFormat1D):
         -------
         TensorFormat1D or tuple[TensorFormat1D, MinimalCanonicalInfo]
             The current format, optionally with iteration count, convergence
-            status and final ``gram_imbalance``. Convergence refers to the
-            parameter-gradient tolerance, not a certified global minimum.
+            status, final relative ``gram_imbalance`` and ``stop_reason``.
+            ``converged`` means either stopping criterion was met, not a
+            certified global minimum. It is ``False`` on an iteration limit
+            or numerical failure. ``stop_reason`` distinguishes ``'tolerance'``,
+            ``'stagnation'``, ``'max_iter'`` and ``'numerical_failure'``.
 
         Examples
         --------
@@ -3568,7 +3598,8 @@ class _CyclicFormat1D(TensorFormat1D):
         >>> info.converged
         True
         """
-        _validate_minimal_options(max_iter, lr, tol, return_info)
+        _validate_minimal_options(max_iter, lr, rtol, stagnation_rtol,
+                                  patience, return_info)
 
         # Optimize gauges on detached cores to avoid accumulating core gradients.
         orbit = TensorRingOrbit(self)
@@ -3580,7 +3611,7 @@ class _CyclicFormat1D(TensorFormat1D):
         scale = max(core.abs().amax().item() for core in detached.cores)
         if scale == 0:
             info = MinimalCanonicalInfo(
-                0, True, self._cores[0].real.new_zeros(()))
+                0, True, self._cores[0].real.new_zeros(()), 'tolerance')
             return (self, info) if return_info else self
         detached.cores = tuple(core / scale for core in detached.cores)
 
@@ -3588,6 +3619,9 @@ class _CyclicFormat1D(TensorFormat1D):
                       for rank in self._rank]
         best_loss = detached.objective(best_gauge).item()
         converged, iterations = False, 0
+        stop_reason = 'max_iter'
+        previous_error, stagnant_steps = None, 0
+        eps = torch.finfo(self._cores[0].real.dtype).eps
         with torch.enable_grad():
             parameters = [torch.zeros_like(gauge, requires_grad=True)
                           for gauge in best_gauge]
@@ -3601,37 +3635,59 @@ class _CyclicFormat1D(TensorFormat1D):
                     (parameter + parameter.transpose(-2, -1).conj()) / 2)
                     for parameter in parameters]
                 if not all(torch.isfinite(gauge).all() for gauge in gauges):
+                    stop_reason = 'numerical_failure'
                     break
 
                 try:
-                    loss = detached.objective(gauges)
+                    cores = detached.apply(gauges)
                 except torch.linalg.LinAlgError:
+                    stop_reason = 'numerical_failure'
                     break
-                if not torch.isfinite(loss):
+                loss = sum(core.abs().square().sum() / 2 for core in cores)
+                with torch.no_grad():
+                    error = GaugeOrbit(cores, orbit.bonds).gram_imbalance(
+                        relative=True)
+                if not torch.isfinite(loss) or not torch.isfinite(error):
+                    stop_reason = 'numerical_failure'
                     break
 
                 loss_value = loss.item()
                 if loss_value < best_loss:
                     best_loss = loss_value
                     best_gauge = [gauge.detach() for gauge in gauges]
+                error_value = error.item()
+                if previous_error is not None:
+                    change = abs(error_value - previous_error) / max(
+                        error_value, previous_error, eps)
+                    stagnant_steps = (stagnant_steps + 1
+                                      if change <= stagnation_rtol else 0)
+                previous_error = error_value
+
+                if (error_value <= rtol) or (stagnant_steps >= patience):
+                    converged = True
+                    stop_reason = ('tolerance' if error_value <= rtol
+                                   else 'stagnation')
+                    best_gauge = [gauge.detach() for gauge in gauges]
+                    break
+
                 loss.backward()
 
                 if not all(torch.isfinite(parameter.grad).all()
                            for parameter in parameters):
+                    stop_reason = 'numerical_failure'
                     break
 
-                if max(parameter.grad.abs().amax().item()
-                       for parameter in parameters) <= tol:
-                    converged = True
-                    break
+                if iterations < max_iter:
+                    optimizer.step()
 
-                optimizer.step()
-
-        # Apply the best finite iterate to the original cores.
+        # Apply the stopping iterate, or the best finite fallback, to the cores.
         self._set_standard_cores(orbit.apply(best_gauge))
         if return_info:
-            info = MinimalCanonicalInfo(iterations, converged,
-                                        TensorRingOrbit(self).gram_imbalance())
+            info = MinimalCanonicalInfo(iterations,
+                                        converged,
+                                        TensorRingOrbit(self).gram_imbalance(
+                                            relative=True),
+                                        stop_reason)
             return self, info
         return self
 

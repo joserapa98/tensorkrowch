@@ -27,15 +27,22 @@ class MinimalCanonicalInfo:
     iterations : int
         Number of gauge optimization iterations; zero for TT/TTM.
     converged : bool
-        Whether the ring optimizer met its gradient tolerance; ``True`` for
-        TT/TTM.
+        Whether a relative imbalance or stagnation criterion was met;
+        ``True`` for TT/TTM. Stagnation need not imply a small imbalance.
     gram_imbalance : torch.Tensor or None
-        Largest final ring Gram imbalance; ``None`` for TT/TTM.
+        Final relative ring Gram imbalance, as returned by
+        :meth:`GaugeOrbit.gram_imbalance` with ``relative=True``;
+        ``None`` for TT/TTM.
+    stop_reason : str or None
+        ``'tolerance'``, ``'stagnation'``, ``'max_iter'`` or
+        ``'numerical_failure'`` for rings; ``'vidal'`` for TT/TTM.
+        ``None`` when no reason is supplied.
     """
 
     iterations: int  # Number of optimization iterations executed
-    converged: bool  # Whether the gauge gradient met the stopping tolerance
-    gram_imbalance: Optional[torch.Tensor]  # Final Gram imbalance for rings
+    converged: bool  # Whether a stopping criterion was met
+    gram_imbalance: Optional[torch.Tensor]  # Final relative imbalance for rings
+    stop_reason: Optional[str] = None
 
 
 class GaugeOrbit:
@@ -173,9 +180,9 @@ class GaugeOrbit:
         """
         return sum(core.abs().square().sum() / 2 for core in self.apply(gauges))
 
-    def gram_imbalance(self) -> torch.Tensor:
+    def gram_imbalance(self, relative: bool = False) -> torch.Tensor:
         r"""
-        Measures the largest Gram-matrix imbalance across the bonds.
+        Measures the joint Gram-matrix imbalance across the bonds.
 
         All axes except the selected bond axis are contracted with the
         conjugate core on each side, leaving a matrix on that bond.
@@ -186,7 +193,17 @@ class GaugeOrbit:
 
         .. math::
 
-            \max_b \left\|L_b^\dagger L_b - R_b R_b^\dagger\right\|_F.
+            D = \sqrt{\sum_b
+                \left\|L_b^\dagger L_b - R_b R_b^\dagger\right\|_F^2}.
+
+        With ``relative=True``, returns :math:`D / \sum_i\|A_i\|_F^2`,
+        where :math:`A_i` are the current cores. This is the norm of the
+        gradient of their joint log-norm along Hermitian gauge directions,
+        following Definition 5.9 of `The minimal canonical form of a tensor
+        network <https://arxiv.org/pdf/2209.14358>`_. The denominator is twice
+        :meth:`objective` at identity gauges, not the squared norm of the
+        contracted tensor. The relative measure is unchanged by a common
+        rescaling of all cores; all-zero cores have zero imbalance.
 
         Equality of these matrices at every bond is necessary and sufficient
         for minimizing :meth:`objective` over the gauge orbit, that is, for
@@ -197,12 +214,20 @@ class GaugeOrbit:
         canonical condition instead compares contracted left/right subchains;
         its implicit Vidal representation need not have zero local imbalance.
 
+        Parameters
+        ----------
+        relative : bool
+            Whether to divide by the sum of squared core norms.
+
         Returns
         -------
         torch.Tensor
-            Largest absolute Gram-matrix imbalance across the bonds. This is not a
-            relative convergence tolerance or a reconstruction error.
+            Joint absolute or relative Gram imbalance. This measures
+            stationarity of the core-norm objective, not reconstruction error
+            or distance to a minimal canonical form.
         """
+        if not isinstance(relative, bool):
+            raise TypeError('`relative` should be bool type')
         if not self.bonds:
             return self.cores[0].real.new_zeros(())
 
@@ -220,7 +245,13 @@ class GaugeOrbit:
 
             imbalances.append((left_gram - right_gram).norm())
 
-        return torch.stack(imbalances).amax()
+        imbalance = torch.stack(imbalances).norm()
+        if relative:
+            norm_squared = sum(core.abs().square().sum() for core in self.cores)
+            if norm_squared == 0:
+                return imbalance
+            imbalance = imbalance / norm_squared
+        return imbalance
 
 
 class TensorRingOrbit(GaugeOrbit):
@@ -228,7 +259,7 @@ class TensorRingOrbit(GaugeOrbit):
     Gauge-related representations of a finite tensor ring.
 
     Gauges act on adjacent virtual axes, including the closing bond. The
-    objective and balance residual support both real and complex cores.
+    objective and Gram imbalance support both real and complex cores.
 
     Parameters
     ----------

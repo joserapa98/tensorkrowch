@@ -423,7 +423,10 @@ def split_block(block: torch.Tensor,
     return SplitBlock(tuple(cores), tuple(factors), tuple(spectra))
 
 
-class TensorFormat1D(TensorFormat):
+###############################################################################
+#                                   FORMATS                                   #
+###############################################################################
+class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
     """
     Compact format for tensors with a 1D chain layout, formed by a sequence of
     cores and, possibly, explicit bond factors. Vector formats have one local
@@ -2242,7 +2245,7 @@ class TensorFormat1D(TensorFormat):
         return site_data, discrete, batch_shape
 
 
-class _VectorFormat1D(TensorFormat1D):
+class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
     """Shared raw-tensor vector operations."""
 
     _family = 'vector'
@@ -2723,7 +2726,7 @@ class _VectorFormat1D(TensorFormat1D):
         return cls(model.tensors, n_batches=n_batches, **kwargs)
 
 
-class _MatrixFormat1D(TensorFormat1D):
+class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
     """Shared raw-tensor matrix operations."""
 
     _family = 'matrix'
@@ -3175,7 +3178,7 @@ class _MatrixFormat1D(TensorFormat1D):
         return cls(model.tensors, **kwargs)
 
 
-class _OpenFormat1D(TensorFormat1D):
+class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
     """Canonical forms and contractions shared by open chains."""
 
     def _contract_local_matrices(
@@ -3459,7 +3462,7 @@ class _OpenFormat1D(TensorFormat1D):
         return self
 
 
-class _CyclicFormat1D(TensorFormat1D):
+class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
     """Contractions, gauges and transformations shared by rings."""
 
     _cyclic = True
@@ -3732,7 +3735,7 @@ class _CyclicFormat1D(TensorFormat1D):
         return self
 
 
-class TT(_OpenFormat1D, _VectorFormat1D):
+class TT(_OpenFormat1D, _VectorFormat1D):  # MARK: TT
     """
     Open tensor train represented by a sequence of cores.
 
@@ -3807,7 +3810,7 @@ class TT(_OpenFormat1D, _VectorFormat1D):
         return rank, batch_shape, tuple(in_dim), None
 
 
-class TR(_CyclicFormat1D, _VectorFormat1D):
+class TR(_CyclicFormat1D, _VectorFormat1D):  # MARK: TR
     """
     Tensor ring represented by a sequence of cores.
 
@@ -3879,7 +3882,7 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
         return rank, batch_shape, tuple(in_dim), None
 
 
-class TTM(_OpenFormat1D, _MatrixFormat1D):
+class TTM(_OpenFormat1D, _MatrixFormat1D):  # MARK: TTM
     """
     Tensor train operator with local input and output dimensions.
 
@@ -3961,7 +3964,7 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
         return rank, batch_shape, tuple(in_dim), tuple(out_dim)
 
 
-class TRM(_CyclicFormat1D, _MatrixFormat1D):
+class TRM(_CyclicFormat1D, _MatrixFormat1D):  # MARK: TRM
     """
     Tensor ring operator with local input and output dimensions.
 

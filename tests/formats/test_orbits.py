@@ -50,10 +50,10 @@ def test_minimal_optional_convergence_information(make_format):
     _, info = format.canonicalize_minimal(max_iter=1, return_info=True)
     assert info.iterations == 1
     assert isinstance(info.converged, bool)
-    assert torch.isfinite(info.balance_residual)
+    assert torch.isfinite(info.gram_imbalance)
     zero = tk.formats.TR([torch.zeros(1, 2, 1)])
     _, info = zero.canonicalize_minimal(return_info=True)
     assert info.converged and info.iterations == 0
-    assert info.balance_residual == 0
+    assert info.gram_imbalance == 0
     with pytest.raises(TypeError):
         zero.canonicalize_minimal(return_info=1)

@@ -86,15 +86,15 @@ def test_normalize_preserves_valid_vidal_gauge(make_format, mode):
                           rtol=1e-10, atol=1e-12)
     assert all(torch.allclose(spectrum.norm(), torch.ones_like(norm))
                for spectrum in format.bonds.spectra)
-    format.redistribute_bond(0, mode='left')
+    format.redistribute_vidal(0, mode='left')
     assert format.bonds._valid
 
 
 def test_normalize_preserves_batched_mixed_vidal_gauge(make_format):
     format = make_format('tt', n_batches=2)
     format.canonicalize_vidal(mode='implicit')
-    format.redistribute_bond(0, mode='left')
-    format.redistribute_bond(1, mode='inverse')
+    format.redistribute_vidal(0, mode='left')
+    format.redistribute_vidal(1, mode='inverse')
     dense = format.contract_dense()
     norm = format.norm()
     format.normalize()

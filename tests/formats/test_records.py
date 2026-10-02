@@ -24,7 +24,7 @@ def test_records_preserve_tensors_and_gradients(kind, dtype):
         assert record.discarded_sq_norm[0] is value
     else:
         record = MinimalCanonicalInfo(0, False, value)
-        stored, frozen_field = record.balance_residual, 'iterations'
+        stored, frozen_field = record.gram_imbalance, 'iterations'
 
     assert is_dataclass(record)
     assert stored is value

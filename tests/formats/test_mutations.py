@@ -182,7 +182,7 @@ def test_manual_replacement_invalidates_vidal(make_format, mode, replacement):
         format.bonds.powers[0] = (0, 0)
     assert not format.bonds._valid
     with pytest.raises(ValueError, match='valid stored Vidal'):
-        format.redistribute_bond(0)
+        format.redistribute_vidal(0)
     dense = format.contract_dense()
     absorbed = format.clone().absorb_bond(0)
     assert torch.allclose(absorbed.contract_dense(), dense)

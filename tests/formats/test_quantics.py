@@ -5,6 +5,26 @@ import torch
 import tensorkrowch as tk
 
 
+@pytest.mark.parametrize('cyclic', [False, True])
+@pytest.mark.parametrize('explicit_data', [False, True])
+def test_error_requires_scalar_quantics_samples(cyclic, explicit_data):
+    layout = tk.formats.QuantizedLayout(1, 2, 1)
+    format = (tk.formats.QTR([torch.ones(1, 2, 1)], layout) if cyclic else
+              tk.formats.QTT([torch.ones(2)], layout))
+    indices = torch.tensor([[0], [1]])
+
+    def function(samples):
+        return torch.ones(samples.shape[0])
+
+    record = format.error(function, indices,
+                          data=indices if explicit_data else None)
+    assert record.absolute == 0
+    features = torch.ones(2, 1, 2)
+    with pytest.raises(ValueError, match='batch dimensions'):
+        format.error(function, features,
+                     data=indices if explicit_data else None)
+
+
 @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
 def test_quantized_grid_and_arithmetic(ordering):
     layout = tk.formats.QuantizedLayout(2, 2, (3, 4), ordering=ordering)

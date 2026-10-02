@@ -156,7 +156,7 @@ def _redistribute(cores: List[torch.Tensor],
                   powers: Sequence[Tuple[float, float]]
                   ) -> Tuple[List[torch.Tensor], List[Optional[torch.Tensor]]]:
     """Moves stored Schmidt powers between neighbours without another SVD."""
-    for site, (spectrum, old, new) in enumerate(zip(spectra, old_powers, powers)):
+    for bond, (spectrum, old, new) in enumerate(zip(spectra, old_powers, powers)):
         negative_power = min(new[0] - old[0], new[1] - old[1],
                              1 - new[0] - new[1])
         if negative_power < 0:
@@ -167,11 +167,11 @@ def _redistribute(cores: List[torch.Tensor],
             if torch.any(positive & (spectrum <= cutoff)) or not torch.all(
                     torch.isfinite(safe.pow(negative_power))):
                 raise ValueError(
-                    f'Bond {site} has singular values too small for stable '
+                    f'Bond {bond} has singular values too small for stable '
                     'inverse powers; use rounding with a cutoff first')
 
-        for neighbour, difference, left_core in ((site, new[0] - old[0], True),
-                                                 (site + 1, new[1] - old[1], False)):
+        for neighbour, difference, left_core in ((bond, new[0] - old[0], True),
+                                                 (bond + 1, new[1] - old[1], False)):
             if difference == 0:
                 continue
             if difference < 0:
@@ -1885,7 +1885,7 @@ class TensorFormat1D(TensorFormat):
                for left, right in zip(left_cores, right_cores)):
             raise ValueError('Contracted local dimensions should match')
 
-        # The same contraction covers matrix products and ket-bra products.
+        # The same contraction covers matrix products and vector outer products.
         cores = []
         for left, right in zip(left_cores, right_cores):
             left = left.to(dtype=dtype).expand(*batch_shape, *left.shape[-4:])
@@ -2138,14 +2138,14 @@ class TensorFormat1D(TensorFormat):
         """
         return self.normalized_overlap(other).abs().square()
 
-    def _normalize_data(
+    def _prepare_data(
             self,
             data: EvaluationData,
             dimensions: Sequence[int],
             same_dim: bool,
             n_batches: int
         ) -> Tuple[List[torch.Tensor], bool, Tuple[int, ...]]:
-        """Normalizes discrete indices or embedded vectors by site."""
+        """Validates and prepares discrete indices or embedded vectors by site."""
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
@@ -2236,8 +2236,28 @@ class TensorFormat1D(TensorFormat):
 class _VectorFormat1D(TensorFormat1D):
     """Shared raw-tensor vector operations."""
 
-    _family = 'state'
+    _family = 'vector'
     _is_row = False
+
+    @property
+    def is_row(self) -> bool:
+        """Whether this vector has row orientation; otherwise it is a column."""
+        return self._is_row
+
+    def _standard_cores(self) -> List[torch.Tensor]:
+        """Adds unit boundary axes to open cores without absorbing bond factors."""
+        cores = list(self._cores)
+        if not self._cyclic:
+            cores[0] = cores[0].unsqueeze(self._n_batches)
+            cores[-1] = cores[-1].unsqueeze(-1)
+        return cores
+
+    def _operator_cores(self) -> List[torch.Tensor]:
+        """Returns effective operator cores according to the vector orientation."""
+        cores = self._effective_cores()
+        if self._is_row:
+            return [core.unsqueeze(-1) for core in cores]
+        return [core.transpose(-2, -1).unsqueeze(-3) for core in cores]
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -2249,33 +2269,92 @@ class _VectorFormat1D(TensorFormat1D):
                                  product: bool = False) -> 'TensorFormat1D':
         """Preserves vector orientation when constructing an algebra result."""
         result = super()._new_from_standard_cores(
-            cores, in_dim, out_dim, n_batches, cyclic, other=other,
-            product=product)
+            cores, in_dim, out_dim, n_batches, cyclic,
+            other=other, product=product)
         if not product:
             result._is_row = self._is_row
         return result
 
-    def _standard_cores(self) -> List[torch.Tensor]:
-        """Adds unit boundary axes to open cores without absorbing bond factors."""
-        cores = list(self._cores)
-        if not self._cyclic:
-            cores[0] = cores[0].unsqueeze(self._n_batches)
-            cores[-1] = cores[-1].unsqueeze(-1)
-        return cores
+    def _new_outer_product(self,
+                           cores: Sequence[torch.Tensor],
+                           other: '_VectorFormat1D',
+                           n_batches: int,
+                           cyclic: bool) -> '_MatrixFormat1D':
+        """Builds the operator represented by a column-row outer product."""
+        return _from_standard_cores(
+            cores, other._in_dim, self._in_dim, n_batches, cyclic)
 
+    def transpose(self) -> '_VectorFormat1D':
+        """
+        Changes row/column orientation without conjugating coefficients.
 
-    def _operator_cores(self) -> List[torch.Tensor]:
-        """Returns effective operator cores according to the vector orientation."""
-        cores = self._effective_cores()
-        if self._is_row:
-            return [core.unsqueeze(-1) for core in cores]
-        return [core.transpose(-2, -1).unsqueeze(-3) for core in cores]
+        The result keeps the concrete format class and its methods. Its core
+        and bond containers are independent, sharing tensor storage. Core
+        shapes and coefficient evaluation are unchanged. Operator core views
+        and products respect the selected orientation.
 
+        Returns
+        -------
+        TT or TR
+            Row for a column input, or column for a row input, including the
+            corresponding Quantics class when applicable.
 
-    def __matmul__(self,
-                   other: Union['_VectorFormat1D', '_MatrixFormat1D']
-                   ) -> Union[torch.Tensor, 'TensorFormat1D']:
-        """Contracts vectors and operators according to row/column orientation.
+        Examples
+        --------
+        >>> x = tk.formats.TT([torch.tensor([1 + 2j, 3 - 4j])])
+        >>> x.is_row
+        False
+        >>> row = x.transpose()
+        >>> row.is_row
+        True
+        >>> row.contract_dense()
+        tensor([1.+2.j, 3.-4.j])
+        """
+        result = self._map_tensors(lambda tensor: tensor)
+        result._is_row = not self._is_row
+        return result
+
+    def adjoint(self) -> '_VectorFormat1D':
+        """
+        Changes row/column orientation and conjugates cores and bond factors.
+
+        Returns
+        -------
+        TT or TR
+            Conjugate row for a column input, or conjugate column for a
+            row input. Containers are independent and tensors may share storage.
+            The concrete format class and its methods are preserved.
+
+        Examples
+        --------
+        >>> x = tk.formats.TT([torch.tensor([1 + 2j, 3 - 4j])])
+        >>> x.is_row
+        False
+        >>> row = x.adjoint()
+        >>> row.is_row
+        True
+        >>> row.contract_dense()
+        tensor([1.-2.j, 3.+4.j])
+        """
+        result = self.conj()
+        result._is_row = not self._is_row
+        return result
+
+    @property
+    def T(self) -> '_VectorFormat1D':
+        """Vector transpose, changing orientation without conjugation."""
+        return self.transpose()
+
+    @property
+    def H(self) -> '_VectorFormat1D':
+        """Vector adjoint, changing orientation and conjugating coefficients."""
+        return self.adjoint()
+
+    def matmul(self,
+               other: Union['_VectorFormat1D', '_MatrixFormat1D']
+               ) -> Union[torch.Tensor, 'TensorFormat1D']:
+        """
+        Contracts vectors and operators according to row/column orientation.
 
         Parameters
         ----------
@@ -2293,88 +2372,50 @@ class _VectorFormat1D(TensorFormat1D):
             and the column's outputs. Row-operator products return rows. A
             cyclic operand gives a cyclic format. Two columns or two rows
             cannot multiply directly.
+
+        Examples
+        --------
+        >>> x = tk.formats.TT([torch.tensor([1., 2.])])
+        >>> inner = x.H.matmul(x)
+        >>> inner
+        tensor(5.)
+        >>> torch.equal(x.H.matmul(x), x.H @ x)
+        True
+        
+        >>> outer = x.matmul(x.H)
+        >>> outer.contract_dense()
+        tensor([[1., 2.],
+                [2., 4.]])
+        >>> torch.equal(outer.contract_dense(), (x @ x.H).contract_dense())
+        True
         """
         if isinstance(other, _VectorFormat1D):
             if self._is_row == other._is_row:
-                raise TypeError('Vector products require a row and a column; use T or H')
+                raise TypeError(
+                    'Vector products require a row and a column; use T or H')
             if self._is_row:
                 self._check_semantics(other)
                 return self.conj().inner(other)
             TensorFormat1D._check_semantics(self, other)
             cores, n_batches, cyclic = self._product_cores(other)
             return self._new_outer_product(cores, other, n_batches, cyclic)
+
         if isinstance(other, _MatrixFormat1D) and self._is_row:
             return (other.T @ self.T).T
-        raise TypeError('A column can multiply a row; a row can multiply a column or operator')
 
+        raise TypeError(
+            'A column can multiply a row; a row can multiply a '
+            'column or operator')
 
-    def _new_outer_product(self,
-                           cores: Sequence[torch.Tensor],
-                           other: '_VectorFormat1D',
-                           n_batches: int,
-                           cyclic: bool) -> '_MatrixFormat1D':
-        """Builds the operator represented by a ket-bra product."""
-        return _from_standard_cores(
-            cores, other._in_dim, self._in_dim, n_batches, cyclic)
-
-
-    def transpose(self) -> '_VectorFormat1D':
-        """Changes row/column orientation without conjugating coefficients.
-
-        The result keeps the concrete format class and its methods. Its core
-        and bond containers are independent, sharing tensor storage. Core
-        shapes and coefficient evaluation are unchanged. Operator core views
-        and products respect the selected orientation.
-
-        Returns
-        -------
-        TT or TR
-            Row for a column input, or column for a row input, including the
-            corresponding Quantics class when applicable.
-        """
-        result = self._map_tensors(lambda tensor: tensor)
-        result._is_row = not self._is_row
-        return result
-
-
-    def adjoint(self) -> '_VectorFormat1D':
-        """Changes row/column orientation and conjugates cores and bond factors.
-
-        Returns
-        -------
-        TT or TR
-            Conjugate row (bra) for a column input, or conjugate column for a
-            row input. Containers are independent and tensors may share storage.
-            The concrete format class and its methods are preserved.
-
-        Examples
-        --------
-        >>> x = tk.formats.TT([torch.tensor([1., 2.])])
-        >>> torch.allclose(x.H @ x, torch.tensor(5.))
-        True
-        >>> outer = x @ x.H
-        >>> torch.equal(outer.contract_dense(), torch.tensor([[1., 2.], [2., 4.]]))
-        True
-        """
-        result = self.conj()
-        result._is_row = not self._is_row
-        return result
-
-
-    @property
-    def T(self) -> '_VectorFormat1D':
-        """Vector transpose, changing orientation without conjugation."""
-        return self.transpose()
-
-
-    @property
-    def H(self) -> '_VectorFormat1D':
-        """Vector adjoint, changing orientation and conjugating coefficients."""
-        return self.adjoint()
-
+    def __matmul__(self,
+                   other: Union['_VectorFormat1D', '_MatrixFormat1D']
+                   ) -> Union[torch.Tensor, 'TensorFormat1D']:
+        """Calls :meth:`matmul` with the same operand."""
+        return self.matmul(other)
 
     def apply(self, other: '_MatrixFormat1D') -> '_VectorFormat1D':
-        """Applies an operator from the right without conjugating this vector.
+        """
+        Applies an operator from the right without conjugating this vector.
 
         Parameters
         ----------
@@ -2391,87 +2432,45 @@ class _VectorFormat1D(TensorFormat1D):
             raise TypeError('`other` should be a matrix format')
         return self @ other if self._is_row else (self.T @ other).T
 
-
-    def __call__(self,
-                 data: EvaluationData,
-                 n_batches: int = 1) -> torch.Tensor:
-        """Calls :meth:`evaluate` with the same input conventions.
-
-        Parameters
-        ----------
-        data : torch.Tensor or sequence of torch.Tensor
-            Integer configurations of shape ``(*data_batch, n_sites)``, or embedded
-            vectors of shape ``(*data_batch, n_sites, in_dim)`` for uniform
-            dimensions. For heterogeneous dimensions, pass one tensor per site.
-            Each site tensor has shape ``(*data_batch,)`` for indices or
-            ``(*data_batch, in_dim[site])`` for embeddings.
-        n_batches : int
-            Number of leading data batch axes. These are independent of
-            structural batch axes stored in the cores.
-
-        Returns
-        -------
-        torch.Tensor
-            Values with shape ``(*core_batch, *data_batch)``. Structural batches and
-            data batches remain independent.
-
-        Examples
-        --------
-        >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
-        >>> format.evaluate(torch.tensor([[0, 0], [0, 1]])).tolist()
-        [1.0, 0.0]
-        >>> embeddings = torch.ones(1, 2, 2)
-        >>> format.evaluate(embeddings).tolist()
-        [2.0]
-        """
-        return self.evaluate(data, n_batches=n_batches)
-
-
     def _local_matrices(
             self,
             site_data: Sequence[torch.Tensor],
             discrete: bool,
             data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
         """Contracts TT/TR cores with one input at each site."""
-        core_batch_size = int(torch.Size(self._batch_shape).numel())
-        data_batch_size = int(torch.Size(data_batch_shape).numel())
         matrices = []
-
         for core, site_value in zip(self._effective_cores(), site_data):
             left_rank, site_in_dim, right_rank = core.shape[-3:]
-            core = core.reshape(
-                core_batch_size, left_rank, site_in_dim, right_rank)
+            core = core.reshape(-1, left_rank, site_in_dim, right_rank)
 
             if discrete:
-                indices = site_value.reshape(data_batch_size).to(torch.long)
+                indices = site_value.reshape(-1).to(torch.long)
                 matrix = core[:, :, indices, :].permute(0, 2, 1, 3)
             else:
-                vectors = site_value.reshape(data_batch_size, site_in_dim)
+                vectors = site_value.reshape(-1, site_in_dim)
                 matrix = torch.einsum('dp,clpr->cdlr',
                                       vectors, core.to(dtype=vectors.dtype))
 
-            matrices.append(matrix.reshape(
-                *self._batch_shape,
-                *data_batch_shape,
-                left_rank,
-                right_rank))
-
+            matrices.append(matrix.reshape(*self._batch_shape,
+                                           *data_batch_shape,
+                                           left_rank,
+                                           right_rank))
         return matrices
-
 
     def evaluate(self,
                  data: EvaluationData,
                  n_batches: int = 1) -> torch.Tensor:
-        """Evaluates integer configurations or local embedded vectors.
+        """
+        Evaluates integer configurations or local embedded feature vectors.
 
         Parameters
         ----------
         data : torch.Tensor or sequence of torch.Tensor
-            Integer configurations of shape ``(*data_batch, n_sites)``, or embedded
-            vectors of shape ``(*data_batch, n_sites, in_dim)`` for uniform
-            dimensions. For heterogeneous dimensions, pass one tensor per site.
-            Each site tensor has shape ``(*data_batch,)`` for indices or
-            ``(*data_batch, in_dim[site])`` for embeddings.
+            Integer configurations of shape ``(*data_batch, n_sites)``, or
+            embedded feature vectors of shape ``(*data_batch, n_sites, in_dim)``
+            for uniform dimensions. For heterogeneous dimensions, pass one
+            tensor per site. Each site tensor has shape ``(*data_batch,)`` for
+            indices or ``(*data_batch, in_dim[site])`` for embeddings.
         n_batches : int
             Number of leading data batch axes. These are independent of
             structural batch axes stored in the cores.
@@ -2479,8 +2478,8 @@ class _VectorFormat1D(TensorFormat1D):
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *data_batch)``. Structural batches and
-            data batches remain independent.
+            Values with shape ``(*core_batch, *data_batch)``. Structural
+            batches and data batches remain independent.
 
         Examples
         --------
@@ -2491,34 +2490,53 @@ class _VectorFormat1D(TensorFormat1D):
         >>> format.evaluate(embeddings).tolist()
         [2.0]
         """
-        site_data, discrete, data_batch_shape = self._normalize_data(
+        site_data, discrete, data_batch_shape = self._prepare_data(
             data, self._in_dim, self._same_in_dim, n_batches)
         matrices = self._local_matrices(
             site_data, discrete, data_batch_shape)
         return self._contract_local_matrices(matrices)
 
+    def __call__(self,
+                 data: EvaluationData,
+                 n_batches: int = 1) -> torch.Tensor:
+        """Calls :meth:`evaluate` with the same input conventions."""
+        return self.evaluate(data, n_batches=n_batches)
 
     def error(self,
               function: Callable[..., torch.Tensor],
-              samples: torch.Tensor,
+              samples: EvaluationData,
               data: Optional[EvaluationData] = None,
               n_batches: int = 1,
               **kwargs) -> SampleError:
-        """Measures absolute and relative errors on a sample set.
+        """
+        Measures absolute and relative errors on a sample set.
 
         Parameters
         ----------
         function : callable
-            Target callable invoked as ``function(samples, **kwargs)``, returning
-            one value per data configuration. Its output is broadcast over
-            structural batches stored in the format.
-        samples : torch.Tensor
-            Sample coordinates or indices passed to the target callable, with
-            ``n_batches`` leading batch axes.
+            Target callable invoked as ``function(samples, **kwargs)``,
+            receiving a tensor for packed samples or a tuple of site tensors
+            for sequence samples. The callable returns one scalar per sample,
+            with shape ``data_batch``. When the cores store a structural batch
+            of formats, each format is compared with the same target values.
+            For example, four formats evaluated on ten samples produce
+            approximations of shape ``(4, 10)``, compared with target values
+            of shape ``(10,)``.
+        samples : torch.Tensor or sequence of torch.Tensor
+            Inputs to ``function``. A single tensor has shape
+            ``(*data_batch, n_sites, *feature_shape)``; scalar inputs have no
+            feature axes. Alternatively, pass one tensor per site, each with
+            shape ``(*data_batch, *feature_shape)``. All tensors share the same
+            leading ``n_batches`` axes, but site shapes may differ.
+            :class:`~tensorkrowch.formats.QTT` and
+            :class:`~tensorkrowch.formats.QTR` require scalar inputs at each
+            site, without feature axes.
         data : torch.Tensor or sequence of torch.Tensor, optional
-            Inputs used to evaluate the format. ``None`` evaluates samples
+            Inputs used to evaluate the format. ``None`` evaluates ``samples``
             directly; supply embedded inputs when target coordinates differ
-            from format configurations.
+            from format configurations or require another feature embedding.
+            For generic formats with explicit ``data``, trailing sample axes
+            are interpreted only by ``function``.
         n_batches : int
             Number of leading data batch axes. These are independent of
             structural batch axes stored in the cores.
@@ -2528,33 +2546,73 @@ class _VectorFormat1D(TensorFormat1D):
         Returns
         -------
         SampleError
-            Scalar error record retaining autograd. Absolute and target norms
-            aggregate all data and structural batches. Relative error is zero
-            when both norms vanish and infinity when only the target norm
-            vanishes.
+            Scalar error record retaining autograd. Returns one global error
+            over all samples and all formats in the structural batch. The
+            absolute error is the norm of all their differences from the target;
+            the target norm includes one copy of the target values per format.
+            Relative error is zero when both norms vanish and infinity when
+            only the target norm vanishes.
         """
         if not callable(function):
             raise TypeError('`function` should be callable')
-        if not isinstance(samples, torch.Tensor):
-            raise TypeError('`samples` should be torch.Tensor type')
-        if samples.ndim != (n_batches + 1):
-            raise ValueError(
-                '`samples` has an incompatible number of batch dimensions')
+        if isinstance(n_batches, bool) or not isinstance(n_batches, int):
+            raise TypeError('`n_batches` should be int type')
+        if n_batches < 0:
+            raise ValueError('`n_batches` should be non-negative')
 
-        samples = samples.to(device=self.device)
-        approximation = self.evaluate(
-            samples if data is None else data,
-            n_batches=n_batches)
+        if isinstance(samples, torch.Tensor):
+            if samples.ndim < (n_batches + 1) or (
+                    self._quantized and (samples.ndim != (n_batches + 1))):
+                raise ValueError(
+                    '`samples` has an incompatible number of batch dimensions')
+            samples = samples.to(device=self.device)
+            data_batch_shape = tuple(samples.shape[:n_batches])
+        else:
+            if isinstance(samples, (str, bytes)):
+                raise TypeError(
+                    '`samples` should be a tensor or a sequence of tensors')
+            try:
+                samples = tuple(samples)
+            except TypeError as exc:
+                raise TypeError(
+                    '`samples` should be a tensor or a sequence of tensors') \
+                        from exc
+            if not samples:
+                raise ValueError('`samples` should contain at least one site')
+            if not all(isinstance(item, torch.Tensor) for item in samples):
+                raise TypeError('Every site sample should be a torch.Tensor')
+            if any(item.ndim < n_batches or (
+                    self._quantized and (item.ndim != n_batches))
+                   for item in samples):
+                raise ValueError(
+                    '`samples` has an incompatible number of batch dimensions')
+            data_batch_shape = tuple(samples[0].shape[:n_batches])
+            if any(tuple(item.shape[:n_batches]) != data_batch_shape
+                   for item in samples[1:]):
+                raise ValueError(
+                    'All site samples should have the same batch shape')
+            samples = tuple(item.to(device=self.device) for item in samples)
+
+        approximation = self.evaluate(samples if data is None else data,
+                                      n_batches=n_batches)
+        if approximation.shape != (*self._batch_shape, *data_batch_shape):
+            raise ValueError(
+                '`data` and `samples` should have matching batch shapes')
+
         target = function(samples, **kwargs)
         if not isinstance(target, torch.Tensor):
             raise TypeError('`function` should return a torch.Tensor')
-        target = target.to(device=approximation.device,
-                           dtype=approximation.dtype)
-        target = target.reshape(samples.shape[:n_batches])
+
+        dtype = torch.promote_types(approximation.dtype, target.dtype)
+        approximation = approximation.to(dtype=dtype)
+        target = target.to(device=approximation.device, dtype=dtype)
+
+        target = target.reshape(data_batch_shape)
         if self._n_batches:
             target = target.reshape(
                 *((1,) * self._n_batches), *target.shape)
-            target = target.expand(*self._batch_shape, *target.shape[self._n_batches:])
+            target = target.expand(*self._batch_shape,
+                                   *target.shape[self._n_batches:])
 
         absolute = torch.linalg.vector_norm(approximation - target)
         denominator = torch.linalg.vector_norm(target)
@@ -2565,32 +2623,37 @@ class _VectorFormat1D(TensorFormat1D):
         else:
             relative = torch.full_like(absolute, torch.inf)
 
-        size = int(torch.Size(samples.shape[:n_batches]).numel())
-        return SampleError(
-            kind='samples',
-            absolute=absolute,
-            relative=relative,
-            size=size,
-            denominator=denominator)
+        size = int(torch.Size(data_batch_shape).numel())
+        return SampleError(kind='samples',
+                           absolute=absolute,
+                           relative=relative,
+                           size=size,
+                           denominator=denominator)
 
+    def to_mps(self,
+               parameterized: bool = False,
+               **kwargs) -> Union['MPS', 'MPSData']:
+        """
+        Builds an open or periodic :class:`~tensorkrowch.models.MPS` or
+        :class:`~tensorkrowch.models.MPSData` from effective cores.
 
-    def to_mps(self, parameterized: bool = False, **kwargs) -> Union['MPS', 'MPSData']:
-        """Builds an open or periodic MPS or MPSData from effective cores.
-
-        Batched vectors produce MPSData and reject ``parameterized=True``.
+        :class:`~tensorkrowch.formats.TT` produces open boundaries (``'obc'``);
+        :class:`~tensorkrowch.formats.TR` produces periodic boundaries
+        (``'pbc'``). Batched vectors produce :class:`~tensorkrowch.models.MPSData`
+        and reject ``parameterized=True``.
 
         Parameters
         ----------
         parameterized : bool
-            Whether the constructed model uses trainable parameter nodes. Inputs
-            are not detached implicitly.
+            Whether the constructed model uses trainable parameter nodes.
+            Inputs are not detached implicitly.
         **kwargs : keyword arguments
             Additional model constructor options. Tensor cores and boundary are
             supplied by the adapter.
 
         Returns
         -------
-        MPS or MPSData
+        :class:`~tensorkrowch.models.MPS` or :class:`~tensorkrowch.models.MPSData`
             New graph model. Stored factors are materialized in temporary
             tensors; the source format is unchanged.
 
@@ -2606,32 +2669,36 @@ class _VectorFormat1D(TensorFormat1D):
 
         if not isinstance(parameterized, bool):
             raise TypeError('`parameterized` should be bool type')
+
         cores = _restore_cores(self._effective_cores(), self._in_dim,
                                self._out_dim, self._n_batches, self._cyclic)
         if self._n_batches:
             if parameterized:
-                raise ValueError('MPSData does not expose parameterized model cores')
-            return MPSData(tensors=cores,
-                           n_batches=self._n_batches, **kwargs)
+                raise ValueError(
+                    'MPSData does not expose parameterized model cores')
+            return MPSData(tensors=cores, n_batches=self._n_batches, **kwargs)
         return MPS(tensors=cores, parameterized=parameterized, **kwargs)
-
 
     @classmethod
     def from_mps(cls, model: Union['MPS', 'MPSData'], **kwargs) -> '_VectorFormat1D':
-        """Collects effective open or periodic MPS or MPSData tensors.
+        """
+        Collects effective open or periodic :class:`~tensorkrowch.models.MPS`
+        or :class:`~tensorkrowch.models.MPSData` tensors.
 
         Parameters
         ----------
         model : MPS or MPSData
-            Source model with matching boundaries. Public tensors include boundary
-            contractions where applicable.
+            Source model: :class:`~tensorkrowch.formats.TT` requires open
+            boundaries (``'obc'``), and :class:`~tensorkrowch.formats.TR`
+            requires periodic boundaries (``'pbc'``). For open models,
+            ``model.tensors`` already includes contractions with the end nodes.
         **kwargs : keyword arguments
             Additional options for the concrete format constructor, such as
             Quantics metadata on a subclass.
 
         Returns
         -------
-        TT or TR
+        :class:`~tensorkrowch.formats.TT` or :class:`~tensorkrowch.formats.TR`
             Format sharing the effective tensor storage. Graph nodes and fit
             metrics are not retained.
         """
@@ -2642,6 +2709,7 @@ class _VectorFormat1D(TensorFormat1D):
         boundary = 'pbc' if cls._cyclic else 'obc'
         if model.boundary != boundary:
             raise ValueError(f'This adapter requires {boundary} boundaries')
+
         n_batches = model.n_batches if isinstance(model, MPSData) else 0
         return cls(model.tensors, n_batches=n_batches, **kwargs)
 
@@ -2659,7 +2727,6 @@ class _MatrixFormat1D(TensorFormat1D):
             cores[-1] = cores[-1].unsqueeze(-2)
         return [core.movedim(-1, -2).flatten(-3, -2) for core in cores]
 
-
     def _operator_cores(self) -> List[torch.Tensor]:
         """Returns effective cores with separate input and output axes."""
         cores = list(self._cores)
@@ -2673,14 +2740,91 @@ class _MatrixFormat1D(TensorFormat1D):
                     cores[site] = cores[site] * factor[..., None, :, None]
         return cores
 
+    def transpose(self) -> '_MatrixFormat1D':
+        """
+        Swaps local matrix input/output axes without reversing sites.
 
-    def __matmul__(self, other: Union['_VectorFormat1D', '_MatrixFormat1D']) -> 'TensorFormat1D':
-        """Applies this operator to a ket or composes it with an operator.
+        The result keeps the concrete format class and its methods. Its core
+        and bond containers are independent, sharing tensor storage.
+
+        Returns
+        -------
+        TTM or TRM
+            Transposed matrix, including the corresponding
+            :class:`~tensorkrowch.formats.QTTM` or
+            :class:`~tensorkrowch.formats.QTRM` class when applicable.
+            Input/output dimensions and coordinate metadata are exchanged.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([torch.tensor([[1 + 2j, 3 - 4j],
+        ...                                        [5 + 6j, 7 - 8j]])])
+        >>> matrix.transpose().contract_dense()
+        tensor([[1.+2.j, 5.+6.j],
+                [3.-4.j, 7.-8.j]])
+        """
+        result = copy(self)
+
+        # The final open core omits its right bond axis.
+        last_in_axis = -3 if self._cyclic else -2
+        cores = [core.transpose(
+                    last_in_axis if site == (self.n_sites - 1) else -3, -1)
+                 for site, core in enumerate(self._cores)]
+        result._cores = _SafeList(cores, result._on_cores_changed)
+
+        if self._bonds is not None:
+            result._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, result._on_bonds_changed)
+
+        result._in_dim, result._out_dim = self._out_dim, self._in_dim
+        result._same_in_dim, result._same_out_dim = (
+            self._same_out_dim, self._same_in_dim)
+
+        return result
+
+    def adjoint(self) -> '_MatrixFormat1D':
+        """
+        Returns the conjugate transpose, including explicit factors.
+
+        Returns
+        -------
+        TTM or TRM
+            Conjugate transpose. Containers are independent and tensors may
+            share storage. The concrete format class and its methods are
+            preserved. Input/output coordinate metadata are exchanged for
+            :class:`~tensorkrowch.formats.QTTM` and
+            :class:`~tensorkrowch.formats.QTRM`.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([torch.tensor([[1 + 2j, 3 - 4j],
+        ...                                        [5 + 6j, 7 - 8j]])])
+        >>> matrix.adjoint().contract_dense()
+        tensor([[1.-2.j, 5.-6.j],
+                [3.+4.j, 7.+8.j]])
+        """
+        return self.transpose().conj()
+
+    @property
+    def T(self) -> '_MatrixFormat1D':
+        """Matrix transpose, without reversing the chain."""
+        return self.transpose()
+
+    @property
+    def H(self) -> '_MatrixFormat1D':
+        """Matrix adjoint, including conjugation of bond factors."""
+        return self.adjoint()
+
+    def matmul(self,
+               other: Union['_VectorFormat1D', '_MatrixFormat1D']
+               ) -> 'TensorFormat1D':
+        """
+        Applies this operator to a column or composes it with an operator.
 
         Parameters
         ----------
         other : TT, TR, TTM or TRM
-            Ket or operator whose output space matches this operator's input
+            Column or operator whose output space matches this operator's input
             space at every site. For vectors this is their physical space.
 
         Returns
@@ -2688,11 +2832,32 @@ class _MatrixFormat1D(TensorFormat1D):
         TT, TR, TTM or TRM
             Exact product with the same kind of object as ``other``. A cyclic
             operand gives a cyclic result. No rounding is performed.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([torch.diag(torch.tensor([2., 3.]))])
+        >>> x = tk.formats.TT([torch.tensor([1., 2.])])
+        >>> product = matrix.matmul(x)
+        >>> product.contract_dense()
+        tensor([2., 6.])
+        >>> torch.equal(product.contract_dense(),
+        ...             (matrix @ x).contract_dense())
+        True
+
+        >>> composition = matrix.matmul(matrix)
+        >>> composition.contract_dense()
+        tensor([[4., 0.],
+                [0., 9.]])
+        >>> torch.equal(composition.contract_dense(),
+        ...             (matrix @ matrix).contract_dense())
+        True
         """
         if not isinstance(other, (_VectorFormat1D, _MatrixFormat1D)):
-            raise TypeError('An operator can multiply a ket or another operator')
+            raise TypeError(
+                'An operator can multiply a column or another operator')
         if isinstance(other, _VectorFormat1D) and other._is_row:
             raise TypeError('An operator can multiply a column, not a row')
+
         self._check_semantics(other, product=True)
         cores, n_batches, cyclic = self._product_cores(other)
         if isinstance(other, _VectorFormat1D):
@@ -2700,216 +2865,55 @@ class _MatrixFormat1D(TensorFormat1D):
         else:
             in_dim, out_dim = other._in_dim, self._out_dim
         return self._new_from_standard_cores(
-            cores, in_dim, out_dim, n_batches, cyclic, other=other, product=True)
+            cores, in_dim, out_dim, n_batches, cyclic,
+            other=other, product=True)
 
-
-    def transpose(self) -> '_MatrixFormat1D':
-        """Swaps local matrix input/output axes without reversing sites.
-
-        Returns
-        -------
-        TTM or TRM
-            Separate matrix format; tensor views may share storage. Quantics
-            subclasses exchange input/output coordinate semantics.
-        """
-        result = copy(self)
-        # The final open core omits its right bond axis.
-        last_in_axis = -3 if self._cyclic else -2
-        result._cores = _SafeList([
-            core.transpose(last_in_axis if site == self.n_sites - 1 else -3, -1)
-            for site, core in enumerate(self._cores)], result._on_cores_changed)
-        if self._bonds is not None:
-            result._bonds = self._bonds._map_tensors(
-                lambda tensor: tensor, result._on_bonds_changed)
-        result._in_dim, result._out_dim = self._out_dim, self._in_dim
-        result._same_in_dim, result._same_out_dim = (
-            self._same_out_dim, self._same_in_dim)
-        return result
-
-
-    def adjoint(self) -> '_MatrixFormat1D':
-        """Returns the conjugate transpose, including explicit factors.
-
-        Returns
-        -------
-        TTM or TRM
-            Separate matrix format; tensor views may share storage. Quantics
-            subclasses exchange input/output coordinate semantics.
-        """
-        return self.transpose().conj()
-
-
-    @property
-    def T(self) -> '_MatrixFormat1D':
-        """Matrix transpose, without reversing the chain."""
-        return self.transpose()
-
-
-    @property
-    def H(self) -> '_MatrixFormat1D':
-        """Matrix adjoint, including conjugation of bond factors."""
-        return self.adjoint()
-
+    def __matmul__(self,
+                   other: Union['_VectorFormat1D', '_MatrixFormat1D']
+                   ) -> 'TensorFormat1D':
+        """Calls :meth:`matmul` with the same operand."""
+        return self.matmul(other)
 
     def trace(self) -> torch.Tensor:
-        """Contracts the operator trace without forming the dense matrix.
+        """
+        Contracts the operator trace without forming the dense matrix.
 
         Returns
         -------
         torch.Tensor
             Trace resolved by structural batch. Every site should have matching
             input/output dimensions; global squareness alone is insufficient.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([torch.diag(torch.tensor([2., 3.]))])
+        >>> matrix.trace()
+        tensor(5.)
         """
         if self._in_dim != self._out_dim:
-            raise ValueError('Trace requires matching local input/output dimensions')
+            raise ValueError(
+                'Trace requires matching local input/output dimensions')
+
         matrices = [core.diagonal(dim1=-3, dim2=-1).sum(-1)
                     for core in self._operator_cores()]
-        return self._contract_open_chain(matrices).diagonal(dim1=-2, dim2=-1).sum(-1)
-
-
-    def __call__(
-            self,
-            in_data: Union[EvaluationData, TensorFormat1D],
-            out_data: Optional[EvaluationData] = None,
-            n_batches: int = 1
-        ) -> Union[torch.Tensor, TensorFormat1D]:
-        """Evaluates matrix entries or applies the operator to product data.
-
-        Parameters
-        ----------
-        in_data : torch.Tensor or sequence of torch.Tensor
-            Integer configurations of shape ``(*data_batch, n_sites)``, or embedded
-            vectors of shape ``(*data_batch, n_sites, in_dim)`` for uniform
-            dimensions. For heterogeneous dimensions, pass one tensor per site.
-            Each site tensor has shape ``(*data_batch,)`` for indices or
-            ``(*data_batch, in_dim[site])`` for embeddings.
-        out_data : torch.Tensor or sequence of torch.Tensor, optional
-            Output configurations or embeddings in the same layouts as ``in_data``,
-            using ``out_dim`` instead of ``in_dim``. Both data batch shapes should
-            match. If omitted, returns the vector produced by :meth:`apply`.
-        n_batches : int
-            Number of leading data batch axes. These are independent of
-            structural batch axes stored in the cores.
-
-        Returns
-        -------
-        torch.Tensor or TensorFormat1D
-            With ``out_data``, values have shape ``(*core_batch, *data_batch)``.
-            Embedded contractions use supplied vectors directly, without
-            implicit conjugation.
-        """
-        if out_data is None:
-            return self.apply(in_data, n_batches=n_batches)
-        return self.evaluate(in_data, out_data, n_batches=n_batches)
-
-
-    def _entry_matrices(
-            self,
-            in_data_by_site: Sequence[torch.Tensor],
-            out_data_by_site: Sequence[torch.Tensor],
-            in_discrete: bool,
-            out_discrete: bool,
-            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
-        """Builds local matrices for paired matrix-entry evaluation."""
-        core_batch_size = int(torch.Size(self._batch_shape).numel())
-        data_batch_size = int(torch.Size(data_batch_shape).numel())
-        matrices = []
-
-        for core, in_site_data, out_site_data in zip(
-                self._operator_cores(), in_data_by_site, out_data_by_site):
-            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
-            core = core.reshape(
-                core_batch_size, left_rank, in_dim, right_rank, out_dim)
-
-            if in_discrete and out_discrete:
-                in_indices = in_site_data.reshape(data_batch_size).to(torch.long)
-                out_indices = out_site_data.reshape(data_batch_size).to(torch.long)
-                fused = in_indices * out_dim + out_indices
-                matrix = core.permute(0, 1, 3, 2, 4).reshape(
-                    core_batch_size, left_rank, right_rank, in_dim * out_dim)
-                matrix = matrix[..., fused].permute(0, 3, 1, 2)
-            elif in_discrete:
-                indices = in_site_data.reshape(data_batch_size).to(torch.long)
-                vectors = out_site_data.reshape(data_batch_size, out_dim)
-                selected = core.index_select(2, indices).to(dtype=vectors.dtype)
-                matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
-            elif out_discrete:
-                indices = out_site_data.reshape(data_batch_size).to(torch.long)
-                vectors = in_site_data.reshape(data_batch_size, in_dim)
-                selected = core.index_select(4, indices).to(dtype=vectors.dtype)
-                matrix = torch.einsum('clird,di->cdlr', selected, vectors)
-            else:
-                in_vectors = in_site_data.reshape(data_batch_size, in_dim)
-                out_vectors = out_site_data.reshape(data_batch_size, out_dim)
-                dtype = torch.promote_types(in_vectors.dtype, out_vectors.dtype)
-                matrix = torch.einsum(
-                    'di,do,cliro->cdlr', in_vectors.to(dtype=dtype),
-                    out_vectors.to(dtype=dtype), core.to(dtype=dtype))
-
-            matrices.append(matrix.reshape(
-                *self._batch_shape,
-                *data_batch_shape,
-                left_rank,
-                right_rank))
-
-        return matrices
-
-
-    def evaluate(self,
-                 in_data: EvaluationData,
-                 out_data: EvaluationData,
-                 n_batches: int = 1) -> torch.Tensor:
-        """Evaluates paired matrix configurations or embedded vectors.
-
-        Parameters
-        ----------
-        in_data : torch.Tensor or sequence of torch.Tensor
-            Integer configurations of shape ``(*data_batch, n_sites)``, or embedded
-            vectors of shape ``(*data_batch, n_sites, in_dim)`` for uniform
-            dimensions. For heterogeneous dimensions, pass one tensor per site.
-            Each site tensor has shape ``(*data_batch,)`` for indices or
-            ``(*data_batch, in_dim[site])`` for embeddings.
-        out_data : torch.Tensor or sequence of torch.Tensor
-            Output configurations or embeddings in the same layouts as ``in_data``,
-            using ``out_dim`` instead of ``in_dim``. Both data batch shapes should
-            match.
-        n_batches : int
-            Number of leading data batch axes. These are independent of
-            structural batch axes stored in the cores.
-
-        Returns
-        -------
-        torch.Tensor
-            Values with shape ``(*core_batch, *data_batch)``. Embedded contractions
-            use supplied vectors directly, without implicit conjugation.
-        """
-        in_data_by_site, in_discrete, data_batch_shape = self._normalize_data(
-            in_data, self._in_dim, self._same_in_dim, n_batches)
-        out_data_by_site, out_discrete, out_batch_shape = self._normalize_data(
-            out_data, self._out_dim, self._same_out_dim, n_batches)
-        if out_batch_shape != data_batch_shape:
-            raise ValueError(
-                'Input and output data should have the same batch shape')
-
-        matrices = self._entry_matrices(
-            in_data_by_site,
-            out_data_by_site,
-            in_discrete,
-            out_discrete,
-            data_batch_shape)
-        return self._contract_local_matrices(matrices)
-
+        return self._contract_open_chain(matrices).diagonal(
+            dim1=-2, dim2=-1).sum(-1)
 
     def apply(self,
               data: Union[EvaluationData, TensorFormat1D],
               n_batches: int = 1) -> TensorFormat1D:
-        """Applies the operator to product data or another format.
+        """
+        Applies the operator to product data or another format.
 
         Parameters
         ----------
         data : torch.Tensor, sequence of torch.Tensor or TensorFormat1D
-            Product input data accepted by vector :meth:`evaluate`, or a TT/TR vector
-            or TTM/TRM matrix. With a vector, contracts ``in_dim``; with a matrix,
+            Integer configurations or embedded feature vectors in the same
+            layouts as ``in_data`` in :meth:`evaluate`, or a
+            :class:`~tensorkrowch.formats.TT` / :class:`~tensorkrowch.formats.TR`
+            column or :class:`~tensorkrowch.formats.TTM` /
+            :class:`~tensorkrowch.formats.TRM` matrix.
+            With a vector, contracts ``in_dim``; with a matrix,
             contracts ``self.in_dim`` with ``data.out_dim``.
         n_batches : int
             Number of leading data batch axes. These are independent of
@@ -2917,7 +2921,7 @@ class _MatrixFormat1D(TensorFormat1D):
 
         Returns
         -------
-        TensorFormat1D
+        :class:`~tensorkrowch.formats.TensorFormat1D`
             Vector or matrix format, according to the operand. Cyclic if either
             operand is cyclic. Product data become structural batches in the
             returned vector; applying a global dense vector does not
@@ -2927,33 +2931,36 @@ class _MatrixFormat1D(TensorFormat1D):
         --------
         >>> operator = tk.formats.TTM([torch.eye(2)])
         >>> vector = tk.formats.TT([torch.tensor([2., 3.])])
-        >>> torch.equal((operator @ vector).contract_dense(), vector.contract_dense())
-        True
+        >>> operator.apply(vector).contract_dense()
+        tensor([2., 3.])
+
         >>> operator.apply(torch.tensor([[0], [1]])).contract_dense().tolist()
         [[1.0, 0.0], [0.0, 1.0]]
-        >>> torch.equal((operator @ operator).contract_dense(), torch.eye(2))
-        True
+
+        >>> embeddings = torch.tensor([[[2., 3.]]])
+        >>> operator.apply(embeddings).contract_dense()
+        tensor([[2., 3.]])
         """
         if isinstance(data, TensorFormat1D):
             return self @ data
-        site_data, discrete, data_batch_shape = self._normalize_data(
-            data, self._in_dim, self._same_in_dim, n_batches)
-        core_batch_size = int(torch.Size(self._batch_shape).numel())
-        data_batch_size = int(torch.Size(data_batch_shape).numel())
-        output_cores = []
 
+        site_data, discrete, data_batch_shape = self._prepare_data(
+            data, self._in_dim, self._same_in_dim, n_batches)
+
+        output_cores = []
         for core, site_value in zip(self._operator_cores(), site_data):
             left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
-            core = core.reshape(
-                core_batch_size, left_rank, in_dim, right_rank, out_dim)
+            core = core.reshape(-1, left_rank, in_dim, right_rank, out_dim)
+
             if discrete:
-                indices = site_value.reshape(data_batch_size).to(torch.long)
+                indices = site_value.reshape(-1).to(torch.long)
                 output_core = core.index_select(2, indices)
                 output_core = output_core.permute(0, 2, 1, 4, 3)
             else:
-                vectors = site_value.reshape(data_batch_size, in_dim)
+                vectors = site_value.reshape(-1, in_dim)
                 output_core = torch.einsum(
                     'di,cliro->cdlor', vectors, core.to(dtype=vectors.dtype))
+
             output_cores.append(output_core.reshape(
                 *self._batch_shape,
                 *data_batch_shape,
@@ -2965,27 +2972,153 @@ class _MatrixFormat1D(TensorFormat1D):
             output_cores, self._out_dim, None,
             self._n_batches + n_batches, self._cyclic, product=True)
 
+    def _local_matrices(
+            self,
+            in_data_by_site: Sequence[torch.Tensor],
+            out_data_by_site: Sequence[torch.Tensor],
+            in_discrete: bool,
+            out_discrete: bool,
+            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
+        """Builds local matrices for paired matrix-entry evaluation."""
+        matrices = []
+        for core, in_site_data, out_site_data in zip(
+                self._operator_cores(), in_data_by_site, out_data_by_site):
+            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
+            core = core.reshape(-1, left_rank, in_dim, right_rank, out_dim)
 
-    def to_mpo(self, parameterized: bool = False, **kwargs) -> 'MPO':
-        """Builds an open or periodic MPO from effective cores.
+            if in_discrete and out_discrete:
+                in_indices = in_site_data.reshape(-1).to(torch.long)
+                out_indices = out_site_data.reshape(-1).to(torch.long)
+                fused = in_indices * out_dim + out_indices
+                matrix = core.permute(0, 1, 3, 2, 4).reshape(
+                    -1, left_rank, right_rank, in_dim * out_dim)
+                matrix = matrix[..., fused].permute(0, 3, 1, 2)
+            elif in_discrete:
+                indices = in_site_data.reshape(-1).to(torch.long)
+                vectors = out_site_data.reshape(-1, out_dim)
+                selected = core.index_select(2, indices).to(dtype=vectors.dtype)
+                matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
+            elif out_discrete:
+                indices = out_site_data.reshape(-1).to(torch.long)
+                vectors = in_site_data.reshape(-1, in_dim)
+                selected = core.index_select(4, indices).to(dtype=vectors.dtype)
+                matrix = torch.einsum('clird,di->cdlr', selected, vectors)
+            else:
+                in_vectors = in_site_data.reshape(-1, in_dim)
+                out_vectors = out_site_data.reshape(-1, out_dim)
+                dtype = torch.promote_types(in_vectors.dtype, out_vectors.dtype)
+                matrix = torch.einsum('di,do,cliro->cdlr',
+                                      in_vectors.to(dtype=dtype),
+                                      out_vectors.to(dtype=dtype),
+                                      core.to(dtype=dtype))
 
-        MPO conversion requires unbatched cores. The model may share effective
-        tensor storage with the format.
+            matrices.append(matrix.reshape(*self._batch_shape,
+                                           *data_batch_shape,
+                                           left_rank,
+                                           right_rank))
+        return matrices
+
+    def evaluate(self,
+                 in_data: EvaluationData,
+                 out_data: EvaluationData,
+                 n_batches: int = 1) -> torch.Tensor:
+        """
+        Evaluates paired integer configurations or local embedded feature
+        vectors.
+
+        Parameters
+        ----------
+        in_data : torch.Tensor or sequence of torch.Tensor
+            Integer configurations of shape ``(*data_batch, n_sites)``, or
+            embedded feature vectors of shape ``(*data_batch, n_sites, in_dim)``
+            for uniform dimensions. For heterogeneous dimensions, pass one
+            tensor per site. Each site tensor has shape ``(*data_batch,)`` for
+            indices or ``(*data_batch, in_dim[site])`` for embeddings.
+        out_data : torch.Tensor or sequence of torch.Tensor
+            Output configurations or embeddings in the same layouts as
+            ``in_data``, using ``out_dim`` instead of ``in_dim``. Both data
+            batch shapes should match.
+        n_batches : int
+            Number of leading data batch axes. These are independent of
+            structural batch axes stored in the cores.
+
+        Returns
+        -------
+        torch.Tensor
+            Values with shape ``(*core_batch, *data_batch)``. Structural
+            batches and data batches remain independent. Embedded contractions
+            use supplied vectors directly, without implicit conjugation.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([torch.diag(torch.tensor([2., 3.]))])
+        >>> indices = torch.tensor([[0], [1]])
+        >>> matrix.evaluate(indices, indices).tolist()
+        [2.0, 3.0]
+        >>> embeddings = torch.ones(1, 1, 2)
+        >>> matrix.evaluate(embeddings, embeddings).tolist()
+        [5.0]
+        """
+        in_data_by_site, in_discrete, data_batch_shape = self._prepare_data(
+            in_data, self._in_dim, self._same_in_dim, n_batches)
+        out_data_by_site, out_discrete, out_batch_shape = self._prepare_data(
+            out_data, self._out_dim, self._same_out_dim, n_batches)
+        if out_batch_shape != data_batch_shape:
+            raise ValueError(
+                'Input and output data should have the same batch shape')
+
+        matrices = self._local_matrices(
+            in_data_by_site, out_data_by_site,
+            in_discrete, out_discrete, data_batch_shape)
+        return self._contract_local_matrices(matrices)
+
+    def __call__(self,
+                 in_data: Union[EvaluationData, TensorFormat1D],
+                 out_data: Optional[EvaluationData] = None,
+                 n_batches: int = 1
+                 ) -> Union[torch.Tensor, TensorFormat1D]:
+        """
+        Calls :meth:`evaluate` with paired inputs, or :meth:`apply` when
+        ``out_data`` is omitted, using the same input conventions.
+        """
+        if out_data is None:
+            return self.apply(in_data, n_batches=n_batches)
+        return self.evaluate(in_data, out_data, n_batches=n_batches)
+
+    def to_mpo(self,
+               parameterized: bool = False,
+               **kwargs) -> 'MPO':
+        """
+        Builds an open or periodic :class:`~tensorkrowch.models.MPO`
+        from effective cores.
+
+        :class:`~tensorkrowch.formats.TTM` produces open boundaries (``'obc'``);
+        :class:`~tensorkrowch.formats.TRM` produces periodic boundaries
+        (``'pbc'``). Batched matrices are not supported by
+        :class:`~tensorkrowch.models.MPO`.
 
         Parameters
         ----------
         parameterized : bool
-            Whether the constructed model uses trainable parameter nodes. Inputs
-            are not detached implicitly.
+            Whether the constructed model uses trainable parameter nodes.
+            Inputs are not detached implicitly.
         **kwargs : keyword arguments
             Additional model constructor options. Tensor cores and boundary are
             supplied by the adapter.
 
         Returns
         -------
-        MPO
+        :class:`~tensorkrowch.models.MPO`
             New graph model. Stored factors are materialized in temporary
             tensors; the source format is unchanged.
+
+        Examples
+        --------
+        >>> matrix = tk.formats.TTM([torch.eye(2)])
+        >>> model = matrix.to_mpo()
+        >>> restored = tk.formats.TTM.from_mpo(model)
+        >>> torch.allclose(restored.contract_dense(), matrix.contract_dense())
+        True
         """
         from tensorkrowch.models import MPO
 
@@ -2993,27 +3126,32 @@ class _MatrixFormat1D(TensorFormat1D):
             raise ValueError('Batched MPO model cores are not supported')
         if not isinstance(parameterized, bool):
             raise TypeError('`parameterized` should be bool type')
+
         cores = _restore_cores(self._effective_cores(), self._in_dim,
                                self._out_dim, self._n_batches, self._cyclic)
         return MPO(tensors=cores, parameterized=parameterized, **kwargs)
 
-
     @classmethod
     def from_mpo(cls, model: 'MPO', **kwargs) -> '_MatrixFormat1D':
-        """Collects effective open or periodic MPO tensors.
+        """
+        Collects effective open or periodic :class:`~tensorkrowch.models.MPO`
+        tensors.
 
         Parameters
         ----------
         model : MPO
-            Source model with matching boundaries. Public tensors include boundary
-            contractions where applicable.
+            Source model: :class:`~tensorkrowch.formats.TTM` requires open
+            boundaries (``'obc'``), and :class:`~tensorkrowch.formats.TRM`
+            requires periodic boundaries (``'pbc'``). For open models,
+            ``model.tensors`` already includes contractions with the end nodes.
         **kwargs : keyword arguments
             Additional options for the concrete format constructor, such as
-            Quantics metadata on a subclass.
+            :class:`~tensorkrowch.formats.QTTM` or
+            :class:`~tensorkrowch.formats.QTRM` metadata on a subclass.
 
         Returns
         -------
-        TTM or TRM
+        :class:`~tensorkrowch.formats.TTM` or :class:`~tensorkrowch.formats.TRM`
             Format sharing the effective tensor storage. Graph nodes and fit
             metrics are not retained.
         """
@@ -3024,49 +3162,56 @@ class _MatrixFormat1D(TensorFormat1D):
         boundary = 'pbc' if cls._cyclic else 'obc'
         if model.boundary != boundary:
             raise ValueError(f'This adapter requires {boundary} boundaries')
+
         return cls(model.tensors, **kwargs)
 
 
 class _OpenFormat1D(TensorFormat1D):
     """Canonical forms and contractions shared by open chains."""
 
-    def _contract_local_matrices(self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         """Contracts selected matrices along an open chain."""
         return self._contract_open_chain(matrices).squeeze(-1).squeeze(-1)
-
 
     def canonicalize_vidal(self,
                            mode: str = 'implicit',
                            inverse_positions: Optional[Sequence[int]] = None,
                            remaining_mode: str = 'implicit',
                            inverse_cutoff: float = 0.0) -> 'TensorFormat1D':
-        """Builds or redistributes an open-chain Vidal gauge in-place.
+        """
+        Builds or redistributes an open-chain Vidal gauge in-place.
 
-        Only TT/TTM admit this global Schmidt representation. Invalidated gauges
-        are recomputed; valid gauges can be redistributed without another SVD.
-        No truncation is performed to manufacture an inverse.
+        Only :class:`TT` and :class:`TTM` admit this global Schmidt
+        representation. Invalidated gauges are recomputed; valid gauges can
+        be redistributed without another SVD. No truncation is performed to
+        manufacture an inverse.
 
         Parameters
         ----------
-        mode : {"implicit", "explicit", "inverse"}
-            Absorbs spectrum powers ``(0.5, 0.5)``, ``(0, 0)``, or ``(1, 1)`` into
-            neighboring cores, respectively. The remaining diagonal factor has
-            power ``1 - left_power - right_power``.
+        mode : {"implicit", "explicit", "inverse", "left", "right"}
+            Absorbs spectrum powers ``(0.5, 0.5)``, ``(0, 0)``, ``(1, 1)``,
+            ``(1, 0)`` or ``(0, 1)`` into the left/right neighboring cores,
+            respectively. The remaining diagonal factor has power
+            ``1 - left_power - right_power``.
         inverse_positions : sequence of int, optional
             Distinct virtual bonds to use in inverse form. Cannot be combined
             with ``mode="inverse"``. When supplied, ``remaining_mode`` controls
             every other bond.
-        remaining_mode : {"implicit", "explicit"}
+        remaining_mode : {"implicit", "explicit", "left", "right"}
             Distribution for bonds not selected by ``inverse_positions``.
         inverse_cutoff : float
-            Finite non-negative threshold. Positive spectrum values used in an
-            inverse should exceed it; exact zeros use the pseudoinverse and
-            remain zero. Values are not truncated to create an inverse.
+            Finite non-negative threshold for spectra used in inverse form.
+            Positive values at or below this threshold raise ``ValueError``;
+            call :meth:`rounding` first to truncate small values, then retry.
+            Exact zeros use the pseudoinverse and remain zero. This method
+            does not truncate values to create an inverse.
 
         Returns
         -------
         TensorFormat1D
-            The current format with a valid VidalGauge.
+            The current format with a valid
+            :class:`~tensorkrowch.formats.VidalGauge`.
 
         Examples
         --------
@@ -3080,30 +3225,38 @@ class _OpenFormat1D(TensorFormat1D):
         >>> torch.allclose(format.contract_dense(), torch.eye(2))
         True
         """
-        modes = {'explicit': (0, 0), 'implicit': (0.5, 0.5), 'inverse': (1, 1)}
-        if mode not in modes or remaining_mode not in ('explicit', 'implicit'):
-            raise ValueError('Invalid Vidal mode or remaining_mode')
-        if isinstance(inverse_cutoff, bool) or not isinstance(inverse_cutoff, Real):
+        modes = {'explicit': (0, 0),
+                 'implicit': (0.5, 0.5),
+                 'inverse': (1, 1),
+                 'left': (1, 0),
+                 'right': (0, 1)}
+        if mode not in modes or remaining_mode == 'inverse':
+            raise ValueError('Invalid Vidal mode or `remaining_mode`')
+        if isinstance(inverse_cutoff, bool) or \
+                not isinstance(inverse_cutoff, Real):
             raise TypeError('`inverse_cutoff` should be a real number')
-        if not isfinite(inverse_cutoff) or inverse_cutoff < 0:
-            raise ValueError('`inverse_cutoff` should be finite and non-negative')
-        count = self.n_sites - 1
+        if not isfinite(inverse_cutoff) or (inverse_cutoff < 0):
+            raise ValueError(
+                '`inverse_cutoff` should be finite and non-negative')
+
+        n_bonds = self.n_sites - 1
         if inverse_positions is None:
-            positions = set(range(count)) if mode == 'inverse' else set()
-            powers = [modes[mode]] * count
+            positions = range(n_bonds) if mode == 'inverse' else ()
+            powers = [modes[mode]] * n_bonds
         else:
-            positions_list = list(inverse_positions)
+            positions = list(inverse_positions)
             if mode == 'inverse':
-                raise ValueError('Select either mode="inverse" or inverse_positions')
-            if any(isinstance(site, bool) or not isinstance(site, int)
-                   for site in positions_list):
+                raise ValueError(
+                    'Select either mode="inverse" or `inverse_positions`')
+            if any(isinstance(bond, bool) or not isinstance(bond, int)
+                   for bond in positions):
                 raise TypeError('Inverse bond positions should be integers')
-            if len(set(positions_list)) != len(positions_list) or any(
-                    site < 0 or site >= count for site in positions_list):
-                raise ValueError('Inverse bond positions should be distinct valid bonds')
-            positions = set(positions_list)
-            powers = [modes['inverse' if site in positions else remaining_mode]
-                      for site in range(count)]
+            if (len(set(positions)) != len(positions)) or any(
+                    (bond < 0) or (bond >= n_bonds) for bond in positions):
+                raise ValueError(
+                    'Inverse bond positions should be distinct valid bonds')
+            powers = [modes['inverse' if bond in positions else remaining_mode]
+                      for bond in range(n_bonds)]
 
         # Reuse stored spectra when the Vidal representation is still valid.
         if isinstance(self._bonds, VidalGauge) and self._bonds._valid:
@@ -3113,43 +3266,57 @@ class _OpenFormat1D(TensorFormat1D):
         else:
             cores = _canonicalize_cores(self._effective_cores(), 0, False)
             spectra = []
-            batch = self._batch_shape
+            batch_shape = self._batch_shape
 
             # Recover the spectra and cores of the explicit representation.
-            for site in range(count):
-                core = cores[site]
-                u, s, vh = truncated_svd(core.reshape(*batch, -1, core.shape[-1]))
-                cores[site] = u.reshape(*batch, core.shape[-3], core.shape[-2], s.shape[-1])
-                if site:
+            for bond in range(n_bonds):
+                core = cores[bond]
+                u, s, vh = truncated_svd(
+                    core.reshape(*batch_shape, -1, core.shape[-1]))
+                cores[bond] = u.reshape(
+                    *batch_shape, core.shape[-3], core.shape[-2], s.shape[-1])
+
+                if bond:
                     previous = spectra[-1]
-                    safe = torch.where(previous > 0, previous, torch.ones_like(previous))
+                    safe = torch.where(previous > 0, previous,
+                                       torch.ones_like(previous))
                     inverse = torch.where(previous > 0, safe.reciprocal(),
                                           torch.zeros_like(previous))
-                    cores[site] = cores[site] * inverse[..., :, None, None]
+                    cores[bond] = inverse[..., :, None, None] * cores[bond]
+
                 spectra.append(s)
-                cores[site + 1] = torch.einsum('...ab,...bpr->...apr',
-                                               s.unsqueeze(-1) * vh, cores[site + 1])
-            if count:
+                cores[bond + 1] = torch.einsum('...ab,...bpr->...apr',
+                                               s.unsqueeze(-1) * vh,
+                                               cores[bond + 1])
+            if n_bonds:
                 last = spectra[-1]
                 safe = torch.where(last > 0, last, torch.ones_like(last))
-                inverse = torch.where(last > 0, safe.reciprocal(), torch.zeros_like(last))
-                cores[-1] = cores[-1] * inverse[..., :, None, None]
-            old_powers = [(0, 0)] * count
-        for site in positions:
-            spectrum = spectra[site]
+                inverse = torch.where(last > 0, safe.reciprocal(),
+                                      torch.zeros_like(last))
+                cores[-1] = inverse[..., :, None, None] * cores[-1]
+            old_powers = [(0, 0)] * n_bonds
+
+        for bond in positions:
+            spectrum = spectra[bond]
             if torch.any((spectrum > 0) & (spectrum <= inverse_cutoff)):
                 raise ValueError(
-                    f'Inverse Vidal bond {site} has values at or below inverse_cutoff')
+                    f'Inverse Vidal bond {bond} has values at or below '
+                    '`inverse_cutoff`')
+
         cores, factors = _redistribute(cores, spectra, old_powers, powers)
-        self._set_standard_cores(cores, factors, spectra=spectra, powers=powers)
+        self._set_standard_cores(
+            cores, factors, spectra=spectra, powers=powers)
         return self
 
+    def redistribute_vidal(self,
+                           bond: int,
+                           mode: str = 'implicit',
+                           inverse_cutoff: float = 0.0) -> 'TensorFormat1D':
+        """
+        Redistributes one valid Vidal spectrum without another SVD.
 
-    def redistribute_bond(self, bond: int, mode: str = 'implicit',
-                          inverse_cutoff: float = 0.0) -> 'TensorFormat1D':
-        """Redistributes one valid Vidal spectrum without another SVD.
-
-        Requires a valid stored Vidal gauge. Manual edits invalidate it;
+        Requires a valid stored :class:`~tensorkrowch.formats.VidalGauge`.
+        Manual edits invalidate it;
         recompute :meth:`canonicalize_vidal` before redistributing spectra.
 
         Parameters
@@ -3169,32 +3336,54 @@ class _OpenFormat1D(TensorFormat1D):
         -------
         TensorFormat1D
             The current format. Other bonds retain their distribution.
+
+        Examples
+        --------
+        >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
+        >>> _ = format.canonicalize_vidal()
+        >>> _ = format.redistribute_vidal(0, mode='left')
+        >>> format.bonds.powers
+        [(1, 0)]
+        >>> format.contract_dense()
+        tensor([[1., 0.],
+                [0., 1.]])
         """
         if isinstance(bond, bool) or not isinstance(bond, int):
             raise TypeError('`bond` should be int type')
         if not isinstance(self._bonds, VidalGauge) or not self._bonds._valid:
-            raise ValueError('Bond redistribution requires valid stored Vidal spectra')
+            raise ValueError(
+                'Bond redistribution requires valid stored Vidal spectra')
         if not 0 <= bond < len(self._bonds.spectra):
             raise ValueError('`bond` should select a valid virtual bond')
-        modes = {'explicit': (0, 0), 'implicit': (0.5, 0.5),
-                 'inverse': (1, 1), 'left': (1, 0), 'right': (0, 1)}
+
+        modes = {'explicit': (0, 0),
+                 'implicit': (0.5, 0.5),
+                 'inverse': (1, 1),
+                 'left': (1, 0),
+                 'right': (0, 1)}
         if mode not in modes:
             raise ValueError('Invalid Vidal bond distribution mode')
-        if isinstance(inverse_cutoff, bool) or not isinstance(inverse_cutoff, Real):
+        if isinstance(inverse_cutoff, bool) or \
+                not isinstance(inverse_cutoff, Real):
             raise TypeError('`inverse_cutoff` should be a real number')
-        if not isfinite(inverse_cutoff) or inverse_cutoff < 0:
-            raise ValueError('`inverse_cutoff` should be finite and non-negative')
+        if not isfinite(inverse_cutoff) or (inverse_cutoff < 0):
+            raise ValueError(
+                '`inverse_cutoff` should be finite and non-negative')
         if mode == 'inverse':
             spectrum = self._bonds.spectra[bond]
             if torch.any((spectrum > 0) & (spectrum <= inverse_cutoff)):
-                raise ValueError(f'Bond {bond} has values at or below inverse_cutoff')
+                raise ValueError(
+                    f'Bond {bond} has values at or below `inverse_cutoff`')
+
         powers = list(self._bonds.powers)
         powers[bond] = modes[mode]
-        cores, factors = _redistribute(
-            self._standard_cores(), self._bonds.spectra, self._bonds.powers, powers)
-        self._set_standard_cores(cores, factors, spectra=self._bonds.spectra, powers=powers)
+        cores, factors = _redistribute(self._standard_cores(),
+                                       self._bonds.spectra,
+                                       self._bonds.powers,
+                                       powers)
+        self._set_standard_cores(
+            cores, factors, spectra=self._bonds.spectra, powers=powers)
         return self
-
 
     def canonicalize_minimal(self,
                              max_iter: int = 200,
@@ -3204,7 +3393,16 @@ class _OpenFormat1D(TensorFormat1D):
                              return_info: bool = False) -> Union[
             'TensorFormat1D',
             Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
-        """Balances an open chain using implicit Vidal form.
+        """
+        Computes the minimal canonical form of an open chain in-place.
+
+        Uses implicit Vidal form through :meth:`canonicalize_vidal`, without
+        iterative optimization. At each bond, the Gram matrices of the
+        contracted left and right subchains agree. This condition concerns
+        whole subchains, not just neighboring cores, as described in Section
+        3.3 of `The minimal canonical form of a tensor network
+        <https://arxiv.org/pdf/2209.14358>`_. The represented tensor is
+        preserved.
 
         Parameters
         ----------
@@ -3222,7 +3420,16 @@ class _OpenFormat1D(TensorFormat1D):
         -------
         TensorFormat1D or tuple[TensorFormat1D, MinimalCanonicalInfo]
             The current format, optionally reporting zero iterations and
-            convergence of the direct Vidal construction.
+            convergence of the direct Vidal construction. ``gram_imbalance``
+            is ``None`` because that diagnostic compares neighboring cores,
+            rather than the subchains used by the open-chain condition.
+
+        Examples
+        --------
+        >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
+        >>> _, info = format.canonicalize_minimal(return_info=True)
+        >>> info.iterations, info.converged
+        (0, True)
         """
         _validate_minimal_options(max_iter, lr, tol, return_info)
         self.canonicalize_vidal('implicit')
@@ -3236,13 +3443,15 @@ class _CyclicFormat1D(TensorFormat1D):
 
     _cyclic = True
 
-    def _contract_local_matrices(self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
+    def _contract_local_matrices(
+            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
         """Contracts selected matrices and closes the ring."""
-        return self._contract_open_chain(matrices).diagonal(dim1=-2, dim2=-1).sum(-1)
-
+        return self._contract_open_chain(matrices).diagonal(
+            dim1=-2, dim2=-1).sum(-1)
 
     def rotate(self, first: int = 0) -> 'TensorFormat1D':
-        """Returns a ring whose first core is the selected site.
+        """
+        Returns a ring whose first core is the selected site.
 
         Parameters
         ----------
@@ -3254,63 +3463,82 @@ class _CyclicFormat1D(TensorFormat1D):
         -------
         TR or TRM
             Rotated format sharing the original core tensors.
+
+        Examples
+        --------
+        >>> ring = tk.formats.TR([torch.ones(1, 2, 1), torch.ones(1, 3, 1)])
+        >>> rotated = ring.rotate(1)
+        >>> rotated.in_dim
+        (3, 2)
         """
         if isinstance(first, bool) or not isinstance(first, int):
             raise TypeError('`first` should be int type')
         if first < 0 or first >= self.n_sites:
             raise ValueError('`first` should select a valid site')
+
         order = [*range(first, self.n_sites), *range(first)]
         cores = self._standard_cores()
+        cores = [cores[site] for site in order]
         in_dim = tuple(self._in_dim[site] for site in order)
         out_dim = None if self._out_dim is None else tuple(
             self._out_dim[site] for site in order)
+
         result = self._new_from_standard_cores(
-            [cores[site] for site in order], in_dim, out_dim,
-            self._n_batches, True)
+            cores, in_dim, out_dim, self._n_batches, True)
         if self._bonds is not None:
             result.bonds = [self._bonds.factors[site] for site in order]
         return result
 
-
     def _to_open(self) -> 'TensorFormat1D':
         """Carries the closing rank through identity factors to an open chain."""
         cores = self._effective_cores()
-        batch = self._batch_shape
+        batch_shape = self._batch_shape
         closing = cores[0].shape[-3]
+
         if len(cores) == 1:
             result = [cores[0].diagonal(
                 dim1=-3, dim2=-1).sum(-1).unsqueeze(-2).unsqueeze(-1)]
         else:
-            first = cores[0].transpose(-3, -2).reshape(*batch, 1, cores[0].shape[-2], -1)
+            first = cores[0].transpose(-3, -2).reshape(
+                *batch_shape, 1, cores[0].shape[-2], -1)
             result = [first]
             identity = torch.eye(closing, dtype=self.dtype, device=self.device)
             for core in cores[1:-1]:
                 combined = torch.einsum('st,...aib->...saitb', identity, core)
-                result.append(combined.reshape(*batch, closing * core.shape[-3],
-                                               core.shape[-2], closing * core.shape[-1]))
+                result.append(combined.reshape(
+                    *batch_shape, closing * core.shape[-3],
+                    core.shape[-2], closing * core.shape[-1]))
             last = cores[-1].movedim(-1, -3)
-            result.append(last.reshape(*batch, closing * cores[-1].shape[-3],
+            result.append(last.reshape(*batch_shape,
+                                       closing * cores[-1].shape[-3],
                                        cores[-1].shape[-2], 1))
-        return self._new_from_standard_cores(result, self._in_dim, self._out_dim,
-                                             self._n_batches, False)
+        return self._new_from_standard_cores(
+            result, self._in_dim, self._out_dim, self._n_batches, False)
 
+    def canonicalize_minimal(
+            self,
+            max_iter: int = 200,
+            lr: float = 0.05,
+            tol: float = 1e-8,
+            *,
+            return_info: bool = False
+        ) -> Union['TensorFormat1D',
+                   Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
+        """
+        Approximates the minimal canonical form of a ring in-place.
 
-    def canonicalize_minimal(self,
-                             max_iter: int = 200,
-                             lr: float = 0.05,
-                             tol: float = 1e-8,
-                             *,
-                             return_info: bool = False) -> Union[
-            'TensorFormat1D',
-            Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
-        """Balances ring cores by optimizing their virtual gauges.
+        Uses Adam to minimize half the sum of squared core norms over virtual
+        gauges, parametrized as exponentials of Hermitian matrices. Each gauge
+        and its inverse act on neighboring cores, preserving the represented
+        tensor. At a minimum, neighboring bond Gram matrices are equal.
 
-        Ring optimization minimizes half the sum of squared core norms using
-        Hermitian exponential gauges and retains the best finite iterate. It may
-        stop without convergence and does not certify a global minimum. Batched
-        rings share one gauge per bond. Input core gradients are not accumulated
-        by gauge optimization. The objective is inspired by `The minimal
-        canonical form of a tensor network <https://arxiv.org/pdf/2209.14358>`_.
+        Returns the best finite iterate, even if optimization stops before
+        convergence. This implements the minimization objective discussed in
+        `The minimal canonical form of a tensor network
+        <https://arxiv.org/pdf/2209.14358>`_, but not its first- or second-order
+        algorithms; their convergence guarantees do not apply here.
+        Structural batches share one gauge per bond. Gauge optimization does
+        not accumulate gradients on the input cores.
 
         Parameters
         ----------
@@ -3319,8 +3547,9 @@ class _CyclicFormat1D(TensorFormat1D):
         lr : float
             Finite positive learning rate of the Adam gauge optimizer.
         tol : float
-            Finite positive stopping tolerance for the maximum absolute gauge-
-            parameter gradient.
+            Finite positive stopping tolerance for the largest absolute
+            gradient entry of the Hermitian gauge parameters. This does not
+            bound :meth:`~tensorkrowch.formats.GaugeOrbit.gram_imbalance`.
         return_info : bool
             If ``True``, returns the format together with the operation-specific
             information record.
@@ -3329,7 +3558,8 @@ class _CyclicFormat1D(TensorFormat1D):
         -------
         TensorFormat1D or tuple[TensorFormat1D, MinimalCanonicalInfo]
             The current format, optionally with iteration count, convergence
-            status and final ring Gram imbalance.
+            status and final ``gram_imbalance``. Convergence refers to the
+            parameter-gradient tolerance, not a certified global minimum.
 
         Examples
         --------
@@ -3340,61 +3570,75 @@ class _CyclicFormat1D(TensorFormat1D):
         """
         _validate_minimal_options(max_iter, lr, tol, return_info)
 
-        # Optimize gauges while keeping input-core gradients untouched.
+        # Optimize gauges on detached cores to avoid accumulating core gradients.
         orbit = TensorRingOrbit(self)
         if not all(torch.isfinite(core).all() for core in orbit.cores):
             raise ValueError('Minimal canonicalization requires finite cores')
-        detached = GaugeOrbit([core.detach() for core in orbit.cores], orbit.bonds)
-        best = [torch.eye(rank, dtype=self.dtype, device=self.device)
-                for rank in self._rank]
+
+        detached = GaugeOrbit(
+            [core.detach() for core in orbit.cores], orbit.bonds)
         scale = max(core.abs().amax().item() for core in detached.cores)
         if scale == 0:
-            info = MinimalCanonicalInfo(0, True, self._cores[0].real.new_zeros(()))
+            info = MinimalCanonicalInfo(
+                0, True, self._cores[0].real.new_zeros(()))
             return (self, info) if return_info else self
         detached.cores = tuple(core / scale for core in detached.cores)
-        best_loss = detached.objective(best).item()
+
+        best_gauge = [torch.eye(rank, dtype=self.dtype, device=self.device)
+                      for rank in self._rank]
+        best_loss = detached.objective(best_gauge).item()
         converged, iterations = False, 0
         with torch.enable_grad():
-            parameters = [torch.zeros_like(gauge, requires_grad=True) for gauge in best]
+            parameters = [torch.zeros_like(gauge, requires_grad=True)
+                          for gauge in best_gauge]
             optimizer = torch.optim.Adam(parameters, lr=lr)
+
             for _ in range(max_iter):
                 iterations += 1
                 optimizer.zero_grad()
-                gauges = [torch.matrix_exp((parameter + parameter.transpose(-2, -1).conj()) / 2)
-                          for parameter in parameters]
+
+                gauges = [torch.matrix_exp(
+                    (parameter + parameter.transpose(-2, -1).conj()) / 2)
+                    for parameter in parameters]
                 if not all(torch.isfinite(gauge).all() for gauge in gauges):
                     break
+
                 try:
                     loss = detached.objective(gauges)
                 except torch.linalg.LinAlgError:
                     break
                 if not torch.isfinite(loss):
                     break
-                value = loss.item()
-                if value < best_loss:
-                    best_loss = value
-                    best = [gauge.detach() for gauge in gauges]
+
+                loss_value = loss.item()
+                if loss_value < best_loss:
+                    best_loss = loss_value
+                    best_gauge = [gauge.detach() for gauge in gauges]
                 loss.backward()
+
                 if not all(torch.isfinite(parameter.grad).all()
                            for parameter in parameters):
                     break
+
                 if max(parameter.grad.abs().amax().item()
                        for parameter in parameters) <= tol:
                     converged = True
                     break
+
                 optimizer.step()
 
         # Apply the best finite iterate to the original cores.
-        self._set_standard_cores(orbit.apply(best))
+        self._set_standard_cores(orbit.apply(best_gauge))
         if return_info:
             info = MinimalCanonicalInfo(iterations, converged,
-                                        TensorRingOrbit(self).balance_residual())
+                                        TensorRingOrbit(self).gram_imbalance())
             return self, info
         return self
 
 
 class TT(_OpenFormat1D, _VectorFormat1D):
-    """Open tensor train represented by a sequence of cores.
+    """
+    Open tensor train represented by a sequence of cores.
 
     With leading structural batch axes B, the first and last cores have shapes
     ``(*B, input, right)`` and ``(*B, left, input)``; interiors use
@@ -3411,7 +3655,8 @@ class TT(_OpenFormat1D, _VectorFormat1D):
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
     bonds : sequence[torch.Tensor or None], optional
-        Explicit diagonal factors between cores. ``None`` uses no explicit factors.
+        Explicit diagonal factors between cores. ``None`` uses no explicit
+        factors.
     """
 
     _topology = 'tt'
@@ -3434,7 +3679,8 @@ class TT(_OpenFormat1D, _VectorFormat1D):
         rank = []
         for site, core in enumerate(self._cores):
             if tuple(core.shape[:self._n_batches]) != batch_shape:
-                raise ValueError('All TT cores should have the same batch shape')
+                raise ValueError(
+                    'All TT cores should have the same batch shape')
 
             if site == 0:
                 if core.ndim != (self._n_batches + 2):
@@ -3465,7 +3711,8 @@ class TT(_OpenFormat1D, _VectorFormat1D):
 
 
 class TR(_CyclicFormat1D, _VectorFormat1D):
-    """Tensor ring represented by a sequence of cores.
+    """
+    Tensor ring represented by a sequence of cores.
 
     Every core has shape ``(*batch, left, input, right)``. Adjacent ranks
     match, including the last-to-first closure. A one-site ring is a trace
@@ -3481,21 +3728,22 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
     bonds : sequence[torch.Tensor or None], optional
-        Explicit diagonal factors between cores. ``None`` uses no explicit factors.
+        Explicit diagonal factors between cores. ``None`` uses no explicit
+        factors.
     """
 
     _topology = 'tr'
 
-
     def to_tt(self) -> 'TT':
-        """Opens the ring exactly by carrying the closure index through all sites.
+        """
+        Opens the ring exactly by carrying the closure index through all sites.
 
         Returns
         -------
-        TT
-            Open format with the same dense tensor. The first and last ranks incorporate
-            the closure rank; intermediate cores carry an identity on that
-            index. No truncation or densification is performed.
+        :class:`TT`
+            Open format with the same dense tensor. The first and last ranks
+            incorporate the closure rank; intermediate cores carry an identity
+            on that index. No truncation or densification is performed.
 
         Examples
         --------
@@ -3505,7 +3753,6 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
         True
         """
         return self._to_open()
-
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
@@ -3521,7 +3768,8 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
                     'TR cores should have left rank, input and right rank '
                     'dimensions')
             if tuple(core.shape[:self._n_batches]) != batch_shape:
-                raise ValueError('All TR cores should have the same batch shape')
+                raise ValueError(
+                    'All TR cores should have the same batch shape')
             if site and (core.shape[-3] != rank[-1]):
                 raise ValueError('Adjacent TR ranks should match')
             in_dim.append(core.shape[-2])
@@ -3533,7 +3781,8 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
 
 
 class TTM(_OpenFormat1D, _MatrixFormat1D):
-    """Tensor train operator with local input and output dimensions.
+    """
+    Tensor train operator with local input and output dimensions.
 
     The first and last core shapes are ``(input, right, output)`` and
     ``(left, input, output)``; interiors are
@@ -3541,7 +3790,8 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
     Structural batches are currently unsupported. Tensor storage and autograd
     are retained without constructing TensorKrowch nodes or edges.
 
-    TTM currently requires ``n_batches=0``; batched operator formats use TRM.
+    TTM currently requires ``n_batches=0``; batched operator formats use
+    :class:`TRM`.
 
     Parameters
     ----------
@@ -3551,7 +3801,8 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
     n_batches : int
         Number of leading structural batch axes. Only zero is supported.
     bonds : sequence[torch.Tensor or None], optional
-        Explicit diagonal factors between cores. ``None`` uses no explicit factors.
+        Explicit diagonal factors between cores. ``None`` uses no explicit
+        factors.
     """
 
     _topology = 'ttm'
@@ -3608,7 +3859,8 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
 
 
 class TRM(_CyclicFormat1D, _MatrixFormat1D):
-    """Tensor ring operator with local input and output dimensions.
+    """
+    Tensor ring operator with local input and output dimensions.
 
     Every core has shape ``(*batch, left, input, right, output)`` and
     adjacent ranks match through the cyclic closure. Structural batches are
@@ -3624,27 +3876,35 @@ class TRM(_CyclicFormat1D, _MatrixFormat1D):
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
     bonds : sequence[torch.Tensor or None], optional
-        Explicit diagonal factors between cores. ``None`` uses no explicit factors.
+        Explicit diagonal factors between cores. ``None`` uses no explicit
+        factors.
     """
 
     _topology = 'trm'
 
-
     def to_ttm(self) -> 'TTM':
-        """Opens the ring exactly by carrying the closure index through all sites.
+        """
+        Opens the ring exactly by carrying the closure index through all sites.
 
-        A batched ring matrix cannot be converted because TTM does not support
-        structural batches.
+        A batched ring matrix cannot be converted because :class:`TTM` does
+        not support structural batches.
 
         Returns
         -------
-        TTM
-            Open format with the same dense tensor. The first and last ranks incorporate
-            the closure rank; intermediate cores carry an identity on that
-            index. No truncation or densification is performed.
+        :class:`TTM`
+            Open format with the same dense tensor. The first and last ranks
+            incorporate the closure rank; intermediate cores carry an identity
+            on that index. No truncation or densification is performed.
+
+        Examples
+        --------
+        >>> ring = tk.formats.TRM([torch.eye(2).reshape(1, 2, 1, 2)])
+        >>> matrix = ring.to_ttm()
+        >>> matrix.contract_dense()
+        tensor([[1., 0.],
+                [0., 1.]])
         """
         return self._to_open()
-
 
     def _validate_cores(
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],

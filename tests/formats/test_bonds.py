@@ -6,7 +6,7 @@ import tensorkrowch as tk
 
 
 @pytest.mark.parametrize('topology', ['tt', 'ttm'])
-@pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse'])
+@pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse', 'left', 'right'])
 def test_vidal_and_mixed_centers(make_format, topology, mode):
     format = make_format(topology, 3, dtype=torch.complex128)
     dense = format.contract_dense()
@@ -30,6 +30,17 @@ def test_vidal_and_mixed_centers(make_format, topology, mode):
                                       atol=1e-10, rtol=1e-10)
     format.canonicalize_vidal('implicit').canonicalize_vidal('explicit')
     assert torch.allclose(format.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('remaining_mode,powers', [
+    ('explicit', (0, 0)), ('left', (1, 0)), ('right', (0, 1)),
+])
+def test_mixed_inverse_bonds_with_directional_modes(make_format, remaining_mode, powers):
+    format = make_format('tt', 4)
+    dense = format.contract_dense()
+    format.canonicalize_vidal(inverse_positions=[1], remaining_mode=remaining_mode)
+    assert format.bonds.powers == [powers, (1, 1), powers]
+    assert torch.allclose(format.materialize_bonds(orth_center=2).contract_dense(), dense)
 
 
 def test_mixed_inverse_bonds_and_zero(make_format):
@@ -62,10 +73,10 @@ def test_local_redistribution_retains_other_interfaces(make_format):
     second = format.bonds.powers[1]
     for mode, powers in [('inverse', (1, 1)), ('explicit', (0, 0)),
                          ('left', (1, 0)), ('right', (0, 1))]:
-        format.redistribute_bond(0, mode)
+        format.redistribute_vidal(0, mode)
         assert format.bonds.powers == [powers, second]
         assert torch.allclose(format.contract_dense(), expected)
     with pytest.raises(ValueError):
-        format.redistribute_bond(0, 'unknown')
+        format.redistribute_vidal(0, 'unknown')
     with pytest.raises(ValueError):
-        format.redistribute_bond(0, 'inverse', inverse_cutoff=1e20)
+        format.redistribute_vidal(0, 'inverse', inverse_cutoff=1e20)

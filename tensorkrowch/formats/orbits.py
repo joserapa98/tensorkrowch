@@ -29,13 +29,13 @@ class MinimalCanonicalInfo:
     converged : bool
         Whether the ring optimizer met its gradient tolerance; ``True`` for
         TT/TTM.
-    balance_residual : torch.Tensor or None
+    gram_imbalance : torch.Tensor or None
         Largest final ring Gram imbalance; ``None`` for TT/TTM.
     """
 
     iterations: int  # Number of optimization iterations executed
     converged: bool  # Whether the gauge gradient met the stopping tolerance
-    balance_residual: Optional[torch.Tensor]  # Final Gram imbalance for rings
+    gram_imbalance: Optional[torch.Tensor]  # Final Gram imbalance for rings
 
 
 class GaugeOrbit:
@@ -173,9 +173,9 @@ class GaugeOrbit:
         """
         return sum(core.abs().square().sum() / 2 for core in self.apply(gauges))
 
-    def balance_residual(self) -> torch.Tensor:
+    def gram_imbalance(self) -> torch.Tensor:
         r"""
-        Measures how closely the cores satisfy the minimal canonical condition.
+        Measures the largest Gram-matrix imbalance across the bonds.
 
         All axes except the selected bond axis are contracted with the
         conjugate core on each side, leaving a matrix on that bond.
@@ -193,16 +193,20 @@ class GaugeOrbit:
         being in minimal canonical form. Structural batch axes are summed
         in these contractions, so the condition concerns the total objective.
 
+        This method compares individual cores. The open-chain minimal
+        canonical condition instead compares contracted left/right subchains;
+        its implicit Vidal representation need not have zero local imbalance.
+
         Returns
         -------
         torch.Tensor
-            Largest absolute imbalance across the bonds. This is not a
+            Largest absolute Gram-matrix imbalance across the bonds. This is not a
             relative convergence tolerance or a reconstruction error.
         """
         if not self.bonds:
             return self.cores[0].real.new_zeros(())
 
-        residuals = []
+        imbalances = []
         for left_site, left_axis, right_site, right_axis in self.bonds:
             left_core, right_core = self.cores[left_site], self.cores[right_site]
 
@@ -214,9 +218,9 @@ class GaugeOrbit:
             left_gram = left_matrix.transpose(-2, -1).conj() @ left_matrix
             right_gram = right_matrix @ right_matrix.transpose(-2, -1).conj()
 
-            residuals.append((left_gram - right_gram).norm())
+            imbalances.append((left_gram - right_gram).norm())
 
-        return torch.stack(residuals).amax()
+        return torch.stack(imbalances).amax()
 
 
 class TensorRingOrbit(GaugeOrbit):

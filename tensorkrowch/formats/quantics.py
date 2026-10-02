@@ -282,7 +282,7 @@ class _QuanticsVector(_QuanticsFormat):
                            other: _VectorFormat1D,
                            n_batches: int,
                            cyclic: bool) -> Union['QTTM', 'QTRM']:
-        """Builds an operator with the row's inputs and this ket's outputs."""
+        """Builds an operator with the row's inputs and this column's outputs."""
         if any(format.digit_positions != tuple(range(format.n_sites))
                for format in (self, other)):
             raise ValueError('Quantics outer products require only digit sites')

@@ -103,7 +103,7 @@ def test_result_parity(make_format, topology, n_sites, dtype):
                               result.apply(inputs).contract_dense())
 
 
-@pytest.mark.parametrize('topology', ['tt', 'tr', 'trm'])
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
 def test_independent_batches(make_format, topology):
     format = make_format(topology, n_batches=2)
     inputs = torch.zeros(2, format.n_sites, dtype=torch.long)
@@ -179,8 +179,10 @@ def test_invalid_construction_and_data(make_format):
         tk.formats.TT([1])
     with pytest.raises(TypeError):
         tk.formats.TT([torch.ones(2)], n_batches=True)
-    with pytest.raises(ValueError):
-        make_format('ttm', n_batches=1)
+    cores = list(make_format('ttm', n_batches=1).cores)
+    cores[-1] = cores[-1][:1]
+    with pytest.raises(ValueError, match='same batch shape'):
+        tk.formats.TTM(cores, n_batches=1)
     format = make_format()
     with pytest.raises(ValueError):
         format.evaluate(torch.full((2, 3), -1, dtype=torch.long))

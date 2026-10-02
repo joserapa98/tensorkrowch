@@ -729,8 +729,6 @@ class _QuanticsMatrix(_QuanticsFormat):
 class QTTM(_QuanticsMatrix, TTM):
     """Open-chain operator with separate input/output Quantics layouts.
 
-    QTTM requires unbatched cores.
-
     Parameters
     ----------
     cores : sequence of torch.Tensor
@@ -750,7 +748,8 @@ class QTTM(_QuanticsMatrix, TTM):
     out_domain : torch.Tensor or sequence of torch.Tensor, optional
         Physical intervals for output coordinates.
     n_batches : int
-        Number of leading structural batch axes. Only zero is supported.
+        Number of leading structural batch axes shared by all cores.
+        Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
     computational_grid : {"endpoints", "cell_centers"}

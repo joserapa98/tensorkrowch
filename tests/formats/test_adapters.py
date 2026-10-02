@@ -19,12 +19,8 @@ def test_rotation_and_train_conversion(make_format, topology, n_sites, n_batches
         axes = [*range(b), *range(b + first * width, b + n_sites * width),
                 *range(b, b + first * width)]
         assert torch.allclose(rotated.contract_dense(), dense.permute(axes))
-        if topology == 'trm' and n_batches:
-            with pytest.raises(ValueError, match='batches'):
-                rotated.to_ttm()
-            continue
         train = rotated.to_tt() if topology == 'tr' else rotated.to_ttm()
-        # The initial TTM contract rejects structural batches explicitly.
+        assert train.batch_shape == rotated.batch_shape
         assert torch.allclose(train.contract_dense(), rotated.contract_dense())
         if n_sites > 1:
             closing = rotated.rank[-1]

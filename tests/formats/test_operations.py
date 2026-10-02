@@ -145,8 +145,12 @@ def test_outer_product_structural_batches(make_format):
     dense_x, dense_y = x.contract_dense().reshape(2, -1), y.contract_dense().flatten()
     assert outer.n_batches == 1
     assert torch.allclose(_matrix(outer), dense_x.unsqueeze(-1) * dense_y.unsqueeze(0))
-    with pytest.raises(ValueError, match='TTM structural batches'):
-        make_format('tt', n_batches=1) @ y.T
+    x = make_format('tt', n_batches=1)
+    outer = x @ y.T
+    dense_x = x.contract_dense().reshape(2, -1)
+    assert outer.topology == 'ttm'
+    assert outer.n_batches == 1
+    assert torch.allclose(_matrix(outer), dense_x.unsqueeze(-1) * dense_y.unsqueeze(0))
 
 
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])

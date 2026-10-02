@@ -3736,11 +3736,12 @@ class TT(_OpenFormat1D, _VectorFormat1D):
     """
     Open tensor train represented by a sequence of cores.
 
-    With leading structural batch axes B, the first and last cores have shapes
-    ``(*B, input, right)`` and ``(*B, left, input)``; interiors use
-    ``(*B, left, input, right)``. A single core is ``(*B, input)``.
-    The constructor shares tensors and copies their container. No nodes or
-    edges are constructed, and input tensors retain autograd.
+    With leading structural batch axes, the first and last cores have shapes
+    ``(*batch, input, right)`` and ``(*batch, left, input)``; interiors use
+    ``(*batch, left, input, right)``. A single core is ``(*batch, input)``.
+    The constructor shares tensors and copies their container. No
+    :class:`Node <tensorkrowch.AbstractNode>` or :class:`~tensorkrowch.Edge`
+    objects are constructed, and input tensors retain autograd.
 
     Parameters
     ----------
@@ -3813,7 +3814,8 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
     Every core has shape ``(*batch, left, input, right)``. Adjacent ranks
     match, including the last-to-first closure. A one-site ring is a trace
     over its two virtual axes. Tensors retain storage and autograd without
-    constructing TensorKrowch nodes or edges.
+    constructing :class:`Node <tensorkrowch.AbstractNode>` or
+    :class:`~tensorkrowch.Edge` objects.
 
     Parameters
     ----------
@@ -3832,7 +3834,8 @@ class TR(_CyclicFormat1D, _VectorFormat1D):
 
     def to_tt(self) -> 'TT':
         """
-        Opens the ring exactly by carrying the closure index through all sites.
+        Flattens the ring exactly by carrying the closure index through
+        all sites.
 
         Returns
         -------
@@ -3880,14 +3883,13 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
     """
     Tensor train operator with local input and output dimensions.
 
-    The first and last core shapes are ``(input, right, output)`` and
-    ``(left, input, output)``; interiors are
-    ``(left, input, right, output)``. A single core is ``(input, output)``.
-    Structural batches are currently unsupported. Tensor storage and autograd
-    are retained without constructing TensorKrowch nodes or edges.
-
-    TTM currently requires ``n_batches=0``; batched operator formats use
-    :class:`TRM`.
+    The first and last core shapes are ``(*batch, input, right, output)`` and
+    ``(*batch, left, input, output)``; interiors are
+    ``(*batch, left, input, right, output)``. A single core is
+    ``(*batch, input, output)``. Structural batches are independent of
+    evaluation-data batches. Tensor storage and autograd
+    are retained without constructing :class:`Node <tensorkrowch.AbstractNode>`
+    or :class:`~tensorkrowch.Edge` objects.
 
     Parameters
     ----------
@@ -3895,7 +3897,8 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
         Core tensors with the shapes described above. The container is copied
         and tensor storage is shared; inputs retain autograd.
     n_batches : int
-        Number of leading structural batch axes. Only zero is supported.
+        Number of leading structural batch axes shared by all cores.
+        Independent of data batches during evaluation.
     bonds : sequence[torch.Tensor or None], optional
         Explicit diagonal factors between cores. ``None`` uses no explicit
         factors.
@@ -3907,51 +3910,55 @@ class TTM(_OpenFormat1D, _MatrixFormat1D):
             self) -> Tuple[List[int], Tuple[int, ...], Tuple[int, ...],
                            Optional[Tuple[int, ...]]]:
         """Validates core layouts and returns structural dimensions and ranks."""
-        if self._n_batches:
-            raise ValueError('TTM structural batches are not supported')
-
         n_sites = len(self._cores)
+        batch_shape = tuple(self._cores[0].shape[:self._n_batches])
         in_dim = []
         out_dim = []
+
         if n_sites == 1:
-            if self._cores[0].ndim != 2:
+            if self._cores[0].ndim != (self._n_batches + 2):
                 raise ValueError(
-                    'A one-site TTM core should have input and output dimensions')
-            in_dim.append(self._cores[0].shape[0])
-            out_dim.append(self._cores[0].shape[1])
-            return [], (), tuple(in_dim), tuple(out_dim)
+                    'A one-site TTM core should have input and output '
+                    'dimensions')
+            in_dim.append(self._cores[0].shape[-2])
+            out_dim.append(self._cores[0].shape[-1])
+            return [], batch_shape, tuple(in_dim), tuple(out_dim)
 
         rank = []
         for site, core in enumerate(self._cores):
+            if tuple(core.shape[:self._n_batches]) != batch_shape:
+                raise ValueError(
+                    'All TTM cores should have the same batch shape')
+
             if site == 0:
-                if core.ndim != 3:
+                if core.ndim != (self._n_batches + 3):
                     raise ValueError(
                         'The first TTM core should have input, right rank and '
                         'output dimensions')
-                in_dim.append(core.shape[0])
-                out_dim.append(core.shape[2])
-                rank.append(core.shape[1])
+                in_dim.append(core.shape[-3])
+                out_dim.append(core.shape[-1])
+                rank.append(core.shape[-2])
             elif site == (n_sites - 1):
-                if core.ndim != 3:
+                if core.ndim != (self._n_batches + 3):
                     raise ValueError(
                         'The last TTM core should have left rank, input and '
                         'output dimensions')
-                if core.shape[0] != rank[-1]:
+                if core.shape[-3] != rank[-1]:
                     raise ValueError('Adjacent TTM ranks should match')
-                in_dim.append(core.shape[1])
-                out_dim.append(core.shape[2])
+                in_dim.append(core.shape[-2])
+                out_dim.append(core.shape[-1])
             else:
-                if core.ndim != 4:
+                if core.ndim != (self._n_batches + 4):
                     raise ValueError(
-                        'Interior TTM cores should have left, input, right and '
-                        'output dimensions')
-                if core.shape[0] != rank[-1]:
+                        'Interior TTM cores should have left, input, right and'
+                        ' output dimensions')
+                if core.shape[-4] != rank[-1]:
                     raise ValueError('Adjacent TTM ranks should match')
-                in_dim.append(core.shape[1])
-                out_dim.append(core.shape[3])
-                rank.append(core.shape[2])
+                in_dim.append(core.shape[-3])
+                out_dim.append(core.shape[-1])
+                rank.append(core.shape[-2])
 
-        return rank, (), tuple(in_dim), tuple(out_dim)
+        return rank, batch_shape, tuple(in_dim), tuple(out_dim)
 
 
 class TRM(_CyclicFormat1D, _MatrixFormat1D):
@@ -3961,7 +3968,8 @@ class TRM(_CyclicFormat1D, _MatrixFormat1D):
     Every core has shape ``(*batch, left, input, right, output)`` and
     adjacent ranks match through the cyclic closure. Structural batches are
     independent of evaluation-data batches. Tensor storage and autograd are
-    retained without constructing TensorKrowch nodes or edges.
+    retained without constructing :class:`Node <tensorkrowch.AbstractNode>` or
+    :class:`~tensorkrowch.Edge` objects.
 
     Parameters
     ----------
@@ -3980,10 +3988,9 @@ class TRM(_CyclicFormat1D, _MatrixFormat1D):
 
     def to_ttm(self) -> 'TTM':
         """
-        Opens the ring exactly by carrying the closure index through all sites.
+        Flattens the ring exactly by carrying the closure index through all sites.
 
-        A batched ring matrix cannot be converted because :class:`TTM` does
-        not support structural batches.
+        Structural batches are preserved in the resulting :class:`TTM`.
 
         Returns
         -------

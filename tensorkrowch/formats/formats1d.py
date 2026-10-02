@@ -11,18 +11,18 @@ This script contains:
     Public functions:
         * split_block
 
-    Internal classes:
-        * _OpenFormat1D
-        * _CyclicFormat1D
-        * _VectorFormat1D
-        * _MatrixFormat1D
-
-    Public classes:
+    Classes:
         * TensorFormat1D
-        * TT, TR, TTM, TRM
+            + _VectorFormat1D
+            + _MatrixFormat1D
+            + _OpenFormat1D
+            + _CyclicFormat1D
 
-    Aliases:
-        * EvaluationData
+    Concrete formats:
+        * TT  (_OpenFormat1D, _VectorFormat1D)
+        * TR  (_CyclicFormat1D, _VectorFormat1D)
+        * TTM (_OpenFormat1D, _MatrixFormat1D)
+        * TRM (_CyclicFormat1D, _MatrixFormat1D)
 
 Core names used in this module:
 

@@ -180,16 +180,56 @@ class GaugeOrbit:
         """
         return sum(core.abs().square().sum() / 2 for core in self.apply(gauges))
 
+    def gram_matrices(self) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        r"""
+        Constructs the left and right Gram matrices at each configured bond.
+
+        For each bond, the left core is reshaped into :math:`L_b` with the
+        bond axis in its columns; the right core becomes :math:`R_b` with
+        that axis in its rows. All other axes, including structural batches,
+        are contracted to form :math:`L_b^\dagger L_b` and
+        :math:`R_b R_b^\dagger`. These are individual-core contractions,
+        not contracted subchains.
+
+        Returns
+        -------
+        list[tuple[torch.Tensor, torch.Tensor]]
+            One ``(left_gram, right_gram)`` pair per bond, in the order of
+            ``bonds``. Both matrices have shape ``(rank, rank)`` and retain
+            gradients through the cores. Returns an empty list without bonds.
+
+        Examples
+        --------
+        >>> orbit = tk.formats.GaugeOrbit([2 * torch.eye(2), torch.eye(2)],
+        ...                               [(0, 1, 1, 0)])
+        >>> left, right = orbit.gram_matrices()[0]
+        >>> left, right
+        (tensor([[4., 0.],
+                 [0., 4.]]),
+         tensor([[1., 0.],
+                 [0., 1.]]))
+        """
+        grams = []
+        for left_site, left_axis, right_site, right_axis in self.bonds:
+            left_core, right_core = self.cores[left_site], self.cores[right_site]
+
+            left_matrix = left_core.movedim(left_axis, -1).reshape(
+                -1, left_core.shape[left_axis])
+            right_matrix = right_core.movedim(right_axis, 0).reshape(
+                right_core.shape[right_axis], -1)
+
+            left_gram = left_matrix.transpose(-2, -1).conj() @ left_matrix
+            right_gram = right_matrix @ right_matrix.transpose(-2, -1).conj()
+            grams.append((left_gram, right_gram))
+
+        return grams
+
     def gram_imbalance(self, relative: bool = False) -> torch.Tensor:
         r"""
         Measures the joint Gram-matrix imbalance across the bonds.
 
-        All axes except the selected bond axis are contracted with the
-        conjugate core on each side, leaving a matrix on that bond.
-        For each bond :math:`b`, :math:`L_b` is the left core reshaped with
-        that bond in its columns, and :math:`R_b` is the right core reshaped
-        with that bond in its rows. The method compares their Gram matrices
-        (the inner products between columns or rows) and returns
+        Uses the left and right Gram matrices from :meth:`gram_matrices`
+        to compute
 
         .. math::
 
@@ -231,19 +271,8 @@ class GaugeOrbit:
         if not self.bonds:
             return self.cores[0].real.new_zeros(())
 
-        imbalances = []
-        for left_site, left_axis, right_site, right_axis in self.bonds:
-            left_core, right_core = self.cores[left_site], self.cores[right_site]
-
-            left_matrix = left_core.movedim(left_axis, -1).reshape(
-                -1, left_core.shape[left_axis])
-            right_matrix = right_core.movedim(right_axis, 0).reshape(
-                right_core.shape[right_axis], -1)
-
-            left_gram = left_matrix.transpose(-2, -1).conj() @ left_matrix
-            right_gram = right_matrix @ right_matrix.transpose(-2, -1).conj()
-
-            imbalances.append((left_gram - right_gram).norm())
+        imbalances = [(left - right).norm()
+                      for left, right in self.gram_matrices()]
 
         imbalance = torch.stack(imbalances).norm()
         if relative:

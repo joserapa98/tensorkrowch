@@ -210,10 +210,15 @@ def _validate_minimal_options(max_iter: int,
                               rtol: float,
                               stagnation_rtol: float,
                               patience: int,
+                              method: str,
                               return_info: bool) -> None:
     """Checks the options shared by minimal canonicalization methods."""
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
+    if not isinstance(method, str):
+        raise TypeError('`method` should be str type')
+    if method not in ('adam', 'gradient'):
+        raise ValueError("`method` should be 'adam' or 'gradient'")
     for name, value in [('max_iter', max_iter), ('patience', patience)]:
         if isinstance(value, bool) or not isinstance(value, int):
             raise TypeError(f'`{name}` should be int type')
@@ -3395,6 +3400,7 @@ class _OpenFormat1D(TensorFormat1D):
             lr: float = 0.05,
             rtol: float = 1e-8,
             *,
+            method: str = 'adam',
             stagnation_rtol: float = 1e-6,
             patience: int = 5,
             return_info: bool = False
@@ -3420,6 +3426,8 @@ class _OpenFormat1D(TensorFormat1D):
             Positive learning rate, used only by cyclic formats.
         rtol : float
             Positive relative Gram-imbalance tolerance, used only by rings.
+        method : {'adam', 'gradient'}
+            Gauge optimization method, used only by rings.
         stagnation_rtol : float
             Positive relative error-change tolerance, used only by rings.
         patience : int
@@ -3444,7 +3452,7 @@ class _OpenFormat1D(TensorFormat1D):
         (0, True)
         """
         _validate_minimal_options(max_iter, lr, rtol, stagnation_rtol,
-                                  patience, return_info)
+                                  patience, method, return_info)
         self.canonicalize_vidal('implicit')
         if return_info:
             return self, MinimalCanonicalInfo(0, True, None, 'vidal')
@@ -3534,18 +3542,26 @@ class _CyclicFormat1D(TensorFormat1D):
             lr: float = 0.05,
             rtol: float = 1e-8,
             *,
+            method: str = 'adam',
             stagnation_rtol: float = 1e-6,
             patience: int = 5,
             return_info: bool = False
         ) -> Union['TensorFormat1D',
                    Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
-        """
+        r"""
         Approximates the minimal canonical form of a ring in-place.
 
-        Uses Adam to minimize half the sum of squared core norms over virtual
-        gauges, parametrized as exponentials of Hermitian matrices. Each gauge
+        Minimizes half the sum of squared core norms over virtual gauges.
+        Uses Adam on Hermitian exponential parameters, or first-order
+        updates from the normalized bond Gram differences. Each gauge
         and its inverse act on neighboring cores, preserving the represented
         tensor. At a minimum, neighboring bond Gram matrices are equal.
+
+        The second-order method in Section 5.3 of `The minimal canonical form
+        of a tensor network <https://arxiv.org/pdf/2209.14358>`_ is not
+        implemented. It has a better theoretical dependence on the requested
+        precision than the paper's first-order method, but requires Hessian
+        information and constrained Newton steps.
 
         Stops when the relative Gram imbalance reaches ``rtol`` or its
         relative change stays below ``stagnation_rtol`` for ``patience``
@@ -3553,8 +3569,9 @@ class _CyclicFormat1D(TensorFormat1D):
         iterate with lowest objective on an iteration limit or numerical
         failure. This implements the minimization objective discussed in
         `The minimal canonical form of a tensor network
-        <https://arxiv.org/pdf/2209.14358>`_, but not its first- or second-order
-        algorithms; their convergence guarantees do not apply here.
+        <https://arxiv.org/pdf/2209.14358>`_. The first-order update adapts its
+        log-norm gradient to a finite non-uniform ring with a user-selected
+        fixed step; the paper's convergence guarantees are not asserted here.
         Structural batches share one gauge per bond. Gauge optimization does
         not accumulate gradients on the input cores.
 
@@ -3563,12 +3580,22 @@ class _CyclicFormat1D(TensorFormat1D):
         max_iter : int
             Positive maximum number of gauge optimization iterations for a ring.
         lr : float
-            Finite positive learning rate of the Adam gauge optimizer.
+            Finite positive Adam learning rate or fixed first-order step.
+            Values need not give equivalent steps for the two methods.
         rtol : float
             Finite positive tolerance for
             :meth:`~tensorkrowch.formats.GaugeOrbit.gram_imbalance` with
             ``relative=True``. The joint Frobenius norm of the bond Gram
             differences is divided by the sum of squared core norms.
+        method : {'adam', 'gradient'}
+            ``'adam'`` optimizes Hermitian parameters whose exponentials are
+            the gauges. ``'gradient'`` constructs increments
+            :math:`h_b=\exp(-\mathrm{lr}\,\Delta_b/N)`, where
+            :math:`\Delta_b=G_b^{\mathrm{left}}-G_b^{\mathrm{right}}` and
+            :math:`N=\sum_i\|A_i\|_F^2`. All increments use the same current
+            cores and multiply the accumulated gauges on the right. A smaller
+            ``lr`` may be needed for descent. This method needs no backward
+            pass for the gauge search.
         stagnation_rtol : float
             Finite positive tolerance for the relative change of consecutive
             errors: ``abs(error - previous) / max(error, previous, eps)``,
@@ -3597,9 +3624,14 @@ class _CyclicFormat1D(TensorFormat1D):
         >>> _, info = ring.canonicalize_minimal(return_info=True)
         >>> info.converged
         True
+        >>> ring = tk.formats.TR([torch.ones(1, 2, 1)] * 2)
+        >>> _, info = ring.canonicalize_minimal(method='gradient',
+        ...                                     return_info=True)
+        >>> info.stop_reason
+        'tolerance'
         """
         _validate_minimal_options(max_iter, lr, rtol, stagnation_rtol,
-                                  patience, return_info)
+                                  patience, method, return_info)
 
         # Optimize gauges on detached cores to avoid accumulating core gradients.
         orbit = TensorRingOrbit(self)
@@ -3622,18 +3654,21 @@ class _CyclicFormat1D(TensorFormat1D):
         stop_reason = 'max_iter'
         previous_error, stagnant_steps = None, 0
         eps = torch.finfo(self._cores[0].real.dtype).eps
-        with torch.enable_grad():
-            parameters = [torch.zeros_like(gauge, requires_grad=True)
-                          for gauge in best_gauge]
-            optimizer = torch.optim.Adam(parameters, lr=lr)
+        with torch.set_grad_enabled(method == 'adam'):
+            if method == 'adam':
+                parameters = [torch.zeros_like(gauge, requires_grad=True)
+                              for gauge in best_gauge]
+                optimizer = torch.optim.Adam(parameters, lr=lr)
+            else:
+                gauges = list(best_gauge)
 
             for _ in range(max_iter):
                 iterations += 1
-                optimizer.zero_grad()
-
-                gauges = [torch.matrix_exp(
-                    (parameter + parameter.transpose(-2, -1).conj()) / 2)
-                    for parameter in parameters]
+                if method == 'adam':
+                    optimizer.zero_grad()
+                    gauges = [torch.matrix_exp(
+                        (parameter + parameter.transpose(-2, -1).conj()) / 2)
+                        for parameter in parameters]
                 if not all(torch.isfinite(gauge).all() for gauge in gauges):
                     stop_reason = 'numerical_failure'
                     break
@@ -3644,9 +3679,9 @@ class _CyclicFormat1D(TensorFormat1D):
                     stop_reason = 'numerical_failure'
                     break
                 loss = sum(core.abs().square().sum() / 2 for core in cores)
+                current = GaugeOrbit(cores, orbit.bonds)
                 with torch.no_grad():
-                    error = GaugeOrbit(cores, orbit.bonds).gram_imbalance(
-                        relative=True)
+                    error = current.gram_imbalance(relative=True)
                 if not torch.isfinite(loss) or not torch.isfinite(error):
                     stop_reason = 'numerical_failure'
                     break
@@ -3670,15 +3705,20 @@ class _CyclicFormat1D(TensorFormat1D):
                     best_gauge = [gauge.detach() for gauge in gauges]
                     break
 
-                loss.backward()
-
-                if not all(torch.isfinite(parameter.grad).all()
-                           for parameter in parameters):
-                    stop_reason = 'numerical_failure'
-                    break
-
-                if iterations < max_iter:
-                    optimizer.step()
+                if method == 'adam':
+                    loss.backward()
+                    if not all(torch.isfinite(parameter.grad).all()
+                               for parameter in parameters):
+                        stop_reason = 'numerical_failure'
+                        break
+                    if iterations < max_iter:
+                        optimizer.step()
+                elif iterations < max_iter:
+                    increments = [torch.matrix_exp(-lr * (left - right) /
+                                                   (2 * loss))
+                                  for left, right in current.gram_matrices()]
+                    gauges = [gauge @ increment
+                              for gauge, increment in zip(gauges, increments)]
 
         # Apply the stopping iterate, or the best finite fallback, to the cores.
         self._set_standard_cores(orbit.apply(best_gauge))

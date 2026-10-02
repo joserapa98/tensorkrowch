@@ -7,7 +7,8 @@ from tensorkrowch.formats.orbits import GaugeOrbit, TensorRingOrbit
 
 
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-def test_ring_gauge_cancellation_and_balancing(make_format, dtype):
+@pytest.mark.parametrize('method', ['adam', 'gradient'])
+def test_ring_gauge_cancellation_and_balancing(make_format, dtype, method):
     format = make_format('tr', 3, dtype=dtype)
     dense = format.contract_dense()
     orbit = TensorRingOrbit(format)
@@ -17,7 +18,7 @@ def test_ring_gauge_cancellation_and_balancing(make_format, dtype):
     assert torch.allclose(transformed.contract_dense(), dense)
     transformed.cores[0].requires_grad_()
     before = sum(core.abs().square().sum() for core in transformed.cores)
-    transformed.canonicalize_minimal(max_iter=80)
+    transformed.canonicalize_minimal(max_iter=80, method=method)
     after = sum(core.abs().square().sum() for core in transformed.cores)
     assert after < before
     assert torch.allclose(transformed.contract_dense(), dense, rtol=1e-9, atol=1e-10)
@@ -80,7 +81,8 @@ def test_joint_gram_imbalance_and_relative_scaling(dtype):
 
 @pytest.mark.parametrize('kind', ['tr', 'trm'])
 @pytest.mark.parametrize('reason', ['tolerance', 'stagnation', 'max_iter'])
-def test_minimal_stopping_criteria(make_format, kind, reason):
+@pytest.mark.parametrize('method', ['adam', 'gradient'])
+def test_minimal_stopping_criteria(make_format, kind, reason, method):
     format = make_format(kind, 3, dtype=torch.float64)
     dense = format.contract_dense()
     options = dict(rtol=1e-15, stagnation_rtol=1e-15, max_iter=1)
@@ -88,7 +90,8 @@ def test_minimal_stopping_criteria(make_format, kind, reason):
         options['rtol'] = 10.
     elif reason == 'stagnation':
         options.update(max_iter=8, stagnation_rtol=1., patience=2)
-    _, info = format.canonicalize_minimal(return_info=True, **options)
+    _, info = format.canonicalize_minimal(method=method, return_info=True,
+                                         **options)
     assert info.stop_reason == reason
     assert info.converged == (reason != 'max_iter')
     assert info.iterations == (3 if reason == 'stagnation' else 1)
@@ -97,11 +100,12 @@ def test_minimal_stopping_criteria(make_format, kind, reason):
     assert torch.allclose(format.contract_dense(), dense, rtol=1e-9, atol=1e-10)
 
 
-def test_minimal_relative_stopping_is_scale_invariant(make_format):
+@pytest.mark.parametrize('method', ['adam', 'gradient'])
+def test_minimal_relative_stopping_is_scale_invariant(make_format, method):
     format = make_format('tr', 3, dtype=torch.float64)
     scaled = tk.formats.TR([100 * core for core in format.cores])
     options = dict(max_iter=12, rtol=1e-15, stagnation_rtol=1., patience=3,
-                   return_info=True)
+                   method=method, return_info=True)
     _, info = format.canonicalize_minimal(**options)
     _, scaled_info = scaled.canonicalize_minimal(**options)
     assert (info.iterations, info.stop_reason) == (
@@ -127,12 +131,13 @@ def test_minimal_stagnation_counter_resets(make_format, monkeypatch):
     assert info.iterations == 7
 
 
-def test_minimal_internal_gradients_are_isolated(make_format):
+@pytest.mark.parametrize('method', ['adam', 'gradient'])
+def test_minimal_internal_gradients_are_isolated(make_format, method):
     format = make_format('tr', 3, dtype=torch.float64)
     original = list(format.cores)
     for core in original:
         core.requires_grad_()
-    format.canonicalize_minimal(max_iter=3, rtol=1e-15)
+    format.canonicalize_minimal(max_iter=3, rtol=1e-15, method=method)
     assert all(core.grad is None for core in original)
     format.contract_dense().square().sum().backward()
     assert all(core.grad is not None and torch.isfinite(core.grad).all()
@@ -140,7 +145,7 @@ def test_minimal_internal_gradients_are_isolated(make_format):
 
     with torch.no_grad():
         _, info = make_format('tr', 3).canonicalize_minimal(
-            max_iter=3, return_info=True)
+            max_iter=3, method=method, return_info=True)
     assert torch.isfinite(info.gram_imbalance)
 
 
@@ -170,7 +175,62 @@ def test_minimal_numerical_failure_returns_finite_fallback(make_format,
     ({'stagnation_rtol': True}, TypeError),
     ({'patience': 0}, ValueError),
     ({'patience': 1.5}, TypeError),
+    ({'method': 'newton'}, ValueError),
+    ({'method': 1}, TypeError),
 ])
 def test_minimal_stopping_options(make_format, kind, options, error):
     with pytest.raises(error):
         make_format(kind, 3).canonicalize_minimal(**options)
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_gram_matrices_contract_batches_and_preserve_gradients(dtype):
+    left = torch.arange(12, dtype=torch.float64).reshape(2, 2, 3).to(dtype)
+    right = torch.arange(24, dtype=torch.float64).reshape(2, 3, 4).to(dtype)
+    if dtype.is_complex:
+        left = left + 1j * left.flip(-1)
+        right = right + 1j * right.flip(-1)
+    left.requires_grad_()
+    right.requires_grad_()
+    orbit = GaugeOrbit([left, right], [(0, -1, 1, 1)])
+    left_gram, right_gram = orbit.gram_matrices()[0]
+    expected_left = sum(core.conj().T @ core for core in left)
+    expected_right = sum(core @ core.conj().T for core in right)
+    assert torch.allclose(left_gram, expected_left)
+    assert torch.allclose(right_gram, expected_right)
+    assert torch.allclose(orbit.gram_imbalance(),
+                          (expected_left - expected_right).norm())
+    (left_gram.real.sum() + right_gram.real.sum()).backward()
+    assert left.grad is not None and right.grad is not None
+    assert GaugeOrbit([left], []).gram_matrices() == []
+
+
+def test_gradient_update_matches_simultaneous_increment(make_format):
+    format = make_format('tr', 3, dtype=torch.complex128)
+    orbit = TensorRingOrbit(format)
+    norm_squared = sum(core.abs().square().sum() for core in orbit.cores)
+    increments = [torch.matrix_exp(-0.05 * (left - right) / norm_squared)
+                  for left, right in orbit.gram_matrices()]
+    expected = orbit.apply(increments)
+    before = sum(core.abs().square().sum() for core in orbit.cores)
+    assert sum(core.abs().square().sum() for core in expected) < before
+    format.canonicalize_minimal(method='gradient', max_iter=2, rtol=1e-15)
+    assert all(torch.allclose(actual, target)
+               for actual, target in zip(format.cores, expected))
+
+
+@pytest.mark.parametrize('kind', ['tr', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_gradient_search_needs_no_backward(make_format, monkeypatch, kind,
+                                          dtype):
+    def reject_backward(*args, **kwargs):
+        raise AssertionError('Gradient gauge updates should not call backward')
+
+    monkeypatch.setattr(torch.Tensor, 'backward', reject_backward)
+    format = make_format(kind, 3, n_batches=1, dtype=dtype)
+    dense = format.contract_dense()
+    before = TensorRingOrbit(format).gram_imbalance(relative=True)
+    _, info = format.canonicalize_minimal(method='gradient', max_iter=40,
+                                         return_info=True)
+    assert info.gram_imbalance < before
+    assert torch.allclose(format.contract_dense(), dense, rtol=1e-9, atol=1e-10)

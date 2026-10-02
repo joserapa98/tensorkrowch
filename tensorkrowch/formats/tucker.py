@@ -47,7 +47,7 @@ class _QuantizedTuckerFormat(TensorFormat):
             raise TypeError('`coordinate_map` should implement CoordinateMap')
         if computational_grid not in (
             'endpoints', 'cell_centers') or out_of_domain not in ('error', 'clip'):
-            raise ValueError('Invalid computational grid or coordinate policy')
+            raise ValueError('Invalid `computational_grid` or `out_of_domain`')
 
         self.upper = upper
         self.factors = tuple(factors)
@@ -57,100 +57,92 @@ class _QuantizedTuckerFormat(TensorFormat):
 
         if len(self.factors) != layout.n_variables or not all(
             isinstance(factor, TT) for factor in self.factors):
-            raise ValueError('There should be one TT factor per variable')
+            raise ValueError('`factors` should contain one TT per variable')
         if variable_positions is None:
             if upper.n_sites != layout.n_variables:
                 raise ValueError(
-                    'variable_positions is required when upper output sites are present')
+                    '`variable_positions` is required when `upper` has output '
+                    'sites')
             variable_positions = range(layout.n_variables)
         self.variable_positions = tuple(variable_positions)
         positions = self.variable_positions
         if len(positions) != layout.n_variables or any(
                 isinstance(site, bool) or not isinstance(site, int) or
                 not 0 <= site < upper.n_sites for site in positions):
-            raise ValueError('Variable positions should select valid upper sites')
+            raise ValueError(
+                '`variable_positions` should select valid `upper` sites')
         if any(left >= right for left, right in zip(positions, positions[1:])):
-            raise ValueError('Variable positions should be strictly increasing')
+            raise ValueError(
+                '`variable_positions` should be strictly increasing')
 
         self.computational_grid = computational_grid
         self.out_of_domain = out_of_domain
         self.validate()
 
-
     @property
     def cores(self) -> List[torch.Tensor]:
-        """Mutable cores of the upper TT/TR, shared with :attr:`upper`.
+        """
+        Mutable cores of the upper TT/TR, shared with :attr:`upper`.
 
         Local digit cores remain in :attr:`factors`. Use :meth:`flatten` to
         obtain a chain whose cores represent the digit sites directly.
         """
         return self.upper.cores
 
-
     @cores.setter
     def cores(self, values: Sequence[torch.Tensor]) -> None:
+        """Replaces upper cores through the upper format's validated setter."""
         self.upper.cores = values
-
 
     @property
     def device(self) -> torch.device:
         """Device shared by the stored structural tensors."""
         return self.upper.device
 
-
     @property
     def dtype(self) -> torch.dtype:
         """Dtype shared by the stored structural tensors."""
         return self.upper.dtype
-
 
     @property
     def n_sites(self) -> int:
         """Number of sites in the upper format."""
         return self.upper.n_sites
 
-
     @property
     def n_batches(self) -> int:
-        """Number of structural batch axes; hierarchical Tucker formats are unbatched."""
+        """Number of structural batch axes; always zero for Tucker formats."""
         return 0
-
 
     @property
     def batch_shape(self) -> Tuple[int, ...]:
         """Structural batch shape; empty for hierarchical Tucker formats."""
         return ()
 
-
     @property
     def rank(self) -> List[int]:
         """Defensive list of upper-format virtual ranks."""
         return self.upper.rank
-
 
     @property
     def factor_rank(self) -> Tuple[Tuple[int, ...], ...]:
         """TT ranks internal to every local quantized factor."""
         return tuple(tuple(factor.rank) for factor in self.factors)
 
-
     @property
     def topology(self) -> str:
         """Topology identifier of the concrete format."""
         return self._topology
-
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Physical input dimensions of the flattened digit and output sites."""
         return self._flattened_in_dim()
 
-
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
         """Dedicated matrix output dimensions; ``None`` for vector Tucker formats."""
         return None
-
 
     @property
     def out_shape(self) -> Tuple[int, ...]:
@@ -161,15 +153,15 @@ class _QuantizedTuckerFormat(TensorFormat):
             for site, dimension in enumerate(self.upper.in_dim)
             if site not in variable_positions)
 
-
     def validate(self) -> '_QuantizedTuckerFormat':
-        """Validates upper cores, local factors and connector dimensions.
+        """
+        Validates upper cores, local factors and connector dimensions.
 
         Returns
         -------
-        QTTTucker or QTRTucker
-            The current format. Factors and upper cores should share runtime,
-            and structural batches are unsupported.
+        :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
+            The current format. Factors and upper cores should share device and
+            dtype, and structural batches are unsupported.
         """
         self.upper.validate()
         for factor in self.factors:
@@ -177,32 +169,32 @@ class _QuantizedTuckerFormat(TensorFormat):
         self._validate_cores()
         return self
 
-
     def _validate_cores(self) -> None:
         """Checks dimensions and runtime shared by the upper format and factors."""
         upper = self.upper
         if upper.n_batches:
             raise ValueError(
-                'Quantized Tucker upper formats cannot be batched')
+                '`upper` cannot have structural batches')
         if any(factor.n_batches for factor in self.factors):
-            raise ValueError('Quantized Tucker factors cannot be batched')
+            raise ValueError('`factors` cannot have structural batches')
         for variable, (factor, position) in enumerate(zip(
                 self.factors, self.variable_positions)):
             expected = (
                 (self.layout.base[variable],) * self.layout.level[variable])
             if factor.in_dim[:-1] != expected:
                 raise ValueError(
-                    'Factor digit dimensions should match the quantized layout')
+                    'Factor digit dimensions should match `layout`')
             if factor.in_dim[-1] != upper.in_dim[position]:
                 raise ValueError(
-                    'Factor connector dimension should match its upper site')
+                    'Factor connector dimension should match its site in '
+                    '`upper`')
             if factor.device != upper.device or factor.dtype != upper.dtype:
                 raise ValueError(
-                    'Upper cores and factors should share device and dtype')
+                    '`upper` and `factors` should share device and dtype')
 
-
-    def _map_tensors(self,
-                     function: Callable[[torch.Tensor], torch.Tensor]) -> '_QuantizedTuckerFormat':
+    def _map_tensors(
+            self, function: Callable[[torch.Tensor], torch.Tensor]
+        ) -> '_QuantizedTuckerFormat':
         """Maps stored tensors while preserving concrete container semantics."""
         return type(self)(self.upper._map_tensors(function),
                           [factor._map_tensors(function) for factor in self.factors],
@@ -212,10 +204,12 @@ class _QuantizedTuckerFormat(TensorFormat):
                           computational_grid=self.computational_grid,
                           out_of_domain=self.out_of_domain)
 
-
-    def to(self, device: Optional[Union[str, torch.device]] = None,
-           dtype: Optional[torch.dtype] = None, copy: bool = False) -> '_QuantizedTuckerFormat':
-        """Returns a device/dtype conversion, preserving the concrete format.
+    def to(self,
+           device: Optional[Union[str, torch.device]] = None,
+           dtype: Optional[torch.dtype] = None,
+           copy: bool = False) -> '_QuantizedTuckerFormat':
+        """
+        Returns a device/dtype conversion, preserving the concrete format.
 
         PyTorch device errors propagate without a CPU fallback. Autograd is
         retained.
@@ -225,17 +219,18 @@ class _QuantizedTuckerFormat(TensorFormat):
         device : str or torch.device, optional
             Target device. ``None`` preserves the current device.
         dtype : torch.dtype, optional
-            Target dtype. ``None`` preserves the current dtype. Coordinate grids and
-            Schmidt spectra remain real when cores are complex.
+            Target dtype. ``None`` preserves the current dtype. Coordinate
+            grids and Schmidt spectra remain real when cores are complex.
         copy : bool
-            If ``True``, copies tensors even when device and dtype are unchanged. If
-            ``False``, an unchanged conversion may return ``self``.
+            If ``True``, copies tensors even when device and dtype are
+            unchanged. If ``False``, an unchanged conversion may return
+            ``self``.
 
         Returns
         -------
-        QTTTucker or QTRTucker
-            Converted format; ``self`` when no conversion is needed and ``copy`` is
-            ``False``.
+        :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
+            Converted format; ``self`` when no conversion is needed and
+            ``copy`` is ``False``.
 
         Examples
         --------
@@ -249,9 +244,9 @@ class _QuantizedTuckerFormat(TensorFormat):
         True
         """
         if dtype is not None and not isinstance(dtype, torch.dtype):
-            raise TypeError('dtype should be torch.dtype type')
+            raise TypeError('`dtype` should be torch.dtype type')
         if not isinstance(copy, bool):
-            raise TypeError('copy should be bool type')
+            raise TypeError('`copy` should be bool type')
         upper = self.upper.to(device=device, dtype=dtype, copy=copy)
         factors = [factor.to(device=device, dtype=dtype, copy=copy)
                    for factor in self.factors]
@@ -272,43 +267,42 @@ class _QuantizedTuckerFormat(TensorFormat):
                           computational_grid=self.computational_grid,
                           out_of_domain=self.out_of_domain)
 
-
     def clone(self) -> '_QuantizedTuckerFormat':
-        """Clones the structural tensors, preserving autograd.
+        """
+        Clones the structural tensors, preserving autograd.
 
         Returns
         -------
-        QTTTucker or QTRTucker
+        :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
             Independent tensor storage with the same represented tensor.
         """
         return self._map_tensors(lambda tensor: tensor.clone())
 
-
     def detach(self) -> '_QuantizedTuckerFormat':
-        """Returns a detached format sharing tensor storage.
+        """
+        Returns a detached format sharing tensor storage.
 
         Returns
         -------
-        QTTTucker or QTRTucker
+        :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
             Separate containers with detached tensor references. Value edits to
             shared storage affect both formats.
         """
         return self._map_tensors(lambda tensor: tensor.detach())
 
-
     def detach_(self) -> '_QuantizedTuckerFormat':
-        """Detaches structural tensors in-place by replacing references.
+        """
+        Detaches structural tensors in-place by replacing references.
 
         Returns
         -------
-        QTTTucker or QTRTucker
+        :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
             The current format. Tensor shapes and canonical metadata are
             preserved.
         """
         detached = self.detach()
         self.__dict__.update(detached.__dict__)
         return self
-
 
     def _flattened_in_dim(self) -> Tuple[int, ...]:
         """Expands each upper connector into its factor digit dimensions."""
@@ -323,7 +317,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             else:
                 dimensions.extend(self.factors[variable].in_dim[:-1])
         return tuple(dimensions)
-
 
     def _effective_cores(self) -> List[torch.Tensor]:
         """Replaces upper input sites by their factors with bonds absorbed."""
@@ -359,16 +352,17 @@ class _QuantizedTuckerFormat(TensorFormat):
                 upper_core.shape[-1]))
         return flat
 
-
     def flatten(self) -> Union[QTT, QTR]:
-        """Substitutes each upper connector with its local Quantics factor.
+        """
+        Substitutes each upper connector with its local Quantics factor.
 
         Returns
         -------
-        QTT or QTR
-            Exact flat format, preserving coordinate maps and open output sites.
-            Digit sites become contiguous factor blocks with a corresponding
-            custom layout. Upper ranks are carried through identity factors.
+        :class:`~tensorkrowch.formats.QTT` or :class:`~tensorkrowch.formats.QTR`
+            Exact flat format, preserving coordinate maps and open output
+            sites. Digit sites become contiguous factor blocks with a
+            corresponding custom layout. Upper ranks are carried through
+            identity factors.
 
         Examples
         --------
@@ -378,7 +372,8 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> format = tk.formats.QTTTucker(upper, [factor], layout)
         >>> flat = format.flatten()
         >>> indices = torch.tensor([[0], [1]])
-        >>> torch.allclose(flat.evaluate_indices(indices), format.evaluate_indices(indices))
+        >>> torch.allclose(flat.evaluate_indices(indices),
+        ...                format.evaluate_indices(indices))
         True
         """
         effective_cores = self._effective_cores()
@@ -412,7 +407,6 @@ class _QuantizedTuckerFormat(TensorFormat):
                    computational_grid=self.computational_grid,
                    out_of_domain=self.out_of_domain)
 
-
     def _factor_vectors(self, digits: torch.Tensor) -> List[torch.Tensor]:
         """Returns each factor's connector vector for the scheduled digits."""
         schedule = self.layout.sites()
@@ -434,7 +428,6 @@ class _QuantizedTuckerFormat(TensorFormat):
             vectors.append((state @ connector).squeeze(-2))
         return vectors
 
-
     def _contract_upper(self,
                         vectors: Dict[int, torch.Tensor],
                         batch_size: int) -> torch.Tensor:
@@ -452,16 +445,16 @@ class _QuantizedTuckerFormat(TensorFormat):
                 state = torch.einsum('ba...l,lpr->ba...pr', state, core)
         return state.diagonal(dim1=1, dim2=-1).sum(-1)
 
-
     def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
-        """Evaluates digit configurations through the factors and upper TT/TR.
+        """
+        Evaluates digit configurations through the factors and upper TT/TR.
 
         Parameters
         ----------
         digits : torch.Tensor
             Integer digit configurations in layout schedule order, with shape
-            ``(batch_size, layout.n_sites)``. Every digit should lie within its site
-            base.
+            ``(batch_size, layout.n_sites)``. Every digit should lie within its
+            site base.
 
         Returns
         -------
@@ -482,15 +475,15 @@ class _QuantizedTuckerFormat(TensorFormat):
             for variable, position in enumerate(self.variable_positions)}
         return self._contract_upper(vectors_by_position, digits.shape[0])
 
-
     def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
-        """Evaluates integer grid indices in the original variable order.
+        """
+        Evaluates integer grid indices in the original variable order.
 
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape ``(batch_size, n_variables)``; each value lies in
-            ``[0, grid_size[variable] - 1]``.
+            Integer grid indices with shape ``(batch_size, n_variables)``; each
+            value lies in ``[0, grid_size[variable] - 1]``.
 
         Returns
         -------
@@ -504,9 +497,9 @@ class _QuantizedTuckerFormat(TensorFormat):
                 '`indices` should have shape (batch_size, n_variables)')
         return self.evaluate_digits(self.layout.encode_indices(indices))
 
-
     def evaluate(self, points: torch.Tensor) -> torch.Tensor:
-        """Evaluates physical points after mapping them to the digit grid.
+        """
+        Evaluates physical points after mapping them to the digit grid.
 
         Physical coordinates require a coordinate map and are quantized before
         contraction.
@@ -514,10 +507,10 @@ class _QuantizedTuckerFormat(TensorFormat):
         Parameters
         ----------
         points : torch.Tensor
-            Finite physical coordinates with shape ``(batch_size, n_variables)``. A
-            coordinate map is required. Coordinates are quantized to the
-            computational grid; no interpolation of the represented function is
-            performed.
+            Finite physical coordinates with shape
+            ``(batch_size, n_variables)``. A coordinate map is required.
+            Coordinates are quantized to the computational grid; no
+            interpolation of the represented function is performed.
 
         Returns
         -------
@@ -542,9 +535,9 @@ class _QuantizedTuckerFormat(TensorFormat):
             self.computational_grid, self.out_of_domain)
         return self.evaluate_indices(indices)
 
-
     def evaluate_points(self, points: torch.Tensor) -> torch.Tensor:
-        """Evaluates physical points, with the same meaning as :meth:`evaluate`.
+        """
+        Evaluates physical points, with the same meaning as :meth:`evaluate`.
 
         Physical coordinates require a coordinate map and are quantized before
         contraction.
@@ -552,10 +545,10 @@ class _QuantizedTuckerFormat(TensorFormat):
         Parameters
         ----------
         points : torch.Tensor
-            Finite physical coordinates with shape ``(batch_size, n_variables)``. A
-            coordinate map is required. Coordinates are quantized to the
-            computational grid; no interpolation of the represented function is
-            performed.
+            Finite physical coordinates with shape
+            ``(batch_size, n_variables)``. A coordinate map is required.
+            Coordinates are quantized to the computational grid; no
+            interpolation of the represented function is performed.
 
         Returns
         -------
@@ -565,9 +558,9 @@ class _QuantizedTuckerFormat(TensorFormat):
         """
         return self.evaluate(points)
 
-
     def contract_dense(self) -> torch.Tensor:
-        """Returns the full tensor with physical axes in flattened digit order.
+        """
+        Returns the full tensor with physical axes in flattened digit order.
 
         This allocates the entire tensor, including open output sites.
 
@@ -579,9 +572,9 @@ class _QuantizedTuckerFormat(TensorFormat):
         """
         return self.flatten().contract_dense()
 
-
     def norm(self) -> torch.Tensor:
-        """Returns the norm of the flattened represented tensor.
+        """
+        Returns the norm of the flattened represented tensor.
 
         Returns
         -------
@@ -590,16 +583,16 @@ class _QuantizedTuckerFormat(TensorFormat):
         """
         return self.flatten().norm()
 
-
     def normalized_overlap(
             self, other: '_QuantizedTuckerFormat') -> torch.Tensor:
-        """Returns the phase-preserving normalized overlap.
+        """
+        Returns the phase-preserving normalized overlap.
 
         Parameters
         ----------
-        other : QTTTucker or QTRTucker
-            Other hierarchical format whose flattened local dimensions, batches
-            and device match this format.
+        other : :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
+            Other hierarchical format whose flattened local dimensions and
+            device match this format.
 
         Returns
         -------
@@ -612,15 +605,15 @@ class _QuantizedTuckerFormat(TensorFormat):
                 '`other` should be a quantized Tucker format')
         return self.flatten().normalized_overlap(other.flatten())
 
-
     def fidelity(self, other: '_QuantizedTuckerFormat') -> torch.Tensor:
-        """Returns the squared magnitude of normalized overlap.
+        """
+        Returns the squared magnitude of :meth:`normalized_overlap`.
 
         Parameters
         ----------
-        other : QTTTucker or QTRTucker
-            Other hierarchical format whose flattened local dimensions, batches
-            and device match this format.
+        other : :class:`~tensorkrowch.formats.QTTTucker` or :class:`~tensorkrowch.formats.QTRTucker`
+            Other hierarchical format whose flattened local dimensions and
+            device match this format.
 
         Returns
         -------
@@ -631,26 +624,28 @@ class _QuantizedTuckerFormat(TensorFormat):
 
 
 class QTTTucker(_QuantizedTuckerFormat):
-    """Quantics factors connected to an upper tensor train.
+    """
+    Quantics factors connected to an upper tensor train.
 
     Parameters
     ----------
-    upper : TT
-        Unbatched upper tensor train.
-        Its variable sites represent connector indices.
+    upper : :class:`~tensorkrowch.formats.TT`
+        Unbatched upper tensor train. Its variable sites represent connector
+        indices.
     factors : sequence of TT
         One unbatched factor per original variable. Each contains its digit
-        sites followed by a physical connector site matching the
-        corresponding upper dimension.
-    layout : QuantizedLayout
+        sites followed by a physical connector site matching the corresponding
+        upper dimension.
+    layout : :class:`~tensorkrowch.formats.QuantizedLayout`
         Original-variable bases, levels and evaluation digit schedule.
-    coordinate_map : CoordinateMap, optional
-        Map used to quantize physical inputs. Integer and digit evaluation
-        do not require one.
+    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
+        Map used to quantize physical inputs. Integer and digit evaluation do
+        not require one.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
-        for separate intervals. Interval-based maps require a domain; maps with
-        their own physical grid or geometry can use ``None``.
+        Physical intervals as ``(2,)`` for a shared interval or
+        ``(n_variables, 2)`` for separate intervals. Interval-based maps
+        require a domain; maps with their own physical grid or geometry can use
+        ``None``.
     variable_positions : sequence of int, optional
         Strictly increasing upper sites receiving factor connectors. Other
         upper sites remain output axes. Required when upper contains output
@@ -667,26 +662,28 @@ class QTTTucker(_QuantizedTuckerFormat):
 
 
 class QTRTucker(_QuantizedTuckerFormat):
-    """Quantics factors connected to an upper tensor ring.
+    """
+    Quantics factors connected to an upper tensor ring.
 
     Parameters
     ----------
-    upper : TR
-        Unbatched upper tensor ring.
-        Its variable sites represent connector indices.
-    factors : sequence of TT
+    upper : :class:`~tensorkrowch.formats.TR`
+        Unbatched upper tensor ring. Its variable sites represent connector
+        indices.
+    factors : sequence of :class:`~tensorkrowch.formats.TT`
         One unbatched factor per original variable. Each contains its digit
-        sites followed by a physical connector site matching the
-        corresponding upper dimension.
-    layout : QuantizedLayout
+        sites followed by a physical connector site matching the corresponding
+        upper dimension.
+    layout : :class:`~tensorkrowch.formats.QuantizedLayout`
         Original-variable bases, levels and evaluation digit schedule.
-    coordinate_map : CoordinateMap, optional
-        Map used to quantize physical inputs. Integer and digit evaluation
-        do not require one.
+    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
+        Map used to quantize physical inputs. Integer and digit evaluation do
+        not require one.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Physical intervals as ``(2,)`` for a shared interval or ``(n_variables, 2)``
-        for separate intervals. Interval-based maps require a domain; maps with
-        their own physical grid or geometry can use ``None``.
+        Physical intervals as ``(2,)`` for a shared interval or
+        ``(n_variables, 2)`` for separate intervals. Interval-based maps
+        require a domain; maps with their own physical grid or geometry can use
+        ``None``.
     variable_positions : sequence of int, optional
         Strictly increasing upper sites receiving factor connectors. Other
         upper sites remain output axes. Required when upper contains output

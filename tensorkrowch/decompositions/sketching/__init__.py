@@ -19,8 +19,8 @@ from tensorkrowch.decompositions.sketching.quantization import (
     ExplicitGridMap,
     QuantizedLayout,
     QuantizedSourceAdapter,
-    UniformCoordinateMap,
-    WarpedCoordinateMap,
+    AffineCoordinateMap,
+    FunctionalCoordinateMap,
 )
 from tensorkrowch.decompositions.sketching.sketches import (
     CoreDeterminingSystem,
@@ -65,8 +65,8 @@ __all__ = [
     'RandomizedRangeProjector',
     'QuantizedLayout',
     'CoordinateMap',
-    'UniformCoordinateMap',
-    'WarpedCoordinateMap',
+    'AffineCoordinateMap',
+    'FunctionalCoordinateMap',
     'ExplicitGridMap',
     'QuantizedSourceAdapter',
     'SketchOperator',

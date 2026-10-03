@@ -13,13 +13,14 @@ This script contains:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, Optional, Sequence
 
 import torch
 
 from tensorkrowch.formats import (
     TensorFormat, TensorFormat1D, TT, TR, TTM, TRM,
-    QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout)
+    QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout,
+    AffineCoordinateMap, CoordinateMap)
 from tensorkrowch.formats.formats1d import _restore_cores
 from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
 
@@ -146,11 +147,8 @@ class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
 
     n_coordinates: int = field()  # Number of original input coordinates
     layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
-    coordinate_map: Any = None  # Actual physical-coordinate map
-    domain: Any = None  # Physical coordinate domains
+    coordinate_map: CoordinateMap = field()  # Domain and grid conversions
     digit_positions: Sequence[int] = field()  # Network sites carrying digits
-    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
 
 
 @dataclass(init=False)
@@ -159,11 +157,8 @@ class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):
 
     n_coordinates: int = field()  # Number of original input coordinates
     layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
-    coordinate_map: Any = None  # Actual physical-coordinate map
-    domain: Any = None  # Physical coordinate domains
+    coordinate_map: CoordinateMap = field()  # Domain and grid conversions
     digit_positions: Sequence[int] = field()  # Network sites carrying digits
-    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
 
 
 @dataclass(init=False)
@@ -175,12 +170,8 @@ class QTTMDecomposition(_QuanticsResultState, QTTM,
     out_n_coordinates: int = field()  # Number of original output coordinates
     in_layout: QuantizedLayout = field()  # Input digit schedule
     out_layout: QuantizedLayout = field()  # Output digit schedule
-    in_coordinate_map: Any = None  # Actual input-coordinate map
-    out_coordinate_map: Any = None  # Actual output-coordinate map
-    in_domain: Any = None  # Physical input domains
-    out_domain: Any = None  # Physical output domains
-    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
+    in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
+    out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
 
 
 @dataclass(init=False)
@@ -192,12 +183,8 @@ class QTRMDecomposition(_QuanticsResultState, QTRM,
     out_n_coordinates: int = field()  # Number of original output coordinates
     in_layout: QuantizedLayout = field()  # Input digit schedule
     out_layout: QuantizedLayout = field()  # Output digit schedule
-    in_coordinate_map: Any = None  # Actual input-coordinate map
-    out_coordinate_map: Any = None  # Actual output-coordinate map
-    in_domain: Any = None  # Physical input domains
-    out_domain: Any = None  # Physical output domains
-    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
+    in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
+    out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
 
 
 class _TuckerResultState(TensorDecomposition):
@@ -273,20 +260,25 @@ def _quantics_result(result, quantization=None, *, adapter=None,
         return result
     kwargs = dict(metrics=result.metrics, metadata=result.metadata,
                   n_batches=result.n_batches)
+    unit_domain = torch.tensor([0., 1.], device=result.device,
+                               dtype=result.cores[0].real.dtype)
     if isinstance(quantization, tuple):
         cls = QTRMDecomposition if result.topology == 'trm' else QTTMDecomposition
         kwargs.update(in_n_coordinates=quantization[0].n_coordinates,
                       out_n_coordinates=quantization[1].n_coordinates,
-                      in_layout=quantization[0], out_layout=quantization[1])
+                      in_layout=quantization[0], out_layout=quantization[1],
+                      in_coordinate_map=AffineCoordinateMap(
+                          unit_domain, quantization[0].grid_size),
+                      out_coordinate_map=AffineCoordinateMap(
+                          unit_domain, quantization[1].grid_size))
     else:
         cls = QTRDecomposition if result.topology == 'tr' else QTTDecomposition
         kwargs.update(n_coordinates=quantization.n_coordinates,
                       layout=quantization, digit_positions=digit_positions)
-        if adapter is not None:
-            kwargs.update(coordinate_map=adapter.coordinate_map,
-                          domain=adapter.domain,
-                          computational_grid=adapter.computational_grid,
-                          out_of_domain=adapter.out_of_domain)
+        kwargs['coordinate_map'] = (adapter.coordinate_map
+                                    if adapter is not None else
+                                    AffineCoordinateMap(
+                                        unit_domain, quantization.grid_size))
     wrapped = cls(result.cores, **kwargs)
     wrapped.metadata = dict(result.metadata)
     if 'quantization' not in wrapped.metadata:

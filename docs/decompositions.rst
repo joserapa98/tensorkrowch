@@ -217,11 +217,11 @@ original variable coordinates for both layouts.
    :members:
    :noindex:
 
-.. autoclass:: UniformCoordinateMap
+.. autoclass:: AffineCoordinateMap
    :members:
    :noindex:
 
-.. autoclass:: WarpedCoordinateMap
+.. autoclass:: FunctionalCoordinateMap
    :members:
    :noindex:
 

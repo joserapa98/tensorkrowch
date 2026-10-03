@@ -315,22 +315,24 @@ with no dense reconstruction, truncation or SVD. Matrices use ``to_ttm``.
 Quantics and Tucker
 --------------------
 
-Quantics subclasses add ``QuantizedLayout`` and optional coordinate maps to
+Quantics subclasses add ``QuantizedLayout`` and coordinate maps to
 the ordinary numerical formats. Layouts support grouped, interleaved and
 custom schedules, heterogeneous bases/levels and both digit directions.
-``QuantizedLayout.from_grid`` infers a missing base or level from grid sizes.
-It warns if a uniform grid must grow; explicit coordinate grids must match
-``base ** level`` exactly.
 ``QTT`` and ``QTR`` can construct these objects from ``n_coordinates``,
-``base``, ``level`` and ``domain``. Passing ``grid_coordinates`` creates an
-explicit map and infers a missing base or level. The matrix formats accept
+``base``, ``level`` and ``domain``. This constructs an interleaved,
+coarse-to-fine layout and an ``AffineCoordinateMap`` with ``grid_offset='left'``.
+Passing ``grid_coordinates`` instead of ``domain`` constructs an
+``ExplicitGridMap``; both ``base`` and ``level`` are required, and
+``base ** level`` must match the grid sizes exactly. The matrix formats accept
 independent ``in_*`` and ``out_*`` arguments; all four formats also accept
 prebuilt layouts and coordinate maps.
 ``evaluate_digits``, ``evaluate_indices`` and ``evaluate_coordinates`` distinguish
-TT site digits, original grid indices and physical coordinates.
+site digits, original grid indices and coordinates in the domain.
 ``digit_positions`` allows vector formats to retain tensor-valued output
-sites. Physical evaluation requires an actual map and its inverse; a stored
-map name is insufficient. ``to_dense_grid`` is an explicit small-grid oracle.
+sites. Maps store their domain, grid sizes and out-of-domain policy.
+``AffineCoordinateMap`` and ``FunctionalCoordinateMap`` both use a uniform
+grid in unit space; the latter applies supplied transformation functions.
+``to_dense_grid`` is an explicit small-grid oracle.
 
 Matrix Quantics has separate input/output layouts and maps with paired digit
 schedules. ``T`` and ``H`` swap their meaning. Algebra preserves Quantics

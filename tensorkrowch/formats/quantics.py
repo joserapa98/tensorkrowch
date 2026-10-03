@@ -37,13 +37,9 @@ import torch
 from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
                                          _VectorFormat1D,
                                          _restore_cores)
-from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
-                                             CoordinateDigit, Domain, ExplicitGridMap,
-                                             UniformCoordinateMap,
-                                             _CompositeCoordinateMap,
-                                             _grid_offset,
-                                             _validate_explicit_grid,
-                                             _unit_to_indices)
+from tensorkrowch.formats.quantization import (AffineCoordinateMap,
+                                             CoordinateMap, Domain,
+                                             ExplicitGridMap, QuantizedLayout)
 
 
 def _map_structure(value: Any,
@@ -53,9 +49,6 @@ def _map_structure(value: Any,
         result = function(value)
         return (result.real if not value.is_complex() and result.is_complex()
                 else result)
-    if isinstance(value, _CompositeCoordinateMap):
-        return _CompositeCoordinateMap(
-            [_map_structure(item, function) for item in value.maps])
     if is_dataclass(value):
         mapped = {field.name: _map_structure(getattr(value, field.name), function)
                   for field in fields(value) if field.init}
@@ -75,8 +68,6 @@ def _equal_structure(first: Any, second: Any) -> bool:
         return False
     if isinstance(first, torch.Tensor):
         return torch.equal(first, second)
-    if isinstance(first, _CompositeCoordinateMap):
-        return _equal_structure(first.maps, second.maps)
     if is_dataclass(first):
         return all(_equal_structure(getattr(first, field.name),
                                     getattr(second, field.name))
@@ -93,8 +84,6 @@ def _same_references(first: Any, second: Any) -> bool:
     """Compares storage references to decide whether a conversion was a no-op."""
     if isinstance(first, torch.Tensor):
         return first is second
-    if isinstance(first, _CompositeCoordinateMap):
-        return _same_references(first.maps, second.maps)
     if is_dataclass(first):
         return all(_same_references(getattr(first, field.name),
                                     getattr(second, field.name))
@@ -109,26 +98,13 @@ def _coordinates_to_indices(coordinates: torch.Tensor,
                             layout: QuantizedLayout,
                             coordinate_map: Optional[CoordinateMap],
                             domain: Domain,
-                            grid: Union[str, float],
+                            grid_offset: Union[str, float],
                             policy: str) -> torch.Tensor:
-    """Converts coordinates in the domain using the stored coordinate map."""
+    """Delegates coordinate conversion for the deferred Tucker integration."""
     if coordinate_map is None:
         raise ValueError(
             '`coordinate_map` is required for evaluation in the domain')
-    if not isinstance(coordinates, torch.Tensor):
-        raise TypeError('`coordinates` should be torch.Tensor type')
-    if coordinates.ndim < 1 or coordinates.shape[-1] != layout.n_coordinates:
-        raise ValueError(
-            'The last `coordinates` dimension should match `layout.n_coordinates`')
-    direct = getattr(coordinate_map, 'to_indices', None)
-    if callable(direct):
-        return direct(coordinates, layout.grid_size, domain, out_of_domain=policy)
-    inverse = getattr(coordinate_map, 'inverse', None)
-    if not callable(inverse):
-        raise NotImplementedError(
-            '`coordinate_map` should provide an inverse or grid-index lookup')
-    return _unit_to_indices(inverse(coordinates, domain, out_of_domain=policy),
-                            layout.grid_size, grid, policy)
+    return coordinate_map.to_indices(coordinates)
 
 
 def _resolve_quantization(
@@ -137,70 +113,48 @@ def _resolve_quantization(
         base: Optional[Union[int, Sequence[int]]],
         level: Optional[Union[int, Sequence[int]]],
         domain: Domain,
-        grid_coordinates: Optional[Union[
-            torch.Tensor, Sequence[torch.Tensor]]],
+        grid_coordinates: Optional[Union[torch.Tensor, Sequence[torch.Tensor]]],
         layout: Optional[QuantizedLayout],
-        coordinate_map: Optional[Union[
-            CoordinateMap, Sequence[CoordinateMap]]],
-        ordering: Optional[str],
-        digit_order: Optional[str],
-        permutation: Optional[Sequence[CoordinateDigit]],
-        computational_grid: Union[str, float]
-        ) -> Tuple[QuantizedLayout, Optional[CoordinateMap]]:
-    """Resolves shorthand or supplied layout and map for one coordinate space."""
+        coordinate_map: Optional[CoordinateMap]
+        ) -> Tuple[QuantizedLayout, CoordinateMap]:
+    """Builds or accepts a layout and map, then checks their compatibility."""
     if isinstance(n_coordinates, bool) or not isinstance(n_coordinates, int):
         raise TypeError('`n_coordinates` should be int type')
     if n_coordinates < 1:
         raise ValueError('`n_coordinates` should be positive')
-    _grid_offset(computational_grid)
 
-    if layout is None:
-        if coordinate_map is not None:
-            raise ValueError('`coordinate_map` requires `layout`')
-        if grid_coordinates is not None:
-            if domain is not None:
-                raise ValueError('`domain` should be None with `grid_coordinates`')
-            coordinate_map = ExplicitGridMap(grid_coordinates)
-            layout = QuantizedLayout.from_grid(
-                n_coordinates, coordinate_map, base=base, level=level,
-                ordering='grouped' if ordering is None else ordering,
-                digit_order=('coarse_to_fine' if digit_order is None
-                             else digit_order),
-                permutation=permutation)
-        else:
-            if base is None or level is None:
-                raise ValueError(
-                    '`base` and `level` are required without `layout` or '
-                    '`grid_coordinates`')
-            layout = QuantizedLayout(
-                n_coordinates, base, level,
-                ordering='grouped' if ordering is None else ordering,
-                digit_order=('coarse_to_fine' if digit_order is None
-                             else digit_order),
-                permutation=permutation)
-            if domain is not None:
-                coordinate_map = UniformCoordinateMap(grid=computational_grid)
-    else:
+    if layout is not None or coordinate_map is not None:
+        if any(value is not None for value in (
+                base, level, domain, grid_coordinates)):
+            raise ValueError(
+                'Do not combine `layout` or `coordinate_map` with shorthand arguments')
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
-        if layout.n_coordinates != n_coordinates:
-            raise ValueError('`n_coordinates` should match `layout`')
-        if any(value is not None for value in (
-                base, level, grid_coordinates, ordering, digit_order,
-                permutation)):
+        if not isinstance(coordinate_map, CoordinateMap):
+            raise TypeError('`coordinate_map` should be CoordinateMap type')
+    else:
+        if base is None or level is None:
             raise ValueError(
-                'Do not combine `layout` with shorthand quantization arguments')
-        if coordinate_map is None and domain is not None:
-            coordinate_map = UniformCoordinateMap(grid=computational_grid)
+                '`base` and `level` are required without `layout`')
+        layout = QuantizedLayout(n_coordinates, base, level,
+                                 ordering='interleaved',
+                                 digit_order='coarse_to_fine')
+        if grid_coordinates is not None:
+            if domain is not None:
+                raise ValueError(
+                    '`domain` should be None with `grid_coordinates`')
+            coordinate_map = ExplicitGridMap(grid_coordinates)
+        else:
+            if domain is None:
+                raise ValueError(
+                    '`domain` is required without `grid_coordinates`')
+            coordinate_map = AffineCoordinateMap(domain, layout.grid_size)
 
-    if isinstance(coordinate_map, (list, tuple)):
-        coordinate_map = _CompositeCoordinateMap(coordinate_map)
-    if coordinate_map is not None and not isinstance(
-            coordinate_map, CoordinateMap):
-        raise TypeError('`coordinate_map` should implement CoordinateMap')
-    if isinstance(coordinate_map, ExplicitGridMap) and domain is not None:
-        raise ValueError('`domain` should be None with an explicit grid')
-    _validate_explicit_grid(layout, coordinate_map)
+    if layout.n_coordinates != n_coordinates:
+        raise ValueError('`n_coordinates` should match `layout.n_coordinates`')
+    if coordinate_map.grid_size != layout.grid_size:
+        raise ValueError(
+            '`coordinate_map.grid_size` should match `layout.grid_size`')
     return layout, coordinate_map
 
 
@@ -238,28 +192,22 @@ class _QuanticsFormat:
         """Checks layouts, coordinate maps and contracted coordinate spaces."""
         super()._check_semantics(other, product=product)
         if product:
-            # Operator products are constructed by the matrix operand.
-            left = (self.in_layout, self.in_coordinate_map, self.in_domain)
-            right = ((other.out_layout, other.out_coordinate_map, other.out_domain)
-                     if isinstance(other, _QuanticsMatrix) else
-                     (other.layout, other.coordinate_map, other.domain))
+            left = (self.in_layout, self.in_coordinate_map)
+            right = ((other.out_layout, other.out_coordinate_map)
+                     if isinstance(other, _QuanticsMatrix)
+                     else (other.layout, other.coordinate_map))
             if not _equal_structure(left, right):
                 raise ValueError(
                     'Contracted Quantics coordinate spaces should match')
         else:
-            names = (('layout', 'coordinate_map', 'domain', 'digit_positions')
-                     if isinstance(self, _QuanticsVector) else
-                     ('in_layout', 'out_layout', 'in_coordinate_map',
-                      'out_coordinate_map', 'in_domain', 'out_domain'))
+            names = (('layout', 'coordinate_map', 'digit_positions')
+                     if isinstance(self, _QuanticsVector)
+                     else ('in_layout', 'out_layout', 'in_coordinate_map',
+                           'out_coordinate_map'))
             if any(not _equal_structure(getattr(self, name), getattr(other, name, None))
                    for name in names):
                 raise ValueError(
                     'Quantics layouts and coordinate maps should match')
-        if (self.computational_grid, self.out_of_domain) != (
-            other.computational_grid, other.out_of_domain):
-            raise ValueError(
-                '`computational_grid` and `out_of_domain` should match '
-                'between formats')
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -269,11 +217,8 @@ class _QuanticsFormat:
                                  cyclic: bool,
                                  other: Optional[TensorFormat1D] = None,
                                  product: bool = False) -> TensorFormat1D:
-        """Constructs the matching Quantics result directly from its cores."""
+        """Constructs algebra results with their input and output coordinate maps."""
         cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
-        options = dict(n_batches=n_batches,
-                       computational_grid=self.computational_grid,
-                       out_of_domain=self.out_of_domain)
         if out_dim is not None:
             cls = QTRM if cyclic else QTTM
             input_format = other if product else self
@@ -282,27 +227,22 @@ class _QuanticsFormat:
                 self.out_layout.n_coordinates,
                 in_layout=input_format.in_layout, out_layout=self.out_layout,
                 in_coordinate_map=input_format.in_coordinate_map,
-                out_coordinate_map=self.out_coordinate_map,
-                in_domain=input_format.in_domain, out_domain=self.out_domain,
-                **options)
+                out_coordinate_map=self.out_coordinate_map, n_batches=n_batches)
+
         cls = QTR if cyclic else QTT
-        if product:
-            layout, coordinate_map, domain = (
-                self.out_layout, self.out_coordinate_map, self.out_domain)
-            positions = None
-        else:
-            layout, coordinate_map, domain = (
-                self.layout, self.coordinate_map, self.domain)
-            positions = self.digit_positions
+        layout = self.out_layout if product else self.layout
+        coordinate_map = (self.out_coordinate_map if product
+                          else self.coordinate_map)
+        positions = None if product else self.digit_positions
         return cls(cores, layout.n_coordinates, layout=layout,
-                   coordinate_map=coordinate_map, domain=domain,
-                   digit_positions=positions, **options)
+                   coordinate_map=coordinate_map, digit_positions=positions,
+                   n_batches=n_batches)
 
 
 class _QuanticsVector(_QuanticsFormat):
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
-    _coordinate_names = ('coordinate_map', 'domain')
+    _coordinate_names = ('coordinate_map',)
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -330,43 +270,27 @@ class _QuanticsVector(_QuanticsFormat):
                  grid_coordinates: Optional[Union[
                      torch.Tensor, Sequence[torch.Tensor]]] = None,
                  layout: Optional[QuantizedLayout] = None,
-                 coordinate_map: Optional[Union[
-                     CoordinateMap, Sequence[CoordinateMap]]] = None,
-                 ordering: Optional[str] = None,
-                 digit_order: Optional[str] = None,
-                 permutation: Optional[Sequence[CoordinateDigit]] = None,
+                 coordinate_map: Optional[CoordinateMap] = None,
                  digit_positions: Optional[Sequence[int]] = None,
                  n_batches: int = 0,
-                 computational_grid: Union[str, float] = 'endpoints',
-                 out_of_domain: str = 'error',
                  bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
-        layout, coordinate_map = _resolve_quantization(
+        self.layout, self.coordinate_map = _resolve_quantization(
             n_coordinates, base=base, level=level, domain=domain,
             grid_coordinates=grid_coordinates, layout=layout,
-            coordinate_map=coordinate_map, ordering=ordering,
-            digit_order=digit_order, permutation=permutation,
-            computational_grid=computational_grid)
-        if out_of_domain not in ('error', 'clip'):
-            raise ValueError('Invalid `out_of_domain`')
+            coordinate_map=coordinate_map)
         self.n_coordinates = n_coordinates
-        self.layout = layout
-        self.coordinate_map = coordinate_map
-        self.domain = domain
-        self.computational_grid = computational_grid
-        self.out_of_domain = out_of_domain
         super().__init__(cores, n_batches=n_batches, bonds=bonds)
 
         # Digit sites carry inputs; any remaining output sites stay open.
         positions = (tuple(range(self.n_sites)) if digit_positions is None
                      else tuple(digit_positions))
-        if len(positions) != layout.n_sites or any(
-                isinstance(site, bool) or not isinstance(
-                    site, int) or not 0 <= site < self.n_sites
-                for site in positions) or len(set(positions)) != len(positions):
+        if len(positions) != self.layout.n_sites or any(
+                isinstance(site, bool) or not isinstance(site, int) or
+                not 0 <= site < self.n_sites for site in positions) or \
+                len(set(positions)) != len(positions):
             raise ValueError(
-                '`digit_positions` should select every scheduled digit '
-                'exactly once')
-        if tuple(self._in_dim[site] for site in positions) != layout.in_dim:
+                '`digit_positions` should select every scheduled digit exactly once')
+        if tuple(self._in_dim[site] for site in positions) != self.layout.in_dim:
             raise ValueError(
                 'Digit core dimensions should match `layout.in_dim`')
         self.digit_positions = positions
@@ -400,12 +324,6 @@ class _QuanticsVector(_QuanticsFormat):
                for format in (self, other)):
             raise ValueError(
                 'Quantics outer products require only digit sites')
-        if (self.computational_grid, self.out_of_domain) != (
-                other.computational_grid, other.out_of_domain):
-            raise ValueError(
-                '`computational_grid` and `out_of_domain` should match '
-                'between formats')
-
         cores = _restore_cores(
             cores, other._in_dim, self._in_dim, n_batches, cyclic)
         cls = QTRM if cyclic else QTTM
@@ -413,10 +331,7 @@ class _QuanticsVector(_QuanticsFormat):
             cores, other.layout.n_coordinates, self.layout.n_coordinates,
             in_layout=other.layout, out_layout=self.layout,
             in_coordinate_map=other.coordinate_map,
-            out_coordinate_map=self.coordinate_map,
-            in_domain=other.domain, out_domain=self.domain, n_batches=n_batches,
-            computational_grid=self.computational_grid,
-            out_of_domain=self.out_of_domain)
+            out_coordinate_map=self.coordinate_map, n_batches=n_batches)
 
     def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
         """
@@ -491,8 +406,10 @@ class _QuanticsVector(_QuanticsFormat):
         Examples
         --------
         >>> layout = tk.formats.QuantizedLayout(1, 2, 2)
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([0., 1.]), grid_size=layout.grid_size)
         >>> format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
-        ...                         layout=layout)
+        ...     layout=layout, coordinate_map=coordinate_map)
         >>> format.evaluate_indices(torch.tensor([[0], [3]])).tolist()
         [1.0, 1.0]
         """
@@ -502,9 +419,8 @@ class _QuanticsVector(_QuanticsFormat):
         """
         Evaluates coordinate configurations in the domain.
 
-        Coordinates in the domain require a coordinate map with an inverse or
-        grid-index lookup. The ``computational_grid`` and ``out_of_domain``
-        policies determine quantization.
+        The coordinate map quantizes the inputs using its stored grid
+        and out-of-domain policy.
 
         Each coordinate configuration is evaluated for every stored structural
         batch, as in :meth:`evaluate_indices`.
@@ -527,14 +443,13 @@ class _QuanticsVector(_QuanticsFormat):
         --------
         >>> layout = tk.formats.QuantizedLayout(1, 2, 2)
         >>> format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
-        ...     layout=layout, coordinate_map=tk.formats.UniformCoordinateMap(),
-        ...     domain=torch.tensor([0., 3.]))
+        ...     layout=layout, coordinate_map=tk.formats.AffineCoordinateMap(
+        ...         domain=torch.tensor([0., 3.]), grid_size=layout.grid_size))
         >>> format.evaluate_coordinates(torch.tensor([[0.], [3.]])).tolist()
         [1.0, 1.0]
         """
-        return self.evaluate_indices(_coordinates_to_indices(
-            coordinates, self.layout, self.coordinate_map, self.domain,
-            self.computational_grid, self.out_of_domain))
+        indices = self.coordinate_map.to_indices(coordinates)
+        return self.evaluate_indices(indices)
 
     def to_dense_grid(self) -> torch.Tensor:
         """
@@ -560,65 +475,69 @@ class _QuanticsVector(_QuanticsFormat):
 
 class QTT(_QuanticsVector, TT):
     """
-    A tensor train plus the domain meaning of its digit sites.
+    Quantics tensor train with a digit layout and coordinate map.
+
+    Shorthand construction uses ``base``, ``level`` and either ``domain`` or
+    ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;
+    domain intervals produce an affine map with ``grid_offset="left"``. For other
+    choices, supply ``layout`` and ``coordinate_map`` explicitly.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Core tensors with the shapes described in
-        :class:`~tensorkrowch.formats.TT`. The container is copied and tensors
-        retain storage and autograd.
+        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TT`.
+        The container is copied; tensors retain storage and autograd.
     n_coordinates : int
         Number of original input coordinates.
     base : int or sequence of int, optional
-        Digit base for each coordinate when ``layout`` is omitted.
+        Digit bases for shorthand construction. Required together with ``level``
+        and either ``domain`` or ``grid_coordinates``.
     level : int or sequence of int, optional
-        Number of digits for each coordinate when ``layout`` is omitted.
-    grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit coordinate values. With these, either ``base`` or ``level``
-        may be inferred; the resulting grid size must match exactly.
-    ordering : {"grouped", "interleaved", "custom"}, optional
-        TT site order when constructing a layout.
-    digit_order : {"coarse_to_fine", "fine_to_coarse"}, optional
-        Order of digit positions within each coordinate.
-    permutation : sequence of tuple[int, int], optional
-        TT site order when ``ordering="custom"``.
-    layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
-        Digit bases, levels and site schedule. Scheduled core input dimensions
-        should match the layout. Cannot be combined with shorthand layout
-        arguments.
-    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
-        Coordinate map from unit coordinates to the domain. Evaluation
-        requires an inverse or direct grid-index lookup. If only
-        ``domain`` is given, a uniform map is constructed.
+        Number of digits per coordinate for shorthand construction.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals as ``(2,)`` for a shared interval or
-        ``(n_coordinates, 2)`` for separate intervals. Interval-based maps
-        require a domain; maps with their own grid or domain geometry can use
-        ``None``.
+        Intervals used to build an :class:`~tensorkrowch.formats.AffineCoordinateMap`
+        with ``grid_offset="left"``. Cannot be combined with
+        ``grid_coordinates`` or
+        prebuilt objects.
+    grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
+        Grid points in the domain, used to build an
+        :class:`~tensorkrowch.formats.ExplicitGridMap`. A vector describes one
+        coordinate; a matrix or sequence of vectors describes multiple
+        coordinates. Sizes must equal ``base ** level`` exactly.
+    layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
+        Prebuilt digit layout, supplied together with ``coordinate_map``.
+        Cannot be combined with shorthand construction arguments.
+    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
+        Prebuilt map containing the domain, grid and conversion policy.
+        Its ``grid_size`` must match ``layout.grid_size``.
     digit_positions : sequence of int, optional
-        Core position for each scheduled digit column, in layout order.
-        ``None`` uses every core. Other sites are open tensor outputs.
+        Core position for each digit column in layout order. ``None`` uses
+        every core. Other sites remain open tensor outputs.
     n_batches : int
-        Number of leading structural batch axes shared by all cores.
+        Number of leading structural batch axes shared by the cores.
         Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
-    computational_grid : {"endpoints", "left", "centers", "right"} or float
-        Uniform grid convention or within-cell offset in ``[0, 1]``, as in
-        :class:`~tensorkrowch.formats.UniformCoordinateMap`. Used when
-        constructing a uniform map or when a map provides no direct
-        index lookup.
-    out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ``ValueError`` or are
-        clipped to the domain boundary.
 
     Examples
     --------
     >>> format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
-    ...                         base=2, level=2, domain=torch.tensor([0., 3.]))
-    >>> format.evaluate_coordinates(torch.tensor([[0.], [3.]])).tolist()
+    ...                         base=2, level=2, domain=torch.tensor([0., 1.]))
+    >>> format.evaluate_coordinates(torch.tensor([[0.], [1.]])).tolist()
     [1.0, 1.0]
+    >>> format = tk.formats.QTT([torch.tensor([2., 3.])], 1,
+    ...     base=2, level=1, grid_coordinates=torch.tensor([-1., 4.]))
+    >>> format.evaluate_coordinates(torch.tensor([[-1.], [4.]])).tolist()
+    [2.0, 3.0]
+    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=1)
+    >>> coordinate_map = tk.formats.FunctionalCoordinateMap(
+    ...     domain=None, grid_size=layout.grid_size,
+    ...     forward_function=lambda u, domain: u.square(),
+    ...     inverse_function=lambda x, domain: x.sqrt())
+    >>> format = tk.formats.QTT([torch.tensor([2., 3.])], 1,
+    ...                         layout=layout, coordinate_map=coordinate_map)
+    >>> format.evaluate_coordinates(torch.tensor([[0.25]])).tolist()
+    [3.0]
     """
 
     def as_tt(self) -> TT:
@@ -636,58 +555,49 @@ class QTT(_QuanticsVector, TT):
 
 class QTR(_QuanticsVector, TR):
     """
-    A tensor ring plus the domain meaning of its digit sites.
+    Quantics tensor ring with a digit layout and coordinate map.
+
+    Shorthand construction uses ``base``, ``level`` and either ``domain`` or
+    ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;
+    domain intervals produce an affine map with ``grid_offset="left"``. For other
+    choices, supply ``layout`` and ``coordinate_map`` explicitly.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Core tensors with the shapes described in
-        :class:`~tensorkrowch.formats.TR`. The container is copied and tensors
-        retain storage and autograd.
+        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TR`.
+        The container is copied; tensors retain storage and autograd.
     n_coordinates : int
         Number of original input coordinates.
     base : int or sequence of int, optional
-        Digit base for each coordinate when ``layout`` is omitted.
+        Digit bases for shorthand construction. Required together with ``level``
+        and either ``domain`` or ``grid_coordinates``.
     level : int or sequence of int, optional
-        Number of digits for each coordinate when ``layout`` is omitted.
-    grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit coordinate values. With these, either ``base`` or ``level``
-        may be inferred; the resulting grid size must match exactly.
-    ordering : {"grouped", "interleaved", "custom"}, optional
-        TT site order when constructing a layout.
-    digit_order : {"coarse_to_fine", "fine_to_coarse"}, optional
-        Order of digit positions within each coordinate.
-    permutation : sequence of tuple[int, int], optional
-        TT site order when ``ordering="custom"``.
-    layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
-        Digit bases, levels and site schedule. Scheduled core input dimensions
-        should match the layout. Cannot be combined with shorthand layout
-        arguments.
-    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
-        Coordinate map from unit coordinates to the domain. Evaluation
-        requires an inverse or direct grid-index lookup. If only
-        ``domain`` is given, a uniform map is constructed.
+        Number of digits per coordinate for shorthand construction.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals as ``(2,)`` for a shared interval or
-        ``(n_coordinates, 2)`` for separate intervals. Interval-based maps
-        require a domain; maps with their own grid or domain geometry can use
-        ``None``.
+        Intervals used to build an :class:`~tensorkrowch.formats.AffineCoordinateMap`
+        with ``grid_offset="left"``. Cannot be combined with
+        ``grid_coordinates`` or
+        prebuilt objects.
+    grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
+        Grid points in the domain, used to build an
+        :class:`~tensorkrowch.formats.ExplicitGridMap`. A vector describes one
+        coordinate; a matrix or sequence of vectors describes multiple
+        coordinates. Sizes must equal ``base ** level`` exactly.
+    layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
+        Prebuilt digit layout, supplied together with ``coordinate_map``.
+        Cannot be combined with shorthand construction arguments.
+    coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
+        Prebuilt map containing the domain, grid and conversion policy.
+        Its ``grid_size`` must match ``layout.grid_size``.
     digit_positions : sequence of int, optional
-        Core position for each scheduled digit column, in layout order.
-        ``None`` uses every core. Other sites are open tensor outputs.
+        Core position for each digit column in layout order. ``None`` uses
+        every core. Other sites remain open tensor outputs.
     n_batches : int
-        Number of leading structural batch axes shared by all cores.
+        Number of leading structural batch axes shared by the cores.
         Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
-    computational_grid : {"endpoints", "left", "centers", "right"} or float
-        Uniform grid convention or within-cell offset in ``[0, 1]``, as in
-        :class:`~tensorkrowch.formats.UniformCoordinateMap`. Used when
-        constructing a uniform map or when a map provides no direct
-        index lookup.
-    out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ``ValueError`` or are
-        clipped to the domain boundary.
     """
 
     def as_tr(self) -> TR:
@@ -726,10 +636,8 @@ class QTR(_QuanticsVector, TR):
                           self.n_sites for site in self.digit_positions)
         result = QTR(
             cores, self.layout.n_coordinates, layout=self.layout,
-            coordinate_map=self.coordinate_map, domain=self.domain,
-            digit_positions=positions, n_batches=self._n_batches,
-            computational_grid=self.computational_grid,
-            out_of_domain=self.out_of_domain)
+            coordinate_map=self.coordinate_map,
+            digit_positions=positions, n_batches=self._n_batches)
         result._is_row = self._is_row
         if self._bonds is not None:
             factors = self._bonds.factors
@@ -740,8 +648,7 @@ class QTR(_QuanticsVector, TR):
 class _QuanticsMatrix(_QuanticsFormat):
     """Paired input/output digit layouts of a tensorized operator."""
 
-    _coordinate_names = ('in_coordinate_map', 'out_coordinate_map',
-                         'in_domain', 'out_domain')
+    _coordinate_names = ('in_coordinate_map', 'out_coordinate_map')
 
     def __init__(self,
                  cores: Sequence[torch.Tensor],
@@ -760,49 +667,23 @@ class _QuanticsMatrix(_QuanticsFormat):
                      torch.Tensor, Sequence[torch.Tensor]]] = None,
                  in_layout: Optional[QuantizedLayout] = None,
                  out_layout: Optional[QuantizedLayout] = None,
-                 in_coordinate_map: Optional[Union[
-                     CoordinateMap, Sequence[CoordinateMap]]] = None,
-                 out_coordinate_map: Optional[Union[
-                     CoordinateMap, Sequence[CoordinateMap]]] = None,
-                 in_ordering: Optional[str] = None,
-                 out_ordering: Optional[str] = None,
-                 in_digit_order: Optional[str] = None,
-                 out_digit_order: Optional[str] = None,
-                 in_permutation: Optional[Sequence[CoordinateDigit]] = None,
-                 out_permutation: Optional[Sequence[CoordinateDigit]] = None,
+                 in_coordinate_map: Optional[CoordinateMap] = None,
+                 out_coordinate_map: Optional[CoordinateMap] = None,
                  n_batches: int = 0,
-                 computational_grid: Union[str, float] = 'endpoints',
-                 out_of_domain: str = 'error',
                  bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
-        in_layout, in_coordinate_map = _resolve_quantization(
+        self.in_layout, self.in_coordinate_map = _resolve_quantization(
             in_n_coordinates, base=in_base, level=in_level, domain=in_domain,
             grid_coordinates=in_grid_coordinates, layout=in_layout,
-            coordinate_map=in_coordinate_map, ordering=in_ordering,
-            digit_order=in_digit_order, permutation=in_permutation,
-            computational_grid=computational_grid)
-        out_layout, out_coordinate_map = _resolve_quantization(
-            out_n_coordinates, base=out_base, level=out_level,
-            domain=out_domain, grid_coordinates=out_grid_coordinates,
-            layout=out_layout, coordinate_map=out_coordinate_map,
-            ordering=out_ordering, digit_order=out_digit_order,
-            permutation=out_permutation,
-            computational_grid=computational_grid)
-        if in_layout.n_sites != out_layout.n_sites:
+            coordinate_map=in_coordinate_map)
+        self.out_layout, self.out_coordinate_map = _resolve_quantization(
+            out_n_coordinates, base=out_base, level=out_level, domain=out_domain,
+            grid_coordinates=out_grid_coordinates, layout=out_layout,
+            coordinate_map=out_coordinate_map)
+        if self.in_layout.n_sites != self.out_layout.n_sites:
             raise ValueError(
                 '`in_layout` and `out_layout` should have equal `n_sites`')
-        if out_of_domain not in ('error', 'clip'):
-            raise ValueError('Invalid `out_of_domain`')
         self.in_n_coordinates = in_n_coordinates
         self.out_n_coordinates = out_n_coordinates
-        self.in_layout = in_layout
-        self.out_layout = out_layout
-        self.in_coordinate_map = in_coordinate_map
-        self.out_coordinate_map = out_coordinate_map
-        self.in_domain = in_domain
-        self.out_domain = out_domain
-        self.computational_grid = computational_grid
-        self.out_of_domain = out_of_domain
-
         super().__init__(cores, n_batches=n_batches, bonds=bonds)
 
     def validate(self) -> TensorFormat1D:
@@ -839,8 +720,12 @@ class _QuanticsMatrix(_QuanticsFormat):
         --------
         >>> layout = tk.formats.QuantizedLayout(1, 2, 1)
         >>> core = torch.tensor([[1+2j, 3+4j], [5+6j, 7+8j]])
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([0., 1.]), grid_size=layout.grid_size)
         >>> matrix = tk.formats.QTTM([core], 1, 1,
-        ...                          in_layout=layout, out_layout=layout)
+        ...     in_layout=layout, out_layout=layout,
+        ...     in_coordinate_map=coordinate_map,
+        ...     out_coordinate_map=coordinate_map)
         >>> matrix.transpose().contract_dense().tolist()
         [[(1+2j), (5+6j)], [(3+4j), (7+8j)]]
         >>> torch.equal(matrix.T.contract_dense(),
@@ -853,7 +738,6 @@ class _QuanticsMatrix(_QuanticsFormat):
         result.in_layout, result.out_layout = self.out_layout, self.in_layout
         result.in_coordinate_map, result.out_coordinate_map = (
             self.out_coordinate_map, self.in_coordinate_map)
-        result.in_domain, result.out_domain = self.out_domain, self.in_domain
         return result
 
     def evaluate_digits(self,
@@ -934,12 +818,8 @@ class _QuanticsMatrix(_QuanticsFormat):
             in the domain quantizes both coordinate groups; it does not
             interpolate matrix entries.
         """
-        in_indices = _coordinates_to_indices(
-            in_coordinates, self.in_layout, self.in_coordinate_map,
-            self.in_domain, self.computational_grid, self.out_of_domain)
-        out_indices = _coordinates_to_indices(
-            out_coordinates, self.out_layout, self.out_coordinate_map,
-            self.out_domain, self.computational_grid, self.out_of_domain)
+        in_indices = self.in_coordinate_map.to_indices(in_coordinates)
+        out_indices = self.out_coordinate_map.to_indices(out_coordinates)
         return self.evaluate_indices(in_indices, out_indices)
 
     def to_dense_grid(self) -> torch.Tensor:
@@ -975,67 +855,51 @@ class _QuanticsMatrix(_QuanticsFormat):
 
 class QTTM(_QuanticsMatrix, TTM):
     """
-    Open-chain operator with separate input/output Quantics layouts.
+    Quantics open-chain matrix with separate input and output coordinate spaces.
+
+    Each space independently accepts shorthand arguments or a prebuilt layout
+    and map, as in :class:`QTT`. Shorthand layouts are ``interleaved`` and
+    ``coarse_to_fine``; shorthand affine maps use ``grid_offset="left"``.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Core tensors with the shapes described in
-        :class:`~tensorkrowch.formats.TTM`. The container is copied and tensors
-        retain storage and autograd.
-    in_n_coordinates : int
-        Number of original input coordinates.
-    out_n_coordinates : int
-        Number of original output coordinates.
+        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TTM`.
+        The container is copied; tensors retain storage and autograd.
+    in_n_coordinates, out_n_coordinates : int
+        Number of original input and output coordinates.
     in_base, out_base : int or sequence of int, optional
-        Digit bases when the corresponding layout is omitted.
+        Digit bases for shorthand construction of each coordinate space.
+        Each base requires its corresponding level and domain or grid points.
     in_level, out_level : int or sequence of int, optional
-        Digit counts when the corresponding layout is omitted.
-    in_grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit input coordinate values. The grid size must match its layout.
-    out_grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit output coordinate values. The grid size must match its layout.
-    in_ordering, out_ordering : str, optional
-        Input and output TT site schedules.
-    in_digit_order, out_digit_order : str, optional
-        Input and output digit directions.
-    in_permutation, out_permutation : sequence of tuple[int, int], optional
-        Custom input and output TT site schedules.
-    in_layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
-        Digit layout of input/column indices.
-    out_layout : QuantizedLayout, optional
-        Digit layout of output/row indices. Input and output schedules should
-        have the same number of sites.
-    in_coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
-        Coordinate map for the operator input domain. A uniform map is
-        built when only ``in_domain`` is given.
-    out_coordinate_map : CoordinateMap, optional
-        Coordinate map for the operator output domain. A uniform map is
-        built when only ``out_domain`` is given.
-    in_domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals for input coordinates.
-    out_domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals for output coordinates.
+        Number of digits per coordinate in each space.
+    in_domain, out_domain : torch.Tensor or sequence of torch.Tensor, optional
+        Intervals used to build affine maps with ``grid_offset="left"``.
+        Cannot be combined with grid points or prebuilt objects for that space.
+    in_grid_coordinates, out_grid_coordinates : torch.Tensor or sequence, optional
+        Domain grid points used to build explicit maps. A vector describes one
+        coordinate; a matrix or sequence of vectors describes multiple
+        coordinates. Grid sizes must match the corresponding ``base ** level``.
+    in_layout, out_layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
+        Prebuilt digit layouts, each supplied with its corresponding map.
+        Input and output layouts must have the same number of sites.
+    in_coordinate_map, out_coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
+        Prebuilt maps, each with grid sizes matching its layout. Cannot be
+        combined with shorthand arguments for that coordinate space.
     n_batches : int
-        Number of leading structural batch axes shared by all cores.
+        Number of leading structural batch axes shared by the cores.
         Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
-    computational_grid : {"endpoints", "left", "centers", "right"} or float
-        Uniform grid convention or within-cell offset in ``[0, 1]``, as in
-        :class:`~tensorkrowch.formats.UniformCoordinateMap`. Used when
-        constructing a uniform map or when a map provides no direct
-        index lookup.
-    out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ``ValueError`` or are
-        clipped to the domain boundary.
 
     Examples
     --------
     >>> matrix = tk.formats.QTTM([torch.ones(2, 3)], 1, 1,
-    ...     in_base=2, in_level=1,
-    ...     out_grid_coordinates=torch.tensor([0., 2., 5.]), out_base=3)
-    >>> matrix.evaluate_indices(torch.tensor([[1]]), torch.tensor([[2]])).tolist()
+    ...     in_base=2, in_level=1, in_domain=torch.tensor([0., 1.]),
+    ...     out_grid_coordinates=torch.tensor([0., 2., 5.]),
+    ...     out_base=3, out_level=1)
+    >>> matrix.evaluate_coordinates(torch.tensor([[1.]]),
+    ...                             torch.tensor([[5.]])).tolist()
     [1.0]
     """
 
@@ -1054,60 +918,42 @@ class QTTM(_QuanticsMatrix, TTM):
 
 class QTRM(_QuanticsMatrix, TRM):
     """
-    Cyclic operator with separate input/output Quantics layouts.
+    Quantics cyclic matrix with separate input and output coordinate spaces.
+
+    Each space independently accepts shorthand arguments or a prebuilt layout
+    and map, as in :class:`QTT`. Shorthand layouts are ``interleaved`` and
+    ``coarse_to_fine``; shorthand affine maps use ``grid_offset="left"``.
 
     Parameters
     ----------
     cores : sequence of torch.Tensor
-        Core tensors with the shapes described in
-        :class:`~tensorkrowch.formats.TRM`. The container is copied and tensors
-        retain storage and autograd.
-    in_n_coordinates : int
-        Number of original input coordinates.
-    out_n_coordinates : int
-        Number of original output coordinates.
+        Core tensors with the shapes described in :class:`~tensorkrowch.formats.TRM`.
+        The container is copied; tensors retain storage and autograd.
+    in_n_coordinates, out_n_coordinates : int
+        Number of original input and output coordinates.
     in_base, out_base : int or sequence of int, optional
-        Digit bases when the corresponding layout is omitted.
+        Digit bases for shorthand construction of each coordinate space.
+        Each base requires its corresponding level and domain or grid points.
     in_level, out_level : int or sequence of int, optional
-        Digit counts when the corresponding layout is omitted.
-    in_grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit input coordinate values. The grid size must match its layout.
-    out_grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit output coordinate values. The grid size must match its layout.
-    in_ordering, out_ordering : str, optional
-        Input and output TT site schedules.
-    in_digit_order, out_digit_order : str, optional
-        Input and output digit directions.
-    in_permutation, out_permutation : sequence of tuple[int, int], optional
-        Custom input and output TT site schedules.
-    in_layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
-        Digit layout of input/column indices.
-    out_layout : QuantizedLayout, optional
-        Digit layout of output/row indices. Input and output schedules should
-        have the same number of sites.
-    in_coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
-        Coordinate map for the operator input domain. A uniform map is
-        built when only ``in_domain`` is given.
-    out_coordinate_map : CoordinateMap, optional
-        Coordinate map for the operator output domain. A uniform map is
-        built when only ``out_domain`` is given.
-    in_domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals for input coordinates.
-    out_domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals for output coordinates.
+        Number of digits per coordinate in each space.
+    in_domain, out_domain : torch.Tensor or sequence of torch.Tensor, optional
+        Intervals used to build affine maps with ``grid_offset="left"``.
+        Cannot be combined with grid points or prebuilt objects for that space.
+    in_grid_coordinates, out_grid_coordinates : torch.Tensor or sequence, optional
+        Domain grid points used to build explicit maps. A vector describes one
+        coordinate; a matrix or sequence of vectors describes multiple
+        coordinates. Grid sizes must match the corresponding ``base ** level``.
+    in_layout, out_layout : :class:`~tensorkrowch.formats.QuantizedLayout`, optional
+        Prebuilt digit layouts, each supplied with its corresponding map.
+        Input and output layouts must have the same number of sites.
+    in_coordinate_map, out_coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
+        Prebuilt maps, each with grid sizes matching its layout. Cannot be
+        combined with shorthand arguments for that coordinate space.
     n_batches : int
-        Number of leading structural batch axes shared by all cores.
+        Number of leading structural batch axes shared by the cores.
         Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
-    computational_grid : {"endpoints", "left", "centers", "right"} or float
-        Uniform grid convention or within-cell offset in ``[0, 1]``, as in
-        :class:`~tensorkrowch.formats.UniformCoordinateMap`. Used when
-        constructing a uniform map or when a map provides no direct
-        index lookup.
-    out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ``ValueError`` or are
-        clipped to the domain boundary.
     """
 
     def as_trm(self) -> TRM:
@@ -1156,10 +1002,7 @@ class QTRM(_QuanticsMatrix, TRM):
             out_layout=rotated_layout(self.out_layout),
             in_coordinate_map=self.in_coordinate_map,
             out_coordinate_map=self.out_coordinate_map,
-            in_domain=self.in_domain, out_domain=self.out_domain,
-            n_batches=self._n_batches,
-            computational_grid=self.computational_grid,
-            out_of_domain=self.out_of_domain)
+            n_batches=self._n_batches)
         if self._bonds is not None:
             factors = self._bonds.factors
             result.bonds = [*factors[first:], *factors[:first]]

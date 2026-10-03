@@ -17,7 +17,7 @@ from tensorkrowch.decompositions.sketching.quantization import (
     CoordinateMap,
     QuantizedLayout,
     QuantizedSourceAdapter,
-    UniformCoordinateMap,
+    AffineCoordinateMap,
 )
 from tensorkrowch.utils import truncated_svd
 
@@ -729,7 +729,9 @@ class QTTInputFitter:
             level=level,
             digit_order=digit_order)
         if coordinate_map is None:
-            coordinate_map = UniformCoordinateMap()
+            coordinate_map = AffineCoordinateMap(
+                torch.tensor([0., 1.]) if domain is None else domain,
+                self.layout.grid_size)
         if not isinstance(coordinate_map, CoordinateMap):
             raise TypeError('`coordinate_map` should implement CoordinateMap')
         if rank is not None and (

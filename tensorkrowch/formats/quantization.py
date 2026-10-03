@@ -7,14 +7,12 @@ This script contains:
     Public classes:
         * QuantizedLayout
         * CoordinateMap
-        * UniformCoordinateMap
-        * WarpedCoordinateMap
+        * AffineCoordinateMap
+        * FunctionalCoordinateMap
         * ExplicitGridMap
 
     Internal functions:
         * _integer_spec
-        * _smallest_level
-        * _smallest_base
         * _coordinate_tensor
         * _domain_tensor
         * _out_of_domain
@@ -30,9 +28,9 @@ Terminology:
     * Coordinate: a continuous input value along one dimension.
     * Grid: the discrete values available along that dimension.
     * Index: an integer position on its grid.
-    * Digit: one component of an index in the chosen base, used as a TT site
-      input.
-    * Layout: the order in which coordinates' digits occupy TT sites.
+    * Digit: one component of an index in the chosen base, used as a
+      site input.
+    * Layout: the order in which coordinates' digits occupy sites.
 
 For example, index ``5`` on a base-``2`` grid with three digits becomes
 ``(1, 0, 1)``. A coordinate is first mapped to a grid index, then expanded
@@ -40,10 +38,9 @@ into digits; evaluating coordinates selects entries of the format without
 interpolating between them.
 """
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import (Callable, Optional, Protocol, Sequence, Tuple, Union,
-                    runtime_checkable)
-import warnings
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -82,27 +79,6 @@ def _integer_spec(value: IntegerSpec,
         qualifier = 'at least two' if minimum == 2 else 'positive'
         raise ValueError(f'`{name}` values should be {qualifier}')
     return values
-
-
-def _smallest_level(size: int, base: int) -> int:
-    """Returns the fewest digits in ``base`` that cover ``size`` indices."""
-    level, capacity = 1, base
-    while capacity < size:
-        level += 1
-        capacity *= base
-    return level
-
-
-def _smallest_base(size: int, level: int) -> int:
-    """Returns the smallest base whose ``level`` digits cover ``size`` indices."""
-    lower, upper = 2, size
-    while lower < upper:
-        middle = (lower + upper) // 2
-        if middle ** level < size:
-            lower = middle + 1
-        else:
-            upper = middle
-    return lower
 
 
 @dataclass(frozen=True)
@@ -224,93 +200,6 @@ class QuantizedLayout:
         object.__setattr__(self, 'base', base)
         object.__setattr__(self, 'level', level)
         object.__setattr__(self, 'permutation', permutation)
-
-    @classmethod
-    def from_grid(cls,
-                  n_coordinates: int,
-                  grid: Union[IntegerSpec, 'ExplicitGridMap'],
-                  *,
-                  base: Optional[IntegerSpec] = None,
-                  level: Optional[IntegerSpec] = None,
-                  ordering: str = 'grouped',
-                  digit_order: str = 'coarse_to_fine',
-                  permutation: Optional[Sequence[CoordinateDigit]] = None
-                  ) -> 'QuantizedLayout':
-        """
-        Constructs a layout from grid sizes and the supplied digit resolution.
-
-        An integer or sequence of integers specifies a uniform grid size. When
-        only ``base`` or ``level`` is given, the other is chosen to cover each
-        grid with the smallest possible ``base ** level``. A larger grid is
-        used when necessary, and a warning reports the changed size. An
-        :class:`ExplicitGridMap` supplies coordinate values, which cannot be
-        extended automatically: its sizes must match exactly.
-
-        Parameters
-        ----------
-        n_coordinates : int
-            Number of independently quantized coordinates.
-        grid : int, sequence of int or ExplicitGridMap
-            Uniform grid sizes or an explicit grid of coordinate values.
-        base : int or sequence of int
-            Digit base shared by all coordinates or specified per coordinate.
-        level : int or sequence of int
-            Number of digits shared by all coordinates or specified per
-            coordinate.
-        ordering : {"grouped", "interleaved", "custom"}
-            Final digit-site schedule.
-        digit_order : {"coarse_to_fine", "fine_to_coarse"}
-            Direction of digit positions within each coordinate.
-        permutation : sequence of tuple[int, int], optional
-            Complete site schedule of ``(coordinate, digit)`` pairs when
-            ``ordering="custom"``.
-
-        Returns
-        -------
-        QuantizedLayout
-            Layout whose ``grid_size`` matches the resulting grid.
-
-        Examples
-        --------
-        >>> layout = tk.formats.QuantizedLayout.from_grid(1, 8, base=2)
-        >>> layout.level, layout.grid_size
-        ((3,), (8,))
-        """
-        if base is None and level is None:
-            raise ValueError('Specify `base` or `level` with `grid`')
-        if isinstance(n_coordinates, bool) or not isinstance(n_coordinates, int) \
-                or (n_coordinates < 1):
-            raise ValueError('`n_coordinates` should be a positive integer')
-
-        explicit = isinstance(grid, ExplicitGridMap)
-        sizes = (tuple(value.shape[0] for value in grid._grids(n_coordinates))
-                 if explicit else _integer_spec(grid, n_coordinates, 'grid', 2))
-        bases = (_integer_spec(base, n_coordinates, 'base', 2)
-                 if base is not None else None)
-        levels = (_integer_spec(level, n_coordinates, 'level', 1)
-                  if level is not None else None)
-
-        if bases is None:
-            bases = tuple(_smallest_base(size, coordinate_level)
-                          for size, coordinate_level in zip(sizes, levels))
-        if levels is None:
-            levels = tuple(_smallest_level(size, coordinate_base)
-                           for size, coordinate_base in zip(sizes, bases))
-
-        result = cls(n_coordinates, bases, levels,
-                     ordering, digit_order, permutation)
-
-        if explicit and (result.grid_size != sizes):
-            raise ValueError(
-                '`base ** level` should match the explicit grid size')
-        if base is not None and level is not None and (
-            result.grid_size != sizes):
-            raise ValueError('`base ** level` should match `grid`')
-        if result.grid_size != sizes:
-            warnings.warn(
-                f'Uniform grid size changed from {sizes} to {result.grid_size} '
-                 'to match `base ** level`', UserWarning, stacklevel=2)
-        return result
 
     @property
     def grid_size(self) -> Tuple[int, ...]:
@@ -527,8 +416,8 @@ def _coordinate_tensor(values: torch.Tensor, name: str) -> torch.Tensor:
 
 def _domain_tensor(domain: Domain,
                    n_coordinates: int,
-                   device: torch.device,
-                   dtype: torch.dtype) -> torch.Tensor:
+                   device: Optional[torch.device],
+                   dtype: Optional[torch.dtype]) -> torch.Tensor:
     """Normalizes one shared interval or one interval per coordinate."""
     if domain is None:
         raise ValueError('`domain` is required by this coordinate map')
@@ -543,22 +432,25 @@ def _domain_tensor(domain: Domain,
         if isinstance(domain, (str, bytes)):
             raise TypeError('`domain` should contain interval tensors')
         try:
-            values = tuple(domain)
+            domains = tuple(domain)
         except TypeError as exc:
             raise TypeError('`domain` should contain interval tensors') \
                 from exc
-        if len(values) != n_coordinates:
-            raise ValueError(
-                '`domain` should contain one interval per coordinate')
         intervals = torch.stack([
-            value if isinstance(value, torch.Tensor)
-            else torch.as_tensor(value)
-            for value in values
+            interval if isinstance(interval, torch.Tensor)
+            else torch.as_tensor(interval)
+            for interval in domains
         ])
-        if intervals.shape != (n_coordinates, 2):
+        if intervals.shape == (2,):
+            intervals = intervals.expand(n_coordinates, 2)
+        elif intervals.shape != (n_coordinates, 2):
             raise ValueError(
                 'Every `domain` interval should contain two values')
     intervals = intervals.to(device=device, dtype=dtype)
+    if intervals.is_complex():
+        raise TypeError('`domain` should contain real intervals')
+    if not intervals.is_floating_point():
+        intervals = intervals.to(torch.get_default_dtype())
     if not torch.isfinite(intervals).all():
         raise ValueError('`domain` should contain finite values')
     if torch.any(intervals[:, 1] <= intervals[:, 0]):
@@ -574,28 +466,30 @@ def _out_of_domain(value: str) -> str:
     return value
 
 
-def _grid_offset(grid: Union[str, float]) -> Optional[float]:
+def _grid_offset(grid_offset: Union[str, float]) -> Optional[float]:
     """Validates the grid convention and returns its within-cell offset."""
-    if isinstance(grid, str):
-        if grid == 'endpoints':
+    if isinstance(grid_offset, str):
+        if grid_offset == 'endpoints':
             return None
         offsets = {'left': 0., 'centers': 0.5, 'right': 1.}
-        if grid in offsets:
-            return offsets[grid]
+        if grid_offset in offsets:
+            return offsets[grid_offset]
         raise ValueError(
-            "`grid` should be 'endpoints', 'left', 'centers', 'right' or "
+            "`grid_offset` should be 'endpoints', 'left', 'centers', 'right' or "
             'a number between 0 and 1')
 
-    if isinstance(grid, bool) or not isinstance(grid, (int, float)):
-        raise TypeError('`grid` should be str or a number between 0 and 1')
-    if not 0 <= grid <= 1:
-        raise ValueError('A numeric `grid` should be between 0 and 1')
-    return float(grid)
+    if isinstance(grid_offset, bool) or not isinstance(
+            grid_offset, (int, float)):
+        raise TypeError(
+            '`grid_offset` should be str or a number between 0 and 1')
+    if not 0 <= grid_offset <= 1:
+        raise ValueError('A numeric `grid_offset` should be between 0 and 1')
+    return float(grid_offset)
 
 
 def _indices_to_unit(indices: torch.Tensor,
                      grid_size: Sequence[int],
-                     grid: Union[str, float],
+                     grid_offset: Union[str, float],
                      dtype: Optional[torch.dtype] = None) -> torch.Tensor:
     """Maps integer grid indices to coordinates in the unit interval."""
     if not isinstance(indices, torch.Tensor) or (indices.ndim < 1) or \
@@ -615,7 +509,7 @@ def _indices_to_unit(indices: torch.Tensor,
     if torch.any(values < 0) or torch.any(values >= sizes):
         raise ValueError('`indices` is out of bounds for `grid_size`')
 
-    offset = _grid_offset(grid)
+    offset = _grid_offset(grid_offset)
     if offset is None:
         return values / (sizes - 1)
     return (values + offset) / sizes
@@ -623,7 +517,7 @@ def _indices_to_unit(indices: torch.Tensor,
 
 def _unit_to_indices(unit_coordinates: torch.Tensor,
                      grid_size: Sequence[int],
-                     grid: Union[str, float],
+                     grid_offset: Union[str, float],
                      out_of_domain: str) -> torch.Tensor:
     """Quantizes unit coordinates according to the grid convention."""
     unit_coordinates = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
@@ -639,7 +533,7 @@ def _unit_to_indices(unit_coordinates: torch.Tensor,
             '`unit_coordinates` lie outside the unit interval [0, 1]')
 
     unit = unit_coordinates.clamp(0, 1)
-    offset = _grid_offset(grid)
+    offset = _grid_offset(grid_offset)
     if offset == 0:
         indices = torch.floor(unit * sizes)
     elif offset == 1:
@@ -653,30 +547,72 @@ def _unit_to_indices(unit_coordinates: torch.Tensor,
     return indices.clamp_min(0).minimum(sizes - 1).to(torch.long)
 
 
-@runtime_checkable
-class CoordinateMap(Protocol):
-    """Maps unit coordinates to coordinates in the domain."""
+class CoordinateMap(ABC):
+    """
+    Converts between unit coordinates, domain coordinates and grid indices.
 
-    def forward(self,
-                unit_coordinates: torch.Tensor,
-                domain: Domain = None) -> torch.Tensor:
+    Maps own their domain, grid sizes and out-of-domain policy. Unit coordinates
+    lie in ``[0, 1]``; domain coordinates lie in the domain described by the map.
+    :class:`AffineCoordinateMap` and :class:`FunctionalCoordinateMap` both use
+    uniform grids in unit space. Their transformations determine where these
+    grid points lie in the domain. :class:`ExplicitGridMap` stores the domain
+    grid points directly.
+
+    With ``N`` grid points, ``grid_offset="endpoints"`` uses ``i / (N - 1)``.
+    Other uniform grids use ``(i + offset) / N``: ``"left"``, ``"centers"``
+    and ``"right"`` correspond to offsets ``0``, ``0.5`` and ``1``. A numeric
+    ``grid_offset`` selects any offset in ``[0, 1]``.
+
+    ``"left"`` assigns unit coordinates using ``floor(N * x)``, with ``x=1``
+    assigned to the last index, as in :func:`~tensorkrowch.embeddings.discretize`.
+    ``"right"`` uses ``ceil(N * x) - 1``, with ``x=0`` assigned to the first
+    index. Numeric offsets ``0`` and ``1`` follow the same rules. Other grids
+    select the nearest unit grid point; ties select the lower index.
+    """
+
+    domain: Domain
+    grid_size: Tuple[int, ...]
+    grid_offset: Union[str, float]
+    out_of_domain: str
+
+    def _initialize_grid(self) -> None:
+        """Normalizes uniform grid sizes and validates the grid policy."""
+        if isinstance(self.grid_size, (str, bytes)):
+            raise TypeError('`grid_size` should be a sequence of integers')
+        sizes = tuple(self.grid_size)
+        if not sizes:
+            raise ValueError('`grid_size` should contain at least one size')
+        sizes = _integer_spec(sizes, len(sizes), 'grid_size', 2)
+        _grid_offset(self.grid_offset)
+        _out_of_domain(self.out_of_domain)
+        object.__setattr__(self, 'grid_size', sizes)
+
+    def _coordinates(self, values: torch.Tensor, name: str) -> torch.Tensor:
+        """Checks coordinate values and their final coordinate dimension."""
+        values = _coordinate_tensor(values, name)
+        if values.shape[-1] != len(self.grid_size):
+            raise ValueError(
+                f'`{name}` should contain one value per coordinate')
+        return values
+
+    def _unit_coordinates(self, values: torch.Tensor) -> torch.Tensor:
+        """Checks or clips unit coordinates according to the stored policy."""
+        unit = self._coordinates(values, 'unit_coordinates')
+        outside = (unit < 0) | (unit > 1)
+        if (self.out_of_domain == 'error') and torch.any(outside):
+            raise ValueError('`unit_coordinates` should lie in [0, 1]')
+        return unit.clamp(0, 1) if self.out_of_domain == 'clip' else unit
+
+    @abstractmethod
+    def forward(self, unit_coordinates: torch.Tensor) -> torch.Tensor:
         """
         Maps unit coordinates to coordinates in the domain.
-
-        Implementations preserve the coordinate shape. Inverse and grid-index
-        methods are optional capabilities used for evaluation at coordinates
-        in the domain.
 
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape ``(*batch, n_coordinates)``,
-            with each coordinate in ``[0, 1]``.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain metadata understood by the implementation. Interval-based
-            maps use ``(2,)`` for a shared interval or ``(n_coordinates, 2)`` for
-            separate intervals. The meaning of ``None`` depends on the concrete
-            map.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
+            Each coordinate lies in ``[0, 1]``.
 
         Returns
         -------
@@ -684,742 +620,637 @@ class CoordinateMap(Protocol):
             Coordinates in the domain with the same shape as the input.
         """
 
-
-@dataclass(frozen=True)
-class UniformCoordinateMap:
-    """
-    Affine map between a uniform grid and coordinates in the domain.
-
-    With ``N`` grid coordinates, ``"endpoints"`` places them at
-    ``i / (N - 1)``, including both domain boundaries. The other conventions
-    use ``(i + offset) / N``: ``"left"``, ``"centers"`` and ``"right"``
-    correspond to offsets ``0``, ``0.5`` and ``1``. A numeric ``grid`` selects
-    any offset between ``0`` and ``1``.
-
-    ``"left"`` assigns coordinates by interval using ``floor(N * x)``,
-    with ``x=1`` assigned to the last interval, as in
-    :func:`~tensorkrowch.embeddings.discretize`. ``"right"`` uses
-    ``ceil(N * x) - 1``, with ``x=0`` assigned to the first interval.
-    Numeric offsets ``0`` and ``1`` follow the same rules. For ``"endpoints"``
-    and intermediate offsets, the nearest grid coordinate is selected;
-    ties select the lower index. Here ``x`` is a unit coordinate
-    in ``[0, 1]``.
-
-    Parameters
-    ----------
-    grid : {"endpoints", "left", "centers", "right"} or float
-        Grid convention used by :meth:`from_indices` and :meth:`to_indices`.
-        Numeric offsets should be between ``0`` and ``1``. Coordinate
-        forward/inverse mappings remain affine for all conventions.
-
-    Examples
-    --------
-    >>> coordinate_map = tk.formats.UniformCoordinateMap(grid='left')
-    >>> domain = torch.tensor([0., 1.])
-    >>> coordinate_map.from_indices(
-    ...     torch.arange(4).unsqueeze(-1), (4,), domain).tolist()
-    [[0.0], [0.25], [0.5], [0.75]]
-    >>> coordinate_map.to_indices(
-    ...     torch.tensor([[0.2], [0.75], [1.]]), (4,), domain).tolist()
-    [[0], [3], [3]]
-    >>> coordinate_map = tk.formats.UniformCoordinateMap(grid=0.25)
-    >>> coordinate_map.from_indices(
-    ...     torch.arange(4).unsqueeze(-1), (4,), domain).tolist()
-    [[0.0625], [0.3125], [0.5625], [0.8125]]
-    """
-
-    grid: Union[str, float] = 'endpoints'
-
-    def __post_init__(self) -> None:
-        """Validates the computational grid convention."""
-        _grid_offset(self.grid)
-
-    def forward(self,
-                unit_coordinates: torch.Tensor,
-                domain: Domain = None) -> torch.Tensor:
-        """
-        Maps unit coordinates to coordinates in the domain.
-
-        Uniform maps use an affine transformation of each domain interval.
-
-        Parameters
-        ----------
-        unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape ``(*batch, n_coordinates)``,
-            with each coordinate in ``[0, 1]``.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain intervals as ``(2,)`` for a shared interval or
-            ``(n_coordinates, 2)`` for separate intervals. Required for this
-            affine map; ``None`` raises ``ValueError``.
-
-        Returns
-        -------
-        torch.Tensor
-            Coordinates in the domain with the same shape as the input.
-
-        Examples
-        --------
-        >>> coordinate_map = tk.formats.UniformCoordinateMap()
-        >>> domain = torch.tensor([-2., 2.])
-        >>> unit_coordinates = torch.tensor([[0.], [0.5], [1.]])
-        >>> coordinate_map.forward(unit_coordinates, domain).tolist()
-        [[-2.0], [0.0], [2.0]]
-        """
-        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
-        intervals = _domain_tensor(
-            domain, unit.shape[-1], unit.device, unit.dtype)
-        return intervals[:, 0] + unit * (intervals[:, 1] - intervals[:, 0])
-
-    def inverse(self,
-                domain_coordinates: torch.Tensor,
-                domain: Domain = None,
-                out_of_domain: str = 'error') -> torch.Tensor:
+    @abstractmethod
+    def inverse(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
         """
         Maps coordinates in the domain back to unit coordinates.
-
-        Uses the inverse affine interval transformation.
 
         Parameters
         ----------
         domain_coordinates : torch.Tensor
-            Finite floating coordinates in the domain with shape
-            ``(*batch, n_coordinates)``.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain intervals as ``(2,)`` for a shared interval or
-            ``(n_coordinates, 2)`` for separate intervals. Required for this
-            affine map; ``None`` raises ``ValueError``.
-        out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ``ValueError`` or are
-            clipped to the domain boundary.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
 
         Returns
         -------
         torch.Tensor
-            Unit coordinates with the same shape and floating dtype as the
-            input.
-
-        Examples
-        --------
-        >>> coordinate_map = tk.formats.UniformCoordinateMap()
-        >>> domain = torch.tensor([-2., 2.])
-        >>> domain_coordinates = torch.tensor([[-2.], [0.], [2.]])
-        >>> coordinate_map.inverse(domain_coordinates, domain).tolist()
-        [[0.0], [0.5], [1.0]]
-        >>> coordinate_map.inverse(torch.tensor([[-3.], [3.]]), domain,
-        ...                        out_of_domain='clip').tolist()
-        [[0.0], [1.0]]
+            Unit coordinates with the same shape as the input.
         """
-        coordinates = _coordinate_tensor(
-            domain_coordinates, 'domain_coordinates')
-        intervals = _domain_tensor(
-            domain, coordinates.shape[-1],
-            coordinates.device, coordinates.dtype)
-        unit = (coordinates - intervals[:, 0]) / (
-            intervals[:, 1] - intervals[:, 0])
-        policy = _out_of_domain(out_of_domain)
-        outside = (unit < 0) | (unit > 1)
-        if (policy == 'error') and torch.any(outside):
-            raise ValueError(
-                '`domain_coordinates` lie outside the domain')
-        return unit.clamp(0, 1) if policy == 'clip' else unit
 
-    def from_indices(self,
-                     indices: torch.Tensor,
-                     grid_size: Sequence[int],
-                     domain: Domain = None) -> torch.Tensor:
+    def from_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """
-        Maps integer grid indices to coordinate values in the domain.
+        Maps grid indices to coordinates in the domain.
 
-        Positions follow the ``grid`` convention described in
-        :class:`UniformCoordinateMap`, then are mapped into ``domain``.
+        Indices select points of the uniform grid in unit space. The forward
+        transformation maps these points into the domain.
 
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape ``(*batch, n_coordinates)``; each
-            value lies in ``[0, grid_size[coordinate] - 1]``.
-        grid_size : sequence of int
-            Number of grid coordinates per coordinate.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain intervals as ``(2,)`` for a shared interval or
-            ``(n_coordinates, 2)`` for separate intervals. Required for this
-            affine map; ``None`` raises ``ValueError``.
+            Integer indices with shape ``(*batch, n_coordinates)``. Each index
+            lies in ``[0, grid_size[coordinate] - 1]``.
 
         Returns
         -------
         torch.Tensor
-            Values in the domain with shape ``(*batch, n_coordinates)``,
-            using the domain dtype when available and otherwise the
-            default floating dtype.
+            Coordinates in the domain with the same shape as ``indices``.
+            Uses the domain dtype when available, otherwise the default
+            floating dtype.
 
         Examples
         --------
-        >>> coordinate_map = tk.formats.UniformCoordinateMap(grid='centers')
-        >>> domain = torch.tensor([-2., 2.])
-        >>> indices = torch.tensor([[0], [1], [2], [3]])
-        >>> coordinate_map.from_indices(indices, (4,), domain).tolist()
-        [[-1.5], [-0.5], [0.5], [1.5]]
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([-2., 2.]),
+        ...     grid_size=(4,),
+        ...     grid_offset='centers')
+        >>> coordinate_map.from_indices(torch.tensor([[0], [3]])).tolist()
+        [[-1.5], [1.5]]
         """
-        dtype = None
-        if isinstance(domain, torch.Tensor) and domain.is_floating_point():
-            dtype = domain.dtype
-        elif isinstance(domain, (list, tuple)) and domain and \
-                isinstance(domain[0], torch.Tensor) and \
-                domain[0].is_floating_point():
-            dtype = domain[0].dtype
+        dtype = (self.domain.dtype if isinstance(self.domain, torch.Tensor) and
+                 self.domain.is_floating_point() else None)
         unit = _indices_to_unit(
-            indices, grid_size, self.grid, dtype=dtype)
-        return self.forward(unit, domain)
+            indices, self.grid_size, self.grid_offset, dtype=dtype)
+        return self.forward(unit)
 
-    def to_indices(self,
-                   domain_coordinates: torch.Tensor,
-                   grid_size: Sequence[int],
-                   domain: Domain = None,
-                   out_of_domain: str = 'error') -> torch.Tensor:
+    def to_indices(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
         """
         Quantizes coordinates in the domain to grid indices.
 
-        ``"left"`` and ``"right"`` assign coordinates by interval. Other
-        conventions select the nearest grid coordinate, with ties assigned
-        to the lower index. See :class:`UniformCoordinateMap` for the rules.
+        Applies the inverse transformation, then selects indices according to
+        ``grid_offset`` in unit space. No interpolation of format values is
+        performed.
 
         Parameters
         ----------
         domain_coordinates : torch.Tensor
-            Finite floating coordinates in the domain with shape
-            ``(*batch, n_coordinates)``.
-        grid_size : sequence of int
-            Number of grid coordinates per coordinate.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain intervals as ``(2,)`` for a shared interval or
-            ``(n_coordinates, 2)`` for separate intervals. Required for this
-            affine map; ``None`` raises ``ValueError``.
-        out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ``ValueError`` or are
-            clipped to the domain boundary.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
 
         Returns
         -------
         torch.Tensor
-            ``torch.long`` indices with shape ``(*batch, n_coordinates)``.
+            ``torch.long`` indices with the same shape as the input.
 
         Examples
         --------
-        >>> coordinate_map = tk.formats.UniformCoordinateMap()
-        >>> domain = torch.tensor([0., 4.])
-        >>> coordinate_map.to_indices(torch.tensor([[1.], [3.]]),
-        ...                           (5,), domain).tolist()
-        [[1], [3]]
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([0., 1.]), grid_size=(4,))
+        >>> coordinate_map.to_indices(torch.tensor([[0.2], [0.75], [1.]])).tolist()
+        [[0], [3], [3]]
         """
-        unit = self.inverse(
-            domain_coordinates,
-            domain,
-            out_of_domain=out_of_domain)
+        unit = self.inverse(domain_coordinates)
         return _unit_to_indices(
-            unit, grid_size, self.grid, out_of_domain=out_of_domain)
+            unit, self.grid_size, self.grid_offset, self.out_of_domain)
 
 
 @dataclass(frozen=True)
-class WarpedCoordinateMap:
+class AffineCoordinateMap(CoordinateMap):
     """
-    User-defined separable or coupled map from unit coordinates to the domain.
+    Affine transformation of a uniform unit grid into a coordinate domain.
 
-    Callables receive ``(coordinates, domain)`` and should preserve the input
-    shape. ``domain`` may be ``None`` when the callable already contains the
-    complete domain geometry.
+    Grid points are uniform in unit space and remain uniform in each domain
+    interval. ``forward`` and ``inverse`` apply affine transformations between
+    unit and domain coordinates. ``from_indices`` and ``to_indices`` also use
+    the stored uniform grid.
 
     Parameters
     ----------
+    domain : torch.Tensor or sequence of torch.Tensor
+        Domain intervals as ``(2,)`` for a shared interval or
+        ``(n_coordinates, 2)`` for separate intervals.
+    grid_size : sequence of int
+        Number of grid points per coordinate, with each size at least ``2``.
+    grid_offset : {"endpoints", "left", "centers", "right"} or float
+        Uniform unit grid convention, as described in :class:`CoordinateMap`.
+        The default ``"left"`` reproduces interval assignment in
+        :func:`~tensorkrowch.embeddings.discretize`.
+    out_of_domain : {"error", "clip"}
+        Whether coordinates outside the domain raise ``ValueError`` or are
+        clipped to its boundaries.
+
+    Examples
+    --------
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))
+    >>> coordinate_map.from_indices(torch.arange(4).unsqueeze(-1)).tolist()
+    [[0.0], [0.25], [0.5], [0.75]]
+    """
+
+    domain: Domain
+    grid_size: Sequence[int]
+    grid_offset: Union[str, float] = 'left'
+    out_of_domain: str = 'error'
+
+    def __post_init__(self) -> None:
+        """Validates the grid and required affine domain."""
+        if self.domain is None:
+            raise ValueError('`domain` is required by AffineCoordinateMap')
+        self._initialize_grid()
+        intervals = _domain_tensor(self.domain, len(self.grid_size),
+                                   None, None)
+        object.__setattr__(self, 'domain', intervals)
+
+    def forward(self, unit_coordinates: torch.Tensor) -> torch.Tensor:
+        """
+        Maps unit coordinates into the domain using an affine transformation.
+
+        Parameters
+        ----------
+        unit_coordinates : torch.Tensor
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
+            Each coordinate lies in ``[0, 1]``.
+
+        Returns
+        -------
+        torch.Tensor
+            Coordinates in the domain with the same shape and dtype as input.
+
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([-2., 2.]), grid_size=(4,))
+        >>> coordinate_map.forward(torch.tensor([[0.], [0.5], [1.]])).tolist()
+        [[-2.0], [0.0], [2.0]]
+        """
+        unit = self._unit_coordinates(unit_coordinates)
+        intervals = self.domain.to(device=unit.device, dtype=unit.dtype)
+        return intervals[:, 0] + unit * (intervals[:, 1] - intervals[:, 0])
+
+    def inverse(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
+        """
+        Maps coordinates in the domain back to unit coordinates.
+
+        Parameters
+        ----------
+        domain_coordinates : torch.Tensor
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
+
+        Returns
+        -------
+        torch.Tensor
+            Unit coordinates with the same shape and dtype as the input.
+
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([-2., 2.]), grid_size=(4,))
+        >>> coordinate_map.inverse(torch.tensor([[-2.], [0.], [2.]])).tolist()
+        [[0.0], [0.5], [1.0]]
+        >>> coordinate_map = tk.formats.AffineCoordinateMap(
+        ...     domain=torch.tensor([-2., 2.]),
+        ...     grid_size=(4,),
+        ...     out_of_domain='clip')
+        >>> coordinate_map.inverse(torch.tensor([[-3.], [3.]])).tolist()
+        [[0.0], [1.0]]
+        """
+        coordinates = self._coordinates(
+            domain_coordinates, 'domain_coordinates')
+        intervals = self.domain.to(
+            device=coordinates.device, dtype=coordinates.dtype)
+        unit = (coordinates - intervals[:, 0]) / (
+            intervals[:, 1] - intervals[:, 0])
+        return self._unit_coordinates(unit)
+
+
+@dataclass(frozen=True, init=False)
+class FunctionalCoordinateMap(CoordinateMap):
+    """
+    Function-defined transformation of a uniform unit grid into the domain.
+
+    Like :class:`AffineCoordinateMap`, this map uses a uniform grid in unit
+    space. The supplied transformation can make its grid nonuniform in the
+    domain, or couple coordinates. ``to_indices`` quantizes in unit space after
+    applying the supplied inverse; it does not search for the nearest domain
+    grid point.
+
+    Parameters
+    ----------
+    domain : torch.Tensor or sequence of torch.Tensor, optional
+        Domain metadata stored in the map and passed unchanged to the functions.
+        ``None`` is allowed when the functions already define the domain.
+    grid_size : sequence of int
+        Number of uniform unit grid points per coordinate.
+    grid_offset : {"endpoints", "left", "centers", "right"} or float
+        Uniform unit grid convention, as described in :class:`CoordinateMap`.
+    out_of_domain : {"error", "clip"}
+        Whether unit coordinates outside ``[0, 1]`` raise ``ValueError`` or are
+        clipped to its boundaries.
     forward_function : callable
         Function ``(unit_coordinates, domain)`` returning finite floating
-        coordinates in the domain of unchanged shape.
+        coordinates in the domain with unchanged shape.
     inverse_function : callable, optional
         Function ``(domain_coordinates, domain)`` returning unit coordinates
-        of unchanged shape. Without it, inverse evaluation raises
+        with unchanged shape. Without it, inverse operations raise
         ``NotImplementedError``.
 
     Examples
     --------
-    >>> coordinate_map = tk.formats.WarpedCoordinateMap(
-    ...     lambda unit, domain: unit.square(),
-    ...     lambda coordinates, domain: coordinates.sqrt())
-    >>> unit = torch.tensor([[0.5]])
-    >>> torch.equal(coordinate_map.inverse(coordinate_map.forward(unit)), unit)
-    True
+    >>> coordinate_map = tk.formats.FunctionalCoordinateMap(
+    ...     domain=None, grid_size=(4,),
+    ...     forward_function=lambda u, domain: u.square(),
+    ...     inverse_function=lambda x, domain: x.sqrt())
+    >>> coordinate_map.from_indices(torch.arange(4).unsqueeze(-1)).tolist()
+    [[0.0], [0.0625], [0.25], [0.5625]]
+    >>> coordinate_map.to_indices(torch.tensor([[0.25]])).tolist()
+    [[2]]
     """
 
+    domain: Domain
+    grid_size: Sequence[int]
+    grid_offset: Union[str, float]
+    out_of_domain: str
     forward_function: Callable[[torch.Tensor, Domain], torch.Tensor]
-    inverse_function: Optional[Callable[[torch.Tensor, Domain], torch.Tensor]] = None
+    inverse_function: Optional[Callable[[torch.Tensor, Domain], torch.Tensor]]
+
+    def __init__(self,
+                 domain: Domain = None,
+                 grid_size: Optional[Sequence[int]] = None,
+                 grid_offset: Union[str, float] = 'left',
+                 out_of_domain: str = 'error',
+                 *,
+                 forward_function: Callable[[torch.Tensor, Domain],
+                                            torch.Tensor],
+                 inverse_function: Optional[Callable[[torch.Tensor, Domain],
+                                                     torch.Tensor]] = None
+                 ) -> None:
+        if grid_size is None:
+            raise TypeError(
+                '`grid_size` is required by FunctionalCoordinateMap')
+
+        object.__setattr__(self, 'domain', domain)
+        object.__setattr__(self, 'grid_size', grid_size)
+        object.__setattr__(self, 'grid_offset', grid_offset)
+        object.__setattr__(self, 'out_of_domain', out_of_domain)
+        object.__setattr__(self, 'forward_function', forward_function)
+        object.__setattr__(self, 'inverse_function', inverse_function)
+        self.__post_init__()
 
     def __post_init__(self) -> None:
-        """Checks that forward and optional inverse functions are callable."""
+        """Validates the grid and supplied coordinate functions."""
+        self._initialize_grid()
         if not callable(self.forward_function):
             raise TypeError('`forward_function` should be callable')
         if self.inverse_function is not None and not callable(
                 self.inverse_function):
             raise TypeError('`inverse_function` should be callable or None')
 
-    @staticmethod
-    def _validate_result(result: torch.Tensor,
-                         reference: torch.Tensor,
-                         name: str) -> torch.Tensor:
-        """Checks that a coordinate-map result preserves shape and finite values."""
-        if not isinstance(result, torch.Tensor):
-            raise TypeError(f'`{name}` should return a torch.Tensor')
+    def _result(self,
+                result: torch.Tensor,
+                reference: torch.Tensor,
+                name: str) -> torch.Tensor:
+        """Checks the shape and values returned by a coordinate function."""
+        result = self._coordinates(result, name)
         if result.shape != reference.shape:
             raise ValueError(f'`{name}` should preserve coordinate shape')
-        if not result.is_floating_point() or not torch.isfinite(result).all():
-            raise ValueError(f'`{name}` should return finite floating values')
         return result
 
-    def forward(self,
-                unit_coordinates: torch.Tensor,
-                domain: Domain = None) -> torch.Tensor:
+    def forward(self, unit_coordinates: torch.Tensor) -> torch.Tensor:
         """
-        Maps unit coordinates to coordinates in the domain.
-
-        Calls ``forward_function(coordinates, domain)`` and requires finite
-        floating outputs of unchanged shape.
+        Transforms unit coordinates using ``forward_function``.
 
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape ``(*batch, n_coordinates)``,
-            with each coordinate in ``[0, 1]``.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain metadata understood by the implementation. Warped maps pass
-            it unchanged to the supplied callable; ``None`` may leave the
-            domain geometry entirely within that callable.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
+            Each coordinate lies in ``[0, 1]``.
 
         Returns
         -------
         torch.Tensor
             Coordinates in the domain with the same shape as the input.
-        """
-        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
-        return self._validate_result(
-            self.forward_function(unit, domain), unit, 'forward_function')
 
-    def inverse(self,
-                domain_coordinates: torch.Tensor,
-                domain: Domain = None,
-                out_of_domain: str = 'error') -> torch.Tensor:
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.FunctionalCoordinateMap(
+        ...     domain=None, grid_size=(4,),
+        ...     forward_function=lambda u, domain: u.square(),
+        ...     inverse_function=lambda x, domain: x.sqrt())
+        >>> coordinate_map.forward(torch.tensor([[0.5]])).tolist()
+        [[0.25]]
         """
-        Maps coordinates in the domain back to unit coordinates.
+        unit = self._unit_coordinates(unit_coordinates)
+        return self._result(self.forward_function(unit, self.domain),
+                            unit, 'forward_function')
 
-        Requires ``inverse_function``; otherwise raises
-        ``NotImplementedError``. No numerical inverse is inferred.
+    def inverse(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
+        """
+        Transforms domain coordinates using ``inverse_function``.
+
+        No numerical inverse is inferred. If ``inverse_function`` is absent,
+        this method raises ``NotImplementedError``.
 
         Parameters
         ----------
         domain_coordinates : torch.Tensor
-            Finite floating coordinates in the domain with shape
-            ``(*batch, n_coordinates)``.
-        domain : torch.Tensor or sequence of torch.Tensor, optional
-            Domain metadata understood by the implementation. Warped maps pass
-            it unchanged to the supplied callable; ``None`` may leave the
-            domain geometry entirely within that callable.
-        out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ``ValueError`` or are
-            clipped to the domain boundary.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
 
         Returns
         -------
         torch.Tensor
-            Unit coordinates with the same shape and floating dtype as the
-            input.
+            Unit coordinates with the same shape as the input.
+
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.FunctionalCoordinateMap(
+        ...     domain=None, grid_size=(4,),
+        ...     forward_function=lambda u, domain: u.square(),
+        ...     inverse_function=lambda x, domain: x.sqrt())
+        >>> coordinate_map.inverse(torch.tensor([[0.25]])).tolist()
+        [[0.5]]
         """
         if self.inverse_function is None:
             raise NotImplementedError(
                 '`inverse_function` is required for inverse mapping')
-        coordinates = _coordinate_tensor(
+        coordinates = self._coordinates(
             domain_coordinates, 'domain_coordinates')
-        unit = self._validate_result(
-            self.inverse_function(coordinates, domain),
-            coordinates,
-            'inverse_function')
-        policy = _out_of_domain(out_of_domain)
-        outside = (unit < 0) | (unit > 1)
-        if policy == 'error' and torch.any(outside):
-            raise ValueError(
-                '`inverse_function` returned coordinates outside the unit '
-                'domain')
-        return unit.clamp(0, 1) if policy == 'clip' else unit
+        unit = self._result(self.inverse_function(coordinates, self.domain),
+                            coordinates, 'inverse_function')
+        return self._unit_coordinates(unit)
 
 
-class ExplicitGridMap:
+@dataclass(frozen=True, init=False)
+class ExplicitGridMap(CoordinateMap):
     """
-    Maps unit coordinates through arbitrary monotonic coordinate grids.
+    Coordinate map with grid points supplied directly in the domain.
 
-    The forward map interpolates linearly between stored coordinates. Inverse
-    evaluation selects the nearest stored coordinate, with ties resolved by its
-    lower index. Increasing and decreasing grids are both supported.
+    A vector describes one coordinate. A matrix has one row per coordinate;
+    a sequence of vectors also supports different grid sizes. Grids can be
+    increasing or decreasing. ``from_indices`` selects stored grid points and
+    ``to_indices`` selects the nearest point, with ties choosing the lower
+    stored index. ``forward`` interpolates between the stored points;
+    ``inverse`` reverses this interpolation to recover unit coordinates.
 
     Parameters
     ----------
-    coordinates : torch.Tensor or sequence of torch.Tensor
-        A shared strictly monotonic floating vector, or one per coordinate. Each
-        grid should be finite and have at least two coordinates. These
-        coordinates define the domain interval, so ``domain`` should be
-        ``None``.
+    grid_coordinates : torch.Tensor or sequence of torch.Tensor
+        Finite, strictly monotonic floating grid vectors of size at least ``2``.
+    out_of_domain : {"error", "clip"}
+        Whether coordinates outside the grid boundaries raise ``ValueError``
+        or are clipped to those boundaries.
+
+    Examples
+    --------
+    >>> coordinate_map = tk.formats.ExplicitGridMap(
+    ...     torch.tensor([0., 0.125, 0.5, 1.]))
+    >>> coordinate_map.from_indices(torch.tensor([[2]])).tolist()
+    [[0.5]]
     """
 
+    grid_coordinates: Tuple[torch.Tensor, ...]
+    out_of_domain: str = 'error'
+
     def __init__(self,
-                 coordinates: Union[torch.Tensor, Sequence[torch.Tensor]]) -> None:
-        if isinstance(coordinates, torch.Tensor):
-            grids = (coordinates,)
-            self.shared = True
+                 grid_coordinates: Union[torch.Tensor, Sequence[torch.Tensor]],
+                 out_of_domain: str = 'error') -> None:
+        if isinstance(grid_coordinates, torch.Tensor):
+            if grid_coordinates.ndim not in (1, 2):
+                raise ValueError(
+                    '`grid_coordinates` should be a vector or matrix')
+            grids = ((grid_coordinates,) if grid_coordinates.ndim == 1
+                     else tuple(grid_coordinates.unbind(0)))
         else:
-            if isinstance(coordinates, (str, bytes)):
-                raise TypeError('`coordinates` should contain grid tensors')
+            if isinstance(grid_coordinates, (str, bytes)):
+                raise TypeError(
+                    '`grid_coordinates` should contain grid tensors')
             try:
-                grids = tuple(coordinates)
+                grids = tuple(grid_coordinates)
             except TypeError as exc:
                 raise TypeError(
-                    '`coordinates` should contain grid tensors') from exc
-            self.shared = False
+                    '`grid_coordinates` should contain grid tensors') from exc
         if not grids or not all(
-                isinstance(grid, torch.Tensor) and grid.ndim == 1 and
-                grid.shape[0] >= 2 and grid.is_floating_point() and
-                torch.isfinite(grid).all()
-                for grid in grids):
+                isinstance(grid, torch.Tensor) and (grid.ndim == 1) and
+                (grid.shape[0] >= 2) and grid.is_floating_point() and
+                torch.isfinite(grid).all() for grid in grids):
             raise ValueError(
-                '`coordinates` should contain finite floating vectors of size >= 2')
+                '`grid_coordinates` should contain finite floating grid vectors')
         for grid in grids:
             differences = grid[1:] - grid[:-1]
-            if not (torch.all(differences > 0) or
-                    torch.all(differences < 0)):
+            if not (torch.all(differences > 0) or torch.all(differences < 0)):
                 raise ValueError(
-                    'Every grid in `coordinates` should be monotonic')
-        self.coordinates = grids
+                    'Every grid in `grid_coordinates` should be strictly '
+                    'monotonic')
+        object.__setattr__(self, 'grid_coordinates', grids)
+        object.__setattr__(self, 'out_of_domain',
+                           _out_of_domain(out_of_domain))
 
-    def _grids(self, n_coordinates: int) -> Tuple[torch.Tensor, ...]:
-        """Broadcasts one shared grid or validates per-coordinate grids."""
-        if self.shared:
-            return self.coordinates * n_coordinates
-        if len(self.coordinates) != n_coordinates:
-            raise ValueError('`coordinates` should contain one grid per coordinate')
-        return self.coordinates
+    @property
+    def domain(self) -> Tuple[torch.Tensor, ...]:
+        """Domain boundaries taken from the endpoints of each stored grid."""
+        return tuple(grid[[0, -1]] for grid in self.grid_coordinates)
 
     @property
     def grid_size(self) -> Tuple[int, ...]:
-        """Stored coordinate count per explicit grid before shared broadcasting."""
-        return tuple(grid.shape[0] for grid in self.coordinates)
+        """Number of stored grid points per coordinate."""
+        return tuple(grid.shape[0] for grid in self.grid_coordinates)
 
-    def forward(self,
-                unit_coordinates: torch.Tensor,
-                domain: Domain = None) -> torch.Tensor:
+    def forward(self, unit_coordinates: torch.Tensor) -> torch.Tensor:
         """
-        Interpolates explicit grid coordinates at unit coordinates.
-
-        Explicit grids are linearly interpolated; unit values should lie in
-        :math:`[0, 1]`.
+        Interpolates grid points at unit coordinates.
 
         Parameters
         ----------
         unit_coordinates : torch.Tensor
-            Finite floating coordinates with shape ``(*batch, n_coordinates)``,
-            with each coordinate in ``[0, 1]``.
-        domain : None, optional
-            Should be ``None``: the grid coordinates already define the
-            domain.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
+            Each coordinate lies in ``[0, 1]``.
 
         Returns
         -------
         torch.Tensor
-            Coordinates in the domain with the same shape as the input.
+            Coordinates in the domain with the same shape and dtype as input.
+
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.ExplicitGridMap(
+        ...     torch.tensor([0., 1., 4.]))
+        >>> coordinate_map.forward(torch.tensor([[0.25]])).tolist()
+        [[0.5]]
         """
-        if domain is not None:
-            raise ValueError('`domain` is not used by ExplicitGridMap')
-        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
-        if torch.any(unit < 0) or torch.any(unit > 1):
-            raise ValueError('`unit_coordinates` should lie in [0, 1]')
+        unit = self._unit_coordinates(unit_coordinates)
         values = []
-        for coordinate, grid in enumerate(self._grids(unit.shape[-1])):
+        for coordinate, grid in enumerate(self.grid_coordinates):
             grid = grid.to(device=unit.device, dtype=unit.dtype)
             scaled = unit[..., coordinate] * (grid.shape[0] - 1)
             lower = scaled.floor().to(torch.long)
             upper = (lower + 1).clamp_max(grid.shape[0] - 1)
             fraction = scaled - lower
-            values.append(
-                grid[lower] * (1 - fraction) + grid[upper] * fraction)
+            values.append(grid[lower] * (1 - fraction) + grid[upper] * fraction)
         return torch.stack(values, dim=-1)
 
-    def inverse(self,
-                domain_coordinates: torch.Tensor,
-                domain: Domain = None,
-                out_of_domain: str = 'error') -> torch.Tensor:
+    def inverse(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
         """
-        Finds nearest explicit grid coordinates and returns their unit positions.
+        Maps domain coordinates to unit coordinates by inverse interpolation.
 
-        Ties choose the lower stored index, also on descending grids.
+        Finds the two grid points surrounding each domain coordinate and its
+        relative position between them. Uses that position between their unit
+        coordinates, ``i / (N - 1)`` and ``(i + 1) / (N - 1)``, to reverse the
+        interpolation performed by :meth:`forward`.
 
         Parameters
         ----------
         domain_coordinates : torch.Tensor
-            Finite floating coordinates in the domain with shape
-            ``(*batch, n_coordinates)``.
-        domain : None, optional
-            Should be ``None``: the grid coordinates already define the
-            domain.
-        out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ``ValueError`` or are
-            clipped to the domain boundary.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
 
         Returns
         -------
         torch.Tensor
-            Unit coordinates with the same shape and floating dtype as the
-            input.
+            Unit coordinates with the same shape and dtype as the input.
+
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.ExplicitGridMap(
+        ...     torch.tensor([0., 1., 4.]))
+        >>> coordinate_map.inverse(torch.tensor([[2.5]])).tolist()
+        [[0.75]]
         """
-        if domain is not None:
-            raise ValueError('`domain` is not used by ExplicitGridMap')
-        coordinates = _coordinate_tensor(
+        coordinates = self._coordinates(
             domain_coordinates, 'domain_coordinates')
-        policy = _out_of_domain(out_of_domain)
         values = []
-        for coordinate, grid in enumerate(self._grids(coordinates.shape[-1])):
+        for coordinate, grid in enumerate(self.grid_coordinates):
             grid = grid.to(device=coordinates.device, dtype=coordinates.dtype)
             value = coordinates[..., coordinate]
-            lower_bound = grid.min()
-            upper_bound = grid.max()
-            outside = (value < lower_bound) | (value > upper_bound)
-            if policy == 'error' and torch.any(outside):
+            lower, upper = grid.min(), grid.max()
+            outside = (value < lower) | (value > upper)
+            if (self.out_of_domain == 'error') and torch.any(outside):
                 raise ValueError(
                     '`domain_coordinates` lie outside an explicit grid')
-            value = value.clamp(lower_bound, upper_bound)
-            distances = (value.unsqueeze(-1) - grid).abs()
-            index = distances.argmin(dim=-1)
-            values.append(index.to(coordinates.dtype) / (grid.shape[0] - 1))
+            value = value.clamp(lower, upper)
+
+            # Find the enclosing interval in increasing or decreasing grids.
+            if grid[0] < grid[-1]:
+                right = torch.searchsorted(grid, value.contiguous())
+            else:
+                right = torch.searchsorted(-grid, (-value).contiguous())
+            right = right.clamp(1, grid.shape[0] - 1)
+            left = right - 1
+            fraction = (value - grid[left]) / (grid[right] - grid[left])
+            values.append((left + fraction) / (grid.shape[0] - 1))
+
         return torch.stack(values, dim=-1)
 
-    def from_indices(self,
-                     indices: torch.Tensor,
-                     grid_size: Optional[Sequence[int]] = None,
-                     domain: Domain = None) -> torch.Tensor:
+    def from_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """
-        Maps integer grid indices to coordinate values in the domain.
+        Selects stored grid points by index.
 
         Parameters
         ----------
         indices : torch.Tensor
-            Integer grid indices with shape ``(*batch, n_coordinates)``; each
-            value lies in ``[0, grid_size[coordinate] - 1]``.
-        grid_size : sequence of int, optional
-            Expected number of grid coordinates per coordinate. ``None`` uses stored
-            coordinate counts; a supplied value should match them.
-        domain : None, optional
-            Should be ``None``: the grid coordinates already define the
-            domain.
+            Integer indices with shape ``(*batch, n_coordinates)``. Each index
+            lies in ``[0, grid_size[coordinate] - 1]``.
 
         Returns
         -------
         torch.Tensor
-            Values in the domain with shape ``(*batch, n_coordinates)``,
+            Coordinates in the domain with the same shape as ``indices``,
             retaining the stored grid dtype.
+
+        Examples
+        --------
+        >>> coordinate_map = tk.formats.ExplicitGridMap(
+        ...     torch.tensor([0., 1., 4.]))
+        >>> coordinate_map.from_indices(torch.tensor([[0], [2]])).tolist()
+        [[0.0], [4.0]]
         """
-        if domain is not None:
-            raise ValueError('`domain` is not used by ExplicitGridMap')
-        if not isinstance(indices, torch.Tensor) or indices.ndim < 1 or \
+        if not isinstance(indices, torch.Tensor) or (indices.ndim < 1) or \
                 indices.dtype not in _INTEGER_DTYPES:
             raise TypeError('`indices` should be an integer tensor')
-        grids = self._grids(indices.shape[-1])
-        if grid_size is not None and tuple(grid_size) != tuple(
-                grid.shape[0] for grid in grids):
-            raise ValueError('`grid_size` should match the explicit grids')
+        if indices.shape[-1] != len(self.grid_coordinates):
+            raise ValueError(
+                '`indices` should contain one index per coordinate')
         values = []
-        for coordinate, grid in enumerate(grids):
-            index = indices[..., coordinate].to(torch.long)
+        for coordinate, grid in enumerate(self.grid_coordinates):
+            index = indices[..., coordinate].long()
             if torch.any(index < 0) or torch.any(index >= grid.shape[0]):
                 raise ValueError(
                     '`indices` is out of bounds for explicit grid')
             values.append(grid.to(indices.device)[index])
         return torch.stack(values, dim=-1)
 
-    def to_indices(self,
-                   domain_coordinates: torch.Tensor,
-                   grid_size: Optional[Sequence[int]] = None,
-                   domain: Domain = None,
-                   out_of_domain: str = 'error') -> torch.Tensor:
+    def to_indices(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
         """
-        Quantizes coordinates in the domain to nearest grid indices.
+        Selects the nearest grid point for each coordinate in the domain.
 
         Parameters
         ----------
         domain_coordinates : torch.Tensor
-            Finite floating coordinates in the domain with shape
-            ``(*batch, n_coordinates)``.
-        grid_size : sequence of int, optional
-            Expected number of grid coordinates per coordinate. ``None`` uses stored
-            coordinate counts; a supplied value should match them.
-        domain : None, optional
-            Should be ``None``: the grid coordinates already define the
-            domain.
-        out_of_domain : {"error", "clip"}
-            Whether coordinates outside the domain raise ``ValueError`` or are
-            clipped to the domain boundary.
+            Finite floating coordinates with shape ``(*batch, n_coordinates)``.
 
         Returns
         -------
         torch.Tensor
-            ``torch.long`` indices with shape ``(*batch, n_coordinates)``. Exact
-            ties select the lower index.
+            ``torch.long`` indices with the same shape as the input. Ties select
+            the lower stored index, including on decreasing grids.
 
         Examples
         --------
-        >>> coordinate_map = tk.formats.ExplicitGridMap(torch.tensor([0., 1., 4.]))
+        >>> coordinate_map = tk.formats.ExplicitGridMap(
+        ...     torch.tensor([0., 1., 4.]))
         >>> coordinate_map.to_indices(torch.tensor([[2.5]])).tolist()
         [[1]]
         """
-        if domain is not None:
-            raise ValueError('`domain` is not used by ExplicitGridMap')
-        unit = self.inverse(
-            domain_coordinates, out_of_domain=out_of_domain)
-        sizes_tuple = tuple(
-            grid.shape[0] for grid in self._grids(unit.shape[-1]))
-        if grid_size is not None and tuple(grid_size) != sizes_tuple:
-            raise ValueError('`grid_size` should match the explicit grids')
-        sizes = unit.new_tensor(sizes_tuple)
-        return torch.round(unit * (sizes - 1)).to(torch.long)
+        coordinates = self._coordinates(
+            domain_coordinates, 'domain_coordinates')
+        values = []
+        for coordinate, grid in enumerate(self.grid_coordinates):
+            grid = grid.to(device=coordinates.device, dtype=coordinates.dtype)
+            value = coordinates[..., coordinate]
+            lower, upper = grid.min(), grid.max()
+            outside = (value < lower) | (value > upper)
+            if (self.out_of_domain == 'error') and torch.any(outside):
+                raise ValueError(
+                    '`domain_coordinates` lie outside an explicit grid')
+            value = value.clamp(lower, upper)
+            values.append((value.unsqueeze(-1) - grid).abs().argmin(dim=-1))
+        return torch.stack(values, dim=-1)
 
 
-class _CompositeCoordinateMap:
+@dataclass(frozen=True)
+class _CompositeCoordinateMap(CoordinateMap):
     """Applies one independent coordinate map per coordinate."""
 
-    def __init__(self, maps: Sequence[CoordinateMap]) -> None:
-        self.maps = tuple(maps)
-        if not self.maps or not all(
-                isinstance(coordinate_map, CoordinateMap)
-                for coordinate_map in self.maps):
-            raise TypeError(
-                'Every map in `maps` should implement CoordinateMap')
+    maps: Sequence[CoordinateMap]
 
-    @staticmethod
-    def _domains(domain: Domain, n_coordinates: int) -> Tuple[Domain, ...]:
-        """Normalizes one domain specification per coordinate."""
-        if domain is None:
-            return (None,) * n_coordinates
-        if isinstance(domain, torch.Tensor):
-            if domain.shape == (2,):
-                return (domain,) * n_coordinates
-            if domain.shape == (n_coordinates, 2):
-                return tuple(domain[coordinate] for coordinate in range(n_coordinates))
+    def __post_init__(self) -> None:
+        """Checks and stores maps for individual coordinates."""
+        maps = tuple(self.maps)
+        if not maps or not all(isinstance(item, CoordinateMap) and
+                               (len(item.grid_size) == 1) for item in maps):
             raise ValueError(
-                '`domain` should contain one interval per coordinate')
-        values = tuple(domain)
-        if len(values) != n_coordinates:
-            raise ValueError('`domain` should contain one entry per coordinate')
-        return values
+                '`maps` should contain one single-coordinate map per coordinate')
+        object.__setattr__(self, 'maps', maps)
 
-    def forward(self,
-                unit_coordinates: torch.Tensor,
-                domain: Domain = None) -> torch.Tensor:
-        """Maps each coordinate through its constituent forward coordinate map."""
-        unit = _coordinate_tensor(unit_coordinates, 'unit_coordinates')
-        if unit.shape[-1] != len(self.maps):
+    @property
+    def grid_size(self) -> Tuple[int, ...]:
+        """Grid size of each constituent coordinate map."""
+        return tuple(item.grid_size[0] for item in self.maps)
+
+    def _apply(self, method: str, values: torch.Tensor) -> torch.Tensor:
+        """Applies each constituent map to its coordinate column."""
+        if not isinstance(values, torch.Tensor) or (values.ndim < 1) or (
+                values.shape[-1] != len(self.maps)):
             raise ValueError(
-                'Coordinate coordinates should match coordinate maps')
-        domains = self._domains(domain, len(self.maps))
-        values = [
-            coordinate_map.forward(
-                unit[..., coordinate:coordinate + 1], domains[coordinate])
-            for coordinate, coordinate_map in enumerate(self.maps)
-        ]
-        return torch.cat(values, dim=-1)
+                '`values` should contain one column per coordinate map')
+        return torch.cat([getattr(item, method)(values[..., site:site + 1])
+                          for site, item in enumerate(self.maps)], dim=-1)
 
+    def forward(self, unit_coordinates: torch.Tensor) -> torch.Tensor:
+        """Maps each unit coordinate through its constituent map."""
+        return self._apply('forward', unit_coordinates)
 
-    def inverse(self,
-                domain_coordinates: torch.Tensor,
-                domain: Domain = None,
-                out_of_domain: str = 'error') -> torch.Tensor:
-        """Maps coordinates in the domain through each inverse map."""
-        coordinates = _coordinate_tensor(
-            domain_coordinates, 'domain_coordinates')
-        if coordinates.shape[-1] != len(self.maps):
-            raise ValueError(
-                'Coordinate coordinates should match coordinate maps')
-        domains = self._domains(domain, len(self.maps))
-        values = []
-        for coordinate, coordinate_map in enumerate(self.maps):
-            inverse = getattr(coordinate_map, 'inverse', None)
-            if not callable(inverse):
-                raise NotImplementedError(
-                    f'Coordinate map {coordinate} does not define an inverse')
-            values.append(inverse(
-                coordinates[..., coordinate:coordinate + 1],
-                domains[coordinate],
-                out_of_domain=out_of_domain))
-        return torch.cat(values, dim=-1)
+    def inverse(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
+        """Maps each domain coordinate through its constituent inverse map."""
+        return self._apply('inverse', domain_coordinates)
 
-    def from_indices(self,
-                     indices: torch.Tensor,
-                     grid_size: Sequence[int],
-                     domain: Domain = None) -> torch.Tensor:
-        """Maps each coordinate grid index through its constituent coordinate map."""
-        domains = self._domains(domain, len(self.maps))
-        values = []
-        for coordinate, coordinate_map in enumerate(self.maps):
-            kernel = getattr(coordinate_map, 'from_indices', None)
-            if callable(kernel):
-                value = kernel(
-                    indices[..., coordinate:coordinate + 1],
-                    (grid_size[coordinate],),
-                    domains[coordinate])
-            else:
-                unit = _indices_to_unit(
-                    indices[..., coordinate:coordinate + 1],
-                    (grid_size[coordinate],),
-                    'endpoints')
-                value = coordinate_map.forward(unit, domains[coordinate])
-            values.append(value)
-        return torch.cat(values, dim=-1)
+    def from_indices(self, indices: torch.Tensor) -> torch.Tensor:
+        """Selects grid points through each constituent map."""
+        return self._apply('from_indices', indices)
 
-    def to_indices(self,
-                   domain_coordinates: torch.Tensor,
-                   grid_size: Sequence[int],
-                   domain: Domain = None,
-                   out_of_domain: str = 'error') -> torch.Tensor:
-        """Quantizes coordinates in the domain using each coordinate map."""
-        domains = self._domains(domain, len(self.maps))
-        values = []
-        for coordinate, coordinate_map in enumerate(self.maps):
-            kernel = getattr(coordinate_map, 'to_indices', None)
-            if callable(kernel):
-                value = kernel(
-                    domain_coordinates[..., coordinate:coordinate + 1],
-                    (grid_size[coordinate],),
-                    domains[coordinate],
-                    out_of_domain=out_of_domain)
-            else:
-                inverse = getattr(coordinate_map, 'inverse', None)
-                if not callable(inverse):
-                    raise NotImplementedError(
-                        f'Coordinate map {coordinate} does not define an inverse')
-                unit = inverse(
-                    domain_coordinates[..., coordinate:coordinate + 1],
-                    domains[coordinate],
-                    out_of_domain=out_of_domain)
-                value = _unit_to_indices(
-                    unit,
-                    (grid_size[coordinate],),
-                    'endpoints',
-                    out_of_domain)
-            values.append(value)
-        return torch.cat(values, dim=-1)
+    def to_indices(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
+        """Quantizes domain coordinates through each constituent map."""
+        return self._apply('to_indices', domain_coordinates)
 
 
 def _validate_explicit_grid(layout: QuantizedLayout,
                             coordinate_map: Optional[CoordinateMap]) -> None:
-    """Checks that explicit coordinate grids cover every digit configuration."""
-    if isinstance(coordinate_map, ExplicitGridMap):
-        sizes = tuple(grid.shape[0] for grid in coordinate_map._grids(
-            layout.n_coordinates))
-        if sizes != layout.grid_size:
-            raise ValueError('Explicit grid size should match `base ** level`')
-    elif isinstance(coordinate_map, _CompositeCoordinateMap):
-        for coordinate, item in enumerate(coordinate_map.maps):
-            if isinstance(item, ExplicitGridMap):
-                sizes = tuple(grid.shape[0] for grid in item._grids(1))
-                if sizes != (layout.grid_size[coordinate],):
-                    raise ValueError(
-                        'Explicit grid size should match `base ** level`')
+    """Checks layout and map grid sizes for the deferred Tucker integration."""
+    if coordinate_map is not None and (
+            coordinate_map.grid_size != layout.grid_size):
+        raise ValueError(
+            '`coordinate_map.grid_size` should match `layout.grid_size`')

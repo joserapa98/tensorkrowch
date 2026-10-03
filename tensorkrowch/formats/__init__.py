@@ -15,7 +15,7 @@ This module contains:
 
     Layouts and coordinate maps:
         * QuantizedLayout, CoordinateMap
-        * UniformCoordinateMap, WarpedCoordinateMap, ExplicitGridMap
+        * AffineCoordinateMap, FunctionalCoordinateMap, ExplicitGridMap
 
     Blocks:
         * BlockLayout, SplitBlock
@@ -42,8 +42,8 @@ from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
                                        MinimalCanonicalInfo)
 from tensorkrowch.formats.quantics import QTT, QTR, QTTM, QTRM
 from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
-                                             UniformCoordinateMap,
-                                             WarpedCoordinateMap,
+                                             AffineCoordinateMap,
+                                             FunctionalCoordinateMap,
                                              ExplicitGridMap)
 from tensorkrowch.formats.tucker import QTTTucker, QTRTucker
 
@@ -78,7 +78,7 @@ __all__ = [
 
     'QuantizedLayout',
     'CoordinateMap',
-    'UniformCoordinateMap',
-    'WarpedCoordinateMap',
+    'AffineCoordinateMap',
+    'FunctionalCoordinateMap',
     'ExplicitGridMap',
 ]

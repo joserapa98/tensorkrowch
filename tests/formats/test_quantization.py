@@ -8,12 +8,43 @@ import tensorkrowch as tk
 
 class TestQuantizedLayout:  # MARK: TestQuantizedLayout
 
+    def test_grid_inference_and_uniform_expansion(self):
+        with pytest.warns(UserWarning, match=r'\(3,\) to \(4,\)'):
+            by_base = tk.formats.QuantizedLayout.from_grid(1, 3, base=2)
+        with pytest.warns(UserWarning, match=r'\(5,\) to \(9,\)'):
+            by_level = tk.formats.QuantizedLayout.from_grid(1, 5, level=2)
+
+        assert by_base.base == (2,)
+        assert by_base.level == (2,)
+        assert by_base.grid_size == (4,)
+        assert by_level.base == (3,)
+        assert by_level.level == (2,)
+        assert by_level.grid_size == (9,)
+
+    def test_grid_requires_resolution_and_exact_explicit_size(self):
+        grid = tk.formats.ExplicitGridMap(torch.tensor([0., 1., 4., 10.]))
+        with pytest.raises(ValueError, match='base.*level'):
+            tk.formats.QuantizedLayout.from_grid(1, 4)
+        with pytest.raises(ValueError, match='match'):
+            tk.formats.QuantizedLayout.from_grid(1, 4, base=2, level=3)
+        with pytest.raises(ValueError, match='explicit grid'):
+            tk.formats.QuantizedLayout.from_grid(1, grid, base=2, level=3)
+        with pytest.raises(ValueError, match='explicit grid'):
+            tk.formats.QuantizedLayout.from_grid(
+                1, tk.formats.ExplicitGridMap(torch.tensor([0., 1., 4.])),
+                base=2)
+
+        layout = tk.formats.QuantizedLayout.from_grid(1, grid, base=2)
+        assert layout.level == (2,)
+        assert layout.grid_size == (4,)
+
+
     @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
     @pytest.mark.parametrize(
         'digit_order', ['coarse_to_fine', 'fine_to_coarse'])
     def test_multivariable_roundtrip(self, ordering, digit_order):
         layout = tk.formats.QuantizedLayout(
-            n_variables=3,
+            n_coordinates=3,
             base=(2, 3, 2),
             level=(3, 2, 1),
             ordering=ordering,
@@ -81,15 +112,15 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
     @pytest.mark.parametrize(
         'kwargs, error, match',
         [
-            ({'n_variables': 0}, ValueError, 'positive'),
-            ({'n_variables': 2, 'base': (2,)}, ValueError, 'one value'),
-            ({'n_variables': 1, 'base': 1}, ValueError, 'at least two'),
-            ({'n_variables': 1, 'level': 0}, ValueError, 'positive'),
-            ({'n_variables': 1, 'ordering': 'custom'}, ValueError,
+            ({'n_coordinates': 0}, ValueError, 'positive'),
+            ({'n_coordinates': 2, 'base': (2,)}, ValueError, 'one value'),
+            ({'n_coordinates': 1, 'base': 1}, ValueError, 'at least two'),
+            ({'n_coordinates': 1, 'level': 0}, ValueError, 'positive'),
+            ({'n_coordinates': 1, 'ordering': 'custom'}, ValueError,
              'permutation'),
-            ({'n_variables': 1, 'level': 2, 'ordering': 'custom',
+            ({'n_coordinates': 1, 'level': 2, 'ordering': 'custom',
               'permutation': ((0, 0), (0, 0))}, ValueError, 'every'),
-            ({'n_variables': 1, 'base': 2, 'level': 63}, OverflowError,
+            ({'n_coordinates': 1, 'base': 2, 'level': 63}, OverflowError,
              'int64'),
         ])
     def test_invalid_layouts_are_rejected(self, kwargs, error, match):
@@ -99,7 +130,7 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
     def test_invalid_shapes_and_bounds_are_rejected(self):
         layout = tk.formats.QuantizedLayout(2, level=2)
 
-        with pytest.raises(ValueError, match='n_variables'):
+        with pytest.raises(ValueError, match='n_coordinates'):
             layout.encode_indices(torch.tensor([[0, 1, 2]]))
         with pytest.raises(ValueError, match='out of bounds'):
             layout.encode_indices(torch.tensor([[4, 0]]))
@@ -111,7 +142,57 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
 
 class TestUniformCoordinateMap:  # MARK: TestUniformCoordinateMap
 
-    @pytest.mark.parametrize('grid', ['endpoints', 'cell_centers'])
+    @pytest.mark.parametrize('grid, offset', [
+        ('left', 0.), ('centers', 0.5), ('right', 1.),
+        (0., 0.), (0.25, 0.25), (0.5, 0.5), (0.75, 0.75), (1., 1.),
+    ])
+    def test_cell_positions_and_roundtrip(self, grid, offset):
+        coordinate_map = tk.formats.UniformCoordinateMap(grid=grid)
+        indices = torch.arange(4).unsqueeze(-1)
+        domain = torch.tensor([-2., 2.], dtype=torch.float64)
+
+        coordinates = coordinate_map.from_indices(indices, (4,), domain)
+
+        assert torch.equal(coordinates, indices.to(torch.float64) + offset - 2)
+        assert torch.equal(
+            coordinate_map.to_indices(coordinates, (4,), domain), indices)
+
+    @pytest.mark.parametrize('grid, expected', [
+        ('left', [0, 1, 1, 3, 3]), (0., [0, 1, 1, 3, 3]),
+        ('right', [0, 0, 1, 2, 3]), (1., [0, 0, 1, 2, 3]),
+        ('centers', [0, 0, 1, 2, 3]), (0.25, [0, 1, 1, 3, 3]),
+    ])
+    def test_quantization_at_boundaries_and_inside_cells(self, grid, expected):
+        coordinate_map = tk.formats.UniformCoordinateMap(grid=grid)
+        coordinates = torch.tensor([[0.], [0.25], [0.375], [0.75], [1.]])
+
+        indices = coordinate_map.to_indices(
+            coordinates, (4,), domain=torch.tensor([0., 1.]))
+
+        assert indices.squeeze(-1).tolist() == expected
+
+    def test_left_grid_matches_discretize(self):
+        layout = tk.formats.QuantizedLayout(1, base=2, level=3)
+        coordinate_map = tk.formats.UniformCoordinateMap(grid='left')
+        coordinates = torch.tensor([[0.], [0.1], [0.125], [0.9], [1.]])
+        indices = coordinate_map.to_indices(
+            coordinates, layout.grid_size, torch.tensor([0., 1.]))
+
+        assert torch.equal(
+            layout.encode_indices(indices),
+            tk.embeddings.discretize(coordinates, level=3).squeeze(-2).long())
+
+    @pytest.mark.parametrize('grid, error', [
+        ('cell_centers', ValueError), ('unknown', ValueError),
+        (-0.1, ValueError), (1.1, ValueError),
+        (float('nan'), ValueError), (float('inf'), ValueError),
+        (True, TypeError), (None, TypeError), ([0.5], TypeError),
+    ])
+    def test_invalid_grid_conventions_are_rejected(self, grid, error):
+        with pytest.raises(error, match='grid'):
+            tk.formats.UniformCoordinateMap(grid=grid)
+
+    @pytest.mark.parametrize('grid', ['endpoints', 'centers'])
     def test_index_physical_roundtrip_with_per_variable_domains(self, grid):
         coordinate_map = tk.formats.UniformCoordinateMap(grid=grid)
         grid_size = (5, 4)
@@ -235,5 +316,3 @@ class TestExplicitGridMap:  # MARK: TestExplicitGridMap
         with pytest.raises(ValueError, match='monotonic'):
             tk.formats.ExplicitGridMap(
                 torch.tensor([0., 2., 1.]))
-
-

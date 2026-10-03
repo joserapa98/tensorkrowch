@@ -11,6 +11,7 @@ from tensorkrowch.formats.quantization import (
     _coordinate_tensor,
     _domain_tensor,
     _out_of_domain,
+    _grid_offset,
     _indices_to_unit,
     _unit_to_indices,
     CoordinateMap,
@@ -20,7 +21,7 @@ from tensorkrowch.formats.quantization import (
     _CompositeCoordinateMap,
     Domain,
     IntegerSpec,
-    DigitSite)
+    CoordinateDigit)
 
 class QuantizedSourceAdapter(_SourceEvaluationTracker):
     """Presents a physical or variable-index source on quantized digit sites.
@@ -51,7 +52,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             out_shape: Optional[Sequence[int]] = None,
             dtype: Optional[torch.dtype] = None,
             device: Optional[Union[str, torch.device]] = None,
-            computational_grid: str = 'endpoints',
+            computational_grid: Union[str, float] = 'endpoints',
             out_of_domain: str = 'error') -> None:
         self._initialize_evaluation_stats()
         if not isinstance(layout, QuantizedLayout):
@@ -66,10 +67,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         if source_space not in ('physical', 'indices', 'digits'):
             raise ValueError(
                 "`source_space` should be 'physical', 'indices' or 'digits'")
-        if computational_grid not in ('endpoints', 'cell_centers'):
-            raise ValueError(
-                "`computational_grid` should be 'endpoints' or "
-                "'cell_centers'")
+        _grid_offset(computational_grid)
         out_of_domain = _out_of_domain(out_of_domain)
         if dtype is not None and not isinstance(dtype, torch.dtype):
             raise TypeError('`dtype` should be torch.dtype type or None')
@@ -91,7 +89,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
                     'Digit sources require explicit `source_layout` metadata')
             if source_layout.base != layout.base or \
                     source_layout.level != layout.level or \
-                    source_layout.n_variables != layout.n_variables:
+                    source_layout.n_coordinates != layout.n_coordinates:
                 raise ValueError('Source and adapter layouts are incompatible')
             if tuple(source.in_dim) != source_layout.in_dim:
                 raise ValueError(
@@ -103,7 +101,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             if tuple(source.in_dim) != layout.grid_size:
                 raise ValueError(
                     'Indexed source dimensions should match layout grid sizes')
-        elif is_source and len(source.in_dim) != layout.n_variables:
+        elif is_source and len(source.in_dim) != layout.n_coordinates:
             raise ValueError(
                 'Physical source should contain one site per variable')
 
@@ -355,7 +353,7 @@ def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
     outputs = tuple(axis for axis in range(n_batches, tensor.ndim) if axis not in features)
     tensor = tensor.permute([*range(n_batches), *features, *outputs])
     output_shape = tensor.shape[n_batches + len(features):]
-    canonical = [(variable, digit) for variable in range(layout.n_variables)
+    canonical = [(variable, digit) for variable in range(layout.n_coordinates)
                  for digit in range(layout.level[variable])]
     shape = [layout.base[variable] for variable, _ in canonical]
     tensor = tensor.reshape(*tensor.shape[:n_batches], *shape, *output_shape)
@@ -380,9 +378,9 @@ def _quantize_matrix(tensor, in_dim, out_dim, axis_layout, quantization,
         raise ValueError('Raw matrix dimensions should match quantized coordinate grids')
     grouped = raw.interleaved.permute([*range(0, 2 * len(raw.in_dim), 2),
                                       *range(1, 2 * len(raw.out_dim), 2)])
-    sites = [(0, variable, digit) for variable in range(a.n_variables)
+    sites = [(0, variable, digit) for variable in range(a.n_coordinates)
              for digit in range(a.level[variable])]
-    sites += [(1, variable, digit) for variable in range(b.n_variables)
+    sites += [(1, variable, digit) for variable in range(b.n_coordinates)
               for digit in range(b.level[variable])]
     shape = [(a if side == 0 else b).base[variable]
              for side, variable, _ in sites]

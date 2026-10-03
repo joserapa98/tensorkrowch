@@ -773,7 +773,7 @@ class TRALS(TTALS):
                    quantization: Optional[QuantizedLayout] = None,
                    sample_space: str = 'indices',
                    coordinate_map=None, domain=None,
-                   computational_grid: str = 'endpoints',
+                   computational_grid: Union[str, float] = 'endpoints',
                    out_of_domain: str = 'error',
                    out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TRALS':
@@ -1166,7 +1166,7 @@ def tr_als(source,
            quantization: Optional[QuantizedLayout] = None,
            source_space: Optional[str] = None,
            coordinate_map=None, domain=None,
-           computational_grid: str = 'endpoints',
+           computational_grid: Union[str, float] = 'endpoints',
            out_of_domain: str = 'error'):
     """Approximates a scalar tensor source with cyclic TR-ALS.
 

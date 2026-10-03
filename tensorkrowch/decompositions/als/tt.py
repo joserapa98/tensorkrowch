@@ -695,7 +695,7 @@ class TTALS:
                  source_space: Optional[str] = None,
                  coordinate_map=None,
                  domain=None,
-                 computational_grid: str = 'endpoints',
+                 computational_grid: Union[str, float] = 'endpoints',
                  out_of_domain: str = 'error',
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
@@ -921,7 +921,7 @@ class TTALS:
                    quantization: Optional[QuantizedLayout] = None,
                    sample_space: str = 'indices',
                    coordinate_map=None, domain=None,
-                   computational_grid: str = 'endpoints',
+                   computational_grid: Union[str, float] = 'endpoints',
                    out_of_domain: str = 'error',
                    out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TTALS':
@@ -1340,7 +1340,7 @@ def tt_als(source,
            quantization: Optional[QuantizedLayout] = None,
            source_space: Optional[str] = None,
            coordinate_map=None, domain=None,
-           computational_grid: str = 'endpoints',
+           computational_grid: Union[str, float] = 'endpoints',
            out_of_domain: str = 'error'):
     """Approximates a scalar tensor source with tensor train ALS.
 

@@ -60,7 +60,7 @@ same digit configuration raise an error instead of being silently averaged.
 
 RSS ``.quantized`` and ``qtt_rss``/``qtr_rss`` use the same source adapter and
 return formats containing the fitted layout, coordinate map and output-site
-positions. ``evaluate_indices`` and ``evaluate_points`` remain usable after
+positions. ``evaluate_indices`` and ``evaluate_coordinates`` remain usable after
 the source and fitter are released. Layout/map compatibility is checked
 before Quantics algebra or use as an ALS initializer.
 
@@ -340,7 +340,7 @@ Quantized RSS for a two-variable physical function:
    cores = tk.decompositions.qtt_rss(
        function,
        samples,
-       n_variables=2,
+       n_coordinates=2,
        base=2,
        level=3,
        domain=torch.tensor([0., 1.]),

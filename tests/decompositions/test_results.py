@@ -553,7 +553,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
                 connector.reshape(2, 2, 1),
             ])
         layout = tk.decompositions.QuantizedLayout(
-            n_variables=2, base=2, level=2)
+            n_coordinates=2, base=2, level=2)
         result = result_type(
             upper,
             factors,
@@ -593,10 +593,10 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             upper,
             (_qtt_factor(first), _qtt_factor(second)),
             tk.decompositions.QuantizedLayout(
-                n_variables=2, base=2, level=2),
+                n_coordinates=2, base=2, level=2),
             tk.decompositions.UniformCoordinateMap(),
             torch.tensor([[0., 1.], [0., 1.]], dtype=dtype),
-            variable_positions=(0, 2))
+            coordinate_positions=(0, 2))
         indices = torch.tensor([[1, 3], [2, 0]])
         expected = torch.einsum(
             'bi,ioj,bj->bo', first[indices[:, 0]], output_core,

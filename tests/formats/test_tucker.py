@@ -18,7 +18,7 @@ def test_tucker_factor_contraction_and_clone(cyclic):
     upper = upper_cls(engine(upper_dense, out_device=None))
     cls = tk.formats.QTRTucker if cyclic else tk.formats.QTTTucker
     format = cls(upper, factors, tk.formats.QuantizedLayout(2, 2, 2),
-                  variable_positions=(0, 2))
+                  coordinate_positions=(0, 2))
     indices = torch.cartesian_prod(torch.arange(4), torch.arange(4))
     expected = torch.einsum('ag,goh,bh->abo', factor_values[0].reshape(4, 2),
                              upper_dense, factor_values[1].reshape(4, 2))

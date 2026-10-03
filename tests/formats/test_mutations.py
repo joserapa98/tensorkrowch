@@ -255,7 +255,9 @@ def test_core_replacement_checks_existing_bonds(make_format):
 
 def test_quantics_replacement_restores_layout_and_metadata():
     layout = tk.formats.QuantizedLayout(1, 2, 2)
-    format = tk.formats.QTT([torch.ones(2, 3), torch.ones(3, 2)], layout)
+    format = tk.formats.QTT(
+        [torch.ones(2, 3), torch.ones(3, 2)], layout.n_coordinates,
+        layout=layout)
     cores = format.cores
     with pytest.raises(ValueError, match='Digit core dimensions'):
         cores[0] = torch.ones(4, 3)
@@ -265,7 +267,8 @@ def test_quantics_replacement_restores_layout_and_metadata():
     assert format.in_dim == layout.in_dim and format.rank == [3]
 
     matrix = tk.formats.QTTM([torch.ones(2, 3, 2), torch.ones(3, 2, 2)],
-                            layout, layout)
+                             layout.n_coordinates, layout.n_coordinates,
+                             in_layout=layout, out_layout=layout)
     previous = matrix.cores[0]
     with pytest.raises(ValueError, match='paired digit layouts'):
         matrix.cores[0] = torch.ones(4, 3, 2)

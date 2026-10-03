@@ -9,7 +9,7 @@ import tensorkrowch as tk
 def _physical_grid(layout, coordinate_map, domain):
     variable_indices = torch.cartesian_prod(*(
         torch.arange(size) for size in layout.grid_size))
-    if layout.n_variables == 1:
+    if layout.n_coordinates == 1:
         variable_indices = variable_indices.reshape(-1, 1)
     physical = coordinate_map.from_indices(
         variable_indices, layout.grid_size, domain)
@@ -162,7 +162,7 @@ class TestQTRRSS:  # MARK: TestQTRRSS
             result.evaluate(layout.encode_indices(indices)),
             torch.ones(indices.shape[0]))
         assert info['metadata']['algorithm'] == 'qtr_rss'
-        assert info['metadata']['quantization']['n_variables'] == 1
+        assert info['metadata']['quantization']['n_coordinates'] == 1
 
 
 __all__ = []

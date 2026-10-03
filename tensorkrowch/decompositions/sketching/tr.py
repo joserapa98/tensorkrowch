@@ -431,7 +431,7 @@ class TRRSS(TTRSS):
             *,
             source=None,
             layout: Optional[QuantizedLayout] = None,
-            n_variables: Optional[int] = None,
+            n_coordinates: Optional[int] = None,
             base: Union[int, Sequence[int]] = 2,
             level: Union[int, Sequence[int]] = 1,
             ordering: str = 'grouped',
@@ -443,7 +443,7 @@ class TRRSS(TTRSS):
             source_space: str = 'physical',
             source_layout: Optional[QuantizedLayout] = None,
             sample_space: str = 'physical',
-            computational_grid: str = 'endpoints',
+            computational_grid: Union[str, float] = 'endpoints',
             out_of_domain: str = 'error',
             out_position=None,
             device: Device = None,
@@ -460,7 +460,7 @@ class TRRSS(TTRSS):
             function=function,
             source=source,
             layout=layout,
-            n_variables=n_variables,
+            n_coordinates=n_coordinates,
             base=base,
             level=level,
             ordering=ordering,
@@ -1170,7 +1170,7 @@ class QTRTuckerRSS(QTTTuckerRSS):
         indices = self._sample_indices(sketch_samples, sample_space)
         probe = self._evaluate_indices(indices[:1])
         outputs = _OutputSpec.normalize(
-            probe, self.layout.n_variables, self.out_position)
+            probe, self.layout.n_coordinates, self.out_position)
         if outputs.n_sites < 3:
             raise ValueError(
                 'QTR-Tucker RSS requires at least three upper sites')
@@ -1254,7 +1254,7 @@ class QTRTuckerRSS(QTTTuckerRSS):
             'algorithm': 'qtr_tucker_rss',
             'experimental': True,
             'rss_recovery_guarantee': False,
-            'variable_positions': tuple(decomposer.variable_positions),
+            'coordinate_positions': tuple(decomposer.coordinate_positions),
             'connector_rank': [
                 factor.in_dim[-1] for factor in decomposer.factors],
             'quantization': {
@@ -1273,7 +1273,7 @@ class QTRTuckerRSS(QTTTuckerRSS):
             self.layout,
             self.adapter.coordinate_map,
             self.adapter.domain,
-            variable_positions=decomposer.variable_positions,
+            coordinate_positions=decomposer.coordinate_positions,
             computational_grid=self.adapter.computational_grid,
             out_of_domain=self.adapter.out_of_domain,
             metrics=upper.metrics,
@@ -1653,7 +1653,7 @@ def qtr_tucker_rss(
         *,
         source=None,
         layout: Optional[QuantizedLayout] = None,
-        n_variables: Optional[int] = None,
+        n_coordinates: Optional[int] = None,
         base: Union[int, Sequence[int]] = 2,
         level: Union[int, Sequence[int]] = 1,
         ordering: str = 'grouped',
@@ -1665,7 +1665,7 @@ def qtr_tucker_rss(
         source_space: str = 'physical',
         source_layout: Optional[QuantizedLayout] = None,
         sample_space: str = 'physical',
-        computational_grid: str = 'endpoints',
+        computational_grid: Union[str, float] = 'endpoints',
         out_of_domain: str = 'error',
         labels: Optional[torch.Tensor] = None,
         out_position=None,
@@ -1697,24 +1697,24 @@ def qtr_tucker_rss(
     """
     if sketch_samples is None:
         raise TypeError('`sketch_samples` should be provided')
-    if layout is None and n_variables is None:
+    if layout is None and n_coordinates is None:
         if sample_space != 'physical':
             raise ValueError(
-                '`n_variables` is required for non-physical samples')
+                '`n_coordinates` is required for non-physical samples')
         values = sketch_samples.values \
             if isinstance(sketch_samples, ConfigurationBatch) \
             else sketch_samples
         if not isinstance(values, torch.Tensor) or values.ndim != 2:
             raise ValueError(
-                '`n_variables` could not be inferred from sketch samples')
-        n_variables = values.shape[1]
+                '`n_coordinates` could not be inferred from sketch samples')
+        n_coordinates = values.shape[1]
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = QTRTuckerRSS(
         function=function,
         source=source,
         layout=layout,
-        n_variables=n_variables,
+        n_coordinates=n_coordinates,
         base=base,
         level=level,
         ordering=ordering,
@@ -1760,7 +1760,7 @@ def qtr_rss(
         *,
         source=None,
         layout: Optional[QuantizedLayout] = None,
-        n_variables: Optional[int] = None,
+        n_coordinates: Optional[int] = None,
         base: Union[int, Sequence[int]] = 2,
         level: Union[int, Sequence[int]] = 1,
         ordering: str = 'grouped',
@@ -1772,7 +1772,7 @@ def qtr_rss(
         source_space: str = 'physical',
         source_layout: Optional[QuantizedLayout] = None,
         sample_space: str = 'physical',
-        computational_grid: str = 'endpoints',
+        computational_grid: Union[str, float] = 'endpoints',
         out_of_domain: str = 'error',
         labels: Optional[torch.Tensor] = None,
         out_position=None,
@@ -1803,17 +1803,17 @@ def qtr_rss(
     """
     if sketch_samples is None:
         raise TypeError('`sketch_samples` should be provided')
-    if layout is None and n_variables is None:
+    if layout is None and n_coordinates is None:
         if sample_space != 'physical':
             raise ValueError(
-                '`n_variables` is required for digit-space samples')
+                '`n_coordinates` is required for digit-space samples')
         values = sketch_samples.values \
             if isinstance(sketch_samples, ConfigurationBatch) \
             else sketch_samples
         if not isinstance(values, torch.Tensor) or values.ndim != 2:
             raise ValueError(
-                '`n_variables` could not be inferred from sketch samples')
-        n_variables = values.shape[1]
+                '`n_coordinates` could not be inferred from sketch samples')
+        n_coordinates = values.shape[1]
     if not isinstance(return_result, bool):
         raise TypeError('`return_result` should be bool type')
     if return_info and return_result:
@@ -1824,7 +1824,7 @@ def qtr_rss(
         function=function,
         source=source,
         layout=layout,
-        n_variables=n_variables,
+        n_coordinates=n_coordinates,
         base=base,
         level=level,
         ordering=ordering,

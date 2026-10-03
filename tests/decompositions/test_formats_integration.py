@@ -91,12 +91,12 @@ def test_quantized_als_raw_callable_and_repeated_fits(method, ordering):
         result = engine.fit(
             rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
         assert torch.allclose(result.to_dense_grid(), data, atol=1e-8)
-    physical = cls(lambda points: torch.exp(points[:, 0] + 2 * points[:, 1]),
+    physical = cls(lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
                    quantization=layout, dtype=torch.float64,
                    domain=torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64))
     result = physical.fit(rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
-    points = torch.tensor([[0., 0.], [1., 1.]], dtype=torch.float64)
-    assert torch.allclose(result.evaluate_points(points), torch.exp(torch.tensor([0., 3.], dtype=torch.float64)), atol=1e-9)
+    coordinates = torch.tensor([[0., 0.], [1., 1.]], dtype=torch.float64)
+    assert torch.allclose(result.evaluate_coordinates(coordinates), torch.exp(torch.tensor([0., 3.], dtype=torch.float64)), atol=1e-9)
     assert not result.metrics.sweeps
 
 
@@ -154,22 +154,23 @@ def test_quantized_rss_result_retains_coordinates_without_source():
     layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
     domain = torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64)
     indices = torch.cartesian_prod(torch.arange(4), torch.arange(4))
-    points = indices.to(torch.float64) / 3
+    coordinates = indices.to(torch.float64) / 3
 
     def function(values):
         return torch.stack([1 + values[:, 0], 2 + values[:, 1]], dim=-1)
 
     reference = weakref.ref(function)
     result = tk.decompositions.qtt_rss(
-        function, points, layout=layout, domain=domain, rank=4,
+        function, coordinates, layout=layout, domain=domain, rank=4,
         legacy_projection=False, return_result=True)
     assert isinstance(result, tk.decompositions.QTTDecomposition)
     del function
     gc.collect()
     assert reference() is None
-    expected = torch.stack([1 + points[:, 0], 2 + points[:, 1]], dim=-1)
-    assert torch.allclose(result.evaluate_points(points), expected, atol=1e-9)
+    expected = torch.stack([1 + coordinates[:, 0], 2 + coordinates[:, 1]], dim=-1)
+    assert torch.allclose(result.evaluate_coordinates(coordinates), expected, atol=1e-9)
     restored = tk.formats.QTT.from_mps(
-        result.to_mps(), layout=layout, coordinate_map=result.coordinate_map,
+        result.to_mps(), n_coordinates=layout.n_coordinates,
+        layout=layout, coordinate_map=result.coordinate_map,
         domain=domain, digit_positions=result.digit_positions)
-    assert torch.allclose(restored.evaluate_points(points), expected, atol=1e-9)
+    assert torch.allclose(restored.evaluate_coordinates(coordinates), expected, atol=1e-9)

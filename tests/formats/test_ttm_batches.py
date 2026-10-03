@@ -63,11 +63,16 @@ def test_batched_qttm_coordinates_and_plain_conversion():
     layout = tk.formats.QuantizedLayout(1, 2, 2)
     cores = [torch.arange(8., dtype=torch.float64).reshape(2, 2, 1, 2),
              torch.arange(8., dtype=torch.float64).reshape(2, 1, 2, 2)]
-    format = tk.formats.QTTM(cores, layout, layout, n_batches=1)
+    format = tk.formats.QTTM(
+        cores, layout.n_coordinates, layout.n_coordinates,
+        in_layout=layout, out_layout=layout, n_batches=1)
     indices = torch.tensor([[0], [1], [3]])
     actual = format.evaluate_indices(indices, indices)
     for batch in range(2):
-        member = tk.formats.QTTM([core[batch] for core in cores], layout, layout)
+        member = tk.formats.QTTM(
+            [core[batch] for core in cores],
+            layout.n_coordinates, layout.n_coordinates,
+            in_layout=layout, out_layout=layout)
         assert torch.allclose(actual[batch],
                               member.evaluate_indices(indices, indices))
     plain = format.as_ttm()

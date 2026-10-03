@@ -13,7 +13,7 @@ This script contains:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import torch
 
@@ -144,11 +144,12 @@ class _QuanticsResultState:
 class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
     """Quantics TT retaining its actual digit layout and coordinate map."""
 
-    layout: QuantizedLayout = field()  # Logical variable-to-digit schedule
+    n_coordinates: int = field()  # Number of original input coordinates
+    layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
     coordinate_map: Any = None  # Actual physical-coordinate map
-    domain: Any = None  # Physical variable domains
+    domain: Any = None  # Physical coordinate domains
     digit_positions: Sequence[int] = field()  # Network sites carrying digits
-    computational_grid: str = 'endpoints'  # Grid-node convention
+    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
     out_of_domain: str = 'error'  # Explicit coordinate boundary policy
 
 
@@ -156,11 +157,12 @@ class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
 class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):
     """Quantics TR retaining its actual digit layout and coordinate map."""
 
-    layout: QuantizedLayout = field()  # Logical variable-to-digit schedule
+    n_coordinates: int = field()  # Number of original input coordinates
+    layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
     coordinate_map: Any = None  # Actual physical-coordinate map
-    domain: Any = None  # Physical variable domains
+    domain: Any = None  # Physical coordinate domains
     digit_positions: Sequence[int] = field()  # Network sites carrying digits
-    computational_grid: str = 'endpoints'  # Grid-node convention
+    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
     out_of_domain: str = 'error'  # Explicit coordinate boundary policy
 
 
@@ -169,13 +171,15 @@ class QTTMDecomposition(_QuanticsResultState, QTTM,
                        TTMDecomposition):
     """Quantics TTM with separate input and output coordinate spaces."""
 
+    in_n_coordinates: int = field()  # Number of original input coordinates
+    out_n_coordinates: int = field()  # Number of original output coordinates
     in_layout: QuantizedLayout = field()  # Input digit schedule
     out_layout: QuantizedLayout = field()  # Output digit schedule
     in_coordinate_map: Any = None  # Actual input-coordinate map
     out_coordinate_map: Any = None  # Actual output-coordinate map
     in_domain: Any = None  # Physical input domains
     out_domain: Any = None  # Physical output domains
-    computational_grid: str = 'endpoints'  # Grid-node convention
+    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
     out_of_domain: str = 'error'  # Explicit coordinate boundary policy
 
 
@@ -184,13 +188,15 @@ class QTRMDecomposition(_QuanticsResultState, QTRM,
                        TRMDecomposition):
     """Quantics TRM with separate input and output coordinate spaces."""
 
+    in_n_coordinates: int = field()  # Number of original input coordinates
+    out_n_coordinates: int = field()  # Number of original output coordinates
     in_layout: QuantizedLayout = field()  # Input digit schedule
     out_layout: QuantizedLayout = field()  # Output digit schedule
     in_coordinate_map: Any = None  # Actual input-coordinate map
     out_coordinate_map: Any = None  # Actual output-coordinate map
     in_domain: Any = None  # Physical input domains
     out_domain: Any = None  # Physical output domains
-    computational_grid: str = 'endpoints'  # Grid-node convention
+    computational_grid: Union[str, float] = 'endpoints'  # Grid-node convention
     out_of_domain: str = 'error'  # Explicit coordinate boundary policy
 
 
@@ -198,7 +204,7 @@ class _TuckerResultState(TensorDecomposition):
     """Provenance for a hierarchical format with a single upper owner."""
 
     def __init__(self, upper, factors, layout, coordinate_map, domain=None, *,
-                 variable_positions=None, computational_grid='endpoints',
+                 coordinate_positions=None, computational_grid='endpoints',
                  out_of_domain='error', metrics=None, metadata=None):
         self.metrics = upper.metrics if metrics is None and isinstance(
             upper, TensorDecomposition) else (
@@ -209,7 +215,7 @@ class _TuckerResultState(TensorDecomposition):
         if not isinstance(self.metadata, dict):
             raise TypeError('`metadata` should be dict type')
         super().__init__(upper, factors, layout, coordinate_map, domain,
-                         variable_positions=variable_positions,
+                         coordinate_positions=coordinate_positions,
                          computational_grid=computational_grid,
                          out_of_domain=out_of_domain)
 
@@ -221,7 +227,7 @@ class _TuckerResultState(TensorDecomposition):
         info.update(upper_rank=self.upper.rank,
                     factor_rank=[list(rank) for rank in self.factor_rank],
                     grid_size=list(self.layout.grid_size),
-                    variable_positions=list(self.variable_positions),
+                    coordinate_positions=list(self.coordinate_positions),
                     out_shape=list(self.out_shape))
         return info
 
@@ -269,10 +275,13 @@ def _quantics_result(result, quantization=None, *, adapter=None,
                   n_batches=result.n_batches)
     if isinstance(quantization, tuple):
         cls = QTRMDecomposition if result.topology == 'trm' else QTTMDecomposition
-        kwargs.update(in_layout=quantization[0], out_layout=quantization[1])
+        kwargs.update(in_n_coordinates=quantization[0].n_coordinates,
+                      out_n_coordinates=quantization[1].n_coordinates,
+                      in_layout=quantization[0], out_layout=quantization[1])
     else:
         cls = QTRDecomposition if result.topology == 'tr' else QTTDecomposition
-        kwargs.update(layout=quantization, digit_positions=digit_positions)
+        kwargs.update(n_coordinates=quantization.n_coordinates,
+                      layout=quantization, digit_positions=digit_positions)
         if adapter is not None:
             kwargs.update(coordinate_map=adapter.coordinate_map,
                           domain=adapter.domain,

@@ -318,8 +318,16 @@ Quantics and Tucker
 Quantics subclasses add ``QuantizedLayout`` and optional coordinate maps to
 the ordinary numerical formats. Layouts support grouped, interleaved and
 custom schedules, heterogeneous bases/levels and both digit directions.
-``evaluate_digits``, ``evaluate_indices`` and ``evaluate_points`` distinguish
-network digits, original grid indices and physical coordinates.
+``QuantizedLayout.from_grid`` infers a missing base or level from grid sizes.
+It warns if a uniform grid must grow; explicit coordinate grids must match
+``base ** level`` exactly.
+``QTT`` and ``QTR`` can construct these objects from ``n_coordinates``,
+``base``, ``level`` and ``domain``. Passing ``grid_coordinates`` creates an
+explicit map and infers a missing base or level. The matrix formats accept
+independent ``in_*`` and ``out_*`` arguments; all four formats also accept
+prebuilt layouts and coordinate maps.
+``evaluate_digits``, ``evaluate_indices`` and ``evaluate_coordinates`` distinguish
+TT site digits, original grid indices and physical coordinates.
 ``digit_positions`` allows vector formats to retain tensor-valued output
 sites. Physical evaluation requires an actual map and its inverse; a stored
 map name is insufficient. ``to_dense_grid`` is an explicit small-grid oracle.
@@ -333,7 +341,7 @@ cores: grouped-to-interleaved conversion would require swaps and SVDs.
 
 ``QTTTucker``/``QTRTucker`` compose an upper TT/TR with one local TT per
 variable, whose final site is the connector gamma. Upper cores have one
-owner; ``cores`` delegates to ``upper.cores``. ``variable_positions`` locates
+owner; ``cores`` delegates to ``upper.cores``. ``coordinate_positions`` locates
 upper connectors among optional output sites. ``flatten`` returns a Quantics
 network with the actual grouped factor schedule. Fitters and sketch recursion
 remain in decompositions.

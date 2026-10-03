@@ -23,7 +23,7 @@ class TestQTTTuckerRSS:
         function, samples, domain = _scalar_problem()
         result = tk.decompositions.QTTTuckerRSS(
             function,
-            n_variables=2,
+            n_coordinates=2,
             base=2,
             level=2,
             domain=domain,
@@ -41,7 +41,7 @@ class TestQTTTuckerRSS:
             result, tk.decompositions.QTTTuckerDecomposition)
         assert len(result.upper.cores) == 2
         assert len(result.factors) == 2
-        assert result.variable_positions == (0, 1)
+        assert result.coordinate_positions == (0, 1)
         assert result.in_dim == (2, 2, 2, 2)
         assert torch.allclose(
             result.evaluate(samples), function(samples),
@@ -68,7 +68,7 @@ class TestQTTTuckerRSS:
         result, info = tk.decompositions.qtt_tucker_rss(
             function,
             samples,
-            n_variables=2,
+            n_coordinates=2,
             base=2,
             level=2,
             domain=domain,
@@ -83,7 +83,7 @@ class TestQTTTuckerRSS:
             out_device=None,
             return_info=True)
 
-        assert result.variable_positions == (0, 2)
+        assert result.coordinate_positions == (0, 2)
         assert result.out_shape == (2,)
         assert result.evaluate(samples).shape == (samples.shape[0], 2)
         assert torch.allclose(result.evaluate(samples), function(samples))
@@ -92,7 +92,7 @@ class TestQTTTuckerRSS:
 
     def test_heterogeneous_interleaved_layout_evaluates_same_points(self):
         layout = tk.decompositions.QuantizedLayout(
-            n_variables=2,
+            n_coordinates=2,
             base=(2, 3),
             level=(2, 1),
             ordering='interleaved',
@@ -132,7 +132,7 @@ class TestQTTTuckerRSS:
         result = tk.decompositions.qtt_tucker_rss(
             complex_function,
             samples,
-            n_variables=2,
+            n_coordinates=2,
             base=2,
             level=2,
             domain=domain,
@@ -160,7 +160,7 @@ class TestQTRTuckerRSS:
         result = tk.decompositions.qtr_tucker_rss(
             function,
             samples,
-            n_variables=3,
+            n_coordinates=3,
             base=2,
             level=2,
             domain=domain,
@@ -174,7 +174,7 @@ class TestQTRTuckerRSS:
 
         assert isinstance(
             result, tk.decompositions.QTRTuckerDecomposition)
-        assert result.variable_positions == (0, 1, 2)
+        assert result.coordinate_positions == (0, 1, 2)
         assert result.upper.rank == [1, 1, 1]
         assert torch.allclose(result.evaluate(samples), function(samples))
         assert torch.allclose(

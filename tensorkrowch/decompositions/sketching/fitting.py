@@ -724,7 +724,7 @@ class QTTInputFitter:
             seed: int = 0,
             materialize_tensor: bool = True) -> None:
         self.layout = QuantizedLayout(
-            n_variables=1,
+            n_coordinates=1,
             base=base,
             level=level,
             digit_order=digit_order)

@@ -1,15 +1,13 @@
 """
 This script contains:
 
-    Internal classes:
-        * _CompositeCoordinateMap
-
     Public classes:
         * QuantizedLayout
         * CoordinateMap
-        * AffineCoordinateMap
-        * FunctionalCoordinateMap
-        * ExplicitGridMap
+            + AffineCoordinateMap
+            + FunctionalCoordinateMap
+            + ExplicitGridMap
+            + _CompositeCoordinateMap
 
     Internal functions:
         * _integer_spec
@@ -20,9 +18,6 @@ This script contains:
         * _indices_to_unit
         * _unit_to_indices
         * _validate_explicit_grid
-
-    Aliases:
-        * IntegerSpec, CoordinateDigit, Domain
 
 Terminology:
     * Coordinate: a continuous input value along one dimension.

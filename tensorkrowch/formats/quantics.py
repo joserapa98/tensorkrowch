@@ -34,12 +34,13 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
 
 import torch
 
-from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR, TTM, TRM,
-                                         _VectorFormat1D,
-                                         _restore_cores)
-from tensorkrowch.formats.quantization import (AffineCoordinateMap,
-                                             CoordinateMap, Domain,
-                                             ExplicitGridMap, QuantizedLayout)
+from tensorkrowch.formats.formats1d import (_restore_cores, TensorFormat1D,
+                                            _VectorFormat1D,
+                                            TT, TR, TTM, TRM)
+from tensorkrowch.formats.quantization import (Domain, QuantizedLayout,
+                                               CoordinateMap,
+                                               AffineCoordinateMap,
+                                               ExplicitGridMap)
 
 
 def _map_structure(value: Any,
@@ -73,7 +74,7 @@ def _equal_structure(first: Any, second: Any) -> bool:
                                     getattr(second, field.name))
                    for field in fields(first))
     if isinstance(first, (list, tuple)):
-        return len(first) == len(second) and all(
+        return (len(first) == len(second)) and all(
             _equal_structure(left, right) for left, right in zip(first, second))
     if callable(first):
         return False
@@ -127,7 +128,8 @@ def _resolve_quantization(
         if any(value is not None for value in (
                 base, level, domain, grid_coordinates)):
             raise ValueError(
-                'Do not combine `layout` or `coordinate_map` with shorthand arguments')
+                'Do not combine `layout` or `coordinate_map` with '
+                'shorthand arguments')
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
         if not isinstance(coordinate_map, CoordinateMap):
@@ -188,7 +190,9 @@ class _QuanticsFormat:
             result._is_row = self._is_row
         return result
 
-    def _check_semantics(self, other: TensorFormat1D, product: bool = False) -> None:
+    def _check_semantics(self,
+                         other: TensorFormat1D,
+                         product: bool = False) -> None:
         """Checks layouts, coordinate maps and contracted coordinate spaces."""
         super()._check_semantics(other, product=product)
         if product:
@@ -202,9 +206,10 @@ class _QuanticsFormat:
         else:
             names = (('layout', 'coordinate_map', 'digit_positions')
                      if isinstance(self, _QuanticsVector)
-                     else ('in_layout', 'out_layout', 'in_coordinate_map',
-                           'out_coordinate_map'))
-            if any(not _equal_structure(getattr(self, name), getattr(other, name, None))
+                     else ('in_layout', 'out_layout',
+                           'in_coordinate_map', 'out_coordinate_map'))
+            if any(not _equal_structure(getattr(self, name),
+                                        getattr(other, name, None))
                    for name in names):
                 raise ValueError(
                     'Quantics layouts and coordinate maps should match')
@@ -223,19 +228,25 @@ class _QuanticsFormat:
             cls = QTRM if cyclic else QTTM
             input_format = other if product else self
             return cls(
-                cores, input_format.in_layout.n_coordinates,
-                self.out_layout.n_coordinates,
-                in_layout=input_format.in_layout, out_layout=self.out_layout,
+                cores=cores,
+                in_n_coordinates=input_format.in_layout.n_coordinates,
+                out_n_coordinates=self.out_layout.n_coordinates,
+                in_layout=input_format.in_layout,
+                out_layout=self.out_layout,
                 in_coordinate_map=input_format.in_coordinate_map,
-                out_coordinate_map=self.out_coordinate_map, n_batches=n_batches)
+                out_coordinate_map=self.out_coordinate_map,
+                n_batches=n_batches)
 
         cls = QTR if cyclic else QTT
         layout = self.out_layout if product else self.layout
         coordinate_map = (self.out_coordinate_map if product
                           else self.coordinate_map)
         positions = None if product else self.digit_positions
-        return cls(cores, layout.n_coordinates, layout=layout,
-                   coordinate_map=coordinate_map, digit_positions=positions,
+        return cls(cores=cores,
+                   n_coordinates=layout.n_coordinates,
+                   layout=layout,
+                   coordinate_map=coordinate_map,
+                   digit_positions=positions,
                    n_batches=n_batches)
 
 
@@ -243,22 +254,6 @@ class _QuanticsVector(_QuanticsFormat):
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
     _coordinate_names = ('coordinate_map',)
-
-    def _new_from_standard_cores(self,
-                                 cores: Sequence[torch.Tensor],
-                                 in_dim: Sequence[int],
-                                 out_dim: Optional[Sequence[int]],
-                                 n_batches: int,
-                                 cyclic: bool,
-                                 other: Optional[TensorFormat1D] = None,
-                                 product: bool = False) -> TensorFormat1D:
-        """Preserves Quantics vector orientation in algebra results."""
-        result = super()._new_from_standard_cores(
-            cores, in_dim, out_dim, n_batches, cyclic, other=other,
-            product=product)
-        if not product:
-            result._is_row = self._is_row
-        return result
 
     def __init__(self,
                  cores: Sequence[torch.Tensor],
@@ -284,16 +279,55 @@ class _QuanticsVector(_QuanticsFormat):
         # Digit sites carry inputs; any remaining output sites stay open.
         positions = (tuple(range(self.n_sites)) if digit_positions is None
                      else tuple(digit_positions))
-        if len(positions) != self.layout.n_sites or any(
+        if (len(positions) != self.layout.n_sites) or any(
                 isinstance(site, bool) or not isinstance(site, int) or
-                not 0 <= site < self.n_sites for site in positions) or \
-                len(set(positions)) != len(positions):
+                not (0 <= site < self.n_sites) for site in positions) or \
+                (len(set(positions)) != len(positions)):
             raise ValueError(
-                '`digit_positions` should select every scheduled digit exactly once')
+                '`digit_positions` should select every scheduled digit '
+                'exactly once')
         if tuple(self._in_dim[site] for site in positions) != self.layout.in_dim:
             raise ValueError(
                 'Digit core dimensions should match `layout.in_dim`')
         self.digit_positions = positions
+
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Sequence[int],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional[TensorFormat1D] = None,
+                                 product: bool = False) -> TensorFormat1D:
+        """Preserves Quantics vector orientation in algebra results."""
+        result = super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic,
+            other=other, product=product)
+        if not product:
+            result._is_row = self._is_row
+        return result
+
+    def _new_outer_product(self,
+                           cores: Sequence[torch.Tensor],
+                           other: _VectorFormat1D,
+                           n_batches: int,
+                           cyclic: bool) -> Union['QTTM', 'QTRM']:
+        """Builds an operator with the row's inputs and this column's outputs."""
+        if any(format.digit_positions != tuple(range(format.n_sites))
+               for format in (self, other)):
+            raise ValueError(
+                'Quantics outer products require only digit sites')
+        cores = _restore_cores(
+            cores, other._in_dim, self._in_dim, n_batches, cyclic)
+        cls = QTRM if cyclic else QTTM
+        return cls(cores=cores,
+                   in_n_coordinates=other.layout.n_coordinates,
+                   out_n_coordinates=self.layout.n_coordinates,
+                   in_layout=other.layout,
+                   out_layout=self.layout,
+                   in_coordinate_map=other.coordinate_map,
+                   out_coordinate_map=self.coordinate_map,
+                   n_batches=n_batches)
 
     def validate(self) -> TensorFormat1D:
         """
@@ -313,25 +347,6 @@ class _QuanticsVector(_QuanticsFormat):
             raise ValueError(
                 'Digit core dimensions should match `layout.in_dim`')
         return self
-
-    def _new_outer_product(self,
-                           cores: Sequence[torch.Tensor],
-                           other: _VectorFormat1D,
-                           n_batches: int,
-                           cyclic: bool) -> Union['QTTM', 'QTRM']:
-        """Builds an operator with the row's inputs and this column's outputs."""
-        if any(format.digit_positions != tuple(range(format.n_sites))
-               for format in (self, other)):
-            raise ValueError(
-                'Quantics outer products require only digit sites')
-        cores = _restore_cores(
-            cores, other._in_dim, self._in_dim, n_batches, cyclic)
-        cls = QTRM if cyclic else QTTM
-        return cls(
-            cores, other.layout.n_coordinates, self.layout.n_coordinates,
-            in_layout=other.layout, out_layout=self.layout,
-            in_coordinate_map=other.coordinate_map,
-            out_coordinate_map=self.coordinate_map, n_batches=n_batches)
 
     def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
         """

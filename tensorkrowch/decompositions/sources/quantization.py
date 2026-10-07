@@ -329,16 +329,17 @@ def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
         raise ValueError('in_features should select distinct non-batch tensor axes')
     if tuple(tensor.shape[axis] for axis in features) != layout.grid_size:
         raise ValueError('Raw variable dimensions should match quantization.grid_size')
-    outputs = tuple(axis for axis in range(n_batches, tensor.ndim) if axis not in features)
-    tensor = tensor.permute([*range(n_batches), *features, *outputs])
-    output_shape = tensor.shape[n_batches + len(features):]
-    canonical = [(variable, digit) for variable in range(layout.n_coordinates)
-                 for digit in range(layout.level[variable])]
-    shape = [layout.base[variable] for variable, _ in canonical]
-    tensor = tensor.reshape(*tensor.shape[:n_batches], *shape, *output_shape)
-    permutation = [*range(n_batches), *[n_batches + canonical.index(site)
-                                      for site in layout.sites()],
-                   *range(n_batches + len(canonical), tensor.ndim)]
+    if len(features) != tensor.ndim - n_batches:
+        raise ValueError(
+            'Quantics vectors require a digit at every site; '
+            '`in_features` should include every non-batch axis')
+    tensor = tensor.permute([*range(n_batches), *features])
+    sites = [(coordinate, digit) for coordinate in range(layout.n_coordinates)
+             for digit in range(layout.level[coordinate])]
+    shape = [layout.base[coordinate] for coordinate, _ in sites]
+    tensor = tensor.reshape(*tensor.shape[:n_batches], *shape)
+    permutation = [*range(n_batches), *[n_batches + sites.index(site)
+                                      for site in layout.sites()]]
     return tensor.permute(permutation)
 
 
@@ -382,8 +383,6 @@ def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
     raw_callable = callable(source) and not isinstance(source, TensorSource)
     if isinstance(source, _QuanticsVector):
         source_layout = source.layout
-        if len(source.digit_positions) != source.n_sites:
-            raise ValueError('Scalar ALS does not support Quantics output sites')
         source_space = 'digits' if source_space is None else source_space
         if source_space != 'digits':
             raise ValueError('Quantics formats should use source_space="digits"')

@@ -1189,6 +1189,18 @@ class _QuantizedRSSMixin:
         self._fit_sample_space = sample_space
         super().__init__(*args, **kwargs)
 
+    def _initialize_fit(
+            self,
+            sketch_samples: Samples,
+            generator: Optional[torch.Generator]) -> ConfigurationBatch:
+        """Initializes a quantized fit and requires scalar function outputs."""
+        samples = super()._initialize_fit(sketch_samples, generator)
+        if not self.outputs.scalar:
+            raise ValueError(
+                'Quantics RSS requires scalar function outputs; '
+                'every QTT/QTR site should represent a digit')
+        return samples
+
     def _normalize_samples(self, sketch_samples: Samples) -> ConfigurationBatch:
         """Normalizes already encoded digits or quantizes physical samples."""
         if self._fit_sample_space == 'digits':
@@ -1262,8 +1274,7 @@ class _QuantizedRSSMixin:
         }
         result.metadata['algorithm'] = self._quantized_algorithm
         return _quantics_result(result, self.quantized_layout,
-                                adapter=self.quantized_adapter,
-                                digit_positions=self.outputs.input_positions)
+                                adapter=self.quantized_adapter)
 
 
 class _QuantizedTTRSS(_QuantizedRSSMixin, TTRSS):
@@ -2115,6 +2126,8 @@ def qtt_rss(
         return_info: bool = False,
         return_result: bool = False):
     """Decomposes a multivariable physical function into QTT cores.
+
+    The function must return scalar values; every fitted site represents a digit.
 
     Digit sites always use the corresponding basis embedding, so this API has
     no ``embedding`` argument. Physical samples with shape

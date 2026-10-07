@@ -19,7 +19,8 @@ from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR,
                                          _restore_cores)
 from tensorkrowch.formats.quantics import (QTT, QTR, _map_structure,
                                          _coordinates_to_indices, _same_references)
-from tensorkrowch.formats.quantization import (CoordinateMap, QuantizedLayout,
+from tensorkrowch.formats.quantization import (AffineCoordinateMap,
+                                             CoordinateMap, QuantizedLayout,
                                              Domain, _grid_offset,
                                              _validate_explicit_grid)
 
@@ -358,11 +359,15 @@ class _QuantizedTuckerFormat(TensorFormat):
         """
         Substitutes each upper connector with its local Quantics factor.
 
+        Only scalar-output formats can be flattened to QTT/QTR. Tensor-valued
+        outputs raise ``ValueError`` because QTT/QTR require a digit at every
+        site.
+
         Returns
         -------
         :class:`~tensorkrowch.formats.QTT` or :class:`~tensorkrowch.formats.QTR`
-            Exact flat format, preserving coordinate maps and open output
-            sites. Digit sites become contiguous factor blocks with a
+            Exact flat format for scalar outputs, preserving coordinate maps.
+            Digit sites become contiguous factor blocks with a
             corresponding custom layout. Upper ranks are carried through
             identity factors.
 
@@ -378,37 +383,33 @@ class _QuantizedTuckerFormat(TensorFormat):
         ...                format.evaluate_indices(indices))
         True
         """
+        if self.out_shape:
+            raise ValueError(
+                'Cannot flatten tensor-valued Tucker formats to QTT/QTR; '
+                'every QTT/QTR site should represent a digit')
+
         effective_cores = self._effective_cores()
         dimensions = self._flattened_in_dim()
         cyclic = self._upper_type is TR
         cores = _restore_cores(effective_cores, dimensions, None, 0, cyclic)
 
         # Keep the coordinate schedule aligned with the flattened factor blocks.
-        schedule = []
-        positions = []
-        column = 0
-        by_position = {site: coordinate for coordinate,
-                       site in enumerate(self.coordinate_positions)}
-        for site in range(self.upper.n_sites):
-            if site not in by_position:
-                column += 1
-                continue
-            coordinate = by_position[site]
-            for digit_site in self.layout.sites():
-                if digit_site[0] != coordinate:
-                    continue
-                schedule.append(digit_site)
-                positions.append(column)
-                column += 1
+        schedule = [site for coordinate in range(self.layout.n_coordinates)
+                    for site in self.layout.sites() if site[0] == coordinate]
         layout = QuantizedLayout(
             self.layout.n_coordinates, self.layout.base, self.layout.level,
-            ordering='custom', permutation=schedule)
+            ordering='custom', digit_order=self.layout.digit_order,
+            permutation=schedule)
+        coordinate_map = self.coordinate_map
+        if coordinate_map is None:
+            domain = self.domain if self.domain is not None else torch.tensor(
+                [0., 1.], device=self.device, dtype=self.upper.cores[0].real.dtype)
+            coordinate_map = AffineCoordinateMap(
+                domain, layout.grid_size, grid_offset=self.computational_grid,
+                out_of_domain=self.out_of_domain)
         cls = QTR if cyclic else QTT
         return cls(cores, layout.n_coordinates, layout=layout,
-                   coordinate_map=self.coordinate_map, domain=self.domain,
-                   digit_positions=positions,
-                   computational_grid=self.computational_grid,
-                   out_of_domain=self.out_of_domain)
+                   coordinate_map=coordinate_map)
 
     def _factor_vectors(self, digits: torch.Tensor) -> List[torch.Tensor]:
         """Returns each factor's connector vector for the scheduled digits."""

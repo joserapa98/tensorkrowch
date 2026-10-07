@@ -24,8 +24,25 @@ def test_tucker_factor_contraction_and_clone(cyclic):
                              upper_dense, factor_values[1].reshape(4, 2))
     assert format.cores is format.upper.cores
     assert torch.allclose(format.evaluate_indices(indices), expected.reshape(16, 3))
-    assert torch.allclose(format.flatten().evaluate_indices(indices), expected.reshape(16, 3))
+    with pytest.raises(ValueError, match='tensor-valued Tucker'):
+        format.flatten()
     copied = format.clone()
     assert copied.upper.cores[0].data_ptr() != upper.cores[0].data_ptr()
     assert copied.factors[0].cores[0].data_ptr() != factors[0].cores[0].data_ptr()
     assert torch.allclose(format.norm(), expected.norm())
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_scalar_tucker_flattens_to_digit_only_quantics(cyclic):
+    upper_cls = tk.formats.TR if cyclic else tk.formats.TT
+    upper_core = torch.tensor([1., 2.])
+    if cyclic:
+        upper_core = upper_core.reshape(1, 2, 1)
+    upper = upper_cls([upper_core])
+    factor = tk.formats.TT([torch.eye(2), torch.eye(2)])
+    cls = tk.formats.QTRTucker if cyclic else tk.formats.QTTTucker
+    format = cls(upper, [factor], tk.formats.QuantizedLayout(1, 2, 1))
+    flat = format.flatten()
+    indices = torch.tensor([[0], [1]])
+    assert flat.n_sites == flat.layout.n_sites
+    assert torch.allclose(flat.evaluate_indices(indices), format.evaluate_indices(indices))

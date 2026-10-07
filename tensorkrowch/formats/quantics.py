@@ -29,7 +29,6 @@ cores. ``evaluate_digits`` accepts digits already in layout order.
 """
 
 from dataclasses import fields, is_dataclass, replace
-from math import prod
 from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
 
 import torch
@@ -204,7 +203,7 @@ class _QuanticsFormat:
                 raise ValueError(
                     'Contracted Quantics coordinate spaces should match')
         else:
-            names = (('layout', 'coordinate_map', 'digit_positions')
+            names = (('layout', 'coordinate_map')
                      if isinstance(self, _QuanticsVector)
                      else ('in_layout', 'out_layout',
                            'in_coordinate_map', 'out_coordinate_map'))
@@ -241,12 +240,10 @@ class _QuanticsFormat:
         layout = self.out_layout if product else self.layout
         coordinate_map = (self.out_coordinate_map if product
                           else self.coordinate_map)
-        positions = None if product else self.digit_positions
         return cls(cores=cores,
                    n_coordinates=layout.n_coordinates,
                    layout=layout,
                    coordinate_map=coordinate_map,
-                   digit_positions=positions,
                    n_batches=n_batches)
 
 
@@ -266,7 +263,6 @@ class _QuanticsVector(_QuanticsFormat):
                      torch.Tensor, Sequence[torch.Tensor]]] = None,
                  layout: Optional[QuantizedLayout] = None,
                  coordinate_map: Optional[CoordinateMap] = None,
-                 digit_positions: Optional[Sequence[int]] = None,
                  n_batches: int = 0,
                  bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
         self.layout, self.coordinate_map = _resolve_quantization(
@@ -275,21 +271,6 @@ class _QuanticsVector(_QuanticsFormat):
             coordinate_map=coordinate_map)
         self.n_coordinates = n_coordinates
         super().__init__(cores, n_batches=n_batches, bonds=bonds)
-
-        # Digit sites carry inputs; any remaining output sites stay open.
-        positions = (tuple(range(self.n_sites)) if digit_positions is None
-                     else tuple(digit_positions))
-        if (len(positions) != self.layout.n_sites) or any(
-                isinstance(site, bool) or not isinstance(site, int) or
-                not (0 <= site < self.n_sites) for site in positions) or \
-                (len(set(positions)) != len(positions)):
-            raise ValueError(
-                '`digit_positions` should select every scheduled digit '
-                'exactly once')
-        if tuple(self._in_dim[site] for site in positions) != self.layout.in_dim:
-            raise ValueError(
-                'Digit core dimensions should match `layout.in_dim`')
-        self.digit_positions = positions
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -313,10 +294,6 @@ class _QuanticsVector(_QuanticsFormat):
                            n_batches: int,
                            cyclic: bool) -> Union['QTTM', 'QTRM']:
         """Builds an operator with the row's inputs and this column's outputs."""
-        if any(format.digit_positions != tuple(range(format.n_sites))
-               for format in (self, other)):
-            raise ValueError(
-                'Quantics outer products require only digit sites')
         cores = _restore_cores(
             cores, other._in_dim, self._in_dim, n_batches, cyclic)
         cls = QTRM if cyclic else QTTM
@@ -340,10 +317,7 @@ class _QuanticsVector(_QuanticsFormat):
             metadata.
         """
         super().validate()
-        if 'digit_positions' in self.__dict__ and (
-                any(site >= len(self._cores) for site in self.digit_positions) or
-                tuple(self._in_dim[site] for site in self.digit_positions) !=
-                self.layout.in_dim):
+        if self._in_dim != self.layout.in_dim:
             raise ValueError(
                 'Digit core dimensions should match `layout.in_dim`')
         return self
@@ -354,8 +328,7 @@ class _QuanticsVector(_QuanticsFormat):
 
         Each configuration is evaluated for every stored structural batch.
         ``core_batch`` indexes those formats; ``data_batch`` indexes the
-        supplied configurations. Sites outside ``digit_positions`` remain
-        output axes.
+        supplied configurations. Every site corresponds to a digit.
 
         Parameters
         ----------
@@ -367,35 +340,11 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *data_batch, *output_sites)``.
-            Sites outside ``digit_positions`` remain open.
+            Values with shape ``(*core_batch, *data_batch)``.
         """
         digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
         self.layout.decode_digits(digits)
-        if self.digit_positions == tuple(range(self.n_sites)):
-            return self.evaluate(digits, n_batches=digits.ndim - 1)
-
-        # Contract digit sites while retaining output and structural batch axes.
-        data_batch_shape = digits.shape[:-1]
-        data_batch_size = prod(data_batch_shape)
-        core_batch_size = prod(self._batch_shape)
-        digits = digits.reshape(data_batch_size, -1)
-        cores = self._effective_cores()
-        closing = cores[0].shape[-3]
-        state = torch.eye(closing, device=self.device, dtype=self.dtype)
-        state = state.expand(core_batch_size, data_batch_size, closing, closing)
-        columns = {site: column for column, site in enumerate(self.digit_positions)}
-        output_shape = []
-        for site, core in enumerate(cores):
-            core = core.reshape(core_batch_size, *core.shape[-3:])
-            if site in columns:
-                local = core[:, :, digits[:, columns[site]], :].permute(0, 2, 1, 3)
-                state = torch.einsum('cds...l,cdlr->cds...r', state, local)
-            else:
-                state = torch.einsum('cds...l,clpr->cds...pr', state, core)
-                output_shape.append(core.shape[-2])
-        value = state.diagonal(dim1=2, dim2=-1).sum(-1)
-        return value.reshape(*self._batch_shape, *data_batch_shape, *output_shape)
+        return self.evaluate(digits, n_batches=digits.ndim - 1)
 
     def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """
@@ -415,8 +364,7 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *data_batch, *output_sites)``.
-            Sites outside ``digit_positions`` remain open.
+            Values with shape ``(*core_batch, *data_batch)``.
 
         Examples
         --------
@@ -451,8 +399,7 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *data_batch, *output_sites)``.
-            Sites outside ``digit_positions`` remain open.
+            Values with shape ``(*core_batch, *data_batch)``.
 
         Examples
         --------
@@ -476,21 +423,21 @@ class _QuanticsVector(_QuanticsFormat):
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *grid_size, *output_sites)``, in
+            Values with shape ``(*core_batch, *grid_size)``, in
             original coordinate order.
         """
         axes = [torch.arange(size, device=self.device)
                 for size in self.layout.grid_size]
         indices = torch.cartesian_prod(*axes).reshape(-1, self.layout.n_coordinates)
         values = self.evaluate_indices(indices)
-        output_shape = tuple(self._in_dim[site] for site in range(self.n_sites)
-                        if site not in self.digit_positions)
-        return values.reshape(*self._batch_shape, *self.layout.grid_size, *output_shape)
+        return values.reshape(*self._batch_shape, *self.layout.grid_size)
 
 
 class QTT(_QuanticsVector, TT):
     """
     Quantics tensor train with a digit layout and coordinate map.
+
+    Every core represents one digit site; evaluation contracts all sites.
 
     Shorthand construction uses ``base``, ``level`` and either ``domain`` or
     ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;
@@ -525,9 +472,6 @@ class QTT(_QuanticsVector, TT):
     coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
         Prebuilt map containing the domain, grid and conversion policy.
         Its ``grid_size`` must match ``layout.grid_size``.
-    digit_positions : sequence of int, optional
-        Core position for each digit column in layout order. ``None`` uses
-        every core. Other sites remain open tensor outputs.
     n_batches : int
         Number of leading structural batch axes shared by the cores.
         Independent of data batches during evaluation.
@@ -572,6 +516,8 @@ class QTR(_QuanticsVector, TR):
     """
     Quantics tensor ring with a digit layout and coordinate map.
 
+    Every core represents one digit site; evaluation contracts all sites.
+
     Shorthand construction uses ``base``, ``level`` and either ``domain`` or
     ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;
     domain intervals produce an affine map with ``grid_offset="left"``. For other
@@ -605,9 +551,6 @@ class QTR(_QuanticsVector, TR):
     coordinate_map : :class:`~tensorkrowch.formats.CoordinateMap`, optional
         Prebuilt map containing the domain, grid and conversion policy.
         Its ``grid_size`` must match ``layout.grid_size``.
-    digit_positions : sequence of int, optional
-        Core position for each digit column in layout order. ``None`` uses
-        every core. Other sites remain open tensor outputs.
     n_batches : int
         Number of leading structural batch axes shared by the cores.
         Independent of data batches during evaluation.
@@ -647,12 +590,14 @@ class QTR(_QuanticsVector, TR):
         if not 0 <= first < self.n_sites:
             raise ValueError('`first` should lie inside the format')
         cores = [*self._cores[first:], *self._cores[:first]]
-        positions = tuple((site - first) %
-                          self.n_sites for site in self.digit_positions)
+        schedule = self.layout.sites()
+        layout = self.layout if first == 0 else QuantizedLayout(
+            self.layout.n_coordinates, self.layout.base, self.layout.level,
+            ordering='custom', digit_order=self.layout.digit_order,
+            permutation=(*schedule[first:], *schedule[:first]))
         result = QTR(
-            cores, self.layout.n_coordinates, layout=self.layout,
-            coordinate_map=self.coordinate_map,
-            digit_positions=positions, n_batches=self._n_batches)
+            cores, self.layout.n_coordinates, layout=layout,
+            coordinate_map=self.coordinate_map, n_batches=self._n_batches)
         result._is_row = self._is_row
         if self._bonds is not None:
             factors = self._bonds.factors

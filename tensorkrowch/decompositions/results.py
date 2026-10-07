@@ -148,7 +148,6 @@ class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
     n_coordinates: int = field()  # Number of original input coordinates
     layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
     coordinate_map: CoordinateMap = field()  # Domain and grid conversions
-    digit_positions: Sequence[int] = field()  # Network sites carrying digits
 
 
 @dataclass(init=False)
@@ -158,7 +157,6 @@ class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):
     n_coordinates: int = field()  # Number of original input coordinates
     layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
     coordinate_map: CoordinateMap = field()  # Domain and grid conversions
-    digit_positions: Sequence[int] = field()  # Network sites carrying digits
 
 
 @dataclass(init=False)
@@ -253,8 +251,7 @@ class PEPODecomposition(TensorDecomposition2D):
     """Reserved PEPO result interface."""
 
 
-def _quantics_result(result, quantization=None, *, adapter=None,
-                     digit_positions=None):
+def _quantics_result(result, quantization=None, *, adapter=None):
     """Attaches coordinate meaning to fitted cores without numerical refitting."""
     if quantization is None:
         return result
@@ -274,7 +271,7 @@ def _quantics_result(result, quantization=None, *, adapter=None,
     else:
         cls = QTRDecomposition if result.topology == 'tr' else QTTDecomposition
         kwargs.update(n_coordinates=quantization.n_coordinates,
-                      layout=quantization, digit_positions=digit_positions)
+                      layout=quantization)
         kwargs['coordinate_map'] = (adapter.coordinate_map
                                     if adapter is not None else
                                     AffineCoordinateMap(

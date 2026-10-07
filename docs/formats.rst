@@ -328,8 +328,8 @@ independent ``in_*`` and ``out_*`` arguments; all four formats also accept
 prebuilt layouts and coordinate maps.
 ``evaluate_digits``, ``evaluate_indices`` and ``evaluate_coordinates`` distinguish
 site digits, original grid indices and coordinates in the domain.
-``digit_positions`` allows vector formats to retain tensor-valued output
-sites. Maps store their domain, grid sizes and out-of-domain policy.
+Every site of a Quantics vector represents a digit; evaluation returns
+one scalar per coordinate configuration. Maps store their domain, grid sizes and out-of-domain policy.
 ``AffineCoordinateMap`` and ``FunctionalCoordinateMap`` both use a uniform
 grid in unit space; the latter applies supplied transformation functions.
 ``to_dense_grid`` is an explicit small-grid oracle.

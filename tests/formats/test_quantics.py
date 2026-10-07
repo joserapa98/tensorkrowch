@@ -5,22 +5,29 @@ import torch
 import tensorkrowch as tk
 
 
+def _coordinate_map(layout, domain=None, grid_offset='endpoints'):
+    return tk.formats.AffineCoordinateMap(
+        torch.tensor([0., 1.]) if domain is None else domain,
+        layout.grid_size, grid_offset=grid_offset)
+
+
 @pytest.mark.parametrize('cyclic', [False, True])
 @pytest.mark.parametrize('matrix', [False, True])
 @pytest.mark.parametrize('grid, index', [
     ('left', 1), ('centers', 0), ('right', 0), (0.25, 1),
 ])
-def test_shorthand_uses_the_selected_grid(cyclic, matrix, grid, index):
+def test_coordinate_map_uses_the_selected_grid(cyclic, matrix, grid, index):
     domain = torch.tensor([0., 1.])
     coordinates = torch.tensor([[0.25]])
+    layout = tk.formats.QuantizedLayout(1, 4, 1)
+    coordinate_map = _coordinate_map(layout, domain, grid_offset=grid)
     if matrix:
         core = torch.arange(16.).reshape(4, 4)
         cls = tk.formats.QTRM if cyclic else tk.formats.QTTM
         format = cls(
             [core.reshape(1, 4, 1, 4) if cyclic else core], 1, 1,
-            in_base=4, in_level=1, in_domain=domain,
-            out_base=4, out_level=1, out_domain=domain,
-            computational_grid=grid)
+            in_layout=layout, out_layout=layout,
+            in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map)
         actual = format.evaluate_coordinates(coordinates, coordinates)
         expected = core[index, index]
     else:
@@ -28,7 +35,7 @@ def test_shorthand_uses_the_selected_grid(cyclic, matrix, grid, index):
         cls = tk.formats.QTR if cyclic else tk.formats.QTT
         format = cls(
             [core.reshape(1, 4, 1) if cyclic else core], 1,
-            base=4, level=1, domain=domain, computational_grid=grid)
+            layout=layout, coordinate_map=coordinate_map)
         actual = format.evaluate_coordinates(coordinates)
         expected = core[index]
 
@@ -39,9 +46,10 @@ def test_shorthand_uses_the_selected_grid(cyclic, matrix, grid, index):
 @pytest.mark.parametrize('explicit_data', [False, True])
 def test_error_requires_scalar_quantics_samples(cyclic, explicit_data):
     layout = tk.formats.QuantizedLayout(1, 2, 1)
-    format = (tk.formats.QTR([torch.ones(1, 2, 1)], 1, layout=layout)
-              if cyclic else tk.formats.QTT([torch.ones(2)], 1,
-                                            layout=layout))
+    cls = tk.formats.QTR if cyclic else tk.formats.QTT
+    core = torch.ones(1, 2, 1) if cyclic else torch.ones(2)
+    format = cls([core], 1, layout=layout,
+                 coordinate_map=_coordinate_map(layout))
     indices = torch.tensor([[0], [1]])
 
     def function(samples):
@@ -61,7 +69,7 @@ def test_explicit_grid_size_is_checked_when_building_quantics():
     coordinate_map = tk.formats.ExplicitGridMap(torch.tensor([0., 1., 4.]))
     cores = [torch.ones(2, 1), torch.ones(1, 2)]
 
-    with pytest.raises(ValueError, match='Explicit grid size'):
+    with pytest.raises(ValueError, match='coordinate_map.grid_size'):
         tk.formats.QTT(cores, 1, layout=layout,
                        coordinate_map=coordinate_map)
 
@@ -72,10 +80,10 @@ def test_vector_shorthand_builds_uniform_and_explicit_coordinates():
         cores, 1, base=2, level=2, domain=torch.tensor([0., 3.]))
     explicit = tk.formats.QTT(
         cores, 1, grid_coordinates=torch.tensor([0., 1., 4., 10.]),
-        base=2)
+        base=2, level=2)
 
     assert uniform.layout.grid_size == explicit.layout.grid_size == (4,)
-    assert isinstance(uniform.coordinate_map, tk.formats.UniformCoordinateMap)
+    assert isinstance(uniform.coordinate_map, tk.formats.AffineCoordinateMap)
     assert isinstance(explicit.coordinate_map, tk.formats.ExplicitGridMap)
     assert torch.equal(uniform.evaluate_coordinates(torch.tensor([[3.]])),
                        explicit.evaluate_coordinates(torch.tensor([[10.]])))
@@ -84,23 +92,24 @@ def test_vector_shorthand_builds_uniform_and_explicit_coordinates():
         tk.formats.QTT(cores, 1, layout=uniform.layout, base=2)
     with pytest.raises(ValueError, match='domain'):
         tk.formats.QTT(cores, 1, grid_coordinates=torch.tensor([0., 1., 2., 3.]),
-                       base=2, domain=torch.tensor([0., 3.]))
+                       base=2, level=2, domain=torch.tensor([0., 3.]))
 
 
 def test_matrix_shorthand_resolves_input_and_output_separately():
     matrix = tk.formats.QTTM(
         [torch.ones(2, 3)], 1, 1,
         in_base=2, in_level=1, in_domain=torch.tensor([0., 1.]),
-        out_grid_coordinates=torch.tensor([0., 2., 5.]), out_base=3)
+        out_grid_coordinates=torch.tensor([0., 2., 5.]), out_base=3, out_level=1)
 
-    assert isinstance(matrix.in_coordinate_map, tk.formats.UniformCoordinateMap)
+    assert isinstance(matrix.in_coordinate_map, tk.formats.AffineCoordinateMap)
     assert isinstance(matrix.out_coordinate_map, tk.formats.ExplicitGridMap)
     assert matrix.evaluate_coordinates(
         torch.tensor([[1.]]), torch.tensor([[5.]])).item() == 1
 
     with pytest.raises(ValueError, match='equal `n_sites`'):
         tk.formats.QTTM([torch.ones(2, 3)], 1, 1,
-                        in_base=2, in_level=2, out_base=3, out_level=1)
+                        in_base=2, in_level=2, in_domain=torch.tensor([0., 1.]),
+                        out_base=3, out_level=1, out_domain=torch.tensor([0., 1.]))
 
 
 def test_ring_shorthand_uses_the_same_coordinate_resolution():
@@ -109,8 +118,8 @@ def test_ring_shorthand_uses_the_same_coordinate_resolution():
         base=2, level=1, domain=torch.tensor([0., 1.]))
     matrix = tk.formats.QTRM(
         [torch.ones(1, 2, 1, 3)], 1, 1,
-        in_base=2, in_level=1,
-        out_grid_coordinates=torch.tensor([0., 2., 5.]), out_base=3)
+        in_base=2, in_level=1, in_domain=torch.tensor([0., 1.]),
+        out_grid_coordinates=torch.tensor([0., 2., 5.]), out_base=3, out_level=1)
 
     assert vector.evaluate_coordinates(torch.tensor([[1.]])).item() == 1
     assert matrix.evaluate_indices(torch.tensor([[1]]),
@@ -120,8 +129,8 @@ def test_ring_shorthand_uses_the_same_coordinate_resolution():
 def test_matrix_coordinate_counts_can_differ_with_equal_site_counts():
     matrix = tk.formats.QTTM(
         [torch.ones(2, 1, 2), torch.ones(1, 2, 3)], 1, 2,
-        in_base=2, in_level=2,
-        out_base=(2, 3), out_level=1)
+        in_base=2, in_level=2, in_domain=torch.tensor([0., 1.]),
+        out_base=(2, 3), out_level=1, out_domain=torch.tensor([0., 1.]))
 
     assert matrix.in_layout.n_sites == matrix.out_layout.n_sites == 2
     assert matrix.to_dense_grid().shape == (4, 2, 3)
@@ -138,8 +147,8 @@ def test_quantized_grid_and_arithmetic(ordering):
     cores = tk.decompositions.tt_svd(tensor, out_device=None)
     format = tk.formats.QTT(
         cores, 2, layout=layout,
-        coordinate_map=tk.formats.UniformCoordinateMap(),
-        domain=torch.tensor([[0., 7.], [0., 15.]]))
+        coordinate_map=_coordinate_map(
+            layout, torch.tensor([[0., 7.], [0., 15.]])))
     assert torch.allclose(format.evaluate_indices(indices), values)
     assert torch.allclose(format.evaluate_coordinates(indices.to(torch.float64)), values)
     assert torch.allclose(format.to_dense_grid(), values.reshape(8, 16))
@@ -150,22 +159,30 @@ def test_quantized_grid_and_arithmetic(ordering):
     with pytest.raises(ValueError, match='semantics'):
         format + format.as_tt()
     detached = format.clone().detach()
-    assert detached.domain.data_ptr() != format.domain.data_ptr()
+    assert detached.coordinate_map.domain.data_ptr() != \
+        format.coordinate_map.domain.data_ptr()
     complex_format = format.to(dtype=torch.complex128)
-    assert not complex_format.domain.is_complex()
+    assert not complex_format.coordinate_map.domain.is_complex()
     row = format.H
     assert isinstance(row, tk.formats.QTT)
     assert row.layout is layout
     assert torch.allclose(row.as_tt() @ format.as_tt(), tensor.square().sum())
 
 
-def test_ring_coordinate_rotation_and_conversion():
-    layout = tk.formats.QuantizedLayout(1, 2, 3)
+@pytest.mark.parametrize('n_coordinates, base, level', [
+    (1, 2, 3), (2, (2, 3), (2, 1)),
+])
+def test_ring_coordinate_rotation_and_conversion(n_coordinates, base, level):
+    layout = tk.formats.QuantizedLayout(n_coordinates, base, level)
     generator = torch.Generator().manual_seed(4)
-    cores = [torch.randn(2, 2, 2, dtype=torch.float64, generator=generator) for _ in range(3)]
-    format = tk.formats.QTR(cores, layout.n_coordinates, layout=layout)
-    indices = torch.arange(8).reshape(-1, 1)
+    cores = [torch.randn(2, dim, 2, dtype=torch.float64, generator=generator)
+             for dim in layout.in_dim]
+    format = tk.formats.QTR(cores, layout.n_coordinates, layout=layout,
+                            coordinate_map=_coordinate_map(layout))
+    indices = torch.cartesian_prod(
+        *[torch.arange(size) for size in layout.grid_size]).reshape(-1, n_coordinates)
     values = format.evaluate_indices(indices)
+    assert format.rotate(0).layout is layout
     assert torch.allclose(format.to_tt().evaluate_indices(indices), values)
     assert torch.allclose(format.H.to_tt() @ format.to_tt(), values.square().sum())
     for first in range(3):
@@ -173,17 +190,49 @@ def test_ring_coordinate_rotation_and_conversion():
         assert torch.allclose(format.H.rotate(first) @ format.rotate(first), values.square().sum())
 
 
-def test_quantized_output_sites():
-    layout = tk.formats.QuantizedLayout(1, 2, 2)
-    generator = torch.Generator().manual_seed(5)
-    dense = torch.randn(2, 3, 2, dtype=torch.float64, generator=generator)
-    cores = tk.decompositions.tt_svd(dense, out_device=None)
-    format = tk.formats.QTT(cores, 1, layout=layout,
-                            digit_positions=(0, 2))
-    indices = torch.arange(4).reshape(-1, 1)
-    digits = layout.encode_indices(indices)
-    assert torch.allclose(format.evaluate_indices(indices), dense[digits[:, 0], :, digits[:, 1]])
-    assert format.to_dense_grid().shape == (4, 3)
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_quantized_vectors_require_one_digit_per_site(cyclic):
+    layout = tk.formats.QuantizedLayout(1, 2, 1)
+    cls = tk.formats.QTR if cyclic else tk.formats.QTT
+    cores = ([torch.ones(1, 2, 1), torch.ones(1, 3, 1)] if cyclic
+             else [torch.ones(2, 1), torch.ones(1, 3)])
+    with pytest.raises(ValueError, match='layout.in_dim'):
+        cls(cores, 1, layout=layout,
+            coordinate_map=_coordinate_map(layout))
+
+    wrong_core = torch.ones(1, 3, 1) if cyclic else torch.ones(3)
+    with pytest.raises(ValueError, match='layout.in_dim'):
+        cls([wrong_core], 1, layout=layout,
+            coordinate_map=_coordinate_map(layout))
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_quantized_core_replacement_preserves_digit_dimensions(cyclic):
+    layout = tk.formats.QuantizedLayout(1, 2, 1)
+    cls = tk.formats.QTR if cyclic else tk.formats.QTT
+    core = torch.ones(1, 2, 1) if cyclic else torch.ones(2)
+    format = cls([core], 1, layout=layout,
+                 coordinate_map=_coordinate_map(layout))
+    wrong_core = torch.ones(1, 3, 1) if cyclic else torch.ones(3)
+    with pytest.raises(ValueError, match='layout.in_dim'):
+        format.cores[0] = wrong_core
+    assert format.cores[0] is core
+    assert format.in_dim == (2,)
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_quantized_evaluation_keeps_structural_and_data_batches(cyclic):
+    layout = tk.formats.QuantizedLayout(1, 2, 1)
+    values = torch.tensor([[1., 2.], [3., 4.]])
+    cls = tk.formats.QTR if cyclic else tk.formats.QTT
+    core = values.reshape(2, 1, 2, 1) if cyclic else values
+    format = cls([core], 1, layout=layout, coordinate_map=_coordinate_map(layout),
+                 n_batches=1)
+    indices = torch.tensor([[[0], [1]], [[1], [0]]])
+    expected = values[:, indices[..., 0]]
+    assert torch.equal(format.evaluate_indices(indices), expected)
+    assert torch.equal(format.evaluate_digits(layout.encode_indices(indices)), expected)
+    assert torch.equal(format.to_dense_grid(), values)
 
 
 def test_quantized_matrix_transpose_apply():
@@ -192,10 +241,13 @@ def test_quantized_matrix_transpose_apply():
     dense = torch.randn(2, 2, 2, 2, dtype=torch.complex128, generator=generator)
     matrix = tk.formats.QTTM(
         tk.decompositions.ttm_svd(dense, out_device=None), 1, 1,
-        in_layout=layout, out_layout=layout)
+        in_layout=layout, out_layout=layout,
+        in_coordinate_map=_coordinate_map(layout),
+        out_coordinate_map=_coordinate_map(layout))
     vector = tk.formats.QTT(
         [torch.ones(2, 1, dtype=dense.dtype),
-         torch.ones(1, 2, dtype=dense.dtype)], 1, layout=layout)
+         torch.ones(1, 2, dtype=dense.dtype)], 1, layout=layout,
+                            coordinate_map=_coordinate_map(layout))
     assert isinstance(matrix @ vector, tk.formats.QTT)
     assert isinstance(matrix @ matrix.H, tk.formats.QTTM)
     assert matrix.T.in_layout == matrix.out_layout
@@ -206,36 +258,28 @@ def test_quantized_matrix_transpose_apply():
 def test_quantized_outer_product_preserves_coordinate_spaces():
     output_layout = tk.formats.QuantizedLayout(1, 2, 1)
     input_layout = tk.formats.QuantizedLayout(1, 3, 1)
-    coordinate_map = tk.formats.UniformCoordinateMap()
     x = tk.formats.QTT(
         [torch.tensor([1., 2.])], 1, layout=output_layout,
-        coordinate_map=coordinate_map, domain=torch.tensor([[0., 1.]]))
+        coordinate_map=_coordinate_map(output_layout))
     y = tk.formats.QTT(
         [torch.tensor([2., 3., 4.])], 1, layout=input_layout,
-        coordinate_map=coordinate_map, domain=torch.tensor([[-1., 1.]]))
+        coordinate_map=_coordinate_map(input_layout, torch.tensor([-1., 1.])))
     outer = x @ y.H
     assert isinstance(outer, tk.formats.QTTM)
     assert outer.in_layout is input_layout
     assert outer.out_layout is output_layout
-    assert outer.in_domain is y.domain
-    assert outer.out_domain is x.domain
+    assert outer.in_coordinate_map is y.coordinate_map
+    assert outer.out_coordinate_map is x.coordinate_map
     assert torch.equal(outer.contract_dense(), torch.outer(
         y.contract_dense(), x.contract_dense()))
     assert torch.allclose((x.H @ outer).T.contract_dense(),
                           (x.H @ x) * y.contract_dense())
     with pytest.raises(ValueError, match='layouts'):
-        x.H @ tk.formats.QTT(x.cores, 1, layout=output_layout)
+        x.H @ tk.formats.QTT(
+            x.cores, 1, layout=output_layout,
+            coordinate_map=_coordinate_map(output_layout, torch.tensor([0., 2.])))
     with pytest.raises(ValueError, match='semantics'):
         x @ y.as_tt().H
-
-
-def test_quantized_outer_product_rejects_extra_output_sites():
-    layout = tk.formats.QuantizedLayout(1, 2, 1)
-    x = tk.formats.QTT(
-        [torch.ones(2, 1), torch.ones(1, 3)], 1, layout=layout,
-        digit_positions=(0,))
-    with pytest.raises(ValueError, match='only digit sites'):
-        x @ x.T
 
 
 @pytest.mark.parametrize('operation', ['sum', 'scale', 'hadamard', 'apply', 'transpose'])
@@ -245,9 +289,12 @@ def test_quantics_constructs_results_directly(operation, monkeypatch):
     layout = tk.formats.QuantizedLayout(1, 2, 2)
     matrix = tk.formats.QTTM(
         [torch.eye(2).unsqueeze(1), torch.eye(2).unsqueeze(0)], 1, 1,
-        in_layout=layout, out_layout=layout)
+        in_layout=layout, out_layout=layout,
+        in_coordinate_map=_coordinate_map(layout),
+        out_coordinate_map=_coordinate_map(layout))
     vector = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], 1,
-                            layout=layout)
+                            layout=layout,
+                            coordinate_map=_coordinate_map(layout))
     calls = []
     validate = TensorFormat1D.validate
 
@@ -273,7 +320,8 @@ def test_quantics_constructs_results_directly(operation, monkeypatch):
 def test_plain_operands_reject_quantics_in_both_orders():
     layout = tk.formats.QuantizedLayout(1, 2, 2)
     quantics = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], 1,
-                              layout=layout)
+                              layout=layout,
+                            coordinate_map=_coordinate_map(layout))
     plain = quantics.as_tt()
     for first, second in [(plain, quantics), (quantics, plain)]:
         with pytest.raises(ValueError, match='semantics'):
@@ -285,7 +333,8 @@ def test_plain_operands_reject_quantics_in_both_orders():
 def test_quantics_blocking_preserves_coordinate_contract():
     layout = tk.formats.QuantizedLayout(1, 2, 2)
     format = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], 1,
-                            layout=layout)
+                            layout=layout,
+                            coordinate_map=_coordinate_map(layout))
     cores = format.cores
     with pytest.raises(ValueError, match='layout'):
         format.block([2])
@@ -303,11 +352,13 @@ def test_plain_conversion_owns_its_bonds(cyclic):
     layout = tk.formats.QuantizedLayout(1, 2, 2)
     if cyclic:
         format = tk.formats.QTR([torch.ones(2, 2, 2)] * 2, 1,
-                                layout=layout)
+                                layout=layout,
+                            coordinate_map=_coordinate_map(layout))
         plain = format.as_tr
     else:
         format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
-                                layout=layout)
+                                layout=layout,
+                            coordinate_map=_coordinate_map(layout))
         plain = format.as_tt
     format.bonds = [torch.ones(2)] * (2 if cyclic else 1)
     converted = plain()

@@ -1799,7 +1799,8 @@ def qtr_rss(
 
     This is the cyclic counterpart of :func:`qtt_rss`; it uses basis digit
     sites and the ordinary TR-RSS ring driver after quantizing physical sketch
-    samples. At least three final digit/output sites are required.
+    samples. The function must return scalar values. At least three digit sites
+    are required.
     """
     if sketch_samples is None:
         raise TypeError('`sketch_samples` should be provided')

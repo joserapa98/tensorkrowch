@@ -1111,7 +1111,7 @@ class TTALS:
         >>> model = tk.models.MPS(tensors=result.cores)
         """
         if isinstance(initial_cores, _QuanticsVector):
-            if initial_cores.layout != self._quantization or initial_cores.digit_positions != tuple(range(initial_cores.n_sites)):
+            if initial_cores.layout != self._quantization:
                 raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')

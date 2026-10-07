@@ -77,7 +77,7 @@ def _integer_spec(value: IntegerSpec,
 
 
 @dataclass(frozen=True)
-class QuantizedLayout:
+class QuantizedLayout:  # MARK: QuantizedLayout
     """
     Defines how multivariable integer indices are expanded into digits.
 
@@ -90,9 +90,9 @@ class QuantizedLayout:
     from ``0`` to ``level[coordinate] - 1``; ``digit_order`` only changes which
     position appears first in the TT site schedule.
 
-    ``ordering="grouped"`` places all digits of each coordinate together.
     ``ordering="interleaved"`` cycles over coordinates at every available digit
-    depth and omits coordinates whose levels are exhausted. With
+    depth and omits coordinates whose levels are exhausted.
+    ``ordering="grouped"`` places all digits of each coordinate together. With
     ``ordering="custom"``, ``permutation`` lists the ``(coordinate, digit)``
     pairs in TT site order, using each pair exactly once.
 
@@ -109,8 +109,8 @@ class QuantizedLayout:
     level : int or sequence of int
         Number of digits shared by all coordinates or specified per
         coordinate.
-    ordering : {"grouped", "interleaved", "custom"}
-        Final digit-site schedule.
+    ordering : {"interleaved", "grouped", "custom"}
+        Final digit-site schedule. Defaults to ``"interleaved"``.
     digit_order : {"coarse_to_fine", "fine_to_coarse"}
         Direction of digit positions within each coordinate.
     permutation : sequence of tuple[int, int], optional
@@ -131,7 +131,7 @@ class QuantizedLayout:
     n_coordinates: int
     base: IntegerSpec = 2
     level: IntegerSpec = 1
-    ordering: str = 'grouped'
+    ordering: str = 'interleaved'
     digit_order: str = 'coarse_to_fine'
     permutation: Optional[Sequence[CoordinateDigit]] = None
 
@@ -366,7 +366,8 @@ class QuantizedLayout:
 
         Examples
         --------
-        >>> layout = tk.formats.QuantizedLayout(2, base=2, level=2)
+        >>> layout = tk.formats.QuantizedLayout(
+        ...     2, base=2, level=2, ordering='grouped')
         >>> digits = layout.encode_indices(torch.tensor([[1, 2]]))
         >>> reordered = layout.reorder_configurations(digits, 'interleaved')
         >>> target = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
@@ -542,7 +543,7 @@ def _unit_to_indices(unit_coordinates: torch.Tensor,
     return indices.clamp_min(0).minimum(sizes - 1).to(torch.long)
 
 
-class CoordinateMap(ABC):
+class CoordinateMap(ABC):  # MARK: CoordinateMap
     """
     Converts between unit coordinates, domain coordinates and grid indices.
 
@@ -697,7 +698,7 @@ class CoordinateMap(ABC):
 
 
 @dataclass(frozen=True)
-class AffineCoordinateMap(CoordinateMap):
+class AffineCoordinateMap(CoordinateMap):  # MARK: AffineCoordinateMap
     """
     Affine transformation of a uniform unit grid into a coordinate domain.
 
@@ -806,7 +807,7 @@ class AffineCoordinateMap(CoordinateMap):
 
 
 @dataclass(frozen=True, init=False)
-class FunctionalCoordinateMap(CoordinateMap):
+class FunctionalCoordinateMap(CoordinateMap):  # MARK: FunctionalCoordinateMap
     """
     Function-defined transformation of a uniform unit grid into the domain.
 
@@ -962,7 +963,7 @@ class FunctionalCoordinateMap(CoordinateMap):
 
 
 @dataclass(frozen=True, init=False)
-class ExplicitGridMap(CoordinateMap):
+class ExplicitGridMap(CoordinateMap):  # MARK: ExplicitGridMap
     """
     Coordinate map with grid points supplied directly in the domain.
 
@@ -1197,7 +1198,7 @@ class ExplicitGridMap(CoordinateMap):
 
 
 @dataclass(frozen=True)
-class _CompositeCoordinateMap(CoordinateMap):
+class _CompositeCoordinateMap(CoordinateMap):  # MARK: _CompositeCoordinateMap
     """Applies one independent coordinate map per coordinate."""
 
     maps: Sequence[CoordinateMap]

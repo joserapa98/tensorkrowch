@@ -4,8 +4,8 @@ import inspect
 from math import sqrt
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tr as tr_module
@@ -573,3 +573,33 @@ class TestTRSVDFunction:  # MARK: TestTRSVDFunction
         with pytest.raises(TypeError, match='`return_info` should be bool type'):
             tk.decompositions.tr_svd(
                 torch.ones(2, 3), return_info=1)
+
+
+
+
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_quantized_svd_preserves_raw_grid_and_returns_generic_algebra(ordering,
+                                                                      dtype):
+    layout = tk.formats.QuantizedLayout(2, 2, (3, 4), ordering=ordering)
+    data = torch.arange(128, dtype=torch.float64).reshape(8, 16).to(dtype)
+    if data.is_complex():
+        data = data + 1j * data.flip(-1)
+    result = tk.decompositions.tr_svd(
+        data, rank=16, quantization=layout, return_result=True, out_device=None)
+    cls = tk.formats.QTR
+    assert isinstance(result, cls)
+    assert torch.allclose(result.to_dense_grid(), data, atol=1e-9)
+    indices = torch.tensor([[0, 0], [7, 15], [3, 8]])
+    assert torch.allclose(result.evaluate_indices(indices), data[indices[:, 0], indices[:, 1]], atol=1e-9)
+    assert not result.metrics.truncations
+    assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
+
+
+def test_quantized_svd_rejects_unquantized_output_sites():
+    layout = tk.formats.QuantizedLayout(2, 2, 2)
+    data = torch.arange(48, dtype=torch.float64).reshape(4, 3, 4)
+    with pytest.raises(ValueError, match='every non-batch axis'):
+        tk.decompositions.tr_svd(
+            data, quantization=layout, in_features=(0, 2), rank=16,
+            return_result=True)

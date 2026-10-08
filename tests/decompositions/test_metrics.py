@@ -3,8 +3,8 @@
 import math
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 

@@ -1,13 +1,15 @@
-"""Tests for lightweight tensor decomposition results."""
+"""Tests for decomposition formats and historical diagnostics."""
 
+from dataclasses import replace
 import inspect
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions._runtime import _RuntimePolicy
+from tensorkrowch.decompositions.sketching.quantization import QuantizedLayout
+from tensorkrowch.decompositions.sources.quantization import (QuantizedSourceAdapter)
 
 
 def _product_tt(vectors):
@@ -28,8 +30,6 @@ def _outer(vectors):
     for vector in vectors[1:]:
         result = torch.tensordot(result, vector, dims=0)
     return result
-
-
 
 
 class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
@@ -520,8 +520,6 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
                    for model_core, result_core
                    in zip(mpo.tensors, result.cores))
 
-
-
     def test_norm_overlap_fidelity_and_phase(self):
         vectors = [
             torch.tensor([1.0, 2.0], dtype=torch.complex128),
@@ -787,31 +785,16 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             tk.decompositions.TTDecomposition(cores)
 
 
-class TestRuntimePolicy:  # MARK: TestRuntimePolicy
-
-    def test_inference_prepare_finalize_and_timer(self):
-        tensor = torch.ones(2, dtype=torch.float32)
-        runtime = _RuntimePolicy.from_tensor(tensor, dtype=torch.float64)
-
-        prepared = runtime.prepare(tensor)
-        finalized = runtime.finalize(prepared)
-        with runtime.timer() as timer:
-            _ = prepared.square()
-
-        assert runtime.device == tensor.device
-        assert runtime.out_device == torch.device('cpu')
-        assert runtime.dtype == torch.float64
-        assert prepared.dtype == torch.float64
-        assert finalized.device.type == 'cpu'
-        assert timer.elapsed is not None
-        assert timer.elapsed >= 0
-
-    def test_output_device_none_keeps_tensor(self):
-        tensor = torch.ones(2)
-        runtime = _RuntimePolicy.from_tensor(tensor, out_device=None)
-
-        assert runtime.finalize(tensor) is tensor
-
-    def test_invalid_dtype(self):
-        with pytest.raises(TypeError):
-            _RuntimePolicy(dtype='float64')
+def test_results_inherit_formats_and_keep_historical_metrics():
+    result = tk.decompositions.TTDecomposition(
+        [torch.ones(2, 1), torch.ones(1, 3)], metadata={'fit': 'original'})
+    assert isinstance(result, tk.formats.TT)
+    replaced = replace(result, cores=[torch.zeros(2, 1), torch.ones(1, 3)])
+    assert replaced.norm() == 0
+    for transformed in [result.clone(), result.detach(), result.to(dtype=torch.float64)]:
+        assert type(transformed) is type(result)
+        assert transformed.metrics is result.metrics
+        assert transformed.metadata == result.metadata
+    assert type(result + result) is tk.formats.TT
+    assert QuantizedLayout is tk.formats.QuantizedLayout
+    assert QuantizedSourceAdapter is tk.decompositions.QuantizedSourceAdapter

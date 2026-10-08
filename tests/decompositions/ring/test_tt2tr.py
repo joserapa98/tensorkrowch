@@ -1,11 +1,12 @@
 """Tests for structured conversion from TT to TR."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.observers import HistoryObserver
+
 
 def _rank_one_tt(dtype=torch.float64, phase=1):
     generator = torch.Generator().manual_seed(150)

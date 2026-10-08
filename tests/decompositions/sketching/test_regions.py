@@ -1,15 +1,12 @@
 """Tests for regional sample sketches and recursive gather maps."""
 
 import pytest
-
 import torch
 
-from tensorkrowch.decompositions.sketching.regions import (
-    RegionSketch,
-    SiteRegion,
-    SketchRecursion,
-    _SamplePool,
-)
+from tensorkrowch.decompositions.sketching.regions import (RegionSketch,
+                                                           SiteRegion,
+                                                           SketchRecursion,
+                                                           _SamplePool)
 
 
 def _packed_values(sketch):

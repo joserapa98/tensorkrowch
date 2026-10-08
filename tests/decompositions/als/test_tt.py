@@ -1,11 +1,12 @@
 """Tests for exact tensor train alternating least squares."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.observers import HistoryObserver
+
 
 def _exact_tt(dtype=torch.float64):
     """Returns a small heterogeneous TT and its dense contraction."""
@@ -539,3 +540,53 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
                     n_samples=8,
                     convergence=tk.decompositions.ConvergencePolicy(
                         max_sweeps=1))
+
+
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+def test_quantized_als_raw_callable_and_repeated_fits(ordering):
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering=ordering)
+    data = torch.arange(16, dtype=torch.float64).reshape(4, 4)
+    cls = tk.decompositions.TTALS
+    engine = cls(data, quantization=layout, out_device=None)
+    for _ in range(2):
+        result = engine.fit(
+            rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+        assert torch.allclose(result.to_dense_grid(), data, atol=1e-8)
+    physical = cls(lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
+                   quantization=layout, dtype=torch.float64,
+                   domain=torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64))
+    result = physical.fit(rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    coordinates = torch.tensor([[0., 0.], [1., 1.]], dtype=torch.float64)
+    assert torch.allclose(result.evaluate_coordinates(coordinates), torch.exp(torch.tensor([0., 3.], dtype=torch.float64)), atol=1e-9)
+    assert not result.metrics.sweeps
+
+
+def test_quantized_completion_keeps_values_weights_and_physical_collision_policy():
+    cls = tk.decompositions.TTALS
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
+    indices = torch.tensor([[3, 1], [0, 0], [1, 2]])
+    values = torch.tensor([4., 1., 3.], dtype=torch.float64)
+    weights = torch.tensor([2., 3., 4.], dtype=torch.float64)
+    engine = cls.completion(indices, values, weights=weights, quantization=layout)
+    observed = engine.problem.observations
+    decoded = layout.decode_digits(observed.indices)
+    for i, row in enumerate(decoded):
+        original = torch.nonzero((indices == row).all(-1))[0, 0]
+        assert observed.values[i] == values[original]
+        assert observed.weights[i] == weights[original]
+    result = engine.fit(rank=2, convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    assert result.layout == layout
+    with pytest.raises(ValueError, match='Repeated observations'):
+        cls.completion(torch.tensor([[0., 0.], [0.01, 0.01]]),
+                       torch.tensor([1., 2.]), quantization=layout, sample_space='physical', domain=torch.tensor([[0., 1.], [0., 1.]]))
+
+
+def test_quantized_als_source_and_initializer_layout_validation():
+    layout = tk.formats.QuantizedLayout(2, 2, 2)
+    q = tk.decompositions.tt_svd(torch.ones(4, 4), quantization=layout, return_result=True)
+    result = tk.decompositions.tt_als(q, quantization=layout, initial_cores=q,
+                                    max_sweeps=1, return_result=True)
+    assert torch.allclose(result.to_dense_grid(), torch.ones(4, 4))
+    other = tk.formats.QuantizedLayout(2, 2, 2, ordering='grouped')
+    with pytest.raises(ValueError, match='fixed digit layout'):
+        tk.decompositions.TTALS(torch.ones(4, 4), quantization=other).fit(initial_cores=q)

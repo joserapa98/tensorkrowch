@@ -1,22 +1,18 @@
 """Tests for topology-neutral recursive-sketching orchestration."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.observers import HistoryObserver
 from tensorkrowch.decompositions.sketching import base as base_module
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
-from tensorkrowch.decompositions.sketching.phi import (
-    PhiOperator,
-    _MaterializedPhi,
-)
-from tensorkrowch.decompositions.sketching.specs import (
-    _DomainSpec,
-    _EmbeddingSpec,
-    _OutputSpec,
-)
+from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
+                                                       _MaterializedPhi)
+from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
+                                                         _EmbeddingSpec,
+                                                         _OutputSpec)
 
 
 class _ToyRecursiveSketching(tk.decompositions.RecursiveSketching):

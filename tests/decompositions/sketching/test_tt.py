@@ -253,3 +253,587 @@ class TestTTRSS:
 
 
 __all__ = []
+
+
+def _physical_grid(layout, coordinate_map, domain):
+    variable_indices = torch.cartesian_prod(*(
+        torch.arange(size) for size in layout.grid_size))
+    if layout.n_coordinates == 1:
+        variable_indices = variable_indices.reshape(-1, 1)
+    physical = coordinate_map.from_indices(variable_indices)
+    return variable_indices, physical
+
+
+class TestQTTRSS:  # MARK: TestQTTRSS
+
+    @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+    def test_standard_layouts_fit_the_same_physical_function(self, ordering):
+        layout = tk.decompositions.QuantizedLayout(
+            2, base=2, level=2, ordering=ordering)
+        domain = torch.tensor([[0., 1.], [-1., 1.]], dtype=torch.float64)
+        coordinate_map = tk.formats.AffineCoordinateMap(
+            domain, layout.grid_size, grid_offset="endpoints")
+        variable_indices, physical = _physical_grid(
+            layout, coordinate_map, domain)
+
+        def function(values):
+            return 1 + values[:, 0] + 2 * values[:, 1]
+
+        cores, info = tk.decompositions.qtt_rss(
+            function,
+            physical,
+            layout=layout,
+            coordinate_map=coordinate_map,
+            rank=4,
+            legacy_projection=False,
+            return_info=True)
+        result = tk.decompositions.TTDecomposition(cores)
+        digits = layout.encode_indices(variable_indices)
+
+        assert torch.allclose(
+            result.evaluate(digits), function(physical),
+            rtol=1e-9, atol=1e-11)
+        assert info['metadata']['algorithm'] == 'qtt_rss'
+        assert info['metadata']['quantization']['ordering'] == ordering
+        assert info['metadata']['quantization']['sample_space'] == 'physical'
+
+    def test_class_reuses_problem_with_physical_or_digit_samples(self):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        coordinate_map = tk.formats.AffineCoordinateMap(
+            torch.tensor([0., 1.]), layout.grid_size, grid_offset="endpoints")
+        indices, physical = _physical_grid(
+            layout, coordinate_map, torch.tensor([0., 1.]))
+        digits = layout.encode_indices(indices)
+        decomposer = tk.decompositions.TTRSS.quantized(
+            lambda values: 1 + values[:, 0],
+            layout=layout,
+            coordinate_map=coordinate_map,
+            )
+
+        physical_result = decomposer.fit(
+            physical, rank=2, legacy_projection=False)
+        digit_result = decomposer.fit(
+            digits,
+            rank=2,
+            legacy_projection=False,
+            sample_space='digits')
+
+        assert torch.allclose(
+            physical_result.contract_dense(), digit_result.contract_dense())
+        assert physical_result.metadata['quantization']['sample_space'] == \
+            'physical'
+        assert digit_result.metadata['quantization']['sample_space'] == \
+            'digits'
+
+    def test_digit_samples_allow_forward_only_warp(self):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=2)
+        coordinate_map = tk.formats.FunctionalCoordinateMap(
+            None, layout.grid_size, grid_offset="endpoints",
+            forward_function=lambda unit, domain: unit.square())
+        indices = torch.arange(4).reshape(-1, 1)
+        digits = layout.encode_indices(indices)
+
+        cores = tk.decompositions.qtt_rss(
+            lambda values: 1 + values[:, 0],
+            digits,
+            layout=layout,
+            coordinate_map=coordinate_map,
+            sample_space='digits',
+            rank=2,
+            legacy_projection=False)
+        result = tk.decompositions.TTDecomposition(cores)
+        physical = coordinate_map.forward(
+            indices.to(torch.float32) / 3)
+
+        assert torch.allclose(result.evaluate(digits), 1 + physical[:, 0])
+
+    @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])
+    def test_quantized_rss_rejects_tensor_outputs(self, out_shape):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
+
+        def function(values):
+            return torch.ones(values.shape[0], *out_shape, dtype=values.dtype,
+                              device=values.device)
+
+        with pytest.raises(ValueError, match='scalar function outputs'):
+            tk.decompositions.qtt_rss(
+                function, physical, layout=layout,
+                domain=torch.tensor([0., 1.], dtype=torch.float64), rank=4,
+                return_result=True)
+
+    @pytest.mark.parametrize('singleton_axis', [False, True])
+    def test_quantized_rss_accepts_scalar_outputs(self, singleton_axis):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
+
+        def function(values):
+            result = torch.ones_like(values[:, 0])
+            return result.unsqueeze(-1) if singleton_axis else result
+
+        result = tk.decompositions.qtt_rss(
+            function, physical, layout=layout,
+            domain=torch.tensor([0., 1.], dtype=torch.float64), rank=1,
+            return_result=True)
+        assert result.n_sites == layout.n_sites
+        assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))
+
+    def test_physical_samples_require_an_inverse_for_custom_maps(self):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=2)
+        coordinate_map = tk.formats.FunctionalCoordinateMap(
+            None, layout.grid_size, grid_offset="endpoints",
+            forward_function=lambda unit, domain: unit.square())
+        decomposer = tk.decompositions.TTRSS.quantized(
+            lambda values: values[:, 0],
+            layout=layout,
+            coordinate_map=coordinate_map)
+
+        with pytest.raises(NotImplementedError, match='inverse'):
+            decomposer.fit(torch.tensor([[0.], [1.]]), rank=2)
+
+
+def _rank_one_sparse(dtype=torch.float64):
+    left = torch.tensor([1., 2.], dtype=dtype)
+    middle = torch.tensor([1., 3., 2.], dtype=dtype)
+    right = torch.tensor([2., 1.], dtype=dtype)
+    dense = torch.einsum('i,j,k->ijk', left, middle, right)
+    indices = torch.cartesian_prod(
+        torch.arange(2), torch.arange(3), torch.arange(2))
+    source = tk.decompositions.SparseTensorSource(
+        indices, dense.reshape(-1), dense.shape)
+    return source, dense
+
+
+class TestTTRS:  # MARK: TestTTRS
+
+    @pytest.mark.parametrize('operator', [
+        tk.decompositions.SampledSketch(),
+        tk.decompositions.MarginalSketch.markov(),
+        tk.decompositions.TTStackSketch(tt_rank=2, n_stacks=2),
+    ])
+    def test_sparse_rank_one_source_is_recovered(self, operator):
+        source, dense = _rank_one_sparse()
+        result = tk.decompositions.TTRS(
+            source,
+            sketch_operator=operator,
+            out_device=None).fit(
+                rank=1,
+                generator=torch.Generator().manual_seed(301),
+                strict_system=True,
+                collect_metrics=True)
+
+        assert result.rank == [1, 1]
+        assert torch.allclose(
+            result.contract_dense(), dense, rtol=1e-10, atol=1e-12)
+        assert result.metrics.errors[0].kind == 'source_support'
+        assert result.metrics.errors[0].relative < 1e-10
+        assert result.metadata['source_type'] == 'SparseTensorSource'
+        assert result.metadata['system']['source_path'] == 'support'
+
+    def test_dataset_and_functional_api_are_distinct_from_rss_samples(self):
+        dataset = torch.tensor([
+            [0, 0], [0, 0], [0, 1], [1, 0], [1, 1], [1, 1]])
+        cores, info = tk.decompositions.tt_rs(
+            dataset=dataset,
+            in_dim=(2, 2),
+            rank=2,
+            return_info=True)
+        expected = torch.tensor(
+            [[2., 1.], [1., 2.]], dtype=torch.get_default_dtype()) / 6
+
+        result = tk.decompositions.TTDecomposition(cores)
+        assert torch.allclose(result.contract_dense(), expected)
+        assert info['metadata']['source_type'] == 'EmpiricalDistribution'
+        assert info['metrics']['errors'][0]['kind'] == 'source_support'
+
+    def test_tt_source_uses_structured_contractions(self):
+        source, dense = _rank_one_sparse()
+        tt = tk.decompositions.TTSVD(
+            dense, out_device=None).fit(rank=1)
+        tt_source = tk.decompositions.TTTensorSource(tt)
+        result = tk.decompositions.TTRS(
+            tt_source,
+            sketch_operator=tk.decompositions.MarginalSketch.markov(),
+            out_device=None).fit(rank=1, batch_size=3)
+
+        assert torch.allclose(result.contract_dense(), dense)
+        assert result.metadata['system']['source_path'] == 'structured_tt'
+        assert result.metadata['system']['structured_kernel'] == \
+            'markov_marginal'
+        assert tt_source.evaluation_stats.requested_points == 0
+
+    def test_repeated_random_fits_are_independent_and_reproducible(self):
+        source, _ = _rank_one_sparse()
+        decomposer = tk.decompositions.TTRS(
+            source,
+            sketch_operator=tk.decompositions.TTStackSketch(
+                tt_rank=2, n_stacks=2),
+            out_device=None)
+        first = decomposer.fit(
+            rank=1, generator=torch.Generator().manual_seed(302))
+        second = decomposer.fit(
+            rank=1, generator=torch.Generator().manual_seed(302))
+
+        assert first is not second
+        assert all(left is not right
+                   for left, right in zip(first.cores, second.cores))
+        assert all(torch.allclose(left, right)
+                   for left, right in zip(first.cores, second.cores))
+
+    def test_warm_start_is_explicitly_rejected(self):
+        source, _ = _rank_one_sparse()
+        initial = tk.decompositions.TTRS(source).fit(rank=1)
+        with pytest.raises(NotImplementedError, match='warm-start'):
+            tk.decompositions.TTRS(source).fit(
+                rank=1, warm_start=initial)
+
+    def test_history_observer_receives_clean_hierarchy(self):
+        source, _ = _rank_one_sparse()
+        observer = HistoryObserver()
+        result = tk.decompositions.TTRS(source).fit(
+            rank=1, observer=observer)
+
+        assert observer.metrics is result.metrics
+        assert observer.events[0].name == 'start'
+        assert sum(event.name == 'site_complete'
+                   for event in observer.events) == 3
+        assert next(event for event in observer.events
+                    if event.name == 'summary').values['rank'] == [1, 1]
+
+
+def _binary_problem(dtype=torch.float64):
+    """Returns a small scalar problem exactly represented at rank two."""
+    domain = torch.tensor([0., 1.], dtype=torch.float64)
+    samples = torch.cartesian_prod(domain, domain, domain)
+
+    def function(data):
+        values = 1 + data.prod(dim=1, keepdim=True)
+        if dtype.is_complex:
+            values = values + 1j * data.sum(dim=1, keepdim=True)
+        return values.to(dtype)
+
+    def embedding(data):
+        return torch.stack((1 - data, data), dim=-1)
+
+    return function, embedding, samples, domain
+
+
+def _vector_problem():
+    """Returns a vector function whose input/output dimensions differ."""
+    domain = torch.tensor([-1., 0., 1.], dtype=torch.float64)
+    samples = torch.cartesian_prod(domain, domain, domain)
+
+    def function(data):
+        return torch.stack(
+            (1 + data.sum(dim=1), 2 + data.prod(dim=1)), dim=1)
+
+    def embedding(data):
+        return torch.stack((torch.ones_like(data), data, data.square()), dim=-1)
+
+    labels = (samples[:, 0] > 0).long()
+    return function, embedding, samples, domain, labels
+
+
+def _in_dim(cores):
+    """Extracts standard TT input dimensions from raw open-boundary cores."""
+    if len(cores) == 1:
+        return [cores[0].shape[0]]
+    return [cores[0].shape[0], *(
+        core.shape[1] for core in cores[1:])]
+
+_DEVICE_CASES = [
+    torch.device('cpu'),
+    pytest.param(
+        torch.device('cuda'),
+        marks=pytest.mark.skipif(
+            not torch.cuda.is_available(), reason='CUDA is unavailable')),
+    pytest.param(
+        torch.device('mps'),
+        marks=pytest.mark.skipif(
+            not torch.backends.mps.is_available(), reason='MPS is unavailable')),
+]
+
+
+class TestTTRSSPublicWorkflow:  # MARK: TestTTRSSPublicWorkflow
+
+    def test_scalar_function_returns_mps_compatible_cores_and_info(self):
+        function, embedding, samples, domain = _binary_problem()
+        cores, info = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            generator=torch.Generator().manual_seed(700),
+            verbose=False,
+            return_info=True)
+        model = tk.models.MPS(tensors=cores, parameterized=False)
+
+        assert [tuple(core.shape) for core in cores] == [
+            (2, 2), (2, 2, 2), (2, 2)]
+        assert model.phys_dim == [2, 2, 2]
+        assert info['total_time'] >= 0
+        assert info['val_eps'] < 1e-10
+
+    @pytest.mark.parametrize('out_position', [0, 2, 3])
+    def test_vector_output_first_middle_last_with_explicit_labels(
+            self, out_position):
+        function, embedding, samples, domain, labels = _vector_problem()
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            labels=labels,
+            domain=domain,
+            out_position=out_position,
+            rank=4,
+            generator=torch.Generator().manual_seed(701),
+            verbose=False)
+        model = tk.models.MPSLayer(
+            tensors=cores,
+            out_position=out_position,
+            parameterized=False)
+
+        expected = [3, 3, 3]
+        expected.insert(out_position, 2)
+        assert _in_dim(cores) == expected
+        assert model.phys_dim == expected
+        assert model.out_position == out_position
+
+    def test_default_vector_output_is_equally_centered_for_one_axis(self):
+        function, embedding, samples, domain, labels = _vector_problem()
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            labels=labels,
+            domain=domain,
+            rank=4,
+            generator=torch.Generator().manual_seed(702),
+            verbose=False)
+
+        assert _in_dim(cores) == [3, 3, 2, 3]
+
+    @pytest.mark.parametrize('domain_kind', ['shared', 'per_site', 'inferred'])
+    def test_shared_per_site_and_inferred_domains(self, domain_kind):
+        function, embedding, samples, shared = _binary_problem()
+        if domain_kind == 'shared':
+            domain = shared
+        elif domain_kind == 'per_site':
+            domain = [shared.clone() for _ in range(samples.shape[1])]
+        else:
+            domain = None
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            generator=torch.Generator().manual_seed(703),
+            verbose=False)
+
+        assert [tuple(core.shape) for core in cores] == [
+            (2, 2), (2, 2, 2), (2, 2)]
+        assert all(torch.isfinite(core).all() for core in cores)
+
+    def test_vector_coordinate_samples_and_domains(self):
+        domain = torch.tensor(
+            [[0., 0.], [1., 0.], [0., 1.]], dtype=torch.float64)
+        ids = torch.cartesian_prod(*(torch.arange(3) for _ in range(3)))
+        samples = torch.stack(
+            [domain.index_select(0, ids[:, site]) for site in range(3)],
+            dim=1)
+
+        def function(data):
+            return (1 + data.sum(dim=(1, 2))).unsqueeze(1)
+
+        def embedding(data):
+            return torch.cat((torch.ones_like(data[..., :1]), data), dim=-1)
+
+        cores, info = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=3,
+            generator=torch.Generator().manual_seed(704),
+            verbose=False,
+            return_info=True)
+
+        assert [tuple(core.shape) for core in cores] == [
+            (3, 3), (3, 3, 3), (3, 3)]
+        assert info['val_eps'] < 1e-10
+
+    @pytest.mark.parametrize(
+        'truncation',
+        [
+            {'cutoff': 0.0},
+            {'atol': 0.0},
+            {'rtol': 0.0},
+            {'cum_percentage': 1.0},
+        ])
+    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+    def test_modern_truncation_options_reach_truncated_svd(
+            self, truncation, svd_method):
+        function, embedding, samples, domain = _binary_problem()
+        with tk.svd_method(svd_method):
+            cores = tk.decompositions.tt_rss(
+                function=function,
+                embedding=embedding,
+                sketch_samples=samples,
+                domain=domain,
+                rank=2,
+                generator=torch.Generator().manual_seed(705),
+                verbose=False,
+                **truncation)
+
+        assert all(torch.isfinite(core).all() for core in cores)
+        assert all(max(core.shape) <= 2 for core in cores)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_real_and_complex_dtype(self, dtype):
+        function, embedding, samples, domain = _binary_problem(dtype)
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            device=torch.device('cpu'),
+            dtype=dtype,
+            generator=torch.Generator().manual_seed(706),
+            verbose=False)
+
+        assert all(core.dtype == dtype for core in cores)
+        assert all(core.device.type == 'cpu' for core in cores)
+        assert all(torch.isfinite(core).all() for core in cores)
+
+    @pytest.mark.parametrize('device', _DEVICE_CASES)
+    def test_explicit_compute_device_returns_final_cpu_cores(self, device):
+        function, embedding, samples, domain = _binary_problem(torch.float32)
+        samples = samples.float()
+        domain = domain.float()
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            device=device,
+            dtype=torch.float32,
+            generator=torch.Generator().manual_seed(706),
+            verbose=False)
+
+        assert all(core.dtype == torch.float32 for core in cores)
+        assert all(core.device.type == 'cpu' for core in cores)
+        assert all(torch.isfinite(core).all() for core in cores)
+
+    def test_generator_is_reproducible_and_does_not_touch_global_rng(self):
+        function, embedding, samples, _ = _vector_problem()[:4]
+        torch.manual_seed(707)
+        initial_state = torch.random.get_rng_state().clone()
+        results = []
+        for _ in range(2):
+            results.append(tk.decompositions.tt_rss(
+                function=function,
+                embedding=embedding,
+                sketch_samples=samples,
+                domain=None,
+                rank=3,
+                generator=torch.Generator().manual_seed(708),
+                verbose=False))
+
+        assert torch.equal(torch.random.get_rng_state(), initial_state)
+        assert all(torch.equal(first, second)
+                   for first, second in zip(*results))
+
+
+class TestGeneralizedTTRSS:  # MARK: TestGeneralizedTTRSS
+
+    def test_scalar_output_without_artificial_axis(self):
+        function, embedding, samples, domain = _binary_problem()
+        tk.decompositions.tt_rss(
+            function=lambda data: function(data).squeeze(1),
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            verbose=False)
+
+    def test_heterogeneous_embeddings(self):
+        function, embedding, samples, domain = _binary_problem()
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=[embedding, embedding, embedding],
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            verbose=False)
+        assert len(cores) == 3
+
+    def test_multiple_output_axes(self):
+        _, embedding, samples, domain = _binary_problem()
+
+        def function(data):
+            scalar = 1 + data.sum(dim=1)
+            return torch.stack((scalar, scalar + 1, scalar + 2, scalar + 3),
+                               dim=1).reshape(-1, 2, 2)
+
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            verbose=False)
+        assert len(cores) == 5
+
+    def test_random_projection_can_be_disabled(self):
+        function, embedding, samples, domain = _binary_problem()
+        cores = tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=2,
+            random_projection=False,
+            verbose=False)
+        assert len(cores) == 3
+
+    def test_verbosity_level_two_does_not_print_full_cores(self, capsys):
+        function, embedding, samples, domain = _binary_problem()
+        tk.decompositions.tt_rss(
+            function=function,
+            embedding=embedding,
+            sketch_samples=samples,
+            domain=domain,
+            rank=1,
+            verbose=2)
+        assert 'tensor(' not in capsys.readouterr().out
+
+
+def test_quantized_rss_result_retains_coordinates_without_source():
+    import gc
+    import weakref
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
+    domain = torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64)
+    indices = torch.cartesian_prod(torch.arange(4), torch.arange(4))
+    coordinates = indices.to(torch.float64) / 3
+
+    def function(values):
+        return 1 + values[:, 0] + 2 * values[:, 1]
+
+    reference = weakref.ref(function)
+    result = tk.decompositions.qtt_rss(
+        function, coordinates, layout=layout, domain=domain, rank=4,
+        legacy_projection=False, return_result=True)
+    assert isinstance(result, tk.decompositions.QTTDecomposition)
+    del function
+    gc.collect()
+    assert reference() is None
+    expected = 1 + coordinates[:, 0] + 2 * coordinates[:, 1]
+    assert torch.allclose(result.evaluate_coordinates(coordinates), expected, atol=1e-9)
+    restored = tk.formats.QTT.from_mps(
+        result.to_mps(), n_coordinates=layout.n_coordinates,
+        layout=layout, coordinate_map=result.coordinate_map)
+    assert torch.allclose(restored.evaluate_coordinates(coordinates), expected, atol=1e-9)

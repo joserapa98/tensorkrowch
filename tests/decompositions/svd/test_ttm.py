@@ -1,8 +1,8 @@
 """Tests for TTM-SVD classes and functional interfaces."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tt as tt_module
@@ -484,3 +484,14 @@ class TestTTMSVDFunction:  # MARK: TestTTMSVDFunction
         with pytest.raises(TypeError, match='`return_info` should be bool type'):
             tk.decompositions.ttm_svd(
                 torch.ones(2, 3), return_info=1)
+
+
+def test_quantized_matrix_svd_and_adjoint():
+    a = tk.formats.QuantizedLayout(1, 2, 2)
+    b = tk.formats.QuantizedLayout(1, 3, 2)
+    data = torch.arange(36, dtype=torch.float64).reshape(4, 9)
+    result = tk.decompositions.ttm_svd(
+        data, in_dim=(4,), out_dim=(9,), quantization=(a, b),
+        rank=9, return_result=True, out_device=None)
+    assert torch.allclose(result.to_dense_grid(), data, atol=1e-10)
+    assert torch.allclose(result.H.to_dense_grid(), data.T, atol=1e-10)

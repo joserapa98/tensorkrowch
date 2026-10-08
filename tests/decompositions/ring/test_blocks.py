@@ -1,17 +1,15 @@
 """Tests for tensor ring block selection, rank estimates and splitting."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.ring.blocks import (
-    BlockSelection,
-    CentralBlockSelector,
-    PrescribedCentralBlockSelector,
-    RingRankEstimator,
-    split_block_ttsvd,
-)
+from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
+                                                     CentralBlockSelector,
+                                                     PrescribedCentralBlockSelector,
+                                                     RingRankEstimator,
+                                                     split_block_ttsvd)
 
 
 class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector

@@ -1,8 +1,8 @@
 """Tests for ALS gauge factorization and absorption policies."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 

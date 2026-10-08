@@ -1,16 +1,16 @@
-"""Tests for the canonical SVD API and deprecated compatibility wrappers."""
+"""Tests for svd/init."""
 
 import inspect
 import warnings
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
+import tensorkrowch.decompositions.svd.trm as trm_module
 import tensorkrowch.decompositions.svd.tt as tt_module
 import tensorkrowch.decompositions.svd.ttm as ttm_module
-import tensorkrowch.decompositions.svd.trm as trm_module
 
 
 class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI

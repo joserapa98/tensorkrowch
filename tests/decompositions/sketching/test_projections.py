@@ -1,13 +1,13 @@
 """Tests for identity and randomized sketch range projections."""
 
 import pytest
-
 import torch
-import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching import projections as projection_module
-from tensorkrowch.decompositions.sketching.projections import ProjectedRange
+import tensorkrowch as tk
 from tensorkrowch.utils import random_unitary, truncated_svd
+
+from tensorkrowch.decompositions.sketching import (projections as projection_module)
+from tensorkrowch.decompositions.sketching.projections import ProjectedRange
 
 
 def _generator(seed=0):

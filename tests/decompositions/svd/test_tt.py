@@ -3,8 +3,8 @@
 import math
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tt as tt_module
@@ -616,3 +616,45 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
         assert len(info['metrics']['errors']) == 1
         assert len(info['metrics']['truncations']) == 2
         assert len(info['metrics']['timings']) == 1
+
+
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_quantized_svd_preserves_raw_grid_and_returns_generic_algebra(ordering,
+                                                                      dtype):
+    layout = tk.formats.QuantizedLayout(2, 2, (3, 4), ordering=ordering)
+    data = torch.arange(128, dtype=torch.float64).reshape(8, 16).to(dtype)
+    if data.is_complex():
+        data = data + 1j * data.flip(-1)
+    result = tk.decompositions.tt_svd(
+        data, rank=16, quantization=layout, return_result=True, out_device=None)
+    cls = tk.formats.QTT
+    assert isinstance(result, cls)
+    assert torch.allclose(result.to_dense_grid(), data, atol=1e-9)
+    indices = torch.tensor([[0, 0], [7, 15], [3, 8]])
+    assert torch.allclose(result.evaluate_indices(indices), data[indices[:, 0], indices[:, 1]], atol=1e-9)
+    assert not result.metrics.truncations
+    assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
+
+
+def test_quantized_svd_structural_batches_and_invalid_controls():
+    layout = tk.formats.QuantizedLayout(1, 2, 3)
+    data = torch.arange(16, dtype=torch.float64).reshape(2, 8)
+    result = tk.decompositions.tt_svd(data, n_batches=1, quantization=layout,
+                                    return_result=True, rank=4)
+    assert torch.allclose(result.to_dense_grid(), data, atol=1e-10)
+    with pytest.raises(ValueError):
+        tk.decompositions.tt_svd(torch.ones(7), quantization=layout)
+    with pytest.raises(ValueError):
+        tk.decompositions.tt_svd(data, return_result=True, return_info=True)
+    with pytest.raises(TypeError):
+        tk.decompositions.tt_svd(data, return_result=1)
+
+
+def test_quantized_svd_rejects_unquantized_output_sites():
+    layout = tk.formats.QuantizedLayout(2, 2, 2)
+    data = torch.arange(48, dtype=torch.float64).reshape(4, 3, 4)
+    with pytest.raises(ValueError, match='every non-batch axis'):
+        tk.decompositions.tt_svd(
+            data, quantization=layout, in_features=(0, 2), rank=16,
+            return_result=True)

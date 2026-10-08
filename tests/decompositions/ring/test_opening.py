@@ -1,13 +1,13 @@
 """Tests for local loop-opening contracts and strategies."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tests.decompositions.als._oracles import (contract_tr_dense,
-                                               make_tr_cores)
 from tensorkrowch.decompositions.ring.opening import resolve_loop_opener
+
+from tests.decompositions.als._oracles import contract_tr_dense, make_tr_cores
 
 
 def _local_problem(dtype=torch.float64):

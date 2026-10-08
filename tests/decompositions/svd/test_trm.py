@@ -4,8 +4,8 @@ import inspect
 from math import sqrt
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tr as tr_module
@@ -500,3 +500,16 @@ class TestTRMSVDFunction:  # MARK: TestTRMSVDFunction
         with pytest.raises(TypeError, match='`return_info` should be bool type'):
             tk.decompositions.trm_svd(
                 torch.ones(2, 3, 4, 5), return_info=1)
+
+
+
+
+def test_quantized_matrix_svd_and_adjoint():
+    a = tk.formats.QuantizedLayout(1, 2, 2)
+    b = tk.formats.QuantizedLayout(1, 3, 2)
+    data = torch.arange(36, dtype=torch.float64).reshape(4, 9)
+    result = tk.decompositions.trm_svd(
+        data, in_dim=(4,), out_dim=(9,), quantization=(a, b),
+        rank=9, return_result=True, out_device=None)
+    assert torch.allclose(result.to_dense_grid(), data, atol=1e-10)
+    assert torch.allclose(result.H.to_dense_grid(), data.T, atol=1e-10)

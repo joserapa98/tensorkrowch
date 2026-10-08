@@ -3,15 +3,12 @@
 from itertools import product
 
 import pytest
-
 import torch
 
-from tensorkrowch.decompositions.sketching.specs import (
-    _DomainSpec,
-    _EmbeddingSpec,
-    _OutputSpec,
-    _SketchingFitSpec,
-)
+from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
+                                                         _EmbeddingSpec,
+                                                         _OutputSpec,
+                                                         _SketchingFitSpec)
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 
 

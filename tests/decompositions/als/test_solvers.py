@@ -1,8 +1,8 @@
 """Tests for stable local least-squares solving."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.als.solvers as solver_module

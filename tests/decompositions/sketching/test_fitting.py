@@ -3,16 +3,14 @@
 import math
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.phi import (_MaterializedPhi)
 from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
-from tensorkrowch.decompositions.sketching.specs import (
-    _DomainSpec,
-    _EmbeddingSpec,
-)
+from tensorkrowch.decompositions.sketching.phi import _MaterializedPhi
+from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
+                                                         _EmbeddingSpec)
 
 
 class _FiberOnlyPhi:

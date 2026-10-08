@@ -1,14 +1,25 @@
 """Tests for reusable TT ALS environment caches."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 TTDecomposition)
+
 from tests.decompositions.als._oracles import (absorb_right_qr,
+                                               build_tr_environment,
+                                               contract_tr_dense,
                                                contract_tt_dense,
                                                dense_local_design,
-                                               make_tt_cores)
+                                               direct_environment_slices,
+                                               make_tr_cores,
+                                               make_tt_cores,
+                                               observed_error,
+                                               reference_tr_sweep,
+                                               sampled_rows,
+                                               solve_local_core)
 
 
 def _empty_update():
@@ -302,3 +313,348 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         assert normalized.log_scale > 0
         assert torch.allclose(
             normalized_solution, direct_solution, rtol=1e-10, atol=1e-10)
+
+
+class TestDenseALSOracles:  # MARK: TestDenseALSOracles
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_tt_and_tr_contractions_match_results(self, dtype):
+        generator = torch.Generator().manual_seed(0)
+        tt_cores = make_tt_cores(dtype=dtype, generator=generator)
+        tr_cores = make_tr_cores(dtype=dtype, generator=generator)
+
+        tt_result_cores = [tt_cores[0].squeeze(0)]
+        tt_result_cores.extend(tt_cores[1:-1])
+        tt_result_cores.append(tt_cores[-1].squeeze(-1))
+
+        assert torch.allclose(
+            contract_tt_dense(tt_cores),
+            TTDecomposition(tt_result_cores).contract_dense())
+        assert torch.allclose(
+            contract_tr_dense(tr_cores),
+            TRDecomposition(tr_cores).contract_dense())
+
+    def test_heterogeneous_tr_environment_matches_direct_products(self):
+        cores = make_tr_cores(
+            in_dim=(2, 3, 2, 2),
+            rank=(2, 3, 2, 4),
+            generator=torch.Generator().manual_seed(1))
+
+        for site in range(len(cores)):
+            environment = build_tr_environment(cores, site)
+            assert environment.shape[0] == cores[site].shape[-1]
+            assert environment.shape[-1] == cores[site].shape[0]
+            for configuration, expected in direct_environment_slices(
+                    cores, site):
+                index = (slice(None), *configuration, slice(None))
+                assert torch.allclose(environment[index], expected)
+
+    @pytest.mark.parametrize('topology', ['tt', 'tr'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_local_design_reconstructs_original_tensor(self,
+                                                       topology,
+                                                       dtype):
+        generator = torch.Generator().manual_seed(2)
+        if topology == 'tt':
+            cores = make_tt_cores(dtype=dtype, generator=generator)
+            contract = contract_tt_dense
+        else:
+            cores = make_tr_cores(dtype=dtype, generator=generator)
+            contract = contract_tr_dense
+
+        for site, core in enumerate(cores):
+            design = dense_local_design(cores, site, topology)
+            actual = design @ core.reshape(-1)
+            assert torch.allclose(
+                actual.reshape_as(contract(cores)),
+                contract(cores),
+                rtol=1e-12,
+                atol=1e-12)
+
+
+class TestLegacyTRALSCharacterization:  # MARK: TestLegacyTRALSCharacterization
+
+    def test_fixed_cores_are_preserved_bit_for_bit(self):
+        generator = torch.Generator().manual_seed(3)
+        target_cores = make_tr_cores(generator=generator)
+        target = contract_tr_dense(target_cores)
+        initial = [core.clone() for core in target_cores]
+        initial[1] = torch.randn(
+            initial[1].shape, dtype=initial[1].dtype, generator=generator)
+        initial[3] = torch.randn(
+            initial[3].shape, dtype=initial[3].dtype, generator=generator)
+        fixed_sites = (0, 2)
+
+        updated = reference_tr_sweep(
+            initial, target, fixed_sites=fixed_sites, qr=True)
+
+        for site in fixed_sites:
+            assert torch.equal(updated[site], initial[site])
+        assert torch.linalg.vector_norm(
+            contract_tr_dense(updated) - target) <= torch.linalg.vector_norm(
+                contract_tr_dense(initial) - target)
+
+    def test_qr_is_absorbed_only_into_a_trainable_neighbour(self):
+        cores = make_tr_cores(generator=torch.Generator().manual_seed(4))
+        target = contract_tr_dense(cores)
+
+        gauged, applied = absorb_right_qr(cores, site=0)
+        q_matrix = gauged[0].reshape(-1, gauged[0].shape[-1])
+
+        assert applied
+        assert torch.allclose(
+            q_matrix.mH @ q_matrix,
+            torch.eye(q_matrix.shape[1], dtype=q_matrix.dtype),
+            rtol=1e-12,
+            atol=1e-12)
+        assert torch.allclose(contract_tr_dense(gauged), target)
+
+        skipped, applied = absorb_right_qr(
+            cores, site=0, fixed_sites=(1,))
+        assert not applied
+        assert all(torch.equal(before, after)
+                   for before, after in zip(cores, skipped))
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_zero_target_local_solve_is_finite(self, dtype):
+        cores = make_tr_cores(
+            dtype=dtype, generator=torch.Generator().manual_seed(5))
+        target = torch.zeros_like(contract_tr_dense(cores))
+
+        core = solve_local_core(cores, target, site=1, topology='tr')
+
+        assert torch.isfinite(core).all()
+        updated = list(cores)
+        updated[1] = core
+        assert torch.allclose(contract_tr_dense(updated), target)
+
+    def test_rank_deficient_local_system_has_a_finite_solution(self):
+        cores = make_tr_cores(generator=torch.Generator().manual_seed(6))
+        cores[2] = torch.zeros_like(cores[2])
+        target = torch.randn(
+            contract_tr_dense(cores).shape,
+            dtype=cores[0].dtype,
+            generator=torch.Generator().manual_seed(7))
+        design = dense_local_design(cores, site=0, topology='tr')
+
+        core = solve_local_core(cores, target, site=0, topology='tr')
+
+        assert torch.linalg.matrix_rank(design) < design.shape[1]
+        assert torch.isfinite(core).all()
+
+    def test_sampled_rows_are_deterministic_with_generator(self):
+        first = sampled_rows(
+            48, 20, generator=torch.Generator().manual_seed(8))
+        second = sampled_rows(
+            48, 20, generator=torch.Generator().manual_seed(8))
+        different = sampled_rows(
+            48, 20, generator=torch.Generator().manual_seed(9))
+
+        assert torch.equal(first, second)
+        assert not torch.equal(first, different)
+
+    def test_completion_rows_remain_fixed_across_sweeps(self):
+        generator = torch.Generator().manual_seed(10)
+        target_cores = make_tr_cores(generator=generator)
+        target = contract_tr_dense(target_cores)
+        initial = make_tr_cores(generator=generator)
+        rows = torch.tensor([0, 3, 7, 12, 18, 23])
+        original_rows = rows.clone()
+        errors = [observed_error(initial, target, rows)]
+
+        updated = initial
+        for _ in range(2):
+            updated = reference_tr_sweep(updated, target, rows=rows)
+            errors.append(observed_error(updated, target, rows))
+
+        assert torch.equal(rows, original_rows)
+        assert errors[1] <= errors[0]
+        assert errors[2] <= errors[1] + 1e-12
+
+
+def _tr_environments_empty_update():
+    """Advances a fixed site without changing a core."""
+    return tk.decompositions.CoreUpdateSet((), (), (), reason='fixed')
+
+
+class TestDirectTREnvironment:  # MARK: TestDirectTREnvironment
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_matches_dense_oracle(self, dtype):
+        cores = make_tr_cores(
+            in_dim=(2, 3, 2),
+            rank=(2, 3, 2),
+            dtype=dtype,
+            generator=torch.Generator().manual_seed(90))
+        direct = tk.decompositions.DirectTREnvironment(cores)
+
+        for site in range(len(cores)):
+            local = direct.local_environment(site)
+            expected = dense_local_design(cores, site, topology='tr')
+            assert torch.allclose(
+                local.design(), expected, rtol=1e-12, atol=1e-12)
+            assert not local.sampled
+            assert local.key.direction == 'direct'
+
+    def test_sampled_rows_preserve_order_and_duplicates(self):
+        cores = make_tr_cores(generator=torch.Generator().manual_seed(91))
+        ids = torch.tensor([7, 0, 7, 19])
+        probabilities = torch.full((4,), 1 / 24)
+        samples = tk.decompositions.SampleBatch(
+            ids=ids,
+            probabilities=probabilities,
+            weights=(4 * probabilities).rsqrt(),
+            generation=3)
+        local = tk.decompositions.DirectTREnvironment(
+            cores).local_environment(1, samples=samples)
+        expected = dense_local_design(
+            cores, 1, topology='tr').index_select(0, ids)
+
+        assert torch.allclose(local.design(), expected)
+        assert local.sampled
+        assert local.key.sample_generation == 3
+
+
+class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('direction', ['forward', 'reverse'])
+    @pytest.mark.parametrize('n_segments', [1, 2, 3, 5])
+    def test_exact_design_matches_direct_oracle(
+            self, dtype, direction, n_segments):
+        cores = make_tr_cores(
+            in_dim=(2, 2, 3, 2, 2),
+            rank=(2, 3, 2, 4, 2),
+            dtype=dtype,
+            generator=torch.Generator().manual_seed(92))
+        order = tuple(range(len(cores)))
+        if direction == 'reverse':
+            order = tuple(reversed(order))
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=n_segments)
+        cache.prepare_sweep(order)
+
+        for site in order:
+            local = cache.local_environment(site)
+            expected = dense_local_design(cores, site, topology='tr')
+            assert torch.allclose(
+                local.design(), expected, rtol=2e-12, atol=2e-12)
+            assert local.key.direction == direction
+            cache.commit(_tr_environments_empty_update())
+
+    @pytest.mark.parametrize('direction', ['forward', 'reverse'])
+    def test_sampled_slices_match_direct_oracle(self, direction):
+        cores = make_tr_cores(
+            generator=torch.Generator().manual_seed(93))
+        ids = torch.tensor([0, 4, 11, 11, 22])
+        probabilities = torch.full((5,), 1 / 24)
+        samples = tk.decompositions.SampleBatch(
+            ids=ids,
+            probabilities=probabilities,
+            weights=(5 * probabilities).rsqrt(),
+            generation=6)
+        order = tuple(range(len(cores)))
+        if direction == 'reverse':
+            order = tuple(reversed(order))
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=3)
+        cache.prepare_sweep(order, samples=samples)
+
+        for site in order:
+            local = cache.local_environment(site)
+            expected = dense_local_design(
+                cores, site, topology='tr').index_select(0, ids)
+            assert torch.allclose(local.design(), expected)
+            assert local.sampled
+            assert local.key.sample_generation == 6
+            cache.commit(_tr_environments_empty_update())
+
+    def test_cross_segment_gauge_update_is_atomic(self):
+        cores = make_tr_cores(
+            in_dim=(2, 2, 2, 2),
+            rank=(2, 3, 3, 2),
+            generator=torch.Generator().manual_seed(94))
+        gauged, applied = absorb_right_qr(cores, site=1)
+        assert applied
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=2)
+        cache.prepare_sweep(range(len(cores)))
+        cache.local_environment(0)
+        cache.commit(_tr_environments_empty_update())
+        cache.local_environment(1)
+        cache.commit(tk.decompositions.CoreUpdateSet(
+            sites=(1, 2),
+            cores=(gauged[1], gauged[2]),
+            versions=(1, 1),
+            reason='qr'))
+
+        local = cache.local_environment(2)
+        expected = tk.decompositions.DirectTREnvironment(
+            gauged).local_environment(2)
+        assert torch.allclose(local.design(), expected.design())
+        assert cache.core_versions == (0, 1, 1, 0)
+
+    @pytest.mark.parametrize('direction', ['forward', 'reverse'])
+    def test_renormalized_design_and_target_preserve_local_system(
+            self, direction):
+        cores = make_tr_cores(
+            generator=torch.Generator().manual_seed(95))
+        order = tuple(range(len(cores)))
+        if direction == 'reverse':
+            order = tuple(reversed(order))
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=3, renormalize=True)
+        cache.prepare_sweep(order)
+        target = torch.randn(24, dtype=cores[0].dtype)
+
+        for site in order:
+            local = cache.local_environment(site)
+            direct = tk.decompositions.DirectTREnvironment(
+                cache.cores).local_environment(site)
+            scale = local.log_scale.exp().to(local.design().dtype)
+            assert torch.allclose(
+                local.design() * scale,
+                direct.design(),
+                rtol=2e-12,
+                atol=2e-12)
+            assert torch.allclose(
+                local.scale_target(target) * scale,
+                target,
+                rtol=2e-12,
+                atol=2e-12)
+            cache.commit(_tr_environments_empty_update())
+
+    def test_invalid_cross_segment_update_does_not_mutate_cache(self):
+        cores = make_tr_cores(
+            generator=torch.Generator().manual_seed(96))
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=3)
+        cache.prepare_sweep(range(len(cores)))
+        cache.local_environment(0)
+
+        invalid = torch.randn(
+            cores[2].shape[0] + 1,
+            cores[2].shape[1],
+            cores[2].shape[2],
+            dtype=cores[2].dtype)
+        with pytest.raises(ValueError, match='Adjacent TR ranks'):
+            cache.commit(tk.decompositions.CoreUpdateSet(
+                sites=(2,),
+                cores=(invalid,),
+                versions=(1,),
+                reason='invalid_far_update'))
+
+        assert cache.core_versions == (0, 0, 0, 0)
+        assert all(before is after
+                   for before, after in zip(cores, cache.cores))
+        cache.commit(_tr_environments_empty_update())
+
+    def test_segment_partition_is_balanced_and_complete(self):
+        cores = make_tr_cores(
+            in_dim=(2,) * 7,
+            rank=(2,) * 7,
+            generator=torch.Generator().manual_seed(97))
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=3)
+
+        assert cache.segments == ((0, 3), (3, 5), (5, 7))

@@ -1,11 +1,12 @@
 """Tests for tensor ring alternating least squares."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.observers import HistoryObserver
+
 from tests.decompositions.als._oracles import (contract_tr_dense,
                                                make_tr_cores,
                                                reference_tr_sweep)
@@ -366,3 +367,42 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
         assert len(cores) == tensor.ndim
         assert info['metadata']['leverage_method'] == 'exact'
         assert info['metadata']['sampling_exact'] is True
+
+
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+def test_quantized_als_raw_callable_and_repeated_fits(ordering):
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering=ordering)
+    data = torch.arange(16, dtype=torch.float64).reshape(4, 4)
+    cls = tk.decompositions.TRALS
+    engine = cls(data, quantization=layout, out_device=None)
+    for _ in range(2):
+        result = engine.fit(
+            rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+        assert torch.allclose(result.to_dense_grid(), data, atol=1e-8)
+    physical = cls(lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
+                   quantization=layout, dtype=torch.float64,
+                   domain=torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64))
+    result = physical.fit(rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    coordinates = torch.tensor([[0., 0.], [1., 1.]], dtype=torch.float64)
+    assert torch.allclose(result.evaluate_coordinates(coordinates), torch.exp(torch.tensor([0., 3.], dtype=torch.float64)), atol=1e-9)
+    assert not result.metrics.sweeps
+
+
+def test_quantized_completion_keeps_values_weights_and_physical_collision_policy():
+    cls = tk.decompositions.TRALS
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
+    indices = torch.tensor([[3, 1], [0, 0], [1, 2]])
+    values = torch.tensor([4., 1., 3.], dtype=torch.float64)
+    weights = torch.tensor([2., 3., 4.], dtype=torch.float64)
+    engine = cls.completion(indices, values, weights=weights, quantization=layout)
+    observed = engine.problem.observations
+    decoded = layout.decode_digits(observed.indices)
+    for i, row in enumerate(decoded):
+        original = torch.nonzero((indices == row).all(-1))[0, 0]
+        assert observed.values[i] == values[original]
+        assert observed.weights[i] == weights[original]
+    result = engine.fit(rank=2, convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    assert result.layout == layout
+    with pytest.raises(ValueError, match='Repeated observations'):
+        cls.completion(torch.tensor([[0., 0.], [0.01, 0.01]]),
+                       torch.tensor([1., 2.]), quantization=layout, sample_space='physical', domain=torch.tensor([[0., 1.], [0., 1.]]))

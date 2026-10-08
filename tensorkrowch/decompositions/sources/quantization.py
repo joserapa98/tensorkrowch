@@ -422,7 +422,7 @@ def _quantize_tensor(tensor: torch.Tensor,
 def _quantize_matrix(tensor: torch.Tensor,
                      in_dim: Optional[Union[int, Sequence[int]]],
                      out_dim: Optional[Union[int, Sequence[int]]],
-                     axis_layout: str,
+                     axis_ordering: str,
                      quantization: Tuple[QuantizedLayout, QuantizedLayout],
                      family: str) -> '_MatrixInput':
     """Orders independently quantized matrix coordinates into paired digit sites."""
@@ -445,8 +445,8 @@ def _quantize_matrix(tensor: torch.Tensor,
             _normalize_dim(out_dim, 'out_dim') != out_layout.grid_size):
         raise ValueError(
             'Raw matrix dimensions should match quantized coordinate grids')
-    if axis_layout not in ('interleaved', 'grouped'):
-        raise ValueError('`layout` should be "interleaved" or "grouped"')
+    if axis_ordering not in ('interleaved', 'grouped'):
+        raise ValueError('`ordering` should be "interleaved" or "grouped"')
 
     # Coordinate counts may differ; digit-site counts must agree.
     in_shape, out_shape = in_layout.grid_size, out_layout.grid_size
@@ -454,9 +454,9 @@ def _quantize_matrix(tensor: torch.Tensor,
     if tensor.ndim == 2 and tuple(tensor.shape) == (
             prod(in_shape), prod(out_shape)):
         grouped = tensor.reshape(grouped_shape)
-    elif axis_layout == 'grouped' and tuple(tensor.shape) == grouped_shape:
+    elif axis_ordering == 'grouped' and tuple(tensor.shape) == grouped_shape:
         grouped = tensor
-    elif axis_layout == 'interleaved' and len(in_shape) == len(out_shape):
+    elif axis_ordering == 'interleaved' and len(in_shape) == len(out_shape):
         interleaved_shape = tuple(
             dim for pair in zip(in_shape, out_shape) for dim in pair)
         if tuple(tensor.shape) != interleaved_shape:
@@ -466,7 +466,7 @@ def _quantize_matrix(tensor: torch.Tensor,
     else:
         raise ValueError(
             '`tensor` should be a matrix or match the coordinate grids; '
-            'unequal coordinate counts require `layout="grouped"`')
+            'unequal coordinate counts require `ordering="grouped"`')
 
     # Split each coordinate into digits, then pair the two site schedules.
     sites = [(side, coordinate, digit)

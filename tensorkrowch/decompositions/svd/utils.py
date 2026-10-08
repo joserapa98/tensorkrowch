@@ -42,10 +42,9 @@ class _SVDProgress:  # MARK: _SVDProgress
         if abs_error.ndim:
             abs_error = torch.linalg.vector_norm(abs_error)
             local_norm = torch.linalg.vector_norm(record.local_norm)
-            rel_error = torch.where(
-                local_norm > 0,
-                abs_error / local_norm,
-                torch.zeros_like(abs_error))
+            rel_error = torch.where(local_norm > 0,
+                                    abs_error / local_norm,
+                                    torch.zeros_like(abs_error))
         values = {
             'full_rank': record.full_rank,
             'selected_rank': record.selected_rank,
@@ -54,6 +53,7 @@ class _SVDProgress:  # MARK: _SVDProgress
         }
         if self.subphase is not None:
             values['subphase'] = self.subphase
+
         self.observer.emit(DecompositionEvent(
             name='cut_complete',
             phase=self.phase,
@@ -63,10 +63,9 @@ class _SVDProgress:  # MARK: _SVDProgress
 
 
 def _tensor_norm_components(tensor: torch.Tensor,
-                            dim: _Dimension = None) -> Tuple[
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor]:
+                            dim: _Dimension = None) -> Tuple[torch.Tensor,
+                                                             torch.Tensor,
+                                                             torch.Tensor]:
     """Returns stable scale factors and the log-norm of tensors."""
     absolute = tensor.abs()
     if dim is None:
@@ -86,10 +85,9 @@ def _tensor_norm_components(tensor: torch.Tensor,
 
     safe_scaled_norm = torch.where(
         positive, scaled_norm, torch.ones_like(scaled_norm))
-    log_norm = torch.where(
-        positive,
-        safe_scale.log() + safe_scaled_norm.log(),
-        torch.full_like(safe_scale, -torch.inf))
+    log_norm = torch.where(positive,
+                           safe_scale.log() + safe_scaled_norm.log(),
+                           torch.full_like(safe_scale, -torch.inf))
     return safe_scale, safe_scaled_norm, log_norm
 
 
@@ -125,8 +123,7 @@ def _log_tensor_norm(tensor: torch.Tensor,
 def _normalize_tensor(tensor: torch.Tensor,
                       dim: _Dimension = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """Normalizes tensors and returns their log-norms without overflow."""
-    safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(
-        tensor, dim)
+    safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(tensor, dim)
     scaled = tensor / safe_scale
     normalized = scaled / safe_scaled_norm
     if dim is None:

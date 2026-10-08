@@ -405,8 +405,8 @@ class TTSVD:  # MARK: TTSVD
 
             .. math::
 
-        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-                cum\_percentage
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}}
+                \ge cum\_percentage
 
         renormalize : bool
             If ``True``, normalizes the residual before every SVD and

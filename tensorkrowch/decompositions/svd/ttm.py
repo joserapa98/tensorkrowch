@@ -36,15 +36,15 @@ class TTMSVD:  # MARK: TTMSVD
     """
     Decomposes a fixed dense tensor into a tensor train matrix.
 
-    The tensor, its input/output dimensions and its axis layout are fixed when
+    The tensor, its input/output dimensions and its axis ordering are fixed when
     this object is created. :meth:`fit` can then be called repeatedly with
     different truncation criteria. The numerical sweep is performed by
     :class:`~tensorkrowch.decompositions.TTSVD` after fusing each local
     input/output pair, so both algorithms share the same truncation, error,
     normalization and SVD-backend semantics.
 
-    A tensorized input can use either ``layout="interleaved"`` with shape
-    ``(in_1, out_1, ..., in_n, out_n)`` or ``layout="grouped"`` with shape
+    A tensorized input can use either ``ordering="interleaved"`` with shape
+    ``(in_1, out_1, ..., in_n, out_n)`` or ``ordering="grouped"`` with shape
     ``(in_1, ..., in_n, out_1, ..., out_n)``. When ``in_dim`` and
     ``out_dim`` are provided, a two-dimensional tensor is instead treated
     as a matrix with shape ``(prod(in_dim), prod(out_dim))`` and is
@@ -61,8 +61,8 @@ class TTMSVD:  # MARK: TTMSVD
     out_dim : int or sequence[int], optional
         Output dimension of each site. It should contain the same number of
         sites as ``in_dim``.
-    layout : {"interleaved", "grouped"}
-        Axis layout of a tensorized input. The default is ``"interleaved"``.
+    ordering : {"interleaved", "grouped"}
+        Axis ordering of a tensorized input. The default is ``"interleaved"``.
         It does not alter the two matrix axes in the explicit-dimension route.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
@@ -74,21 +74,21 @@ class TTMSVD:  # MARK: TTMSVD
                  in_dim: _Dimension = None,
                  out_dim: _Dimension = None,
                  *,
-                 layout: str = 'interleaved',
+                 ordering: str = 'interleaved',
                  quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._quantization = quantization
         if quantization is None:
             matrix_input = _prepare_matrix_input(
-                tensor, in_dim, out_dim, layout, 'TTM')
+                tensor, in_dim, out_dim, ordering, 'TTM')
         else:
             matrix_input = _quantize_matrix(
-                tensor, in_dim, out_dim, layout, quantization, 'TTM')
+                tensor, in_dim, out_dim, ordering, quantization, 'TTM')
 
         self._tensor = tensor
         self._in_dim = matrix_input.in_dim
         self._out_dim = matrix_input.out_dim
-        self._layout = layout
+        self._ordering = ordering
         self._matrix_input = matrix_input.matrix_input
         self._engine = TTSVD(
             matrix_input.fused,
@@ -110,9 +110,9 @@ class TTMSVD:  # MARK: TTMSVD
         return self._out_dim
 
     @property
-    def layout(self) -> str:
-        """Axis layout specified for the fixed input tensor."""
-        return self._layout
+    def ordering(self) -> str:
+        """Axis ordering specified for the fixed input tensor."""
+        return self._ordering
 
     def _unfuse_in_out_axes(self,
                             cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
@@ -238,7 +238,7 @@ class TTMSVD:  # MARK: TTMSVD
         Fix a grouped tensor once and compare two maximum ranks:
 
         >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-        >>> decomposer = tk.decompositions.TTMSVD(tensor, layout='grouped')
+        >>> decomposer = tk.decompositions.TTMSVD(tensor, ordering='grouped')
         >>> rank_one = decomposer.fit(rank=1)
         >>> rank_two = decomposer.fit(rank=2)
         >>> rank_one.rank
@@ -270,7 +270,7 @@ class TTMSVD:  # MARK: TTMSVD
                     'sites': len(self._in_dim),
                     'in_dim': self._in_dim,
                     'out_dim': self._out_dim,
-                    'layout': self._layout,
+                    'ordering': self._ordering,
                     'matrix_input': self._matrix_input,
                     'renormalize': renormalize,
                 }))
@@ -290,7 +290,7 @@ class TTMSVD:  # MARK: TTMSVD
             metrics=tt_result.metrics,
             metadata={
                 'algorithm': 'ttm_svd',
-                'layout': self._layout,
+                'ordering': self._ordering,
                 'matrix_input': self._matrix_input,
                 'renormalize': renormalize,
             })
@@ -322,7 +322,7 @@ def ttm_svd(tensor: torch.Tensor,
             in_dim: _Dimension = None,
             out_dim: _Dimension = None,
             *,
-            layout: str = 'interleaved',
+            ordering: str = 'interleaved',
             rank: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
@@ -346,7 +346,7 @@ def ttm_svd(tensor: torch.Tensor,
 
     A tensorized input can have interleaved shape
     ``(in_1, out_1, ..., in_n, out_n)`` or grouped shape
-    ``(in_1, ..., in_n, out_1, ..., out_n)``, selected through ``layout``. A
+    ``(in_1, ..., in_n, out_1, ..., out_n)``, selected through ``ordering``. A
     two-dimensional matrix can be split into several sites by supplying
     ``in_dim`` and ``out_dim``; their products should match its two axes.
     All routes are normalized internally to the same interleaved order.
@@ -367,8 +367,8 @@ def ttm_svd(tensor: torch.Tensor,
         tensorize a matrix, or omit both arguments to infer dimensions.
     out_dim : int or sequence[int], optional
         Output dimension per site.
-    layout : {"interleaved", "grouped"}
-        Axis ``layout`` of a tensorized input. The default is ``"interleaved"``.
+    ordering : {"interleaved", "grouped"}
+        Axis ``ordering`` of a tensorized input. The default is ``"interleaved"``.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
@@ -423,7 +423,7 @@ def ttm_svd(tensor: torch.Tensor,
         present. It does not enable metrics and is incompatible with ``return_info``.
     quantization : QuantizedLayout or pair of layouts, optional
         Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        ``layout`` pair with matching numbers of digit sites. No padding is implicit.
+        layout pair with matching numbers of digit sites. No padding is implicit.
 
     Returns
     -------
@@ -436,7 +436,7 @@ def ttm_svd(tensor: torch.Tensor,
     Decompose a grouped two-site ``tensor``:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = tk.decompositions.ttm_svd(tensor, layout='grouped', rank=2)
+    >>> cores = tk.decompositions.ttm_svd(tensor, ordering='grouped', rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 3), (2, 2, 3)]
 
@@ -458,7 +458,7 @@ def ttm_svd(tensor: torch.Tensor,
         tensor=tensor,
         in_dim=in_dim,
         out_dim=out_dim,
-        layout=layout,
+        ordering=ordering,
         out_device=out_device, quantization=quantization).fit(
             rank=rank,
             cutoff=cutoff,
@@ -492,7 +492,7 @@ def mat_to_mpo(mat: torch.Tensor,
         explicit output-device policy and repeated fits through
         :class:`TTMSVD`.
 
-    The historical ``mat`` argument and interleaved layout are preserved.
+    The historical ``mat`` argument and interleaved ordering are preserved.
     Final cores remain on the input device, matching the previous behavior.
     ``mat`` should have shape
     ``(in_1, out_1, ..., in_n, out_n)``.
@@ -543,7 +543,7 @@ def mat_to_mpo(mat: torch.Tensor,
 
     Examples
     --------
-    The canonical replacement keeps the historical interleaved layout:
+    The canonical replacement keeps the historical interleaved ordering:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
     >>> cores = tk.decompositions.ttm_svd(tensor, rank=2)
@@ -561,7 +561,7 @@ def mat_to_mpo(mat: torch.Tensor,
 
     return ttm_svd(
         tensor=mat,
-        layout='interleaved',
+        ordering='interleaved',
         rank=rank,
         cutoff=cutoff,
         atol=atol,

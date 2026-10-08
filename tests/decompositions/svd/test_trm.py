@@ -194,7 +194,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         with tk.svd_method(svd_method):
             grouped_result = tk.decompositions.TRMSVD(
                 grouped,
-                layout='grouped',
+                ordering='grouped',
                 out_device=None).fit(
                     rank=3, renormalize=renormalize)
             interleaved_result = tk.decompositions.TRMSVD(
@@ -405,10 +405,10 @@ class TestTRMSVD:  # MARK: TestTRMSVD
              '`tensor` should be torch.Tensor type'),
             ((torch.ones(2, 3),), {}, ValueError,
              'requires at least two sites'),
-            ((torch.ones(2, 3, 4, 5),), {'layout': 1}, TypeError,
-             '`layout` should be str type'),
-            ((torch.ones(2, 3, 4, 5),), {'layout': 'other'}, ValueError,
-             '`layout` should be either'),
+            ((torch.ones(2, 3, 4, 5),), {'ordering': 1}, TypeError,
+             '`ordering` should be str type'),
+            ((torch.ones(2, 3, 4, 5),), {'ordering': 'other'}, ValueError,
+             '`ordering` should be either'),
             ((torch.ones(2, 3, 4, 5),), {'in_dim': (2, 4)}, ValueError,
              '`in_dim` and `out_dim` should be provided together'),
             ((torch.ones(6, 19),),
@@ -458,7 +458,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         def reconstruct(value):
             return tk.decompositions.TRMSVD(
                 value,
-                layout='grouped',
+                ordering='grouped',
                 out_device=None).fit().contract_dense()
 
         with tk.svd_method('qr_svd'):
@@ -549,7 +549,7 @@ def test_quantized_matrix_independent_coordinate_counts(ordering,
         matrix = matrix + 1j * matrix.flip(-1)
     tensor = matrix if raw_layout == 'matrix' else matrix.reshape(2, 2, 9)
     result = tk.decompositions.trm_svd(
-        tensor, layout='grouped', quantization=(in_layout, out_layout),
+        tensor, ordering='grouped', quantization=(in_layout, out_layout),
         rank=9, out_device=None, return_result=True)
     assert result.in_n_coordinates == 2
     assert result.out_n_coordinates == 1
@@ -582,7 +582,7 @@ def test_matrix_formats_devices_and_application(raw_layout,
     result = tk.decompositions.trm_svd(
         tensor, in_dim=(4,) if quantized else (2, 2),
         out_dim=(4,) if quantized else (2, 2),
-        layout='grouped' if raw_layout != 'interleaved' else 'interleaved',
+        ordering='grouped' if raw_layout != 'interleaved' else 'interleaved',
         quantization=(layout, layout) if quantized else None,
         rank=8, out_device=None, return_result=True)
     if quantized:

@@ -156,13 +156,13 @@ class TestTTMSVD:  # MARK: TestTTMSVD
         with tk.svd_method(svd_method):
             grouped_result = tk.decompositions.TTMSVD(
                 grouped,
-                layout='grouped',
+                ordering='grouped',
                 out_device=None).fit(
                     renormalize=renormalize,
                     collect_metrics=True)
             interleaved_result = tk.decompositions.TTMSVD(
                 interleaved,
-                layout='interleaved',
+                ordering='interleaved',
                 out_device=None).fit(
                     renormalize=renormalize,
                     collect_metrics=True)
@@ -217,7 +217,7 @@ class TestTTMSVD:  # MARK: TestTTMSVD
             grouped,
             in_dim=in_dim,
             out_dim=out_dim,
-            layout='grouped').fit()
+            ordering='grouped').fit()
         interleaved_result = tk.decompositions.TTMSVD(
             interleaved,
             in_dim=in_dim,
@@ -374,10 +374,10 @@ class TestTTMSVD:  # MARK: TestTTMSVD
         [
             (([1, 2],), {}, TypeError,
              '`tensor` should be torch.Tensor type'),
-            ((torch.ones(2, 3),), {'layout': 1}, TypeError,
-             '`layout` should be str type'),
-            ((torch.ones(2, 3),), {'layout': 'other'}, ValueError,
-             '`layout` should be either'),
+            ((torch.ones(2, 3),), {'ordering': 1}, TypeError,
+             '`ordering` should be str type'),
+            ((torch.ones(2, 3),), {'ordering': 'other'}, ValueError,
+             '`ordering` should be either'),
             ((torch.ones(2, 3),), {'in_dim': (2,)}, ValueError,
              '`in_dim` and `out_dim` should be provided together'),
             ((torch.ones(2, 3),),
@@ -443,7 +443,7 @@ class TestTTMSVD:  # MARK: TestTTMSVD
         def reconstruct(value):
             return tk.decompositions.TTMSVD(
                 value,
-                layout='grouped',
+                ordering='grouped',
                 out_device=None).fit().contract_dense()
 
         with tk.svd_method('qr_svd'):
@@ -510,7 +510,7 @@ def test_quantized_matrix_independent_coordinate_counts(ordering,
         matrix = matrix + 1j * matrix.flip(-1)
     tensor = matrix if raw_layout == 'matrix' else matrix.reshape(2, 2, 9)
     result = tk.decompositions.ttm_svd(
-        tensor, layout='grouped', quantization=(in_layout, out_layout),
+        tensor, ordering='grouped', quantization=(in_layout, out_layout),
         rank=9, out_device=None, return_result=True)
     assert result.in_n_coordinates == 2
     assert result.out_n_coordinates == 1
@@ -543,7 +543,7 @@ def test_matrix_formats_devices_and_application(raw_layout,
     result = tk.decompositions.ttm_svd(
         tensor, in_dim=(4,) if quantized else (2, 2),
         out_dim=(4,) if quantized else (2, 2),
-        layout='grouped' if raw_layout != 'interleaved' else 'interleaved',
+        ordering='grouped' if raw_layout != 'interleaved' else 'interleaved',
         quantization=(layout, layout) if quantized else None,
         rank=8, out_device=None, return_result=True)
     if quantized:

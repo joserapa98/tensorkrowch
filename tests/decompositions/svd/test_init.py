@@ -139,7 +139,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
         assert result == 'ttm-result'
         assert calls == [{
             'tensor': tensor,
-            'layout': 'interleaved',
+            'ordering': 'interleaved',
             'rank': 2,
             'cutoff': 0.1,
             'atol': 0.2,

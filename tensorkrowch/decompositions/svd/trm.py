@@ -37,15 +37,15 @@ class TRMSVD:  # MARK: TRMSVD
     """
     Decomposes a fixed dense tensor into a tensor ring matrix.
 
-    The tensor, its input/output dimensions, axis layout and preferred
+    The tensor, its input/output dimensions, axis ordering and preferred
     interior cut are fixed when this object is created. :meth:`fit` can then
     be called repeatedly with different truncation criteria and centers. Each
     local input/output pair is fused and decomposed by
     :class:`~tensorkrowch.decompositions.TRSVD`, so both algorithms share rank
     discovery, truncation, normalization and SVD-backend semantics.
 
-    A tensorized input can use either ``layout="interleaved"`` with shape
-    ``(in_1, out_1, ..., in_n, out_n)`` or ``layout="grouped"`` with shape
+    A tensorized input can use either ``ordering="interleaved"`` with shape
+    ``(in_1, out_1, ..., in_n, out_n)`` or ``ordering="grouped"`` with shape
     ``(in_1, ..., in_n, out_1, ..., out_n)``. When ``in_dim`` and
     ``out_dim`` are provided, a two-dimensional tensor is instead treated as
     a matrix with shape ``(prod(in_dim), prod(out_dim))`` and tensorized
@@ -66,8 +66,8 @@ class TRMSVD:  # MARK: TRMSVD
     center : int, optional
         Interior cut between sites ``center - 1`` and ``center``. It should
         satisfy ``1 <= center < n_sites``. The default is the middle cut.
-    layout : {"interleaved", "grouped"}
-        Axis layout of a tensorized input. The default is ``"interleaved"``.
+    ordering : {"interleaved", "grouped"}
+        Axis ordering of a tensorized input. The default is ``"interleaved"``.
         It does not alter the two matrix axes in the explicit-dimension route.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
@@ -80,16 +80,16 @@ class TRMSVD:  # MARK: TRMSVD
                  out_dim: _Dimension = None,
                  center: Optional[int] = None,
                  *,
-                 layout: str = 'interleaved',
+                 ordering: str = 'interleaved',
                  quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._quantization = quantization
         if quantization is None:
             matrix_input = _prepare_matrix_input(
-                tensor, in_dim, out_dim, layout, 'TRM')
+                tensor, in_dim, out_dim, ordering, 'TRM')
         else:
             matrix_input = _quantize_matrix(
-                tensor, in_dim, out_dim, layout, quantization, 'TRM')
+                tensor, in_dim, out_dim, ordering, quantization, 'TRM')
         if len(matrix_input.in_dim) < 2:
             raise ValueError('TRM-SVD requires at least two sites')
 
@@ -97,7 +97,7 @@ class TRMSVD:  # MARK: TRMSVD
         self._in_dim = matrix_input.in_dim
         self._out_dim = matrix_input.out_dim
         self._interleaved = matrix_input.interleaved
-        self._layout = layout
+        self._ordering = ordering
         self._matrix_input = matrix_input.matrix_input
         self._engine = TRSVD(
             matrix_input.fused,
@@ -125,9 +125,9 @@ class TRMSVD:  # MARK: TRMSVD
         return self._engine.center
 
     @property
-    def layout(self) -> str:
-        """Axis layout specified for the fixed input tensor."""
-        return self._layout
+    def ordering(self) -> str:
+        """Axis ordering specified for the fixed input tensor."""
+        return self._ordering
 
     def _unfuse_in_out_axes(self,
                             cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
@@ -282,7 +282,7 @@ class TRMSVD:  # MARK: TRMSVD
                     'sites': len(self._in_dim),
                     'in_dim': self._in_dim,
                     'out_dim': self._out_dim,
-                    'layout': self._layout,
+                    'ordering': self._ordering,
                     'matrix_input': self._matrix_input,
                     'center': center,
                     'rank_mode': (
@@ -305,7 +305,7 @@ class TRMSVD:  # MARK: TRMSVD
             metadata={
                 **tr_result.metadata,
                 'algorithm': 'trm_svd',
-                'layout': self._layout,
+                'ordering': self._ordering,
                 'matrix_input': self._matrix_input,
             })
 
@@ -353,7 +353,7 @@ def trm_svd(tensor: torch.Tensor,
             out_dim: _Dimension = None,
             center: Optional[int] = None,
             *,
-            layout: str = 'interleaved',
+            ordering: str = 'interleaved',
             rank: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
@@ -376,7 +376,7 @@ def trm_svd(tensor: torch.Tensor,
 
     A tensorized input can have interleaved shape
     ``(in_1, out_1, ..., in_n, out_n)`` or grouped shape
-    ``(in_1, ..., in_n, out_1, ..., out_n)``, selected through ``layout``. A
+    ``(in_1, ..., in_n, out_1, ..., out_n)``, selected through ``ordering``. A
     two-dimensional matrix can be split into several sites by supplying
     ``in_dim`` and ``out_dim``; their products should match its two axes. At
     least two sites are required.
@@ -398,8 +398,8 @@ def trm_svd(tensor: torch.Tensor,
     center : int, optional
         Interior cut satisfying ``1 <= center < n_sites``. The default is the
         middle cut.
-    layout : {"interleaved", "grouped"}
-        Axis ``layout`` of a tensorized input. The default is ``"interleaved"``.
+    ordering : {"interleaved", "grouped"}
+        Axis ``ordering`` of a tensorized input. The default is ``"interleaved"``.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
         this many singular values are retained. The initial bipartition
@@ -454,7 +454,7 @@ def trm_svd(tensor: torch.Tensor,
         present. It does not enable metrics and is incompatible with ``return_info``.
     quantization : QuantizedLayout or pair of layouts, optional
         Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        ``layout`` pair with matching numbers of digit sites. No padding is implicit.
+        layout pair with matching numbers of digit sites. No padding is implicit.
 
     Returns
     -------
@@ -467,7 +467,7 @@ def trm_svd(tensor: torch.Tensor,
     Decompose a grouped two-site ``tensor`` with a shared ``rank`` cap:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = tk.decompositions.trm_svd(tensor, layout='grouped', rank=2)
+    >>> cores = tk.decompositions.trm_svd(tensor, ordering='grouped', rank=2)
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2, 3), (2, 2, 2, 3)]
 
@@ -490,7 +490,7 @@ def trm_svd(tensor: torch.Tensor,
         in_dim=in_dim,
         out_dim=out_dim,
         center=center,
-        layout=layout,
+        ordering=ordering,
         out_device=out_device, quantization=quantization).fit(
             rank=rank,
             cutoff=cutoff,

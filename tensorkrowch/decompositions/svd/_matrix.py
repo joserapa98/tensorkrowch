@@ -53,16 +53,16 @@ class _MatrixInput:  # MARK: _MatrixInput
 def _prepare_matrix_input(tensor: torch.Tensor,
                           in_dim: _Dimension,
                           out_dim: _Dimension,
-                          layout: str,
+                          ordering: str,
                           family: str) -> _MatrixInput:
     """Validates and normalizes a dense matrix or matrix-like ``tensor``."""
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
-    if not isinstance(layout, str):
-        raise TypeError('`layout` should be str type')
-    if layout not in ('interleaved', 'grouped'):
+    if not isinstance(ordering, str):
+        raise TypeError('`ordering` should be str type')
+    if ordering not in ('interleaved', 'grouped'):
         raise ValueError(
-            '`layout` should be either "interleaved" or "grouped"')
+            '`ordering` should be either "interleaved" or "grouped"')
     if (in_dim is None) != (out_dim is None):
         raise ValueError(
             '`in_dim` and `out_dim` should be provided together')
@@ -74,7 +74,7 @@ def _prepare_matrix_input(tensor: torch.Tensor,
                 f'A tensorized {family} input should have a positive even '
                 'number of dimensions')
         n_sites = tensor.ndim // 2
-        if layout == 'interleaved':
+        if ordering == 'interleaved':
             normalized_in_dim = tuple(tensor.shape[::2])
             normalized_out_dim = tuple(tensor.shape[1::2])
         else:
@@ -85,7 +85,7 @@ def _prepare_matrix_input(tensor: torch.Tensor,
             raise ValueError(
                 f'{family} input and output dimensions should be positive')
         tensorized = tensor
-        tensorized_layout = layout
+        tensorized_ordering = ordering
     else:
         normalized_in_dim = _normalize_dim(in_dim, 'in_dim')
         normalized_out_dim = _normalize_dim(out_dim, 'out_dim')
@@ -105,7 +105,7 @@ def _prepare_matrix_input(tensor: torch.Tensor,
                     '(prod(`in_dim`), prod(`out_dim`))')
             tensorized = tensor.reshape(
                 *normalized_in_dim, *normalized_out_dim)
-            tensorized_layout = 'grouped'
+            tensorized_ordering = 'grouped'
             matrix_input = True
         else:
             if tensor.ndim != (2 * n_sites):
@@ -117,17 +117,17 @@ def _prepare_matrix_input(tensor: torch.Tensor,
                       for pair in zip(normalized_in_dim,
                                       normalized_out_dim)
                       for value in pair)
-                if layout == 'interleaved'
+                if ordering == 'interleaved'
                 else normalized_in_dim + normalized_out_dim
             )
             if tuple(tensor.shape) != expected_shape:
                 raise ValueError(
                     'The tensor shape is incompatible with `in_dim`, '
-                    '`out_dim` and `layout`')
+                    '`out_dim` and `ordering`')
             tensorized = tensor
-            tensorized_layout = layout
+            tensorized_ordering = ordering
 
-    if (tensorized_layout == 'interleaved') or (n_sites == 1):
+    if (tensorized_ordering == 'interleaved') or (n_sites == 1):
         interleaved = tensorized
     else:
         axes = tuple(
@@ -136,16 +136,14 @@ def _prepare_matrix_input(tensor: torch.Tensor,
             for axis in (site, n_sites + site))
         interleaved = tensorized.permute(axes)
 
-    fused_dim = tuple(
-        in_value * out_value
-        for in_value, out_value
-        in zip(normalized_in_dim, normalized_out_dim))
-    return _MatrixInput(
-        in_dim=normalized_in_dim,
-        out_dim=normalized_out_dim,
-        interleaved=interleaved,
-        fused=interleaved.reshape(*fused_dim),
-        matrix_input=matrix_input)
+    fused_dim = tuple(in_value * out_value
+                      for in_value, out_value
+                      in zip(normalized_in_dim, normalized_out_dim))
+    return _MatrixInput(in_dim=normalized_in_dim,
+                        out_dim=normalized_out_dim,
+                        interleaved=interleaved,
+                        fused=interleaved.reshape(*fused_dim),
+                        matrix_input=matrix_input)
 
 
 __all__ = [

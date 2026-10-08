@@ -73,15 +73,11 @@ class TTMSVD:
                  quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
-        matrix_input = _prepare_matrix_input(
-            tensor=tensor,
-            in_dim=in_dim,
-            out_dim=out_dim,
-            layout=layout,
-            family='TTM')
-
         self._quantization = quantization
-        if quantization is not None:
+        if quantization is None:
+            matrix_input = _prepare_matrix_input(
+                tensor, in_dim, out_dim, layout, 'TTM')
+        else:
             matrix_input = _quantize_matrix(
                 tensor, in_dim, out_dim, layout, quantization, 'TTM')
 

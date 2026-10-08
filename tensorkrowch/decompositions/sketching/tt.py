@@ -256,7 +256,8 @@ class TTRSS(RecursiveSketching):
         self._domain = domain
         self._domain_multiplier = domain_multiplier
         self._out_position = out_position
-        self._device = None if device is None else torch.device(device)
+        self._device = None if device is None else \
+            torch.empty(0, device=device).device
         self._dtype = dtype
         self._out_device = out_device
         self._input_fitters_option = input_fitters

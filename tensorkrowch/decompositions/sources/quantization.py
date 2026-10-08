@@ -1,5 +1,6 @@
 """Quantized source adaptation; structural layouts and maps live in formats."""
 
+from math import prod
 from typing import Optional, Sequence, Tuple, Union
 import torch
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch, TensorSource,
@@ -99,11 +100,12 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
                     'Indexed source dimensions should match layout grid sizes')
         elif is_source and len(source.in_dim) != layout.n_coordinates:
             raise ValueError(
-                'Physical source should contain one site per variable')
+                'Domain source should contain one site per coordinate')
 
         if is_source:
             resolved_device = source.device
-            if device is not None and torch.device(device) != resolved_device:
+            if device is not None and \
+                    torch.empty(0, device=device).device != resolved_device:
                 raise ValueError('`source` and `device` should match')
             resolved_dtype = source.dtype if dtype is None else dtype
             if dtype is not None and source.dtype is not None and \
@@ -112,7 +114,8 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             if out_shape is None:
                 out_shape = source.out_shape
         else:
-            resolved_device = torch.device('cpu' if device is None else device)
+            resolved_device = torch.empty(
+                0, device='cpu' if device is None else device).device
             resolved_dtype = dtype
 
         self.source = source
@@ -346,28 +349,62 @@ def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
 def _quantize_matrix(tensor, in_dim, out_dim, axis_layout, quantization,
                      family):
     """Tensorizes matrix coordinate axes before the existing fused SVD engine."""
-    from tensorkrowch.decompositions.svd._matrix import _prepare_matrix_input
+    from tensorkrowch.decompositions.svd._matrix import (
+        _normalize_dim, _prepare_matrix_input)
+
+    if not isinstance(tensor, torch.Tensor):
+        raise TypeError('`tensor` should be torch.Tensor type')
     if not isinstance(quantization, tuple) or len(quantization) != 2 or not all(
             isinstance(layout, QuantizedLayout) for layout in quantization):
-        raise TypeError('Matrix `quantization` should contain input and output layouts')
-    a, b = quantization
-    if a.n_sites != b.n_sites:
+        raise TypeError(
+            'Matrix `quantization` should contain input and output layouts')
+    in_layout, out_layout = quantization
+    if in_layout.n_sites != out_layout.n_sites:
         raise ValueError('Matrix digit schedules should have equal lengths')
-    raw = _prepare_matrix_input(tensor, in_dim, out_dim, axis_layout, family)
-    if raw.in_dim != a.grid_size or raw.out_dim != b.grid_size:
-        raise ValueError('Raw matrix dimensions should match quantized coordinate grids')
-    grouped = raw.interleaved.permute([*range(0, 2 * len(raw.in_dim), 2),
-                                      *range(1, 2 * len(raw.out_dim), 2)])
-    sites = [(0, variable, digit) for variable in range(a.n_coordinates)
-             for digit in range(a.level[variable])]
-    sites += [(1, variable, digit) for variable in range(b.n_coordinates)
-              for digit in range(b.level[variable])]
-    shape = [(a if side == 0 else b).base[variable]
-             for side, variable, _ in sites]
-    schedule = [site for left, right in zip(a.sites(), b.sites())
-                for site in [(0, *left), (1, *right)]]
-    interleaved = grouped.reshape(shape).permute([sites.index(site) for site in schedule])
-    return _prepare_matrix_input(interleaved, None, None, 'interleaved', family)
+    if (in_dim is None) != (out_dim is None):
+        raise ValueError('`in_dim` and `out_dim` should be provided together')
+    if in_dim is not None and (
+            _normalize_dim(in_dim, 'in_dim') != in_layout.grid_size or
+            _normalize_dim(out_dim, 'out_dim') != out_layout.grid_size):
+        raise ValueError(
+            'Raw matrix dimensions should match quantized coordinate grids')
+    if axis_layout not in ('interleaved', 'grouped'):
+        raise ValueError('`layout` should be "interleaved" or "grouped"')
+
+    # Coordinate counts may differ; digit-site counts must agree.
+    in_shape, out_shape = in_layout.grid_size, out_layout.grid_size
+    grouped_shape = in_shape + out_shape
+    if tensor.ndim == 2 and tuple(tensor.shape) == (
+            prod(in_shape), prod(out_shape)):
+        grouped = tensor.reshape(grouped_shape)
+    elif axis_layout == 'grouped' and tuple(tensor.shape) == grouped_shape:
+        grouped = tensor
+    elif axis_layout == 'interleaved' and len(in_shape) == len(out_shape):
+        interleaved_shape = tuple(
+            dim for pair in zip(in_shape, out_shape) for dim in pair)
+        if tuple(tensor.shape) != interleaved_shape:
+            raise ValueError('`tensor` shape should match the coordinate grids')
+        grouped = tensor.permute(
+            *range(0, tensor.ndim, 2), *range(1, tensor.ndim, 2))
+    else:
+        raise ValueError(
+            '`tensor` should be a matrix or match the coordinate grids; '
+            'unequal coordinate counts require `layout="grouped"`')
+
+    # Split each coordinate into digits, then pair the two site schedules.
+    sites = [(side, coordinate, digit)
+             for side, layout in enumerate(quantization)
+             for coordinate in range(layout.n_coordinates)
+             for digit in range(layout.level[coordinate])]
+    shape = [quantization[side].base[coordinate]
+             for side, coordinate, _ in sites]
+    schedule = [site for in_site, out_site in zip(
+        in_layout.sites(), out_layout.sites())
+                for site in ((0, *in_site), (1, *out_site))]
+    interleaved = grouped.reshape(shape).permute(
+        [sites.index(site) for site in schedule])
+    return _prepare_matrix_input(
+        interleaved, None, None, 'interleaved', family)
 
 
 def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,

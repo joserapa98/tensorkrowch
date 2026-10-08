@@ -79,14 +79,11 @@ class TRMSVD:
                  quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
                  out_device: Optional[
                      Union[str, torch.device]] = 'cpu') -> None:
-        matrix_input = _prepare_matrix_input(
-            tensor=tensor,
-            in_dim=in_dim,
-            out_dim=out_dim,
-            layout=layout,
-            family='TRM')
         self._quantization = quantization
-        if quantization is not None:
+        if quantization is None:
+            matrix_input = _prepare_matrix_input(
+                tensor, in_dim, out_dim, layout, 'TRM')
+        else:
             matrix_input = _quantize_matrix(
                 tensor, in_dim, out_dim, layout, quantization, 'TRM')
         if len(matrix_input.in_dim) < 2:

@@ -279,11 +279,14 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         def function(values):
             return 1 + values[:, 0] + 2 * values[:, 1]
 
-        cores, info = tk.decompositions.qtt_rss(
+        source = tk.decompositions.QuanticsVectorSource(
             function,
-            physical,
+            layout.n_coordinates,
             layout=layout,
-            coordinate_map=coordinate_map,
+            coordinate_map=coordinate_map)
+        cores, info = tk.decompositions.qtt_rss(
+            source,
+            physical,
             rank=4,
             legacy_projection=False,
             return_info=True)
@@ -295,7 +298,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             rtol=1e-9, atol=1e-11)
         assert info['metadata']['algorithm'] == 'qtt_rss'
         assert info['metadata']['quantization']['ordering'] == ordering
-        assert info['metadata']['quantization']['sample_space'] == 'physical'
+        assert info['metadata']['quantization']['sample_space'] == 'coordinates'
 
     def test_class_reuses_problem_with_physical_or_digit_samples(self):
         layout = tk.formats.QuantizedLayout(1, base=2, level=3)
@@ -304,11 +307,13 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         indices, physical = _physical_grid(
             layout, coordinate_map, torch.tensor([0., 1.]))
         digits = layout.encode_indices(indices)
-        decomposer = tk.decompositions.TTRSS.quantized(
+        source = tk.decompositions.QuanticsVectorSource(
             lambda values: 1 + values[:, 0],
+            layout.n_coordinates,
             layout=layout,
-            coordinate_map=coordinate_map,
-            )
+            coordinate_map=coordinate_map)
+        decomposer = tk.decompositions.TTRSS.quantized(
+            source)
 
         physical_result = decomposer.fit(
             physical, rank=2, legacy_projection=False)
@@ -321,7 +326,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         assert torch.allclose(
             physical_result.contract_dense(), digit_result.contract_dense())
         assert physical_result.metadata['quantization']['sample_space'] == \
-            'physical'
+            'coordinates'
         assert digit_result.metadata['quantization']['sample_space'] == \
             'digits'
 
@@ -333,11 +338,14 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         indices = torch.arange(4).reshape(-1, 1)
         digits = layout.encode_indices(indices)
 
-        cores = tk.decompositions.qtt_rss(
+        source = tk.decompositions.QuanticsVectorSource(
             lambda values: 1 + values[:, 0],
-            digits,
+            layout.n_coordinates,
             layout=layout,
-            coordinate_map=coordinate_map,
+            coordinate_map=coordinate_map)
+        cores = tk.decompositions.qtt_rss(
+            source,
+            digits,
             sample_space='digits',
             rank=2,
             legacy_projection=False)
@@ -356,10 +364,16 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             return torch.ones(values.shape[0], *out_shape, dtype=values.dtype,
                               device=values.device)
 
-        with pytest.raises(ValueError, match='scalar function outputs'):
+        with pytest.raises(ValueError, match='out_shape'):
+            source = tk.decompositions.QuanticsVectorSource(
+                function,
+                layout.n_coordinates,
+                layout=layout,
+                coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
             tk.decompositions.qtt_rss(
-                function, physical, layout=layout,
-                domain=torch.tensor([0., 1.], dtype=torch.float64), rank=4,
+                source,
+                physical,
+                rank=4,
                 return_result=True)
 
     @pytest.mark.parametrize('singleton_axis', [False, True])
@@ -371,9 +385,15 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             result = torch.ones_like(values[:, 0])
             return result.unsqueeze(-1) if singleton_axis else result
 
+        source = tk.decompositions.QuanticsVectorSource(
+            function,
+            layout.n_coordinates,
+            layout=layout,
+            coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
         result = tk.decompositions.qtt_rss(
-            function, physical, layout=layout,
-            domain=torch.tensor([0., 1.], dtype=torch.float64), rank=1,
+            source,
+            physical,
+            rank=1,
             return_result=True)
         assert result.n_sites == layout.n_sites
         assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))
@@ -383,10 +403,13 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         coordinate_map = tk.formats.FunctionalCoordinateMap(
             None, layout.grid_size, grid_offset="endpoints",
             forward_function=lambda unit, domain: unit.square())
-        decomposer = tk.decompositions.TTRSS.quantized(
+        source = tk.decompositions.QuanticsVectorSource(
             lambda values: values[:, 0],
+            layout.n_coordinates,
             layout=layout,
             coordinate_map=coordinate_map)
+        decomposer = tk.decompositions.TTRSS.quantized(
+            source)
 
         with pytest.raises(NotImplementedError, match='inverse'):
             decomposer.fit(torch.tensor([[0.], [1.]]), rank=2)
@@ -824,11 +847,19 @@ def test_quantized_rss_result_retains_coordinates_without_source():
         return 1 + values[:, 0] + 2 * values[:, 1]
 
     reference = weakref.ref(function)
+    source = tk.decompositions.QuanticsVectorSource(
+        function,
+        layout.n_coordinates,
+        layout=layout,
+        coordinate_map=tk.formats.AffineCoordinateMap(domain, layout.grid_size, grid_offset="endpoints"))
     result = tk.decompositions.qtt_rss(
-        function, coordinates, layout=layout, domain=domain, rank=4,
-        legacy_projection=False, return_result=True)
+        source,
+        coordinates,
+        rank=4,
+        legacy_projection=False,
+        return_result=True)
     assert isinstance(result, tk.decompositions.QTTDecomposition)
-    del function
+    del function, source
     gc.collect()
     assert reference() is None
     expected = 1 + coordinates[:, 0] + 2 * coordinates[:, 1]
@@ -859,9 +890,16 @@ def test_rss_function_formats_devices_and_sample_error(quantized,
         layout = tk.formats.QuantizedLayout(1, 2, 3)
         coordinate_map = tk.formats.AffineCoordinateMap(
             torch.tensor([0., 1.], dtype=real_dtype, device=device), layout.grid_size)
-        problem = engine.quantized(function, layout=layout,
-                                   coordinate_map=coordinate_map,
-                                   device=device, dtype=dtype, out_device=None)
+        source = tk.decompositions.QuanticsVectorSource(
+            function,
+            layout.n_coordinates,
+            layout=layout,
+            coordinate_map=coordinate_map,
+            device=device,
+            dtype=dtype)
+        problem = engine.quantized(
+            source,
+            out_device=None)
     else:
         problem = engine(function, embedding, domain=domain, device=device,
                          dtype=dtype, out_device=None)

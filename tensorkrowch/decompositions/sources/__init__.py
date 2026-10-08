@@ -5,6 +5,7 @@ Tensor sources shared by ALS and recursive sketching.
             ├─ DenseTensorSource
             ├─ CallableTensorSource
             ├─ SparseTensorSource / EmpiricalDistribution
+            ├─ QuanticsVectorSource (coordinate callable + layout/map)
             └─ TTTensorSource
 
         ConfigurationBatch
@@ -12,6 +13,9 @@ Tensor sources shared by ALS and recursive sketching.
 
         FiberTensorSource
             └─ optional source.fiber() over one varying input site
+
+        QuanticsMatrixSource
+            └─ paired digit axes ─> TTMSVD.quantized() / TRMSVD.quantized()
 
         TensorSource
             ├─ ALSProblem ─> TTALS / TRALS
@@ -30,6 +34,8 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.factory import as_tensor_source
+from tensorkrowch.decompositions.sources.quantics import (QuanticsMatrixSource,
+                                                          QuanticsVectorSource)
 from tensorkrowch.decompositions.sources.sparse import (EmpiricalDistribution,
                                                         SparseTensorSource)
 from tensorkrowch.decompositions.sources.tt import TTTensorSource
@@ -40,6 +46,8 @@ __all__ = [
     'TensorSource',
     'FiberTensorSource',
     'CallableTensorSource',
+    'QuanticsVectorSource',
+    'QuanticsMatrixSource',
     'DenseTensorSource',
     'SparseTensorSource',
     'EmpiricalDistribution',

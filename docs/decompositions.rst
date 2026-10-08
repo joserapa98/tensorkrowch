@@ -18,52 +18,46 @@ metadata and diagnostics.
 Quantics preparation
 --------------------
 
-``quantization=QuantizedLayout(...)`` reshapes raw discrete variable axes into
-digits and orders them according to the actual schedule. TT/TR SVD and ALS
-reuse their existing engines. Matrix SVD uses
-``quantization=(in_layout, out_layout)`` with equally many input/output digit
-sites and raw dimensions matching each grid. No padding or interpolation is
-implicit. Ranks and fixed cores refer to the digit network. The current TR-SVD
-and Matrix engines retain their existing restrictions on structural batches.
+Quantics discretization belongs to the callable source. Construct a
+:class:`QuanticsVectorSource` with ``base``, ``level`` and ``domain`` (or
+``grid_coordinates``), or supply a prebuilt
+:class:`~tensorkrowch.formats.QuantizedLayout` and
+:class:`~tensorkrowch.formats.CoordinateMap`. Dense tensors and tensor sources
+retain their fixed axes and are never automatically split into digits.
 
-Advanced ``fit`` returns a QTT/QTR/QTTM/QTRM result when quantization is
-selected. Direct SVD, ALS and RS/RSS functions continue to return core lists
-by default. ``return_result=True`` retains the object and its coordinate
-meaning without enabling metrics. Combining it with ``return_info=True`` is
-an error.
+``TTSVD.quantized(source)`` and ``TRSVD.quantized(source)`` materialize the
+full digit tensor before fitting. ``TTALS.quantized(source)`` and
+``TRALS.quantized(source)`` query the source on digit configurations during
+runtime. RSS ``quantized`` and ``qtt_rss``/``qtr_rss`` use basis embeddings
+at every digit site; their samples are domain coordinates by default, or
+already encoded digits with ``sample_space="digits"``. Ordinary RSS retains
+continuous callable evaluation with a user-supplied embedding.
 
 .. code-block:: python
 
    import torch
    import tensorkrowch as tk
 
-   layout = tk.formats.QuantizedLayout(
-       2, base=2, level=(3, 4), ordering='interleaved')
-   data = torch.arange(128, dtype=torch.float64).reshape(8, 16)
-   qtt = tk.decompositions.tt_svd(
-       data, rank=16, quantization=layout, return_result=True)
-   assert torch.allclose(qtt.to_dense_grid(), data, atol=1e-9)
-   fitted = tk.decompositions.tt_als(
-       data, quantization=layout, initial_cores=qtt,
-       max_sweeps=1, return_result=True)
-   assert fitted.layout == layout
-   model = fitted.to_mps()
+   source = tk.decompositions.QuanticsVectorSource(
+       lambda coordinates: torch.exp(coordinates.sum(-1)),
+       n_coordinates=2, base=2, level=(3, 4),
+       domain=torch.tensor([[0., 1.], [-1., 1.]]))
+   qtt = tk.decompositions.TTSVD.quantized(source).fit(rank=2)
+   fitted = tk.decompositions.TTALS.quantized(source).fit(
+       initial_cores=qtt,
+       convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+   coordinates = torch.tensor([[0., -1.], [0.5, 0.]])
+   values = fitted.evaluate_coordinates(coordinates)
 
-ALS accepts raw dense/discrete sources, compatible Quantics TT sources, or
-physical callables with an actual coordinate map and domain. ``source_space``
-distinguishes physical, original indices and already encoded digits. Physical
-functions are approximated on the chosen grid; scalar ALS is not extended to
-tensor-valued outputs or Matrix ALS. Exact ALS still enumerates its target.
-Dense weights use the same digit ordering as the target. Completion encodes
-indices while preserving values and weights; physical samples require
-``sample_space='physical'``. Conflicting observations that quantize to the
-same digit configuration raise an error instead of being silently averaged.
+For matrix SVD, :class:`QuanticsMatrixSource` owns independent input/output
+layouts and coordinate maps. ``TTMSVD.quantized(source)`` and
+``TRMSVD.quantized(source)`` materialize paired digit axes and return
+QTTM/QTRM results. Matrix ALS/RSS is not implemented.
 
-RSS ``.quantized`` and ``qtt_rss``/``qtr_rss`` use the same source adapter and
-return formats containing the fitted layout, coordinate map and output-site
-positions. ``evaluate_indices`` and ``evaluate_coordinates`` remain usable after
-the source and fitter are released. Layout/map compatibility is checked
-before Quantics algebra or use as an ALS initializer.
+Quantics results retain their layouts and maps independently of the source.
+``to_dense_grid`` restores the original coordinate axes;
+``to_dense_digits`` on the source returns the digit axes used by SVD.
+Completion remains a problem on explicitly supplied discrete tensor indices.
 
 SVD decompositions
 ------------------
@@ -72,7 +66,7 @@ TT-SVD
 ^^^^^^
 
 .. autoclass:: TTSVD
-   :members: fit
+   :members: fit, quantized
 
 .. autofunction:: tt_svd
 
@@ -80,7 +74,7 @@ TTM-SVD
 ^^^^^^^
 
 .. autoclass:: TTMSVD
-   :members: fit
+   :members: fit, quantized
 
 .. autofunction:: ttm_svd
 
@@ -88,7 +82,7 @@ TR-SVD
 ^^^^^^
 
 .. autoclass:: TRSVD
-   :members: fit
+   :members: fit, quantized
 
 .. autofunction:: tr_svd
 
@@ -96,7 +90,7 @@ TRM-SVD
 ^^^^^^^
 
 .. autoclass:: TRMSVD
-   :members: fit
+   :members: fit, quantized
 
 .. autofunction:: trm_svd
 
@@ -247,6 +241,16 @@ a TensorKrowch graph or densifying the complete tensor.
 
 .. autoclass:: CallableTensorSource
    :members:
+
+.. autoclass:: QuanticsVectorSource
+   :members: evaluate, evaluate_digits, evaluate_indices, evaluate_coordinates,
+             coordinates_to_digits, digits_to_coordinates, fiber,
+             to_dense_grid, to_dense_digits
+
+.. autoclass:: QuanticsMatrixSource
+   :members: evaluate_digits, evaluate_indices, evaluate_coordinates,
+             coordinates_to_digits, digits_to_coordinates,
+             to_dense_grid, to_dense_digits
 
 .. autoclass:: SparseTensorSource
    :members:

@@ -26,7 +26,7 @@ from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
-from tensorkrowch.formats import QuantizedLayout, TR
+from tensorkrowch.formats import TR
 from tensorkrowch.formats.quantics import _QuanticsVector
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
@@ -70,8 +70,6 @@ _Rank = Optional[Union[int, Sequence[int]]]
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
     from tensorkrowch.decompositions.sources.factory import SourceLike
-    from tensorkrowch.formats.quantization import Domain
-    from tensorkrowch.formats.quantization import CoordinateMap
     from tensorkrowch.formats import TensorFormat1D
     from tensorkrowch.decompositions.als.problem import ObservedEntries
 
@@ -789,13 +787,6 @@ class TRALS(TTALS):  # MARK: TRALS
                    in_dim: Optional[Sequence[int]] = None,
                    weights: Optional[torch.Tensor] = None,
                    *,
-                   quantization: Optional[QuantizedLayout] = None,
-                   sample_space: str = 'indices',
-                   coordinate_map: Optional[
-                       Union['CoordinateMap', Sequence['CoordinateMap']]] = None,
-                   domain: 'Domain' = None,
-                   computational_grid: Union[str, float] = 'endpoints',
-                   out_of_domain: str = 'error',
                    out_device: Optional[Union[str, torch.device]] = 'cpu') -> 'TRALS':
         """
         Creates TR-ALS for a permanently observed completion objective.
@@ -838,10 +829,7 @@ class TRALS(TTALS):  # MARK: TRALS
             values=values,
             in_dim=in_dim,
             weights=weights,
-            out_device=out_device, quantization=quantization,
-            sample_space=sample_space, coordinate_map=coordinate_map,
-            domain=domain, computational_grid=computational_grid,
-            out_of_domain=out_of_domain)
+            out_device=out_device)
 
     def fit(self,
             rank: _Rank = None,
@@ -954,8 +942,9 @@ class TRALS(TTALS):  # MARK: TRALS
         >>> model.boundary
         'pbc'
         """
-        if isinstance(initial_cores, _QuanticsVector):
-            if initial_cores.layout != self._quantization:
+        if isinstance(initial_cores, _QuanticsVector) and \
+                self._quantics_source is not None:
+            if initial_cores.layout != self._quantics_source.layout:
                 raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
@@ -1144,8 +1133,7 @@ class TRALS(TTALS):  # MARK: TRALS
             })
         if fit_observer is not None:
             _report_als_result(result, fit_observer, 'TR-ALS')
-        return _quantics_result(result, self._quantization,
-                                adapter=self._quantized_adapter)
+        return _quantics_result(result, self._quantics_source)
 
 
 def tr_als(source: 'SourceLike',
@@ -1183,13 +1171,7 @@ def tr_als(source: 'SourceLike',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
            return_info: bool = False,
-           return_result: bool = False,
-           quantization: Optional[QuantizedLayout] = None,
-           source_space: Optional[str] = None,
-           coordinate_map: Optional[Union['CoordinateMap', Sequence['CoordinateMap']]] = None,
-           domain: 'Domain' = None,
-           computational_grid: Union[str, float] = 'endpoints',
-           out_of_domain: str = 'error') -> '_DecompositionOutput':
+           return_result: bool = False) -> '_DecompositionOutput':
     """
     Approximates a scalar tensor ``source`` with cyclic TR-ALS.
 
@@ -1292,15 +1274,6 @@ def tr_als(source: 'SourceLike',
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
         present. It does not enable metrics and is incompatible with ``return_info``.
-    quantization : QuantizedLayout or pair of layouts, optional
-        Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
-    source_space : str, optional
-        Physical coordinates, original indices, or explicitly described digits.
-    coordinate_map, domain : optional
-        Actual coordinate map and coordinate domains for quantized callables.
-    computational_grid, out_of_domain : str
-        Explicit grid-node and coordinate-boundary conventions.
 
     Returns
     -------
@@ -1336,9 +1309,7 @@ def tr_als(source: 'SourceLike',
         dtype=dtype,
         device=device,
         batch_size=batch_size,
-        out_device=out_device, quantization=quantization,
-        source_space=source_space, coordinate_map=coordinate_map, domain=domain,
-        computational_grid=computational_grid, out_of_domain=out_of_domain).fit(
+        out_device=out_device).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,

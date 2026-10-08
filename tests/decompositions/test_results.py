@@ -9,7 +9,6 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.formats import QuantizedLayout
-from tensorkrowch.decompositions.sources.quantization import (QuantizedSourceAdapter)
 
 
 def _product_tt(vectors):
@@ -787,7 +786,6 @@ def test_results_inherit_formats_and_keep_historical_metrics():
         assert transformed.metadata == result.metadata
     assert type(result + result) is tk.formats.TT
     assert QuantizedLayout is tk.formats.QuantizedLayout
-    assert QuantizedSourceAdapter is tk.decompositions.QuantizedSourceAdapter
 
 
 def _make_result(name, device, dtype, n_batches=0, construction='objects'):

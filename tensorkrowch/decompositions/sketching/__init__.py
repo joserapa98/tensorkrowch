@@ -15,7 +15,7 @@ Recursive-sketching decompositions.
 Each algorithm prepares evaluations, constructs and trims local systems, fits
 input axes and solves for the cores. Results inherit numerical operations from
 ``formats`` and retain the algorithm's metrics. Quantics variants use the same
-flow through ``QuantizedSourceAdapter``; layouts and coordinate maps belong to
+flow through ``QuanticsVectorSource``; layouts and coordinate maps belong to
 ``formats``.
 """
 

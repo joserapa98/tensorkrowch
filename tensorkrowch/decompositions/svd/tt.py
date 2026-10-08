@@ -15,12 +15,11 @@ This script contains:
 
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import List, Optional, TYPE_CHECKING, Tuple, Union
 import warnings
 
 import torch
 
-from tensorkrowch.formats import QuantizedLayout
 from tensorkrowch.utils import truncated_svd
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
@@ -34,7 +33,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  _quantics_result)
-from tensorkrowch.decompositions.sources.quantization import _quantize_tensor
+from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm,
                                                    _normalize_tensor)
@@ -104,14 +103,8 @@ class TTSVD:  # MARK: TTSVD
                  tensor: torch.Tensor,
                  n_batches: int = 0,
                  *,
-                 quantization: Optional[QuantizedLayout] = None,
-                 in_features: Optional[Sequence[int]] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
-        self._quantization = quantization
-        if quantization is not None:
-            tensor = _quantize_tensor(tensor, quantization, n_batches, in_features)
-        elif in_features is not None:
-            raise ValueError("`in_features` requires `quantization`")
+        self._quantics_source = None
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
@@ -127,6 +120,36 @@ class TTSVD:  # MARK: TTSVD
         self._n_batches = n_batches
         self._runtime = _RuntimePolicy.from_tensor(
             tensor, out_device=out_device)
+
+    @classmethod
+    def quantized(cls,
+                  source: QuanticsVectorSource,
+                  *,
+                  out_device: Optional[Union[str, torch.device]] = 'cpu'
+                  ) -> 'TTSVD':
+        """
+        Creates a Quantics SVD problem from a discretized coordinate callable.
+
+        Materializes the full digit tensor once. Its axes follow the source's
+        layout; the fitted result retains the source's coordinate maps.
+
+        Parameters
+        ----------
+        source : QuanticsVectorSource
+            Callable and discretization to approximate.
+        out_device : str or torch.device, optional
+            Device receiving finalized cores. ``None`` retains the source device.
+
+        Returns
+        -------
+        TTSVD
+            Reusable problem returning a Quantics decomposition from :meth:`fit`.
+        """
+        if not isinstance(source, QuanticsVectorSource):
+            raise TypeError('`source` should be QuanticsVectorSource type')
+        instance = cls(source.to_dense_digits(), out_device=out_device)
+        instance._quantics_source = source
+        return instance
 
     @property
     def tensor(self) -> torch.Tensor:
@@ -520,7 +543,7 @@ class TTSVD:  # MARK: TTSVD
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantization)
+        return _quantics_result(result, self._quantics_source)
 
 
 def tt_svd(tensor: torch.Tensor,
@@ -534,9 +557,7 @@ def tt_svd(tensor: torch.Tensor,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False,
-           return_result: bool = False,
-           quantization: Optional[QuantizedLayout] = None,
-           in_features: Optional[Sequence[int]] = None) -> '_DecompositionOutput':
+           return_result: bool = False) -> '_DecompositionOutput':
     r"""
     Decomposes a dense ``tensor`` into TT cores by consecutive SVDs.
 
@@ -616,14 +637,8 @@ def tt_svd(tensor: torch.Tensor,
         timings are skipped.
 
     return_result : bool
-        Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with ``return_info``.
-    quantization : QuantizedLayout or pair of layouts, optional
-        Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
-    in_features : sequence[int], optional
-        Raw axes to quantize, in coordinate order. Must include every
-        non-batch axis. Requires ``quantization``.
+        Returns the numerical result object without enabling metrics.
+        Incompatible with ``return_info``.
 
     Returns
     -------
@@ -658,8 +673,7 @@ def tt_svd(tensor: torch.Tensor,
     result = TTSVD(
         tensor=tensor,
         n_batches=n_batches,
-        out_device=out_device, quantization=quantization,
-        in_features=in_features).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,

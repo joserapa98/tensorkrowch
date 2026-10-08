@@ -173,11 +173,14 @@ class TestQTRRSS:  # MARK: TestQTRRSS
         indices, physical = _physical_grid(
             layout, coordinate_map, torch.tensor([0., 1.]))
 
-        cores, info = tk.decompositions.qtr_rss(
+        source = tk.decompositions.QuanticsVectorSource(
             lambda values: torch.ones_like(values[:, 0]),
-            physical,
+            layout.n_coordinates,
             layout=layout,
-            coordinate_map=coordinate_map,
+            coordinate_map=coordinate_map)
+        cores, info = tk.decompositions.qtr_rss(
+            source,
+            physical,
             rank=1,
             return_info=True)
         result = tk.decompositions.TRDecomposition(cores)
@@ -304,9 +307,16 @@ def test_rss_function_formats_devices_and_sample_error(quantized,
         layout = tk.formats.QuantizedLayout(1, 2, 3)
         coordinate_map = tk.formats.AffineCoordinateMap(
             torch.tensor([0., 1.], dtype=real_dtype, device=device), layout.grid_size)
-        problem = engine.quantized(function, layout=layout,
-                                   coordinate_map=coordinate_map,
-                                   device=device, dtype=dtype, out_device=None)
+        source = tk.decompositions.QuanticsVectorSource(
+            function,
+            layout.n_coordinates,
+            layout=layout,
+            coordinate_map=coordinate_map,
+            device=device,
+            dtype=dtype)
+        problem = engine.quantized(
+            source,
+            out_device=None)
     else:
         problem = engine(function, embedding, domain=domain, device=device,
                          dtype=dtype, out_device=None)
@@ -335,10 +345,16 @@ def test_quantized_rss_rejects_tensor_outputs(out_shape):
         return torch.ones(values.shape[0], *out_shape, dtype=values.dtype,
                           device=values.device)
 
-    with pytest.raises(ValueError, match='scalar function outputs'):
+    with pytest.raises(ValueError, match='out_shape'):
+        source = tk.decompositions.QuanticsVectorSource(
+            function,
+            layout.n_coordinates,
+            layout=layout,
+            coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
         tk.decompositions.qtr_rss(
-            function, physical, layout=layout,
-            domain=torch.tensor([0., 1.], dtype=torch.float64), rank=4,
+            source,
+            physical,
+            rank=4,
             return_result=True)
 
 
@@ -351,9 +367,15 @@ def test_quantized_rss_accepts_scalar_outputs(singleton_axis):
         result = torch.ones_like(values[:, 0])
         return result.unsqueeze(-1) if singleton_axis else result
 
+    source = tk.decompositions.QuanticsVectorSource(
+        function,
+        layout.n_coordinates,
+        layout=layout,
+        coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
     result = tk.decompositions.qtr_rss(
-        function, physical, layout=layout,
-        domain=torch.tensor([0., 1.], dtype=torch.float64), rank=1,
+        source,
+        physical,
+        rank=1,
         return_result=True)
     assert result.n_sites == layout.n_sites
     assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))

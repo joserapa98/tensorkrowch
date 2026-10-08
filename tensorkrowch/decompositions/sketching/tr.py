@@ -33,7 +33,7 @@ import warnings
 
 import torch
 
-from tensorkrowch.formats import CoordinateMap, QuantizedLayout, TR
+from tensorkrowch.formats import TR
 from tensorkrowch.utils import truncated_svd
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
@@ -81,9 +81,8 @@ from tensorkrowch.decompositions.sketching.tt import (Device,
                                                       Samples,
                                                       TTRS,
                                                       TTRSS,
-                                                      _QuantizedRSSMixin,
-                                                      _quantized_source)
-from tensorkrowch.decompositions.sources import ConfigurationBatch
+                                                      _QuantizedRSSMixin)
+from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
 
 
 _Rank = Union[int, Sequence[int]]
@@ -461,26 +460,9 @@ class TRRSS(TTRSS):  # MARK: TRRSS
 
     @classmethod
     def quantized(cls,
-                  function: Callable = None,
+                  source: QuanticsVectorSource,
                   *,
-                  source: 'SourceLike' = None,
-                  layout: Optional[QuantizedLayout] = None,
-                  n_coordinates: Optional[int] = None,
-                  base: Union[int, Sequence[int]] = 2,
-                  level: Union[int, Sequence[int]] = 1,
-                  ordering: str = 'grouped',
-                  digit_order: str = 'coarse_to_fine',
-                  permutation: Optional[Sequence[Tuple[int, int]]] = None,
-                  coordinate_map: Optional[Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-                  domain: 'Domain' = None,
-                  source_space: str = 'physical',
-                  source_layout: Optional[QuantizedLayout] = None,
-                  sample_space: str = 'physical',
-                  computational_grid: Union[str, float] = 'endpoints',
-                  out_of_domain: str = 'error',
-                  out_position: Optional[Union[int, Sequence[int]]] = None,
-                  device: Device = None,
-                  dtype: Optional[torch.dtype] = None,
+                  sample_space: str = 'coordinates',
                   out_device: Device = 'cpu',
                   input_fitters: Optional[Sequence[InputFitter]] = None,
                   range_projector: Optional[RangeProjector] = None,
@@ -488,47 +470,44 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                   local_transform: Optional[LocalValueTransform] = None,
                   local_solver: Optional[LeastSquaresSolver] = None,
                   synchronize_timers: bool = True) -> 'TRRSS':
-        """Creates a QTR-RSS problem with basis-embedded digit sites."""
-        adapter, layout = _quantized_source(
-            function=function,
-            source=source,
-            layout=layout,
-            n_coordinates=n_coordinates,
-            base=base,
-            level=level,
-            ordering=ordering,
-            digit_order=digit_order,
-            permutation=permutation,
-            coordinate_map=coordinate_map,
-            domain=domain,
-            source_space=source_space,
-            source_layout=source_layout,
-            computational_grid=computational_grid,
-            out_of_domain=out_of_domain,
-            device=device,
-            dtype=dtype)
-        embeddings = tuple(
-            torch.eye(dimension) for dimension in layout.in_dim)
-        digit_domains = tuple(
-            torch.arange(dimension) for dimension in layout.in_dim)
+        """
+        Creates a Quantics RSS problem with basis-embedded digit sites.
+
+        Parameters
+        ----------
+        source : QuanticsVectorSource
+            Scalar coordinate callable with its fixed layout and map.
+        sample_space : {"coordinates", "digits"}, optional
+            Space of the sketch samples passed to :meth:`fit`. Coordinates are
+            quantized through the source; digits already follow its site order.
+        out_device : str or torch.device, optional
+            Device receiving finalized cores. ``None`` retains the source device.
+        input_fitters : sequence of InputFitter, optional
+            Site fitting strategies, as in the ordinary constructor.
+        range_projector : RangeProjector, optional
+            Range projection strategy.
+        global_transform, local_transform : optional
+            Value transforms used by the ordinary RSS workflow.
+        local_solver : LeastSquaresSolver, optional
+            Solver for the core-determining systems.
+        synchronize_timers : bool, optional
+            Synchronizes device operations when collecting timings.
+
+        Returns
+        -------
+        TRRSS
+            Reusable problem returning a Quantics decomposition.
+        """
         return _QuantizedTRRSS(
-            source=adapter,
-            embedding=embeddings,
-            in_dim=layout.in_dim,
-            domain=digit_domains,
-            out_position=out_position,
-            device=device,
-            dtype=dtype,
+            source=source,
+            sample_space=sample_space,
             out_device=out_device,
             input_fitters=input_fitters,
             range_projector=range_projector,
             global_transform=global_transform,
             local_transform=local_transform,
             local_solver=local_solver,
-            synchronize_timers=synchronize_timers,
-            quantized_layout=layout,
-            quantized_adapter=adapter,
-            sample_space=sample_space)
+            synchronize_timers=synchronize_timers)
 
     def fit(self,
             sketch_samples: Samples,
@@ -1513,26 +1492,10 @@ def tr_rs(source: 'SourceLike' = None,
 
 
 @torch.no_grad()
-def qtr_rss(function: Callable = None,
-            sketch_samples: Samples = None,
+def qtr_rss(source: QuanticsVectorSource,
+            sketch_samples: Samples,
             *,
-            source: 'SourceLike' = None,
-            layout: Optional[QuantizedLayout] = None,
-            n_coordinates: Optional[int] = None,
-            base: Union[int, Sequence[int]] = 2,
-            level: Union[int, Sequence[int]] = 1,
-            ordering: str = 'grouped',
-            digit_order: str = 'coarse_to_fine',
-            permutation: Optional[Sequence[Tuple[int, int]]] = None,
-            coordinate_map: Optional[Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-            domain: 'Domain' = None,
-            source_space: str = 'physical',
-            source_layout: Optional[QuantizedLayout] = None,
-            sample_space: str = 'physical',
-            computational_grid: Union[str, float] = 'endpoints',
-            out_of_domain: str = 'error',
-            labels: Optional[torch.Tensor] = None,
-            out_position: Optional[Union[int, Sequence[int]]] = None,
+            sample_space: str = 'coordinates',
             rank: _Rank = 1,
             center: Optional[int] = None,
             loop_opener: Union[str, LoopOpener] = 'als',
@@ -1545,64 +1508,39 @@ def qtr_rss(function: Callable = None,
             rtol: Optional[float] = None,
             cum_percentage: Optional[float] = None,
             batch_size: int = 64,
-            device: Device = None,
-            dtype: Optional[torch.dtype] = None,
             generator: Optional[torch.Generator] = None,
             out_device: Device = 'cpu',
             verbose: Union[bool, int] = 0,
             return_info: bool = False,
             return_result: bool = False) -> '_DecompositionOutput':
     """
-    Decomposes a coordinate-dependent ``function`` into QTR cores.
+    Fits QTR cores from a Quantics coordinate source and sketch samples.
 
-    This is the cyclic counterpart of :func:`qtt_rss`; it uses basis digit
-    sites and the ordinary TR-RSS ring driver after quantizing sketch
-    samples. The ``function`` must return scalar values. At least three digit sites
-    are required.
+    ``source`` owns the callable, layout and coordinate map. The digit sites
+    use basis embeddings. ``sample_space="coordinates"`` quantizes domain
+    samples; ``sample_space="digits"`` accepts already encoded digit rows.
+    Numerical fitting arguments follow :meth:`TRRSS.fit`.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.QuanticsVectorSource(
+    ...     lambda coordinates: 1 + coordinates[:, 0], 1,
+    ...     base=2, level=3, domain=torch.tensor([0., 1.]))
+    >>> samples = torch.arange(8).float().reshape(-1, 1) / 8
+    >>> cores = tk.decompositions.qtr_rss(source, samples, rank=2)
+    >>> len(cores)
+    3
     """
-    if sketch_samples is None:
-        raise TypeError('`sketch_samples` should be provided')
-    if layout is None and n_coordinates is None:
-        if sample_space != 'physical':
-            raise ValueError(
-                '`n_coordinates` is required for digit-space samples')
-        values = sketch_samples.values \
-            if isinstance(sketch_samples, ConfigurationBatch) \
-            else sketch_samples
-        if not isinstance(values, torch.Tensor) or values.ndim != 2:
-            raise ValueError(
-                '`n_coordinates` could not be inferred from sketch samples')
-        n_coordinates = values.shape[1]
     if not isinstance(return_result, bool):
         raise TypeError('`return_result` should be bool type')
     if return_info and return_result:
         raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
-    decomposer = TRRSS.quantized(
-        function=function,
-        source=source,
-        layout=layout,
-        n_coordinates=n_coordinates,
-        base=base,
-        level=level,
-        ordering=ordering,
-        digit_order=digit_order,
-        permutation=permutation,
-        coordinate_map=coordinate_map,
-        domain=domain,
-        source_space=source_space,
-        source_layout=source_layout,
-        sample_space=sample_space,
-        computational_grid=computational_grid,
-        out_of_domain=out_of_domain,
-        out_position=out_position,
-        device=device,
-        dtype=dtype,
-        out_device=out_device)
+    decomposer = TRRSS.quantized(source, sample_space=sample_space,
+                                out_device=out_device)
     result = decomposer.fit(
         sketch_samples,
-        labels=labels,
         rank=rank,
         center=center,
         loop_opener=loop_opener,
@@ -1616,7 +1554,6 @@ def qtr_rss(function: Callable = None,
         cum_percentage=cum_percentage,
         batch_size=batch_size,
         generator=generator,
-        sample_space=sample_space,
         verbose=verbose,
         collect_metrics=return_info)
     if return_result:

@@ -618,46 +618,10 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
         assert len(info['metrics']['timings']) == 1
 
 
-@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
-@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-def test_quantized_svd_preserves_raw_grid_and_returns_generic_algebra(ordering,
-                                                                      dtype):
-    layout = tk.formats.QuantizedLayout(2, 2, (3, 4), ordering=ordering)
-    data = torch.arange(128, dtype=torch.float64).reshape(8, 16).to(dtype)
-    if data.is_complex():
-        data = data + 1j * data.flip(-1)
-    result = tk.decompositions.tt_svd(
-        data, rank=16, quantization=layout, return_result=True, out_device=None)
-    cls = tk.formats.QTT
-    assert isinstance(result, cls)
-    assert torch.allclose(result.to_dense_grid(), data, atol=1e-9)
-    indices = torch.tensor([[0, 0], [7, 15], [3, 8]])
-    assert torch.allclose(result.evaluate_indices(indices), data[indices[:, 0], indices[:, 1]], atol=1e-9)
-    assert not result.metrics.truncations
-    assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
 
 
-def test_quantized_svd_structural_batches_and_invalid_controls():
-    layout = tk.formats.QuantizedLayout(1, 2, 3)
-    data = torch.arange(16, dtype=torch.float64).reshape(2, 8)
-    result = tk.decompositions.tt_svd(data, n_batches=1, quantization=layout,
-                                    return_result=True, rank=4)
-    assert torch.allclose(result.to_dense_grid(), data, atol=1e-10)
-    with pytest.raises(ValueError):
-        tk.decompositions.tt_svd(torch.ones(7), quantization=layout)
-    with pytest.raises(ValueError):
-        tk.decompositions.tt_svd(data, return_result=True, return_info=True)
-    with pytest.raises(TypeError):
-        tk.decompositions.tt_svd(data, return_result=1)
 
 
-def test_quantized_svd_rejects_unquantized_output_sites():
-    layout = tk.formats.QuantizedLayout(2, 2, 2)
-    data = torch.arange(48, dtype=torch.float64).reshape(4, 3, 4)
-    with pytest.raises(ValueError, match='every non-batch axis'):
-        tk.decompositions.tt_svd(
-            data, quantization=layout, in_features=(0, 2), rank=16,
-            return_result=True)
 
 
 @pytest.mark.parametrize('renormalize', [False, True])
@@ -741,3 +705,46 @@ def test_renormalized_svd_preserves_extreme_input_scale(large, device_dtype,
     assert all(torch.isfinite(core).all() for core in result.cores)
     # Compare in the original relative scale without overflowing a norm.
     assert_close(result.contract_dense() / scale, reference)
+
+
+@pytest.mark.parametrize('ordering', ['interleaved', 'grouped'])
+def test_quantized_svd_preserves_callable_grid(ordering, device_dtype, assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    layout = tk.formats.QuantizedLayout(2, 2, (2, 2), ordering=ordering)
+    coordinate_map = tk.formats.AffineCoordinateMap(
+        torch.tensor([[-1., 1.], [2., 3.]], dtype=real_dtype, device=device),
+        layout.grid_size)
+
+    def function(coordinates):
+        value = (coordinates[:, 0] + 2 * coordinates[:, 1]).to(dtype)
+        return value * (1 + 1j) if dtype.is_complex else value
+
+    source = tk.decompositions.QuanticsVectorSource(
+        function, 2, layout=layout, coordinate_map=coordinate_map,
+        dtype=dtype, device=device)
+    engine = tk.decompositions.TTSVD.quantized(source, out_device=None)
+    for _ in range(2):
+        result = engine.fit(rank=16)
+        assert isinstance(result, tk.decompositions.QTTDecomposition)
+        assert result.layout == layout
+        assert_close(result.to_dense_grid(), source.to_dense_grid())
+        indices = torch.tensor([[0, 0], [3, 3], [2, 1]], device=device)
+        assert_close(result.evaluate_indices(indices), source.evaluate_indices(indices))
+        assert not result.metrics.truncations
+        assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
+        assert result.dtype == dtype and result.device.type == device
+        assert_close(result.coordinate_map.from_indices(indices),
+                     coordinate_map.from_indices(indices))
+
+
+def test_dense_svd_has_fixed_axes_and_no_quantization():
+    data = torch.arange(16., dtype=torch.float64).reshape(4, 4)
+    result = tk.decompositions.TTSVD(data).fit(rank=4)
+    assert result.in_dim == (4, 4)
+    assert not isinstance(result, tk.formats.QTT)
+    torch.testing.assert_close(result.contract_dense(), data)
+    with pytest.raises(TypeError, match='QuanticsVectorSource'):
+        tk.decompositions.TTSVD.quantized(data)
+    with pytest.raises(TypeError, match='quantization'):
+        tk.decompositions.tt_svd(data, quantization=tk.formats.QuantizedLayout(2, 2, 2))

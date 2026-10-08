@@ -13,15 +13,13 @@ import warnings
 
 import torch
 
-from tensorkrowch.formats import QuantizedLayout
-
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TTMDecomposition,
                                                  _quantics_result)
-from tensorkrowch.decompositions.sources.quantization import _quantize_matrix
+from tensorkrowch.decompositions.sources.quantics import QuanticsMatrixSource
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
                                                      _prepare_matrix_input)
 from tensorkrowch.decompositions.svd.tt import TTSVD
@@ -75,15 +73,10 @@ class TTMSVD:  # MARK: TTMSVD
                  out_dim: _Dimension = None,
                  *,
                  ordering: str = 'interleaved',
-                 quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
-        self._quantization = quantization
-        if quantization is None:
-            matrix_input = _prepare_matrix_input(
-                tensor, in_dim, out_dim, ordering, 'TTM')
-        else:
-            matrix_input = _quantize_matrix(
-                tensor, in_dim, out_dim, ordering, quantization, 'TTM')
+        self._quantics_source = None
+        matrix_input = _prepare_matrix_input(
+            tensor, in_dim, out_dim, ordering, 'TTM')
 
         self._tensor = tensor
         self._in_dim = matrix_input.in_dim
@@ -93,6 +86,36 @@ class TTMSVD:  # MARK: TTMSVD
         self._engine = TTSVD(
             matrix_input.fused,
             out_device=out_device)
+
+    @classmethod
+    def quantized(cls,
+                  source: QuanticsMatrixSource,
+                  *,
+                  out_device: Optional[Union[str, torch.device]] = 'cpu'
+                  ) -> 'TTMSVD':
+        """
+        Creates a Quantics SVD problem from a discretized coordinate callable.
+
+        Materializes the full digit tensor once. Its axes follow the source's
+        layout; the fitted result retains the source's coordinate maps.
+
+        Parameters
+        ----------
+        source : QuanticsMatrixSource
+            Callable and discretization to approximate.
+        out_device : str or torch.device, optional
+            Device receiving finalized cores. ``None`` retains the source device.
+
+        Returns
+        -------
+        TTMSVD
+            Reusable problem returning a Quantics decomposition from :meth:`fit`.
+        """
+        if not isinstance(source, QuanticsMatrixSource):
+            raise TypeError('`source` should be QuanticsMatrixSource type')
+        instance = cls(source.to_dense_digits(), out_device=out_device)
+        instance._quantics_source = source
+        return instance
 
     @property
     def tensor(self) -> torch.Tensor:
@@ -315,7 +338,7 @@ class TTMSVD:  # MARK: TTMSVD
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantization)
+        return _quantics_result(result, self._quantics_source)
 
 
 def ttm_svd(tensor: torch.Tensor,
@@ -332,9 +355,7 @@ def ttm_svd(tensor: torch.Tensor,
             out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
             return_info: bool = False,
-            return_result: bool = False,
-            quantization: Optional[
-                Tuple[QuantizedLayout, QuantizedLayout]] = None) -> '_DecompositionOutput':
+            return_result: bool = False) -> '_DecompositionOutput':
     r"""
     Decomposes a dense ``tensor`` or matrix into TTM cores.
 
@@ -419,11 +440,8 @@ def ttm_svd(tensor: torch.Tensor,
         timings are skipped.
 
     return_result : bool
-        Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with ``return_info``.
-    quantization : QuantizedLayout or pair of layouts, optional
-        Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
+        Returns the numerical result object without enabling metrics.
+        Incompatible with ``return_info``.
 
     Returns
     -------
@@ -459,7 +477,7 @@ def ttm_svd(tensor: torch.Tensor,
         in_dim=in_dim,
         out_dim=out_dim,
         ordering=ordering,
-        out_device=out_device, quantization=quantization).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,

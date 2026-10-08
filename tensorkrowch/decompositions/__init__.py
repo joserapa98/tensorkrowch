@@ -5,7 +5,7 @@ Tensor decomposition algorithms and their numerical results.
         * TensorSource, ConfigurationBatch
         * DenseTensorSource, CallableTensorSource
         * SparseTensorSource, EmpiricalDistribution, TTTensorSource
-        * QuantizedSourceAdapter
+        * QuanticsVectorSource, QuanticsMatrixSource
 
     Algorithms:
         * TTSVD, TRSVD, TTMSVD, TRMSVD
@@ -145,7 +145,8 @@ from tensorkrowch.decompositions.sources import (CallableTensorSource,
                                                  TTTensorSource,
                                                  TensorSource,
                                                  as_tensor_source)
-from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdapter
+from tensorkrowch.decompositions.sources.quantics import (QuanticsMatrixSource,
+                                                          QuanticsVectorSource)
 from tensorkrowch.decompositions.svd import (TRMSVD,
                                              TRSVD,
                                              TTMSVD,
@@ -261,7 +262,8 @@ __all__ = [
     'RangeProjector',
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
-    'QuantizedSourceAdapter',
+    'QuanticsVectorSource',
+    'QuanticsMatrixSource',
     'GlobalValueTransform',
     'IdentityGlobalValueTransform',
     'CallableGlobalValueTransform',

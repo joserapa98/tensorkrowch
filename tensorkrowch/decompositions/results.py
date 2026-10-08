@@ -17,8 +17,6 @@ import torch
 
 from tensorkrowch.formats import (TensorFormat, TensorFormat1D,
                                   TT, TR, TTM, TRM,
-                                  QuantizedLayout,
-                                  AffineCoordinateMap,
                                   QTT, QTR, QTTM, QTRM)
 from tensorkrowch.formats.formats1d import _restore_cores
 
@@ -27,7 +25,8 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdapter
+    from tensorkrowch.decompositions.sources.quantics import (QuanticsMatrixSource,
+                                                              QuanticsVectorSource)
 
 
 @dataclass(init=False, eq=False)
@@ -718,59 +717,44 @@ class QTRMDecomposition(TensorDecomposition, QTRM):  # MARK: QTRMDecomposition
 
 
 def _quantics_result(
-        result: 'TensorDecomposition',
-        quantization: Optional[
-            Union[QuantizedLayout,
-                  Tuple[QuantizedLayout, QuantizedLayout]]] = None,
-        *,
-        adapter: Optional['QuantizedSourceAdapter'] = None
-    ) -> 'TensorDecomposition':
-    """
-    Attaches coordinate meaning to fitted cores without numerical refitting.
-    """
-    if quantization is None:
+        result: TensorDecomposition,
+        source: Optional[Union['QuanticsVectorSource',
+                               'QuanticsMatrixSource']] = None
+    ) -> TensorDecomposition:
+    """Attaches the Quantics source's layout and maps to fitted cores."""
+    if source is None:
         return result
 
-    kwargs = dict(metrics=result.metrics,
-                  metadata=result.metadata,
-                  n_batches=result.n_batches)
-    unit_domain = torch.tensor([0., 1.],
-                               device=result.device,
-                               dtype=result.cores[0].real.dtype)
+    from tensorkrowch.decompositions.sources.quantics import QuanticsMatrixSource
 
-    if isinstance(quantization, tuple):
+    kwargs = dict(metrics=result.metrics,
+                  metadata=dict(result.metadata),
+                  n_batches=result.n_batches)
+    if isinstance(source, QuanticsMatrixSource):
         cls = QTRMDecomposition if result.topology == 'trm' else QTTMDecomposition
-        kwargs.update(in_n_coordinates=quantization[0].n_coordinates,
-                      out_n_coordinates=quantization[1].n_coordinates,
-                      in_layout=quantization[0],
-                      out_layout=quantization[1],
-                      in_coordinate_map=AffineCoordinateMap(
-                          unit_domain, quantization[0].grid_size),
-                      out_coordinate_map=AffineCoordinateMap(
-                          unit_domain, quantization[1].grid_size))
+        layouts = (source.in_layout, source.out_layout)
+        kwargs.update(in_n_coordinates=source.in_n_coordinates,
+                      out_n_coordinates=source.out_n_coordinates,
+                      in_layout=source.in_layout,
+                      out_layout=source.out_layout,
+                      in_coordinate_map=source.in_coordinate_map,
+                      out_coordinate_map=source.out_coordinate_map)
     else:
         cls = QTRDecomposition if result.topology == 'tr' else QTTDecomposition
-        kwargs.update(n_coordinates=quantization.n_coordinates,
-                      layout=quantization)
-        kwargs['coordinate_map'] = (adapter.coordinate_map
-                                    if adapter is not None else
-                                    AffineCoordinateMap(
-                                        unit_domain, quantization.grid_size))
+        layouts = (source.layout,)
+        kwargs.update(n_coordinates=source.n_coordinates,
+                      layout=source.layout,
+                      coordinate_map=source.coordinate_map)
 
     wrapped = cls(result.cores, **kwargs)
-    wrapped.metadata = dict(result.metadata)
     if 'quantization' not in wrapped.metadata:
-        layouts = quantization if isinstance(quantization, tuple) else (quantization,)
         wrapped.metadata['quantization'] = [
             {'base': layout.base,
              'level': layout.level,
              'sites': layout.sites(),
              'grid_size': layout.grid_size}
             for layout in layouts]
-
-    if adapter is not None:
-        wrapped = wrapped.to(device=result.device)
-    return wrapped
+    return wrapped.to(device=result.device)
 
 
 _DecompositionOutput = Union[

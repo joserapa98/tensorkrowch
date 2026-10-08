@@ -34,12 +34,11 @@ def _outer(vectors):
 
 class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
 
-    def test_result_hierarchy_and_placeholders(self):
+    def test_result_hierarchy(self):
         result_types = tk.decompositions
         assert not issubclass(result_types.TensorDecomposition,
                               tk.formats.TensorFormat)
         assert not hasattr(result_types, 'TensorDecomposition1D')
-        assert not hasattr(result_types, 'TensorDecomposition2D')
 
         for name in ('TT', 'TR', 'TTM', 'TRM', 'QTT', 'QTR', 'QTTM', 'QTRM'):
             result_type = getattr(result_types, name + 'Decomposition')
@@ -47,11 +46,6 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             assert result_type.__bases__ == (
                 result_types.TensorDecomposition, format_type)
             assert not inspect.isabstract(result_type)
-
-        for result_type in (result_types.PEPSDecomposition,
-                            result_types.PEPODecomposition):
-            assert issubclass(result_type, result_types.TensorDecomposition)
-            assert inspect.isabstract(result_type)
 
         assert not issubclass(result_types.QTTDecomposition,
                               result_types.TTDecomposition)

@@ -276,8 +276,8 @@ class TestPhiOperator:  # MARK: TestPhiOperator
 
         assert torch.allclose(phi.materialize(), dense)
 
-    def test_grid_coordinates_require_no_peps_specific_branch(self):
-        sites = ((0, 0), (0, 1), (1, 0), (1, 1))
+    def test_custom_site_order_preserves_correlated_samples(self):
+        sites = (3, 1, 5, 7)
         source = tk.decompositions.CallableTensorSource(
             lambda values: values.sum(dim=1),
             in_dim=(2, 2, 2, 2),
@@ -288,13 +288,13 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             [0., 1., 0., 1.],
         ])
         pool = _SamplePool(samples, sites=sites)
-        top = pool.restrict(SiteRegion(((0, 0), (0, 1))))
+        region = pool.restrict(SiteRegion((3, 1)))
         phi = PhiOperator(
             source,
             (
-                top,
-                ((1, 0), torch.tensor([0., 1.])),
-                ((1, 1), torch.tensor([0., 1.])),
+                region,
+                (5, torch.tensor([0., 1.])),
+                (7, torch.tensor([0., 1.])),
             ),
             _scalar_output_spec(4),
             input_sites=sites,
@@ -302,12 +302,12 @@ class TestPhiOperator:  # MARK: TestPhiOperator
 
         result = phi.materialize()
 
-        expected = torch.empty(top.n_unique, 2, 2)
-        for top_id, lower_left, lower_right in product(
-                range(top.n_unique), range(2), range(2)):
-            expected[top_id, lower_left, lower_right] = (
-                top.values[0][top_id] + top.values[1][top_id] +
-                lower_left + lower_right)
+        expected = torch.empty(region.n_unique, 2, 2)
+        for region_id, first_value, second_value in product(
+                range(region.n_unique), range(2), range(2)):
+            expected[region_id, first_value, second_value] = (
+                region.values[0][region_id] + region.values[1][region_id] +
+                first_value + second_value)
         assert torch.equal(result, expected)
 
     def test_component_coverage_and_collisions_are_validated(self):

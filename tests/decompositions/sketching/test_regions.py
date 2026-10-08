@@ -34,24 +34,17 @@ class TestSiteRegion:  # MARK: TestSiteRegion
         assert left.union(right) == SiteRegion((0, 2, 1, 3))
         assert SiteRegion().union(right) == right
 
-    def test_nd_coordinates_are_hashable_and_dimension_aware(self):
-        region = SiteRegion(((0, 1), (2, 3), (1, 1)))
-
-        assert region.contains((2, 3))
-        assert region.difference(SiteRegion(((0, 1),))) == \
-            SiteRegion(((2, 3), (1, 1)))
-
     @pytest.mark.parametrize(
         'sites, error, match',
         [
             ((0, 0), ValueError, 'duplicates'),
-            ((0, (0, 1)), ValueError, 'mix'),
-            (((0, 1), (2, )), ValueError, 'same dimension'),
-            ((True,), TypeError, 'integers or tuples'),
-            (((),), TypeError, 'integers or tuples'),
-            (((0, []),), TypeError, 'hashable'),
+            ((0, (0, 1)), TypeError, 'integer site identifiers'),
+            ((True,), TypeError, 'integer site identifiers'),
+            ((0.5,), TypeError, 'integer site identifiers'),
+            (('0',), TypeError, 'integer site identifiers'),
+            (None, TypeError, 'sequence of site identifiers'),
         ])
-    def test_invalid_site_geometry(self, sites, error, match):
+    def test_invalid_site_identifiers(self, sites, error, match):
         with pytest.raises(error, match=match):
             SiteRegion(sites)
 
@@ -97,18 +90,18 @@ class TestSamplePool:  # MARK: TestSamplePool
         assert torch.equal(
             sketch.inverse_ids, torch.tensor([0, 1, 2, 0]))
 
-    def test_heterogeneous_mixed_dtype_samples_use_coordinate_sites(self):
+    def test_heterogeneous_mixed_dtype_samples_use_custom_sites(self):
         samples = (
             torch.tensor([0., 0., 1., 1.]),
             torch.tensor([[1., 2.], [1., 2.], [3., 4.], [3., 4.]]),
             torch.tensor([2, 2, 3, 3]),
         )
-        sites = ((0, 0), (0, 1), (1, 0))
+        sites = (2, 4, 6)
         pool = _SamplePool(samples, sites=sites)
 
-        sketch = pool.restrict(SiteRegion(((0, 1), (1, 0))))
+        sketch = pool.restrict(SiteRegion((4, 6)))
 
-        assert sketch.region.sites == ((0, 1), (1, 0))
+        assert sketch.region.sites == (4, 6)
         assert sketch.values[0].shape == (2, 2)
         assert sketch.values[1].dtype == torch.int64
         assert torch.equal(sketch.inverse_ids, torch.tensor([0, 0, 1, 1]))
@@ -179,16 +172,16 @@ class TestRegionSketch:  # MARK: TestRegionSketch
                 second.restrict(SiteRegion((1,))))
 
     def test_compare_reports_common_and_directional_new_regions(self):
-        sites = ((0, 0), (0, 1), (1, 0), (1, 1))
+        sites = (0, 1, 2, 3)
         pool = _SamplePool(torch.randn(5, 4), sites=sites)
-        first = pool.restrict(SiteRegion(((0, 0), (0, 1), (1, 0))))
-        second = pool.restrict(SiteRegion(((0, 1), (1, 1))))
+        first = pool.restrict(SiteRegion((0, 1, 2)))
+        second = pool.restrict(SiteRegion((1, 3)))
 
         common, first_only, second_only = first.compare(second)
 
-        assert common == SiteRegion(((0, 1),))
-        assert first_only == SiteRegion(((0, 0), (1, 0)))
-        assert second_only == SiteRegion(((1, 1),))
+        assert common == SiteRegion((1,))
+        assert first_only == SiteRegion((0, 2))
+        assert second_only == SiteRegion((3,))
 
     def test_restrict_rejects_sites_outside_the_sketch(self):
         sketch = _SamplePool(torch.ones(3, 3)).restrict(

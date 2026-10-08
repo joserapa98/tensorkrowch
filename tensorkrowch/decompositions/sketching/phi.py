@@ -31,7 +31,6 @@ from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBu
                                                                _EvaluationRequest,
                                                                _EvaluationSession)
 from tensorkrowch.decompositions.sketching.regions import (RegionSketch,
-                                                           Site,
                                                            SiteRegion)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
@@ -39,7 +38,7 @@ from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource)
 
 
-AxisComponent = Tuple[Site, torch.Tensor]
+AxisComponent = Tuple[int, torch.Tensor]
 PhiComponent = Union[RegionSketch, AxisComponent]
 
 
@@ -232,8 +231,8 @@ class PhiOperator:  # MARK: PhiOperator
                  components: Sequence[PhiComponent],
                  output_spec: _OutputSpec,
                  *,
-                 input_sites: Optional[Sequence[Site]] = None,
-                 output_sites: Optional[Sequence[Site]] = None,
+                 input_sites: Optional[Sequence[int]] = None,
+                 output_sites: Optional[Sequence[int]] = None,
                  input_kind: Optional[str] = None) -> None:
         if not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')

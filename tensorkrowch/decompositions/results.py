@@ -6,8 +6,6 @@ This script contains:
     Format subclasses with decomposition diagnostics:
         * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition
         * QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition
-    Deferred 2D results:
-        * PEPSDecomposition, PEPODecomposition
 """
 
 from dataclasses import dataclass, field
@@ -716,14 +714,6 @@ class QTRMDecomposition(TensorDecomposition, QTRM):  # MARK: QTRMDecomposition
                           'in_n_coordinates', 'out_n_coordinates',
                           'in_layout', 'out_layout',
                           'in_coordinate_map', 'out_coordinate_map')
-
-
-class PEPSDecomposition(TensorDecomposition, TensorFormat):  # MARK: PEPSDecomposition
-    """Reserved PEPS result interface until its numerical format is available."""
-
-
-class PEPODecomposition(TensorDecomposition, TensorFormat):  # MARK: PEPODecomposition
-    """Reserved PEPO result interface until its numerical format is available."""
 
 
 def _quantics_result(result: 'TensorDecomposition',

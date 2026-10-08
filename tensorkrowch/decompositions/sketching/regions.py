@@ -17,7 +17,6 @@ import torch
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 
 
-Site = Union[int, Tuple[Hashable, ...]]
 SampleValues = Union[
     torch.Tensor,
     Sequence[torch.Tensor],
@@ -28,10 +27,11 @@ SampleValues = Union[
 @dataclass(frozen=True)
 class SiteRegion:  # MARK: SiteRegion
     """
-    Ordered collection of distinct ``sites`` with set-like region operations.
+    Ordered collection of distinct integer ``sites`` with set-like region
+    operations.
     """
 
-    sites: Sequence[Site] = ()
+    sites: Sequence[int] = ()
     _membership: frozenset = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -43,32 +43,9 @@ class SiteRegion:  # MARK: SiteRegion
             raise TypeError(
                 '`sites` should be a sequence of site identifiers') from exc
 
-        site_kind = None
-        coordinate_size = None
-        for site in sites:
-            if isinstance(site, bool):
-                raise TypeError('Site identifiers should be integers or tuples')
-            if isinstance(site, int):
-                current_kind = 'linear'
-            elif isinstance(site, tuple) and site:
-                current_kind = 'coordinate'
-                if coordinate_size is None:
-                    coordinate_size = len(site)
-                elif len(site) != coordinate_size:
-                    raise ValueError(
-                        'Coordinate sites should have the same dimension')
-                try:
-                    hash(site)
-                except TypeError as exc:
-                    raise TypeError('Coordinate sites should be hashable') \
-                        from exc
-            else:
-                raise TypeError('Site identifiers should be integers or tuples')
-            if site_kind is None:
-                site_kind = current_kind
-            elif current_kind != site_kind:
-                raise ValueError(
-                    'A region should not mix linear and coordinate sites')
+        if any(isinstance(site, bool) or not isinstance(site, int)
+               for site in sites):
+            raise TypeError('`sites` should contain integer site identifiers')
 
         membership = frozenset(sites)
         if len(membership) != len(sites):
@@ -79,10 +56,10 @@ class SiteRegion:  # MARK: SiteRegion
     def __len__(self) -> int:
         return len(self.sites)
 
-    def __iter__(self) -> Iterator[Site]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.sites)
 
-    def contains(self, other: Union[Site, 'SiteRegion']) -> bool:
+    def contains(self, other: Union[int, 'SiteRegion']) -> bool:
         """Checks membership of one site or containment of another region."""
         if isinstance(other, SiteRegion):
             return other._membership.issubset(self._membership)
@@ -123,7 +100,7 @@ class _SamplePool:  # MARK: _SamplePool
 
     def __init__(self,
                  samples: SampleValues,
-                 sites: Optional[Sequence[Site]] = None,
+                 sites: Optional[Sequence[int]] = None,
                  pool_id: Optional[Hashable] = None) -> None:
         if isinstance(samples, ConfigurationBatch):
             if samples.packed:
@@ -210,7 +187,7 @@ class _SamplePool:  # MARK: _SamplePool
         """Device shared by all sample sites."""
         return self._values[0].device
 
-    def values(self, site: Site) -> torch.Tensor:
+    def values(self, site: int) -> torch.Tensor:
         """Returns all original sample values at one ``site``."""
         if not self.region.contains(site):
             raise ValueError('`site` should belong to the sample pool')
@@ -455,7 +432,7 @@ class SketchRecursion:  # MARK: SketchRecursion
         """Sites removed when this recursion is the inverse of an expansion."""
         return self.child_region.difference(self.parent_region)
 
-    def value(self, site: Site) -> torch.Tensor:
+    def value(self, site: int) -> torch.Tensor:
         """Returns parent-aligned values for one newly introduced ``site``."""
         if not self.new_region.contains(site):
             raise ValueError('`site` should belong to the new recursion region')

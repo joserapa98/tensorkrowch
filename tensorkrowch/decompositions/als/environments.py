@@ -93,7 +93,7 @@ class CoreUpdateSet:  # MARK: CoreUpdateSet
 
 
 class EnvironmentCache(Protocol):  # MARK: EnvironmentCache
-    """Protocol shared by TT, TR and future PEPS environment caches."""
+    """Protocol shared by TT and TR environment caches."""
 
     def prepare_sweep(self,
                       order: Sequence[int],

@@ -23,12 +23,33 @@ This module contains:
     Diagnostics:
         * SampleError, RoundingInfo, MinimalCanonicalInfo
 
-Module flow:
+Construction:
 
-    cores ─> TT / TR / TTM / TRM
-    cores + QuantizedLayout + CoordinateMap ─> QTT / QTR / QTTM / QTRM
-    formats <─> models
-    decompositions ─> formats + diagnostics
+    cores + optional diagonal factors ─> TT / TR / TTM / TRM
+        cores ─> format.cores
+        factors ─> format.bonds (BondFactors1D)
+        canonicalize_vidal ─> format.bonds (VidalGauge, TT / TTM)
+
+    Quantics:
+        base + level + domain ─> QuantizedLayout + AffineCoordinateMap
+        base + level + grid_coordinates ─> QuantizedLayout + ExplicitGridMap
+        cores + layout + coordinate_map ─> QTT / QTR
+        cores + input/output layouts and maps ─> QTTM / QTRM
+
+Evaluation:
+
+    domain coordinates ─> CoordinateMap.to_indices ─> grid indices
+    grid indices ─> QuantizedLayout.encode_indices ─> digits in site order
+    digits ─> evaluate_digits ─> Quantics values
+
+Numerical workflows:
+
+    block ─> BlockLayout; split_block ─> SplitBlock; unblock ─> restored sites
+    rounding(return_info=True) ─> format + RoundingInfo
+    error ─> SampleError
+    canonicalize_minimal(return_info=True) ─> format + MinimalCanonicalInfo
+    formats <─> models (explicit conversion methods)
+    decompositions ─> results inheriting formats and adding fit diagnostics
 """
 
 from tensorkrowch.formats.base import (RoundingInfo, SampleError, BlockLayout,

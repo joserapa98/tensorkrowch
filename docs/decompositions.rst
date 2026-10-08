@@ -12,7 +12,8 @@ the same relationship. Their additional ``metrics`` and ``metadata`` describe
 the original fit. Copying, detaching or moving a result preserves this history;
 editing or rounding its cores does not recompute historical errors. New exact
 algebra returns numerical formats without attaching a fictitious fit history.
-The compatibility aliases ``input_dim``/``output_dim`` and ``as_info`` remain.
+Use ``in_dim`` and ``out_dim`` for dimensions, and ``as_info`` to inspect
+metadata and diagnostics.
 
 Quantics preparation
 --------------------
@@ -122,8 +123,8 @@ Lightweight results
 .. autoclass:: TRMDecomposition
    :members:
 
-Compatibility aliases
----------------------
+Compatibility with official releases
+------------------------------------
 
 The historical names below remain available for compatibility and emit a
 deprecation warning. New code should use :func:`tt_svd` and :func:`ttm_svd`.

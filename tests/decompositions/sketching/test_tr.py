@@ -167,7 +167,7 @@ def _physical_grid(layout, coordinate_map, domain):
 class TestQTRRSS:  # MARK: TestQTRRSS
 
     def test_qtr_functional_and_class_apis_use_ring_driver(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        layout = tk.formats.QuantizedLayout(1, base=2, level=3)
         coordinate_map = tk.formats.AffineCoordinateMap(
             torch.tensor([0., 1.]), layout.grid_size, grid_offset="endpoints")
         indices, physical = _physical_grid(
@@ -328,7 +328,7 @@ def test_rss_function_formats_devices_and_sample_error(quantized,
 
 @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])
 def test_quantized_rss_rejects_tensor_outputs(out_shape):
-    layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+    layout = tk.formats.QuantizedLayout(1, base=2, level=3)
     physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
     def function(values):
@@ -344,7 +344,7 @@ def test_quantized_rss_rejects_tensor_outputs(out_shape):
 
 @pytest.mark.parametrize('singleton_axis', [False, True])
 def test_quantized_rss_accepts_scalar_outputs(singleton_axis):
-    layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+    layout = tk.formats.QuantizedLayout(1, base=2, level=3)
     physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
     def function(values):

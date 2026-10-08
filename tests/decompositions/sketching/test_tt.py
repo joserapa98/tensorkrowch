@@ -268,7 +268,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
 
     @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
     def test_standard_layouts_fit_the_same_physical_function(self, ordering):
-        layout = tk.decompositions.QuantizedLayout(
+        layout = tk.formats.QuantizedLayout(
             2, base=2, level=2, ordering=ordering)
         domain = torch.tensor([[0., 1.], [-1., 1.]], dtype=torch.float64)
         coordinate_map = tk.formats.AffineCoordinateMap(
@@ -298,7 +298,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         assert info['metadata']['quantization']['sample_space'] == 'physical'
 
     def test_class_reuses_problem_with_physical_or_digit_samples(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        layout = tk.formats.QuantizedLayout(1, base=2, level=3)
         coordinate_map = tk.formats.AffineCoordinateMap(
             torch.tensor([0., 1.]), layout.grid_size, grid_offset="endpoints")
         indices, physical = _physical_grid(
@@ -326,7 +326,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             'digits'
 
     def test_digit_samples_allow_forward_only_warp(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=2)
+        layout = tk.formats.QuantizedLayout(1, base=2, level=2)
         coordinate_map = tk.formats.FunctionalCoordinateMap(
             None, layout.grid_size, grid_offset="endpoints",
             forward_function=lambda unit, domain: unit.square())
@@ -349,7 +349,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
 
     @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])
     def test_quantized_rss_rejects_tensor_outputs(self, out_shape):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        layout = tk.formats.QuantizedLayout(1, base=2, level=3)
         physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
         def function(values):
@@ -364,7 +364,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
 
     @pytest.mark.parametrize('singleton_axis', [False, True])
     def test_quantized_rss_accepts_scalar_outputs(self, singleton_axis):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        layout = tk.formats.QuantizedLayout(1, base=2, level=3)
         physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
         def function(values):
@@ -379,7 +379,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))
 
     def test_physical_samples_require_an_inverse_for_custom_maps(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=2)
+        layout = tk.formats.QuantizedLayout(1, base=2, level=2)
         coordinate_map = tk.formats.FunctionalCoordinateMap(
             None, layout.grid_size, grid_offset="endpoints",
             forward_function=lambda unit, domain: unit.square())

@@ -28,7 +28,7 @@ from typing import (Any,
 
 import torch
 
-from tensorkrowch.formats import TT
+from tensorkrowch.formats import CoordinateMap, QuantizedLayout, TT
 from tensorkrowch.utils import random_unitary
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
@@ -51,9 +51,6 @@ from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
                                                        _MaterializedPhi)
 from tensorkrowch.decompositions.sketching.projections import (ProjectedRange,
                                                                RangeProjector)
-from tensorkrowch.decompositions.sketching.quantization import (CoordinateMap,
-                                                                QuantizedLayout,
-                                                                QuantizedSourceAdapter)
 from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
 from tensorkrowch.decompositions.sketching.sketches import (MarginalSketch,
@@ -73,6 +70,7 @@ from tensorkrowch.decompositions.sources import (CallableTensorSource,
                                                  ConfigurationBatch,
                                                  TensorSource,
                                                  as_tensor_source)
+from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdapter
 
 
 Domain = Optional[Union[torch.Tensor, Sequence[torch.Tensor]]]

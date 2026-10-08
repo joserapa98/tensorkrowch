@@ -33,7 +33,7 @@ import warnings
 
 import torch
 
-from tensorkrowch.formats import TR
+from tensorkrowch.formats import CoordinateMap, QuantizedLayout, TR
 from tensorkrowch.utils import truncated_svd
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
@@ -68,8 +68,6 @@ from tensorkrowch.decompositions.sketching.fitting import InputFitter
 from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
                                                        _MaterializedPhi)
 from tensorkrowch.decompositions.sketching.projections import RangeProjector
-from tensorkrowch.decompositions.sketching.quantization import (CoordinateMap,
-                                                                QuantizedLayout)
 from tensorkrowch.decompositions.sketching.sketches import SketchOperator
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec

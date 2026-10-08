@@ -8,7 +8,7 @@ import torch
 
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.quantization import QuantizedLayout
+from tensorkrowch.formats import QuantizedLayout
 from tensorkrowch.decompositions.sources.quantization import (QuantizedSourceAdapter)
 
 
@@ -89,8 +89,8 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert result.rank == [3, 5]
         with pytest.raises(AttributeError):
             result.rank = [1, 5]
-        assert result.input_dim == (2, 4, 2)
-        assert result.output_dim is None
+        assert result.in_dim == (2, 4, 2)
+        assert result.out_dim is None
 
         expected = torch.einsum('ia,ajb,bk->ijk', *cores)
         assert torch.allclose(result.contract_dense(), expected)
@@ -120,8 +120,8 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         result = tk.decompositions.TRDecomposition(cores)
 
         assert result.rank == [4, 3, 2]
-        assert result.input_dim == (3, 5, 2)
-        assert result.output_dim is None
+        assert result.in_dim == (3, 5, 2)
+        assert result.out_dim is None
         expected = torch.einsum('aib,bjc,cka->ijk', *cores)
         assert torch.allclose(result.contract_dense(), expected)
 
@@ -349,7 +349,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             parameterized=False)
 
         assert mps.boundary == boundary
-        assert mps.phys_dim == list(result.input_dim)
+        assert mps.phys_dim == list(result.in_dim)
         assert mps.bond_dim == result.rank
         assert all(torch.allclose(model_core, result_core)
                    for model_core, result_core
@@ -376,7 +376,7 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert mps_data.boundary == ('obc' if result.topology == 'tt'
                                      else 'pbc')
         assert mps_data.n_batches == result.n_batches
-        assert mps_data.phys_dim == list(result.input_dim)
+        assert mps_data.phys_dim == list(result.in_dim)
         assert mps_data.bond_dim == result.rank
 
     def test_ttm_validation_dense_contraction_and_apply(self):
@@ -387,8 +387,8 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
 
         expected_dense = torch.einsum('io,jp->iojp', first, second)
         assert result.rank == [1]
-        assert result.input_dim == (2, 2)
-        assert result.output_dim == (2, 3)
+        assert result.in_dim == (2, 2)
+        assert result.out_dim == (2, 3)
         assert torch.allclose(result.contract_dense(), expected_dense)
 
         inputs = torch.tensor([[0, 1], [1, 0]])
@@ -498,8 +498,8 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
             parameterized=False)
 
         assert mpo.boundary == 'obc'
-        assert mpo.in_dim == list(result.input_dim)
-        assert mpo.out_dim == list(result.output_dim)
+        assert mpo.in_dim == list(result.in_dim)
+        assert mpo.out_dim == list(result.out_dim)
         assert mpo.bond_dim == result.rank
         assert all(torch.allclose(model_core, result_core)
                    for model_core, result_core
@@ -757,9 +757,14 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
         assert copied.dtype == torch.float64
         assert copied.cpu().device.type == 'cpu'
         assert copied.as_info()['rank'] == [1]
-        assert copied.as_info()['input_dim'] == [2, 3]
-        assert copied.as_info()['output_dim'] is None
+        assert copied.as_info()['in_dim'] == [2, 3]
+        assert copied.as_info()['out_dim'] is None
         assert copied.as_info()['metadata'] == {'source': 'test'}
+        assert set(copied.as_info()) == {
+            'topology', 'rank', 'in_dim', 'out_dim', 'n_batches',
+            'metrics', 'metadata'}
+        assert not hasattr(copied, 'input_dim')
+        assert not hasattr(copied, 'output_dim')
 
     @pytest.mark.parametrize(
         'result_type, cores, match',

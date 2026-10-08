@@ -10,7 +10,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
 
     @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
     def test_physical_callable_decodes_each_layout(self, ordering):
-        layout = tk.decompositions.QuantizedLayout(
+        layout = tk.formats.QuantizedLayout(
             3, base=2, level=2, ordering=ordering)
         domain = torch.tensor([[0., 1.], [-1., 1.], [2., 4.]])
         coordinate_map = tk.formats.AffineCoordinateMap(
@@ -38,7 +38,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
         assert adapter.out_shape == (2,)
 
     def test_indexed_tensor_source_uses_decoded_variable_indices(self):
-        layout = tk.decompositions.QuantizedLayout(
+        layout = tk.formats.QuantizedLayout(
             2, base=2, level=(2, 1), ordering='interleaved')
         dense = torch.arange(8., dtype=torch.float64).reshape(4, 2)
         adapter = tk.decompositions.QuantizedSourceAdapter(
@@ -53,7 +53,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
         assert torch.equal(values, dense[indices[:, 0], indices[:, 1]])
 
     def test_per_variable_coordinate_maps_compose_without_driver_branches(self):
-        layout = tk.decompositions.QuantizedLayout(2, base=2, level=2)
+        layout = tk.formats.QuantizedLayout(2, base=2, level=2)
         maps = (
             tk.formats.AffineCoordinateMap(torch.tensor([-1., 1.]), (4,), grid_offset="endpoints"),
             tk.formats.FunctionalCoordinateMap(
@@ -73,9 +73,9 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
         assert torch.allclose(adapter.digits_to_physical(digits), physical)
 
     def test_digit_tt_bypass_requires_and_respects_layout_metadata(self):
-        grouped = tk.decompositions.QuantizedLayout(
+        grouped = tk.formats.QuantizedLayout(
             2, base=2, level=2, ordering='grouped')
-        interleaved = tk.decompositions.QuantizedLayout(
+        interleaved = tk.formats.QuantizedLayout(
             2, base=2, level=2, ordering='interleaved')
         variable_indices = torch.cartesian_prod(
             torch.arange(4), torch.arange(4))
@@ -105,7 +105,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
             (test_indices[:, 0] + 10 * test_indices[:, 1]).to(torch.float64))
 
     def test_physical_sparse_collisions_are_coalesced(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=3, level=1)
+        layout = tk.formats.QuantizedLayout(1, base=3, level=1)
         coordinates = torch.tensor([[0.1], [0.2], [0.9]])
         values = torch.tensor([1., 2., 4.])
         adapter = tk.decompositions.QuantizedSourceAdapter.from_physical_support(
@@ -121,7 +121,7 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
         assert torch.equal(result, torch.tensor([3., 0., 4.]))
 
     def test_physical_dataset_collisions_form_empirical_distribution(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=3, level=1)
+        layout = tk.formats.QuantizedLayout(1, base=3, level=1)
         dataset = torch.tensor([[0.1], [0.2], [0.9], [0.9]])
         adapter = tk.decompositions.QuantizedSourceAdapter.from_physical_dataset(
             dataset,

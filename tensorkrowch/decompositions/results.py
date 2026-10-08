@@ -79,16 +79,6 @@ class _ResultState:  # MARK: _ResultState
             raise TypeError('`metadata` should be dict type')
         super().__init__(cores, n_batches=n_batches, **kwargs)
 
-    @property
-    def input_dim(self) -> Tuple[int, ...]:
-        """Compatibility alias for ``in_dim``."""
-        return self.in_dim
-
-    @property
-    def output_dim(self) -> Optional[Tuple[int, ...]]:
-        """Compatibility alias for ``out_dim``."""
-        return self.out_dim
-
     def as_info(self) -> Dict[str, Any]:
         """
         Returns current dimensions and historical decomposition diagnostics.
@@ -108,8 +98,6 @@ class _ResultState:  # MARK: _ResultState
             'rank': self.rank,
             'in_dim': list(self.in_dim),
             'out_dim': None if self.out_dim is None else list(self.out_dim),
-            'input_dim': list(self.in_dim),
-            'output_dim': None if self.out_dim is None else list(self.out_dim),
             'n_batches': self.n_batches,
             'metrics': self.metrics.as_info(),
             'metadata': dict(self.metadata),

@@ -17,7 +17,6 @@ This script contains:
         * _grid_offset
         * _indices_to_unit
         * _unit_to_indices
-        * _validate_explicit_grid
 
 Terminology:
     * Coordinate: a continuous input value along one dimension.
@@ -1249,12 +1248,3 @@ class _CompositeCoordinateMap(CoordinateMap):  # MARK: _CompositeCoordinateMap
     def to_indices(self, domain_coordinates: torch.Tensor) -> torch.Tensor:
         """Quantizes domain coordinates through each constituent map."""
         return self._apply('to_indices', domain_coordinates)
-
-
-def _validate_explicit_grid(layout: QuantizedLayout,
-                            coordinate_map: Optional[CoordinateMap]) -> None:
-    """Checks layout and map grid sizes for the deferred Tucker integration."""
-    if coordinate_map is not None and (
-            coordinate_map.grid_size != layout.grid_size):
-        raise ValueError(
-            '`coordinate_map.grid_size` should match `layout.grid_size`')

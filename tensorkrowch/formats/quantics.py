@@ -13,7 +13,6 @@ This script contains:
         * _map_structure
         * _equal_structure
         * _same_references
-        * _coordinates_to_indices
         * _resolve_quantization
 
 Terminology:
@@ -92,19 +91,6 @@ def _same_references(first: Any, second: Any) -> bool:
         return all(_same_references(left, right)
                    for left, right in zip(first, second))
     return True
-
-
-def _coordinates_to_indices(coordinates: torch.Tensor,
-                            layout: QuantizedLayout,
-                            coordinate_map: Optional[CoordinateMap],
-                            domain: Domain,
-                            grid_offset: Union[str, float],
-                            policy: str) -> torch.Tensor:
-    """Delegates coordinate conversion for the deferred Tucker integration."""
-    if coordinate_map is None:
-        raise ValueError(
-            '`coordinate_map` is required for evaluation in the domain')
-    return coordinate_map.to_indices(coordinates)
 
 
 def _resolve_quantization(

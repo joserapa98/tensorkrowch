@@ -7,7 +7,6 @@ This module contains:
     Formats:
         * TT, TR, TTM, TRM
         * QTT, QTR, QTTM, QTRM
-        * QTTTucker, QTRTucker
 
     Bonds and gauges:
         * BondFactors1D, VidalGauge
@@ -28,7 +27,6 @@ Module flow:
 
     cores ─> TT / TR / TTM / TRM
     cores + QuantizedLayout + CoordinateMap ─> QTT / QTR / QTTM / QTRM
-    TT / TR + Quantics factors ─> QTTTucker / QTRTucker
     formats <─> models
     decompositions ─> formats + diagnostics
 """
@@ -45,7 +43,6 @@ from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
                                              AffineCoordinateMap,
                                              FunctionalCoordinateMap,
                                              ExplicitGridMap)
-from tensorkrowch.formats.tucker import QTTTucker, QTRTucker
 
 
 __all__ = [
@@ -61,8 +58,6 @@ __all__ = [
     'QTR',
     'QTTM',
     'QTRM',
-    'QTTTucker',
-    'QTRTucker',
 
     'BondFactors1D',
     'VidalGauge',

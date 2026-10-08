@@ -33,9 +33,6 @@ The implementation follows a one-way dependency flow:
                 +----------+-------------+
                            v
                        quantics.py
-                           |
-                           v
-                        tucker.py
 
 ``formats1d.py`` contains the shared container, vector/matrix and open/cyclic
 bases, TT/TR/TTM/TRM, numerical operations and model adapters. Review it from
@@ -312,8 +309,8 @@ cut is expressed explicitly by rotating the ring first.
 core. Internal ranks become ``closing_rank * original_rank``. It is exact,
 with no dense reconstruction, truncation or SVD. Matrices use ``to_ttm``.
 
-Quantics and Tucker
---------------------
+Quantics
+--------
 
 Quantics subclasses add ``QuantizedLayout`` and coordinate maps to
 the ordinary numerical formats. Layouts support grouped, interleaved and
@@ -340,13 +337,6 @@ classes when coordinate meanings match; incompatible layouts are rejected
 even if core sizes coincide. ``to_tt``/``to_tr``/matrix equivalents deliberately
 drop coordinate semantics. Reordering configurations does not reorder fitted
 cores: grouped-to-interleaved conversion would require swaps and SVDs.
-
-``QTTTucker``/``QTRTucker`` compose an upper TT/TR with one local TT per
-variable, whose final site is the connector gamma. Upper cores have one
-owner; ``cores`` delegates to ``upper.cores``. ``coordinate_positions`` locates
-upper connectors among optional output sites. ``flatten`` returns a Quantics
-network with the actual grouped factor schedule. Fitters and sketch recursion
-remain in decompositions.
 
 Models and numerical workflows
 -------------------------------

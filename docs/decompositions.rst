@@ -29,7 +29,7 @@ Advanced ``fit`` returns a QTT/QTR/QTTM/QTRM result when quantization is
 selected. Direct SVD, ALS and RS/RSS functions continue to return core lists
 by default. ``return_result=True`` retains the object and its coordinate
 meaning without enabling metrics. Combining it with ``return_info=True`` is
-an error. Tucker wrappers retain their existing hierarchical object return.
+an error.
 
 .. code-block:: python
 
@@ -60,7 +60,7 @@ same digit configuration raise an error instead of being silently averaged.
 
 RSS ``.quantized`` and ``qtt_rss``/``qtr_rss`` use the same source adapter and
 return formats containing the fitted layout, coordinate map and output-site
-positions. ``evaluate_indices`` and ``evaluate_points`` remain usable after
+positions. ``evaluate_indices`` and ``evaluate_coordinates`` remain usable after
 the source and fitter are released. Layout/map compatibility is checked
 before Quantics algebra or use as an ALS initializer.
 
@@ -166,9 +166,6 @@ Maturity
    * - :func:`qtt_rss`, :func:`qtr_rss`
      - Experimental
      - Quantized coordinate adapters over TT-RSS and TR-RSS.
-   * - :class:`QTTTuckerRSS`, :class:`QTRTuckerRSS`
-     - Experimental
-     - Native two-level quantized factors joined by an upper TT or TR.
 
 Sampled recursive sketching
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -217,11 +214,11 @@ original variable coordinates for both layouts.
    :members:
    :noindex:
 
-.. autoclass:: UniformCoordinateMap
+.. autoclass:: AffineCoordinateMap
    :members:
    :noindex:
 
-.. autoclass:: WarpedCoordinateMap
+.. autoclass:: FunctionalCoordinateMap
    :members:
    :noindex:
 
@@ -232,22 +229,6 @@ original variable coordinates for both layouts.
 .. autofunction:: qtt_rss
 
 .. autofunction:: qtr_rss
-
-.. autoclass:: QTTTuckerRSS
-   :members: fit
-
-.. autoclass:: QTRTuckerRSS
-   :members: fit
-
-.. autofunction:: qtt_tucker_rss
-
-.. autofunction:: qtr_tucker_rss
-
-.. autoclass:: QTTTuckerDecomposition
-   :members:
-
-.. autoclass:: QTRTuckerDecomposition
-   :members:
 
 Sources and fitting strategies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -340,7 +321,7 @@ Quantized RSS for a two-variable physical function:
    cores = tk.decompositions.qtt_rss(
        function,
        samples,
-       n_variables=2,
+       n_coordinates=2,
        base=2,
        level=3,
        domain=torch.tensor([0., 1.]),

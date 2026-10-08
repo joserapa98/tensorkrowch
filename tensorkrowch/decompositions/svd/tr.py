@@ -582,9 +582,7 @@ class TRSVD:
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(
-            result, self._quantization,
-            digit_positions=None if self._quantization is None else range(self._quantization.n_sites))
+        return _quantics_result(result, self._quantization)
 
 
 def tr_svd(tensor: torch.Tensor,
@@ -687,8 +685,8 @@ def tr_svd(tensor: torch.Tensor,
         Raw variable-to-digit schedule. Matrix SVD requires an input/output
         layout pair with matching numbers of digit sites. No padding is implicit.
     in_features : sequence[int], optional
-        Raw non-batch input axes to quantize. Other axes remain output sites
-        after the digit network. Requires quantization.
+        Raw axes to quantize, in coordinate order. Must include every
+        non-batch axis. Requires ``quantization``.
 
     Returns
     -------

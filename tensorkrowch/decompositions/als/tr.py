@@ -74,7 +74,7 @@ def _standard_tr_cores(
     if isinstance(cores, TR):
         if cores.n_batches:
             raise ValueError('Batched TR cores are not supported by TR-ALS')
-        cores = cores._standard_cores()
+        cores = cores._effective_cores()
     elif isinstance(cores, torch.Tensor):
         raise TypeError(
             '`initial_cores` should be a TRDecomposition or a core sequence')
@@ -773,7 +773,7 @@ class TRALS(TTALS):
                    quantization: Optional[QuantizedLayout] = None,
                    sample_space: str = 'indices',
                    coordinate_map=None, domain=None,
-                   computational_grid: str = 'endpoints',
+                   computational_grid: Union[str, float] = 'endpoints',
                    out_of_domain: str = 'error',
                    out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TRALS':
@@ -934,7 +934,7 @@ class TRALS(TTALS):
         'pbc'
         """
         if isinstance(initial_cores, _QuanticsVector):
-            if initial_cores.layout != self._quantization or initial_cores.digit_positions != tuple(range(initial_cores.n_sites)):
+            if initial_cores.layout != self._quantization:
                 raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
@@ -1166,7 +1166,7 @@ def tr_als(source,
            quantization: Optional[QuantizedLayout] = None,
            source_space: Optional[str] = None,
            coordinate_map=None, domain=None,
-           computational_grid: str = 'endpoints',
+           computational_grid: Union[str, float] = 'endpoints',
            out_of_domain: str = 'error'):
     """Approximates a scalar tensor source with cyclic TR-ALS.
 

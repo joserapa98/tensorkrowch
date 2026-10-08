@@ -1,6 +1,7 @@
 """Shared format kernels and result provenance contracts."""
 
 from dataclasses import replace
+import pytest
 import torch
 import tensorkrowch as tk
 from tensorkrowch.decompositions.sketching.quantization import QuantizedLayout
@@ -13,7 +14,7 @@ def test_results_inherit_formats_and_keep_historical_metrics():
     assert isinstance(result, tk.formats.TT)
     replaced = replace(result, cores=[torch.zeros(2, 1), torch.ones(1, 3)])
     assert replaced.norm() == 0
-    for transformed in [result.copy(), result.detach(), result.to(dtype=torch.float64)]:
+    for transformed in [result.clone(), result.detach(), result.to(dtype=torch.float64)]:
         assert type(transformed) is type(result)
         assert transformed.metrics is result.metrics
         assert transformed.metadata == result.metadata
@@ -24,15 +25,12 @@ def test_results_inherit_formats_and_keep_historical_metrics():
 
 def test_base_tt_source_absorbs_bonds_without_mutating_format():
     result = tk.formats.TT([torch.ones(2, 2), torch.ones(2, 3)])
-    result.bonds = tk.formats.BondFactors([torch.tensor([2., 3.])])
+    result.bonds = [torch.tensor([2., 3.])]
     source = tk.decompositions.as_tensor_source(result)
     indices = torch.tensor([[0, 0], [1, 2]])
     actual = source.evaluate(tk.decompositions.ConfigurationBatch(indices, kind='indices'))
     assert torch.equal(actual, torch.full((2,), 5.))
     assert result.bonds is not None
-
-
-import pytest
 
 
 @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
@@ -91,12 +89,12 @@ def test_quantized_als_raw_callable_and_repeated_fits(method, ordering):
         result = engine.fit(
             rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
         assert torch.allclose(result.to_dense_grid(), data, atol=1e-8)
-    physical = cls(lambda points: torch.exp(points[:, 0] + 2 * points[:, 1]),
+    physical = cls(lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
                    quantization=layout, dtype=torch.float64,
                    domain=torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64))
     result = physical.fit(rank=2, init='svd', convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
-    points = torch.tensor([[0., 0.], [1., 1.]], dtype=torch.float64)
-    assert torch.allclose(result.evaluate_points(points), torch.exp(torch.tensor([0., 3.], dtype=torch.float64)), atol=1e-9)
+    coordinates = torch.tensor([[0., 0.], [1., 1.]], dtype=torch.float64)
+    assert torch.allclose(result.evaluate_coordinates(coordinates), torch.exp(torch.tensor([0., 3.], dtype=torch.float64)), atol=1e-9)
     assert not result.metrics.sweeps
 
 
@@ -126,26 +124,19 @@ def test_quantized_als_source_and_initializer_layout_validation():
     result = tk.decompositions.tt_als(q, quantization=layout, initial_cores=q,
                                     max_sweeps=1, return_result=True)
     assert torch.allclose(result.to_dense_grid(), torch.ones(4, 4))
-    other = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
+    other = tk.formats.QuantizedLayout(2, 2, 2, ordering='grouped')
     with pytest.raises(ValueError, match='fixed digit layout'):
         tk.decompositions.TTALS(torch.ones(4, 4), quantization=other).fit(initial_cores=q)
 
 
 @pytest.mark.parametrize('method', ['tt', 'tr'])
-def test_quantized_svd_retains_unquantized_output_sites(method):
-    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
+def test_quantized_svd_rejects_unquantized_output_sites(method):
+    layout = tk.formats.QuantizedLayout(2, 2, 2)
     data = torch.arange(48, dtype=torch.float64).reshape(4, 3, 4)
-    result = getattr(tk.decompositions, method + '_svd')(
-        data, quantization=layout, in_features=(0, 2), rank=16,
-        return_result=True)
-    indices = torch.tensor([[0, 0], [2, 3]])
-    assert result.digit_positions == (0, 1, 2, 3)
-    assert torch.allclose(result.evaluate_indices(indices),
-                          data[indices[:, 0], :, indices[:, 1]], atol=1e-9)
-    assert torch.allclose(result.to_dense_grid(), data.permute(0, 2, 1), atol=1e-9)
-    replacement = replace(result, cores=result.cores)
-    assert replacement.layout == layout
-    assert torch.allclose(replacement.to_dense_grid(), result.to_dense_grid())
+    with pytest.raises(ValueError, match='every non-batch axis'):
+        getattr(tk.decompositions, method + '_svd')(
+            data, quantization=layout, in_features=(0, 2), rank=16,
+            return_result=True)
 
 
 def test_quantized_rss_result_retains_coordinates_without_source():
@@ -154,22 +145,22 @@ def test_quantized_rss_result_retains_coordinates_without_source():
     layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
     domain = torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64)
     indices = torch.cartesian_prod(torch.arange(4), torch.arange(4))
-    points = indices.to(torch.float64) / 3
+    coordinates = indices.to(torch.float64) / 3
 
     def function(values):
-        return torch.stack([1 + values[:, 0], 2 + values[:, 1]], dim=-1)
+        return 1 + values[:, 0] + 2 * values[:, 1]
 
     reference = weakref.ref(function)
     result = tk.decompositions.qtt_rss(
-        function, points, layout=layout, domain=domain, rank=4,
+        function, coordinates, layout=layout, domain=domain, rank=4,
         legacy_projection=False, return_result=True)
     assert isinstance(result, tk.decompositions.QTTDecomposition)
     del function
     gc.collect()
     assert reference() is None
-    expected = torch.stack([1 + points[:, 0], 2 + points[:, 1]], dim=-1)
-    assert torch.allclose(result.evaluate_points(points), expected, atol=1e-9)
+    expected = 1 + coordinates[:, 0] + 2 * coordinates[:, 1]
+    assert torch.allclose(result.evaluate_coordinates(coordinates), expected, atol=1e-9)
     restored = tk.formats.QTT.from_mps(
-        result.to_mps(), layout=layout, coordinate_map=result.coordinate_map,
-        domain=domain, digit_positions=result.digit_positions)
-    assert torch.allclose(restored.evaluate_points(points), expected, atol=1e-9)
+        result.to_mps(), n_coordinates=layout.n_coordinates,
+        layout=layout, coordinate_map=result.coordinate_map)
+    assert torch.allclose(restored.evaluate_coordinates(coordinates), expected, atol=1e-9)

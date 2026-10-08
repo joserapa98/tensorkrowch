@@ -13,7 +13,7 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
         'digit_order', ['coarse_to_fine', 'fine_to_coarse'])
     def test_multivariable_roundtrip(self, ordering, digit_order):
         layout = tk.decompositions.QuantizedLayout(
-            n_variables=3,
+            n_coordinates=3,
             base=(2, 3, 2),
             level=(3, 2, 1),
             ordering=ordering,
@@ -81,15 +81,15 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
     @pytest.mark.parametrize(
         'kwargs, error, match',
         [
-            ({'n_variables': 0}, ValueError, 'positive'),
-            ({'n_variables': 2, 'base': (2,)}, ValueError, 'one value'),
-            ({'n_variables': 1, 'base': 1}, ValueError, 'at least two'),
-            ({'n_variables': 1, 'level': 0}, ValueError, 'positive'),
-            ({'n_variables': 1, 'ordering': 'custom'}, ValueError,
+            ({'n_coordinates': 0}, ValueError, 'positive'),
+            ({'n_coordinates': 2, 'base': (2,)}, ValueError, 'one value'),
+            ({'n_coordinates': 1, 'base': 1}, ValueError, 'at least two'),
+            ({'n_coordinates': 1, 'level': 0}, ValueError, 'positive'),
+            ({'n_coordinates': 1, 'ordering': 'custom'}, ValueError,
              'permutation'),
-            ({'n_variables': 1, 'level': 2, 'ordering': 'custom',
+            ({'n_coordinates': 1, 'level': 2, 'ordering': 'custom',
               'permutation': ((0, 0), (0, 0))}, ValueError, 'every'),
-            ({'n_variables': 1, 'base': 2, 'level': 63}, OverflowError,
+            ({'n_coordinates': 1, 'base': 2, 'level': 63}, OverflowError,
              'int64'),
         ])
     def test_invalid_layouts_are_rejected(self, kwargs, error, match):
@@ -99,7 +99,7 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
     def test_invalid_shapes_and_bounds_are_rejected(self):
         layout = tk.decompositions.QuantizedLayout(2, level=2)
 
-        with pytest.raises(ValueError, match='n_variables'):
+        with pytest.raises(ValueError, match='n_coordinates'):
             layout.encode_indices(torch.tensor([[0, 1, 2]]))
         with pytest.raises(ValueError, match='out of bounds'):
             layout.encode_indices(torch.tensor([[4, 0]]))
@@ -111,7 +111,7 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
 
 class TestUniformCoordinateMap:  # MARK: TestUniformCoordinateMap
 
-    @pytest.mark.parametrize('grid', ['endpoints', 'cell_centers'])
+    @pytest.mark.parametrize('grid', ['endpoints', 'centers'])
     def test_index_physical_roundtrip_with_per_variable_domains(self, grid):
         coordinate_map = tk.decompositions.UniformCoordinateMap(grid=grid)
         grid_size = (5, 4)

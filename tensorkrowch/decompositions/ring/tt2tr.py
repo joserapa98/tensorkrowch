@@ -22,6 +22,8 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.formats.formats1d import _restore_cores
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import (ErrorRecord,
                                                  FidelityRecord,
@@ -55,10 +57,9 @@ def _as_tt_decomposition(tt) -> TTDecomposition:
             raise ValueError('TT-to-TR does not support decomposition batches')
         result = tt
         if tt.bonds is not None:
-            from tensorkrowch.formats.operations import _build_network
-            effective = _build_network(tt._standard_cores(), tt.in_dim,
-                                       None, 0, False)
-            result = TTDecomposition(effective.cores, metrics=tt.metrics,
+            cores = _restore_cores(tt._effective_cores(), tt.in_dim,
+                                   None, 0, False)
+            result = TTDecomposition(cores, metrics=tt.metrics,
                                      metadata=tt.metadata)
     else:
         source = TTTensorSource(tt)

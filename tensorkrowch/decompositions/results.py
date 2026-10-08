@@ -6,20 +6,18 @@ This script contains:
     Format subclasses with decomposition diagnostics:
         * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition
         * QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition
-        * QTTTuckerDecomposition, QTRTuckerDecomposition
     Deferred 2D results:
         * PEPSDecomposition, PEPODecomposition
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 import torch
 
-from tensorkrowch.formats import (
-    TensorFormat, TensorFormat1D, TensorFormat2D, TT, TR, TTM, TRM,
-    QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout)
+from tensorkrowch.formats import (TensorFormat, TensorFormat1D, TT, TR, TTM, TRM, QTT, QTR, QTTM, QTRM, QuantizedLayout, AffineCoordinateMap, CoordinateMap)
+from tensorkrowch.formats.formats1d import _restore_cores
 from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
 
 
@@ -39,7 +37,7 @@ class TensorDecomposition1D(TensorFormat1D, TensorDecomposition, ABC):
     """Compatibility interface for raw-core 1D decomposition results."""
 
 
-class TensorDecomposition2D(TensorFormat2D, TensorDecomposition, ABC):
+class TensorDecomposition2D(TensorDecomposition, ABC):
     """Reserved provenance interface for future 2D results."""
 
 
@@ -91,7 +89,21 @@ class _ResultState:
     def error(self, *args: Any, **kwargs: Any) -> ErrorRecord:
         """Collects a sample error using the shared numerical format kernel."""
         record = super().error(*args, **kwargs)
-        return ErrorRecord(**record._asdict())
+        return ErrorRecord(kind=record.kind, absolute=record.absolute,
+                           relative=record.relative, size=record.size,
+                           denominator=record.denominator)
+
+    def _new_from_standard_cores(self, cores, in_dim, out_dim, n_batches,
+                                 cyclic, other=None, product=False):
+        """Preserves the result contract when applying an operator to data."""
+        if self._family == 'matrix' and product and other is None:
+            cls = TRDecomposition if cyclic else TTDecomposition
+            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
+            return cls(cores, n_batches=n_batches, metadata={
+                'operation': 'trm_apply' if cyclic else 'ttm_apply'})
+        return super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic, other=other,
+            product=product)
 
 
 class TTDecomposition(_ResultState, TT, TensorDecomposition1D):
@@ -105,20 +117,9 @@ class TRDecomposition(_ResultState, TR, TensorDecomposition1D):
 class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):
     """TTM format with decomposition metrics and algorithm metadata."""
 
-    def _build_applied_decomposition(self, cores: List[torch.Tensor],
-                                     n_batches: int) -> TTDecomposition:
-        result = super()._build_applied_decomposition(cores, n_batches)
-        return TTDecomposition(result.cores, n_batches=n_batches,
-                               metadata={'operation': 'ttm_apply'})
-
 
 class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):
     """TRM format with decomposition metrics and algorithm metadata."""
-
-    def _build_applied_decomposition(self, cores: List[torch.Tensor],
-                                     n_batches: int) -> TRDecomposition:
-        return TRDecomposition(cores, n_batches=n_batches,
-                               metadata={'operation': 'trm_apply'})
 
 
 class _QuanticsResultState:
@@ -140,24 +141,18 @@ class _QuanticsResultState:
 class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
     """Quantics TT retaining its actual digit layout and coordinate map."""
 
-    layout: QuantizedLayout = field()  # Logical variable-to-digit schedule
-    coordinate_map: Any = None  # Actual physical-coordinate map
-    domain: Any = None  # Physical variable domains
-    digit_positions: Sequence[int] = field()  # Network sites carrying digits
-    computational_grid: str = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
+    n_coordinates: int = field()  # Number of original input coordinates
+    layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
+    coordinate_map: CoordinateMap = field()  # Domain and grid conversions
 
 
 @dataclass(init=False)
 class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):
     """Quantics TR retaining its actual digit layout and coordinate map."""
 
-    layout: QuantizedLayout = field()  # Logical variable-to-digit schedule
-    coordinate_map: Any = None  # Actual physical-coordinate map
-    domain: Any = None  # Physical variable domains
-    digit_positions: Sequence[int] = field()  # Network sites carrying digits
-    computational_grid: str = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
+    n_coordinates: int = field()  # Number of original input coordinates
+    layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
+    coordinate_map: CoordinateMap = field()  # Domain and grid conversions
 
 
 @dataclass(init=False)
@@ -165,14 +160,12 @@ class QTTMDecomposition(_QuanticsResultState, QTTM,
                        TTMDecomposition):
     """Quantics TTM with separate input and output coordinate spaces."""
 
+    in_n_coordinates: int = field()  # Number of original input coordinates
+    out_n_coordinates: int = field()  # Number of original output coordinates
     in_layout: QuantizedLayout = field()  # Input digit schedule
     out_layout: QuantizedLayout = field()  # Output digit schedule
-    in_coordinate_map: Any = None  # Actual input-coordinate map
-    out_coordinate_map: Any = None  # Actual output-coordinate map
-    in_domain: Any = None  # Physical input domains
-    out_domain: Any = None  # Physical output domains
-    computational_grid: str = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
+    in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
+    out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
 
 
 @dataclass(init=False)
@@ -180,72 +173,12 @@ class QTRMDecomposition(_QuanticsResultState, QTRM,
                        TRMDecomposition):
     """Quantics TRM with separate input and output coordinate spaces."""
 
+    in_n_coordinates: int = field()  # Number of original input coordinates
+    out_n_coordinates: int = field()  # Number of original output coordinates
     in_layout: QuantizedLayout = field()  # Input digit schedule
     out_layout: QuantizedLayout = field()  # Output digit schedule
-    in_coordinate_map: Any = None  # Actual input-coordinate map
-    out_coordinate_map: Any = None  # Actual output-coordinate map
-    in_domain: Any = None  # Physical input domains
-    out_domain: Any = None  # Physical output domains
-    computational_grid: str = 'endpoints'  # Grid-node convention
-    out_of_domain: str = 'error'  # Explicit coordinate boundary policy
-
-
-class _TuckerResultState(TensorDecomposition):
-    """Provenance for a hierarchical format with a single upper owner."""
-
-    def __init__(self, upper, factors, layout, coordinate_map, domain=None, *,
-                 variable_positions=None, computational_grid='endpoints',
-                 out_of_domain='error', metrics=None, metadata=None):
-        self.metrics = upper.metrics if metrics is None and isinstance(
-            upper, TensorDecomposition) else (
-                DecompositionMetrics() if metrics is None else metrics)
-        self.metadata = {} if metadata is None else metadata
-        if not isinstance(self.metrics, DecompositionMetrics):
-            raise TypeError('`metrics` should be DecompositionMetrics type')
-        if not isinstance(self.metadata, dict):
-            raise TypeError('`metadata` should be dict type')
-        super().__init__(upper, factors, layout, coordinate_map, domain,
-                         variable_positions=variable_positions,
-                         computational_grid=computational_grid,
-                         out_of_domain=out_of_domain)
-
-    input_dim = _ResultState.input_dim
-    output_dim = _ResultState.output_dim
-
-    def as_info(self) -> Dict[str, Any]:
-        info = _ResultState.as_info(self)
-        info.update(upper_rank=self.upper.rank,
-                    factor_rank=[list(rank) for rank in self.factor_rank],
-                    grid_size=list(self.layout.grid_size),
-                    variable_positions=list(self.variable_positions),
-                    out_shape=list(self.out_shape))
-        return info
-
-    def _map_tensors(self, function):
-        result = super()._map_tensors(function)
-        result.metrics = self.metrics
-        result.metadata = self.metadata
-        return result
-
-    def to(self, device=None, dtype=None, copy=False):
-        result = super().to(device=device, dtype=dtype, copy=copy)
-        result.metrics = self.metrics
-        result.metadata = self.metadata
-        return result
-
-
-class QTTTuckerDecomposition(_TuckerResultState, QTTTucker):
-    """QTT-Tucker format together with fit diagnostics."""
-
-
-class QTRTuckerDecomposition(_TuckerResultState, QTRTucker):
-    """QTR-Tucker format together with fit diagnostics."""
-
-
-# Hierarchical formats satisfy the public 1D provenance interface without
-# inheriting the flat core-container implementation a second time.
-TensorDecomposition1D.register(QTTTuckerDecomposition)
-TensorDecomposition1D.register(QTRTuckerDecomposition)
+    in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
+    out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
 
 
 class PEPSDecomposition(TensorDecomposition2D):
@@ -256,24 +189,31 @@ class PEPODecomposition(TensorDecomposition2D):
     """Reserved PEPO result interface."""
 
 
-def _quantics_result(result, quantization=None, *, adapter=None,
-                     digit_positions=None):
+def _quantics_result(result, quantization=None, *, adapter=None):
     """Attaches coordinate meaning to fitted cores without numerical refitting."""
     if quantization is None:
         return result
     kwargs = dict(metrics=result.metrics, metadata=result.metadata,
                   n_batches=result.n_batches)
+    unit_domain = torch.tensor([0., 1.], device=result.device,
+                               dtype=result.cores[0].real.dtype)
     if isinstance(quantization, tuple):
         cls = QTRMDecomposition if result.topology == 'trm' else QTTMDecomposition
-        kwargs.update(in_layout=quantization[0], out_layout=quantization[1])
+        kwargs.update(in_n_coordinates=quantization[0].n_coordinates,
+                      out_n_coordinates=quantization[1].n_coordinates,
+                      in_layout=quantization[0], out_layout=quantization[1],
+                      in_coordinate_map=AffineCoordinateMap(
+                          unit_domain, quantization[0].grid_size),
+                      out_coordinate_map=AffineCoordinateMap(
+                          unit_domain, quantization[1].grid_size))
     else:
         cls = QTRDecomposition if result.topology == 'tr' else QTTDecomposition
-        kwargs.update(layout=quantization, digit_positions=digit_positions)
-        if adapter is not None:
-            kwargs.update(coordinate_map=adapter.coordinate_map,
-                          domain=adapter.domain,
-                          computational_grid=adapter.computational_grid,
-                          out_of_domain=adapter.out_of_domain)
+        kwargs.update(n_coordinates=quantization.n_coordinates,
+                      layout=quantization)
+        kwargs['coordinate_map'] = (adapter.coordinate_map
+                                    if adapter is not None else
+                                    AffineCoordinateMap(
+                                        unit_domain, quantization.grid_size))
     wrapped = cls(result.cores, **kwargs)
     wrapped.metadata = dict(result.metadata)
     if 'quantization' not in wrapped.metadata:

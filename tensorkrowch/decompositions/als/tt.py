@@ -75,7 +75,7 @@ def _standard_tt_cores(
     if isinstance(cores, TT):
         if cores.n_batches:
             raise ValueError('Batched TT cores are not supported by TT-ALS')
-        cores = cores._standard_cores()
+        cores = cores._effective_cores()
     elif isinstance(cores, torch.Tensor):
         raise TypeError(
             '`initial_cores` should be a TTDecomposition or a core sequence')
@@ -695,7 +695,7 @@ class TTALS:
                  source_space: Optional[str] = None,
                  coordinate_map=None,
                  domain=None,
-                 computational_grid: str = 'endpoints',
+                 computational_grid: Union[str, float] = 'endpoints',
                  out_of_domain: str = 'error',
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
@@ -921,7 +921,7 @@ class TTALS:
                    quantization: Optional[QuantizedLayout] = None,
                    sample_space: str = 'indices',
                    coordinate_map=None, domain=None,
-                   computational_grid: str = 'endpoints',
+                   computational_grid: Union[str, float] = 'endpoints',
                    out_of_domain: str = 'error',
                    out_device: Optional[
                        Union[str, torch.device]] = 'cpu') -> 'TTALS':
@@ -1111,7 +1111,7 @@ class TTALS:
         >>> model = tk.models.MPS(tensors=result.cores)
         """
         if isinstance(initial_cores, _QuanticsVector):
-            if initial_cores.layout != self._quantization or initial_cores.digit_positions != tuple(range(initial_cores.n_sites)):
+            if initial_cores.layout != self._quantization:
                 raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
@@ -1340,7 +1340,7 @@ def tt_als(source,
            quantization: Optional[QuantizedLayout] = None,
            source_space: Optional[str] = None,
            coordinate_map=None, domain=None,
-           computational_grid: str = 'endpoints',
+           computational_grid: Union[str, float] = 'endpoints',
            out_of_domain: str = 'error'):
     """Approximates a scalar tensor source with tensor train ALS.
 

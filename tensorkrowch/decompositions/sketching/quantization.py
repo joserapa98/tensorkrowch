@@ -1,9 +1,9 @@
 """Compatibility imports for quantized layouts, maps and source adaptation."""
 
 from tensorkrowch.formats.quantization import (
-    QuantizedLayout, CoordinateMap, UniformCoordinateMap, WarpedCoordinateMap,
-    ExplicitGridMap, _CompositeCoordinateMap, _unit_to_indices)
+    QuantizedLayout, CoordinateMap, AffineCoordinateMap, FunctionalCoordinateMap,
+    ExplicitGridMap)
 from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdapter
 
-__all__ = ['QuantizedLayout', 'CoordinateMap', 'UniformCoordinateMap',
-           'WarpedCoordinateMap', 'ExplicitGridMap', 'QuantizedSourceAdapter']
+__all__ = ['QuantizedLayout', 'CoordinateMap', 'AffineCoordinateMap',
+           'FunctionalCoordinateMap', 'ExplicitGridMap', 'QuantizedSourceAdapter']

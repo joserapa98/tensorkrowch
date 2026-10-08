@@ -7,6 +7,7 @@ from typing import (Any, Mapping, Optional, Protocol, Sequence, Tuple,
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TruncationRecord)
@@ -593,8 +594,7 @@ class SampledSketch:
                  sketch_size: Optional[int] = None) -> None:
         if samples is not None and (
                 not isinstance(samples, torch.Tensor) or samples.ndim != 2 or
-                samples.dtype not in (torch.uint8, torch.int8, torch.int16,
-                                      torch.int32, torch.int64)):
+                samples.dtype not in _INTEGER_DTYPES):
             raise TypeError('`samples` should be a two-dimensional integer tensor')
         if sketch_size is not None and (
                 isinstance(sketch_size, bool) or

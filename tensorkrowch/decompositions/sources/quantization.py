@@ -1,26 +1,18 @@
 """Quantized source adaptation; structural layouts and maps live in formats."""
 
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 import torch
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch, TensorSource,
     _discrete_indices, _fiber_configurations, _SourceEvaluationTracker)
 from tensorkrowch.decompositions.sources.sparse import EmpiricalDistribution, SparseTensorSource
 from tensorkrowch.formats.quantization import (
-    _integer_spec,
     QuantizedLayout,
-    _coordinate_tensor,
-    _domain_tensor,
-    _out_of_domain,
-    _indices_to_unit,
-    _unit_to_indices,
     CoordinateMap,
-    UniformCoordinateMap,
-    WarpedCoordinateMap,
+    AffineCoordinateMap,
+    FunctionalCoordinateMap,
     ExplicitGridMap,
     _CompositeCoordinateMap,
-    Domain,
-    IntegerSpec,
-    DigitSite)
+    Domain)
 
 class QuantizedSourceAdapter(_SourceEvaluationTracker):
     """Presents a physical or variable-index source on quantized digit sites.
@@ -51,26 +43,28 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             out_shape: Optional[Sequence[int]] = None,
             dtype: Optional[torch.dtype] = None,
             device: Optional[Union[str, torch.device]] = None,
-            computational_grid: str = 'endpoints',
+            computational_grid: Union[str, float] = 'left',
             out_of_domain: str = 'error') -> None:
         self._initialize_evaluation_stats()
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
         if coordinate_map is None:
-            coordinate_map = UniformCoordinateMap(grid=computational_grid)
-        elif not isinstance(coordinate_map, CoordinateMap):
-            if isinstance(coordinate_map, (str, bytes)):
-                raise TypeError(
-                    '`coordinate_map` should implement CoordinateMap')
-            coordinate_map = _CompositeCoordinateMap(tuple(coordinate_map))
+            intervals = torch.tensor([0., 1.]) if domain is None else domain
+            coordinate_map = AffineCoordinateMap(
+                intervals, layout.grid_size, grid_offset=computational_grid,
+                out_of_domain=out_of_domain)
+        else:
+            if domain is not None:
+                raise ValueError('`domain` belongs in the supplied `coordinate_map`')
+            if isinstance(coordinate_map, (list, tuple)):
+                coordinate_map = _CompositeCoordinateMap(coordinate_map)
+            if not isinstance(coordinate_map, CoordinateMap):
+                raise TypeError('`coordinate_map` should be CoordinateMap type')
+        if coordinate_map.grid_size != layout.grid_size:
+            raise ValueError('`coordinate_map.grid_size` should match `layout.grid_size`')
         if source_space not in ('physical', 'indices', 'digits'):
             raise ValueError(
                 "`source_space` should be 'physical', 'indices' or 'digits'")
-        if computational_grid not in ('endpoints', 'cell_centers'):
-            raise ValueError(
-                "`computational_grid` should be 'endpoints' or "
-                "'cell_centers'")
-        out_of_domain = _out_of_domain(out_of_domain)
         if dtype is not None and not isinstance(dtype, torch.dtype):
             raise TypeError('`dtype` should be torch.dtype type or None')
         if out_shape is not None:
@@ -91,7 +85,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
                     'Digit sources require explicit `source_layout` metadata')
             if source_layout.base != layout.base or \
                     source_layout.level != layout.level or \
-                    source_layout.n_variables != layout.n_variables:
+                    source_layout.n_coordinates != layout.n_coordinates:
                 raise ValueError('Source and adapter layouts are incompatible')
             if tuple(source.in_dim) != source_layout.in_dim:
                 raise ValueError(
@@ -103,7 +97,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             if tuple(source.in_dim) != layout.grid_size:
                 raise ValueError(
                     'Indexed source dimensions should match layout grid sizes')
-        elif is_source and len(source.in_dim) != layout.n_variables:
+        elif is_source and len(source.in_dim) != layout.n_coordinates:
             raise ValueError(
                 'Physical source should contain one site per variable')
 
@@ -124,11 +118,8 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         self.source = source
         self.layout = layout
         self.coordinate_map = coordinate_map
-        self.domain = domain
         self.source_space = source_space
         self.source_layout = source_layout
-        self.computational_grid = computational_grid
-        self.out_of_domain = out_of_domain
         self._device = resolved_device
         self._dtype = resolved_dtype
         self._out_shape = out_shape
@@ -153,47 +144,35 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         """Device used for mapping and source evaluation."""
         return self._device
 
+    @property
+    def domain(self) -> Domain:
+        """Domain owned by the coordinate map."""
+        return getattr(self.coordinate_map, 'domain', None)
+
+    @property
+    def computational_grid(self) -> Union[str, float]:
+        """Uniform grid offset stored by the coordinate map."""
+        return getattr(self.coordinate_map, 'grid_offset', 'left')
+
+    @property
+    def out_of_domain(self) -> str:
+        """Out-of-domain policy stored by the coordinate map."""
+        return getattr(self.coordinate_map, 'out_of_domain', 'error')
+
     def indices_to_physical(self, indices: torch.Tensor) -> torch.Tensor:
-        """Maps one integer grid index per variable to physical coordinates."""
-        kernel = getattr(self.coordinate_map, 'from_indices', None)
-        if callable(kernel):
-            return kernel(indices, self.layout.grid_size, self.domain)
-        unit = _indices_to_unit(
-            indices,
-            self.layout.grid_size,
-            self.computational_grid,
-            dtype=torch.get_default_dtype())
-        return self.coordinate_map.forward(unit, self.domain)
+        """Maps integer grid indices to coordinates in the domain."""
+        return self.coordinate_map.from_indices(indices)
 
     def physical_to_indices(self,
-                            physical_coordinates: torch.Tensor) -> torch.Tensor:
-        """Quantizes physical coordinates into one index per variable."""
-        kernel = getattr(self.coordinate_map, 'to_indices', None)
-        if callable(kernel):
-            return kernel(
-                physical_coordinates,
-                self.layout.grid_size,
-                self.domain,
-                out_of_domain=self.out_of_domain)
-        inverse = getattr(self.coordinate_map, 'inverse', None)
-        if not callable(inverse):
-            raise NotImplementedError(
-                'Physical samples require a coordinate-map inverse')
-        unit = inverse(
-            physical_coordinates,
-            self.domain,
-            out_of_domain=self.out_of_domain)
-        return _unit_to_indices(
-            unit,
-            self.layout.grid_size,
-            self.computational_grid,
-            self.out_of_domain)
+                            domain_coordinates: torch.Tensor) -> torch.Tensor:
+        """Quantizes coordinates in the domain to grid indices."""
+        return self.coordinate_map.to_indices(domain_coordinates)
 
     def physical_to_digits(self,
-                           physical_coordinates: torch.Tensor) -> torch.Tensor:
+                           domain_coordinates: torch.Tensor) -> torch.Tensor:
         """Quantizes physical coordinates directly into scheduled digits."""
         return self.layout.encode_indices(
-            self.physical_to_indices(physical_coordinates))
+            self.physical_to_indices(domain_coordinates))
 
     def digits_to_physical(self, digits: torch.Tensor) -> torch.Tensor:
         """Decodes scheduled digits and maps them to physical coordinates."""
@@ -289,8 +268,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         return cls(
             source,
             layout,
-            coordinate_map,
-            domain,
+            provisional.coordinate_map,
             source_space='indices')
 
     @classmethod
@@ -319,16 +297,15 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         return cls(
             source,
             layout,
-            coordinate_map,
-            domain,
+            provisional.coordinate_map,
             source_space='indices')
 
 
 __all__ = [
     'QuantizedLayout',
     'CoordinateMap',
-    'UniformCoordinateMap',
-    'WarpedCoordinateMap',
+    'AffineCoordinateMap',
+    'FunctionalCoordinateMap',
     'ExplicitGridMap',
     'QuantizedSourceAdapter',
 ]
@@ -352,16 +329,17 @@ def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
         raise ValueError('in_features should select distinct non-batch tensor axes')
     if tuple(tensor.shape[axis] for axis in features) != layout.grid_size:
         raise ValueError('Raw variable dimensions should match quantization.grid_size')
-    outputs = tuple(axis for axis in range(n_batches, tensor.ndim) if axis not in features)
-    tensor = tensor.permute([*range(n_batches), *features, *outputs])
-    output_shape = tensor.shape[n_batches + len(features):]
-    canonical = [(variable, digit) for variable in range(layout.n_variables)
-                 for digit in range(layout.level[variable])]
-    shape = [layout.base[variable] for variable, _ in canonical]
-    tensor = tensor.reshape(*tensor.shape[:n_batches], *shape, *output_shape)
-    permutation = [*range(n_batches), *[n_batches + canonical.index(site)
-                                      for site in layout.sites()],
-                   *range(n_batches + len(canonical), tensor.ndim)]
+    if len(features) != tensor.ndim - n_batches:
+        raise ValueError(
+            'Quantics vectors require a digit at every site; '
+            '`in_features` should include every non-batch axis')
+    tensor = tensor.permute([*range(n_batches), *features])
+    sites = [(coordinate, digit) for coordinate in range(layout.n_coordinates)
+             for digit in range(layout.level[coordinate])]
+    shape = [layout.base[coordinate] for coordinate, _ in sites]
+    tensor = tensor.reshape(*tensor.shape[:n_batches], *shape)
+    permutation = [*range(n_batches), *[n_batches + sites.index(site)
+                                      for site in layout.sites()]]
     return tensor.permute(permutation)
 
 
@@ -380,9 +358,9 @@ def _quantize_matrix(tensor, in_dim, out_dim, axis_layout, quantization,
         raise ValueError('Raw matrix dimensions should match quantized coordinate grids')
     grouped = raw.interleaved.permute([*range(0, 2 * len(raw.in_dim), 2),
                                       *range(1, 2 * len(raw.out_dim), 2)])
-    sites = [(0, variable, digit) for variable in range(a.n_variables)
+    sites = [(0, variable, digit) for variable in range(a.n_coordinates)
              for digit in range(a.level[variable])]
-    sites += [(1, variable, digit) for variable in range(b.n_variables)
+    sites += [(1, variable, digit) for variable in range(b.n_coordinates)
               for digit in range(b.level[variable])]
     shape = [(a if side == 0 else b).base[variable]
              for side, variable, _ in sites]
@@ -395,7 +373,7 @@ def _quantize_matrix(tensor, in_dim, out_dim, axis_layout, quantization,
 def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
                               device='cpu', batch_size=None, source_space=None,
                               coordinate_map=None, domain=None,
-                              computational_grid='endpoints', out_of_domain='error'):
+                              computational_grid='left', out_of_domain='error'):
     """Presents raw discrete or physical variables through the shared digit source."""
     from tensorkrowch.decompositions.sources.factory import as_tensor_source
     from tensorkrowch.formats.quantics import _QuanticsVector
@@ -405,14 +383,10 @@ def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
     raw_callable = callable(source) and not isinstance(source, TensorSource)
     if isinstance(source, _QuanticsVector):
         source_layout = source.layout
-        if len(source.digit_positions) != source.n_sites:
-            raise ValueError('Scalar ALS does not support Quantics output sites')
         source_space = 'digits' if source_space is None else source_space
         if source_space != 'digits':
             raise ValueError('Quantics formats should use source_space="digits"')
         coordinate_map = source.coordinate_map if coordinate_map is None else coordinate_map
-        domain = source.domain if domain is None else domain
-        computational_grid, out_of_domain = source.computational_grid, source.out_of_domain
         source = as_tensor_source(source)
         raw_callable = False
     elif source_space is None:
@@ -432,7 +406,7 @@ def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
 
 def _quantized_observations(observations, values, in_dim, weights, layout, *,
                             sample_space='indices', coordinate_map=None,
-                            domain=None, computational_grid='endpoints',
+                            domain=None, computational_grid='left',
                             out_of_domain='error'):
     """Encodes completion rows while keeping values and weights paired."""
     from tensorkrowch.decompositions.als.problem import ObservedEntries

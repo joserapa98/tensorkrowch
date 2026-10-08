@@ -2,13 +2,7 @@
 
 from tensorkrowch.decompositions.sketching.base import RecursiveSketching
 from tensorkrowch.decompositions.sketching.evaluations import EvaluationView
-from tensorkrowch.decompositions.sketching.fitting import (
-    BasisFitter,
-    FixedEmbeddingFitter,
-    InputFitter,
-    QTTInputFitter,
-    TrainableEmbeddingFitter,
-)
+from tensorkrowch.decompositions.sketching.fitting import (BasisFitter, FixedEmbeddingFitter, InputFitter, TrainableEmbeddingFitter)
 from tensorkrowch.decompositions.sketching.projections import (
     IdentityRangeProjector,
     RandomizedRangeProjector,
@@ -19,8 +13,8 @@ from tensorkrowch.decompositions.sketching.quantization import (
     ExplicitGridMap,
     QuantizedLayout,
     QuantizedSourceAdapter,
-    UniformCoordinateMap,
-    WarpedCoordinateMap,
+    AffineCoordinateMap,
+    FunctionalCoordinateMap,
 )
 from tensorkrowch.decompositions.sketching.sketches import (
     CoreDeterminingSystem,
@@ -41,15 +35,8 @@ from tensorkrowch.decompositions.sketching.transforms import (
     LocalTransformContext,
     LocalValueTransform,
 )
-from tensorkrowch.decompositions.sketching.tt import (QTTTuckerRSS, TTRS,
-                                                      TTRSS, qtt_rss,
-                                                      qtt_tucker_rss, tt_rs,
-                                                      tt_rss)
-from tensorkrowch.decompositions.sketching.tr import (QTRTuckerRSS,
-                                                      SketchGaugeRecursion,
-                                                      TRRS, TRRSS, qtr_rss,
-                                                      qtr_tucker_rss, tr_rs,
-                                                      tr_rss)
+from tensorkrowch.decompositions.sketching.tt import (TTRS, TTRSS, qtt_rss, tt_rs, tt_rss)
+from tensorkrowch.decompositions.sketching.tr import (SketchGaugeRecursion, TRRS, TRRSS, qtr_rss, tr_rs, tr_rss)
 
 
 __all__ = [
@@ -59,14 +46,13 @@ __all__ = [
     'FixedEmbeddingFitter',
     'BasisFitter',
     'TrainableEmbeddingFitter',
-    'QTTInputFitter',
     'RangeProjector',
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
     'QuantizedLayout',
     'CoordinateMap',
-    'UniformCoordinateMap',
-    'WarpedCoordinateMap',
+    'AffineCoordinateMap',
+    'FunctionalCoordinateMap',
     'ExplicitGridMap',
     'QuantizedSourceAdapter',
     'SketchOperator',
@@ -89,14 +75,10 @@ __all__ = [
     'TTRS',
     'tt_rs',
     'qtt_rss',
-    'QTTTuckerRSS',
-    'qtt_tucker_rss',
     'SketchGaugeRecursion',
     'TRRS',
     'tr_rs',
     'qtr_rss',
-    'QTRTuckerRSS',
-    'qtr_tucker_rss',
     'TRRSS',
     'tr_rss',
 ]

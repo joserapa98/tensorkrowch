@@ -6,6 +6,7 @@ from typing import (Callable, Optional, Sequence, Tuple, Union)
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions.observers import _normalize_verbosity
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions._truncation import _TruncationSpec
@@ -515,9 +516,7 @@ class _OutputSpec:
         if indices.ndim != 2 or indices.shape[1] != self.n_output_sites:
             raise ValueError(
                 '`indices` should have shape (batch, n_output_sites)')
-        if indices.dtype not in (
-                torch.int8, torch.int16, torch.int32, torch.int64,
-                torch.uint8):
+        if indices.dtype not in _INTEGER_DTYPES:
             raise TypeError('`indices` should contain integers')
         indices = indices.to(dtype=torch.long)
         for axis, dim in enumerate(self.out_shape):
@@ -549,9 +548,7 @@ class _OutputSpec:
             raise TypeError('`labels` should be torch.Tensor type')
         if labels.ndim != 1:
             raise ValueError('`labels` should have shape (batch,)')
-        if labels.dtype not in (
-                torch.int8, torch.int16, torch.int32, torch.int64,
-                torch.uint8):
+        if labels.dtype not in _INTEGER_DTYPES:
             raise TypeError('`labels` should contain integers')
         labels = labels.to(dtype=torch.long)
         if torch.any(labels < 0) or torch.any(labels >= self.flat_dim):
@@ -670,9 +667,7 @@ class _OutputSpec:
             return embeddings.evaluate(axis, values)
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
-        if values.ndim != 1 or values.dtype not in (
-                torch.int8, torch.int16, torch.int32, torch.int64,
-                torch.uint8):
+        if values.ndim != 1 or values.dtype not in _INTEGER_DTYPES:
             raise TypeError('Output-site values should be integer indices')
         if torch.any(values < 0) or \
                 torch.any(values >= self.out_shape[axis]):

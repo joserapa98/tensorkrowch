@@ -1,51 +1,56 @@
 """
-Compact tensor formats implemented directly with PyTorch.
+This module contains:
 
-These lightweight classes represent fixed data or functions and support
-numerical decomposition and solver algorithms. They do not construct the
-nodes, edges or operation graphs of TensorKrowch. Models remain useful for
-parameterized functions learned from data, with optimized repeated operation
-flows across gradient descent steps. Formats preserve autograd where their
-PyTorch operations support it; they do not detach inputs implicitly.
+    Format interfaces:
+        * TensorFormat, TensorFormat1D
 
-This script contains:
-    * TensorFormat, TensorFormat1D, TensorFormat2D
-    * TT, TR
-    * TTM, TRM
-    * SampleError
-    * BondFactors, VidalGauge, RoundingInfo
-    * GaugeOrbit, TensorRingOrbit
-    * BlockLayout, UnblockInfo, SplitBlock, split_block
-    * QuantizedLayout, CoordinateMap and coordinate maps
-    * QTT, QTR
-    * QTTM, QTRM
-    * QTTTucker, QTRTucker
+    Formats:
+        * TT, TR, TTM, TRM
+        * QTT, QTR, QTTM, QTRM
+
+    Bonds and gauges:
+        * BondFactors1D, VidalGauge
+        * GaugeOrbit, TensorRingOrbit
+
+    Layouts and coordinate maps:
+        * QuantizedLayout, CoordinateMap
+        * AffineCoordinateMap, FunctionalCoordinateMap, ExplicitGridMap
+
+    Blocks:
+        * BlockLayout, SplitBlock
+        * split_block
+
+    Diagnostics:
+        * SampleError, RoundingInfo, MinimalCanonicalInfo
+
+Module flow:
+
+    cores ─> TT / TR / TTM / TRM
+    cores + QuantizedLayout + CoordinateMap ─> QTT / QTR / QTTM / QTRM
+    formats <─> models
+    decompositions ─> formats + diagnostics
 """
 
-from tensorkrowch.formats.base import TensorFormat, TensorFormat2D, SampleError
-from tensorkrowch.formats._chain import TensorFormat1D
-from tensorkrowch.formats.blocking import (BlockLayout, UnblockInfo,
-                                           SplitBlock, split_block)
-from tensorkrowch.formats.bonds import BondFactors, VidalGauge
-from tensorkrowch.formats.orbits import (GaugeOrbit, TensorRingOrbit,
+from tensorkrowch.formats.base import (RoundingInfo, SampleError, BlockLayout,
+                                       SplitBlock, TensorFormat)
+from tensorkrowch.formats.bonds import BondFactors1D, VidalGauge
+from tensorkrowch.formats.formats1d import (TensorFormat1D,
+                                            TT, TR, TTM, TRM,
+                                            split_block)
+from tensorkrowch.formats.orbits import (GaugeOrbit,
+                                         TensorRingOrbit,
                                          MinimalCanonicalInfo)
 from tensorkrowch.formats.quantics import QTT, QTR, QTTM, QTRM
-from tensorkrowch.formats.quantization import (QuantizedLayout, CoordinateMap,
-                                               UniformCoordinateMap,
-                                               WarpedCoordinateMap,
+from tensorkrowch.formats.quantization import (QuantizedLayout,
+                                               CoordinateMap,
+                                               AffineCoordinateMap,
+                                               FunctionalCoordinateMap,
                                                ExplicitGridMap)
-from tensorkrowch.formats.rounding import RoundingInfo
-from tensorkrowch.formats.tr import TR
-from tensorkrowch.formats.trm import TRM
-from tensorkrowch.formats.tt import TT
-from tensorkrowch.formats.ttm import TTM
-from tensorkrowch.formats.tucker import QTTTucker, QTRTucker
 
 
 __all__ = [
     'TensorFormat',
     'TensorFormat1D',
-    'TensorFormat2D',
     'SampleError',
 
     'TT',
@@ -56,15 +61,12 @@ __all__ = [
     'QTR',
     'QTTM',
     'QTRM',
-    'QTTTucker',
-    'QTRTucker',
 
-    'BondFactors',
+    'BondFactors1D',
     'VidalGauge',
     'RoundingInfo',
 
     'BlockLayout',
-    'UnblockInfo',
     'SplitBlock',
     'split_block',
 
@@ -74,7 +76,7 @@ __all__ = [
 
     'QuantizedLayout',
     'CoordinateMap',
-    'UniformCoordinateMap',
-    'WarpedCoordinateMap',
+    'AffineCoordinateMap',
+    'FunctionalCoordinateMap',
     'ExplicitGridMap',
 ]

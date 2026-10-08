@@ -32,6 +32,15 @@ from tensorkrowch.config import (_validate_svd_method, get_svd_method,
 from tensorkrowch.config import svd_method as _svd_method_context
 
 
+_INTEGER_DTYPES = (
+    torch.uint8,
+    torch.int8,
+    torch.int16,
+    torch.int32,
+    torch.int64
+)
+
+
 def print_list(lst: List) -> Text:
     return '[' + '\n '.join(f'{item}' for item in lst) + ']'
 

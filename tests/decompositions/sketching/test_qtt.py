@@ -9,7 +9,7 @@ import tensorkrowch as tk
 def _physical_grid(layout, coordinate_map, domain):
     variable_indices = torch.cartesian_prod(*(
         torch.arange(size) for size in layout.grid_size))
-    if layout.n_variables == 1:
+    if layout.n_coordinates == 1:
         variable_indices = variable_indices.reshape(-1, 1)
     physical = coordinate_map.from_indices(
         variable_indices, layout.grid_size, domain)
@@ -97,34 +97,38 @@ class TestQTTRSS:  # MARK: TestQTTRSS
 
         assert torch.allclose(result.evaluate(digits), 1 + physical[:, 0])
 
-    def test_tensor_outputs_become_basis_sites(self):
-        layout = tk.decompositions.QuantizedLayout(1, base=2, level=2)
-        indices = torch.arange(4).reshape(-1, 1)
-        physical = indices.to(torch.float64) / 3
-        repeated = physical.repeat_interleave(4, dim=0)
-        labels = torch.arange(4).repeat(4)
+    @pytest.mark.parametrize('method', ['qtt_rss', 'qtr_rss'])
+    @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])
+    def test_quantized_rss_rejects_tensor_outputs(self, method, out_shape):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
         def function(values):
-            base = 1 + values[:, 0]
-            return torch.stack((
-                base, base + 1, 2 * base, 2 * base + 1), dim=1
-            ).reshape(-1, 2, 2)
+            return torch.ones(values.shape[0], *out_shape, dtype=values.dtype,
+                              device=values.device)
 
-        cores, info = tk.decompositions.qtt_rss(
-            function,
-            repeated,
-            layout=layout,
-            domain=torch.tensor([0., 1.], dtype=torch.float64),
-            labels=labels,
-            rank=4,
-            legacy_projection=False,
-            return_info=True)
+        with pytest.raises(ValueError, match='scalar function outputs'):
+            getattr(tk.decompositions, method)(
+                function, physical, layout=layout,
+                domain=torch.tensor([0., 1.], dtype=torch.float64), rank=4,
+                legacy_projection=False, return_result=True)
 
-        assert len(cores) == 4
-        assert info['metadata']['out_shape'] == (2, 2)
-        assert info['metadata']['quantization']['domain'].dtype == \
-            torch.float64
-        assert info['metrics']['errors'][0]['relative'] < 1e-9
+    @pytest.mark.parametrize('method', ['qtt_rss', 'qtr_rss'])
+    @pytest.mark.parametrize('singleton_axis', [False, True])
+    def test_quantized_rss_accepts_scalar_outputs(self, method, singleton_axis):
+        layout = tk.decompositions.QuantizedLayout(1, base=2, level=3)
+        physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
+
+        def function(values):
+            result = torch.ones_like(values[:, 0])
+            return result.unsqueeze(-1) if singleton_axis else result
+
+        result = getattr(tk.decompositions, method)(
+            function, physical, layout=layout,
+            domain=torch.tensor([0., 1.], dtype=torch.float64), rank=1,
+            legacy_projection=False, return_result=True)
+        assert result.n_sites == layout.n_sites
+        assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))
 
     def test_physical_samples_require_an_inverse_for_custom_maps(self):
         layout = tk.decompositions.QuantizedLayout(1, base=2, level=2)
@@ -162,7 +166,7 @@ class TestQTRRSS:  # MARK: TestQTRRSS
             result.evaluate(layout.encode_indices(indices)),
             torch.ones(indices.shape[0]))
         assert info['metadata']['algorithm'] == 'qtr_rss'
-        assert info['metadata']['quantization']['n_variables'] == 1
+        assert info['metadata']['quantization']['n_coordinates'] == 1
 
 
 __all__ = []

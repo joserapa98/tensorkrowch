@@ -9,6 +9,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.formats import TT, TTM
 
 from tensorkrowch.decompositions.results import (TTDecomposition,
@@ -47,7 +48,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         if isinstance(tensor, TT):
             if tensor.n_batches:
                 raise ValueError('Batched TT sources are not supported')
-            cores = list(tensor._standard_cores())
+            cores = list(tensor._effective_cores())
         else:
             if isinstance(tensor, torch.Tensor):
                 raise TypeError(
@@ -156,9 +157,7 @@ class TTTensorSource(_SourceEvaluationTracker):
         """Validates a consecutive partial discrete configuration batch."""
         if not isinstance(configurations, torch.Tensor):
             raise TypeError(f'`{name}` should be torch.Tensor type')
-        if configurations.ndim != 2 or configurations.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64):
+        if configurations.ndim != 2 or configurations.dtype not in _INTEGER_DTYPES:
             raise TypeError(
                 f'`{name}` should be a two-dimensional integer tensor')
         stop = start + configurations.shape[1]
@@ -387,9 +386,7 @@ class TTTensorSource(_SourceEvaluationTracker):
             return result
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
-        if (values.ndim != 1) or (values.dtype not in (
-                torch.uint8, torch.int8, torch.int16, torch.int32,
-                torch.int64)):
+        if (values.ndim != 1) or (values.dtype not in _INTEGER_DTYPES):
             raise TypeError('`values` should be a one-dimensional integer tensor')
         values = values.to(device=self.device, dtype=torch.long)
         if torch.any(values < 0) or torch.any(values >= self._in_dim[site]):

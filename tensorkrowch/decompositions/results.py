@@ -3,6 +3,7 @@ This script contains:
 
     Shared decomposition diagnostics:
         * TensorDecomposition
+
     Format subclasses with decomposition diagnostics:
         * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition
         * QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition
@@ -716,25 +717,33 @@ class QTRMDecomposition(TensorDecomposition, QTRM):  # MARK: QTRMDecomposition
                           'in_coordinate_map', 'out_coordinate_map')
 
 
-def _quantics_result(result: 'TensorDecomposition',
-                     quantization: Optional[
-                         Union[QuantizedLayout, Tuple[QuantizedLayout, QuantizedLayout]]] = None,
-                     *,
-                     adapter: Optional['QuantizedSourceAdapter'] = None) -> 'TensorDecomposition':
+def _quantics_result(
+        result: 'TensorDecomposition',
+        quantization: Optional[
+            Union[QuantizedLayout,
+                  Tuple[QuantizedLayout, QuantizedLayout]]] = None,
+        *,
+        adapter: Optional['QuantizedSourceAdapter'] = None
+    ) -> 'TensorDecomposition':
     """
     Attaches coordinate meaning to fitted cores without numerical refitting.
     """
     if quantization is None:
         return result
-    kwargs = dict(metrics=result.metrics, metadata=result.metadata,
+
+    kwargs = dict(metrics=result.metrics,
+                  metadata=result.metadata,
                   n_batches=result.n_batches)
-    unit_domain = torch.tensor([0., 1.], device=result.device,
+    unit_domain = torch.tensor([0., 1.],
+                               device=result.device,
                                dtype=result.cores[0].real.dtype)
+
     if isinstance(quantization, tuple):
         cls = QTRMDecomposition if result.topology == 'trm' else QTTMDecomposition
         kwargs.update(in_n_coordinates=quantization[0].n_coordinates,
                       out_n_coordinates=quantization[1].n_coordinates,
-                      in_layout=quantization[0], out_layout=quantization[1],
+                      in_layout=quantization[0],
+                      out_layout=quantization[1],
                       in_coordinate_map=AffineCoordinateMap(
                           unit_domain, quantization[0].grid_size),
                       out_coordinate_map=AffineCoordinateMap(
@@ -747,15 +756,21 @@ def _quantics_result(result: 'TensorDecomposition',
                                     if adapter is not None else
                                     AffineCoordinateMap(
                                         unit_domain, quantization.grid_size))
+
     wrapped = cls(result.cores, **kwargs)
     wrapped.metadata = dict(result.metadata)
     if 'quantization' not in wrapped.metadata:
         layouts = quantization if isinstance(quantization, tuple) else (quantization,)
         wrapped.metadata['quantization'] = [
-            {'base': layout.base, 'level': layout.level,
-             'sites': layout.sites(), 'grid_size': layout.grid_size}
+            {'base': layout.base,
+             'level': layout.level,
+             'sites': layout.sites(),
+             'grid_size': layout.grid_size}
             for layout in layouts]
-    return wrapped.to(device=result.device)
+
+    if adapter is not None:
+        wrapped = wrapped.to(device=result.device)
+    return wrapped
 
 
 _DecompositionOutput = Union[

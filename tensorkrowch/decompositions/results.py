@@ -79,6 +79,24 @@ class _ResultState:  # MARK: _ResultState
             raise TypeError('`metadata` should be dict type')
         super().__init__(cores, n_batches=n_batches, **kwargs)
 
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Optional[Sequence[int]],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional['TensorFormat1D'] = None,
+                                 product: bool = False) -> 'TensorFormat1D':
+        """Preserves the result contract when applying an operator to data."""
+        if (self._family == 'matrix') and product and other is None:
+            cls = TRDecomposition if cyclic else TTDecomposition
+            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
+            return cls(cores, n_batches=n_batches, metadata={
+                'operation': 'trm_apply' if cyclic else 'ttm_apply'})
+        return super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic,
+            other=other, product=product)
+
     def as_info(self) -> Dict[str, Any]:
         """
         Returns current dimensions and historical decomposition diagnostics.
@@ -116,24 +134,6 @@ class _ResultState:  # MARK: _ResultState
         return ErrorRecord(kind=record.kind, absolute=record.absolute,
                            relative=record.relative, size=record.size,
                            denominator=record.denominator)
-
-    def _new_from_standard_cores(self,
-                                 cores: Sequence[torch.Tensor],
-                                 in_dim: Optional[Sequence[int]],
-                                 out_dim: Optional[Sequence[int]],
-                                 n_batches: int,
-                                 cyclic: bool,
-                                 other: Optional['TensorFormat1D'] = None,
-                                 product: bool = False) -> 'TensorFormat1D':
-        """Preserves the result contract when applying an operator to data."""
-        if self._family == 'matrix' and product and other is None:
-            cls = TRDecomposition if cyclic else TTDecomposition
-            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
-            return cls(cores, n_batches=n_batches, metadata={
-                'operation': 'trm_apply' if cyclic else 'ttm_apply'})
-        return super()._new_from_standard_cores(
-            cores, in_dim, out_dim, n_batches, cyclic, other=other,
-            product=product)
 
 
 class TTDecomposition(_ResultState, TT, TensorDecomposition1D):  # MARK: TTDecomposition

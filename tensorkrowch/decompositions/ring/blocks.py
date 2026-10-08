@@ -25,11 +25,14 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.metrics import DecompositionMetrics
 from tensorkrowch.formats.formats1d import split_block
-from tensorkrowch.decompositions.metrics import ErrorRecord, TruncationRecord, TimingRecord
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
+from tensorkrowch.decompositions._truncation import _TruncationSpec
+from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+                                                 ErrorRecord,
+                                                 TimingRecord,
+                                                 TruncationRecord)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -45,7 +48,7 @@ def _normalize_positive_int(value: int, name: str) -> int:
 
 
 def _normalize_in_dim(provider: Any) -> Tuple[int, ...]:
-    """Obtains input dimensions from a provider or a direct sequence."""
+    """Obtains input dimensions from a ``provider`` or a direct sequence."""
     in_dim = getattr(provider, 'in_dim', provider)
     if isinstance(in_dim, (str, bytes)):
         raise TypeError(
@@ -86,7 +89,7 @@ def _normalize_rank_spec(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
 
 
 @dataclass(frozen=True)
-class BlockSelection:
+class BlockSelection:  # MARK: BlockSelection
     """Describes a contiguous block selected for a local ring operation."""
 
     sites: Sequence[int]  # Ordered zero-based sites represented by this object
@@ -151,8 +154,9 @@ class BlockSelection:
         return self.sites[-1]
 
 
-class CentralBlockSelector:
-    """Selects a refinable block by balanced growth around a seed site.
+class CentralBlockSelector:  # MARK: CentralBlockSelector
+    """
+    Selects a refinable block by balanced growth around a seed site.
 
     The provider can be any object exposing ``in_dim`` or the input-dimension
     sequence itself. ``rank`` follows the standard TR convention: a scalar is
@@ -165,7 +169,8 @@ class CentralBlockSelector:
                center: Optional[int] = None,
                *,
                bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
-        """Grows a contiguous block until its input capacity exceeds the rank
+        """
+        Grows a contiguous block until its input capacity exceeds the ``rank``
         product.
 
         Parameters
@@ -178,14 +183,14 @@ class CentralBlockSelector:
         center : int, optional
             Initial site. Defaults to the middle of the allowed interval.
         bounds : tuple[int, int], optional
-            Inclusive lower and upper site bounds. Defaults to the entire
+            Inclusive lower and upper site ``bounds``. Defaults to the entire
             chain.
 
         Returns
         -------
         BlockSelection
             Selected sites, growth history and capacity checks. Exhausting the
-            bounds returns an infeasible selection with a reason; it does not
+            ``bounds`` returns an infeasible selection with a reason; it does not
             discard the block already reached. No tensors are contracted during
             selection.
         """
@@ -277,7 +282,7 @@ class CentralBlockSelector:
             growth=growth)
 
 
-class PrescribedCentralBlockSelector(CentralBlockSelector):
+class PrescribedCentralBlockSelector(CentralBlockSelector):  # MARK: PrescribedCentralBlockSelector
     """Selects one fixed center without adaptive injectivity growth."""
 
     def select(self,
@@ -286,12 +291,13 @@ class PrescribedCentralBlockSelector(CentralBlockSelector):
                center: Optional[int] = None,
                *,
                bounds: Optional[Tuple[int, int]] = None) -> BlockSelection:
-        """Selects one prescribed center without adaptive block growth.
+        """
+        Selects one prescribed ``center`` without adaptive block growth.
 
         Uses the same arguments and returns as
-        :meth:`CentralBlockSelector.select`. The fixed-rank TT-to-TR path
+        :meth:`CentralBlockSelector.select`. The fixed-``rank`` TT-to-TR path
         deliberately opens one site, even if its input capacity does not
-        satisfy the adaptive selector's strict rank-product test.
+        satisfy the adaptive selector's strict ``rank``-product test.
         """
         in_dim = _normalize_in_dim(provider)
         rank_spec = _normalize_rank_spec(rank, len(in_dim))
@@ -318,7 +324,7 @@ class PrescribedCentralBlockSelector(CentralBlockSelector):
 
 
 @dataclass(frozen=True)
-class RingRankEstimate:
+class RingRankEstimate:  # MARK: RingRankEstimate
     """Stores a balanced ring-rank estimate and its cap diagnostics."""
 
     left_rank: int  # Estimated left virtual rank
@@ -353,7 +359,7 @@ class RingRankEstimate:
         return self.left_rank, self.right_rank, self.cyclic_rank
 
 
-class RingRankEstimator:
+class RingRankEstimator:  # MARK: RingRankEstimator
     """Estimates balanced adjacent and cyclic ranks under explicit caps."""
 
     def estimate(self,
@@ -361,7 +367,8 @@ class RingRankEstimator:
                  right_dim: int,
                  auxiliary_rank: int,
                  rank_caps: Sequence[int]) -> RingRankEstimate:
-        """Estimates three compatible local ring ranks under explicit caps.
+        """
+        Estimates three compatible local ring ranks under explicit caps.
 
         Parameters
         ----------
@@ -448,8 +455,10 @@ class RingRankEstimator:
 
 
 @dataclass(frozen=True)
-class BlockSplit:
-    """Stores a TT-SVD split of a supercore and optional explicit padding."""
+class BlockSplit:  # MARK: BlockSplit
+    """
+    Stores a TT-SVD split of a supercore and optional explicit ``padding``.
+    """
 
     cores: Sequence[torch.Tensor]  # Raw cores in site order
     in_dim: Sequence[int]  # Input dimension at each represented site
@@ -529,7 +538,7 @@ class BlockSplit:
 
 def _pad_block_cores(cores: Sequence[torch.Tensor],
                      rank: int) -> Tuple[torch.Tensor, ...]:
-    """Zero-pads every internal link to one explicitly requested rank."""
+    """Zero-pads every internal link to one explicitly requested ``rank``."""
     padded = []
     for site, core in enumerate(cores):
         left_rank = core.shape[0] if site == 0 else rank
@@ -540,19 +549,19 @@ def _pad_block_cores(cores: Sequence[torch.Tensor],
     return tuple(padded)
 
 
-def split_block_ttsvd(
-        block: torch.Tensor,
-        in_dim: Sequence[int],
-        rank: Optional[int] = None,
-        cutoff: Optional[float] = None,
-        atol: Optional[float] = None,
-        rtol: Optional[float] = None,
-        cum_percentage: Optional[float] = None,
-        renormalize: bool = False,
-        pad_rank: bool = False,
-        collect_metrics: bool = False,
-        out_device: Optional[Union[str, torch.device]] = None) -> BlockSplit:
-    r"""Splits a supercore while retaining its two external rank axes.
+def split_block_ttsvd(block: torch.Tensor,
+                      in_dim: Sequence[int],
+                      rank: Optional[int] = None,
+                      cutoff: Optional[float] = None,
+                      atol: Optional[float] = None,
+                      rtol: Optional[float] = None,
+                      cum_percentage: Optional[float] = None,
+                      renormalize: bool = False,
+                      pad_rank: bool = False,
+                      collect_metrics: bool = False,
+                      out_device: Optional[Union[str, torch.device]] = None) -> BlockSplit:
+    r"""
+    Splits a supercore while retaining its two external ``rank`` axes.
 
     ``block`` has shape ``(left_rank, *in_dim, right_rank)``. The external
     ranks are fused into the first and last TT-SVD inputs and restored after
@@ -566,7 +575,7 @@ def split_block_ttsvd(
     in_dim : sequence[int]
         Input dimensions of the sites to recover, in their original order.
     rank : int, optional
-        Maximum rank allowed at every link. At each SVD cut, at most this many
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -580,7 +589,7 @@ def split_block_ttsvd(
         Relative tolerance over the tail sum of squared singular values.
         Starting from the smallest singular value, values are discarded while
         the tail sum of squares divided by the total sum of squares is ``<=
-        rtol``. It must be finite and in ``[0, 1]``.
+        ``rtol````. It must be finite and in ``[0, 1]``.
     cum_percentage : float, optional
         Minimum fraction of squared singular-value mass to keep. Equivalent to
         setting ``rtol = 1 - cum_percentage``. It must be finite and in ``[0,
@@ -588,7 +597,7 @@ def split_block_ttsvd(
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
     renormalize : bool
         Whether the TT-SVD subroutine extracts intermediate scales. Default is
@@ -658,7 +667,10 @@ def split_block_ttsvd(
     metrics = DecompositionMetrics()
     norm = block.norm() if collect_metrics else None
 
-    def record_cut(site, info, singular_values, log_scale):
+    def record_cut(site: Optional[int],
+                   info: Any,
+                   singular_values: Any,
+                   log_scale: Any) -> None:
         metrics.truncations.append(TruncationRecord.from_svd_info(
             info, site=site, log_scale=log_scale, global_norm=norm,
             singular_values=singular_values))
@@ -705,7 +717,6 @@ def split_block_ttsvd(
             'left_rank': left_rank,
             'right_rank': right_rank,
         })
-
 
 __all__ = [
     'BlockSelection',

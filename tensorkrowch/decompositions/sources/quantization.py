@@ -1,51 +1,111 @@
-"""Quantized source adaptation; structural layouts and maps live in formats."""
+"""
+This script contains:
+
+    Classes:
+        * QuantizedSourceAdapter
+
+    Functions:
+        * _quantize_tensor
+        * _quantize_matrix
+        * _prepare_quantized_source
+        * _quantized_observations
+"""
 
 from math import prod
-from typing import Optional, Sequence, Tuple, Union
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+
 import torch
-from tensorkrowch.decompositions.sources.base import (ConfigurationBatch, TensorSource,
-    _discrete_indices, _fiber_configurations, _SourceEvaluationTracker)
-from tensorkrowch.decompositions.sources.sparse import EmpiricalDistribution, SparseTensorSource
-from tensorkrowch.formats.quantization import (
-    QuantizedLayout,
-    CoordinateMap,
-    AffineCoordinateMap,
-    FunctionalCoordinateMap,
-    ExplicitGridMap,
-    _CompositeCoordinateMap,
-    Domain)
 
-class QuantizedSourceAdapter(_SourceEvaluationTracker):
-    """Presents a physical or variable-index source on quantized digit sites.
+from tensorkrowch.formats.quantization import (AffineCoordinateMap,
+                                               CoordinateMap,
+                                               Domain,
+                                               ExplicitGridMap,
+                                               FunctionalCoordinateMap,
+                                               QuantizedLayout,
+                                               _CompositeCoordinateMap)
 
-    ``source_space="physical"`` maps decoded grid indices to physical
-    coordinates before calling a function or coordinate-aware ``TensorSource``.
-    ``source_space="indices"`` sends one decoded integer per variable to a
+from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
+                                                      TensorSource,
+                                                      _SourceEvaluationTracker,
+                                                      _discrete_indices,
+                                                      _fiber_configurations)
+from tensorkrowch.decompositions.sources.sparse import (EmpiricalDistribution,
+                                                        SparseTensorSource)
+
+
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.als.problem import ObservedEntries
+    from tensorkrowch.decompositions.sources.factory import SourceLike
+    from tensorkrowch.decompositions.svd._matrix import _MatrixInput
+
+
+class QuantizedSourceAdapter(_SourceEvaluationTracker):  # MARK: QuantizedSourceAdapter
+    """
+    Presents domain coordinates or grid indices on quantized digit sites.
+
+    ``source_space="physical"`` maps decoded grid indices to domain coordinates
+    before calling a function or coordinate-aware ``TensorSource``.
+    ``source_space="indices"`` sends one decoded integer per coordinate to a
     discrete source. ``source_space="digits"`` is reserved for an already
     quantized source and requires explicit compatible ``source_layout``
     metadata; digit columns are reordered when the two layouts differ.
 
-    Physical sparse support and empirical datasets use the class methods
+    Sparse support in domain coordinates and empirical datasets use
     :meth:`from_physical_support` and :meth:`from_physical_dataset`. They
     quantize before constructing the sparse source, so collisions are
     coalesced by the existing sparse/empirical contracts.
+
+    Parameters
+    ----------
+    source : TensorSource or callable
+        Value provider in the space selected by ``source_space``. A callable
+        receives domain coordinates with shape ``(batch_size, n_coordinates)``.
+    layout : QuantizedLayout
+        Digit bases, levels and site ordering.
+    coordinate_map : CoordinateMap or sequence of CoordinateMap, optional
+        Domain-to-grid conversion. Its ``grid_size`` must match ``layout``.
+        A sequence combines one map per coordinate.
+    domain : sequence or torch.Tensor, optional
+        Intervals for the default affine map. Cannot accompany a supplied map.
+    source_space : {"physical", "indices", "digits"}, optional
+        ``"physical"`` denotes coordinates in the domain; ``"indices"`` denotes
+        grid indices; ``"digits"`` denotes an already quantized source.
+    source_layout : QuantizedLayout, optional
+        Required only for ``source_space="digits"`` to reorder source sites.
+    out_shape : sequence[int], optional
+        Output shape after the evaluation batch axis; inferred when omitted.
+    dtype : torch.dtype, optional
+        Expected output dtype, inferred when omitted.
+    device : str or torch.device, optional
+        Evaluation device, inherited from a source or ``"cpu"`` for a callable.
+    computational_grid : str or float, optional
+        ``grid_offset`` for the default affine map; defaults to ``"left"``.
+    out_of_domain : {"error", "clip"}, optional
+        Domain policy for the default affine map.
+
+    Examples
+    --------
+    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> source = tk.decompositions.QuantizedSourceAdapter(
+    ...     lambda coordinates: coordinates[:, 0].square(), layout)
+    >>> digits = layout.encode_indices(torch.tensor([[0], [2], [3]]))
+    >>> source.evaluate(tk.decompositions.ConfigurationBatch(digits))
+    tensor([0.0000, 0.2500, 0.5625])
     """
 
-    def __init__(
-            self,
-            source,
-            layout: QuantizedLayout,
-            coordinate_map: Optional[
-                Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-            domain: Domain = None,
-            *,
-            source_space: str = 'physical',
-            source_layout: Optional[QuantizedLayout] = None,
-            out_shape: Optional[Sequence[int]] = None,
-            dtype: Optional[torch.dtype] = None,
-            device: Optional[Union[str, torch.device]] = None,
-            computational_grid: Union[str, float] = 'left',
-            out_of_domain: str = 'error') -> None:
+    def __init__(self,
+                 source: Union[TensorSource, Callable],
+                 layout: QuantizedLayout,
+                 coordinate_map: Optional[Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+                 domain: Domain = None,
+                 *,
+                 source_space: str = 'physical',
+                 source_layout: Optional[QuantizedLayout] = None,
+                 out_shape: Optional[Sequence[int]] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 device: Optional[Union[str, torch.device]] = None,
+                 computational_grid: Union[str, float] = 'left',
+                 out_of_domain: str = 'error') -> None:
         self._initialize_evaluation_stats()
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
@@ -134,12 +194,12 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
 
     @property
     def out_shape(self) -> Optional[Tuple[int, ...]]:
-        """Declared or inferred physical-source output shape."""
+        """Declared or inferred source output shape."""
         return self._out_shape
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
-        """Declared or inferred physical-source dtype."""
+        """Declared or inferred source dtype."""
         return self._dtype
 
     @property
@@ -163,7 +223,7 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         return getattr(self.coordinate_map, 'out_of_domain', 'error')
 
     def indices_to_physical(self, indices: torch.Tensor) -> torch.Tensor:
-        """Maps integer grid indices to coordinates in the domain."""
+        """Maps integer grid ``indices`` to coordinates in the domain."""
         return self.coordinate_map.from_indices(indices)
 
     def physical_to_indices(self,
@@ -173,12 +233,14 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
 
     def physical_to_digits(self,
                            domain_coordinates: torch.Tensor) -> torch.Tensor:
-        """Quantizes physical coordinates directly into scheduled digits."""
+        """Quantizes coordinates in the domain into scheduled digits."""
         return self.layout.encode_indices(
             self.physical_to_indices(domain_coordinates))
 
     def digits_to_physical(self, digits: torch.Tensor) -> torch.Tensor:
-        """Decodes scheduled digits and maps them to physical coordinates."""
+        """
+        Decodes scheduled ``digits`` and maps them to domain coordinates.
+        """
         return self.indices_to_physical(self.layout.decode_digits(digits))
 
     def _validate_values(self,
@@ -206,7 +268,9 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
         return values
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates scheduled digit configurations through the fixed adapter."""
+        """
+        Evaluates scheduled digit ``configurations`` through the fixed adapter.
+        """
         digits = _discrete_indices(
             configurations, self.in_dim, self._device)
         indices = self.layout.decode_digits(digits)
@@ -219,12 +283,12 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             values = self.source.evaluate(ConfigurationBatch(
                 indices, kind='indices'))
         else:
-            physical = self.indices_to_physical(indices)
+            coordinates = self.indices_to_physical(indices)
             if isinstance(self.source, TensorSource):
                 values = self.source.evaluate(ConfigurationBatch(
-                    physical, kind='features'))
+                    coordinates, kind='features'))
             else:
-                values = self.source(physical)
+                values = self.source(coordinates)
         values = self._validate_values(values, digits.shape[0])
         self._record_evaluation(points=digits.shape[0])
         return values
@@ -248,16 +312,15 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             configurations.batch_size, n_values, *result.shape[1:])
 
     @classmethod
-    def from_physical_support(
-            cls,
-            coordinates: torch.Tensor,
-            values: torch.Tensor,
-            layout: QuantizedLayout,
-            coordinate_map: Optional[
-                Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-            domain: Domain = None,
-            **kwargs) -> 'QuantizedSourceAdapter':
-        """Quantizes physical sparse support and coalesces grid collisions."""
+    def from_physical_support(cls,
+                              coordinates: torch.Tensor,
+                              values: torch.Tensor,
+                              layout: QuantizedLayout,
+                              coordinate_map: Optional[
+                                  Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+                              domain: Domain = None,
+                              **kwargs) -> 'QuantizedSourceAdapter':
+        """Quantizes sparse domain coordinates and coalesces grid collisions."""
         provisional = cls(
             lambda data: data.new_zeros(data.shape[0]),
             layout,
@@ -275,16 +338,17 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
             source_space='indices')
 
     @classmethod
-    def from_physical_dataset(
-            cls,
-            dataset: torch.Tensor,
-            layout: QuantizedLayout,
-            coordinate_map: Optional[
-                Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-            domain: Domain = None,
-            weights: Optional[torch.Tensor] = None,
-            **kwargs) -> 'QuantizedSourceAdapter':
-        """Quantizes a physical dataset into an empirical grid distribution."""
+    def from_physical_dataset(cls,
+                              dataset: torch.Tensor,
+                              layout: QuantizedLayout,
+                              coordinate_map: Optional[
+                                  Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+                              domain: Domain = None,
+                              weights: Optional[torch.Tensor] = None,
+                              **kwargs) -> 'QuantizedSourceAdapter':
+        """
+        Quantizes domain samples into an empirical grid distribution.
+        """
         dtype = torch.get_default_dtype() if weights is None else weights.dtype
         provisional = cls(
             lambda data: data.new_zeros(data.shape[0], dtype=dtype),
@@ -314,10 +378,13 @@ __all__ = [
 ]
 
 
-def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
+def _quantize_tensor(tensor: torch.Tensor,
+                     layout: QuantizedLayout,
                      n_batches: int = 0,
                      in_features: Optional[Sequence[int]] = None) -> torch.Tensor:
-    """Reshapes raw variable axes and orders digits without padding or fitting."""
+    """
+    Reshapes coordinate axes into ordered digits without padding or fitting.
+    """
     if not isinstance(layout, QuantizedLayout):
         raise TypeError('`quantization` should be QuantizedLayout type')
     if not isinstance(tensor, torch.Tensor):
@@ -325,17 +392,23 @@ def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
     if isinstance(n_batches, bool) or not isinstance(n_batches, int):
         raise TypeError('`n_batches` should be int type')
     if n_batches < 0 or n_batches >= tensor.ndim:
-        raise ValueError('n_batches should leave at least one variable axis')
-    features = tuple(range(n_batches, tensor.ndim)) if in_features is None else tuple(in_features)
+        raise ValueError('`n_batches` should leave at least one coordinate axis')
+    features = tuple(range(n_batches, tensor.ndim)) \
+        if in_features is None else tuple(in_features)
     if any(isinstance(axis, bool) or not isinstance(axis, int) or
-           not n_batches <= axis < tensor.ndim for axis in features) or len(set(features)) != len(features):
-        raise ValueError('in_features should select distinct non-batch tensor axes')
+           not n_batches <= axis < tensor.ndim for axis in features) or \
+            len(set(features)) != len(features):
+        raise ValueError(
+            '`in_features` should select distinct non-batch tensor axes')
     if tuple(tensor.shape[axis] for axis in features) != layout.grid_size:
-        raise ValueError('Raw variable dimensions should match quantization.grid_size')
+        raise ValueError(
+            'Coordinate dimensions should match `quantization.grid_size`')
     if len(features) != tensor.ndim - n_batches:
         raise ValueError(
             'Quantics vectors require a digit at every site; '
             '`in_features` should include every non-batch axis')
+
+    # Split coordinate axes into digits, then apply the requested site ordering.
     tensor = tensor.permute([*range(n_batches), *features])
     sites = [(coordinate, digit) for coordinate in range(layout.n_coordinates)
              for digit in range(layout.level[coordinate])]
@@ -346,9 +419,13 @@ def _quantize_tensor(tensor: torch.Tensor, layout: QuantizedLayout,
     return tensor.permute(permutation)
 
 
-def _quantize_matrix(tensor, in_dim, out_dim, axis_layout, quantization,
-                     family):
-    """Tensorizes matrix coordinate axes before the existing fused SVD engine."""
+def _quantize_matrix(tensor: torch.Tensor,
+                     in_dim: Optional[Union[int, Sequence[int]]],
+                     out_dim: Optional[Union[int, Sequence[int]]],
+                     axis_layout: str,
+                     quantization: Tuple[QuantizedLayout, QuantizedLayout],
+                     family: str) -> '_MatrixInput':
+    """Orders independently quantized matrix coordinates into paired digit sites."""
     from tensorkrowch.decompositions.svd._matrix import (
         _normalize_dim, _prepare_matrix_input)
 
@@ -407,11 +484,22 @@ def _quantize_matrix(tensor, in_dim, out_dim, axis_layout, quantization,
         interleaved, None, None, 'interleaved', family)
 
 
-def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
-                              device='cpu', batch_size=None, source_space=None,
-                              coordinate_map=None, domain=None,
-                              computational_grid='left', out_of_domain='error'):
-    """Presents raw discrete or physical variables through the shared digit source."""
+def _prepare_quantized_source(source: 'SourceLike',
+                              layout: Optional[QuantizedLayout],
+                              *,
+                              in_dim: Optional[Sequence[int]] = None,
+                              dtype: Optional[torch.dtype] = None,
+                              device: Optional[Union[str, torch.device]] = 'cpu',
+                              batch_size: Optional[int] = None,
+                              source_space: Optional[str] = None,
+                              coordinate_map: Optional[
+                                  Union['CoordinateMap', Sequence['CoordinateMap']]] = None,
+                              domain: 'Domain' = None,
+                              computational_grid: Union[str, float] = 'left',
+                              out_of_domain: str = 'error') -> 'QuantizedSourceAdapter':
+    """
+    Presents raw grid indices or domain coordinates through the shared digit ``source``.
+    """
     from tensorkrowch.decompositions.sources.factory import as_tensor_source
     from tensorkrowch.formats.quantics import _QuanticsVector
     if not isinstance(layout, QuantizedLayout):
@@ -429,7 +517,7 @@ def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
     elif source_space is None:
         source_space = 'physical' if raw_callable else 'indices'
     if in_dim is not None and tuple(in_dim) != layout.grid_size:
-        raise ValueError('Raw in_dim should match quantization.grid_size')
+        raise ValueError('Raw `in_dim` should match `quantization.grid_size`')
     if not raw_callable or source_space != 'physical':
         source = as_tensor_source(source, in_dim=layout.grid_size,
                                   out_shape=(), dtype=dtype,
@@ -441,11 +529,23 @@ def _prepare_quantized_source(source, layout, *, in_dim=None, dtype=None,
         computational_grid=computational_grid, out_of_domain=out_of_domain)
 
 
-def _quantized_observations(observations, values, in_dim, weights, layout, *,
-                            sample_space='indices', coordinate_map=None,
-                            domain=None, computational_grid='left',
-                            out_of_domain='error'):
-    """Encodes completion rows while keeping values and weights paired."""
+def _quantized_observations(
+        observations: Union['ObservedEntries', torch.Tensor],
+        values: torch.Tensor,
+        in_dim: Optional[Sequence[int]],
+        weights: Optional[torch.Tensor],
+        layout: Optional[QuantizedLayout],
+        *,
+        sample_space: str = 'indices',
+        coordinate_map: Optional[Union['CoordinateMap', Sequence['CoordinateMap']]] = None,
+        domain: 'Domain' = None,
+        computational_grid: Union[str, float] = 'left',
+        out_of_domain: str = 'error') -> Tuple[
+        'ObservedEntries',
+        Optional['QuantizedSourceAdapter']]:
+    """
+    Encodes completion rows while keeping ``values`` and ``weights`` paired.
+    """
     from tensorkrowch.decompositions.als.problem import ObservedEntries
     if not isinstance(layout, QuantizedLayout):
         raise TypeError('`quantization` should be QuantizedLayout type')

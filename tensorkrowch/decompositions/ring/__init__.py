@@ -33,8 +33,8 @@ reconstruction error without densifying the TT/TR networks.
 
 from tensorkrowch.decompositions.ring.blostr import BLOSTRLoopOpener, tr_blostr
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
-                                                     GaugeMap)
-from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
+                                                     GaugeMap,
+                                                     GaugeRecursion,
                                                      GaugeRecursionStep,
                                                      PseudoinverseGaugeRecursion,
                                                      TTCoreGaugeRecursion)

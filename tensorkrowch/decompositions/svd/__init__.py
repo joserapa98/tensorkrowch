@@ -55,10 +55,10 @@ interfaces instantiate the corresponding engine, run one fit and return its
 cores, optionally together with decomposition information.
 """
 
-from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd
 from tensorkrowch.decompositions.svd.tr import TRSVD, tr_svd
-from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd
 from tensorkrowch.decompositions.svd.trm import TRMSVD, trm_svd
+from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd
+from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd
 
 
 __all__ = [

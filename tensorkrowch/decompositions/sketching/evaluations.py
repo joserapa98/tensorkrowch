@@ -1,7 +1,22 @@
-"""Deduplicated evaluation plans shared by lazy Phi operators."""
+"""
+This script contains:
+
+    Classes:
+        * _EvaluationRequest
+        * _IncidenceMap
+        * EvaluationView
+        * _EvaluationPlan
+        * _EvaluationRegistry
+        * _EvaluationPlanBuilder
+        * _EvaluationSession
+
+    Functions:
+        * _site_values
+        * _concatenate_configurations
+"""
 
 from dataclasses import dataclass
-from typing import (Optional, Sequence, Tuple)
+from typing import Any, Optional, Sequence, TYPE_CHECKING, Tuple
 
 import torch
 
@@ -13,8 +28,13 @@ from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource)
 
 
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.sketching.transforms import GlobalValueTransform
+
+
 def _site_values(
-        configurations: ConfigurationBatch) -> Tuple[torch.Tensor, ...]:
+    configurations: ConfigurationBatch
+) -> Tuple[torch.Tensor, ...]:
     """Returns one tensor per configuration site."""
     if configurations.packed:
         return tuple(
@@ -24,8 +44,11 @@ def _site_values(
 
 
 def _concatenate_configurations(
-        batches: Sequence[ConfigurationBatch]) -> ConfigurationBatch:
-    """Concatenates compatible packed or heterogeneous configuration batches."""
+    batches: Sequence[ConfigurationBatch]
+) -> ConfigurationBatch:
+    """
+    Concatenates compatible packed or heterogeneous configuration ``batches``.
+    """
     batches = tuple(batches)
     if not batches:
         raise ValueError('At least one configuration batch is required')
@@ -59,7 +82,7 @@ def _concatenate_configurations(
 
 
 @dataclass(frozen=True)
-class _EvaluationRequest:
+class _EvaluationRequest:  # MARK: _EvaluationRequest
     """One flattened Phi or closure request before global deduplication."""
 
     configurations: ConfigurationBatch
@@ -104,7 +127,7 @@ class _EvaluationRequest:
 
 
 @dataclass(frozen=True)
-class _IncidenceMap:
+class _IncidenceMap:  # MARK: _IncidenceMap
     """Maps one request's rows to globally unique source configurations."""
 
     unique_ids: torch.Tensor
@@ -140,8 +163,10 @@ class _IncidenceMap:
 
 
 @dataclass(frozen=True)
-class EvaluationView:
-    """Read-only configurations, values and incidences for advanced callbacks."""
+class EvaluationView:  # MARK: EvaluationView
+    """
+    Read-only ``configurations``, ``values`` and ``incidences`` for advanced callbacks.
+    """
 
     configurations: ConfigurationBatch
     values: Optional[torch.Tensor] = None
@@ -167,8 +192,8 @@ class EvaluationView:
 
 
 @dataclass(frozen=True)
-class _EvaluationPlan:
-    """Frozen unique configurations and request incidence maps."""
+class _EvaluationPlan:  # MARK: _EvaluationPlan
+    """Frozen unique ``configurations`` and request incidence maps."""
 
     source: TensorSource
     configurations: ConfigurationBatch
@@ -202,15 +227,16 @@ class _EvaluationPlan:
             phase='frozen')
 
 
-class _EvaluationRegistry:
+class _EvaluationRegistry:  # MARK: _EvaluationRegistry
     """Deduplicates request points and builds their gather incidence maps."""
 
     @staticmethod
-    def build(
-            source: TensorSource,
-            requests: Sequence[_EvaluationRequest],
-            global_transform_prepared: bool = False) -> _EvaluationPlan:
-        """Freezes requests into one globally deduplicated evaluation plan."""
+    def build(source: TensorSource,
+              requests: Sequence[_EvaluationRequest],
+              global_transform_prepared: bool = False) -> _EvaluationPlan:
+        """
+        Freezes ``requests`` into one globally deduplicated evaluation plan.
+        """
         requests = tuple(requests)
         configurations = _concatenate_configurations(
             [request.configurations for request in requests])
@@ -243,7 +269,7 @@ class _EvaluationRegistry:
             global_transform_prepared=global_transform_prepared)
 
 
-class _EvaluationPlanBuilder:
+class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
     """Mutable collect/expand builder whose ``freeze`` result is immutable."""
 
     def __init__(self, source: TensorSource) -> None:
@@ -260,7 +286,9 @@ class _EvaluationPlanBuilder:
         return self._phase
 
     def _validate_request(self, request: _EvaluationRequest) -> None:
-        """Validates one request against the shared source input metadata."""
+        """
+        Validates one ``request`` against the shared source input metadata.
+        """
         if not isinstance(request, _EvaluationRequest):
             raise TypeError('`request` should be _EvaluationRequest type')
         if request.configurations.n_sites != len(self.source.in_dim):
@@ -268,7 +296,7 @@ class _EvaluationPlanBuilder:
                 'Configurations should contain one value per source input site')
 
     def collect(self, request: _EvaluationRequest) -> int:
-        """Adds a Phi request during the initial collect phase."""
+        """Adds a Phi ``request`` during the initial collect phase."""
         if self._phase != 'collect':
             raise RuntimeError('Phi requests can only be collected before expand')
         if self._global_transform_prepared:
@@ -280,7 +308,9 @@ class _EvaluationPlanBuilder:
         return handle
 
     def expand(self, configurations: ConfigurationBatch) -> int:
-        """Adds closure points before freeze and returns their result handle."""
+        """
+        Adds closure points before freeze and returns their result handle.
+        """
         if self._phase == 'frozen':
             raise RuntimeError('An evaluation plan cannot expand after freeze')
         if not isinstance(configurations, ConfigurationBatch):
@@ -296,7 +326,9 @@ class _EvaluationPlanBuilder:
         return handle
 
     def snapshot(self) -> EvaluationView:
-        """Returns all requested rows without exposing mutable builder storage."""
+        """
+        Returns all requested rows without exposing mutable builder storage.
+        """
         if not self._requests:
             raise ValueError('The evaluation plan should contain a request')
         return EvaluationView(
@@ -305,7 +337,9 @@ class _EvaluationPlanBuilder:
             phase=self._phase)
 
     def _mark_global_transform_prepared(self) -> None:
-        """Marks that global closure requirements were handled before freeze."""
+        """
+        Marks that global closure requirements were handled before freeze.
+        """
         if self._phase == 'frozen':
             raise RuntimeError(
                 'A global transform cannot be prepared after freeze')
@@ -327,13 +361,13 @@ class _EvaluationPlanBuilder:
         return plan
 
 
-class _EvaluationSession:
+class _EvaluationSession:  # MARK: _EvaluationSession
     """Evaluates one frozen plan once and scatters values to all requests."""
 
     def __init__(self,
                  plan: _EvaluationPlan,
-                 global_transform=None,
-                 context=None) -> None:
+                 global_transform: Optional['GlobalValueTransform'] = None,
+                 context: Any = None) -> None:
         if not isinstance(plan, _EvaluationPlan):
             raise TypeError('`plan` should be _EvaluationPlan type')
         self.plan = plan
@@ -351,11 +385,15 @@ class _EvaluationSession:
 
     @property
     def stats(self) -> EvaluationStats:
-        """Final session stats, or planned deduplication stats before evaluate."""
+        """
+        Final session stats, or planned deduplication stats before evaluate.
+        """
         return self.plan.stats if self._stats is None else self._stats
 
     def _evaluate_unique(self, batch_size: Optional[int]) -> torch.Tensor:
-        """Evaluates unique configurations in deterministic contiguous batches."""
+        """
+        Evaluates unique configurations in deterministic contiguous batches.
+        """
         n_points = self.plan.configurations.batch_size
         if batch_size is None:
             batch_size = n_points
@@ -397,10 +435,11 @@ class _EvaluationSession:
         return values
 
     @staticmethod
-    def _scatter(
-            values: torch.Tensor,
-            incidence: _IncidenceMap) -> torch.Tensor:
-        """Scatters global values through one incidence and output selection."""
+    def _scatter(values: torch.Tensor,
+                 incidence: _IncidenceMap) -> torch.Tensor:
+        """
+        Scatters global ``values`` through one ``incidence`` and output selection.
+        """
         unique_ids = incidence.unique_ids.to(values.device)
         selected = values.index_select(0, unique_ids)
         if incidence.output_spec is None:
@@ -414,8 +453,7 @@ class _EvaluationSession:
             1, labels.unsqueeze(1)).squeeze(1)
         return selected.reshape(incidence.result_shape)
 
-    def prepare_values(
-            self, batch_size: Optional[int] = None) -> torch.Tensor:
+    def prepare_values(self, batch_size: Optional[int] = None) -> torch.Tensor:
         """Evaluates and transforms the shared unique-value table once."""
         if self._values is not None:
             return self._values
@@ -440,16 +478,17 @@ class _EvaluationSession:
                     'A global value transform should preserve value device')
         return self._values
 
-    def evaluate(self, batch_size: Optional[int] = None) -> Tuple[torch.Tensor,
-                                                                  ...]:
-        """Evaluates and scatters every request, caching convenience results."""
+    def evaluate(self,
+                 batch_size: Optional[int] = None) -> Tuple[torch.Tensor, ...]:
+        """
+        Evaluates and scatters every request, caching convenience results.
+        """
         return tuple(
             self.result(handle, batch_size=batch_size)
             for handle in range(len(self.plan.incidences)))
 
-    def evaluate_source(
-            self,
-            batch_size: Optional[int] = None) -> torch.Tensor:
+    def evaluate_source(self,
+                        batch_size: Optional[int] = None) -> torch.Tensor:
         """Evaluates and caches only the globally unique source values."""
         if self._raw_values is None:
             self._raw_values = self._evaluate_unique(batch_size)
@@ -458,7 +497,7 @@ class _EvaluationSession:
     def result(self,
                handle: int,
                batch_size: Optional[int] = None) -> torch.Tensor:
-        """Returns one request result by its stable builder handle."""
+        """Returns one request result by its stable builder ``handle``."""
         if isinstance(handle, bool) or not isinstance(handle, int):
             raise TypeError('`handle` should be int type')
         if handle < 0 or handle >= len(self.plan.incidences):
@@ -488,4 +527,6 @@ class _EvaluationSession:
             phase='evaluated')
 
 
-__all__ = ['EvaluationView']
+__all__ = [
+    'EvaluationView',
+]

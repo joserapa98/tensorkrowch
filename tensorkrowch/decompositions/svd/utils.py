@@ -24,7 +24,7 @@ _Dimension = Optional[Union[int, Sequence[int]]]
 
 
 @dataclass(frozen=True)
-class _SVDProgress:
+class _SVDProgress:  # MARK: _SVDProgress
     """Emits one live event for each completed SVD cut."""
 
     observer: DecompositionObserver  # Consumer of live SVD events
@@ -36,7 +36,7 @@ class _SVDProgress:
                      site: int,
                      record: TruncationRecord,
                      elapsed: float) -> None:
-        """Emits a completed cut using its global site position."""
+        """Emits a completed cut using its global ``site`` position."""
         abs_error = record.local_abs_error
         rel_error = record.local_rel_error
         if abs_error.ndim:
@@ -64,9 +64,9 @@ class _SVDProgress:
 
 def _tensor_norm_components(tensor: torch.Tensor,
                             dim: _Dimension = None) -> Tuple[
-                                torch.Tensor,
-                                torch.Tensor,
-                                torch.Tensor]:
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor]:
     """Returns stable scale factors and the log-norm of tensors."""
     absolute = tensor.abs()
     if dim is None:
@@ -96,7 +96,7 @@ def _tensor_norm_components(tensor: torch.Tensor,
 def _log_tensor_norm(tensor: torch.Tensor,
                      dim: _Dimension = None,
                      keepdim: bool = False) -> torch.Tensor:
-    """Computes a tensor log-norm without squaring the original scale."""
+    """Computes a ``tensor`` log-norm without squaring the original scale."""
     if dim is None:
         if not tensor.numel():
             return tensor.real.new_tensor(-torch.inf)
@@ -123,7 +123,7 @@ def _log_tensor_norm(tensor: torch.Tensor,
 
 
 def _normalize_tensor(tensor: torch.Tensor,
-                      dim: _Dimension = None):
+                      dim: _Dimension = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """Normalizes tensors and returns their log-norms without overflow."""
     safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(
         tensor, dim)
@@ -139,4 +139,8 @@ def _normalize_tensor(tensor: torch.Tensor,
     return normalized, log_norm
 
 
-__all__ = ['_SVDProgress', '_log_tensor_norm', '_normalize_tensor']
+__all__ = [
+    '_SVDProgress',
+    '_log_tensor_norm',
+    '_normalize_tensor',
+]

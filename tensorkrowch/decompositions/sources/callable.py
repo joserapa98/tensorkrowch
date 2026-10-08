@@ -16,8 +16,9 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _normalize_in_dim)
 
 
-class CallableTensorSource(_SourceEvaluationTracker):
-    """Tensor source evaluated by a user callable.
+class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSource
+    """
+    Tensor source evaluated by a user callable.
 
     Packed configurations are passed to ``function`` as a tensor. A
     heterogeneous configuration batch is passed as a tuple containing one
@@ -101,8 +102,8 @@ class CallableTensorSource(_SourceEvaluationTracker):
         """Device on which evaluations are performed."""
         return self._device
 
-    def _evaluate_batch(
-            self, configurations: ConfigurationBatch) -> torch.Tensor:
+    def _evaluate_batch(self,
+                        configurations: ConfigurationBatch) -> torch.Tensor:
         """Evaluates and validates one callable batch."""
         argument = configurations.values
         result = self.function(argument)
@@ -129,7 +130,7 @@ class CallableTensorSource(_SourceEvaluationTracker):
         return result
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates configurations in deterministic contiguous batches."""
+        """Evaluates ``configurations`` in deterministic contiguous batches."""
         if not isinstance(configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
@@ -172,7 +173,9 @@ class CallableTensorSource(_SourceEvaluationTracker):
               configurations: ConfigurationBatch,
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates a callable fiber over explicit or discrete site values."""
+        """
+        Evaluates a callable fiber over explicit or discrete ``site`` ``values``.
+        """
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
         if (site < 0) or (site >= len(self._in_dim)):
@@ -190,4 +193,6 @@ class CallableTensorSource(_SourceEvaluationTracker):
             configurations.batch_size, n_values, *result.shape[1:])
 
 
-__all__ = ['CallableTensorSource']
+__all__ = [
+    'CallableTensorSource',
+]

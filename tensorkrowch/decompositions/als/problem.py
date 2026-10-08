@@ -35,23 +35,24 @@ def _zero_safe_relative_error(absolute: torch.Tensor,
 
 
 @dataclass(frozen=True)
-class ObservedEntries:
-    """Fixed entries defining a matrix/tensor completion objective.
+class ObservedEntries:  # MARK: ObservedEntries
+    """
+    Fixed entries defining a matrix/tensor completion objective.
 
-    Repeated indices are deduplicated only when their values and weights are
-    identical. Values outside these global indices remain unknown; they are not
+    Repeated ``indices`` are deduplicated only when their ``values`` and ``weights`` are
+    identical. Values outside these global ``indices`` remain unknown; they are not
     interpreted as zeros.
 
     Parameters
     ----------
     indices : torch.Tensor
-        Global integer multi-indices with shape ``(observations, sites)``.
+        Global integer multi-``indices`` with shape ``(observations, sites)``.
     values : torch.Tensor
-        Observed target values with shape ``(observations, *out_shape)``.
+        Observed target ``values`` with shape ``(observations, *out_shape)``.
     in_dim : sequence of int
         Complete discrete input dimension.
     weights : torch.Tensor, optional
-        Non-negative multiplicative weights ``W`` in the observed objective.
+        Non-negative multiplicative ``weights`` ``W`` in the observed objective.
     """
 
     indices: torch.Tensor  # Observed discrete configurations in row order
@@ -156,9 +157,9 @@ class ObservedEntries:
         return ConfigurationBatch(self.indices, kind='indices')
 
     def error(self,
-              approximation: torch.Tensor) -> Tuple[torch.Tensor,
-                                                     torch.Tensor]:
-        """Returns absolute and relative weighted observed errors.
+              approximation: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Returns absolute and relative weighted observed errors.
 
         The errors are
 
@@ -188,11 +189,12 @@ class ObservedEntries:
 
 
 @dataclass
-class ALSProblem:
-    """Composition of a tensor source and its ALS objective semantics.
+class ALSProblem:  # MARK: ALSProblem
+    """
+    Composition of a tensor ``source`` and its ALS objective semantics.
 
-    A source supplies known tensor/function values. ``ObservedEntries`` instead
-    defines a completion objective and may be used without a source because
+    A ``source`` supplies known tensor/function values. ``ObservedEntries`` instead
+    defines a completion objective and may be used without a ``source`` because
     values outside the observed set are unknown. Sampling strategies are added
     separately and do not change either meaning.
     """
@@ -272,19 +274,19 @@ class ALSProblem:
         return (self.observations is not None) or \
             (self.source is not None and self.selector is None)
 
-    def evaluate(self,
-                 configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates a known source target on configurations."""
+    def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
+        """Evaluates a known source target on ``configurations``."""
         if self.source is None:
             raise ValueError(
                 'Completion targets are known only at observed entries')
         return self.source.evaluate(configurations)
 
-    def objective_error(
-            self,
-            approximation: torch.Tensor,
-            configurations: Optional[ConfigurationBatch] = None
-            ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def objective_error(self,
+                        approximation: torch.Tensor,
+                        configurations: Optional[
+                            ConfigurationBatch] = None) -> Tuple[
+            torch.Tensor,
+            torch.Tensor]:
         """Returns weighted absolute and relative L2 objective errors."""
         if self.observations is not None:
             if configurations is not None:
@@ -314,4 +316,7 @@ class ALSProblem:
         return absolute, relative
 
 
-__all__ = ['ALSProblem', 'ObservedEntries']
+__all__ = [
+    'ALSProblem',
+    'ObservedEntries',
+]

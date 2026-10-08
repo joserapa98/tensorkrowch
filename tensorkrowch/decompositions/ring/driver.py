@@ -21,6 +21,7 @@ from typing import (Any,
                     Protocol,
                     Sequence,
                     Tuple,
+                    Union,
                     runtime_checkable)
 
 import torch
@@ -29,7 +30,6 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  GaugeRecord)
 from tensorkrowch.decompositions.observers import DecompositionEvent
 from tensorkrowch.decompositions.results import TRDecomposition
-
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector)
 from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
@@ -40,7 +40,7 @@ from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
 
 
 @runtime_checkable
-class RingTargetProvider(Protocol):
+class RingTargetProvider(Protocol):  # MARK: RingTargetProvider
     """Provides local targets, ranks and contexts to the ring driver."""
 
     @property
@@ -54,9 +54,9 @@ class RingTargetProvider(Protocol):
 
     def local_rank(self,
                    sites: Sequence[int],
-                   rank,
-                   context: Mapping[str, Any]):
-        """Returns right-link ranks for gauges and local sites."""
+                   rank: Union[int, Sequence[int]],
+                   context: Mapping[str, Any]) -> Tuple[int, ...]:
+        """Returns right-link ranks for gauges and local ``sites``."""
 
     def local_context(self,
                       sites: Sequence[int],
@@ -65,8 +65,10 @@ class RingTargetProvider(Protocol):
 
 
 @dataclass(frozen=True)
-class BoundaryClosure:
-    """Stores one final core obtained by absorbing an open target boundary."""
+class BoundaryClosure:  # MARK: BoundaryClosure
+    """
+    Stores one final ``core`` obtained by absorbing an open target boundary.
+    """
 
     site: int  # Optional zero-based active site
     direction: str  # Direction of the current sweep or closure
@@ -97,8 +99,10 @@ class BoundaryClosure:
 
 
 @dataclass(frozen=True)
-class BidirectionalRingResult:
-    """Stores ordered cores and structural diagnostics from a driver run."""
+class BidirectionalRingResult:  # MARK: BidirectionalRingResult
+    """
+    Stores ordered ``cores`` and structural ``diagnostics`` from a driver run.
+    """
 
     cores: Sequence[torch.Tensor]  # Raw cores in site order
     central_block: BlockSelection  # Selection defining the initial block
@@ -194,9 +198,8 @@ class BidirectionalRingResult:
         return self.as_decomposition().contract_dense()
 
 
-def _normalize_context(
-        context: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    """Copies the shared driver context after validation."""
+def _normalize_context(context: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+    """Copies the shared driver ``context`` after validation."""
     if context is None:
         return {}
     if not isinstance(context, Mapping):
@@ -205,7 +208,7 @@ def _normalize_context(
 
 
 def _validate_provider(provider: RingTargetProvider) -> Tuple[int, ...]:
-    """Validates the intentionally small provider protocol."""
+    """Validates the intentionally small ``provider`` protocol."""
     if not isinstance(provider, RingTargetProvider):
         raise TypeError('`provider` should implement RingTargetProvider')
     try:
@@ -243,8 +246,9 @@ def _validate_opening(opening: LoopOpening,
         raise ValueError('The loop opener changed the fixed right gauge')
 
 
-class BidirectionalRingDriver:
-    """Builds a ring from a center block and two alternating recursions.
+class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
+    """
+    Builds a ring from a center block and two alternating recursions.
 
     The unprocessed complement of the central block is one cyclic interval.
     Sites are opened alternately from its right and left ends with one fixed
@@ -252,22 +256,21 @@ class BidirectionalRingDriver:
     the two fronts instead of leaving an unchecked cyclic interface.
     """
 
-    def _fit_open_boundaries(
-            self,
-            provider: RingTargetProvider,
-            rank,
-            opener: LoopOpener,
-            recursion: GaugeRecursion,
-            selection: BlockSelection,
-            central_opening: LoopOpening,
-            in_dim: Tuple[int, ...],
-            context: Mapping[str, Any],
-            cores: list,
-            openings: Dict[Tuple[int, ...], LoopOpening],
-            order: list,
-            directions: list,
-            metrics: DecompositionMetrics,
-            recursion_diagnostics: list) -> BidirectionalRingResult:
+    def _fit_open_boundaries(self,
+                             provider: RingTargetProvider,
+                             rank: Union[int, Sequence[int]],
+                             opener: LoopOpener,
+                             recursion: GaugeRecursion,
+                             selection: BlockSelection,
+                             central_opening: LoopOpening,
+                             in_dim: Tuple[int, ...],
+                             context: Mapping[str, Any],
+                             cores: list,
+                             openings: Dict[Tuple[int, ...], LoopOpening],
+                             order: list,
+                             directions: list,
+                             metrics: DecompositionMetrics,
+                             recursion_diagnostics: list) -> BidirectionalRingResult:
         """Runs two independent sweeps and absorbs both open target edges."""
         if selection.left == 0 or selection.right == len(in_dim) - 1:
             raise ValueError(
@@ -388,28 +391,28 @@ class BidirectionalRingDriver:
             })
 
     @staticmethod
-    def _opening_sites(
-            openings: Mapping[Tuple[int, ...], LoopOpening],
-            opening: LoopOpening) -> Tuple[int, ...]:
-        """Finds the already stored site key for one opening identity."""
+    def _opening_sites(openings: Mapping[Tuple[int, ...], LoopOpening],
+                       opening: LoopOpening) -> Tuple[int, ...]:
+        """Finds the already stored site key for one ``opening`` identity."""
         for sites, candidate in openings.items():
             if candidate is opening:
                 return sites
         raise RuntimeError('The recursion source opening was not stored')
 
     @classmethod
-    def _boundary_context(
-            cls,
-            recursion: GaugeRecursion,
-            direction: str,
-            opening: LoopOpening,
-            boundary_site: int,
-            provider: RingTargetProvider,
-            context: Mapping[str, Any],
-            openings: Mapping[Tuple[int, ...], LoopOpening],
-            metrics: DecompositionMetrics,
-            diagnostics: list) -> Mapping[str, Any]:
-        """Lets a recursion prepare an optional boundary-absorption gauge."""
+    def _boundary_context(cls,
+                          recursion: GaugeRecursion,
+                          direction: str,
+                          opening: LoopOpening,
+                          boundary_site: int,
+                          provider: RingTargetProvider,
+                          context: Mapping[str, Any],
+                          openings: Mapping[Tuple[int, ...], LoopOpening],
+                          metrics: DecompositionMetrics,
+                          diagnostics: list) -> Mapping[str, Any]:
+        """
+        Lets a ``recursion`` prepare an optional boundary-absorption gauge.
+        """
         boundary_context = dict(context)
         prepare_boundary = getattr(recursion, 'prepare_boundary', None)
         if not callable(prepare_boundary):
@@ -454,18 +457,19 @@ class BidirectionalRingDriver:
         return boundary_context
 
     @staticmethod
-    def _advance(
-            recursion: GaugeRecursion,
-            direction: str,
-            opening: LoopOpening,
-            local_target: Any,
-            from_sites: Tuple[int, ...],
-            to_sites: Tuple[int, ...],
-            provider: RingTargetProvider,
-            context: Mapping[str, Any],
-            metrics: DecompositionMetrics,
-            diagnostics: list) -> torch.Tensor:
-        """Runs and validates one direction-specific gauge recursion."""
+    def _advance(recursion: GaugeRecursion,
+                 direction: str,
+                 opening: LoopOpening,
+                 local_target: Any,
+                 from_sites: Tuple[int, ...],
+                 to_sites: Tuple[int, ...],
+                 provider: RingTargetProvider,
+                 context: Mapping[str, Any],
+                 metrics: DecompositionMetrics,
+                 diagnostics: list) -> torch.Tensor:
+        """
+        Runs and validates one ``direction``-specific gauge ``recursion``.
+        """
         recursion_context = dict(context)
         recursion_context.update({
             'direction': direction,
@@ -503,16 +507,15 @@ class BidirectionalRingDriver:
         return step.gauge
 
     @staticmethod
-    def _open(
-            provider: RingTargetProvider,
-            rank,
-            opener: LoopOpener,
-            sites: Tuple[int, ...],
-            target: Any,
-            orientation: str,
-            fixed_left: Optional[torch.Tensor],
-            fixed_right: Optional[torch.Tensor],
-            context: Mapping[str, Any]) -> LoopOpening:
+    def _open(provider: RingTargetProvider,
+              rank: Union[int, Sequence[int]],
+              opener: LoopOpener,
+              sites: Tuple[int, ...],
+              target: Any,
+              orientation: str,
+              fixed_left: Optional[torch.Tensor],
+              fixed_right: Optional[torch.Tensor],
+              context: Mapping[str, Any]) -> LoopOpening:
         """Builds and validates one constrained local opening."""
         local_context = {**context, **provider.local_context(sites, context)}
         local_rank = provider.local_rank(sites, rank, context)
@@ -534,16 +537,17 @@ class BidirectionalRingDriver:
         return opening
 
     @staticmethod
-    def _store_opening(
-            sites: Tuple[int, ...],
-            direction: str,
-            opening: LoopOpening,
-            cores: list,
-            openings: Dict[Tuple[int, ...], LoopOpening],
-            order: list,
-            directions: list,
-            metrics: DecompositionMetrics) -> None:
-        """Stores cores and records after checking sites are still empty."""
+    def _store_opening(sites: Tuple[int, ...],
+                       direction: str,
+                       opening: LoopOpening,
+                       cores: list,
+                       openings: Dict[Tuple[int, ...], LoopOpening],
+                       order: list,
+                       directions: list,
+                       metrics: DecompositionMetrics) -> None:
+        """
+        Stores ``cores`` and records after checking ``sites`` are still empty.
+        """
         if sites in openings or any(cores[site] is not None for site in sites):
             raise RuntimeError('A ring site was opened more than once')
         for site, core in zip(sites, opening.cores):
@@ -556,14 +560,13 @@ class BidirectionalRingDriver:
         metrics.warnings.extend(opening.diagnostics.get('warnings', ()))
 
     @staticmethod
-    def _store_boundary(
-            closure: BoundaryClosure,
-            cores: list,
-            boundaries: Dict[int, BoundaryClosure],
-            order: list,
-            directions: list,
-            metrics: DecompositionMetrics,
-            observer=None) -> None:
+    def _store_boundary(closure: BoundaryClosure,
+                        cores: list,
+                        boundaries: Dict[int, BoundaryClosure],
+                        order: list,
+                        directions: list,
+                        metrics: DecompositionMetrics,
+                        observer: Any = None) -> None:
         """Stores one provider-specific open-boundary absorption."""
         if not isinstance(closure, BoundaryClosure):
             raise TypeError('`close_boundary` should return BoundaryClosure')
@@ -585,15 +588,14 @@ class BidirectionalRingDriver:
 
     def fit(self,
             provider: RingTargetProvider,
-            rank,
+            rank: Union[int, Sequence[int]],
             opener: LoopOpener,
             recursion: GaugeRecursion,
             block_selector: Optional[CentralBlockSelector] = None,
             *,
             center: Optional[int] = None,
             boundary_opener: Optional[LoopOpener] = None,
-            context: Optional[
-                Mapping[str, Any]] = None) -> BidirectionalRingResult:
+            context: Optional[Mapping[str, Any]] = None) -> BidirectionalRingResult:
         """Runs the isolated central/right/left/boundary driver workflow."""
         in_dim = _validate_provider(provider)
         if not isinstance(opener, LoopOpener):

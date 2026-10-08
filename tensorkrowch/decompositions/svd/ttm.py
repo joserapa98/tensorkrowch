@@ -8,28 +8,33 @@ This script contains:
         * ttm_svd
 """
 
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 import warnings
 
 import torch
 
 from tensorkrowch.formats import QuantizedLayout
-from tensorkrowch.decompositions.results import _quantics_result
-from tensorkrowch.decompositions.sources.quantization import _quantize_matrix
 
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TTMDecomposition
+from tensorkrowch.decompositions.results import (TTMDecomposition,
+                                                 _quantics_result)
+from tensorkrowch.decompositions.sources.quantization import _quantize_matrix
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
-                                                    _prepare_matrix_input)
+                                                     _prepare_matrix_input)
 from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.decompositions.svd.utils import _SVDProgress
 
 
-class TTMSVD:
-    """Decomposes a fixed dense tensor into a tensor train matrix.
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import _DecompositionOutput
+
+
+class TTMSVD:  # MARK: TTMSVD
+    """
+    Decomposes a fixed dense tensor into a tensor train matrix.
 
     The tensor, its input/output dimensions and its axis layout are fixed when
     this object is created. :meth:`fit` can then be called repeatedly with
@@ -71,8 +76,7 @@ class TTMSVD:
                  *,
                  layout: str = 'interleaved',
                  quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
-                 out_device: Optional[
-                     Union[str, torch.device]] = 'cpu') -> None:
+                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._quantization = quantization
         if quantization is None:
             matrix_input = _prepare_matrix_input(
@@ -110,8 +114,8 @@ class TTMSVD:
         """Axis layout specified for the fixed input tensor."""
         return self._layout
 
-    def _unfuse_in_out_axes(
-            self, cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
+    def _unfuse_in_out_axes(self,
+                            cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
         """Reopens fused TT input axes into TTM input/output axes."""
         if len(cores) == 1:
             return [cores[0].reshape(self._in_dim[0], self._out_dim[0])]
@@ -145,7 +149,8 @@ class TTMSVD:
             renormalize: bool = False,
             collect_metrics: bool = False,
             verbose: Union[bool, int] = 0) -> TTMDecomposition:
-        r"""Runs TTM-SVD with a shared truncation policy at every cut.
+        r"""
+        Runs TTM-SVD with a shared truncation policy at every cut.
 
         The active exact SVD backend is selected through
         :func:`tensorkrowch.set_svd_method` or
@@ -154,7 +159,7 @@ class TTMSVD:
         reconstruction errors are returned in ``result.metrics``.
 
         If several truncation criteria are specified, each one provides an
-        upper bound for the selected rank and the most restrictive bound is
+        upper bound for the selected ``rank`` and the most restrictive bound is
         used. At least one singular value is always retained. The same
         criteria are applied at every TTM cut.
 
@@ -175,7 +180,7 @@ class TTMSVD:
         Parameters
         ----------
         rank : int, optional
-            Maximum rank allowed at every link. At each SVD cut, at most this
+            Maximum ``rank`` allowed at every link. At each SVD cut, at most this
             many singular values are retained.
         cutoff : float, optional
             Minimum singular value to keep. It must be finite and
@@ -197,7 +202,7 @@ class TTMSVD:
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         renormalize : bool
@@ -218,7 +223,7 @@ class TTMSVD:
             - ``0`` or ``False``: no console output;
             - ``1`` or ``True``: phase title, input configuration, cut
               progress and final summary;
-            - ``2``: detailed per-cut rank, error and timing information;
+            - ``2``: detailed per-cut ``rank``, error and timing information;
             - ``3``: level 2 output followed by every final core.
 
         Returns
@@ -327,14 +332,16 @@ def ttm_svd(tensor: torch.Tensor,
             out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
             return_info: bool = False,
-           return_result: bool = False,
-           quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None):
-    r"""Decomposes a dense tensor or matrix into TTM cores.
+            return_result: bool = False,
+            quantization: Optional[
+                Tuple[QuantizedLayout, QuantizedLayout]] = None) -> '_DecompositionOutput':
+    r"""
+    Decomposes a dense ``tensor`` or matrix into TTM cores.
 
     This is the simple functional interface. Use :class:`TTMSVD` to repeat
-    fits of the same tensor or matrix or to access the lightweight result
+    fits of the same ``tensor`` or matrix or to access the lightweight result
     object. If several truncation criteria are specified, their most
-    restrictive rank is used at every cut and at least one singular value is
+    restrictive ``rank`` is used at every cut and at least one singular value is
     retained.
 
     A tensorized input can have interleaved shape
@@ -354,16 +361,16 @@ def ttm_svd(tensor: torch.Tensor,
     Parameters
     ----------
     tensor : torch.Tensor
-        Dense tensor or matrix to decompose.
+        Dense ``tensor`` or matrix to decompose.
     in_dim : int or sequence[int], optional
         Input dimension per site. Provide it together with ``out_dim`` to
         tensorize a matrix, or omit both arguments to infer dimensions.
     out_dim : int or sequence[int], optional
         Output dimension per site.
     layout : {"interleaved", "grouped"}
-        Axis layout of a tensorized input. The default is ``"interleaved"``.
+        Axis ``layout`` of a tensorized input. The default is ``"interleaved"``.
     rank : int, optional
-        Maximum rank allowed at every link. At each SVD cut, at most this many
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -385,14 +392,14 @@ def ttm_svd(tensor: torch.Tensor,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
         If ``True``, normalizes the residual before every SVD, accumulates its
         scale logarithmically and evenly redistributes the complete scale over
         the final cores. Absolute criteria and reported errors preserve the
-        scale of the original tensor.
+        scale of the original ``tensor``.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. If ``None``, they remain on
         the input device. The default is ``"cpu"``.
@@ -402,7 +409,7 @@ def ttm_svd(tensor: torch.Tensor,
         - ``0`` or ``False``: no console output;
         - ``1`` or ``True``: phase title, input configuration, cut progress
           and final summary;
-        - ``2``: detailed per-cut rank, error and timing information;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
     return_info : bool
@@ -413,10 +420,10 @@ def ttm_svd(tensor: torch.Tensor,
 
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with return_info.
+        present. It does not enable metrics and is incompatible with ``return_info``.
     quantization : QuantizedLayout or pair of layouts, optional
         Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
+        ``layout`` pair with matching numbers of digit sites. No padding is implicit.
 
     Returns
     -------
@@ -426,7 +433,7 @@ def ttm_svd(tensor: torch.Tensor,
 
     Examples
     --------
-    Decompose a grouped two-site tensor:
+    Decompose a grouped two-site ``tensor``:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
     >>> cores = tk.decompositions.ttm_svd(tensor, layout='grouped', rank=2)
@@ -476,8 +483,9 @@ def mat_to_mpo(mat: torch.Tensor,
                cum_percentage: Optional[float] = None,
                renormalize: bool = False,
                verbose: Union[bool, int] = 0,
-               return_info: bool = False):
-    r"""Compatibility wrapper for :func:`ttm_svd`.
+               return_info: bool = False) -> '_DecompositionOutput':
+    r"""
+    Compatibility wrapper for :func:`ttm_svd`.
 
     .. deprecated:: 1.2
         Use :func:`ttm_svd` for TTM terminology, grouped or matrix layouts,
@@ -494,7 +502,7 @@ def mat_to_mpo(mat: torch.Tensor,
     mat : torch.Tensor
         Dense tensor with interleaved input/output dimensions.
     rank : int, optional
-        Maximum rank allowed at every link. At each SVD cut, at most this many
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -516,7 +524,7 @@ def mat_to_mpo(mat: torch.Tensor,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -565,4 +573,8 @@ def mat_to_mpo(mat: torch.Tensor,
         return_info=return_info)
 
 
-__all__ = ['TTMSVD', 'ttm_svd', 'mat_to_mpo']
+__all__ = [
+    'TTMSVD',
+    'ttm_svd',
+    'mat_to_mpo',
+]

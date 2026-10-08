@@ -1,66 +1,82 @@
-"""Composable global and local value transforms for sketching pipelines."""
+"""
+This script contains:
+
+    Classes:
+        * GlobalValueTransform
+        * IdentityGlobalValueTransform
+        * CallableGlobalValueTransform
+        * CompositeGlobalValueTransform
+        * LocalTransformContext
+        * LocalValueTransform
+        * IdentityLocalValueTransform
+        * CallableLocalValueTransform
+        * CompositeLocalValueTransform
+
+    Functions:
+        * _prepare_global_transform
+        * _collect_local_queries
+        * _apply_local_transform
+        * _structured_path_allowed
+"""
 
 from dataclasses import dataclass
-from typing import (Any, Callable, Optional, Protocol, Sequence, Tuple,
+from typing import (Any,
+                    Callable,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    Tuple,
                     runtime_checkable)
 
 import torch
 
-from tensorkrowch.decompositions.sketching.evaluations import (
-    EvaluationView,
-    _EvaluationPlanBuilder,
-    _concatenate_configurations,
-)
-from tensorkrowch.decompositions.sketching.phi import (PhiOperator, PhiView)
+from tensorkrowch.decompositions.sketching.evaluations import (EvaluationView,
+                                                               _EvaluationPlanBuilder,
+                                                               _concatenate_configurations)
+from tensorkrowch.decompositions.sketching.phi import PhiOperator, PhiView
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 
 
 @runtime_checkable
-class GlobalValueTransform(Protocol):
+class GlobalValueTransform(Protocol):  # MARK: GlobalValueTransform
     """Transform applied once to globally unique source evaluations."""
 
     @property
     def is_identity(self) -> bool:
-        """Whether structured source contractions remain mathematically valid."""
+        """
+        Whether structured source contractions remain mathematically valid.
+        """
 
-    def required_points(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> Optional[ConfigurationBatch]:
+    def required_points(self,
+                        view: EvaluationView,
+                        context: Any = None) -> Optional[ConfigurationBatch]:
         """Declares closure points required before freezing the plan."""
 
-    def apply(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> torch.Tensor:
+    def apply(self, view: EvaluationView, context: Any = None) -> torch.Tensor:
         """Transforms the unique value table without changing its shape."""
 
 
 @dataclass(frozen=True)
-class IdentityGlobalValueTransform:
+class IdentityGlobalValueTransform:  # MARK: IdentityGlobalValueTransform
     """No-op global transform that returns the original value tensor."""
 
     @property
     def is_identity(self) -> bool:
         return True
 
-    def required_points(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> Optional[ConfigurationBatch]:
+    def required_points(self,
+                        view: EvaluationView,
+                        context: Any = None) -> Optional[ConfigurationBatch]:
         return None
 
-    def apply(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> torch.Tensor:
+    def apply(self, view: EvaluationView, context: Any = None) -> torch.Tensor:
         if view.values is None:
             raise ValueError('The evaluation view should contain values')
         return view.values
 
 
 @dataclass(frozen=True)
-class CallableGlobalValueTransform:
+class CallableGlobalValueTransform:  # MARK: CallableGlobalValueTransform
     """Adapts callables to the global value-transform protocol."""
 
     function: Callable[[EvaluationView, Any], torch.Tensor]
@@ -78,10 +94,9 @@ class CallableGlobalValueTransform:
     def is_identity(self) -> bool:
         return False
 
-    def required_points(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> Optional[ConfigurationBatch]:
+    def required_points(self,
+                        view: EvaluationView,
+                        context: Any = None) -> Optional[ConfigurationBatch]:
         if self.required_points_function is None:
             return None
         result = self.required_points_function(view, context)
@@ -90,16 +105,13 @@ class CallableGlobalValueTransform:
                 'A global transform should request ConfigurationBatch points')
         return result
 
-    def apply(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> torch.Tensor:
+    def apply(self, view: EvaluationView, context: Any = None) -> torch.Tensor:
         return self.function(view, context)
 
 
 @dataclass(frozen=True)
-class CompositeGlobalValueTransform:
-    """Applies several global transforms in their declared order."""
+class CompositeGlobalValueTransform:  # MARK: CompositeGlobalValueTransform
+    """Applies several global ``transforms`` in their declared order."""
 
     transforms: Sequence[GlobalValueTransform]
 
@@ -115,10 +127,9 @@ class CompositeGlobalValueTransform:
     def is_identity(self) -> bool:
         return all(transform.is_identity for transform in self.transforms)
 
-    def required_points(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> Optional[ConfigurationBatch]:
+    def required_points(self,
+                        view: EvaluationView,
+                        context: Any = None) -> Optional[ConfigurationBatch]:
         requests = [
             request
             for transform in self.transforms
@@ -126,10 +137,7 @@ class CompositeGlobalValueTransform:
         ]
         return _concatenate_configurations(requests) if requests else None
 
-    def apply(
-            self,
-            view: EvaluationView,
-            context: Any = None) -> torch.Tensor:
+    def apply(self, view: EvaluationView, context: Any = None) -> torch.Tensor:
         if view.values is None:
             raise ValueError('The evaluation view should contain values')
         values = view.values
@@ -145,7 +153,7 @@ class CompositeGlobalValueTransform:
 
 
 @dataclass(frozen=True)
-class LocalTransformContext:
+class LocalTransformContext:  # MARK: LocalTransformContext
     """Immutable local callback context with predeclared query results."""
 
     data: Any = None
@@ -164,49 +172,45 @@ class LocalTransformContext:
 
 
 @runtime_checkable
-class LocalValueTransform(Protocol):
+class LocalValueTransform(Protocol):  # MARK: LocalValueTransform
     """Transform applied independently to one Phi view after global scatter."""
 
     @property
     def is_identity(self) -> bool:
         """Whether applying this transform returns the same Phi view."""
 
-    def required_queries(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> Sequence[torch.Tensor]:
+    def required_queries(self,
+                         phi_view: PhiView,
+                         context: LocalTransformContext) -> Sequence[torch.Tensor]:
         """Declares additional same-Phi selections before plan freeze."""
 
-    def apply(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> PhiView:
+    def apply(self,
+              phi_view: PhiView,
+              context: LocalTransformContext) -> PhiView:
         """Returns a transformed lazy or materialized Phi view."""
 
 
 @dataclass(frozen=True)
-class IdentityLocalValueTransform:
+class IdentityLocalValueTransform:  # MARK: IdentityLocalValueTransform
     """No-op local transform preserving the exact Phi view object."""
 
     @property
     def is_identity(self) -> bool:
         return True
 
-    def required_queries(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> Sequence[torch.Tensor]:
+    def required_queries(self,
+                         phi_view: PhiView,
+                         context: LocalTransformContext) -> Sequence[torch.Tensor]:
         return ()
 
-    def apply(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> PhiView:
+    def apply(self,
+              phi_view: PhiView,
+              context: LocalTransformContext) -> PhiView:
         return phi_view
 
 
 @dataclass(frozen=True)
-class CallableLocalValueTransform:
+class CallableLocalValueTransform:  # MARK: CallableLocalValueTransform
     """Adapts local Phi callbacks and optional query declarations."""
 
     function: Callable[[PhiView, LocalTransformContext], PhiView]
@@ -225,10 +229,9 @@ class CallableLocalValueTransform:
     def is_identity(self) -> bool:
         return False
 
-    def required_queries(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> Sequence[torch.Tensor]:
+    def required_queries(self,
+                         phi_view: PhiView,
+                         context: LocalTransformContext) -> Sequence[torch.Tensor]:
         if self.required_queries_function is None:
             return ()
         queries = tuple(self.required_queries_function(phi_view, context))
@@ -237,10 +240,9 @@ class CallableLocalValueTransform:
                 'A local transform should request index-selection tensors')
         return queries
 
-    def apply(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> PhiView:
+    def apply(self,
+              phi_view: PhiView,
+              context: LocalTransformContext) -> PhiView:
         result = self.function(phi_view, context)
         if not isinstance(result, PhiView):
             raise TypeError('A local value transform should return a PhiView')
@@ -248,8 +250,8 @@ class CallableLocalValueTransform:
 
 
 @dataclass(frozen=True)
-class CompositeLocalValueTransform:
-    """Applies several local transforms in their declared order."""
+class CompositeLocalValueTransform:  # MARK: CompositeLocalValueTransform
+    """Applies several local ``transforms`` in their declared order."""
 
     transforms: Sequence[LocalValueTransform]
 
@@ -265,30 +267,29 @@ class CompositeLocalValueTransform:
     def is_identity(self) -> bool:
         return all(transform.is_identity for transform in self.transforms)
 
-    def required_queries(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> Sequence[torch.Tensor]:
+    def required_queries(self,
+                         phi_view: PhiView,
+                         context: LocalTransformContext) -> Sequence[torch.Tensor]:
         return tuple(
             query
             for transform in self.transforms
             for query in transform.required_queries(phi_view, context))
 
-    def apply(
-            self,
-            phi_view: PhiView,
-            context: LocalTransformContext) -> PhiView:
+    def apply(self,
+              phi_view: PhiView,
+              context: LocalTransformContext) -> PhiView:
         result = phi_view
         for transform in self.transforms:
             result = transform.apply(result, context)
         return result
 
 
-def _prepare_global_transform(
-        builder: _EvaluationPlanBuilder,
-        transform: GlobalValueTransform,
-        context: Any = None) -> Optional[int]:
-    """Collects global closure points and marks the transform before freeze."""
+def _prepare_global_transform(builder: _EvaluationPlanBuilder,
+                              transform: GlobalValueTransform,
+                              context: Any = None) -> Optional[int]:
+    """
+    Collects global closure points and marks the ``transform`` before freeze.
+    """
     if not isinstance(builder, _EvaluationPlanBuilder):
         raise TypeError('`builder` should be _EvaluationPlanBuilder type')
     if not isinstance(transform, GlobalValueTransform):
@@ -299,12 +300,13 @@ def _prepare_global_transform(
     return handle
 
 
-def _collect_local_queries(
-        builder: _EvaluationPlanBuilder,
-        phi: PhiOperator,
-        transform: LocalValueTransform,
-        context: Any = None) -> Tuple[int, ...]:
-    """Collects every local query before global transform preparation/freeze."""
+def _collect_local_queries(builder: _EvaluationPlanBuilder,
+                           phi: PhiOperator,
+                           transform: LocalValueTransform,
+                           context: Any = None) -> Tuple[int, ...]:
+    """
+    Collects every local query before global ``transform`` preparation/freeze.
+    """
     if not isinstance(builder, _EvaluationPlanBuilder):
         raise TypeError('`builder` should be _EvaluationPlanBuilder type')
     if not isinstance(phi, PhiOperator):
@@ -317,14 +319,13 @@ def _collect_local_queries(
         for query in transform.required_queries(phi, local_context))
 
 
-def _apply_local_transform(
-        transform: LocalValueTransform,
-        phi_view: PhiView,
-        *,
-        data: Any = None,
-        evaluation: Optional[EvaluationView] = None,
-        query_results: Sequence[torch.Tensor] = ()) -> PhiView:
-    """Applies one local transform with immutable pre-evaluated context."""
+def _apply_local_transform(transform: LocalValueTransform,
+                           phi_view: PhiView,
+                           *,
+                           data: Any = None,
+                           evaluation: Optional[EvaluationView] = None,
+                           query_results: Sequence[torch.Tensor] = ()) -> PhiView:
+    """Applies one local ``transform`` with immutable pre-evaluated context."""
     if not isinstance(transform, LocalValueTransform):
         raise TypeError('`transform` should implement LocalValueTransform')
     if not isinstance(phi_view, PhiView):
@@ -340,7 +341,9 @@ def _apply_local_transform(
 
 
 def _structured_path_allowed(transform: GlobalValueTransform) -> bool:
-    """Returns whether a transform may bypass pointwise source evaluation."""
+    """
+    Returns whether a ``transform`` may bypass pointwise source evaluation.
+    """
     if not isinstance(transform, GlobalValueTransform):
         raise TypeError('`transform` should implement GlobalValueTransform')
     return transform.is_identity

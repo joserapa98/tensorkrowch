@@ -18,8 +18,7 @@ This script contains:
 
 from dataclasses import dataclass, field
 import sys
-from typing import (Any, Dict, List, Optional, Protocol, Sequence, TextIO,
-                    Union)
+from typing import Any, Dict, List, Optional, Protocol, Sequence, TextIO, Union
 
 import torch
 
@@ -27,7 +26,7 @@ from tensorkrowch.decompositions.metrics import DecompositionMetrics
 
 
 @dataclass(frozen=True)
-class DecompositionEvent:
+class DecompositionEvent:  # MARK: DecompositionEvent
     """Describes one structured event emitted by a decomposition driver."""
 
     name: str  # Event type consumed by observers
@@ -68,17 +67,17 @@ class DecompositionEvent:
         object.__setattr__(self, 'values', dict(self.values))
 
 
-class DecompositionObserver(Protocol):
+class DecompositionObserver(Protocol):  # MARK: DecompositionObserver
     """Protocol implemented by decomposition event consumers."""
 
     def emit(self, event: DecompositionEvent) -> None:
-        """Consumes one decomposition event."""
+        """Consumes one decomposition ``event``."""
 
     def close(self, metrics: DecompositionMetrics) -> None:
-        """Consumes the metrics produced by a completed fit."""
+        """Consumes the ``metrics`` produced by a completed fit."""
 
 
-class NullObserver:
+class NullObserver:  # MARK: NullObserver
     """Discards decomposition events."""
 
     def emit(self, event: DecompositionEvent) -> None:
@@ -88,7 +87,7 @@ class NullObserver:
         pass
 
 
-class HistoryObserver:
+class HistoryObserver:  # MARK: HistoryObserver
     """Stores structured events and the metrics from the latest fit."""
 
     def __init__(self) -> None:
@@ -106,7 +105,7 @@ class HistoryObserver:
         self.metrics = metrics
 
 
-class ConsoleObserver:
+class ConsoleObserver:  # MARK: ConsoleObserver
     """Prints hierarchical decomposition progress for a verbosity level."""
 
     def __init__(self,
@@ -238,7 +237,7 @@ class ConsoleObserver:
             raise TypeError('`metrics` should be DecompositionMetrics type')
 
 
-class _CompositeObserver:
+class _CompositeObserver:  # MARK: _CompositeObserver
     """Forwards decomposition events to several observers."""
 
     def __init__(self, observers: Sequence[DecompositionObserver]) -> None:
@@ -264,10 +263,11 @@ def _normalize_verbosity(verbose: Union[bool, int]) -> int:
     return verbose
 
 
-def _resolve_observer(
-        verbose: Union[bool, int],
-        observer: Optional[DecompositionObserver]) -> DecompositionObserver:
-    """Combines an optional observer with the selected console verbosity."""
+def _resolve_observer(verbose: Union[bool, int],
+                      observer: Optional[DecompositionObserver]) -> DecompositionObserver:
+    """
+    Combines an optional ``observer`` with the selected console verbosity.
+    """
     verbosity = _normalize_verbosity(verbose)
     if observer is not None:
         if not callable(getattr(observer, 'emit', None)) or \

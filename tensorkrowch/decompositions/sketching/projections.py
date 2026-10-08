@@ -1,4 +1,18 @@
-"""Range projections used before sketching truncation steps."""
+"""
+This script contains:
+
+    Classes:
+        * ProjectedRange
+        * RangeProjector
+        * IdentityRangeProjector
+        * RandomizedRangeProjector
+
+    Functions:
+        * _normalize_matrix_axis
+        * _stable_norm
+        * _projection_error
+        * _validate_optional_rank
+"""
 
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -13,7 +27,7 @@ from tensorkrowch.decompositions.metrics import RangeProjectionRecord
 
 def _normalize_matrix_axis(matrix: torch.Tensor,
                            axis: int) -> Tuple[torch.Tensor, int]:
-    """Flattens every non-projected axis into matrix rows."""
+    """Flattens every non-projected ``axis`` into ``matrix`` rows."""
     if not isinstance(matrix, torch.Tensor):
         raise TypeError('`matrix` should be torch.Tensor type')
     if matrix.ndim < 2:
@@ -44,8 +58,7 @@ def _stable_norm(tensor: torch.Tensor) -> torch.Tensor:
 
 def _projection_error(matrix: torch.Tensor,
                       basis: Optional[torch.Tensor],
-                      small_matrix: torch.Tensor) -> Tuple[
-                          torch.Tensor, torch.Tensor]:
+                      small_matrix: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Computes absolute and zero-safe relative range-projection errors."""
     approximation = small_matrix if basis is None \
         else basis @ small_matrix
@@ -61,7 +74,7 @@ def _projection_error(matrix: torch.Tensor,
 
 
 def _validate_optional_rank(rank: Optional[int]) -> None:
-    """Validates an optional rank upper bound."""
+    """Validates an optional ``rank`` upper bound."""
     if rank is not None:
         if isinstance(rank, bool) or not isinstance(rank, int):
             raise TypeError('`rank` should be int type or None')
@@ -70,7 +83,7 @@ def _validate_optional_rank(rank: Optional[int]) -> None:
 
 
 @dataclass(frozen=True)
-class ProjectedRange:
+class ProjectedRange:  # MARK: ProjectedRange
     """Small range representation and the map lifting its left vectors."""
 
     small_matrix: torch.Tensor
@@ -133,7 +146,9 @@ class ProjectedRange:
         return self.small_matrix.shape[0]
 
     def lift_left(self, vectors: torch.Tensor) -> torch.Tensor:
-        """Lifts left vectors from the small SVD to flattened input rows."""
+        """
+        Lifts left ``vectors`` from the small SVD to flattened input rows.
+        """
         if not isinstance(vectors, torch.Tensor) or vectors.ndim != 2:
             raise TypeError('`vectors` should be a matrix')
         if vectors.shape[0] != self.range_dim:
@@ -145,7 +160,7 @@ class ProjectedRange:
         return vectors if self.basis is None else self.basis @ vectors
 
     def restore_left(self, vectors: torch.Tensor) -> torch.Tensor:
-        """Lifts vectors and replaces the projected axis by their rank."""
+        """Lifts ``vectors`` and replaces the projected axis by their rank."""
         lifted = self.lift_left(vectors)
         other_shape = self.original_shape[:self.axis] + \
             self.original_shape[(self.axis + 1):]
@@ -166,20 +181,21 @@ class ProjectedRange:
 
 
 @runtime_checkable
-class RangeProjector(Protocol):
+class RangeProjector(Protocol):  # MARK: RangeProjector
     """Strategy producing a small matrix and a left-vector lifting map."""
 
-    def project(
-            self,
-            matrix: torch.Tensor,
-            rank: Optional[int] = None,
-            generator: Optional[torch.Generator] = None,
-            axis: int = -1,
-            return_info: bool = False) -> ProjectedRange:
-        """Projects the range associated with the selected matrix axis."""
+    def project(self,
+                matrix: torch.Tensor,
+                rank: Optional[int] = None,
+                generator: Optional[torch.Generator] = None,
+                axis: int = -1,
+                return_info: bool = False) -> ProjectedRange:
+        """
+        Projects the range associated with the selected ``matrix`` ``axis``.
+        """
 
 
-class IdentityRangeProjector:
+class IdentityRangeProjector:  # MARK: IdentityRangeProjector
     """Leaves the flattened matrix unchanged and introduces no range basis."""
 
     def __init__(self, synchronize_timers: bool = True) -> None:
@@ -187,14 +203,15 @@ class IdentityRangeProjector:
             raise TypeError('`synchronize_timers` should be bool type')
         self.synchronize_timers = synchronize_timers
 
-    def project(
-            self,
-            matrix: torch.Tensor,
-            rank: Optional[int] = None,
-            generator: Optional[torch.Generator] = None,
-            axis: int = -1,
-            return_info: bool = False) -> ProjectedRange:
-        """Returns the exact matrix view without allocating a random map."""
+    def project(self,
+                matrix: torch.Tensor,
+                rank: Optional[int] = None,
+                generator: Optional[torch.Generator] = None,
+                axis: int = -1,
+                return_info: bool = False) -> ProjectedRange:
+        """
+        Returns the exact ``matrix`` view without allocating a random map.
+        """
         _validate_optional_rank(rank)
         if generator is not None and not isinstance(generator, torch.Generator):
             raise TypeError('`generator` should be torch.Generator type or None')
@@ -230,15 +247,14 @@ class IdentityRangeProjector:
             record=record)
 
 
-class RandomizedRangeProjector:
+class RandomizedRangeProjector:  # MARK: RandomizedRangeProjector
     """Computes a Gaussian range finder and its exact small-matrix lifting."""
 
-    def __init__(
-            self,
-            projection_dim: Optional[int] = None,
-            projection_oversampling: int = 0,
-            n_power_iter: int = 0,
-            synchronize_timers: bool = True) -> None:
+    def __init__(self,
+                 projection_dim: Optional[int] = None,
+                 projection_oversampling: int = 0,
+                 n_power_iter: int = 0,
+                 synchronize_timers: bool = True) -> None:
         if projection_dim is not None:
             if isinstance(projection_dim, bool) or \
                     not isinstance(projection_dim, int):
@@ -276,7 +292,7 @@ class RandomizedRangeProjector:
     def _omega(matrix: torch.Tensor,
                projection_dim: int,
                generator: Optional[torch.Generator]) -> torch.Tensor:
-        """Draws a real/complex Gaussian map on the generator's device."""
+        """Draws a real/complex Gaussian map on the ``generator``'s device."""
         random_device = matrix.device
         if generator is not None:
             random_device = torch.device(
@@ -289,12 +305,10 @@ class RandomizedRangeProjector:
             generator=generator)
         return omega.to(matrix.device)
 
-    def _range_find(
-            self,
-            matrix: torch.Tensor,
-            projection_dim: int,
-            generator: Optional[torch.Generator]) -> Tuple[
-                torch.Tensor, torch.Tensor]:
+    def _range_find(self,
+                    matrix: torch.Tensor,
+                    projection_dim: int,
+                    generator: Optional[torch.Generator]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Runs stabilized subspace iteration and forms ``Q^H A``."""
         omega = self._omega(matrix, projection_dim, generator)
         basis = torch.linalg.qr(matrix @ omega, mode='reduced').Q
@@ -306,14 +320,13 @@ class RandomizedRangeProjector:
         small_matrix = basis.mH @ matrix
         return basis, small_matrix
 
-    def project(
-            self,
-            matrix: torch.Tensor,
-            rank: Optional[int] = None,
-            generator: Optional[torch.Generator] = None,
-            axis: int = -1,
-            return_info: bool = False) -> ProjectedRange:
-        """Builds ``Q`` and ``Q^H A`` for the selected compression axis."""
+    def project(self,
+                matrix: torch.Tensor,
+                rank: Optional[int] = None,
+                generator: Optional[torch.Generator] = None,
+                axis: int = -1,
+                return_info: bool = False) -> ProjectedRange:
+        """Builds ``Q`` and ``Q^H A`` for the selected compression ``axis``."""
         _validate_optional_rank(rank)
         if generator is not None and not isinstance(generator, torch.Generator):
             raise TypeError('`generator` should be torch.Generator type or None')

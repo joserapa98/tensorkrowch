@@ -1,49 +1,55 @@
-"""Topology-neutral orchestration for recursive-sketching decompositions."""
+"""
+This script contains:
+
+    Classes:
+        * _SketchingFitContext
+        * RecursiveSketching
+"""
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
-from typing import (Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union)
+from typing import (Any,
+                    Dict,
+                    Iterator,
+                    List,
+                    Optional,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union)
 
 import torch
 
+from tensorkrowch.utils import truncated_svd
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+                                                 LocalSolveRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
-from tensorkrowch.decompositions.observers import (
-    DecompositionEvent,
-    DecompositionObserver,
-    _resolve_observer,
-)
-from tensorkrowch.decompositions.sketching.fitting import (
-    BasisFitter,
-    FittedInputAxis,
-    FixedEmbeddingFitter,
-    InputFitter,
-)
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   DecompositionObserver,
+                                                   _resolve_observer)
+from tensorkrowch.decompositions.sketching.fitting import (BasisFitter,
+                                                           FittedInputAxis,
+                                                           FixedEmbeddingFitter,
+                                                           InputFitter)
 from tensorkrowch.decompositions.sketching.phi import PhiOperator, PhiView
-from tensorkrowch.decompositions.sketching.projections import (
-    IdentityRangeProjector,
-    ProjectedRange,
-    RandomizedRangeProjector,
-    RangeProjector,
-)
-from tensorkrowch.decompositions.sketching.specs import (
-    _DomainSpec,
-    _EmbeddingSpec,
-    _OutputSpec,
-    _SketchingFitSpec,
-)
-from tensorkrowch.decompositions.sketching.transforms import (
-    GlobalValueTransform,
-    IdentityGlobalValueTransform,
-    IdentityLocalValueTransform,
-    LocalValueTransform,
-    _apply_local_transform,
-)
+from tensorkrowch.decompositions.sketching.projections import (IdentityRangeProjector,
+                                                               ProjectedRange,
+                                                               RandomizedRangeProjector,
+                                                               RangeProjector)
+from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
+                                                         _EmbeddingSpec,
+                                                         _OutputSpec,
+                                                         _SketchingFitSpec)
+from tensorkrowch.decompositions.sketching.transforms import (GlobalValueTransform,
+                                                              IdentityGlobalValueTransform,
+                                                              IdentityLocalValueTransform,
+                                                              LocalValueTransform,
+                                                              _apply_local_transform)
 from tensorkrowch.decompositions.sources import TensorSource
-from tensorkrowch.utils import truncated_svd
 
 
 _SKETCHING_PHASES = (
@@ -62,9 +68,13 @@ _SKETCHING_PHASES = (
 )
 
 
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import TensorDecomposition1D
+
+
 @dataclass
-class _SketchingFitContext:
-    """Mutable state owned exclusively by one recursive-sketching fit."""
+class _SketchingFitContext:  # MARK: _SketchingFitContext
+    """Mutable ``state`` owned exclusively by one recursive-sketching fit."""
 
     spec: _SketchingFitSpec
     runtime: _RuntimePolicy
@@ -166,22 +176,23 @@ class _SketchingFitContext:
             self.observer.close(self.metrics)
 
 
-class RecursiveSketching(ABC):
-    """Base class composing shared recursive-sketching phases and strategies."""
+class RecursiveSketching(ABC):  # MARK: RecursiveSketching
+    """
+    Base class composing shared recursive-sketching phases and strategies.
+    """
 
-    def __init__(
-            self,
-            source: TensorSource,
-            domains: _DomainSpec,
-            embeddings: _EmbeddingSpec,
-            outputs: _OutputSpec,
-            *,
-            input_fitters: Optional[Sequence[InputFitter]] = None,
-            range_projector: Optional[RangeProjector] = None,
-            global_transform: Optional[GlobalValueTransform] = None,
-            local_transform: Optional[LocalValueTransform] = None,
-            out_device: Optional[Union[str, torch.device]] = 'cpu',
-            synchronize_timers: bool = True) -> None:
+    def __init__(self,
+                 source: TensorSource,
+                 domains: _DomainSpec,
+                 embeddings: _EmbeddingSpec,
+                 outputs: _OutputSpec,
+                 *,
+                 input_fitters: Optional[Sequence[InputFitter]] = None,
+                 range_projector: Optional[RangeProjector] = None,
+                 global_transform: Optional[GlobalValueTransform] = None,
+                 local_transform: Optional[LocalValueTransform] = None,
+                 out_device: Optional[Union[str, torch.device]] = 'cpu',
+                 synchronize_timers: bool = True) -> None:
         if not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')
         if not isinstance(domains, _DomainSpec):
@@ -252,24 +263,22 @@ class RecursiveSketching(ABC):
                     in_dim=self.outputs.out_shape[axis]))
         return tuple(fitters)
 
-    def _new_context(
-            self,
-            *,
-            rank: Optional[int] = None,
-            cutoff: Optional[float] = None,
-            atol: Optional[float] = None,
-            rtol: Optional[float] = None,
-            cum_percentage: Optional[float] = None,
-            random_projection: bool = True,
-            projection_dim: Optional[int] = None,
-            projection_oversampling: int = 0,
-            n_power_iter: int = 0,
-            batch_size: int = 64,
-            generator: Optional[torch.Generator] = None,
-            collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            observer: Optional[DecompositionObserver] = None
-            ) -> _SketchingFitContext:
+    def _new_context(self,
+                     *,
+                     rank: Optional[int] = None,
+                     cutoff: Optional[float] = None,
+                     atol: Optional[float] = None,
+                     rtol: Optional[float] = None,
+                     cum_percentage: Optional[float] = None,
+                     random_projection: bool = True,
+                     projection_dim: Optional[int] = None,
+                     projection_oversampling: int = 0,
+                     n_power_iter: int = 0,
+                     batch_size: int = 64,
+                     generator: Optional[torch.Generator] = None,
+                     collect_metrics: bool = False,
+                     verbose: Union[bool, int] = 0,
+                     observer: Optional[DecompositionObserver] = None) -> _SketchingFitContext:
         """Creates isolated mutable state and resolves fit-time strategies."""
         spec = _SketchingFitSpec(
             rank=rank,
@@ -360,7 +369,7 @@ class RecursiveSketching(ABC):
                          site: int,
                          phi_view: PhiView,
                          context: _SketchingFitContext) -> PhiView:
-        """Applies the configured local value transform for one site."""
+        """Applies the configured local value transform for one ``site``."""
         with context.phase('values.local_transform', site=site):
             return _apply_local_transform(context.local_transform, phi_view)
 
@@ -369,7 +378,9 @@ class RecursiveSketching(ABC):
                         phi_view: PhiView,
                         axis: int,
                         context: _SketchingFitContext) -> FittedInputAxis:
-        """Fits one final-chain site's sampled axis using its strategy."""
+        """
+        Fits one final-chain ``site``'s sampled ``axis`` using its strategy.
+        """
         domain = self._input_domain(site)
         fitter = context.input_fitters[site]
         with context.phase('input.fit', site=site):
@@ -392,7 +403,7 @@ class RecursiveSketching(ABC):
         return fitted
 
     def _input_domain(self, site: int) -> torch.Tensor:
-        """Returns the domain represented by one final-chain site."""
+        """Returns the domain represented by one final-chain ``site``."""
         kind, source_axis = self.outputs.layout[site]
         if kind == 'input':
             return self.domains.for_site(source_axis)
@@ -400,12 +411,11 @@ class RecursiveSketching(ABC):
             self.outputs.out_shape[source_axis],
             device=self.source.device)
 
-    def _required_input_queries(
-            self,
-            site: int,
-            phi: PhiOperator,
-            axis: int,
-            context: _SketchingFitContext) -> Tuple[torch.Tensor, ...]:
+    def _required_input_queries(self,
+                                site: int,
+                                phi: PhiOperator,
+                                axis: int,
+                                context: _SketchingFitContext) -> Tuple[torch.Tensor, ...]:
         """Collects a fitter's complete query declaration before freeze."""
         queries = tuple(context.input_fitters[site].required_queries(
             phi,
@@ -422,7 +432,9 @@ class RecursiveSketching(ABC):
                        matrix: torch.Tensor,
                        axis: int,
                        context: _SketchingFitContext) -> ProjectedRange:
-        """Projects one fitted Phi on the axis compressed by the next SVD."""
+        """
+        Projects one fitted Phi on the ``axis`` compressed by the next SVD.
+        """
         with context.phase('range.project', site=site):
             projected = context.projector.project(
                 matrix,
@@ -439,8 +451,15 @@ class RecursiveSketching(ABC):
               site: int,
               projected: ProjectedRange,
               context: _SketchingFitContext,
-              rank: Optional[int] = None):
-        """Truncates a projected range and lifts its selected left vectors."""
+              rank: Optional[
+                  int] = None) -> Tuple[
+                torch.Tensor,
+                torch.Tensor,
+                torch.Tensor,
+                Optional[TruncationRecord]]:
+        """
+        Truncates a ``projected`` range and lifts its selected left vectors.
+        """
         truncation_kwargs = context.spec.truncation.as_kwargs()
         if rank is not None:
             truncation_kwargs['rank'] = rank
@@ -464,15 +483,14 @@ class RecursiveSketching(ABC):
     def _validate_result(self,
                          result: Any,
                          context: _SketchingFitContext) -> None:
-        """Optional hook for topology-specific result invariants."""
+        """Optional hook for topology-specific ``result`` invariants."""
 
     @abstractmethod
-    def fit(self, *args, **kwargs):
+    def fit(self, *args, **kwargs) -> 'TensorDecomposition1D':
         """Runs one concrete recursive-sketching decomposition."""
 
     @abstractmethod
-    def _build_regions(self,
-                       context: _SketchingFitContext) -> Dict[Any, Any]:
+    def _build_regions(self, context: _SketchingFitContext) -> Dict[Any, Any]:
         """Builds topology-specific region sketches."""
 
     @abstractmethod
@@ -487,12 +505,14 @@ class RecursiveSketching(ABC):
         """Runs topology-specific dependencies using the shared helpers."""
 
     @abstractmethod
-    def _solve_local(self, *args, **kwargs):
+    def _solve_local(self, *args, **kwargs) -> Tuple[torch.Tensor, Optional['LocalSolveRecord']]:
         """Solves one topology-specific core equation."""
 
     @abstractmethod
-    def _assemble_result(self, *args, **kwargs):
+    def _assemble_result(self, *args, **kwargs) -> 'TensorDecomposition1D':
         """Assembles the lightweight decomposition result."""
 
 
-__all__ = ['RecursiveSketching']
+__all__ = [
+    'RecursiveSketching',
+]

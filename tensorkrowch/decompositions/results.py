@@ -12,17 +12,43 @@ This script contains:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Sequence
+from typing import (Any,
+                    Dict,
+                    List,
+                    Optional,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union)
 
 import torch
 
-from tensorkrowch.formats import (TensorFormat, TensorFormat1D, TT, TR, TTM, TRM, QTT, QTR, QTTM, QTRM, QuantizedLayout, AffineCoordinateMap, CoordinateMap)
+from tensorkrowch.formats import (AffineCoordinateMap,
+                                  CoordinateMap,
+                                  QTR,
+                                  QTRM,
+                                  QTT,
+                                  QTTM,
+                                  QuantizedLayout,
+                                  TR,
+                                  TRM,
+                                  TT,
+                                  TTM,
+                                  TensorFormat,
+                                  TensorFormat1D)
 from tensorkrowch.formats.formats1d import _restore_cores
-from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
+
+from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+                                                 ErrorRecord)
 
 
-class TensorDecomposition(TensorFormat, ABC):
-    """Numerical format together with historical fit diagnostics.
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdapter
+
+
+class TensorDecomposition(TensorFormat, ABC):  # MARK: TensorDecomposition
+    """
+    Numerical format together with historical fit diagnostics.
 
     Structural operations describe the current tensors. Metrics and metadata
     describe how the result was obtained; editing cores does not rewrite them.
@@ -30,30 +56,35 @@ class TensorDecomposition(TensorFormat, ABC):
 
     @abstractmethod
     def as_info(self) -> Dict[str, Any]:
-        """Returns decomposition provenance and current structural dimensions."""
+        """
+        Returns decomposition provenance and current structural dimensions.
+        """
 
 
-class TensorDecomposition1D(TensorFormat1D, TensorDecomposition, ABC):
-    """Compatibility interface for raw-core 1D decomposition results."""
+class TensorDecomposition1D(TensorFormat1D, TensorDecomposition, ABC):  # MARK: TensorDecomposition1D
+    """One-dimensional formats carrying decomposition provenance."""
 
 
-class TensorDecomposition2D(TensorDecomposition, ABC):
+class TensorDecomposition2D(TensorDecomposition, ABC):  # MARK: TensorDecomposition2D
     """Reserved provenance interface for future 2D results."""
 
 
 @dataclass(init=False)
-class _ResultState:
+class _ResultState:  # MARK: _ResultState
     """Owns provenance; numerical representation is inherited from formats."""
 
     cores: Sequence[torch.Tensor] = field()  # Numerical format cores
-    metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)  # Historical fit records
+    # Historical fit records
+    metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
     metadata: Dict[str, Any] = field(default_factory=dict)  # Small algorithm configuration
     n_batches: int = field()  # Leading structural batch axes
 
-    def __init__(self, cores: Sequence[torch.Tensor],
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
                  metrics: Optional[DecompositionMetrics] = None,
                  metadata: Optional[Dict[str, Any]] = None,
-                 n_batches: int = 0, **kwargs: Any) -> None:
+                 n_batches: int = 0,
+                 **kwargs) -> None:
         self.metrics = DecompositionMetrics() if metrics is None else metrics
         self.metadata = {} if metadata is None else metadata
         if not isinstance(self.metrics, DecompositionMetrics):
@@ -63,17 +94,29 @@ class _ResultState:
         super().__init__(cores, n_batches=n_batches, **kwargs)
 
     @property
-    def input_dim(self):
-        """Compatibility alias for in_dim."""
+    def input_dim(self) -> Tuple[int, ...]:
+        """Compatibility alias for ``in_dim``."""
         return self.in_dim
 
     @property
-    def output_dim(self):
-        """Compatibility alias for out_dim."""
+    def output_dim(self) -> Optional[Tuple[int, ...]]:
+        """Compatibility alias for ``out_dim``."""
         return self.out_dim
 
     def as_info(self) -> Dict[str, Any]:
-        """Returns small structural metadata and detached fit diagnostics."""
+        """
+        Returns current dimensions and historical decomposition diagnostics.
+
+        ``rank``, ``in_dim`` and ``out_dim`` describe the current cores. Metrics
+        describe the original fit, even after editing or rounding the result.
+        Tensor-valued diagnostics are detached and moved to CPU by
+        :meth:`~tensorkrowch.decompositions.DecompositionMetrics.as_info`.
+
+        Returns
+        -------
+        dict
+            Structure, a shallow copy of ``metadata`` and fit diagnostics.
+        """
         return {
             'topology': self.topology,
             'rank': self.rank,
@@ -86,15 +129,28 @@ class _ResultState:
             'metadata': dict(self.metadata),
         }
 
-    def error(self, *args: Any, **kwargs: Any) -> ErrorRecord:
-        """Collects a sample error using the shared numerical format kernel."""
+    def error(self, *args, **kwargs) -> ErrorRecord:
+        """
+        Measures sample error with the inherited format's evaluation rules.
+
+        Arguments follow :meth:`~tensorkrowch.formats.TensorFormat1D.error`.
+        This measures the current cores and returns a detached CPU
+        :class:`~tensorkrowch.decompositions.ErrorRecord`; it does not change
+        the historical records in ``metrics``.
+        """
         record = super().error(*args, **kwargs)
         return ErrorRecord(kind=record.kind, absolute=record.absolute,
                            relative=record.relative, size=record.size,
                            denominator=record.denominator)
 
-    def _new_from_standard_cores(self, cores, in_dim, out_dim, n_batches,
-                                 cyclic, other=None, product=False):
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Optional[Sequence[int]],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional['TensorFormat1D'] = None,
+                                 product: bool = False) -> 'TensorFormat1D':
         """Preserves the result contract when applying an operator to data."""
         if self._family == 'matrix' and product and other is None:
             cls = TRDecomposition if cyclic else TTDecomposition
@@ -106,26 +162,77 @@ class _ResultState:
             product=product)
 
 
-class TTDecomposition(_ResultState, TT, TensorDecomposition1D):
-    """TT format with decomposition metrics and algorithm metadata."""
+class TTDecomposition(_ResultState, TT, TensorDecomposition1D):  # MARK: TTDecomposition
+    """
+    :class:`~tensorkrowch.formats.TT` with decomposition diagnostics.
+
+    The numerical API is inherited from ``TT``. ``metrics`` and ``metadata``
+    describe the fit that produced the cores and remain historical when the
+    result is modified. Arithmetic produces ordinary formats.
+
+    Parameters
+    ----------
+    cores : sequence of torch.Tensor
+        TT cores following the public ``TT`` layout.
+    metrics : DecompositionMetrics, optional
+        Historical fit records; a new empty collection is created by default.
+    metadata : dict, optional
+        Algorithm configuration; defaults to a new empty dictionary.
+    n_batches : int, optional
+        Number of leading batch axes in each core. Defaults to ``0``.
+    **kwargs
+        Additional arguments of the underlying format, such as ``bonds``.
+
+    Examples
+    --------
+    >>> result = tk.decompositions.tt_svd(
+    ...     torch.eye(2), rank=2, return_result=True)
+    >>> result.contract_dense()
+    tensor([[1., 0.],
+            [0., 1.]])
+    >>> result.as_info()['rank']
+    [2]
+    """
 
 
-class TRDecomposition(_ResultState, TR, TensorDecomposition1D):
-    """TR format with decomposition metrics and algorithm metadata."""
+class TRDecomposition(_ResultState, TR, TensorDecomposition1D):  # MARK: TRDecomposition
+    """
+    :class:`~tensorkrowch.formats.TR` with decomposition diagnostics.
+
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TTDecomposition`; cores and numerical operations follow ``TR``.
+    """
 
 
-class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):
-    """TTM format with decomposition metrics and algorithm metadata."""
+class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):  # MARK: TTMDecomposition
+    """
+    :class:`~tensorkrowch.formats.TTM` with decomposition diagnostics.
+
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TTDecomposition`; cores and numerical operations follow ``TTM``.
+    """
 
 
-class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):
-    """TRM format with decomposition metrics and algorithm metadata."""
+class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):  # MARK: TRMDecomposition
+    """
+    :class:`~tensorkrowch.formats.TRM` with decomposition diagnostics.
+
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TTDecomposition`; cores and numerical operations follow ``TRM``.
+    """
 
 
-class _QuanticsResultState:
-    """Adds provenance after the coordinate-aware constructor initializes cores."""
+class _QuanticsResultState:  # MARK: _QuanticsResultState
+    """
+    Adds provenance after the coordinate-aware constructor initializes cores.
+    """
 
-    def __init__(self, cores, metrics=None, metadata=None, n_batches=0, **kwargs):
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
+                 metrics: Optional['DecompositionMetrics'] = None,
+                 metadata: Optional[Dict[str, Any]] = None,
+                 n_batches: int = 0,
+                 **kwargs) -> None:
         super().__init__(cores, n_batches=n_batches, **kwargs)
         if metrics is not None:
             if not isinstance(metrics, DecompositionMetrics):
@@ -138,8 +245,8 @@ class _QuanticsResultState:
 
 
 @dataclass(init=False)
-class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
-    """Quantics TT retaining its actual digit layout and coordinate map."""
+class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):  # MARK: QTTDecomposition
+    """:class:`~tensorkrowch.formats.QTT` retaining digit and coordinate metadata."""
 
     n_coordinates: int = field()  # Number of original input coordinates
     layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
@@ -147,8 +254,8 @@ class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):
 
 
 @dataclass(init=False)
-class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):
-    """Quantics TR retaining its actual digit layout and coordinate map."""
+class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):  # MARK: QTRDecomposition
+    """:class:`~tensorkrowch.formats.QTR` retaining digit and coordinate metadata."""
 
     n_coordinates: int = field()  # Number of original input coordinates
     layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
@@ -181,16 +288,22 @@ class QTRMDecomposition(_QuanticsResultState, QTRM,
     out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
 
 
-class PEPSDecomposition(TensorDecomposition2D):
+class PEPSDecomposition(TensorDecomposition2D):  # MARK: PEPSDecomposition
     """Reserved PEPS result interface."""
 
 
-class PEPODecomposition(TensorDecomposition2D):
+class PEPODecomposition(TensorDecomposition2D):  # MARK: PEPODecomposition
     """Reserved PEPO result interface."""
 
 
-def _quantics_result(result, quantization=None, *, adapter=None):
-    """Attaches coordinate meaning to fitted cores without numerical refitting."""
+def _quantics_result(result: 'TensorDecomposition1D',
+                     quantization: Optional[
+                         Union[QuantizedLayout, Tuple[QuantizedLayout, QuantizedLayout]]] = None,
+                     *,
+                     adapter: Optional['QuantizedSourceAdapter'] = None) -> 'TensorDecomposition1D':
+    """
+    Attaches coordinate meaning to fitted cores without numerical refitting.
+    """
     if quantization is None:
         return result
     kwargs = dict(metrics=result.metrics, metadata=result.metadata,
@@ -223,3 +336,10 @@ def _quantics_result(result, quantization=None, *, adapter=None):
              'sites': layout.sites(), 'grid_size': layout.grid_size}
             for layout in layouts]
     return wrapped.to(device=result.device)
+
+
+_DecompositionOutput = Union[
+    List[torch.Tensor],
+    Tuple[List[torch.Tensor], Dict[str, Any]],
+    TensorDecomposition1D,
+]

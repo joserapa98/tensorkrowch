@@ -1,16 +1,31 @@
-"""Internal specifications shared by recursive-sketching decompositions."""
+"""
+This script contains:
+
+    Classes:
+        * _DomainSpec
+        * _EmbeddingSpec
+        * _OutputSpec
+        * _SketchingFitSpec
+
+    Functions:
+        * _normalize_n_sites
+        * _validate_site
+        * _split_samples
+        * _default_output_positions
+"""
 
 from dataclasses import dataclass, field
 from math import prod
-from typing import (Callable, Optional, Sequence, Tuple, Union)
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import _INTEGER_DTYPES
+
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.observers import _normalize_verbosity
 from tensorkrowch.decompositions.sources import ConfigurationBatch
-from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.embeddings import basis
 
 
 _Embedding = Union[torch.Tensor, Callable[[torch.Tensor], torch.Tensor]]
@@ -32,7 +47,7 @@ def _normalize_n_sites(n_sites: int) -> int:
 
 
 def _validate_site(site: int, n_sites: int) -> int:
-    """Validates one site against a normalized site count."""
+    """Validates one ``site`` against a normalized ``site`` count."""
     if isinstance(site, bool) or not isinstance(site, int):
         raise TypeError('`site` should be int type')
     if (site < 0) or (site >= n_sites):
@@ -42,7 +57,9 @@ def _validate_site(site: int, n_sites: int) -> int:
 
 def _split_samples(samples: _Samples,
                    n_sites: int) -> Tuple[torch.Tensor, ...]:
-    """Normalizes packed or heterogeneous samples to one tensor per site."""
+    """
+    Normalizes packed or heterogeneous ``samples`` to one tensor per site.
+    """
     if isinstance(samples, ConfigurationBatch):
         if samples.n_sites != n_sites:
             raise ValueError(
@@ -87,7 +104,7 @@ def _split_samples(samples: _Samples,
 
 
 @dataclass(frozen=True)
-class _DomainSpec:
+class _DomainSpec:  # MARK: _DomainSpec
     """Stores one finite coordinate domain per input site."""
 
     values: Sequence[torch.Tensor]
@@ -126,7 +143,9 @@ class _DomainSpec:
                   domain: _Domain,
                   n_sites: int,
                   samples: _Samples = None) -> '_DomainSpec':
-        """Broadcasts explicit domains or infers them from input samples."""
+        """
+        Broadcasts explicit domains or infers them from input ``samples``.
+        """
         n_sites = _normalize_n_sites(n_sites)
         if domain is None:
             sample_values = _split_samples(samples, n_sites)
@@ -167,13 +186,15 @@ class _DomainSpec:
         return tuple(tuple(value.shape[1:]) for value in self.values)
 
     def for_site(self, site: int) -> torch.Tensor:
-        """Returns the domain associated with one input site."""
+        """Returns the domain associated with one input ``site``."""
         return self.values[_validate_site(site, self.n_sites)]
 
 
 @dataclass(frozen=True)
-class _EmbeddingSpec:
-    """Caches validated site embeddings and their finite-domain matrices."""
+class _EmbeddingSpec:  # MARK: _EmbeddingSpec
+    """
+    Caches validated site ``embeddings`` and their finite-domain ``matrices``.
+    """
 
     embeddings: Sequence[_Embedding]
     domains: _DomainSpec
@@ -201,7 +222,7 @@ class _EmbeddingSpec:
 
     @classmethod
     def normalize(cls,
-                  embedding,
+                  embedding: Union[torch.Tensor, Callable, Sequence[Union[torch.Tensor, Callable]]],
                   domains: _DomainSpec) -> '_EmbeddingSpec':
         """Broadcasts embeddings and evaluates every finite domain once."""
         if not isinstance(domains, _DomainSpec):
@@ -245,7 +266,9 @@ class _EmbeddingSpec:
     def _validate_matrix_for_domain(site: int,
                                     matrix: torch.Tensor,
                                     domain: torch.Tensor) -> None:
-        """Validates one cached embedding matrix against its site domain."""
+        """
+        Validates one cached embedding ``matrix`` against its ``site`` ``domain``.
+        """
         if not isinstance(matrix, torch.Tensor):
             raise TypeError(
                 f'Embedding at site {site} should return a torch.Tensor')
@@ -267,7 +290,7 @@ class _EmbeddingSpec:
             raise ValueError(f'Embedding at site {site} should be finite')
 
     def _validate_matrix(self, site: int, matrix: torch.Tensor) -> None:
-        """Validates one matrix against the already-normalized domain."""
+        """Validates one ``matrix`` against the already-normalized domain."""
         self._validate_matrix_for_domain(
             site, matrix, self.domains.for_site(site))
 
@@ -282,13 +305,15 @@ class _EmbeddingSpec:
         return tuple(matrix.shape[1] for matrix in self.matrices)
 
     def matrix(self, site: int) -> torch.Tensor:
-        """Returns the cached finite-domain embedding matrix for one site."""
+        """
+        Returns the cached finite-domain embedding matrix for one ``site``.
+        """
         return self.matrices[_validate_site(site, self.n_sites)]
 
-    def evaluate(self,
-                 site: int,
-                 values: torch.Tensor) -> torch.Tensor:
-        """Embeds values or looks them up in a precomputed embedding table."""
+    def evaluate(self, site: int, values: torch.Tensor) -> torch.Tensor:
+        """
+        Embeds ``values`` or looks them up in a precomputed embedding table.
+        """
         site = _validate_site(site, self.n_sites)
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
@@ -350,7 +375,7 @@ def _default_output_positions(n_input_sites: int,
 
 
 @dataclass(frozen=True)
-class _OutputSpec:
+class _OutputSpec:  # MARK: _OutputSpec
     """Maps tensor-output axes to ordered sites in the decomposed chain."""
 
     out_shape: Sequence[int]
@@ -397,7 +422,7 @@ class _OutputSpec:
     def normalize(cls,
                   values: torch.Tensor,
                   n_input_sites: int,
-                  out_position=None) -> '_OutputSpec':
+                  out_position: Optional[Union[int, Sequence[int]]] = None) -> '_OutputSpec':
         """Infers scalar/tensor output semantics from one evaluated batch."""
         if not isinstance(values, torch.Tensor):
             raise TypeError('Function output should be a torch.Tensor')
@@ -530,7 +555,7 @@ class _OutputSpec:
         return (indices * strides).sum(dim=1)
 
     def unflatten_labels(self, labels: torch.Tensor) -> torch.Tensor:
-        """Unflattens row-major labels to one index per output axis."""
+        """Unflattens row-major ``labels`` to one index per output axis."""
         labels = self._validate_flat_labels(labels)
         if self.scalar:
             return labels.new_empty((labels.shape[0], 0))
@@ -543,7 +568,7 @@ class _OutputSpec:
         return torch.stack(axes, dim=1)
 
     def _validate_flat_labels(self, labels: torch.Tensor) -> torch.Tensor:
-        """Validates flattened row-major labels."""
+        """Validates flattened row-major ``labels``."""
         if not isinstance(labels, torch.Tensor):
             raise TypeError('`labels` should be torch.Tensor type')
         if labels.ndim != 1:
@@ -555,11 +580,10 @@ class _OutputSpec:
             raise ValueError('`labels` contains an out-of-range output index')
         return labels
 
-    def sample_labels(
-            self,
-            values: torch.Tensor,
-            generator: Optional[torch.Generator] = None,
-            zero_policy: str = 'error') -> torch.Tensor:
+    def sample_labels(self,
+                      values: torch.Tensor,
+                      generator: Optional[torch.Generator] = None,
+                      zero_policy: str = 'error') -> torch.Tensor:
         """Samples flattened labels proportionally to ``abs(values) ** 2``."""
         if self.scalar:
             raise ValueError('A scalar function has no output labels')
@@ -590,14 +614,17 @@ class _OutputSpec:
             generator=generator).squeeze(1)
         return labels.to(values.device)
 
-    def resolve_labels(
-            self,
-            values: torch.Tensor,
-            labels: Optional[torch.Tensor] = None,
-            generator: Optional[torch.Generator] = None,
-            zero_policy: str = 'error'
-            ) -> Tuple[Optional[torch.Tensor], torch.Tensor, torch.Tensor]:
-        """Returns flat labels, per-axis indices and selected output values."""
+    def resolve_labels(self,
+                       values: torch.Tensor,
+                       labels: Optional[torch.Tensor] = None,
+                       generator: Optional[torch.Generator] = None,
+                       zero_policy: str = 'error') -> Tuple[
+            Optional[torch.Tensor],
+            torch.Tensor,
+            torch.Tensor]:
+        """
+        Returns flat ``labels``, per-axis indices and selected output ``values``.
+        """
         values = self.validate_values(values)
         if self.scalar:
             if labels is not None:
@@ -618,11 +645,12 @@ class _OutputSpec:
             1, flat_labels.unsqueeze(1)).squeeze(1)
         return flat_labels, output_indices, selected
 
-    def insert_indices(
-            self,
-            samples: Union[torch.Tensor, Sequence[torch.Tensor]],
-            output_indices: torch.Tensor) -> Tuple[torch.Tensor, ...]:
-        """Inserts one discrete index tensor per output axis into samples."""
+    def insert_indices(self,
+                       samples: Union[torch.Tensor, Sequence[torch.Tensor]],
+                       output_indices: torch.Tensor) -> Tuple[torch.Tensor, ...]:
+        """
+        Inserts one discrete index tensor per output axis into ``samples``.
+        """
         input_values = _split_samples(samples, self.n_input_sites)
         if not isinstance(output_indices, torch.Tensor):
             raise TypeError('`output_indices` should be torch.Tensor type')
@@ -642,8 +670,7 @@ class _OutputSpec:
                 else output_indices[:, axis])
         return tuple(result)
 
-    def site_dim(self,
-                 embeddings: _EmbeddingSpec) -> Tuple[int, ...]:
+    def site_dim(self, embeddings: _EmbeddingSpec) -> Tuple[int, ...]:
         """Returns input/output dimension at every final chain site."""
         if not isinstance(embeddings, _EmbeddingSpec):
             raise TypeError('`embeddings` should be _EmbeddingSpec type')
@@ -660,7 +687,7 @@ class _OutputSpec:
                    values: torch.Tensor,
                    embeddings: _EmbeddingSpec,
                    dtype: Optional[torch.dtype] = None) -> torch.Tensor:
-        """Uses the input embedding or exact basis required at one site."""
+        """Uses the input embedding or exact basis required at one ``site``."""
         site = _validate_site(site, self.n_sites)
         kind, axis = self.layout[site]
         if kind == 'input':
@@ -677,8 +704,8 @@ class _OutputSpec:
 
 
 @dataclass(frozen=True)
-class _SketchingFitSpec:
-    """Groups truncation, range projection, batching and diagnostics."""
+class _SketchingFitSpec:  # MARK: _SketchingFitSpec
+    """Groups ``truncation``, range projection, batching and diagnostics."""
 
     rank: Optional[int] = None
     cutoff: Optional[float] = None

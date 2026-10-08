@@ -30,11 +30,10 @@ import torch
 
 from tensorkrowch.decompositions.metrics import GaugeRecord
 from tensorkrowch.decompositions.observers import DecompositionEvent
-
 from tensorkrowch.decompositions.ring.opening import LoopOpening
 
 
-class ExperimentalWarning(UserWarning):
+class ExperimentalWarning(UserWarning):  # MARK: ExperimentalWarning
     """Warns that an opt-in decomposition strategy is still experimental."""
 
 
@@ -51,10 +50,10 @@ def _validate_non_negative_float(value: Optional[float],
     return value
 
 
-def _matrix_from_core(core: torch.Tensor,
-                      orientation: str) -> torch.Tensor:
-    """Places the transported dimension in rows and both TR ranks in
-    columns."""
+def _matrix_from_core(core: torch.Tensor, orientation: str) -> torch.Tensor:
+    """
+    Places the transported dimension in rows and both TR ranks in columns.
+    """
     if orientation == 'left':
         return core.permute(1, 0, 2).reshape(core.shape[1], -1)
     return core.permute(1, 2, 0).reshape(core.shape[1], -1)
@@ -64,7 +63,7 @@ def _core_from_matrix(matrix: torch.Tensor,
                       orientation: str,
                       cyclic_rank: int,
                       local_rank: int) -> torch.Tensor:
-    """Restores the standard oriented gauge-core shape from its matrix."""
+    """Restores the standard oriented gauge-core shape from its ``matrix``."""
     external_dim = matrix.shape[0]
     tensor = matrix.reshape(external_dim, cyclic_rank, local_rank)
     if orientation == 'left':
@@ -73,13 +72,14 @@ def _core_from_matrix(matrix: torch.Tensor,
 
 
 @dataclass(frozen=True)
-class GaugeMap:
-    """Represents an oriented map between external and cyclic virtual bases.
+class GaugeMap:  # MARK: GaugeMap
+    """
+    Represents an oriented map between external and cyclic virtual bases.
 
     A left gauge has shape ``(cyclic_rank, external_dim, local_rank)`` and a
     right gauge has shape ``(local_rank, external_dim, cyclic_rank)``. Both
     orientations are matricized as ``external_dim x (cyclic_rank *
-    local_rank)``. Mirroring a gauge therefore changes its core orientation
+    local_rank)``. Mirroring a gauge therefore changes its ``core`` ``orientation``
     while preserving the represented matrix.
 
     Calling :meth:`inverse_or_pinv` returns the directional dual ``F`` that
@@ -170,7 +170,8 @@ class GaugeMap:
                         policy: str = 'auto',
                         *,
                         rank_rtol: Optional[float] = None) -> 'GaugeMap':
-        """Builds a dual with solve, inverse or Moore--Penrose pseudoinverse.
+        """
+        Builds a dual with solve, inverse or Moore--Penrose pseudoinverse.
 
         ``policy='auto'`` uses a linear solve for square gauges and falls back
         to a pseudoinverse if the solve fails. Rectangular gauges always use a
@@ -225,7 +226,7 @@ class GaugeMap:
             _rank_rtol=rank_rtol)
 
     def diagnostics(self,
-                    tolerance: float = 1e-8,
+                    tolerance: float = 1e-08,
                     *,
                     rank_rtol: Optional[float] = None) -> GaugeRecord:
         """Measures numerical rank, condition and dual cancellation error."""
@@ -271,14 +272,15 @@ class GaugeMap:
             rank_tolerance=rank_tolerance,
             site=self.site)
 
-    def require_cancellable(
-            self,
-            tolerance: float = 1e-8,
-            allow_projective: bool = False,
-            *,
-            rank_rtol: Optional[float] = None) -> GaugeRecord:
-        """Returns diagnostics or rejects a non-cancellable propagated
-        gauge."""
+    def require_cancellable(self,
+                            tolerance: float = 1e-08,
+                            allow_projective: bool = False,
+                            *,
+                            rank_rtol: Optional[float] = None) -> GaugeRecord:
+        """
+        Returns diagnostics or rejects a non-cancellable propagated
+        gauge.
+        """
         if not isinstance(allow_projective, bool):
             raise TypeError('`allow_projective` should be bool type')
         record = self.diagnostics(
@@ -296,7 +298,7 @@ class GaugeMap:
 
     def as_event(self,
                  phase: str,
-                 tolerance: float = 1e-8,
+                 tolerance: float = 1e-08,
                  *,
                  rank_rtol: Optional[float] = None,
                  level: int = 2) -> DecompositionEvent:
@@ -323,8 +325,10 @@ class GaugeMap:
 
 
 @dataclass(frozen=True)
-class GaugeRecursionStep:
-    """Stores the fixed gauge and diagnostics produced by one recursion."""
+class GaugeRecursionStep:  # MARK: GaugeRecursionStep
+    """
+    Stores the fixed ``gauge`` and ``diagnostics`` produced by one recursion.
+    """
 
     gauge: torch.Tensor  # Gauge passed to the next local problem
     # Gauge measurements produced by this transition
@@ -347,26 +351,25 @@ class GaugeRecursionStep:
 
 
 @runtime_checkable
-class GaugeRecursion(Protocol):
+class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
     """Protocol for advancing an opened gauge to either neighboring site."""
 
-    def advance_left(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+    def advance_left(self,
+                     opening: LoopOpening,
+                     local_target: Any,
+                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         """Builds the fixed right gauge for the next site to the left."""
 
-    def advance_right(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+    def advance_right(self,
+                      opening: LoopOpening,
+                      local_target: Any,
+                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         """Builds the fixed left gauge for the next site to the right."""
 
 
-class PseudoinverseGaugeRecursion:
-    """Advances gauges by directional inverse or pseudoinverse cancellation.
+class PseudoinverseGaugeRecursion:  # MARK: PseudoinverseGaugeRecursion
+    """
+    Advances gauges by directional inverse or pseudoinverse cancellation.
 
     This is the direct recursion used by the characterized TT-to-TR method. An
     outgoing right gauge is dualized and mirrored into the fixed left gauge of
@@ -392,7 +395,7 @@ class PseudoinverseGaugeRecursion:
     def __init__(self,
                  inverse_policy: str = 'pinv',
                  allow_projective: bool = False,
-                 tolerance: float = 1e-8,
+                 tolerance: float = 1e-08,
                  rank_rtol: Optional[float] = None) -> None:
         if inverse_policy not in ('auto', 'solve', 'inverse', 'pinv'):
             raise ValueError(
@@ -411,7 +414,7 @@ class PseudoinverseGaugeRecursion:
                  opening: LoopOpening,
                  recursion_context: Mapping[str, Any],
                  direction: str) -> GaugeRecursionStep:
-        """Dualizes and mirrors the outgoing gauge in one direction."""
+        """Dualizes and mirrors the outgoing gauge in one ``direction``."""
         if not isinstance(opening, LoopOpening):
             raise TypeError('`opening` should be LoopOpening type')
         if not isinstance(recursion_context, Mapping):
@@ -449,25 +452,24 @@ class PseudoinverseGaugeRecursion:
                 'cancellation_error': record.cancellation_error,
             })
 
-    def advance_left(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+    def advance_left(self,
+                     opening: LoopOpening,
+                     local_target: Any,
+                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         """Builds the fixed right gauge for the next site to the left."""
         return self._advance(opening, recursion_context, 'left')
 
-    def advance_right(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+    def advance_right(self,
+                      opening: LoopOpening,
+                      local_target: Any,
+                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         """Builds the fixed left gauge for the next site to the right."""
         return self._advance(opening, recursion_context, 'right')
 
 
-class TTCoreGaugeRecursion:
-    """Transports opened TR bases through the original TT cores.
+class TTCoreGaugeRecursion:  # MARK: TTCoreGaugeRecursion
+    """
+    Transports opened TR bases through the original TT cores.
 
     The incoming gauge and retained TR core define a prefix or suffix basis.
     This strategy expresses that basis in the next TT virtual basis by solving
@@ -498,7 +500,7 @@ class TTCoreGaugeRecursion:
     def __init__(self,
                  inverse_policy: str = 'auto',
                  allow_projective: bool = False,
-                 tolerance: float = 1e-8,
+                 tolerance: float = 1e-08,
                  rank_rtol: Optional[float] = None) -> None:
         if inverse_policy not in ('auto', 'solve', 'inverse', 'pinv'):
             raise ValueError(
@@ -518,12 +520,11 @@ class TTCoreGaugeRecursion:
             ExperimentalWarning,
             stacklevel=2)
 
-    def _solve_coordinates(
-            self,
-            matrix: torch.Tensor,
-            basis: torch.Tensor,
-            orientation: str,
-            site: int) -> Tuple[torch.Tensor, GaugeRecord]:
+    def _solve_coordinates(self,
+                           matrix: torch.Tensor,
+                           basis: torch.Tensor,
+                           orientation: str,
+                           site: int) -> Tuple[torch.Tensor, GaugeRecord]:
         """Expresses ``basis`` in the columns of one TT-core unfolding."""
         square = matrix.shape[0] == matrix.shape[1]
         method = self.inverse_policy
@@ -597,7 +598,8 @@ class TTCoreGaugeRecursion:
 
     @staticmethod
     def _source_core(
-            recursion_context: Mapping[str, Any]) -> Tuple[torch.Tensor, int]:
+        recursion_context: Mapping[str, Any]
+    ) -> Tuple[torch.Tensor, int]:
         """Gets the standardized TT core associated with the source opening."""
         if not isinstance(recursion_context, Mapping):
             raise TypeError('`recursion_context` should be a mapping')
@@ -674,28 +676,25 @@ class TTCoreGaugeRecursion:
                 'source_site': site,
             })
 
-    def advance_left(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+    def advance_left(self,
+                     opening: LoopOpening,
+                     local_target: Any,
+                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         """Builds the fixed right environment for the next site to the left."""
         return self._advance(opening, recursion_context, 'left')
 
-    def advance_right(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+    def advance_right(self,
+                      opening: LoopOpening,
+                      local_target: Any,
+                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         """Builds the fixed left environment for the next site to the right."""
         return self._advance(opening, recursion_context, 'right')
 
-    def prepare_boundary(
-            self,
-            opening: LoopOpening,
-            local_target: Any,
-            recursion_context: Mapping[str, Any],
-            direction: str) -> GaugeRecursionStep:
+    def prepare_boundary(self,
+                         opening: LoopOpening,
+                         local_target: Any,
+                         recursion_context: Mapping[str, Any],
+                         direction: str) -> GaugeRecursionStep:
         """Returns an outgoing-oriented environment for TT-edge absorption."""
         if direction not in ('left', 'right'):
             raise ValueError("`direction` should be 'left' or 'right'")

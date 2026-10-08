@@ -15,8 +15,9 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _fiber_configurations)
 
 
-class DenseTensorSource(_SourceEvaluationTracker):
-    """Tensor source backed by an explicitly stored dense tensor.
+class DenseTensorSource(_SourceEvaluationTracker):  # MARK: DenseTensorSource
+    """
+    Tensor source backed by an explicitly stored dense tensor.
 
     Parameters
     ----------
@@ -91,7 +92,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
         return self.tensor.device
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Gathers dense values at discrete global configurations."""
+        """Gathers dense values at discrete global ``configurations``."""
         indices = _discrete_indices(
             configurations, self._in_dim, self.device)
         result = self._ordered_tensor[tuple(
@@ -103,7 +104,7 @@ class DenseTensorSource(_SourceEvaluationTracker):
               configurations: ConfigurationBatch,
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates a discrete site fiber for every base configuration."""
+        """Evaluates a discrete ``site`` fiber for every base configuration."""
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
         if (site < 0) or (site >= len(self._in_dim)):
@@ -118,4 +119,6 @@ class DenseTensorSource(_SourceEvaluationTracker):
             configurations.batch_size, n_values, *self._out_shape)
 
 
-__all__ = ['DenseTensorSource']
+__all__ = [
+    'DenseTensorSource',
+]

@@ -40,7 +40,7 @@ def _normalize_dim(dim: _Dimension, name: str) -> Tuple[int, ...]:
 
 
 @dataclass(frozen=True)
-class _MatrixInput:
+class _MatrixInput:  # MARK: _MatrixInput
     """Contains a normalized dense matrix input."""
 
     in_dim: Tuple[int, ...]  # Input dimension of every matrix site
@@ -55,7 +55,7 @@ def _prepare_matrix_input(tensor: torch.Tensor,
                           out_dim: _Dimension,
                           layout: str,
                           family: str) -> _MatrixInput:
-    """Validates and normalizes a dense matrix or matrix-like tensor."""
+    """Validates and normalizes a dense matrix or matrix-like ``tensor``."""
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
     if not isinstance(layout, str):
@@ -102,7 +102,7 @@ def _prepare_matrix_input(tensor: torch.Tensor,
             if tuple(tensor.shape) != expected_shape:
                 raise ValueError(
                     'The matrix shape should equal '
-                    '(prod(in_dim), prod(out_dim))')
+                    '(prod(`in_dim`), prod(`out_dim`))')
             tensorized = tensor.reshape(
                 *normalized_in_dim, *normalized_out_dim)
             tensorized_layout = 'grouped'
@@ -148,4 +148,8 @@ def _prepare_matrix_input(tensor: torch.Tensor,
         matrix_input=matrix_input)
 
 
-__all__ = ['_Dimension', '_MatrixInput', '_prepare_matrix_input']
+__all__ = [
+    '_Dimension',
+    '_MatrixInput',
+    '_prepare_matrix_input',
+]

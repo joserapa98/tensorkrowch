@@ -8,7 +8,7 @@ This script contains:
 
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import torch
 
@@ -16,7 +16,7 @@ import torch
 Device = Optional[Union[str, torch.device]]
 
 
-class _RuntimeTimer:
+class _RuntimeTimer:  # MARK: _RuntimeTimer
     """Context manager that measures a runtime policy phase."""
 
     def __init__(self,
@@ -40,7 +40,7 @@ class _RuntimeTimer:
         self._start = perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         if self._start is None:
             raise RuntimeError('Runtime timer was not started')
         self._sync()
@@ -48,8 +48,10 @@ class _RuntimeTimer:
 
 
 @dataclass(frozen=True)
-class _RuntimePolicy:
-    """Normalizes active and final devices, dtype and synchronized timers."""
+class _RuntimePolicy:  # MARK: _RuntimePolicy
+    """
+    Normalizes active and final devices, ``dtype`` and synchronized timers.
+    """
 
     device: Device = None  # Device used for numerical operations
     out_device: Device = 'cpu'  # Device used for finalized tensors
@@ -75,7 +77,7 @@ class _RuntimePolicy:
                     out_device: Device = 'cpu',
                     dtype: Optional[torch.dtype] = None,
                     synchronize_timers: bool = True) -> '_RuntimePolicy':
-        """Infers unspecified active runtime properties from a tensor."""
+        """Infers unspecified active runtime properties from a ``tensor``."""
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         return cls(
@@ -85,7 +87,7 @@ class _RuntimePolicy:
             synchronize_timers=synchronize_timers)
 
     def prepare(self, tensor: torch.Tensor) -> torch.Tensor:
-        """Moves an input tensor to the active device and dtype."""
+        """Moves an input ``tensor`` to the active device and dtype."""
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         device = tensor.device if self.device is None else self.device
@@ -93,7 +95,7 @@ class _RuntimePolicy:
         return tensor.to(device=device, dtype=dtype)
 
     def finalize(self, tensor: torch.Tensor) -> torch.Tensor:
-        """Moves a finalized tensor to the configured output device."""
+        """Moves a finalized ``tensor`` to the configured output device."""
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if self.out_device is None:
@@ -101,9 +103,13 @@ class _RuntimePolicy:
         return tensor.to(device=self.out_device)
 
     def timer(self, device: Device = None) -> _RuntimeTimer:
-        """Returns a synchronized wall-clock timer for the active device."""
+        """
+        Returns a synchronized wall-clock timer for the active ``device``.
+        """
         timer_device = self.device if device is None else torch.device(device)
         return _RuntimeTimer(timer_device, self.synchronize_timers)
 
 
-__all__ = ['_RuntimePolicy']
+__all__ = [
+    '_RuntimePolicy',
+]

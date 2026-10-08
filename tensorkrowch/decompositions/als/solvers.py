@@ -20,19 +20,18 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from tensorkrowch.decompositions.metrics import LocalSolveRecord
-
 from tensorkrowch.decompositions.als.convergence import UpdatePolicy
+from tensorkrowch.decompositions.metrics import LocalSolveRecord
 
 
 ColumnScaling = Union[bool, str]
 
 
-class NonFiniteLocalSystemError(ValueError):
+class NonFiniteLocalSystemError(ValueError):  # MARK: NonFiniteLocalSystemError
     """Raised when a local environment or target contains NaN/Inf."""
 
 
-class NonFiniteSolutionError(RuntimeError):
+class NonFiniteSolutionError(RuntimeError):  # MARK: NonFiniteSolutionError
     """Raised when a local least-squares solution contains NaN/Inf."""
 
 
@@ -69,8 +68,9 @@ def _column_scales(environment: torch.Tensor) -> torch.Tensor:
         torch.ones_like(column_norms))
 
 
-class LeastSquaresSolver:
-    """Solve stable local least-squares systems with optional Tikhonov terms.
+class LeastSquaresSolver:  # MARK: LeastSquaresSolver
+    """
+    Solve stable local least-squares systems with optional Tikhonov terms.
 
     The solver minimizes ``||A x - b||^2 + lambda ||x||^2``. Tikhonov
     regularization is represented by augmented rows, never by normal equations.
@@ -138,11 +138,10 @@ class LeastSquaresSolver:
         self.system_scaling = system_scaling
         self.driver = driver
 
-    def _effective_regularization(
-            self,
-            environment: torch.Tensor,
-            regularization_scale: Optional[torch.Tensor] = None
-            ) -> torch.Tensor:
+    def _effective_regularization(self,
+                                  environment: torch.Tensor,
+                                  regularization_scale: Optional[
+                                      torch.Tensor] = None) -> torch.Tensor:
         """Determines lambda in the unscaled problem."""
         value = environment.real.new_tensor(self.l2_reg)
         if regularization_scale is not None:
@@ -175,8 +174,7 @@ class LeastSquaresSolver:
     def _augment(self,
                  environment: torch.Tensor,
                  target: torch.Tensor,
-                 effective_l2_reg: torch.Tensor
-                 ) -> Tuple[torch.Tensor, torch.Tensor]:
+                 effective_l2_reg: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Appends Tikhonov rows to the original system."""
         if effective_l2_reg == 0:
             return environment, target
@@ -193,8 +191,7 @@ class LeastSquaresSolver:
         augmented_target = torch.cat((target, zeros), dim=0)
         return augmented_environment, augmented_target
 
-    def _should_scale_columns(self,
-                              environment: torch.Tensor) -> bool:
+    def _should_scale_columns(self, environment: torch.Tensor) -> bool:
         """Resolves the explicit or automatic column-scaling policy."""
         if isinstance(self.column_scaling, bool):
             return self.column_scaling
@@ -243,13 +240,17 @@ class LeastSquaresSolver:
     def solve(self,
               environment: torch.Tensor,
               target: torch.Tensor,
-              site=None,
+              site: Optional[int] = None,
               sweep: Optional[int] = None,
               return_record: bool = True,
-              regularization_scale: Optional[torch.Tensor] = None):
-        """Solves one local system and optionally records its diagnostics.
+              regularization_scale: Optional[
+                  torch.Tensor] = None) -> Tuple[
+            torch.Tensor,
+            Optional['LocalSolveRecord']]:
+        """
+        Solves one local system and optionally records its diagnostics.
 
-        A vector target produces a vector solution. Multiple right-hand sides
+        A vector ``target`` produces a vector solution. Multiple right-hand sides
         share the same factorization. Diagnostics describe the original local
         system before column and system scaling; records are detached, while
         the solution retains its PyTorch autograd graph. No device fallback is
@@ -266,13 +267,13 @@ class LeastSquaresSolver:
         site : int or tuple[int], optional
             Site or block identifier attached to the local record.
         sweep : int, optional
-            Zero-based sweep identifier attached to the local record.
+            Zero-based ``sweep`` identifier attached to the local record.
         return_record : bool
             Whether to calculate residuals and create a LocalSolveRecord. With
             False, these diagnostic calculations are skipped. Default is True.
         regularization_scale : torch.Tensor, optional
             Non-negative scalar factor for the regularization coefficient when
-            a caller has normalized both the design and target. Environment
+            a caller has normalized both the design and ``target``. Environment
             caches use it to preserve absolute Tikhonov regularization under
             that normalization.
 
@@ -395,19 +396,20 @@ def _relative_error(absolute: torch.Tensor,
     return torch.full_like(absolute, torch.inf)
 
 
-def _solve_local_proposal(
-        solver: LeastSquaresSolver,
-        environment: torch.Tensor,
-        target: torch.Tensor,
-        current: torch.Tensor,
-        site: int,
-        sweep: int,
-        update_policy: UpdatePolicy,
-        return_record: bool,
-        regularization_scale: Optional[torch.Tensor] = None,
-        sampling_exact: Optional[bool] = None,
-        sample_generation: Optional[int] = None
-        ) -> Tuple[torch.Tensor, Optional[LocalSolveRecord]]:
+def _solve_local_proposal(solver: LeastSquaresSolver,
+                          environment: torch.Tensor,
+                          target: torch.Tensor,
+                          current: torch.Tensor,
+                          site: int,
+                          sweep: int,
+                          update_policy: UpdatePolicy,
+                          return_record: bool,
+                          regularization_scale: Optional[torch.Tensor] = None,
+                          sampling_exact: Optional[bool] = None,
+                          sample_generation: Optional[
+                              int] = None) -> Tuple[
+        torch.Tensor,
+        Optional[LocalSolveRecord]]:
     """Solves, damps and optionally accepts one local ALS proposal."""
     solution, record = solver.solve(
         environment,

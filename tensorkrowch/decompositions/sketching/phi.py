@@ -1,18 +1,37 @@
-"""Lazy Phi operators assembled from regions, sampled axes and sources."""
+"""
+This script contains:
 
-from typing import (Hashable, Optional, Protocol, Sequence, Tuple, Union,
+    Classes:
+        * PhiView
+        * _MaterializedPhi
+        * _SelectedPhiView
+        * PhiOperator
+
+    Functions:
+        * _normalize_selection
+        * _fiber_selection
+"""
+
+from typing import (Any,
+                    Hashable,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union,
                     runtime_checkable)
 
 import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
+
 from tensorkrowch.decompositions.metrics import EvaluationStats
-from tensorkrowch.decompositions.sketching.evaluations import (
-    _EvaluationPlanBuilder,
-    _EvaluationRequest,
-    _EvaluationSession,
-)
-from tensorkrowch.decompositions.sketching.regions import (RegionSketch, Site,
+from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder,
+                                                               _EvaluationRequest,
+                                                               _EvaluationSession)
+from tensorkrowch.decompositions.sketching.regions import (RegionSketch,
+                                                           Site,
                                                            SiteRegion)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
@@ -24,11 +43,16 @@ AxisComponent = Tuple[Site, torch.Tensor]
 PhiComponent = Union[RegionSketch, AxisComponent]
 
 
-def _normalize_selection(
-        shape: Sequence[int],
-        index_selection: Optional[torch.Tensor],
-        device: torch.device) -> Tuple[torch.Tensor, Tuple[int, ...]]:
-    """Returns flattened component indices and their requested result shape."""
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
+
+
+def _normalize_selection(shape: Sequence[int],
+                         index_selection: Optional[torch.Tensor],
+                         device: torch.device) -> Tuple[torch.Tensor, Tuple[int, ...]]:
+    """
+    Returns flattened component indices and their requested result ``shape``.
+    """
     shape = tuple(shape)
     n_components = len(shape)
     if index_selection is None:
@@ -54,12 +78,13 @@ def _normalize_selection(
     return flat, tuple(selection.shape[:-1])
 
 
-def _fiber_selection(
-        shape: Sequence[int],
-        axis: int,
-        fixed_indices: Optional[torch.Tensor],
-        device: torch.device) -> Tuple[torch.Tensor, Tuple[int, ...]]:
-    """Builds selections varying one Phi axis over fixed remaining indices."""
+def _fiber_selection(shape: Sequence[int],
+                     axis: int,
+                     fixed_indices: Optional[torch.Tensor],
+                     device: torch.device) -> Tuple[torch.Tensor, Tuple[int, ...]]:
+    """
+    Builds selections varying one Phi ``axis`` over fixed remaining indices.
+    """
     shape = tuple(shape)
     if isinstance(axis, bool) or not isinstance(axis, int):
         raise TypeError('`axis` should be int type')
@@ -106,7 +131,7 @@ def _fiber_selection(
 
 
 @runtime_checkable
-class PhiView(Protocol):
+class PhiView(Protocol):  # MARK: PhiView
     """Minimal lazy/materialized Phi interface consumed by later fitters."""
 
     @property
@@ -119,13 +144,13 @@ class PhiView(Protocol):
     def fiber(self,
               axis: int,
               fixed_indices: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates one varying Phi axis."""
+        """Evaluates one varying Phi ``axis``."""
 
     def materialize(self, batch_size: Optional[int] = None) -> torch.Tensor:
         """Returns the complete represented Phi tensor."""
 
 
-class _MaterializedPhi:
+class _MaterializedPhi:  # MARK: _MaterializedPhi
     """Materialized Phi tensor retaining its component-axis layout."""
 
     def __init__(self,
@@ -169,7 +194,7 @@ class _MaterializedPhi:
         return self.tensor
 
 
-class _SelectedPhiView:
+class _SelectedPhiView:  # MARK: _SelectedPhiView
     """Lazy selection over a parent Phi operator."""
 
     def __init__(self,
@@ -199,18 +224,17 @@ class _SelectedPhiView:
         return materialized.fiber(axis, fixed_indices)
 
 
-class PhiOperator:
+class PhiOperator:  # MARK: PhiOperator
     """Lazy Cartesian Phi assembled from regional states and sampled axes."""
 
-    def __init__(
-            self,
-            source: TensorSource,
-            components: Sequence[PhiComponent],
-            output_spec: _OutputSpec,
-            *,
-            input_sites: Optional[Sequence[Site]] = None,
-            output_sites: Optional[Sequence[Site]] = None,
-            input_kind: Optional[str] = None) -> None:
+    def __init__(self,
+                 source: TensorSource,
+                 components: Sequence[PhiComponent],
+                 output_spec: _OutputSpec,
+                 *,
+                 input_sites: Optional[Sequence[Site]] = None,
+                 output_sites: Optional[Sequence[Site]] = None,
+                 input_kind: Optional[str] = None) -> None:
         if not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')
         if not isinstance(output_spec, _OutputSpec):
@@ -315,9 +339,7 @@ class PhiOperator:
         """Stats from the latest convenience evaluation, if any."""
         return self._last_stats
 
-    def _values_from_selection(
-            self,
-            selection: torch.Tensor) -> dict:
+    def _values_from_selection(self, selection: torch.Tensor) -> dict:
         """Expands component row ids to one value tensor per declared site."""
         values_by_site = {}
         for axis, component in enumerate(self.components):
@@ -332,10 +354,10 @@ class PhiOperator:
                     0, ids.to(values.device)).to(self.source.device)
         return values_by_site
 
-    def _configuration_and_labels(
-            self,
-            selection: torch.Tensor
-            ) -> Tuple[ConfigurationBatch, Optional[torch.Tensor]]:
+    def _configuration_and_labels(self,
+                                  selection: torch.Tensor) -> Tuple[
+            ConfigurationBatch,
+            Optional[torch.Tensor]]:
         """Builds source inputs and flattened output labels for selections."""
         values_by_site = self._values_from_selection(selection)
         input_values = tuple(values_by_site[site] for site in self.input_sites)
@@ -369,9 +391,8 @@ class PhiOperator:
             labels = self.output_spec.flatten_labels(output_indices)
         return configurations, labels
 
-    def _request(
-            self,
-            index_selection: Optional[torch.Tensor]) -> _EvaluationRequest:
+    def _request(self,
+                 index_selection: Optional[torch.Tensor]) -> _EvaluationRequest:
         """Builds one flattened request without evaluating the source."""
         selection, result_shape = _normalize_selection(
             self.shape, index_selection, self.source.device)
@@ -382,28 +403,26 @@ class PhiOperator:
             output_spec=self.output_spec,
             output_labels=labels)
 
-    def configuration_batch(
-            self,
-            index_selection: Optional[torch.Tensor] = None
-            ) -> ConfigurationBatch:
+    def configuration_batch(self,
+                            index_selection: Optional[torch.Tensor] = None) -> ConfigurationBatch:
         """Builds source configurations and removes all output sites."""
         return self._request(index_selection).configurations
 
-    def collect(
-            self,
-            builder: _EvaluationPlanBuilder,
-            index_selection: Optional[torch.Tensor] = None) -> int:
-        """Collects this Phi request in a shared evaluation-plan builder."""
+    def collect(self,
+                builder: _EvaluationPlanBuilder,
+                index_selection: Optional[torch.Tensor] = None) -> int:
+        """
+        Collects this Phi request in a shared evaluation-plan ``builder``.
+        """
         if not isinstance(builder, _EvaluationPlanBuilder):
             raise TypeError('`builder` should be _EvaluationPlanBuilder type')
         if builder.source is not self.source:
             raise ValueError('The builder and Phi should share the same source')
         return builder.collect(self._request(index_selection))
 
-    def _evaluate_selection(
-            self,
-            index_selection: Optional[torch.Tensor],
-            batch_size: Optional[int] = None) -> torch.Tensor:
+    def _evaluate_selection(self,
+                            index_selection: Optional[torch.Tensor],
+                            batch_size: Optional[int] = None) -> torch.Tensor:
         """Evaluates one selection through a temporary deduplicated session."""
         builder = _EvaluationPlanBuilder(self.source)
         handle = self.collect(builder, index_selection)
@@ -424,10 +443,11 @@ class PhiOperator:
     def with_axis_values(self,
                          axis: int,
                          values: torch.Tensor) -> 'PhiOperator':
-        """Returns a lazy Phi with new values on one explicit input axis.
+        """
+        Returns a lazy Phi with new ``values`` on one explicit input ``axis``.
 
         Regional and output axes cannot be replaced. The returned operator
-        owns no evaluated values and can therefore be collected into a new
+        owns no evaluated ``values`` and can therefore be collected into a new
         evaluation plan before that plan is frozen.
         """
         if isinstance(axis, bool) or not isinstance(axis, int):
@@ -457,19 +477,18 @@ class PhiOperator:
     def fiber_at(self,
                  axis: int,
                  values: torch.Tensor,
-                 fixed_indices: Optional[torch.Tensor] = None
-                 ) -> torch.Tensor:
-        """Evaluates one functional input fiber at user-supplied values."""
+                 fixed_indices: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Evaluates one functional input fiber at user-supplied ``values``."""
         return self.with_axis_values(axis, values).fiber(
             axis, fixed_indices=fixed_indices)
 
     def fit(self,
             axis: int,
-            fitter,
+            fitter: Any,
             domain: torch.Tensor,
-            context=None,
-            return_info: bool = False):
-        """Delegates one lazy input axis to an ``InputFitter`` strategy."""
+            context: Any = None,
+            return_info: bool = False) -> 'FittedInputAxis':
+        """Delegates one lazy input ``axis`` to an ``InputFitter`` strategy."""
         from tensorkrowch.decompositions.sketching.fitting import InputFitter
 
         if not isinstance(fitter, InputFitter):
@@ -484,7 +503,9 @@ class PhiOperator:
     def fiber(self,
               axis: int,
               fixed_indices: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates one Phi fiber, using source partial contractions if valid."""
+        """
+        Evaluates one Phi fiber, using source partial contractions if valid.
+        """
         selection, result_shape = _fiber_selection(
             self.shape, axis, fixed_indices, self.source.device)
         normalized_axis = axis if axis >= 0 else axis + len(self.shape)
@@ -542,4 +563,7 @@ class PhiOperator:
         return _MaterializedPhi(result, self.layout).materialize()
 
 
-__all__ = ['PhiView', 'PhiOperator']
+__all__ = [
+    'PhiView',
+    'PhiOperator',
+]

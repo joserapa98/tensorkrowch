@@ -1,13 +1,40 @@
-"""Tensor ring decompositions based on recursive sketching."""
+"""
+This script contains:
 
-import warnings
+    Classes:
+        * _SelectedBlockSelector
+        * _SketchLocalTarget
+        * _SketchLoopOpener
+        * SketchGaugeRecursion
+        * _SketchTargetProvider
+        * TRRSS
+        * _QuantizedTRRSS
+        * TRRS
+
+    Functions:
+        * _merge_rs_metrics
+        * tr_rs
+        * qtr_rss
+        * tr_rss
+"""
+
 from dataclasses import dataclass
 from math import ceil, prod
-from typing import (Any, Dict, Mapping, Optional, Sequence, Tuple, Union)
+from typing import (Any,
+                    Callable,
+                    Dict,
+                    Mapping,
+                    Optional,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union)
+import warnings
 
 import torch
 
 from tensorkrowch.formats import TR
+from tensorkrowch.utils import truncated_svd
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -17,7 +44,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TRDecomposition)
+from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
                                                      PrescribedCentralBlockSelector,
@@ -27,46 +54,51 @@ from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeRecursionStep)
-from tensorkrowch.decompositions.ring.opening import (LoopOpener,
+from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
+                                                      LoopOpener,
+                                                      LoopOpenerCapabilities,
                                                       LoopOpening,
-                                                      FixedGaugeCoreOpener,
                                                       resolve_loop_opener)
-from tensorkrowch.decompositions.ring.tt2tr import TT2TR
 from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
+from tensorkrowch.decompositions.ring.tt2tr import TT2TR
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
-from tensorkrowch.decompositions.sketching.evaluations import (
-    _EvaluationPlanBuilder,
-    _EvaluationSession,
-)
-from tensorkrowch.decompositions.sketching.phi import (
-    PhiOperator,
-    _MaterializedPhi,
-)
-from tensorkrowch.decompositions.sketching.fitting import (InputFitter)
+from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder,
+                                                               _EvaluationSession)
+from tensorkrowch.decompositions.sketching.fitting import InputFitter
+from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
+                                                       _MaterializedPhi)
 from tensorkrowch.decompositions.sketching.projections import RangeProjector
-from tensorkrowch.decompositions.sketching.quantization import (
-    CoordinateMap,
-    QuantizedLayout,
-)
-from tensorkrowch.decompositions.sketching.transforms import (
-    GlobalValueTransform,
-    LocalValueTransform,
-    _apply_local_transform,
-    _collect_local_queries,
-    _prepare_global_transform,
-)
-from tensorkrowch.decompositions.sketching.specs import _OutputSpec
+from tensorkrowch.decompositions.sketching.quantization import (CoordinateMap,
+                                                                QuantizedLayout)
 from tensorkrowch.decompositions.sketching.sketches import SketchOperator
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
-from tensorkrowch.decompositions.sketching.tt import (Device, Samples, TTRS, TTRSS, _quantized_source, _QuantizedRSSMixin)
+from tensorkrowch.decompositions.sketching.specs import _OutputSpec
+from tensorkrowch.decompositions.sketching.transforms import (GlobalValueTransform,
+                                                              LocalValueTransform,
+                                                              _apply_local_transform,
+                                                              _collect_local_queries,
+                                                              _prepare_global_transform)
+from tensorkrowch.decompositions.sketching.tt import (Device,
+                                                      Samples,
+                                                      TTRS,
+                                                      TTRSS,
+                                                      _QuantizedRSSMixin,
+                                                      _quantized_source)
 from tensorkrowch.decompositions.sources import ConfigurationBatch
-from tensorkrowch.utils import truncated_svd
 
 
 _Rank = Union[int, Sequence[int]]
 
 
-class _SelectedBlockSelector(CentralBlockSelector):
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import _DecompositionOutput
+    from tensorkrowch.decompositions.sources.factory import SourceLike
+    from tensorkrowch.formats.quantization import Domain
+    from tensorkrowch.decompositions.results import TensorDecomposition1D
+    from tensorkrowch.decompositions.als.sampling import SampleBatch
+
+
+class _SelectedBlockSelector(CentralBlockSelector):  # MARK: _SelectedBlockSelector
     """Returns one already-selected center block to the shared ring driver."""
 
     def __init__(self, selection: BlockSelection) -> None:
@@ -74,12 +106,17 @@ class _SelectedBlockSelector(CentralBlockSelector):
             raise TypeError('`selection` should be BlockSelection type')
         self.selection = selection
 
-    def select(self, provider, rank, center=None, *, bounds=None):
+    def select(self,
+               provider: Any,
+               rank: Union[int, Sequence[int]],
+               center: Any = None,
+               *,
+               bounds: Any = None) -> 'BlockSelection':
         return self.selection
 
 
 @dataclass(frozen=True)
-class _SketchLocalTarget:
+class _SketchLocalTarget:  # MARK: _SketchLocalTarget
     """Carries one fitted Phi and the trimming policy for its sketch axes."""
 
     tensor: torch.Tensor
@@ -88,26 +125,24 @@ class _SketchLocalTarget:
     collect_metrics: bool
 
 
-class _SketchLoopOpener:
+class _SketchLoopOpener:  # MARK: _SketchLoopOpener
     """Trims free sketch axes around one delegated loop-opening strategy."""
 
-    def __init__(self,
-                 opener: LoopOpener,
-                 records: list) -> None:
+    def __init__(self, opener: LoopOpener, records: list) -> None:
         if not isinstance(opener, LoopOpener):
             raise TypeError('`opener` should implement LoopOpener')
         self.opener = opener
         self.records = records
 
     @property
-    def capabilities(self):
+    def capabilities(self) -> 'LoopOpenerCapabilities':
         return self.opener.capabilities
 
     def _trim(self,
               matrix: torch.Tensor,
               rank: int,
               site: int,
-              target: _SketchLocalTarget):
+              target: _SketchLocalTarget) -> Tuple[torch.Tensor, torch.Tensor]:
         options = dict(target.truncation)
         options['rank'] = min(rank, min(matrix.shape))
         if target.collect_metrics:
@@ -120,13 +155,13 @@ class _SketchLoopOpener:
         return u, s.unsqueeze(1) * vh
 
     def open(self,
-             target,
-             rank,
+             target: Any,
+             rank: Union[int, Sequence[int]],
              *,
-             fixed_left=None,
-             fixed_right=None,
-             orientation='right',
-             context=None) -> LoopOpening:
+             fixed_left: Any = None,
+             fixed_right: Any = None,
+             orientation: Any = 'right',
+             context: Any = None) -> LoopOpening:
         if not isinstance(target, _SketchLocalTarget):
             raise TypeError('Sketch loop opening requires a fitted Phi target')
         ranks = list(rank)
@@ -201,11 +236,11 @@ class _SketchLoopOpener:
             })
 
 
-class SketchGaugeRecursion:
+class SketchGaugeRecursion:  # MARK: SketchGaugeRecursion
     """Extends RSS gauges through opened cores and sketch recursions."""
 
     @staticmethod
-    def _provider(recursion_context: Mapping[str, Any]):
+    def _provider(recursion_context: Mapping[str, Any]) -> '_SketchTargetProvider':
         provider = recursion_context.get('provider')
         if not isinstance(provider, _SketchTargetProvider):
             raise TypeError(
@@ -215,8 +250,7 @@ class SketchGaugeRecursion:
     def advance_right(self,
                       opening: LoopOpening,
                       local_target: Any,
-                      recursion_context: Mapping[str, Any]
-                      ) -> GaugeRecursionStep:
+                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         provider = self._provider(recursion_context)
         gauge = provider.extend_right(
             opening, recursion_context['from_sites'])
@@ -231,8 +265,7 @@ class SketchGaugeRecursion:
     def advance_left(self,
                      opening: LoopOpening,
                      local_target: Any,
-                     recursion_context: Mapping[str, Any]
-                     ) -> GaugeRecursionStep:
+                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
         provider = self._provider(recursion_context)
         gauge = provider.extend_left(
             opening, recursion_context['from_sites'])
@@ -260,8 +293,10 @@ class SketchGaugeRecursion:
 
 
 @dataclass
-class _SketchTargetProvider:
-    """Exposes fitted Phi targets and recursive sketch bases to the driver."""
+class _SketchTargetProvider:  # MARK: _SketchTargetProvider
+    """
+    Exposes fitted Phi ``targets`` and recursive sketch bases to the driver.
+    """
 
     targets: Mapping[Tuple[int, ...], _SketchLocalTarget]
     in_dim: Sequence[int]
@@ -275,7 +310,7 @@ class _SketchTargetProvider:
 
     boundary_mode = 'open'
 
-    def local_target(self, sites, context):
+    def local_target(self, sites: Sequence[int], context: Any) -> '_SketchLocalTarget':
         sites = tuple(sites)
         try:
             return self.targets[sites]
@@ -283,7 +318,10 @@ class _SketchTargetProvider:
             raise ValueError(f'No fitted Phi target was planned for {sites}') \
                 from exc
 
-    def local_rank(self, sites, rank, context):
+    def local_rank(self,
+                   sites: Sequence[int],
+                   rank: Union[int, Sequence[int]],
+                   context: Any) -> Tuple[int, ...]:
         sites = tuple(sites)
         return (
             self.rank[(sites[0] - 1) % len(self.rank)],
@@ -291,7 +329,9 @@ class _SketchTargetProvider:
             self.rank[-1],
         )
 
-    def local_context(self, sites, context):
+    def local_context(self,
+                      sites: Sequence[int],
+                      context: Any) -> Dict[str, Any]:
         target = self.local_target(sites, context)
         return {
             'in_dim': tuple(target.tensor.shape),
@@ -300,7 +340,10 @@ class _SketchTargetProvider:
             'generator': context.get('generator'),
         }
 
-    def _embed(self, site: int, values: torch.Tensor, dtype) -> torch.Tensor:
+    def _embed(self,
+               site: int,
+               values: torch.Tensor,
+               dtype: Optional[torch.dtype]) -> torch.Tensor:
         if self.embedding_function is not None:
             return self.embedding_function(site, values, dtype)
         return self.outputs.embed_site(
@@ -388,8 +431,9 @@ class _SketchTargetProvider:
             })
 
 
-class TRRSS(TTRSS):
-    r"""Reusable Tensor Ring Recursive Sketching from Samples problem.
+class TRRSS(TTRSS):  # MARK: TRRSS
+    """
+    Reusable Tensor Ring Recursive Sketching from Samples problem.
 
     The constructor fixes the same source, site embeddings, domains and output
     layout as :class:`~tensorkrowch.decompositions.TTRSS`. Each :meth:`fit`
@@ -418,36 +462,34 @@ class TRRSS(TTRSS):
     """
 
     @classmethod
-    def quantized(
-            cls,
-            function=None,
-            *,
-            source=None,
-            layout: Optional[QuantizedLayout] = None,
-            n_coordinates: Optional[int] = None,
-            base: Union[int, Sequence[int]] = 2,
-            level: Union[int, Sequence[int]] = 1,
-            ordering: str = 'grouped',
-            digit_order: str = 'coarse_to_fine',
-            permutation=None,
-            coordinate_map: Optional[
-                Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-            domain=None,
-            source_space: str = 'physical',
-            source_layout: Optional[QuantizedLayout] = None,
-            sample_space: str = 'physical',
-            computational_grid: Union[str, float] = 'endpoints',
-            out_of_domain: str = 'error',
-            out_position=None,
-            device: Device = None,
-            dtype: Optional[torch.dtype] = None,
-            out_device: Device = 'cpu',
-            input_fitters: Optional[Sequence[InputFitter]] = None,
-            range_projector: Optional[RangeProjector] = None,
-            global_transform: Optional[GlobalValueTransform] = None,
-            local_transform: Optional[LocalValueTransform] = None,
-            local_solver: Optional[LeastSquaresSolver] = None,
-            synchronize_timers: bool = True) -> 'TRRSS':
+    def quantized(cls,
+                  function: Callable = None,
+                  *,
+                  source: 'SourceLike' = None,
+                  layout: Optional[QuantizedLayout] = None,
+                  n_coordinates: Optional[int] = None,
+                  base: Union[int, Sequence[int]] = 2,
+                  level: Union[int, Sequence[int]] = 1,
+                  ordering: str = 'grouped',
+                  digit_order: str = 'coarse_to_fine',
+                  permutation: Optional[Sequence[Tuple[int, int]]] = None,
+                  coordinate_map: Optional[Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+                  domain: 'Domain' = None,
+                  source_space: str = 'physical',
+                  source_layout: Optional[QuantizedLayout] = None,
+                  sample_space: str = 'physical',
+                  computational_grid: Union[str, float] = 'endpoints',
+                  out_of_domain: str = 'error',
+                  out_position: Optional[Union[int, Sequence[int]]] = None,
+                  device: Device = None,
+                  dtype: Optional[torch.dtype] = None,
+                  out_device: Device = 'cpu',
+                  input_fitters: Optional[Sequence[InputFitter]] = None,
+                  range_projector: Optional[RangeProjector] = None,
+                  global_transform: Optional[GlobalValueTransform] = None,
+                  local_transform: Optional[LocalValueTransform] = None,
+                  local_solver: Optional[LeastSquaresSolver] = None,
+                  synchronize_timers: bool = True) -> 'TRRSS':
         """Creates a QTR-RSS problem with basis-embedded digit sites."""
         adapter, layout = _quantized_source(
             function=function,
@@ -490,8 +532,7 @@ class TRRSS(TTRSS):
             quantized_adapter=adapter,
             sample_space=sample_space)
 
-    def fit(
-            self,
+    def fit(self,
             sketch_samples: Samples,
             labels: Optional[torch.Tensor] = None,
             rank: _Rank = 1,
@@ -511,17 +552,17 @@ class TRRSS(TTRSS):
             warm_start: Optional[TRDecomposition] = None,
             verbose: Union[bool, int] = 0,
             collect_metrics: bool = False,
-            observer: Optional[DecompositionObserver] = None
-            ) -> TRDecomposition:
-        r"""Decomposes the fixed function into a sampled Tensor Ring.
+            observer: Optional[DecompositionObserver] = None) -> TRDecomposition:
+        r"""
+        Decomposes the fixed function into a sampled Tensor Ring.
 
         Samples contain only the original input sites. Output indices are
-        selected from flattened labels, or sampled proportionally to
+        selected from flattened ``labels``, or sampled proportionally to
         ``abs(function(samples)) ** 2``, and inserted internally. ``rank`` is
         one upper bound shared by all right links, or one bound per final site;
         its last entry is always the cyclic link.
 
-        In prescribed mode the center is one site and the requested ranks are
+        In prescribed mode the ``center`` is one site and the requested ranks are
         passed to the local loop opener. With ``adaptive=True``, a centered
         injective block is fitted and doubly trimmed, the cyclic and adjacent
         ranks are estimated, and internal/outward ranks are discovered under
@@ -533,10 +574,10 @@ class TRRSS(TTRSS):
         sketch_samples : torch.Tensor, sequence of torch.Tensor or ConfigurationBatch
             Correlated samples in packed or heterogeneous per-site form.
         labels : torch.Tensor, optional
-            Flattened tensor-output labels with shape ``(batch_size,)``.
+            Flattened tensor-output ``labels`` with shape ``(batch_size,)``.
         rank : int or sequence of int
-            Shared rank cap or one right-link cap per final TR site. The last
-            value is the cyclic rank cap.
+            Shared ``rank`` cap or one right-link cap per final TR site. The last
+            value is the cyclic ``rank`` cap.
         center : int, optional
             Internal seed site. It defaults to the middle site.
         loop_opener : {``"als"``, ``"blostr+als"``} or LoopOpener, optional
@@ -545,7 +586,7 @@ class TRRSS(TTRSS):
             :class:`~tensorkrowch.decompositions.ALSLoopOpener`, not expanded
             into this signature.
         schedule : {``"center_out"``, ``"alternating"``}, optional
-            Serial ring schedule. The alternating path opens independent
+            Serial ring ``schedule``. The alternating path opens independent
             anchors first and then solves intervening sites with two fixed
             recursively propagated gauges. It is experimental and reports any
             explicit fallback to ``"center_out"`` in the result metadata.
@@ -556,9 +597,9 @@ class TRRSS(TTRSS):
             Advanced central-block policy. Adaptive mode otherwise uses the
             balanced common selector restricted to internal sites.
         adaptive : bool, optional
-            Whether ``rank`` entries are caps for rank discovery.
+            Whether ``rank`` entries are caps for ``rank`` discovery.
         pad_to_rank : bool, optional
-            Whether adaptive effective ranks are explicitly zero-padded to the
+            Whether ``adaptive`` effective ranks are explicitly zero-padded to the
             requested caps. It is disabled by default.
         cutoff : float, optional
             Minimum singular value to keep. It must be non-negative. Singular
@@ -578,7 +619,7 @@ class TRRSS(TTRSS):
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         batch_size : int, optional
@@ -693,7 +734,12 @@ class TRRSS(TTRSS):
     @staticmethod
     def _discovery_svd(matrix: torch.Tensor,
                        rank: int,
-                       truncation: Mapping[str, Any]):
+                       truncation: Mapping[
+                           str,
+                           Any]) -> Tuple[
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor]:
         """Truncates for discovery, dropping numerical null directions."""
         options = dict(truncation)
         options['rank'] = min(rank, min(matrix.shape))
@@ -715,18 +761,20 @@ class TRRSS(TTRSS):
                        matrix: torch.Tensor,
                        rank: int,
                        truncation: Mapping[str, Any]) -> int:
-        """Returns a stable truncated rank under one explicit upper bound."""
+        """
+        Returns a stable truncated ``rank`` under one explicit upper bound.
+        """
         return cls._discovery_svd(
             matrix, rank, truncation)[1].shape[-1]
 
-    def _adaptive_ranks(
-            self,
-            targets: Mapping[Tuple[int, ...], _SketchLocalTarget],
-            selection: BlockSelection,
-            rank_caps: Sequence[int],
-            context: _SketchingFitContext
-            ) -> Tuple[Tuple[int, ...], Mapping[str, Any]]:
-        """Estimates effective right-link ranks from doubly-trimmed sketches."""
+    def _adaptive_ranks(self,
+                        targets: Mapping[Tuple[int, ...], _SketchLocalTarget],
+                        selection: BlockSelection,
+                        rank_caps: Sequence[int],
+                        context: _SketchingFitContext) -> Tuple[Tuple[int, ...], Mapping[str, Any]]:
+        """
+        Estimates effective right-link ranks from doubly-trimmed sketches.
+        """
         left = selection.left
         right = selection.right
         tensor = targets[selection.sites].tensor
@@ -1015,7 +1063,10 @@ class TRRSS(TTRSS):
         context.state['adaptive_info'] = adaptive_info
         return self._assemble_result(context)
 
-    def _evaluate_extended_cores(self, cores, samples, context):
+    def _evaluate_extended_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 samples: Optional['SampleBatch'],
+                                 context: Any) -> torch.Tensor:
         vectors = [
             self.outputs.embed_site(
                 site, values,
@@ -1084,7 +1135,9 @@ class TRRSS(TTRSS):
             metrics=context.metrics,
             metadata=metadata)
 
-    def _validate_result(self, result, context):
+    def _validate_result(self,
+                         result: 'TensorDecomposition1D',
+                         context: Any) -> None:
         if not isinstance(result, TRDecomposition):
             raise TypeError('`result` should be TRDecomposition type')
         expected = context.state.get(
@@ -1093,15 +1146,14 @@ class TRRSS(TTRSS):
             raise ValueError('The result input dimensions are inconsistent')
 
 
-class _QuantizedTRRSS(_QuantizedRSSMixin, TRRSS):
-    """Internal TRRSS specialization that normalizes physical QTR samples."""
+class _QuantizedTRRSS(_QuantizedRSSMixin, TRRSS):  # MARK: _QuantizedTRRSS
+    """Internal TRRSS specialization that normalizes QTR domain samples."""
 
     _quantized_algorithm = 'qtr_rss'
 
 
 def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
-                      tr_metrics: DecompositionMetrics
-                      ) -> DecompositionMetrics:
+                      tr_metrics: DecompositionMetrics) -> DecompositionMetrics:
     """Combines TT-RS construction and TT-to-TR opening diagnostics."""
     return DecompositionMetrics(
         errors=[
@@ -1121,8 +1173,9 @@ def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
         sweeps=tt_metrics.sweeps + tr_metrics.sweeps)
 
 
-class TRRS(TTRS):
-    r"""Experimental Tensor Ring Recursive Sketching problem.
+class TRRS(TTRS):  # MARK: TRRS
+    """
+    Experimental Tensor Ring Recursive Sketching problem.
 
     The fixed source and recursive sketch operator have the same semantics as
     in :class:`~tensorkrowch.decompositions.TTRS`. Each :meth:`fit` first
@@ -1155,18 +1208,17 @@ class TRRS(TTRS):
     [1, 1, 1]
     """
 
-    def __init__(
-            self,
-            source=None,
-            *,
-            dataset: Optional[torch.Tensor] = None,
-            in_dim: Optional[Sequence[int]] = None,
-            weights: Optional[torch.Tensor] = None,
-            sketch_operator: Optional[SketchOperator] = None,
-            dtype: Optional[torch.dtype] = None,
-            device: Device = None,
-            out_device: Device = 'cpu',
-            synchronize_timers: bool = True) -> None:
+    def __init__(self,
+                 source: 'SourceLike' = None,
+                 *,
+                 dataset: Optional[torch.Tensor] = None,
+                 in_dim: Optional[Sequence[int]] = None,
+                 weights: Optional[torch.Tensor] = None,
+                 sketch_operator: Optional[SketchOperator] = None,
+                 dtype: Optional[torch.dtype] = None,
+                 device: Device = None,
+                 out_device: Device = 'cpu',
+                 synchronize_timers: bool = True) -> None:
         super().__init__(
             source=source,
             dataset=dataset,
@@ -1180,8 +1232,7 @@ class TRRS(TTRS):
         self._tr_out_device = out_device
 
     @torch.no_grad()
-    def fit(
-            self,
+    def fit(self,
             rank: int = 1,
             *,
             center: Optional[int] = None,
@@ -1190,7 +1241,7 @@ class TRRS(TTRS):
             schedule_block_size: int = 1,
             gauge_recursion: str = 'pseudoinverse',
             allow_projective_gauges: bool = False,
-            gauge_tolerance: float = 1e-8,
+            gauge_tolerance: float = 1e-08,
             inverse_policy: str = 'pinv',
             rank_rtol: Optional[float] = None,
             cutoff: Optional[float] = None,
@@ -1203,11 +1254,11 @@ class TRRS(TTRS):
             warm_start: Optional[TRDecomposition] = None,
             verbose: Union[bool, int] = 0,
             collect_metrics: bool = False,
-            observer: Optional[DecompositionObserver] = None
-            ) -> TRDecomposition:
-        r"""Projects the fixed source and opens the result into a TR.
+            observer: Optional[DecompositionObserver] = None) -> TRDecomposition:
+        """
+        Projects the fixed source and opens the result into a TR.
 
-        ``rank`` is the common maximum rank for the TT solve and every TR
+        ``rank`` is the common maximum ``rank`` for the TT solve and every TR
         link, including the cyclic link. Advanced local-loop options remain
         encapsulated by ``loop_opener``. Fidelity between the intermediate TT
         and final TR is always recorded because it validates the loop opening.
@@ -1218,19 +1269,19 @@ class TRRS(TTRS):
         Parameters
         ----------
         rank : int, optional
-            Positive maximum rank shared by all links.
+            Positive maximum ``rank`` shared by all links.
         center : int, optional
             Internal site at which cyclic loop opening begins.
         loop_opener : {``"als"``, ``"blostr+als"``} or LoopOpener, optional
             Encapsulated local loop-opening strategy.
         schedule : {``"center_out"``, ``"alternating"``}, optional
-            Serial cyclic construction schedule.
+            Serial cyclic construction ``schedule``.
         schedule_block_size : int, optional
             Consecutive sites in each alternating block.
         gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``}, optional
             Strategy used to propagate cyclic virtual bases.
         allow_projective_gauges : bool, optional
-            Allows rank-deficient directional gauges to propagate projectors.
+            Allows ``rank``-deficient directional gauges to propagate projectors.
         gauge_tolerance : float, optional
             Maximum relative gauge-cancellation error.
         inverse_policy : {``"auto"``, ``"solve"``, ``"inverse"``, ``"pinv"``}
@@ -1244,7 +1295,7 @@ class TRRS(TTRS):
         generator : torch.Generator, optional
             Generator owned by this fit for randomized sketches and openings.
         strict_system : bool, optional
-            Rejects rank-deficient TT core-determining systems.
+            Rejects ``rank``-deficient TT core-determining systems.
         warm_start : TRDecomposition, optional
             Reserved for a future defined update; non-``None`` is rejected.
         verbose : bool or int, optional
@@ -1378,37 +1429,37 @@ class TRRS(TTRS):
 
 
 @torch.no_grad()
-def tr_rs(
-        source=None,
-        *,
-        dataset: Optional[torch.Tensor] = None,
-        in_dim: Optional[Sequence[int]] = None,
-        weights: Optional[torch.Tensor] = None,
-        sketch_operator: Optional[SketchOperator] = None,
-        rank: int = 1,
-        center: Optional[int] = None,
-        loop_opener: Union[str, LoopOpener] = 'als',
-        schedule: str = 'center_out',
-        schedule_block_size: int = 1,
-        gauge_recursion: str = 'pseudoinverse',
-        allow_projective_gauges: bool = False,
-        gauge_tolerance: float = 1e-8,
-        inverse_policy: str = 'pinv',
-        rank_rtol: Optional[float] = None,
-        cutoff: Optional[float] = None,
-        atol: Optional[float] = None,
-        rtol: Optional[float] = None,
-        cum_percentage: Optional[float] = None,
-        batch_size: Optional[int] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Device = None,
-        generator: Optional[torch.Generator] = None,
-        strict_system: bool = False,
-        out_device: Device = 'cpu',
-        verbose: Union[bool, int] = 0,
-        return_info: bool = False,
-        return_result: bool = False):
-    """Projects a complete discrete source into TR cores with TR-RS.
+def tr_rs(source: 'SourceLike' = None,
+          *,
+          dataset: Optional[torch.Tensor] = None,
+          in_dim: Optional[Sequence[int]] = None,
+          weights: Optional[torch.Tensor] = None,
+          sketch_operator: Optional[SketchOperator] = None,
+          rank: int = 1,
+          center: Optional[int] = None,
+          loop_opener: Union[str, LoopOpener] = 'als',
+          schedule: str = 'center_out',
+          schedule_block_size: int = 1,
+          gauge_recursion: str = 'pseudoinverse',
+          allow_projective_gauges: bool = False,
+          gauge_tolerance: float = 1e-08,
+          inverse_policy: str = 'pinv',
+          rank_rtol: Optional[float] = None,
+          cutoff: Optional[float] = None,
+          atol: Optional[float] = None,
+          rtol: Optional[float] = None,
+          cum_percentage: Optional[float] = None,
+          batch_size: Optional[int] = None,
+          dtype: Optional[torch.dtype] = None,
+          device: Device = None,
+          generator: Optional[torch.Generator] = None,
+          strict_system: bool = False,
+          out_device: Device = 'cpu',
+          verbose: Union[bool, int] = 0,
+          return_info: bool = False,
+          return_result: bool = False) -> '_DecompositionOutput':
+    """
+    Projects a complete discrete ``source`` into TR cores with TR-RS.
 
     This simple interface constructs :class:`TRRS`, calls :meth:`TRRS.fit`
     and returns only the cores unless ``return_info=True``. Exactly one of
@@ -1464,52 +1515,51 @@ def tr_rs(
 
 
 @torch.no_grad()
-def qtr_rss(
-        function=None,
-        sketch_samples: Samples = None,
-        *,
-        source=None,
-        layout: Optional[QuantizedLayout] = None,
-        n_coordinates: Optional[int] = None,
-        base: Union[int, Sequence[int]] = 2,
-        level: Union[int, Sequence[int]] = 1,
-        ordering: str = 'grouped',
-        digit_order: str = 'coarse_to_fine',
-        permutation=None,
-        coordinate_map: Optional[
-            Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
-        domain=None,
-        source_space: str = 'physical',
-        source_layout: Optional[QuantizedLayout] = None,
-        sample_space: str = 'physical',
-        computational_grid: Union[str, float] = 'endpoints',
-        out_of_domain: str = 'error',
-        labels: Optional[torch.Tensor] = None,
-        out_position=None,
-        rank: _Rank = 1,
-        center: Optional[int] = None,
-        loop_opener: Union[str, LoopOpener] = 'als',
-        schedule: str = 'center_out',
-        schedule_block_size: int = 1,
-        adaptive: bool = False,
-        pad_to_rank: bool = False,
-        cutoff: Optional[float] = None,
-        atol: Optional[float] = None,
-        rtol: Optional[float] = None,
-        cum_percentage: Optional[float] = None,
-        batch_size: int = 64,
-        device: Device = None,
-        dtype: Optional[torch.dtype] = None,
-        generator: Optional[torch.Generator] = None,
-        out_device: Device = 'cpu',
-        verbose: Union[bool, int] = 0,
-        return_info: bool = False,
-        return_result: bool = False):
-    """Decomposes a multivariable physical function into QTR cores.
+def qtr_rss(function: Callable = None,
+            sketch_samples: Samples = None,
+            *,
+            source: 'SourceLike' = None,
+            layout: Optional[QuantizedLayout] = None,
+            n_coordinates: Optional[int] = None,
+            base: Union[int, Sequence[int]] = 2,
+            level: Union[int, Sequence[int]] = 1,
+            ordering: str = 'grouped',
+            digit_order: str = 'coarse_to_fine',
+            permutation: Optional[Sequence[Tuple[int, int]]] = None,
+            coordinate_map: Optional[Union[CoordinateMap, Sequence[CoordinateMap]]] = None,
+            domain: 'Domain' = None,
+            source_space: str = 'physical',
+            source_layout: Optional[QuantizedLayout] = None,
+            sample_space: str = 'physical',
+            computational_grid: Union[str, float] = 'endpoints',
+            out_of_domain: str = 'error',
+            labels: Optional[torch.Tensor] = None,
+            out_position: Optional[Union[int, Sequence[int]]] = None,
+            rank: _Rank = 1,
+            center: Optional[int] = None,
+            loop_opener: Union[str, LoopOpener] = 'als',
+            schedule: str = 'center_out',
+            schedule_block_size: int = 1,
+            adaptive: bool = False,
+            pad_to_rank: bool = False,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            batch_size: int = 64,
+            device: Device = None,
+            dtype: Optional[torch.dtype] = None,
+            generator: Optional[torch.Generator] = None,
+            out_device: Device = 'cpu',
+            verbose: Union[bool, int] = 0,
+            return_info: bool = False,
+            return_result: bool = False) -> '_DecompositionOutput':
+    """
+    Decomposes a coordinate-dependent ``function`` into QTR cores.
 
     This is the cyclic counterpart of :func:`qtt_rss`; it uses basis digit
-    sites and the ordinary TR-RSS ring driver after quantizing physical sketch
-    samples. The function must return scalar values. At least three digit sites
+    sites and the ordinary TR-RSS ring driver after quantizing sketch
+    samples. The ``function`` must return scalar values. At least three digit sites
     are required.
     """
     if sketch_samples is None:
@@ -1579,14 +1629,14 @@ def qtr_rss(
 
 
 @torch.no_grad()
-def tr_rss(function,
-           embedding,
+def tr_rss(function: Callable,
+           embedding: Union[torch.Tensor, Callable, Sequence[Union[torch.Tensor, Callable]]],
            sketch_samples: Samples,
            labels: Optional[torch.Tensor] = None,
-           in_dim=None,
-           domain=None,
+           in_dim: Optional[Sequence[int]] = None,
+           domain: 'Domain' = None,
            domain_multiplier: int = 1,
-           out_position=None,
+           out_position: Optional[Union[int, Sequence[int]]] = None,
            rank: _Rank = 1,
            center: Optional[int] = None,
            loop_opener: Union[str, LoopOpener] = 'als',
@@ -1605,10 +1655,11 @@ def tr_rss(function,
            out_device: Device = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False,
-        return_result: bool = False):
-    r"""Decomposes a sampled function into Tensor Ring cores.
+           return_result: bool = False) -> '_DecompositionOutput':
+    r"""
+    Decomposes a sampled ``function`` into Tensor Ring cores.
 
-    This compatibility function constructs :class:`TRRSS`, calls
+    This compatibility ``function`` constructs :class:`TRRSS`, calls
     :meth:`TRRSS.fit` and returns its core list. The callable may be scalar or
     tensor-valued; every output axis is represented by a basis site. Input
     samples, embeddings and domains follow :func:`tt_rss`.
@@ -1616,37 +1667,37 @@ def tr_rss(function,
     Parameters
     ----------
     function : callable
-        Scalar- or tensor-valued function to approximate.
+        Scalar- or tensor-valued ``function`` to approximate.
     embedding : callable, torch.Tensor or sequence
-        Shared input embedding or one entry per input site.
+        Shared input ``embedding`` or one entry per input site.
     sketch_samples : torch.Tensor, sequence of torch.Tensor or ConfigurationBatch
         Correlated sketch samples in packed or per-site form.
     labels : torch.Tensor, optional
-        Flattened output labels with shape ``(batch_size,)``.
+        Flattened output ``labels`` with shape ``(batch_size,)``.
     in_dim : int or sequence of int, optional
-        Expected shared or per-site embedding dimensions.
+        Expected shared or per-site ``embedding`` dimensions.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Shared finite domain or one domain per input site.
+        Shared finite ``domain`` or one ``domain`` per input site.
     domain_multiplier : int, optional
-        Maximum inferred-domain size in multiples of ``in_dim``.
+        Maximum inferred-``domain`` size in multiples of ``in_dim``.
     out_position : int or sequence of int, optional
         Explicit positions of output sites; defaults to an even distribution.
     rank : int or sequence of int
-        Shared rank cap or one right-link cap per final site. The last element
-        is the cyclic rank.
+        Shared ``rank`` cap or one right-link cap per final site. The last element
+        is the cyclic ``rank``.
     center : int, optional
-        Internal center site used to start both recursions.
+        Internal ``center`` site used to start both recursions.
     loop_opener : {``"als"``, ``"blostr+als"``} or LoopOpener, optional
         Local loop-opening strategy with advanced options encapsulated in it.
     schedule : {``"center_out"``, ``"alternating"``}, optional
-        Serial ring-construction schedule. The alternating path is
-        experimental and records any center-out fallback.
+        Serial ring-construction ``schedule``. The alternating path is
+        experimental and records any ``center``-out fallback.
     schedule_block_size : int, optional
         Number of consecutive sites per alternating block.
     adaptive : bool, optional
-        Enables central-block rank discovery under ``rank`` caps.
+        Enables central-block ``rank`` discovery under ``rank`` caps.
     pad_to_rank : bool, optional
-        Explicitly pads adaptive effective ranks back to their caps.
+        Explicitly pads ``adaptive`` effective ranks back to their caps.
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
@@ -1665,13 +1716,13 @@ def tr_rss(function,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     batch_size : int, optional
         Maximum source-evaluation batch size.
     device : str or torch.device, optional
-        Compute device.
+        Compute ``device``.
     dtype : torch.dtype, optional
         Dtype of source values and numerical cores.
     generator : torch.Generator, optional
@@ -1685,7 +1736,7 @@ def tr_rss(function,
 
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with return_info.
+        present. It does not enable metrics and is incompatible with ``return_info``.
 
     Returns
     -------
@@ -1744,8 +1795,6 @@ def tr_rss(function,
     if return_info:
         return result.cores, result.as_info()
     return result.cores
-
-
 __all__ = [
     'SketchGaugeRecursion',
     'TRRSS',

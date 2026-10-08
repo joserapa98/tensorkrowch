@@ -59,8 +59,7 @@ def _ratio_from_log_norms(log_numerator: torch.Tensor,
 
 
 def _norm_from_log(log_norm: torch.Tensor,
-                   reference_norm: Optional[
-                       torch.Tensor] = None) -> torch.Tensor:
+                   reference_norm: Optional[torch.Tensor] = None) -> torch.Tensor:
     """Materializes a log-norm, relative to a finite reference if possible."""
     if reference_norm is None:
         return log_norm.exp()
@@ -93,8 +92,10 @@ def _record_as_dict(record: Any) -> Dict[str, Any]:
 
 
 @dataclass(frozen=True)
-class ErrorRecord:
-    """Stores an absolute/relative error measured on a specified target."""
+class ErrorRecord:  # MARK: ErrorRecord
+    """
+    Stores an ``absolute``/``relative`` error measured on a specified target.
+    """
 
     kind: str  # Target or mechanism on which the error was measured
     absolute: torch.Tensor  # Absolute error, optionally resolved by batch
@@ -137,7 +138,7 @@ class ErrorRecord:
 
 
 @dataclass(frozen=True)
-class TruncationRecord:
+class TruncationRecord:  # MARK: TruncationRecord
     """Stores ranks and discarded energy for one truncation cut."""
 
     site: int  # Site immediately to the left of the truncation cut
@@ -159,8 +160,7 @@ class TruncationRecord:
                       site: int,
                       log_scale: Optional[torch.Tensor] = None,
                       global_norm: Optional[torch.Tensor] = None,
-                      singular_values: Optional[torch.Tensor] = None
-                      ) -> 'TruncationRecord':
+                      singular_values: Optional[torch.Tensor] = None) -> 'TruncationRecord':
         """Builds a high-level record from ``_TruncatedSVDInfo``."""
         local_log_norm = info.total_sq_norm.log() / 2
         discarded_log_norm = info.discarded_sq_norm.log() / 2
@@ -284,7 +284,7 @@ class TruncationRecord:
 
 
 @dataclass(frozen=True)
-class LocalSolveRecord:
+class LocalSolveRecord:  # MARK: LocalSolveRecord
     """Stores diagnostics for one local least-squares solve."""
 
     environment_shape: Tuple[int, int]  # Shape of the original local design matrix
@@ -379,8 +379,8 @@ class LocalSolveRecord:
 
 
 @dataclass(frozen=True)
-class InputFitRecord:
-    """Stores diagnostics for fitting one sampled Phi input axis."""
+class InputFitRecord:  # MARK: InputFitRecord
+    """Stores diagnostics for fitting one sampled Phi input ``axis``."""
 
     method: str
     axis: int
@@ -421,8 +421,10 @@ class InputFitRecord:
 
 
 @dataclass(frozen=True)
-class RangeProjectionRecord:
-    """Stores dimensions, approximation error and cost of a range projection."""
+class RangeProjectionRecord:  # MARK: RangeProjectionRecord
+    """
+    Stores dimensions, approximation error and cost of a range projection.
+    """
 
     method: str
     input_shape: Tuple[int, int]
@@ -473,7 +475,7 @@ class RangeProjectionRecord:
 
 
 @dataclass(frozen=True)
-class GaugeRecord:
+class GaugeRecord:  # MARK: GaugeRecord
     """Stores rank, conditioning and cancellation diagnostics for one gauge."""
 
     orientation: str  # Left or right interpretation of the gauge axes
@@ -543,8 +545,10 @@ class GaugeRecord:
 
 
 @dataclass(frozen=True)
-class SweepRecord:
-    """Stores objective metrics measured once at the end of an ALS sweep."""
+class SweepRecord:  # MARK: SweepRecord
+    """
+    Stores objective metrics measured once at the end of an ALS ``sweep``.
+    """
 
     sweep: int  # Zero-based directional sweep index
     # Absolute fixed-objective error at the end of the sweep
@@ -592,8 +596,8 @@ class SweepRecord:
 
 
 @dataclass(frozen=True)
-class TimingRecord:
-    """Stores elapsed time for a decomposition phase or site."""
+class TimingRecord:  # MARK: TimingRecord
+    """Stores ``elapsed`` time for a decomposition phase or ``site``."""
 
     name: str  # Timed phase or operation
     elapsed: float  # Elapsed wall-clock time in seconds
@@ -623,7 +627,7 @@ class TimingRecord:
 
 
 @dataclass(frozen=True)
-class EvaluationStats:
+class EvaluationStats:  # MARK: EvaluationStats
     """Counts point evaluations performed by a tensor source or session."""
 
     requested_points: int = 0
@@ -659,8 +663,8 @@ class EvaluationStats:
 
 
 @dataclass(frozen=True)
-class FidelityRecord:
-    """Stores a phase-aware normalized overlap and its fidelity."""
+class FidelityRecord:  # MARK: FidelityRecord
+    """Stores a phase-aware normalized overlap and its ``fidelity``."""
 
     # Complex normalized overlap with its original phase
     normalized_overlap: torch.Tensor
@@ -688,7 +692,7 @@ class FidelityRecord:
 
 
 @dataclass
-class DecompositionMetrics:
+class DecompositionMetrics:  # MARK: DecompositionMetrics
     """Collects structured records produced during a decomposition fit."""
 
     errors: List[ErrorRecord] = field(default_factory=list)  # Global errors
@@ -744,7 +748,9 @@ class DecompositionMetrics:
             raise TypeError('`warnings` should contain strings')
 
     def as_info(self) -> Dict[str, Any]:
-        """Returns a dictionary suitable for functional ``return_info`` APIs."""
+        """
+        Returns a dictionary suitable for functional ``return_info`` APIs.
+        """
         info = {
             'errors': [_record_as_dict(record) for record in self.errors],
             'truncations': [

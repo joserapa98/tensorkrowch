@@ -1,3 +1,66 @@
+"""
+Tensor decomposition algorithms and their numerical results.
+
+    Sources:
+        * TensorSource, ConfigurationBatch
+        * DenseTensorSource, CallableTensorSource
+        * SparseTensorSource, EmpiricalDistribution, TTTensorSource
+        * QuantizedSourceAdapter
+
+    Algorithms:
+        * TTSVD, TRSVD, TTMSVD, TRMSVD
+        * TTALS, TRALS
+        * TT2TR
+        * TTRSS, TRRSS, TTRS, TRRS
+
+    Results:
+        * TTDecomposition, TRDecomposition
+        * TTMDecomposition, TRMDecomposition
+        * QTTDecomposition, QTRDecomposition
+        * QTTMDecomposition, QTRMDecomposition
+        * DecompositionMetrics
+
+A source supplies tensor entries or function values. An algorithm fixes the
+source and runs ``fit`` with numerical controls. Its result inherits a
+lightweight ``formats`` class and adds historical metrics and metadata.
+Arithmetic returns ordinary formats; model construction remains explicit.
+
+The direct functions return cores by default. Where supported,
+``return_result=True`` returns
+the numerical result object, while ``return_info=True`` returns cores and
+diagnostics. These two return controls are mutually exclusive.
+"""
+
+from tensorkrowch.decompositions.als import (ALSProblem,
+                                             ALSSweepDriver,
+                                             ConvergencePolicy,
+                                             CoreUpdateSet,
+                                             DirectTREnvironment,
+                                             EnvironmentCache,
+                                             ExactRows,
+                                             GaugePolicy,
+                                             LeastSquaresSolver,
+                                             NoGauge,
+                                             ObservedEntries,
+                                             ObservedRows,
+                                             QRGauge,
+                                             RowSampler,
+                                             SVDGauge,
+                                             SampleBatch,
+                                             SampleRefreshPolicy,
+                                             TRALS,
+                                             TRExactLeverageRows,
+                                             TRLocalEnvironment,
+                                             TRProductLeverageRows,
+                                             TRSegmentEnvironmentCache,
+                                             TTALS,
+                                             TTEnvironmentCache,
+                                             TTLeverageRows,
+                                             TTLocalEnvironment,
+                                             UniformRows,
+                                             UpdatePolicy,
+                                             tr_als,
+                                             tt_als)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  EvaluationStats,
@@ -9,58 +72,97 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  SweepRecord,
                                                  TimingRecord,
                                                  TruncationRecord)
-from tensorkrowch.decompositions.als import (ALSProblem, ALSSweepDriver,
-                                             ConvergencePolicy, CoreUpdateSet,
-                                             DirectTREnvironment,
-                                             EnvironmentCache, ExactRows,
-                                             GaugePolicy, LeastSquaresSolver,
-                                             NoGauge,
-                                             ObservedEntries, ObservedRows,
-                                             QRGauge, RowSampler, SampleBatch,
-                                             SampleRefreshPolicy,
-                                             SVDGauge, TTALS,
-                                             TRALS,
-                                             TTEnvironmentCache,
-                                             TTLeverageRows,
-                                             TRExactLeverageRows,
-                                             TRProductLeverageRows,
-                                             TTLocalEnvironment,
-                                             TRLocalEnvironment,
-                                             TRSegmentEnvironmentCache,
-                                             UniformRows,
-                                             UpdatePolicy, tr_als, tt_als)
-from tensorkrowch.decompositions.results import (TensorDecomposition, TensorDecomposition1D, TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition, QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition, TensorDecomposition2D, PEPSDecomposition, PEPODecomposition)
+from tensorkrowch.decompositions.results import (PEPODecomposition,
+                                                 PEPSDecomposition,
+                                                 QTRDecomposition,
+                                                 QTRMDecomposition,
+                                                 QTTDecomposition,
+                                                 QTTMDecomposition,
+                                                 TRDecomposition,
+                                                 TRMDecomposition,
+                                                 TTDecomposition,
+                                                 TTMDecomposition,
+                                                 TensorDecomposition,
+                                                 TensorDecomposition1D,
+                                                 TensorDecomposition2D)
 from tensorkrowch.decompositions.ring import (ALSLoopOpener,
                                               AlternatingRingDriver,
                                               BLOSTRLoopOpener,
                                               CallableLoopOpener,
                                               CompositeLoopOpener,
-                                              FixedGaugeCoreOpener,
                                               ExperimentalWarning,
+                                              FixedGaugeCoreOpener,
                                               GaugeMap,
                                               GaugeRecursion,
                                               GaugeRecursionStep,
-                                              PseudoinverseGaugeRecursion,
-                                              TTCoreGaugeRecursion,
                                               LoopOpener,
                                               LoopOpenerCapabilities,
-                                              LoopOpening, TT2TR, tt2tr)
-from tensorkrowch.decompositions.ring import tr_blostr
+                                              LoopOpening,
+                                              PseudoinverseGaugeRecursion,
+                                              TT2TR,
+                                              TTCoreGaugeRecursion,
+                                              tr_blostr,
+                                              tt2tr)
+from tensorkrowch.decompositions.sketching import (AffineCoordinateMap,
+                                                   BasisFitter,
+                                                   CallableGlobalValueTransform,
+                                                   CallableLocalValueTransform,
+                                                   CompositeGlobalValueTransform,
+                                                   CompositeLocalValueTransform,
+                                                   CoordinateMap,
+                                                   CoreDeterminingSystem,
+                                                   EvaluationView,
+                                                   ExplicitGridMap,
+                                                   FixedEmbeddingFitter,
+                                                   FunctionalCoordinateMap,
+                                                   GlobalValueTransform,
+                                                   IdentityGlobalValueTransform,
+                                                   IdentityLocalValueTransform,
+                                                   IdentityRangeProjector,
+                                                   InputFitter,
+                                                   LocalTransformContext,
+                                                   LocalValueTransform,
+                                                   MarginalSketch,
+                                                   QuantizedLayout,
+                                                   QuantizedSourceAdapter,
+                                                   RandomizedRangeProjector,
+                                                   RangeProjector,
+                                                   RecursiveSketching,
+                                                   SampledSketch,
+                                                   SketchGaugeRecursion,
+                                                   SketchOperator,
+                                                   SketchSystemBuilder,
+                                                   TRRS,
+                                                   TRRSS,
+                                                   TTRS,
+                                                   TTRSS,
+                                                   TTStackSketch,
+                                                   TrainableEmbeddingFitter,
+                                                   qtr_rss,
+                                                   qtt_rss,
+                                                   tr_rs,
+                                                   tr_rss,
+                                                   tt_rs,
+                                                   tt_rss)
 from tensorkrowch.decompositions.sources import (CallableTensorSource,
                                                  ConfigurationBatch,
                                                  DenseTensorSource,
                                                  EmpiricalDistribution,
                                                  FiberTensorSource,
                                                  SparseTensorSource,
-                                                 TensorSource,
                                                  TTTensorSource,
+                                                 TensorSource,
                                                  as_tensor_source)
-from tensorkrowch.decompositions.svd import (TTSVD, TTMSVD, TRSVD, TRMSVD,
-                                             tt_svd, ttm_svd, tr_svd,
-                                             trm_svd)
+from tensorkrowch.decompositions.svd import (TRMSVD,
+                                             TRSVD,
+                                             TTMSVD,
+                                             TTSVD,
+                                             tr_svd,
+                                             trm_svd,
+                                             tt_svd,
+                                             ttm_svd)
 from tensorkrowch.decompositions.svd.tt import vec_to_mps
 from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
-from tensorkrowch.decompositions.sketching import (BasisFitter, CallableGlobalValueTransform, CallableLocalValueTransform, CompositeGlobalValueTransform, CompositeLocalValueTransform, EvaluationView, FixedEmbeddingFitter, GlobalValueTransform, IdentityGlobalValueTransform, IdentityLocalValueTransform, InputFitter, TrainableEmbeddingFitter, IdentityRangeProjector, LocalTransformContext, LocalValueTransform, MarginalSketch, RandomizedRangeProjector, RangeProjector, QuantizedLayout, CoordinateMap, AffineCoordinateMap, FunctionalCoordinateMap, ExplicitGridMap, QuantizedSourceAdapter, RecursiveSketching, SampledSketch, SketchOperator, SketchSystemBuilder, CoreDeterminingSystem, SketchGaugeRecursion, TTRS, TTRSS, TRRS, TRRSS, TTStackSketch, qtt_rss, qtr_rss, tr_rs, tr_rss, tt_rs, tt_rss)
 
 
 __all__ = [
@@ -70,8 +172,10 @@ __all__ = [
     'TRDecomposition',
     'TTMDecomposition',
     'TRMDecomposition',
-    'QTTDecomposition', 'QTRDecomposition',
-    'QTTMDecomposition', 'QTRMDecomposition',
+    'QTTDecomposition',
+    'QTRDecomposition',
+    'QTTMDecomposition',
+    'QTRMDecomposition',
     'TensorDecomposition2D',
     'PEPSDecomposition',
     'PEPODecomposition',

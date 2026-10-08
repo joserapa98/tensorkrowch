@@ -8,29 +8,34 @@ This script contains:
         * trm_svd
 """
 
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
 from tensorkrowch.formats import QuantizedLayout
-from tensorkrowch.decompositions.results import _quantics_result
-from tensorkrowch.decompositions.sources.quantization import _quantize_matrix
 
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import _ratio_from_log_norms
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TRMDecomposition
+from tensorkrowch.decompositions.results import (TRMDecomposition,
+                                                 _quantics_result)
+from tensorkrowch.decompositions.sources.quantization import _quantize_matrix
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
-                                                    _prepare_matrix_input)
+                                                     _prepare_matrix_input)
 from tensorkrowch.decompositions.svd.tr import TRSVD
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm)
 
 
-class TRMSVD:
-    """Decomposes a fixed dense tensor into a tensor ring matrix.
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import _DecompositionOutput
+
+
+class TRMSVD:  # MARK: TRMSVD
+    """
+    Decomposes a fixed dense tensor into a tensor ring matrix.
 
     The tensor, its input/output dimensions, axis layout and preferred
     interior cut are fixed when this object is created. :meth:`fit` can then
@@ -77,8 +82,7 @@ class TRMSVD:
                  *,
                  layout: str = 'interleaved',
                  quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None,
-                 out_device: Optional[
-                     Union[str, torch.device]] = 'cpu') -> None:
+                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._quantization = quantization
         if quantization is None:
             matrix_input = _prepare_matrix_input(
@@ -125,8 +129,8 @@ class TRMSVD:
         """Axis layout specified for the fixed input tensor."""
         return self._layout
 
-    def _unfuse_in_out_axes(
-            self, cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
+    def _unfuse_in_out_axes(self,
+                            cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
         """Reopens fused TR input axes into TRM input/output axes."""
         trm_cores = []
         for site, core in enumerate(cores):
@@ -148,7 +152,8 @@ class TRMSVD:
             renormalize: bool = False,
             collect_metrics: bool = False,
             verbose: Union[bool, int] = 0) -> TRMDecomposition:
-        r"""Runs TRM-SVD from an interior bipartition of the fixed tensor.
+        r"""
+        Runs TRM-SVD from an interior bipartition of the fixed tensor.
 
         The active exact SVD backend is selected through
         :func:`tensorkrowch.set_svd_method` or
@@ -158,14 +163,14 @@ class TRMSVD:
         cyclic truncations are not all orthogonal in one common scale.
 
         If ``rank`` is an integer, it is a shared upper bound for every TRM
-        rank and its square bounds the initial bipartition. Local truncation
-        criteria may therefore select a different effective rank at each
+        ``rank`` and its square bounds the initial bipartition. Local truncation
+        criteria may therefore select a different effective ``rank`` at each
         site. With ``None``, ranks are discovered from the selected SVD
-        dimensions. The selected rank is split with the smallest admissible
+        dimensions. The selected ``rank`` is split with the smallest admissible
         product and the most balanced pair breaks ties. Any extra capacity is
         padded only with structural zeros and recorded in ``result.metadata``.
 
-        Here, ``initial_rank`` is the rank actually selected by the initial
+        Here, ``initial_rank`` is the ``rank`` actually selected by the initial
         SVD, whereas ``initial_capacity`` is the product of the two TRM ranks
         used to represent it. Their difference is ``initial_padding``. For
         example, an ``initial_rank`` of 7 may use ranks 2 and 4, giving an
@@ -174,19 +179,19 @@ class TRMSVD:
         The fixed tensor is normalized to interleaved shape
         ``(in_1, out_1, ..., in_n, out_n)`` and each local pair is fused before
         applying the cyclic SVD. Every returned core has shape
-        ``(rank_{k-1}, in_k, rank_k, out_k)``, where the right rank of the last
-        core matches the left rank of the first core.
+        ``(rank_{k-1}, in_k, rank_k, out_k)``, where the right ``rank`` of the last
+        core matches the left ``rank`` of the first core.
 
         Parameters
         ----------
         center : int, optional
-            Interior cut used for this fit. If omitted, the center fixed at
+            Interior cut used for this fit. If omitted, the ``center`` fixed at
             construction is used.
         rank : int, optional
-            Maximum rank allowed at every link. At each subchain SVD cut, at
+            Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
             most this many singular values are retained. The initial
             bipartition retains at most ``rank ** 2`` singular values before
-            its selected rank is factorized into two TRM ranks.
+            its selected ``rank`` is factorized into two TRM ranks.
         cutoff : float, optional
             Minimum singular value to keep. It must be finite and
             non-negative. Singular values ``<= cutoff`` are removed.
@@ -207,7 +212,7 @@ class TRMSVD:
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         renormalize : bool
@@ -226,7 +231,7 @@ class TRMSVD:
             - ``0`` or ``False``: no console output;
             - ``1`` or ``True``: phase title, input configuration, cut
               progress and final summary;
-            - ``2``: detailed per-cut rank, error and timing information;
+            - ``2``: detailed per-cut ``rank``, error and timing information;
             - ``3``: level 2 output followed by every final core.
 
         Returns
@@ -238,7 +243,7 @@ class TRMSVD:
 
         Examples
         --------
-        Fix a tensor and compare decompositions with two shared rank caps:
+        Fix a tensor and compare decompositions with two shared ``rank`` caps:
 
         >>> tensor = torch.arange(36.).reshape(2, 3, 2, 3)
         >>> decomposer = tk.decompositions.TRMSVD(tensor)
@@ -358,12 +363,14 @@ def trm_svd(tensor: torch.Tensor,
             out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
             return_info: bool = False,
-           return_result: bool = False,
-           quantization: Optional[Tuple[QuantizedLayout, QuantizedLayout]] = None):
-    r"""Decomposes a dense tensor or matrix into cyclic TRM cores.
+            return_result: bool = False,
+            quantization: Optional[
+                Tuple[QuantizedLayout, QuantizedLayout]] = None) -> '_DecompositionOutput':
+    r"""
+    Decomposes a dense ``tensor`` or matrix into cyclic TRM cores.
 
     This is the simple functional interface. Use :class:`TRMSVD` to repeat
-    fits of the same tensor or matrix or to access the lightweight result
+    fits of the same ``tensor`` or matrix or to access the lightweight result
     object. The input/output pair of every site is fused, decomposed through
     TR-SVD and reopened without another factorization.
 
@@ -375,14 +382,14 @@ def trm_svd(tensor: torch.Tensor,
     least two sites are required.
 
     Every returned core has shape
-    ``(rank_{k-1}, in_k, rank_k, out_k)`` and the last right rank matches the
-    first left rank. An integer ``rank`` is a shared upper bound, while local
+    ``(rank_{k-1}, in_k, rank_k, out_k)`` and the last right ``rank`` matches the
+    first left ``rank``. An integer ``rank`` is a shared upper bound, while local
     truncation may select different effective ranks across the ring.
 
     Parameters
     ----------
     tensor : torch.Tensor
-        Dense tensor or matrix to decompose.
+        Dense ``tensor`` or matrix to decompose.
     in_dim : int or sequence[int], optional
         Input dimension per site. Provide it together with ``out_dim`` to
         tensorize a matrix, or omit both arguments to infer dimensions.
@@ -392,11 +399,11 @@ def trm_svd(tensor: torch.Tensor,
         Interior cut satisfying ``1 <= center < n_sites``. The default is the
         middle cut.
     layout : {"interleaved", "grouped"}
-        Axis layout of a tensorized input. The default is ``"interleaved"``.
+        Axis ``layout`` of a tensorized input. The default is ``"interleaved"``.
     rank : int, optional
-        Maximum rank allowed at every link. At each subchain SVD cut, at most
+        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
         this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected rank
+        retains at most ``rank ** 2`` singular values before its selected ``rank``
         is factorized into two TRM ranks.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -418,7 +425,7 @@ def trm_svd(tensor: torch.Tensor,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -433,21 +440,21 @@ def trm_svd(tensor: torch.Tensor,
         - ``0`` or ``False``: no console output;
         - ``1`` or ``True``: phase title, input configuration, cut progress
           and final summary;
-        - ``2``: detailed per-cut rank, error and timing information;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
     return_info : bool
-        If ``True``, also returns ranks, dimensions, rank factorization,
+        If ``True``, also returns ranks, dimensions, ``rank`` factorization,
         metadata and structured local metrics. With the default ``False`` and
         ``verbose=0``, diagnostic norm reductions, records and synchronized
         timings are skipped.
 
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with return_info.
+        present. It does not enable metrics and is incompatible with ``return_info``.
     quantization : QuantizedLayout or pair of layouts, optional
         Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
+        ``layout`` pair with matching numbers of digit sites. No padding is implicit.
 
     Returns
     -------
@@ -457,7 +464,7 @@ def trm_svd(tensor: torch.Tensor,
 
     Examples
     --------
-    Decompose a grouped two-site tensor with a shared rank cap:
+    Decompose a grouped two-site ``tensor`` with a shared ``rank`` cap:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
     >>> cores = tk.decompositions.trm_svd(tensor, layout='grouped', rank=2)
@@ -498,6 +505,12 @@ def trm_svd(tensor: torch.Tensor,
     if return_info:
         return result.cores, result.as_info()
     return result.cores
+__all__ = [
+    'TRMSVD',
+    'trm_svd',
+]
 
-
-__all__ = ['TRMSVD', 'trm_svd']
+__all__ = [
+    'TRMSVD',
+    'trm_svd',
+]

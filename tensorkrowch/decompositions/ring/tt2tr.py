@@ -18,7 +18,13 @@ This script contains:
 """
 
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import (Any,
+                    Mapping,
+                    Optional,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union)
 
 import torch
 
@@ -33,8 +39,6 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition)
-from tensorkrowch.decompositions.sources.tt import TTTensorSource
-
 from tensorkrowch.decompositions.ring.blocks import (PrescribedCentralBlockSelector)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
@@ -45,12 +49,21 @@ from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
                                                       LoopOpener,
                                                       resolve_loop_opener)
 from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
+from tensorkrowch.decompositions.sources.tt import TTTensorSource
 
 
 _Device = Optional[Union[str, torch.device]]
 
 
-def _as_tt_decomposition(tt) -> TTDecomposition:
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import _DecompositionOutput
+    from tensorkrowch.formats import TT
+    from tensorkrowch.models import MPS
+
+
+def _as_tt_decomposition(
+    tt: Union['TT', Sequence[torch.Tensor], 'MPS']
+) -> TTDecomposition:
     """Normalizes TT results, raw cores and open-boundary MPS adapters."""
     if isinstance(tt, TTDecomposition):
         if tt.n_batches:
@@ -78,7 +91,7 @@ def _as_tt_decomposition(tt) -> TTDecomposition:
 def _normalize_rank(rank: int,
                     tr_rank: Optional[int],
                     n_sites: int) -> Tuple[int, ...]:
-    """Builds one prescribed right-link rank per final TR core."""
+    """Builds one prescribed right-link ``rank`` per final TR core."""
     for name, value in (('rank', rank), ('tr_rank', tr_rank)):
         if value is None and name == 'tr_rank':
             continue
@@ -91,7 +104,7 @@ def _normalize_rank(rank: int,
 
 
 @dataclass
-class _TTCoreProvider:
+class _TTCoreProvider:  # MARK: _TTCoreProvider
     """Exposes TT supercores and open-edge absorptions to the ring driver."""
 
     tt: TTDecomposition  # Original open-boundary TT used to supply local targets
@@ -106,8 +119,10 @@ class _TTCoreProvider:
     def local_target(self,
                      sites: Sequence[int],
                      context: Mapping[str, Any]) -> torch.Tensor:
-        """Returns the TT core or contracted supercore for the requested
-        sites."""
+        """
+        Returns the TT core or contracted supercore for the requested
+        ``sites``.
+        """
         sites = tuple(sites)
         if not sites or sites != tuple(range(sites[0], sites[-1] + 1)):
             raise ValueError('TT local sites should form a contiguous interval')
@@ -119,7 +134,7 @@ class _TTCoreProvider:
 
     def local_rank(self,
                    sites: Sequence[int],
-                   rank,
+                   rank: Union[int, Sequence[int]],
                    context: Mapping[str, Any]) -> Tuple[int, ...]:
         """Maps global prescribed ranks to the local cyclic factorization."""
         sites = tuple(sites)
@@ -132,8 +147,10 @@ class _TTCoreProvider:
     def local_context(self,
                       sites: Sequence[int],
                       context: Mapping[str, Any]) -> Mapping[str, Any]:
-        """Adds target dimensions and runtime to the local execution
-        context."""
+        """
+        Adds target dimensions and runtime to the local execution
+        ``context``.
+        """
         target = self.local_target(sites, context)
         return {
             **context,
@@ -145,8 +162,8 @@ class _TTCoreProvider:
     def close_boundary(self,
                        site: int,
                        direction: str,
-                       opening,
-        context: Mapping[str, Any]) -> BoundaryClosure:
+                       opening: Any,
+                       context: Mapping[str, Any]) -> BoundaryClosure:
         """Absorbs the propagated gauge into the matching unit TT edge."""
         if direction == 'left':
             gauge = context.get('boundary_gauge', opening.left_gauge)
@@ -171,13 +188,12 @@ class _TTCoreProvider:
             diagnostics={'algorithm': 'tt_boundary_absorption'})
 
 
-def _resolve_gauge_recursion(
-        gauge_recursion,
-        *,
-        inverse_policy: str,
-        allow_projective: bool,
-        tolerance: float,
-        rank_rtol: Optional[float]) -> GaugeRecursion:
+def _resolve_gauge_recursion(gauge_recursion: Any,
+                             *,
+                             inverse_policy: str,
+                             allow_projective: bool,
+                             tolerance: float,
+                             rank_rtol: Optional[float]) -> GaugeRecursion:
     """Normalizes stable and experimental gauge-recursion strategies."""
     options = {
         'inverse_policy': inverse_policy,
@@ -201,8 +217,9 @@ def _resolve_gauge_recursion(
 
 def _fidelity_error(tt: TTDecomposition,
                     tr: TRDecomposition) -> FidelityRecord:
-    """Computes phase-aware fidelity and relative L2 error without
-    densifying."""
+    """
+    Computes phase-aware fidelity and relative L2 error without densifying.
+    """
     normalized_overlap = tt.normalized_overlap(tr)
     target_norm = tt.norm()
     approximation_norm = tr.norm()
@@ -226,8 +243,9 @@ def _fidelity_error(tt: TTDecomposition,
     return FidelityRecord(normalized_overlap, error=error)
 
 
-class TT2TR:
-    """Converts one fixed TT into a tensor ring by local loop openings.
+class TT2TR:  # MARK: TT2TR
+    """
+    Converts one fixed TT into a tensor ring by local loop openings.
 
     The TT is fixed on construction, while :meth:`fit` can compare prescribed
     TR ranks, cyclic ranks, centers and opening strategies. Inputs may be a
@@ -249,7 +267,7 @@ class TT2TR:
     """
 
     def __init__(self,
-                 tt,
+                 tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
                  *,
                  out_device: _Device = 'cpu') -> None:
         self._tt = _as_tt_decomposition(tt)
@@ -270,20 +288,21 @@ class TT2TR:
             schedule_block_size: int = 1,
             gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
             allow_projective_gauges: bool = False,
-            gauge_tolerance: float = 1e-8,
+            gauge_tolerance: float = 1e-08,
             inverse_policy: str = 'pinv',
             rank_rtol: Optional[float] = None,
             verbose: Union[bool, int] = 0,
             *,
             collect_metrics: bool = False) -> TRDecomposition:
-        """Converts the TT with prescribed non-cyclic and cyclic TR ranks.
+        """
+        Converts the TT with prescribed non-cyclic and cyclic TR ranks.
 
         ``rank`` is used for every non-cyclic right link. ``tr_rank`` sets the
         final cyclic link and defaults to ``rank``. These are prescribed fixed
         ranks: they are never silently reduced. A future adaptive mode will be
         explicit and separate.
 
-        The center is opened without fixed gauges. Two independent sweeps then
+        The ``center`` is opened without fixed gauges. Two independent sweeps then
         propagate directional pseudoinverses toward the TT boundaries, whose
         unit ranks are absorbed into the first and last TR cores. Fidelity,
         normalized overlap and absolute/relative reconstruction error are
@@ -298,9 +317,9 @@ class TT2TR:
         Parameters
         ----------
         rank : int
-            Positive rank prescribed on every non-cyclic TR link.
+            Positive ``rank`` prescribed on every non-cyclic TR link.
         tr_rank : int, optional
-            Positive cyclic rank. Defaults to ``rank``.
+            Positive cyclic ``rank``. Defaults to ``rank``.
         center : int, optional
             Internal TT site opened first. Defaults to the middle site.
         loop_opener : {``"als"``, ``"blostr+als"``}, LoopOpener or callable
@@ -311,8 +330,8 @@ class TT2TR:
             falls back cleanly to the same ALS path if BLOSTR assumptions are
             not satisfied.
         schedule : {``"center_out"``, ``"alternating"``}
-            Serial ring-construction schedule. ``"alternating"`` is an
-            experimental anchor/fixed-block schedule and falls back explicitly
+            Serial ring-construction ``schedule``. ``"alternating"`` is an
+            experimental anchor/fixed-block ``schedule`` and falls back explicitly
             to ``"center_out"`` when the site layout or propagated gauges are
             incompatible.
         schedule_block_size : int
@@ -324,7 +343,7 @@ class TT2TR:
             the stable characterized default. ``"tt_core"`` uses the original
             TT cores as recursive projectors and is experimental.
         allow_projective_gauges : bool
-            Whether rank-deficient directional pseudoinverses may propagate a
+            Whether ``rank``-deficient directional pseudoinverses may propagate a
             projector instead of cancelling exactly.
         gauge_tolerance : float
             Maximum relative error accepted for gauge cancellation.
@@ -348,7 +367,7 @@ class TT2TR:
 
         Examples
         --------
-        Convert a rank-one TT while preserving its represented tensor:
+        Convert a ``rank``-one TT while preserving its represented tensor:
 
         >>> tt = [torch.tensor([[1.], [2.]]),
         ...       torch.tensor([[[1.], [3.]]]),
@@ -473,7 +492,7 @@ class TT2TR:
         return result
 
 
-def tt2tr(tt,
+def tt2tr(tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
           rank: int,
           tr_rank: Optional[int] = None,
           center: Optional[int] = None,
@@ -482,13 +501,14 @@ def tt2tr(tt,
           schedule_block_size: int = 1,
           gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
           allow_projective_gauges: bool = False,
-          gauge_tolerance: float = 1e-8,
+          gauge_tolerance: float = 1e-08,
           inverse_policy: str = 'pinv',
           rank_rtol: Optional[float] = None,
           out_device: _Device = 'cpu',
           verbose: Union[bool, int] = 0,
-          return_info: bool = False):
-    """Converts open-boundary TT cores into prescribed tensor ring cores.
+          return_info: bool = False) -> '_DecompositionOutput':
+    """
+    Converts open-boundary TT cores into prescribed tensor ring cores.
 
     This is the simple functional interface. Use :class:`TT2TR` for repeated
     conversions of the same TT or direct access to the lightweight result.
@@ -501,9 +521,9 @@ def tt2tr(tt,
     tt : TTDecomposition, sequence of torch.Tensor or MPS
         Open-boundary TT to convert. At least three sites are required.
     rank : int
-        Positive rank prescribed on every non-cyclic TR link.
+        Positive ``rank`` prescribed on every non-cyclic TR link.
     tr_rank : int, optional
-        Positive cyclic rank. Defaults to ``rank``.
+        Positive cyclic ``rank``. Defaults to ``rank``.
     center : int, optional
         Internal TT site opened first. Defaults to the middle site.
     loop_opener : {``"als"``, ``"blostr+als"``}, LoopOpener or callable
@@ -513,8 +533,8 @@ def tt2tr(tt,
         tries an experimental spectral initialization and falls back cleanly to
         the same ALS path if BLOSTR assumptions are not satisfied.
     schedule : {``"center_out"``, ``"alternating"``}
-        Serial ring-construction schedule. ``"alternating"`` is an experimental
-        anchor/fixed-block schedule and falls back explicitly to
+        Serial ring-construction ``schedule``. ``"alternating"`` is an experimental
+        anchor/fixed-block ``schedule`` and falls back explicitly to
         ``"center_out"`` when the site layout or propagated gauges are
         incompatible.
     schedule_block_size : int
@@ -526,7 +546,7 @@ def tt2tr(tt,
         stable characterized default. ``"tt_core"`` uses the original TT cores
         as recursive projectors and is experimental.
     allow_projective_gauges : bool
-        Whether rank-deficient directional pseudoinverses may propagate a
+        Whether ``rank``-deficient directional pseudoinverses may propagate a
         projector instead of cancelling exactly.
     gauge_tolerance : float
         Maximum relative error accepted for gauge cancellation.
@@ -579,4 +599,7 @@ def tt2tr(tt,
     return result.cores
 
 
-__all__ = ['TT2TR', 'tt2tr']
+__all__ = [
+    'TT2TR',
+    'tt2tr',
+]

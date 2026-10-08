@@ -25,28 +25,28 @@ from typing import Mapping, Optional, Protocol, Sequence, Tuple, Union
 import torch
 import torch.nn.functional as nnf
 
+from tensorkrowch.decompositions.als.sampling import SampleBatch
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
                                                       _unravel_indices)
 
-from tensorkrowch.decompositions.als.sampling import SampleBatch
-
 
 @dataclass(frozen=True)
-class CoreUpdateSet:
-    """Describes all cores changed by one atomic ALS update.
+class CoreUpdateSet:  # MARK: CoreUpdateSet
+    """
+    Describes all ``cores`` changed by one atomic ALS update.
 
     A local solve can also change a neighboring core through gauge absorption
-    or normalization. Those cores and their new versions travel together so the
+    or normalization. Those ``cores`` and their new ``versions`` travel together so the
     cache can validate the complete state before mutating any stored core. This
     object contains no contraction logic.
 
     Parameters
     ----------
     sites : sequence[int]
-        Distinct zero-based sites touched by the update.
+        Distinct zero-based ``sites`` touched by the update.
     cores : sequence[torch.Tensor]
-        Replacement cores in the same order as ``sites``.
+        Replacement ``cores`` in the same order as ``sites``.
     versions : sequence[int]
         New version numbers, one per replacement core.
     reason : str
@@ -92,13 +92,15 @@ class CoreUpdateSet:
         }
 
 
-class EnvironmentCache(Protocol):
+class EnvironmentCache(Protocol):  # MARK: EnvironmentCache
     """Protocol shared by TT, TR and future PEPS environment caches."""
 
-    def prepare_sweep(self, order, samples=None) -> None:
-        """Prepares reusable environments for a sweep order."""
+    def prepare_sweep(self,
+                      order: Sequence[int],
+                      samples: Optional['SampleBatch'] = None) -> None:
+        """Prepares reusable environments for a sweep ``order``."""
 
-    def local_environment(self, site: int):
+    def local_environment(self, site: int) -> Union['TTLocalEnvironment', 'TRLocalEnvironment']:
         """Returns the environment for the next local solve."""
 
     def commit(self, update_set: CoreUpdateSet) -> None:
@@ -109,7 +111,7 @@ class EnvironmentCache(Protocol):
 
 
 @dataclass(frozen=True)
-class _EnvironmentKey:
+class _EnvironmentKey:  # MARK: _EnvironmentKey
     """Complete dependency key for one cached local environment."""
 
     site: int  # Optional zero-based active site
@@ -122,8 +124,8 @@ class _EnvironmentKey:
 
 
 @dataclass(frozen=True)
-class TTLocalEnvironment:
-    """Left/right TT contractions defining one local design matrix."""
+class TTLocalEnvironment:  # MARK: TTLocalEnvironment
+    """Left/``right`` TT contractions defining one local design matrix."""
 
     site: int  # Optional zero-based active site
     in_dim: int  # Input dimension at each represented site
@@ -185,7 +187,7 @@ class TTLocalEnvironment:
 
 
 @dataclass(frozen=True)
-class TRLocalEnvironment:
+class TRLocalEnvironment:  # MARK: TRLocalEnvironment
     """Cyclic TR contraction defining one local design matrix."""
 
     site: int  # Optional zero-based active site
@@ -235,8 +237,9 @@ def _environment_norm(environment: torch.Tensor) -> torch.Tensor:
     return torch.where(torch.isfinite(norm), norm, maximum)
 
 
-class TTEnvironmentCache:
-    """Zip-up TT environment cache for exact and sampled ALS sweeps.
+class TTEnvironmentCache:  # MARK: TTEnvironmentCache
+    """
+    Zip-up TT environment cache for exact and sampled ALS sweeps.
 
     A forward sweep precomputes old right suffixes and grows a prefix from
     committed cores. A reverse sweep mirrors the process. Cores touched by a
@@ -297,8 +300,7 @@ class TTEnvironmentCache:
         return tuple(core.shape[1] for core in self._cores)
 
     @staticmethod
-    def _validate_cores(
-            cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
+    def _validate_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
         """Validates standard TT shapes without mutating cache state."""
         if not cores:
             raise ValueError('`cores` should contain at least one TT core')
@@ -324,8 +326,8 @@ class TTEnvironmentCache:
                 raise ValueError('Adjacent TT ranks should match')
         return tuple(cores)
 
-    def _boundary_environment(
-            self, n_rows: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _boundary_environment(self,
+                              n_rows: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Creates a unit boundary and zero log-scale."""
         environment = self._cores[0].new_ones((n_rows, 1))
         log_scale = environment.real.new_zeros(())
@@ -333,8 +335,7 @@ class TTEnvironmentCache:
 
     def _normalize(self,
                    environment: torch.Tensor,
-                   log_scale: torch.Tensor
-                   ) -> Tuple[torch.Tensor, torch.Tensor]:
+                   log_scale: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Optionally removes one global norm and accumulates its logarithm."""
         if not self.renormalize:
             return environment, log_scale
@@ -343,11 +344,10 @@ class TTEnvironmentCache:
             return environment, log_scale
         return environment / norm, log_scale + norm.log()
 
-    def _extend_left(
-            self,
-            environment: torch.Tensor,
-            log_scale: torch.Tensor,
-            site: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _extend_left(self,
+                     environment: torch.Tensor,
+                     log_scale: torch.Tensor,
+                     site: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Appends one core to a prefix."""
         core = self._cores[site]
         if self._sample_indices is None:
@@ -360,11 +360,10 @@ class TTEnvironmentCache:
                 'ja,jab->jb', environment, selected)
         return self._normalize(environment, log_scale)
 
-    def _extend_right(
-            self,
-            environment: torch.Tensor,
-            log_scale: torch.Tensor,
-            site: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _extend_right(self,
+                      environment: torch.Tensor,
+                      log_scale: torch.Tensor,
+                      site: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepends one core to a suffix."""
         core = self._cores[site]
         if self._sample_indices is None:
@@ -377,11 +376,11 @@ class TTEnvironmentCache:
                 'jab,jb->ja', selected, environment)
         return self._normalize(environment, log_scale)
 
-    def _prepare_samples(
-            self,
-            samples: Optional[Union[ConfigurationBatch, SampleBatch]]) -> None:
-        """Normalizes exact, configuration and flat-id sample
-        specifications."""
+    def _prepare_samples(self,
+                         samples: Optional[Union[ConfigurationBatch, SampleBatch]]) -> None:
+        """
+        Normalizes exact, configuration and flat-id sample specifications.
+        """
         if samples is None:
             self._sample_indices = None
             self._sample_generation = None
@@ -405,8 +404,9 @@ class TTEnvironmentCache:
     def _rebuild_forward_dependencies(self,
                                       site: int,
                                       updated_sites: Sequence[int]) -> None:
-        """Repairs prefix/suffix dependencies after an atomic forward
-        update."""
+        """
+        Repairs prefix/suffix dependencies after an atomic forward update.
+        """
         if any(updated_site < site for updated_site in updated_sites):
             n_rows = 1 if self._sample_indices is None \
                 else self._sample_indices.shape[0]
@@ -429,8 +429,9 @@ class TTEnvironmentCache:
     def _rebuild_reverse_dependencies(self,
                                       site: int,
                                       updated_sites: Sequence[int]) -> None:
-        """Repairs prefix/suffix dependencies after an atomic reverse
-        update."""
+        """
+        Repairs prefix/suffix dependencies after an atomic reverse update.
+        """
         if any(updated_site > site for updated_site in updated_sites):
             n_rows = 1 if self._sample_indices is None \
                 else self._sample_indices.shape[0]
@@ -450,11 +451,9 @@ class TTEnvironmentCache:
                         self._left_logs[rebuild_site],
                         rebuild_site)
 
-    def prepare_sweep(
-            self,
-            order: Sequence[int],
-            samples: Optional[Union[ConfigurationBatch, SampleBatch]] = None
-            ) -> None:
+    def prepare_sweep(self,
+                      order: Sequence[int],
+                      samples: Optional[Union[ConfigurationBatch, SampleBatch]] = None) -> None:
         """Builds old suffixes or prefixes for one complete sweep."""
         if getattr(self, '_active_site', None) is not None:
             raise RuntimeError(
@@ -552,8 +551,10 @@ class TTEnvironmentCache:
             key=key)
 
     def commit(self, update_set: CoreUpdateSet) -> None:
-        """Validates and commits all touched cores before advancing the
-        zip-up."""
+        """
+        Validates and commits all touched cores before advancing the
+        zip-up.
+        """
         if not self._prepared or (self._active_site is None):
             raise RuntimeError(
                 'A local environment should be active before `commit`')
@@ -588,7 +589,9 @@ class TTEnvironmentCache:
         self._cursor += 1
 
     def invalidate(self, reason: str) -> None:
-        """Invalidates all prepared environments with an explicit reason."""
+        """
+        Invalidates all prepared environments with an explicit ``reason``.
+        """
         if not isinstance(reason, str):
             raise TypeError('`reason` should be str type')
         self._prepared = False
@@ -603,8 +606,9 @@ class TTEnvironmentCache:
                 setattr(self, name, None)
 
 
-class DirectTREnvironment:
-    """Reference TR environments built by direct cyclic contraction.
+class DirectTREnvironment:  # MARK: DirectTREnvironment
+    """
+    Reference TR environments built by direct cyclic contraction.
 
     This deliberately simple implementation is intended as a correctness oracle
     for segmented caches. It contracts every core except the active one
@@ -621,11 +625,10 @@ class DirectTREnvironment:
     def __init__(self, cores: Sequence[torch.Tensor]) -> None:
         self._cores = TRSegmentEnvironmentCache._validate_cores(tuple(cores))
 
-    def local_environment(
-            self,
-            site: int,
-            samples: Optional[Union[ConfigurationBatch, SampleBatch]] = None
-            ) -> TRLocalEnvironment:
+    def local_environment(self,
+                          site: int,
+                          samples: Optional[
+                              Union[ConfigurationBatch, SampleBatch]] = None) -> TRLocalEnvironment:
         """Returns one unnormalized direct environment."""
         n_sites = len(self._cores)
         if isinstance(site, bool) or not isinstance(site, int) or \
@@ -671,8 +674,7 @@ class DirectTREnvironment:
 def _tr_sample_indices(
         samples: Optional[Union[ConfigurationBatch, SampleBatch]],
         in_dim: Sequence[int],
-        device: torch.device
-        ) -> Tuple[torch.Tensor, Optional[int], bool]:
+        device: torch.device) -> Tuple[torch.Tensor, Optional[int], bool]:
     """Normalizes exact and sampled TR rows to packed discrete indices."""
     if samples is None:
         ids = torch.arange(prod(in_dim), device=device, dtype=torch.long)
@@ -691,8 +693,9 @@ def _tr_sample_indices(
     return _discrete_indices(samples, in_dim, device), 0, True
 
 
-class TRSegmentEnvironmentCache:
-    """Segmented zip-up cache for exact and sampled TR ALS sweeps.
+class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
+    """
+    Segmented zip-up cache for exact and sampled TR ALS sweeps.
 
     Sites are partitioned into contiguous segments. Within the active segment,
     old suffixes are combined with a growing updated prefix (and conversely in
@@ -772,8 +775,7 @@ class TRSegmentEnvironmentCache:
         return self._segments
 
     @staticmethod
-    def _validate_cores(
-            cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
+    def _validate_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
         """Validates standard cyclic core shapes without changing state."""
         if not cores:
             raise ValueError('`cores` should contain at least one TR core')
@@ -819,8 +821,7 @@ class TRSegmentEnvironmentCache:
 
     def _normalize(self,
                    environment: torch.Tensor,
-                   log_scale: torch.Tensor
-                   ) -> Tuple[torch.Tensor, torch.Tensor]:
+                   log_scale: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Optionally extracts a global matrix-batch norm."""
         if not self.renormalize:
             return environment, log_scale
@@ -838,8 +839,7 @@ class TRSegmentEnvironmentCache:
                   left: torch.Tensor,
                   left_log: torch.Tensor,
                   right: torch.Tensor,
-                  right_log: torch.Tensor
-                  ) -> Tuple[torch.Tensor, torch.Tensor]:
+                  right_log: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Multiplies compatible batches following the ring orientation."""
         product_ = torch.bmm(left, right)
         return self._normalize(product_, left_log + right_log)
@@ -862,9 +862,9 @@ class TRSegmentEnvironmentCache:
         return self._multiply(
             self._selected(site), zero, product_, log_scale)
 
-    def _segment_summary(
-            self, segment: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Contracts one complete segment in forward ring order."""
+    def _segment_summary(self,
+                         segment: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Contracts one complete ``segment`` in forward ring order."""
         start, stop = self._segments[segment]
         product_, log_scale = self._identity(self._cores[start].shape[0])
         for site in range(start, stop):
@@ -927,9 +927,9 @@ class TRSegmentEnvironmentCache:
                 self._cores[stop - 1].shape[-1])
         self._active_segment = segment
 
-    def _external_product(
-            self, segment: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Returns every segment outside the active one in cyclic order."""
+    def _external_product(self,
+                          segment: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Returns every ``segment`` outside the active one in cyclic order."""
         running, running_log = self._segment_running
         if self._direction == 'forward':
             tail, tail_log = self._segment_right[segment + 1]
@@ -939,11 +939,9 @@ class TRSegmentEnvironmentCache:
         return self._multiply(
             running, running_log, head, head_log)
 
-    def prepare_sweep(
-            self,
-            order: Sequence[int],
-            samples: Optional[Union[ConfigurationBatch, SampleBatch]] = None
-            ) -> None:
+    def prepare_sweep(self,
+                      order: Sequence[int],
+                      samples: Optional[Union[ConfigurationBatch, SampleBatch]] = None) -> None:
         """Builds old segment products for a complete cyclic sweep."""
         if self._active_site is not None:
             raise RuntimeError(
@@ -1068,7 +1066,7 @@ class TRSegmentEnvironmentCache:
         self._cursor += 1
 
     def invalidate(self, reason: str) -> None:
-        """Invalidates prepared products with an explicit reason."""
+        """Invalidates prepared products with an explicit ``reason``."""
         if not isinstance(reason, str):
             raise TypeError('`reason` should be str type')
         self._prepared = False

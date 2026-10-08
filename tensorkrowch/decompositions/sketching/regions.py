@@ -1,7 +1,15 @@
-"""Region geometry and gather-based sketch recursions."""
+"""
+This script contains:
+
+    Classes:
+        * SiteRegion
+        * _SamplePool
+        * RegionSketch
+        * SketchRecursion
+"""
 
 from dataclasses import dataclass, field
-from typing import (Hashable, Iterator, Optional, Sequence, Tuple, Union)
+from typing import Hashable, Iterator, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 
 import torch
@@ -18,8 +26,10 @@ SampleValues = Union[
 
 
 @dataclass(frozen=True)
-class SiteRegion:
-    """Ordered collection of distinct sites with set-like region operations."""
+class SiteRegion:  # MARK: SiteRegion
+    """
+    Ordered collection of distinct ``sites`` with set-like region operations.
+    """
 
     sites: Sequence[Site] = ()
     _membership: frozenset = field(init=False, repr=False, compare=False)
@@ -108,7 +118,7 @@ class SiteRegion:
         return SiteRegion(site for site in self.sites if other.contains(site))
 
 
-class _SamplePool:
+class _SamplePool:  # MARK: _SamplePool
     """Owns correlated sample rows and caches their regional restrictions."""
 
     def __init__(self,
@@ -201,7 +211,7 @@ class _SamplePool:
         return self._values[0].device
 
     def values(self, site: Site) -> torch.Tensor:
-        """Returns all original sample values at one site."""
+        """Returns all original sample values at one ``site``."""
         if not self.region.contains(site):
             raise ValueError('`site` should belong to the sample pool')
         return self._values[self._site_to_axis[site]]
@@ -216,9 +226,8 @@ class _SamplePool:
             flat, sorted=True, dim=0, return_inverse=True)[1]
 
     @staticmethod
-    def _first_representatives(
-            inverse_ids: torch.Tensor,
-            n_unique: int) -> torch.Tensor:
+    def _first_representatives(inverse_ids: torch.Tensor,
+                               n_unique: int) -> torch.Tensor:
         """Finds the first pool row associated with every unique row id."""
         order = torch.argsort(inverse_ids, stable=True)
         first = torch.ones_like(order, dtype=torch.bool)
@@ -268,8 +277,8 @@ class _SamplePool:
 
 
 @dataclass(frozen=True)
-class RegionSketch:
-    """Unique correlated sample restrictions associated with one region."""
+class RegionSketch:  # MARK: RegionSketch
+    """Unique correlated sample restrictions associated with one ``region``."""
 
     pool_id: Hashable
     region: SiteRegion
@@ -327,7 +336,7 @@ class RegionSketch:
         return self.inverse_ids.shape[0]
 
     def restrict(self, region: SiteRegion) -> 'RegionSketch':
-        """Restricts this sketch to a contained region through its pool."""
+        """Restricts this sketch to a contained ``region`` through its pool."""
         if not self.region.contains(region):
             raise ValueError('`region` should be contained in this sketch')
         return self._pool.restrict(region)
@@ -348,11 +357,9 @@ class RegionSketch:
             site for site in self._pool.region if site in membership)
         return self._pool.restrict(region)
 
-    def compare(
-            self,
-            other: 'RegionSketch'
-            ) -> Tuple[SiteRegion, SiteRegion, SiteRegion]:
-        """Returns common, self-only and other-only ordered regions."""
+    def compare(self,
+                other: 'RegionSketch') -> Tuple[SiteRegion, SiteRegion, SiteRegion]:
+        """Returns common, self-only and ``other``-only ordered regions."""
         if not isinstance(other, RegionSketch):
             raise TypeError('`other` should be RegionSketch type')
         return (
@@ -362,7 +369,9 @@ class RegionSketch:
         )
 
     def recursive_projector(self, target: 'RegionSketch') -> 'SketchRecursion':
-        """Builds the gather and new values for a contained target sketch."""
+        """
+        Builds the gather and new values for a contained ``target`` sketch.
+        """
         if not isinstance(target, RegionSketch):
             raise TypeError('`target` should be RegionSketch type')
         if (target._pool is not self._pool) or \
@@ -390,7 +399,7 @@ class RegionSketch:
 
 
 @dataclass(frozen=True)
-class SketchRecursion:
+class SketchRecursion:  # MARK: SketchRecursion
     """Gather map and new site values relating two regional sketch bases."""
 
     pool_id: Hashable
@@ -447,13 +456,13 @@ class SketchRecursion:
         return self.child_region.difference(self.parent_region)
 
     def value(self, site: Site) -> torch.Tensor:
-        """Returns parent-aligned values for one newly introduced site."""
+        """Returns parent-aligned values for one newly introduced ``site``."""
         if not self.new_region.contains(site):
             raise ValueError('`site` should belong to the new recursion region')
         return self.new_values[self.new_region.sites.index(site)]
 
     def apply(self, tensor: torch.Tensor, axis: int = 0) -> torch.Tensor:
-        """Gathers a child sketch axis into parent-row order."""
+        """Gathers a child sketch ``axis`` into parent-row order."""
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(axis, bool) or not isinstance(axis, int):

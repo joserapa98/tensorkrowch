@@ -22,22 +22,12 @@ This script contains:
 
 from dataclasses import replace
 from math import prod
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
+from tensorkrowch.formats import QuantizedLayout, TR
 from tensorkrowch.formats.quantics import _QuanticsVector
-
-from tensorkrowch.formats import TR, QuantizedLayout
-
-from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   _normalize_verbosity,
-                                                   _resolve_observer)
-from tensorkrowch.decompositions.results import TRDecomposition, _quantics_result
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 FiberTensorSource)
-from tensorkrowch.decompositions.sources.base import _unravel_indices
-from tensorkrowch.decompositions.svd.tr import TRSVD
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
@@ -62,15 +52,33 @@ from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
                                                      _relative_error,
                                                      _solve_local_proposal)
 from tensorkrowch.decompositions.als.tt import TTALS
+from tensorkrowch.decompositions.metrics import LocalSolveRecord
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   _normalize_verbosity,
+                                                   _resolve_observer)
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 _quantics_result)
+from tensorkrowch.decompositions.sources import (ConfigurationBatch,
+                                                 FiberTensorSource)
+from tensorkrowch.decompositions.sources.base import _unravel_indices
+from tensorkrowch.decompositions.svd.tr import TRSVD
 
 
 _Rank = Optional[Union[int, Sequence[int]]]
 
 
-def _standard_tr_cores(
-        cores: Union[TRDecomposition, Sequence[torch.Tensor]],
-        in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
-    """Normalizes lightweight TR cores to standard cyclic shapes."""
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import _DecompositionOutput
+    from tensorkrowch.decompositions.sources.factory import SourceLike
+    from tensorkrowch.formats.quantization import Domain
+    from tensorkrowch.formats.quantization import CoordinateMap
+    from tensorkrowch.formats import TensorFormat1D
+    from tensorkrowch.decompositions.als.problem import ObservedEntries
+
+
+def _standard_tr_cores(cores: Union[TRDecomposition, Sequence[torch.Tensor]],
+                       in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
+    """Normalizes lightweight TR ``cores`` to standard cyclic shapes."""
     if isinstance(cores, TR):
         if cores.n_batches:
             raise ValueError('Batched TR cores are not supported by TR-ALS')
@@ -98,9 +106,8 @@ def _standard_tr_cores(
     return TRSegmentEnvironmentCache._validate_cores(cores)
 
 
-def _normalize_tr_rank(rank: _Rank,
-                       n_sites: int) -> Optional[Tuple[int, ...]]:
-    """Normalizes a shared TR rank or one right-link rank per site."""
+def _normalize_tr_rank(rank: _Rank, n_sites: int) -> Optional[Tuple[int, ...]]:
+    """Normalizes a shared TR ``rank`` or one right-link ``rank`` per site."""
     if rank is None:
         return None
     if isinstance(rank, bool):
@@ -128,7 +135,9 @@ def _normalize_tr_rank(rank: _Rank,
 
 
 def _contract_standard_tr(cores: Sequence[torch.Tensor]) -> torch.Tensor:
-    """Contracts standard cyclic cores without constructing a model graph."""
+    """
+    Contracts standard cyclic ``cores`` without constructing a model graph.
+    """
     result = cores[0]
     for core in cores[1:]:
         result = torch.einsum('a...b,bpc->a...pc', result, core)
@@ -137,7 +146,7 @@ def _contract_standard_tr(cores: Sequence[torch.Tensor]) -> torch.Tensor:
 
 def _evaluate_standard_tr(cores: Sequence[torch.Tensor],
                           indices: torch.Tensor) -> torch.Tensor:
-    """Evaluates standard cyclic cores at packed configurations."""
+    """Evaluates standard cyclic ``cores`` at packed configurations."""
     selected = cores[0][:, indices[:, 0], :].permute(1, 0, 2)
     environment = selected
     for site, core in enumerate(cores[1:], 1):
@@ -146,15 +155,14 @@ def _evaluate_standard_tr(cores: Sequence[torch.Tensor],
     return environment.diagonal(dim1=-2, dim2=-1).sum(-1)
 
 
-def _tr_gauge_core_update(
-        cores: Sequence[torch.Tensor],
-        versions: Sequence[int],
-        fixed_sites: Sequence[int],
-        gauge: GaugePolicy,
-        direction: str,
-        site: int,
-        proposal: torch.Tensor) -> CoreUpdateSet:
-    """Builds an atomic cyclic current-plus-receiver gauge update."""
+def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
+                          versions: Sequence[int],
+                          fixed_sites: Sequence[int],
+                          gauge: GaugePolicy,
+                          direction: str,
+                          site: int,
+                          proposal: torch.Tensor) -> CoreUpdateSet:
+    """Builds an atomic cyclic current-plus-receiver ``gauge`` update."""
     n_sites = len(cores)
     receiver = (site + 1) % n_sites if direction == 'forward' else \
         (site - 1) % n_sites
@@ -182,14 +190,13 @@ def _tr_gauge_core_update(
         reason='local_solve')
 
 
-def _normalize_tr_core_update(
-        update_set: CoreUpdateSet,
-        cores: Sequence[torch.Tensor],
-        versions: Sequence[int],
-        fixed_sites: Sequence[int],
-        direction: str,
-        site: int) -> CoreUpdateSet:
-    """Moves a square-root core norm to the next trainable cyclic site."""
+def _normalize_tr_core_update(update_set: CoreUpdateSet,
+                              cores: Sequence[torch.Tensor],
+                              versions: Sequence[int],
+                              fixed_sites: Sequence[int],
+                              direction: str,
+                              site: int) -> CoreUpdateSet:
+    """Moves a square-root core norm to the next trainable cyclic ``site``."""
     updates = dict(update_set.updates)
     current = updates[site][0]
     norm = torch.linalg.vector_norm(current)
@@ -221,7 +228,7 @@ def _normalize_tr_core_update(
         reason='local_solve_normalization')
 
 
-class _TRALSBackend:
+class _TRALSBackend:  # MARK: _TRALSBackend
     """Adapts exact, sampled and completion TR solves to the common driver."""
 
     def __init__(self,
@@ -277,8 +284,10 @@ class _TRALSBackend:
     def prepare_sweep(self,
                       order: Sequence[int],
                       sweep: int) -> Tuple[Optional[int], bool]:
-        """Prepares directional environments and the current sampling
-        generation."""
+        """
+        Prepares directional environments and the current sampling
+        generation.
+        """
         self._direction = 'forward' if order[0] == 0 else 'reverse'
         if self.sampler is None:
             self.cache.prepare_sweep(order)
@@ -331,7 +340,7 @@ class _TRALSBackend:
                    site: int,
                    sweep: int,
                    update_policy: UpdatePolicy,
-                   return_record: bool):
+                   return_record: bool) -> Tuple[CoreUpdateSet, Optional['LocalSolveRecord']]:
         """Builds one local proposal and its atomic gauge update."""
         local = self.cache.local_environment(site)
         environment = local.design()
@@ -401,16 +410,18 @@ class _TRALSBackend:
         self.cache.commit(CoreUpdateSet((), (), (), reason='fixed_core'))
 
     def commit(self, update_set: CoreUpdateSet) -> None:
-        """Commits all replaced cores and invalidates their cache
-        dependencies."""
+        """
+        Commits all replaced cores and invalidates their cache
+        dependencies.
+        """
         self.cache.commit(update_set)
         if self.sampler is not None:
             for site in update_set.sites:
                 self._sampling_state = self.sampler.update_after_core(
                     self._sampling_state, site)
 
-    def measure_objective(
-            self, problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+    def measure_objective(self,
+                          problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
         """Measures the fixed complete-sweep objective when one exists."""
         if problem.observations is not None:
             indices = problem.observations.indices.to(
@@ -441,7 +452,7 @@ class _TRALSBackend:
             renormalize=self.cache.renormalize)
 
 
-class _TRLeverageALSBackend:
+class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
     """Runs product or exact TR leverage sampling by active fibers."""
 
     def __init__(self,
@@ -502,8 +513,10 @@ class _TRLeverageALSBackend:
     def prepare_sweep(self,
                       order: Sequence[int],
                       sweep: int) -> Tuple[Optional[int], bool]:
-        """Prepares directional environments and the current sampling
-        generation."""
+        """
+        Prepares directional environments and the current sampling
+        generation.
+        """
         self._direction = 'forward' if order[0] == 0 else 'reverse'
         self._generation = sweep
         return sweep, True
@@ -512,7 +525,7 @@ class _TRLeverageALSBackend:
                    site: int,
                    sweep: int,
                    update_policy: UpdatePolicy,
-                   return_record: bool):
+                   return_record: bool) -> Tuple[CoreUpdateSet, Optional['LocalSolveRecord']]:
         """Builds one local proposal and its atomic gauge update."""
         state = replace(
             self._sampling_state,
@@ -595,8 +608,10 @@ class _TRLeverageALSBackend:
         return None
 
     def commit(self, update_set: CoreUpdateSet) -> None:
-        """Commits all replaced cores and invalidates their cache
-        dependencies."""
+        """
+        Commits all replaced cores and invalidates their cache
+        dependencies.
+        """
         cores = list(self._cores)
         versions = list(self._versions)
         for site, (core, version) in update_set.updates.items():
@@ -609,8 +624,8 @@ class _TRLeverageALSBackend:
         self._sampling_state = replace(
             self._sampling_state, core_versions=self._versions)
 
-    def measure_objective(
-            self, problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+    def measure_objective(self,
+                          problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
         """Measures the fixed complete-sweep objective when one exists."""
         raise RuntimeError(
             'Renewable leverage batches do not define a global objective')
@@ -624,8 +639,9 @@ class _TRLeverageALSBackend:
         self._cores = TRSegmentEnvironmentCache._validate_cores(cores)
 
 
-class TRALS(TTALS):
-    """Approximates a fixed scalar tensor problem by cyclic TR-ALS.
+class TRALS(TTALS):  # MARK: TRALS
+    """
+    Approximates a fixed scalar tensor problem by cyclic TR-ALS.
 
     The source and input dimensions are fixed on construction. Repeated
     :meth:`fit` calls may compare cyclic ranks, initialization, gauges, segment
@@ -674,9 +690,10 @@ class TRALS(TTALS):
                       ranks: Sequence[int],
                       dtype: torch.dtype,
                       device: torch.device,
-                      generator: Optional[torch.Generator]
-                      ) -> Tuple[torch.Tensor, ...]:
-        """Initializes random cyclic cores with prescribed right-link ranks."""
+                      generator: Optional[torch.Generator]) -> Tuple[torch.Tensor, ...]:
+        """
+        Initializes random cyclic cores with prescribed right-link ``ranks``.
+        """
         cores = []
         for site, site_in_dim in enumerate(self.in_dim):
             core = torch.randn(
@@ -692,12 +709,14 @@ class TRALS(TTALS):
 
     def _initial_tr_cores(self,
                           target: torch.Tensor,
-                          initial_cores,
+                          initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]],
                           rank: _Rank,
                           init: str,
-                          fixed_cores,
-                          generator: Optional[torch.Generator]
-                          ) -> Tuple[Tuple[torch.Tensor, ...], Tuple[int, ...]]:
+                          fixed_cores: Optional[Sequence[Optional[torch.Tensor]]],
+                          generator: Optional[
+                              torch.Generator]) -> Tuple[
+            Tuple[torch.Tensor, ...],
+            Tuple[int, ...]]:
         """Builds and validates initialization plus fixed-site semantics."""
         if init not in ('random', 'svd'):
             raise ValueError("`init` should be 'random' or 'svd'")
@@ -765,19 +784,21 @@ class TRALS(TTALS):
 
     @classmethod
     def completion(cls,
-                   observations,
+                   observations: Union['ObservedEntries', torch.Tensor],
                    values: Optional[torch.Tensor] = None,
                    in_dim: Optional[Sequence[int]] = None,
                    weights: Optional[torch.Tensor] = None,
                    *,
                    quantization: Optional[QuantizedLayout] = None,
                    sample_space: str = 'indices',
-                   coordinate_map=None, domain=None,
+                   coordinate_map: Optional[
+                       Union['CoordinateMap', Sequence['CoordinateMap']]] = None,
+                   domain: 'Domain' = None,
                    computational_grid: Union[str, float] = 'endpoints',
                    out_of_domain: str = 'error',
-                   out_device: Optional[
-                       Union[str, torch.device]] = 'cpu') -> 'TRALS':
-        """Creates TR-ALS for a permanently observed completion objective.
+                   out_device: Optional[Union[str, torch.device]] = 'cpu') -> 'TRALS':
+        """
+        Creates TR-ALS for a permanently observed completion objective.
 
         ``observations`` may already be :class:`ObservedEntries` or may be an
         integer tensor of global multi-indices. In the latter case, ``values``
@@ -787,7 +808,7 @@ class TRALS(TTALS):
         Parameters
         ----------
         observations : ObservedEntries or torch.Tensor
-            Fixed observations or integer multi-indices with shape
+            Fixed ``observations`` or integer multi-indices with shape
             ``(observations, sites)``.
         values : torch.Tensor, optional
             Scalar value at every supplied index.
@@ -824,9 +845,9 @@ class TRALS(TTALS):
 
     def fit(self,
             rank: _Rank = None,
-            initial_cores=None,
+            initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
             init: str = 'random',
-            fixed_cores=None,
+            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
             gauge: Union[str, GaugePolicy] = 'qr',
             sampling: Optional[str] = None,
             n_samples: Optional[int] = None,
@@ -841,12 +862,12 @@ class TRALS(TTALS):
             renormalize: bool = True,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0
-            ) -> TRDecomposition:
-        """Fits a TR by alternating cyclic one-site least-squares solves.
+            verbose: Union[bool, int] = 0) -> TRDecomposition:
+        """
+        Fits a TR by alternating cyclic one-site least-squares solves.
 
         A scalar ``rank`` is used on every link. A sequence contains one right
-        rank per core, so ``rank[-1]`` is the cyclic closing link. With
+        ``rank`` per core, so ``rank[-1]`` is the cyclic closing link. With
         supplied cores, these values are upper bounds and no core is silently
         truncated.
 
@@ -865,7 +886,7 @@ class TRALS(TTALS):
         Parameters
         ----------
         rank : int or sequence of int, optional
-            Shared rank or one upper bound for every right link.
+            Shared ``rank`` or one upper bound for every right link.
         initial_cores : sequence of torch.Tensor or TRDecomposition, optional
             Initial cyclic approximation in standard core shapes.
         init : {``"random"``, ``"svd"``}
@@ -896,7 +917,7 @@ class TRALS(TTALS):
             Number of balanced environment-cache segments. Defaults to at most
             three and already defines future worker partitions.
         solver : LeastSquaresSolver, optional
-            Stable local least-squares solver.
+            Stable local least-squares ``solver``.
         convergence : ConvergencePolicy, optional
             Complete-sweep stopping criteria.
         update_policy : UpdatePolicy, optional
@@ -908,7 +929,7 @@ class TRALS(TTALS):
         renormalize : bool
             Whether environments remove global norms and retain log-scales.
         generator : torch.Generator, optional
-            Generator used by initialization and randomized sampling.
+            Generator used by initialization and randomized ``sampling``.
         collect_metrics : bool
             Whether to retain local solves, sweep errors and timings.
         verbose : bool or int
@@ -1127,12 +1148,12 @@ class TRALS(TTALS):
                                 adapter=self._quantized_adapter)
 
 
-def tr_als(source,
+def tr_als(source: 'SourceLike',
            rank: _Rank = None,
            in_dim: Optional[Sequence[int]] = None,
-           initial_cores=None,
+           initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
            init: str = 'random',
-           fixed_cores=None,
+           fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
            gauge: Union[str, GaugePolicy] = 'qr',
            sampling: str = 'exact',
            n_samples: Optional[int] = None,
@@ -1149,7 +1170,7 @@ def tr_als(source,
            l2_reg: float = 0.0,
            l2_reg_mode: str = 'absolute',
            rcond: Optional[float] = None,
-           column_scaling='auto',
+           column_scaling: Union[bool, str] = 'auto',
            system_scaling: bool = True,
            damping: float = 1.0,
            acceptance: str = 'always',
@@ -1165,15 +1186,17 @@ def tr_als(source,
            return_result: bool = False,
            quantization: Optional[QuantizedLayout] = None,
            source_space: Optional[str] = None,
-           coordinate_map=None, domain=None,
+           coordinate_map: Optional[Union['CoordinateMap', Sequence['CoordinateMap']]] = None,
+           domain: 'Domain' = None,
            computational_grid: Union[str, float] = 'endpoints',
-           out_of_domain: str = 'error'):
-    """Approximates a scalar tensor source with cyclic TR-ALS.
+           out_of_domain: str = 'error') -> '_DecompositionOutput':
+    """
+    Approximates a scalar tensor ``source`` with cyclic TR-ALS.
 
     This functional interface returns a core list. Use :class:`TRALS` for
     repeated fits, completion or advanced policy objects. ``rank`` is either a
     shared value or one right-link value per site; the last value is the cyclic
-    closing rank. With ``sampling="leverage"``, the product method implements
+    closing ``rank``. With ``sampling="leverage"``, the product method implements
     Algorithm 2 of *A Sampling-Based Method for Tensor Ring Decomposition*
     (2021), available in this `paper <https://arxiv.org/abs/2010.08581>`_ by
     Osman Asif Malik and Stephen Becker. The exact method implements Sections
@@ -1187,14 +1210,14 @@ def tr_als(source,
     source : TensorSource, TTDecomposition, torch.Tensor or callable
         Scalar discrete tensor or function to approximate.
     rank : int or sequence of int, optional
-        Shared rank or one upper bound for every right link.
+        Shared ``rank`` or one upper bound for every right link.
     in_dim : sequence of int, optional
         Input dimension at every site; required for callables.
     initial_cores : sequence of torch.Tensor or TRDecomposition, optional
         Initial cyclic approximation in standard core shapes.
     init : {``"random"``, ``"svd"``}
         Initialization used when cores are not supplied. SVD requires an exact
-        known source.
+        known ``source``.
     fixed_cores : sequence of torch.Tensor or None, optional
         Tensor entries remain bitwise unchanged throughout all sweeps.
     gauge : {``"none"``, ``"qr"``, ``"svd"``} or GaugePolicy
@@ -1207,7 +1230,7 @@ def tr_als(source,
         Rows per uniform generation. With leverage, number of sampled
         environments; every active input fiber is retained.
     sample_reuse_sweeps : int
-        Sweeps reusing sampled ids, probabilities and source values. TR
+        Sweeps reusing sampled ids, probabilities and ``source`` values. TR
         leverage redraws after every design change and requires 1.
     leverage_method : {``"product"``, ``"exact"``}
         Product mode uses independent core-unfolding leverage bounds. Exact
@@ -1244,7 +1267,7 @@ def tr_als(source,
     damping : float
         Fraction of each local proposal committed, in ``(0, 1]``.
     acceptance : {``"always"``, ``"non_increasing"``}
-        Optional local acceptance rule.
+        Optional local ``acceptance`` rule.
     normalize : bool
         Whether to extract the square root of each solved core norm and absorb
         it into the next trainable cyclic site. Fixed cores are skipped and
@@ -1252,15 +1275,15 @@ def tr_als(source,
     renormalize : bool
         Whether environments remove global norms and retain log-scales.
     dtype : torch.dtype, optional
-        Declared callable output dtype.
+        Declared callable output ``dtype``.
     device : str or torch.device
-        Callable evaluation device.
+        Callable evaluation ``device``.
     batch_size : int, optional
         Callable evaluation batch size.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
     generator : torch.Generator, optional
-        Generator used by initialization and randomized sampling.
+        Generator used by initialization and randomized ``sampling``.
     verbose : bool or int
         Console verbosity from 0 (silent) to 3 (most detailed).
     return_info : bool
@@ -1268,14 +1291,14 @@ def tr_als(source,
 
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with return_info.
+        present. It does not enable metrics and is incompatible with ``return_info``.
     quantization : QuantizedLayout or pair of layouts, optional
         Raw variable-to-digit schedule. Matrix SVD requires an input/output
         layout pair with matching numbers of digit sites. No padding is implicit.
     source_space : str, optional
         Physical coordinates, original indices, or explicitly described digits.
     coordinate_map, domain : optional
-        Actual coordinate map and physical domains for quantized callables.
+        Actual coordinate map and coordinate domains for quantized callables.
     computational_grid, out_of_domain : str
         Explicit grid-node and coordinate-boundary conventions.
 
@@ -1342,4 +1365,7 @@ def tr_als(source,
     return result.cores
 
 
-__all__ = ['TRALS', 'tr_als']
+__all__ = [
+    'TRALS',
+    'tr_als',
+]

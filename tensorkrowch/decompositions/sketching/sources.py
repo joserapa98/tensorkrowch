@@ -1,6 +1,22 @@
-"""Optional source capabilities and input adapters for sketching methods."""
+"""
+This script contains:
 
-from typing import (Iterator, Optional, Protocol, Sequence, Tuple, Union,
+    Classes:
+        * SketchContractableSource
+        * SupportTensorSource
+
+    Functions:
+        * _resolve_rs_source
+        * _iter_support
+"""
+
+from typing import (Iterator,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union,
                     runtime_checkable)
 
 import torch
@@ -20,20 +36,22 @@ TTStructuredSketch = Union[
 ]
 
 
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.sources.factory import SourceLike
+
+
 @runtime_checkable
-class SketchContractableSource(TensorSource, Protocol):
+class SketchContractableSource(TensorSource, Protocol):  # MARK: SketchContractableSource
     """Optional source capable of contracting a TT-structured sketch."""
 
-    def contract_sketch(
-            self,
-            sketch: TTStructuredSketch,
-            conjugate_sketch: bool = True
-            ) -> Union[torch.Tensor, TTDecomposition]:
+    def contract_sketch(self,
+                        sketch: TTStructuredSketch,
+                        conjugate_sketch: bool = True) -> Union[torch.Tensor, TTDecomposition]:
         """Contracts all source input axes with ``sketch`` without a graph."""
 
 
 @runtime_checkable
-class SupportTensorSource(TensorSource, Protocol):
+class SupportTensorSource(TensorSource, Protocol):  # MARK: SupportTensorSource
     """Optional source exposing its complete finite non-zero support."""
 
     @property
@@ -45,15 +63,16 @@ class SupportTensorSource(TensorSource, Protocol):
         """Returns values aligned with :attr:`support`."""
 
 
-def _resolve_rs_source(
-        *,
-        source=None,
-        dataset: Optional[torch.Tensor] = None,
-        in_dim: Optional[Sequence[int]] = None,
-        weights: Optional[torch.Tensor] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Optional[Union[str, torch.device]] = None) -> TensorSource:
-    """Normalizes the mutually exclusive source/dataset RS input contract."""
+def _resolve_rs_source(*,
+                       source: 'SourceLike' = None,
+                       dataset: Optional[torch.Tensor] = None,
+                       in_dim: Optional[Sequence[int]] = None,
+                       weights: Optional[torch.Tensor] = None,
+                       dtype: Optional[torch.dtype] = None,
+                       device: Optional[Union[str, torch.device]] = None) -> TensorSource:
+    """
+    Normalizes the mutually exclusive ``source``/``dataset`` RS input contract.
+    """
     if (source is None) == (dataset is None):
         raise ValueError('Exactly one of `source` and `dataset` is required')
     if dataset is not None:
@@ -76,10 +95,10 @@ def _resolve_rs_source(
         device='cpu' if device is None else device)
 
 
-def _iter_support(
-        source: SupportTensorSource,
-        batch_size: Optional[int] = None
-        ) -> Iterator[Tuple[ConfigurationBatch, torch.Tensor]]:
+def _iter_support(source: SupportTensorSource,
+                  batch_size: Optional[
+                      int] = None) -> Iterator[
+        Tuple[ConfigurationBatch, torch.Tensor]]:
     """Yields aligned non-zero support batches without a Cartesian grid."""
     if not isinstance(source, SupportTensorSource):
         raise TypeError('`source` should expose finite support')

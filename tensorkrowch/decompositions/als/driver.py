@@ -15,15 +15,9 @@ This script contains:
 
 from dataclasses import dataclass, replace
 from time import perf_counter
-from typing import Optional, Protocol, Sequence, Tuple
+from typing import Optional, Protocol, Sequence, TYPE_CHECKING, Tuple
 
 import torch
-
-from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
-                                                 LocalSolveRecord,
-                                                 SweepRecord)
-from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   DecompositionObserver)
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
@@ -31,9 +25,18 @@ from tensorkrowch.decompositions.als.environments import CoreUpdateSet
 from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
                                                      NonFiniteSolutionError)
+from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
+                                                 LocalSolveRecord,
+                                                 SweepRecord)
+from tensorkrowch.decompositions.observers import (DecompositionEvent,
+                                                   DecompositionObserver)
 
 
-class ALSBackend(Protocol):
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import TensorDecomposition1D
+
+
+class ALSBackend(Protocol):  # MARK: ALSBackend
     """Topology-specific operations consumed by ``ALSSweepDriver``."""
 
     @property
@@ -57,18 +60,17 @@ class ALSBackend(Protocol):
                    site: int,
                    sweep: int,
                    update_policy: UpdatePolicy,
-                   return_record: bool
-                   ) -> Tuple[CoreUpdateSet, Optional[LocalSolveRecord]]:
+                   return_record: bool) -> Tuple[CoreUpdateSet, Optional[LocalSolveRecord]]:
         """Builds one atomic local update without committing it."""
 
     def skip_site(self, site: int) -> None:
-        """Advances caches through a fixed site."""
+        """Advances caches through a fixed ``site``."""
 
     def commit(self, update_set: CoreUpdateSet) -> None:
         """Commits a topology-specific update atomically."""
 
-    def measure_objective(
-            self, problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+    def measure_objective(self,
+                          problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
         """Measures one fixed/global objective after a complete sweep."""
 
     def snapshot(self) -> Sequence[torch.Tensor]:
@@ -79,7 +81,7 @@ class ALSBackend(Protocol):
 
 
 @dataclass(frozen=True)
-class _ALSDriverResult:
+class _ALSDriverResult:  # MARK: _ALSDriverResult
     """Internal result returned from the generic ALS sweep driver."""
 
     cores: Tuple[torch.Tensor, ...]  # Raw cores in site order
@@ -91,8 +93,7 @@ class _ALSDriverResult:
 
 def _relative_objective_change(previous: SweepRecord,
                                current_absolute: torch.Tensor,
-                               current_relative: Optional[torch.Tensor]
-                               ) -> Optional[torch.Tensor]:
+                               current_relative: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
     """Computes relative change between complete comparable objectives."""
     if (previous.rel_error is not None) and \
             (current_relative is not None):
@@ -107,8 +108,9 @@ def _relative_objective_change(previous: SweepRecord,
     return abs(old - new) / scale
 
 
-class ALSSweepDriver:
-    """Run alternating sweeps without topology-specific contractions.
+class ALSSweepDriver:  # MARK: ALSSweepDriver
+    """
+    Run alternating sweeps without topology-specific contractions.
 
     The backend owns environment construction and local solves. This driver
     chooses sweep directions, commits atomic updates, measures only complete
@@ -347,7 +349,8 @@ class ALSSweepDriver:
         return result
 
 
-def _report_als_result(result, observer: DecompositionObserver,
+def _report_als_result(result: 'TensorDecomposition1D',
+                       observer: DecompositionObserver,
                        phase: str) -> None:
     """Reports the final approximation after its cores have been finalized."""
     values = {
@@ -376,4 +379,7 @@ def _report_als_result(result, observer: DecompositionObserver,
     observer.close(result.metrics)
 
 
-__all__ = ['ALSBackend', 'ALSSweepDriver']
+__all__ = [
+    'ALSBackend',
+    'ALSSweepDriver',
+]

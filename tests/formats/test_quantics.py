@@ -1,8 +1,38 @@
-"""Physical-coordinate meaning and inherited numerical Quantics operations."""
+"""Quantics construction, evaluation, algebra and coordinate metadata."""
 
 import pytest
 import torch
+
 import tensorkrowch as tk
+
+
+# Mutations
+
+
+def test_quantics_replacement_restores_layout_and_metadata():
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    format = tk.formats.QTT(
+        [torch.ones(2, 3), torch.ones(3, 2)], layout.n_coordinates,
+        layout=layout)
+    cores = format.cores
+    with pytest.raises(ValueError, match='Digit core dimensions'):
+        cores[0] = torch.ones(4, 3)
+    with pytest.raises(ValueError, match='Digit core dimensions'):
+        format.cores = [torch.ones(2)]
+    assert format.cores is cores
+    assert format.in_dim == layout.in_dim and format.rank == [3]
+
+    matrix = tk.formats.QTTM([torch.ones(2, 3, 2), torch.ones(3, 2, 2)],
+                             layout.n_coordinates, layout.n_coordinates,
+                             in_layout=layout, out_layout=layout)
+    previous = matrix.cores[0]
+    with pytest.raises(ValueError, match='paired digit layouts'):
+        matrix.cores[0] = torch.ones(4, 3, 2)
+    assert matrix.cores[0] is previous
+    assert matrix.in_dim == matrix.out_dim == layout.in_dim
+
+
+# Quantics
 
 
 def _coordinate_map(layout, domain=None, grid_offset='endpoints'):
@@ -402,3 +432,27 @@ def test_quantized_ring_matrix_conversion_requires_explicit_target(n_batches):
     assert torch.allclose(matrix.contract_dense(), format.contract_dense())
     assert torch.allclose(matrix.to_ttm().contract_dense(), format.contract_dense())
     assert torch.allclose(format.to_trm().to_ttm().contract_dense(), format.contract_dense())
+
+
+# Structural batches
+
+
+def test_batched_qttm_coordinates_and_plain_conversion():
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    cores = [torch.arange(8., dtype=torch.float64).reshape(2, 2, 1, 2),
+             torch.arange(8., dtype=torch.float64).reshape(2, 1, 2, 2)]
+    format = tk.formats.QTTM(
+        cores, layout.n_coordinates, layout.n_coordinates,
+        in_layout=layout, out_layout=layout, n_batches=1)
+    indices = torch.tensor([[0], [1], [3]])
+    actual = format.evaluate_indices(indices, indices)
+    for batch in range(2):
+        member = tk.formats.QTTM(
+            [core[batch] for core in cores],
+            layout.n_coordinates, layout.n_coordinates,
+            in_layout=layout, out_layout=layout)
+        assert torch.allclose(actual[batch],
+                              member.evaluate_indices(indices, indices))
+    plain = format.to_ttm()
+    assert plain.batch_shape == (2,)
+    assert torch.equal(plain.contract_dense(), format.contract_dense())

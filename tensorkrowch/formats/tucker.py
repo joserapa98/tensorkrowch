@@ -18,15 +18,20 @@ from tensorkrowch.formats.base import TensorFormat
 from tensorkrowch.formats.formats1d import (TensorFormat1D, TT, TR,
                                          _restore_cores)
 from tensorkrowch.formats.quantics import (QTT, QTR, _map_structure,
-                                         _coordinates_to_indices, _same_references)
+                                         _same_references)
 from tensorkrowch.formats.quantization import (AffineCoordinateMap,
                                              CoordinateMap, QuantizedLayout,
-                                             Domain, _grid_offset,
-                                             _validate_explicit_grid)
+                                             Domain, _grid_offset)
 
 
-class _QuantizedTuckerFormat(TensorFormat):
-    """Local digit factors connected to a small upper TT/TR."""
+class _QuantizedTuckerFormat(TensorFormat):  # MARK: _QuantizedTuckerFormat
+    """
+    Local digit factors connected to an upper TT or TR.
+
+    Each factor maps the digits of one coordinate to a connector in ``upper``.
+    Upper sites without a factor remain output axes. Evaluation contracts the
+    factors first, then passes their connector vectors to the upper format.
+    """
 
     _upper_type: ClassVar[Type[TensorFormat1D]]
     _family = 'quantized_tucker'
@@ -45,9 +50,12 @@ class _QuantizedTuckerFormat(TensorFormat):
             raise TypeError(f'`upper` should be {self._upper_type.__name__} type')
         if not isinstance(layout, QuantizedLayout):
             raise TypeError('`layout` should be QuantizedLayout type')
-        if coordinate_map is not None and not isinstance(coordinate_map, CoordinateMap):
-            raise TypeError('`coordinate_map` should implement CoordinateMap')
-        _validate_explicit_grid(layout, coordinate_map)
+        if coordinate_map is not None:
+            if not isinstance(coordinate_map, CoordinateMap):
+                raise TypeError('`coordinate_map` should implement CoordinateMap')
+            if coordinate_map.grid_size != layout.grid_size:
+                raise ValueError(
+                    '`coordinate_map.grid_size` should match `layout.grid_size`')
         _grid_offset(computational_grid)
         if out_of_domain not in ('error', 'clip'):
             raise ValueError('Invalid `out_of_domain`')
@@ -58,6 +66,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         self.coordinate_map = coordinate_map
         self.domain = domain
 
+        # Attach one local factor to each selected upper site.
         if len(self.factors) != layout.n_coordinates or not all(
             isinstance(factor, TT) for factor in self.factors):
             raise ValueError('`factors` should contain one TT per coordinate')
@@ -94,7 +103,6 @@ class _QuantizedTuckerFormat(TensorFormat):
 
     @cores.setter
     def cores(self, values: Sequence[torch.Tensor]) -> None:
-        """Replaces upper cores through the upper format's validated setter."""
         self.upper.cores = values
 
     @property
@@ -124,7 +132,7 @@ class _QuantizedTuckerFormat(TensorFormat):
 
     @property
     def rank(self) -> List[int]:
-        """Defensive list of upper-format virtual ranks."""
+        """Virtual ranks of the upper format."""
         return self.upper.rank
 
     @property
@@ -140,7 +148,17 @@ class _QuantizedTuckerFormat(TensorFormat):
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Input dimensions of the flattened digit and output sites."""
-        return self._flattened_in_dim()
+        coordinate_by_position = {
+            position: coordinate
+            for coordinate, position in enumerate(self.coordinate_positions)}
+        dimensions = []
+        for site, dimension in enumerate(self.upper.in_dim):
+            coordinate = coordinate_by_position.get(site)
+            if coordinate is None:
+                dimensions.append(dimension)
+            else:
+                dimensions.extend(self.factors[coordinate].in_dim[:-1])
+        return tuple(dimensions)
 
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
@@ -170,6 +188,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         for factor in self.factors:
             factor.validate()
         self._validate_cores()
+
         return self
 
     def _validate_cores(self) -> None:
@@ -198,11 +217,13 @@ class _QuantizedTuckerFormat(TensorFormat):
     def _map_tensors(
             self, function: Callable[[torch.Tensor], torch.Tensor]
         ) -> '_QuantizedTuckerFormat':
-        """Maps stored tensors while preserving concrete container semantics."""
-        return type(self)(self.upper._map_tensors(function),
-                          [factor._map_tensors(function) for factor in self.factors],
-                          self.layout, _map_structure(self.coordinate_map, function),
-                          _map_structure(self.domain, function),
+        """Maps upper cores, local factors and coordinate tensors."""
+        upper = self.upper._map_tensors(function)
+        factors = [factor._map_tensors(function) for factor in self.factors]
+        coordinate_map = _map_structure(self.coordinate_map, function)
+        domain = _map_structure(self.domain, function)
+
+        return type(self)(upper, factors, self.layout, coordinate_map, domain,
                           coordinate_positions=self.coordinate_positions,
                           computational_grid=self.computational_grid,
                           out_of_domain=self.out_of_domain)
@@ -243,13 +264,15 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> format = tk.formats.QTTTucker(upper, [factor], layout)
         >>> format.to() is format
         True
-        >>> format.to(dtype=torch.float64).dtype == torch.float64
-        True
+        >>> format.to(dtype=torch.float64).dtype
+        torch.float64
         """
         if dtype is not None and not isinstance(dtype, torch.dtype):
             raise TypeError('`dtype` should be torch.dtype type')
         if not isinstance(copy, bool):
             raise TypeError('`copy` should be bool type')
+
+        # Convert structural tensors and the tensors stored by the map.
         upper = self.upper.to(device=device, dtype=dtype, copy=copy)
         factors = [factor.to(device=device, dtype=dtype, copy=copy)
                    for factor in self.factors]
@@ -260,10 +283,10 @@ class _QuantizedTuckerFormat(TensorFormat):
 
         coordinate_map = _map_structure(self.coordinate_map, convert_tensor)
         domain = _map_structure(self.domain, convert_tensor)
-        if not copy and upper is self.upper and all(
-                new is old for new, old in zip(factors, self.factors)) and \
-                _same_references(self.coordinate_map, coordinate_map) and \
-                _same_references(self.domain, domain):
+        if (not copy and upper is self.upper and
+                all(new is old for new, old in zip(factors, self.factors)) and
+                _same_references(self.coordinate_map, coordinate_map) and
+                _same_references(self.domain, domain)):
             return self
         return type(self)(upper, factors, self.layout, coordinate_map, domain,
                           coordinate_positions=self.coordinate_positions,
@@ -307,41 +330,29 @@ class _QuantizedTuckerFormat(TensorFormat):
         self.__dict__.update(detached.__dict__)
         return self
 
-    def _flattened_in_dim(self) -> Tuple[int, ...]:
-        """Expands each upper connector into its factor digit dimensions."""
-        coordinate_by_position = {
-            position: coordinate
-            for coordinate, position in enumerate(self.coordinate_positions)}
-        dimensions = []
-        for site, dimension in enumerate(self.upper.in_dim):
-            coordinate = coordinate_by_position.get(site)
-            if coordinate is None:
-                dimensions.append(dimension)
-            else:
-                dimensions.extend(self.factors[coordinate].in_dim[:-1])
-        return tuple(dimensions)
-
     def _effective_cores(self) -> List[torch.Tensor]:
         """Replaces upper input sites by their factors with bonds absorbed."""
         coordinate_by_position = {
             position: coordinate
             for coordinate, position in enumerate(self.coordinate_positions)}
-        flat = []
+        cores = []
         for site, upper_core in enumerate(self.upper._effective_cores()):
             coordinate = coordinate_by_position.get(site)
             if coordinate is None:
-                flat.append(upper_core)
+                cores.append(upper_core)
                 continue
 
+            # Carry the upper left rank through the factor's digit sites.
             factor_cores = self.factors[coordinate]._effective_cores()
             digit_cores = factor_cores[:-1]
             connector = factor_cores[-1].squeeze(-1)
             upper_left = upper_core.shape[0]
             if len(digit_cores) > 1:
-                identity = torch.eye(upper_left, device=self.device, dtype=self.dtype)
+                identity = torch.eye(upper_left, device=self.device,
+                                     dtype=self.dtype)
                 for digit_core in digit_cores[:-1]:
                     combined = torch.einsum('ab,lpr->alpbr', identity, digit_core)
-                    flat.append(combined.reshape(
+                    cores.append(combined.reshape(
                         upper_left * digit_core.shape[0], digit_core.shape[1],
                         upper_left * digit_core.shape[2]))
             last = torch.einsum(
@@ -349,11 +360,17 @@ class _QuantizedTuckerFormat(TensorFormat):
                 digit_cores[-1],
                 connector,
                 upper_core)
-            flat.append(last.reshape(
+            cores.append(last.reshape(
                 upper_left * digit_cores[-1].shape[0],
                 digit_cores[-1].shape[1],
                 upper_core.shape[-1]))
-        return flat
+        return cores
+
+    def _flat_format(self) -> Union[TT, TR]:
+        """Builds a flat vector format, retaining any output sites."""
+        cores = _restore_cores(self._effective_cores(), self.in_dim, None,
+                               0, self.upper._cyclic)
+        return self._upper_type(cores)
 
     def flatten(self) -> Union[QTT, QTR]:
         """
@@ -379,19 +396,15 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> format = tk.formats.QTTTucker(upper, [factor], layout)
         >>> flat = format.flatten()
         >>> indices = torch.tensor([[0], [1]])
-        >>> torch.allclose(flat.evaluate_indices(indices),
-        ...                format.evaluate_indices(indices))
-        True
+        >>> flat.evaluate_indices(indices)
+        tensor([1., 1.])
         """
         if self.out_shape:
             raise ValueError(
                 'Cannot flatten tensor-valued Tucker formats to QTT/QTR; '
                 'every QTT/QTR site should represent a digit')
 
-        effective_cores = self._effective_cores()
-        dimensions = self._flattened_in_dim()
-        cyclic = self._upper_type is TR
-        cores = _restore_cores(effective_cores, dimensions, None, 0, cyclic)
+        format = self._flat_format()
 
         # Keep the coordinate schedule aligned with the flattened factor blocks.
         schedule = [site for coordinate in range(self.layout.n_coordinates)
@@ -407,8 +420,8 @@ class _QuantizedTuckerFormat(TensorFormat):
             coordinate_map = AffineCoordinateMap(
                 domain, layout.grid_size, grid_offset=self.computational_grid,
                 out_of_domain=self.out_of_domain)
-        cls = QTR if cyclic else QTT
-        return cls(cores, layout.n_coordinates, layout=layout,
+        cls = QTR if self.upper._cyclic else QTT
+        return cls(format.cores, layout.n_coordinates, layout=layout,
                    coordinate_map=coordinate_map)
 
     def _factor_vectors(self, digits: torch.Tensor) -> List[torch.Tensor]:
@@ -420,9 +433,7 @@ class _QuantizedTuckerFormat(TensorFormat):
                 column
                 for column, site in enumerate(schedule)
                 if site[0] == coordinate]
-            coordinate_digits = digits.index_select(
-                -1,
-                torch.tensor(columns, device=digits.device))
+            coordinate_digits = digits[..., columns]
             state = None
             factor_cores = factor._effective_cores()
             for site, core in enumerate(factor_cores[:-1]):
@@ -438,9 +449,11 @@ class _QuantizedTuckerFormat(TensorFormat):
         """Contracts upper cores with local factor vectors, retaining output sites."""
         cores = self.upper._effective_cores()
         closing = cores[0].shape[-3]
+
         # Open chains use the same contraction with a unit closing bond.
         state = torch.eye(closing, device=self.device, dtype=self.dtype)
         state = state.expand(batch_size, -1, -1)
+
         for site, core in enumerate(cores):
             if site in vectors:
                 local = torch.einsum('bp,lpr->blr', vectors[site], core)
@@ -466,11 +479,10 @@ class _QuantizedTuckerFormat(TensorFormat):
             Values with shape ``(batch_size, *out_shape)``. Upper sites outside
             ``coordinate_positions`` remain open.
         """
-        digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
-        if digits.ndim != 2 or digits.shape[-1] != self.layout.n_sites:
+        digits = self.layout._validate_digits(digits).to(self.device)
+        if digits.ndim != 2:
             raise ValueError(
                 '`digits` should have shape (batch_size, layout.n_sites)')
-        self.layout.decode_digits(digits)
 
         # Factor connectors provide the inputs to their upper sites.
         factor_vectors = self._factor_vectors(digits)
@@ -495,11 +507,11 @@ class _QuantizedTuckerFormat(TensorFormat):
             Values with shape ``(batch_size, *out_shape)``. Upper sites outside
             ``coordinate_positions`` remain open.
         """
-        indices = self.layout._integer_tensor(indices, 'indices')
-        if indices.ndim != 2 or indices.shape[-1] != self.layout.n_coordinates:
+        digits = self.layout.encode_indices(indices)
+        if digits.ndim != 2:
             raise ValueError(
                 '`indices` should have shape (batch_size, n_coordinates)')
-        return self.evaluate_digits(self.layout.encode_indices(indices))
+        return self.evaluate_digits(digits)
 
     def evaluate(self, coordinates: torch.Tensor) -> torch.Tensor:
         """
@@ -513,7 +525,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         coordinates : torch.Tensor
             Finite coordinates in the domain with shape
             ``(batch_size, n_coordinates)``. A coordinate map is required.
-            Coordinates are quantized to the computational grid; no
+            Coordinates are quantized to the map's grid; no
             interpolation of the represented function is performed.
 
         Returns
@@ -528,15 +540,16 @@ class _QuantizedTuckerFormat(TensorFormat):
         >>> factor = tk.formats.TT([torch.eye(2), torch.eye(2)])
         >>> layout = tk.formats.QuantizedLayout(1, base=2, level=1)
         >>> format = tk.formats.QTTTucker(upper, [factor], layout,
-        ...     tk.formats.UniformCoordinateMap(), domain=torch.tensor([0., 1.]))
+        ...     tk.formats.AffineCoordinateMap([0., 1.], layout.grid_size))
         >>> format.evaluate(torch.tensor([[0.], [1.]])).tolist()
         [2.0, 3.0]
         """
         if isinstance(coordinates, torch.Tensor):
             coordinates = coordinates.to(device=self.device)
-        indices = _coordinates_to_indices(
-            coordinates, self.layout, self.coordinate_map, self.domain,
-            self.computational_grid, self.out_of_domain)
+        if self.coordinate_map is None:
+            raise ValueError(
+                '`coordinate_map` is required for evaluation in the domain')
+        indices = self.coordinate_map.to_indices(coordinates)
         return self.evaluate_indices(indices)
 
     def evaluate_coordinates(self, coordinates: torch.Tensor) -> torch.Tensor:
@@ -551,7 +564,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         coordinates : torch.Tensor
             Finite coordinates in the domain with shape
             ``(batch_size, n_coordinates)``. A coordinate map is required.
-            Coordinates are quantized to the computational grid; no
+            Coordinates are quantized to the map's grid; no
             interpolation of the represented function is performed.
 
         Returns
@@ -574,7 +587,7 @@ class _QuantizedTuckerFormat(TensorFormat):
             Dense tensor in flattened digit-site order, including open output
             sites.
         """
-        return self.flatten().contract_dense()
+        return self._flat_format().contract_dense()
 
     def norm(self) -> torch.Tensor:
         """
@@ -583,9 +596,9 @@ class _QuantizedTuckerFormat(TensorFormat):
         Returns
         -------
         torch.Tensor
-            Scalar Frobenius norm.
+            Scalar Frobenius norm, including any output axes.
         """
-        return self.flatten().norm()
+        return self._flat_format().norm()
 
     def normalized_overlap(
             self, other: '_QuantizedTuckerFormat') -> torch.Tensor:
@@ -607,7 +620,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         if not isinstance(other, _QuantizedTuckerFormat):
             raise TypeError(
                 '`other` should be a quantized Tucker format')
-        return self.flatten().normalized_overlap(other.flatten())
+        return self._flat_format().normalized_overlap(other._flat_format())
 
     def fidelity(self, other: '_QuantizedTuckerFormat') -> torch.Tensor:
         """
@@ -627,7 +640,7 @@ class _QuantizedTuckerFormat(TensorFormat):
         return self.normalized_overlap(other).abs().square()
 
 
-class QTTTucker(_QuantizedTuckerFormat):
+class QTTTucker(_QuantizedTuckerFormat):  # MARK: QTTTucker
     """
     Quantics factors connected to an upper tensor train.
 
@@ -646,28 +659,42 @@ class QTTTucker(_QuantizedTuckerFormat):
         Map used to quantize coordinates in the domain. Integer and digit
         evaluation do not require one.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals as ``(2,)`` for a shared interval or
-        ``(n_coordinates, 2)`` for separate intervals. Interval-based maps
-        require a domain; maps with their own grid or domain geometry can use
-        ``None``.
+        Domain used to construct an affine map in :meth:`flatten` when
+        ``coordinate_map`` is ``None``. A shared interval has shape ``(2,)``;
+        separate intervals have shape ``(n_coordinates, 2)``. Evaluation uses
+        the domain stored by ``coordinate_map``.
     coordinate_positions : sequence of int, optional
         Strictly increasing upper sites receiving factor connectors. Other
         upper sites remain output axes. Required when upper contains output
         sites.
     computational_grid : {"endpoints", "left", "centers", "right"} or float
         Uniform grid convention or within-cell offset in ``[0, 1]``, as in
-        :class:`~tensorkrowch.formats.UniformCoordinateMap`. Used when
-        the coordinate map provides no direct index lookup.
+        :class:`~tensorkrowch.formats.AffineCoordinateMap`. Used only when
+        :meth:`flatten` constructs a map because ``coordinate_map`` is ``None``.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ``ValueError`` or are
-        clipped to the domain boundary.
+        Policy for an affine map constructed by :meth:`flatten`. An explicit
+        ``coordinate_map`` uses its own policy.
+
+    Examples
+    --------
+    The factor maps each digit to its connector index; ``upper`` supplies
+    the values at those indices.
+
+    >>> upper = tk.formats.TT([torch.tensor([2., 3.])])
+    >>> factor = tk.formats.TT([torch.eye(2), torch.eye(2)])
+    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=1)
+    >>> coordinate_map = tk.formats.AffineCoordinateMap([0., 1.],
+    ...                                               layout.grid_size)
+    >>> format = tk.formats.QTTTucker(upper, [factor], layout, coordinate_map)
+    >>> format.evaluate(torch.tensor([[0.], [1.]]))
+    tensor([2., 3.])
     """
 
     _upper_type = TT
     _topology = 'qtt_tucker'
 
 
-class QTRTucker(_QuantizedTuckerFormat):
+class QTRTucker(_QuantizedTuckerFormat):  # MARK: QTRTucker
     """
     Quantics factors connected to an upper tensor ring.
 
@@ -686,21 +713,35 @@ class QTRTucker(_QuantizedTuckerFormat):
         Map used to quantize coordinates in the domain. Integer and digit
         evaluation do not require one.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Domain intervals as ``(2,)`` for a shared interval or
-        ``(n_coordinates, 2)`` for separate intervals. Interval-based maps
-        require a domain; maps with their own grid or domain geometry can use
-        ``None``.
+        Domain used to construct an affine map in :meth:`flatten` when
+        ``coordinate_map`` is ``None``. A shared interval has shape ``(2,)``;
+        separate intervals have shape ``(n_coordinates, 2)``. Evaluation uses
+        the domain stored by ``coordinate_map``.
     coordinate_positions : sequence of int, optional
         Strictly increasing upper sites receiving factor connectors. Other
         upper sites remain output axes. Required when upper contains output
         sites.
     computational_grid : {"endpoints", "left", "centers", "right"} or float
         Uniform grid convention or within-cell offset in ``[0, 1]``, as in
-        :class:`~tensorkrowch.formats.UniformCoordinateMap`. Used when
-        the coordinate map provides no direct index lookup.
+        :class:`~tensorkrowch.formats.AffineCoordinateMap`. Used only when
+        :meth:`flatten` constructs a map because ``coordinate_map`` is ``None``.
     out_of_domain : {"error", "clip"}
-        Whether coordinates outside the domain raise ``ValueError`` or are
-        clipped to the domain boundary.
+        Policy for an affine map constructed by :meth:`flatten`. An explicit
+        ``coordinate_map`` uses its own policy.
+
+    Examples
+    --------
+    The factor maps each digit to its connector index; ``upper`` supplies
+    the values at those indices.
+
+    >>> upper = tk.formats.TR([torch.tensor([2., 3.]).reshape(1, 2, 1)])
+    >>> factor = tk.formats.TT([torch.eye(2), torch.eye(2)])
+    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=1)
+    >>> coordinate_map = tk.formats.AffineCoordinateMap([0., 1.],
+    ...                                               layout.grid_size)
+    >>> format = tk.formats.QTRTucker(upper, [factor], layout, coordinate_map)
+    >>> format.evaluate(torch.tensor([[0.], [1.]]))
+    tensor([2., 3.])
     """
 
     _upper_type = TR

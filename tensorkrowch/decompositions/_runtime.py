@@ -64,8 +64,8 @@ class _RuntimePolicy:  # MARK: _RuntimePolicy
         if self.out_device is not None:
             object.__setattr__(
                 self, 'out_device', torch.device(self.out_device))
-        if (self.dtype is not None) and \
-                (not isinstance(self.dtype, torch.dtype)):
+        if (self.dtype is not None) and (
+                not isinstance(self.dtype, torch.dtype)):
             raise TypeError('`dtype` should be torch.dtype type')
         if not isinstance(self.synchronize_timers, bool):
             raise TypeError('`synchronize_timers` should be bool type')
@@ -80,11 +80,10 @@ class _RuntimePolicy:  # MARK: _RuntimePolicy
         """Infers unspecified active runtime properties from a ``tensor``."""
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
-        return cls(
-            device=tensor.device if device is None else device,
-            out_device=out_device,
-            dtype=tensor.dtype if dtype is None else dtype,
-            synchronize_timers=synchronize_timers)
+        return cls(device=tensor.device if device is None else device,
+                   out_device=out_device,
+                   dtype=tensor.dtype if dtype is None else dtype,
+                   synchronize_timers=synchronize_timers)
 
     def prepare(self, tensor: torch.Tensor) -> torch.Tensor:
         """Moves an input ``tensor`` to the active device and dtype."""

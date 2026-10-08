@@ -36,12 +36,11 @@ class _TruncationSpec:  # MARK: _TruncationSpec
     cum_percentage: Optional[float] = None  # Retained spectral-energy fraction
 
     def __post_init__(self) -> None:
-        _validate_truncation(
-            rank=self.rank,
-            cutoff=self.cutoff,
-            atol=self.atol,
-            rtol=self.rtol,
-            cum_percentage=self.cum_percentage)
+        _validate_truncation(rank=self.rank,
+                             cutoff=self.cutoff,
+                             atol=self.atol,
+                             rtol=self.rtol,
+                             cum_percentage=self.cum_percentage)
 
     def as_kwargs(self) -> Dict[str, Union[int, float, None]]:
         """Returns keyword arguments accepted by ``truncated_svd``."""

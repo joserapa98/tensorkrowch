@@ -1,7 +1,7 @@
 """
 This script contains:
 
-    Provenance interfaces:
+    Metadata and diagnostics interfaces:
         * TensorDecomposition, TensorDecomposition1D, TensorDecomposition2D
     Format subclasses with decomposition diagnostics:
         * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition
@@ -12,30 +12,16 @@ This script contains:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import (Any,
-                    Dict,
-                    List,
-                    Optional,
-                    Sequence,
-                    TYPE_CHECKING,
-                    Tuple,
-                    Union)
+from typing import (Any, Dict, List, Optional, Sequence, Tuple, Union,
+                    TYPE_CHECKING)
 
 import torch
 
-from tensorkrowch.formats import (AffineCoordinateMap,
-                                  CoordinateMap,
-                                  QTR,
-                                  QTRM,
-                                  QTT,
-                                  QTTM,
-                                  QuantizedLayout,
-                                  TR,
-                                  TRM,
-                                  TT,
-                                  TTM,
-                                  TensorFormat,
-                                  TensorFormat1D)
+from tensorkrowch.formats import (TensorFormat, TensorFormat1D,
+                                  TT, TR, TTM, TRM,
+                                  QuantizedLayout, CoordinateMap,
+                                  AffineCoordinateMap,
+                                  QTT, QTR, QTTM, QTRM)
 from tensorkrowch.formats.formats1d import _restore_cores
 
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -57,21 +43,21 @@ class TensorDecomposition(TensorFormat, ABC):  # MARK: TensorDecomposition
     @abstractmethod
     def as_info(self) -> Dict[str, Any]:
         """
-        Returns decomposition provenance and current structural dimensions.
+        Returns decomposition metadata, diagnostics and current dimensions.
         """
 
 
 class TensorDecomposition1D(TensorFormat1D, TensorDecomposition, ABC):  # MARK: TensorDecomposition1D
-    """One-dimensional formats carrying decomposition provenance."""
+    """One-dimensional formats carrying decomposition metadata and diagnostics."""
 
 
 class TensorDecomposition2D(TensorDecomposition, ABC):  # MARK: TensorDecomposition2D
-    """Reserved provenance interface for future 2D results."""
+    """Reserved metadata and diagnostics interface for future 2D results."""
 
 
 @dataclass(init=False)
 class _ResultState:  # MARK: _ResultState
-    """Owns provenance; numerical representation is inherited from formats."""
+    """Stores decomposition metadata and diagnostics; formats hold the tensors."""
 
     cores: Sequence[torch.Tensor] = field()  # Numerical format cores
     # Historical fit records
@@ -224,7 +210,7 @@ class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):  # MARK: TRMDe
 
 class _QuanticsResultState:  # MARK: _QuanticsResultState
     """
-    Adds provenance after the coordinate-aware constructor initializes cores.
+    Adds decomposition metadata and diagnostics after initializing the cores.
     """
 
     def __init__(self,

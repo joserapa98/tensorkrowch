@@ -51,15 +51,15 @@ def _ratio_from_log_norms(log_numerator: torch.Tensor,
     safe_log_denominator = torch.where(
         positive, log_denominator, torch.zeros_like(log_denominator))
     ratio = (log_numerator - safe_log_denominator).exp()
-    zero_ratio = torch.where(
-        torch.isneginf(log_numerator),
-        torch.zeros_like(log_numerator),
-        torch.full_like(log_numerator, torch.inf))
+    zero_ratio = torch.where(torch.isneginf(log_numerator),
+                             torch.zeros_like(log_numerator),
+                             torch.full_like(log_numerator, torch.inf))
     return torch.where(positive, ratio, zero_ratio)
 
 
 def _norm_from_log(log_norm: torch.Tensor,
-                   reference_norm: Optional[torch.Tensor] = None) -> torch.Tensor:
+                   reference_norm: Optional[torch.Tensor] = None
+                   ) -> torch.Tensor:
     """Materializes a log-norm, relative to a finite reference if possible."""
     if reference_norm is None:
         return log_norm.exp()
@@ -68,10 +68,9 @@ def _norm_from_log(log_norm: torch.Tensor,
     safe_reference = torch.where(
         positive, reference_norm, torch.ones_like(reference_norm))
     value = (log_norm - safe_reference.log()).exp() * safe_reference
-    zero_reference_value = torch.where(
-        torch.isneginf(log_norm),
-        torch.zeros_like(log_norm),
-        torch.full_like(log_norm, torch.inf))
+    zero_reference_value = torch.where(torch.isneginf(log_norm),
+                                       torch.zeros_like(log_norm),
+                                       torch.full_like(log_norm, torch.inf))
     return torch.where(positive, value, zero_reference_value)
 
 
@@ -154,13 +153,67 @@ class TruncationRecord:  # MARK: TruncationRecord
     svd_method: Optional[str] = None  # Compact SVD implementation used
     phase: Optional[str] = None  # Algorithmic phase containing this cut
 
+    def __post_init__(self) -> None:
+        for name in ('site', 'full_rank', 'selected_rank'):
+            value = getattr(self, name)
+            if not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+
+        if self.site < 0:
+            raise ValueError('`site` should be non-negative')
+        if self.full_rank < 1:
+            raise ValueError('`full_rank` should be positive')
+        if (self.selected_rank < 1) or (
+                self.selected_rank > self.full_rank):
+            raise ValueError(
+                '`selected_rank` should be between 1 and `full_rank`')
+
+        non_negative_fields = (
+            'local_abs_error',
+            'local_rel_error',
+            'singular_values',
+            'local_norm',
+            'global_rel_contribution',
+        )
+        for name in non_negative_fields:
+            value = getattr(self, name)
+            if value is None:
+                continue
+            value = _cpu_tensor(value, name)
+            if torch.any(value < 0):
+                raise ValueError(f'`{name}` should be non-negative')
+            object.__setattr__(self, name, value)
+
+        discarded_sq_norm = self.discarded_sq_norm
+        if discarded_sq_norm is None:
+            discarded_sq_norm = self.local_abs_error.square()
+        else:
+            discarded_sq_norm = _cpu_tensor(
+                discarded_sq_norm, 'discarded_sq_norm')
+            if torch.any(discarded_sq_norm < 0):
+                raise ValueError('`discarded_sq_norm` should be non-negative')
+        object.__setattr__(self, 'discarded_sq_norm', discarded_sq_norm)
+
+        if self.log_scale is not None:
+            log_scale = _cpu_tensor(self.log_scale, 'log_scale')
+            if not torch.isfinite(log_scale).all():
+                raise ValueError('`log_scale` should be finite')
+            object.__setattr__(self, 'log_scale', log_scale)
+
+        if (self.svd_method is not None) and (
+                self.svd_method not in ('svd', 'qr_svd')):
+            raise ValueError('`svd_method` should be "svd" or "qr_svd"')
+        if (self.phase is not None) and (not isinstance(self.phase, str)):
+            raise TypeError('`phase` should be str type')
+
     @classmethod
     def from_svd_info(cls,
                       info: Any,
                       site: int,
                       log_scale: Optional[torch.Tensor] = None,
                       global_norm: Optional[torch.Tensor] = None,
-                      singular_values: Optional[torch.Tensor] = None) -> 'TruncationRecord':
+                      singular_values: Optional[torch.Tensor] = None
+                      ) -> 'TruncationRecord':
         """Builds a high-level record from ``_TruncatedSVDInfo``."""
         local_log_norm = info.total_sq_norm.log() / 2
         discarded_log_norm = info.discarded_sq_norm.log() / 2
@@ -217,70 +270,17 @@ class TruncationRecord:  # MARK: TruncationRecord
                 discarded_log_norm, global_norm.log())
 
         return cls(
-            site=site,
-            full_rank=info.full_rank,
-            selected_rank=info.selected_rank,
-            local_abs_error=local_abs_error,
-            local_rel_error=local_rel_error,
-            singular_values=singular_values,
-            local_norm=local_norm,
-            log_scale=(log_scale_tensor if log_scale is not None else None),
-            global_rel_contribution=global_rel_contribution,
-            svd_method=info.svd_method,
+                site=site,
+                full_rank=info.full_rank,
+                selected_rank=info.selected_rank,
+                local_abs_error=local_abs_error,
+                local_rel_error=local_rel_error,
+                singular_values=singular_values,
+                local_norm=local_norm,
+                log_scale=(log_scale_tensor if log_scale is not None else None),
+                global_rel_contribution=global_rel_contribution,
+                svd_method=info.svd_method,
         )
-
-    def __post_init__(self) -> None:
-        for name in ('site', 'full_rank', 'selected_rank'):
-            value = getattr(self, name)
-            if not isinstance(value, int):
-                raise TypeError(f'`{name}` should be int type')
-
-        if self.site < 0:
-            raise ValueError('`site` should be non-negative')
-        if self.full_rank < 1:
-            raise ValueError('`full_rank` should be positive')
-        if (self.selected_rank < 1) or \
-                (self.selected_rank > self.full_rank):
-            raise ValueError(
-                '`selected_rank` should be between 1 and `full_rank`')
-
-        non_negative_fields = (
-            'local_abs_error',
-            'local_rel_error',
-            'singular_values',
-            'local_norm',
-            'global_rel_contribution',
-        )
-        for name in non_negative_fields:
-            value = getattr(self, name)
-            if value is None:
-                continue
-            value = _cpu_tensor(value, name)
-            if torch.any(value < 0):
-                raise ValueError(f'`{name}` should be non-negative')
-            object.__setattr__(self, name, value)
-
-        discarded_sq_norm = self.discarded_sq_norm
-        if discarded_sq_norm is None:
-            discarded_sq_norm = self.local_abs_error.square()
-        else:
-            discarded_sq_norm = _cpu_tensor(
-                discarded_sq_norm, 'discarded_sq_norm')
-            if torch.any(discarded_sq_norm < 0):
-                raise ValueError('`discarded_sq_norm` should be non-negative')
-        object.__setattr__(self, 'discarded_sq_norm', discarded_sq_norm)
-
-        if self.log_scale is not None:
-            log_scale = _cpu_tensor(self.log_scale, 'log_scale')
-            if not torch.isfinite(log_scale).all():
-                raise ValueError('`log_scale` should be finite')
-            object.__setattr__(self, 'log_scale', log_scale)
-
-        if (self.svd_method is not None) and \
-                (self.svd_method not in ('svd', 'qr_svd')):
-            raise ValueError('`svd_method` should be "svd" or "qr_svd"')
-        if (self.phase is not None) and (not isinstance(self.phase, str)):
-            raise TypeError('`phase` should be str type')
 
 
 @dataclass(frozen=True)

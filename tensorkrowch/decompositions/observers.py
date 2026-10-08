@@ -4,20 +4,20 @@ This script contains:
     Class for decomposition events:
         * DecompositionEvent
 
+    Observer utilities:
+        * _normalize_verbosity
+        * _resolve_observer
+
     Classes for decomposition observers:
         * DecompositionObserver
         * NullObserver
         * HistoryObserver
         * ConsoleObserver
         * _CompositeObserver
-
-    Observer utilities:
-        * _normalize_verbosity
-        * _resolve_observer
 """
 
-from dataclasses import dataclass, field
 import sys
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol, Sequence, TextIO, Union
 
 import torch
@@ -65,6 +65,17 @@ class DecompositionEvent:  # MARK: DecompositionEvent
         if not isinstance(self.values, dict):
             raise TypeError('`values` should be dict type')
         object.__setattr__(self, 'values', dict(self.values))
+
+
+def _normalize_verbosity(verbose: Union[bool, int]) -> int:
+    """Normalizes boolean and integer verbosity levels."""
+    if isinstance(verbose, bool):
+        return int(verbose)
+    if not isinstance(verbose, int):
+        raise TypeError('`verbose` should be bool or int type')
+    if (verbose < 0) or (verbose > 3):
+        raise ValueError('`verbose` should be between 0 and 3')
+    return verbose
 
 
 class DecompositionObserver(Protocol):  # MARK: DecompositionObserver
@@ -116,18 +127,6 @@ class ConsoleObserver:  # MARK: ConsoleObserver
         if not hasattr(self.stream, 'write'):
             raise TypeError('`stream` should be a text stream')
 
-    def _print_values(self, values: Dict[str, Any]) -> None:
-        labels = {
-            'in_dim': 'input dim',
-            'out_dim': 'output dim',
-            'out_device': 'output device',
-        }
-        for name, value in values.items():
-            label = labels.get(name, name.replace('_', ' '))
-            print(
-                f'  {label}: {self._format_value(name, value)}',
-                file=self.stream)
-
     @staticmethod
     def _format_value(name: str, value: Any) -> Any:
         """Formats floating-point console values consistently."""
@@ -151,6 +150,18 @@ class ConsoleObserver:  # MARK: ConsoleObserver
         else:
             return value
         return f'{formatted} s' if name == 'elapsed' else formatted
+
+    def _print_values(self, values: Dict[str, Any]) -> None:
+        labels = {
+            'in_dim': 'input dim',
+            'out_dim': 'output dim',
+            'out_device': 'output device',
+        }
+        for name, value in values.items():
+            label = labels.get(name, name.replace('_', ' '))
+            print(
+                f'  {label}: {self._format_value(name, value)}',
+                file=self.stream)
 
     def emit(self, event: DecompositionEvent) -> None:
         if not isinstance(event, DecompositionEvent):
@@ -252,19 +263,9 @@ class _CompositeObserver:  # MARK: _CompositeObserver
             observer.close(metrics)
 
 
-def _normalize_verbosity(verbose: Union[bool, int]) -> int:
-    """Normalizes boolean and integer verbosity levels."""
-    if isinstance(verbose, bool):
-        return int(verbose)
-    if not isinstance(verbose, int):
-        raise TypeError('`verbose` should be bool or int type')
-    if (verbose < 0) or (verbose > 3):
-        raise ValueError('`verbose` should be between 0 and 3')
-    return verbose
-
-
 def _resolve_observer(verbose: Union[bool, int],
-                      observer: Optional[DecompositionObserver]) -> DecompositionObserver:
+                      observer: Optional[DecompositionObserver]
+                      ) -> DecompositionObserver:
     """
     Combines an optional ``observer`` with the selected console verbosity.
     """

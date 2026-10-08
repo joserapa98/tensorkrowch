@@ -179,7 +179,7 @@ class _QuanticsFormat:
         return all(_same_references(getattr(self, name), getattr(other, name))
                    for name in self._coordinate_names)
 
-    def _as_format(self, cls: Type[TensorFormat1D]) -> TensorFormat1D:
+    def _to_format(self, cls: Type[TensorFormat1D]) -> TensorFormat1D:
         """Drops coordinate metadata while retaining cores and bond factors."""
         result = cls(self._cores, n_batches=self._n_batches)
         if self._bonds is not None:
@@ -326,10 +326,6 @@ class _QuanticsVector(_QuanticsFormat):
         """
         Evaluates scheduled digit configurations.
 
-        Each configuration is evaluated for every stored structural batch.
-        ``core_batch`` indexes those formats; ``data_batch`` indexes the
-        supplied configurations. Every site corresponds to a digit.
-
         Parameters
         ----------
         digits : torch.Tensor
@@ -341,9 +337,15 @@ class _QuanticsVector(_QuanticsFormat):
         -------
         torch.Tensor
             Values with shape ``(*core_batch, *data_batch)``.
+
+        Examples
+        --------
+        >>> format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
+        ...     base=2, level=2, domain=torch.tensor([0., 1.]))
+        >>> format.evaluate_digits(torch.tensor([[0, 0], [0, 1], [1, 1]])).tolist()
+        [1.0, 0.0, 1.0]
         """
-        digits = self.layout._integer_tensor(digits, 'digits').to(self.device)
-        self.layout.decode_digits(digits)
+        digits = self.layout._validate_digits(digits).to(self.device)
         return self.evaluate(digits, n_batches=digits.ndim - 1)
 
     def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
@@ -352,8 +354,7 @@ class _QuanticsVector(_QuanticsFormat):
 
         Encodes indices through
         :meth:`~tensorkrowch.formats.QuantizedLayout.encode_indices` and calls
-        :meth:`evaluate_digits`. Each configuration is evaluated for every
-        stored structural batch.
+        :meth:`evaluate_digits`.
 
         Parameters
         ----------
@@ -385,9 +386,6 @@ class _QuanticsVector(_QuanticsFormat):
         The coordinate map quantizes the inputs using its stored grid
         and out-of-domain policy.
 
-        Each coordinate configuration is evaluated for every stored structural
-        batch, as in :meth:`evaluate_indices`.
-
         Parameters
         ----------
         coordinates : torch.Tensor
@@ -415,10 +413,13 @@ class _QuanticsVector(_QuanticsFormat):
 
     def to_dense_grid(self) -> torch.Tensor:
         """
-        Evaluates every original coordinate index on a small grid.
+        Evaluates every original coordinate index on a small grid. Explicitly
+        allocates and evaluates the full grid.
 
-        Explicitly allocates and evaluates the full grid, independent of
-        digit-site scheduling.
+        Returns one axis per original coordinate, combining its digits and
+        restoring coordinate order independently of the layout schedule.
+        In contrast, :meth:`contract_dense` returns one axis per digit site
+        in layout order.
 
         Returns
         -------
@@ -435,7 +436,8 @@ class _QuanticsVector(_QuanticsFormat):
 
 class QTT(_QuanticsVector, TT):
     """
-    Quantics tensor train with a digit layout and coordinate map.
+    Quantics tensor train with a :class:`~tensorkrowch.formats.QuantizedLayout`
+    and a :class:`~tensorkrowch.formats.CoordinateMap`.
 
     Every core represents one digit site; evaluation contracts all sites.
 
@@ -480,26 +482,45 @@ class QTT(_QuanticsVector, TT):
 
     Examples
     --------
+    First, discretize domain coordinates into indices on a four-point grid:
+
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))
+    >>> coordinates = torch.tensor([[0.], [0.25], [0.75]])
+    >>> indices = coordinate_map.to_indices(coordinates)
+    >>> indices.tolist()
+    [[0], [1], [3]]
+
+    Then, expand each index into two binary digits, one per TT site:
+
+    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> layout.encode_indices(indices).tolist()
+    [[0, 0], [0, 1], [1, 1]]
+
+    Finally, construct the QTT with these objects and evaluate the coordinates:
+
     >>> format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
-    ...                         base=2, level=2, domain=torch.tensor([0., 1.]))
-    >>> format.evaluate_coordinates(torch.tensor([[0.], [1.]])).tolist()
-    [1.0, 1.0]
-    >>> format = tk.formats.QTT([torch.tensor([2., 3.])], 1,
-    ...     base=2, level=1, grid_coordinates=torch.tensor([-1., 4.]))
-    >>> format.evaluate_coordinates(torch.tensor([[-1.], [4.]])).tolist()
-    [2.0, 3.0]
-    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=1)
-    >>> coordinate_map = tk.formats.FunctionalCoordinateMap(
-    ...     domain=None, grid_size=layout.grid_size,
-    ...     forward_function=lambda u, domain: u.square(),
-    ...     inverse_function=lambda x, domain: x.sqrt())
-    >>> format = tk.formats.QTT([torch.tensor([2., 3.])], 1,
-    ...                         layout=layout, coordinate_map=coordinate_map)
-    >>> format.evaluate_coordinates(torch.tensor([[0.25]])).tolist()
-    [3.0]
+    ...     layout=layout, coordinate_map=coordinate_map)
+    >>> format.evaluate_coordinates(coordinates).tolist()
+    [1.0, 0.0, 1.0]
+
+    With two coordinates, interleave their digits and evaluate both together:
+
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))
+    >>> layout = tk.formats.QuantizedLayout(2, base=2, level=2)
+    >>> cores = [torch.tensor([[1.], [2.]]), torch.ones(1, 2, 1),
+    ...          torch.ones(1, 2, 1), torch.tensor([[3., 4.]])]
+    >>> format = tk.formats.QTT(cores, 2,
+    ...     layout=layout, coordinate_map=coordinate_map)
+    >>> coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])
+    >>> layout.encode_indices(coordinate_map.to_indices(coordinates)).tolist()
+    [[0, 0, 0, 0], [1, 0, 0, 1]]
+    >>> format.evaluate_coordinates(coordinates).tolist()
+    [3.0, 8.0]
     """
 
-    def as_tt(self) -> TT:
+    def to_tt(self) -> TT:
         """
         Drops Quantics metadata while retaining the represented tensor.
 
@@ -509,12 +530,13 @@ class QTT(_QuanticsVector, TT):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        return self._as_format(TT)
+        return self._to_format(TT)
 
 
 class QTR(_QuanticsVector, TR):
     """
-    Quantics tensor ring with a digit layout and coordinate map.
+    Quantics tensor ring with a :class:`~tensorkrowch.formats.QuantizedLayout`
+    and a :class:`~tensorkrowch.formats.CoordinateMap`.
 
     Every core represents one digit site; evaluation contracts all sites.
 
@@ -556,9 +578,51 @@ class QTR(_QuanticsVector, TR):
         Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
+
+    Examples
+    --------
+    First, discretize domain coordinates into indices on a four-point grid:
+
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))
+    >>> coordinates = torch.tensor([[0.], [0.25], [0.75]])
+    >>> indices = coordinate_map.to_indices(coordinates)
+    >>> indices.tolist()
+    [[0], [1], [3]]
+
+    Then, expand each index into two binary digits, one per ring site:
+
+    >>> layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> layout.encode_indices(indices).tolist()
+    [[0, 0], [0, 1], [1, 1]]
+
+    Finally, construct a ring whose cores select matching digits:
+
+    >>> core = torch.tensor([[[1., 0.], [0., 0.]],
+    ...                      [[0., 0.], [0., 1.]]])
+    >>> format = tk.formats.QTR([core, core], 1,
+    ...     layout=layout, coordinate_map=coordinate_map)
+    >>> format.evaluate_coordinates(coordinates).tolist()
+    [1.0, 0.0, 1.0]
+
+    With two coordinates, interleave their digits and evaluate both together:
+
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))
+    >>> layout = tk.formats.QuantizedLayout(2, base=2, level=2)
+    >>> cores = [torch.tensor([1., 2.]).reshape(1, 2, 1),
+    ...          torch.ones(1, 2, 1), torch.ones(1, 2, 1),
+    ...          torch.tensor([3., 4.]).reshape(1, 2, 1)]
+    >>> format = tk.formats.QTR(cores, 2,
+    ...     layout=layout, coordinate_map=coordinate_map)
+    >>> coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])
+    >>> layout.encode_indices(coordinate_map.to_indices(coordinates)).tolist()
+    [[0, 0, 0, 0], [1, 0, 0, 1]]
+    >>> format.evaluate_coordinates(coordinates).tolist()
+    [3.0, 8.0]
     """
 
-    def as_tr(self) -> TR:
+    def to_tr(self) -> TR:
         """
         Drops Quantics metadata while retaining the represented tensor.
 
@@ -568,7 +632,40 @@ class QTR(_QuanticsVector, TR):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        return self._as_format(TR)
+        return self._to_format(TR)
+
+    def to_qtt(self) -> QTT:
+        """
+        Opens the ring while preserving its digit layout and coordinate map.
+
+        Carries the closing index through the chain, as in
+        :meth:`~tensorkrowch.formats.TR.to_tt`, without truncation or dense
+        reconstruction.
+
+        Returns
+        -------
+        :class:`~tensorkrowch.formats.QTT`
+            Open Quantics format representing the same values, with structural
+            batches and vector orientation preserved.
+        """
+        return super().to_tt()
+
+    def to_tt(self) -> TT:
+        """
+        Requires an explicit choice about retaining Quantics information.
+
+        Use :meth:`to_qtt` to open the ring while retaining Quantics, or
+        :meth:`to_tr` to remove Quantics while retaining the ring. To obtain
+        a plain TT, call ``to_qtt().to_tt()`` or ``to_tr().to_tt()``.
+
+        Raises
+        ------
+        NotImplementedError
+            Direct conversion is disabled to make the intended format explicit.
+        """
+        raise NotImplementedError(
+            'Use `to_qtt()` to retain Quantics, or `to_qtt().to_tt()` '
+            'or `to_tr().to_tt()` to obtain a plain TT')
 
     def rotate(self, first: int = 0) -> 'QTR':
         """
@@ -589,15 +686,23 @@ class QTR(_QuanticsVector, TR):
             raise TypeError('`first` should be int type')
         if not 0 <= first < self.n_sites:
             raise ValueError('`first` should lie inside the format')
+
         cores = [*self._cores[first:], *self._cores[:first]]
         schedule = self.layout.sites()
         layout = self.layout if first == 0 else QuantizedLayout(
-            self.layout.n_coordinates, self.layout.base, self.layout.level,
-            ordering='custom', digit_order=self.layout.digit_order,
-            permutation=(*schedule[first:], *schedule[:first]))
-        result = QTR(
-            cores, self.layout.n_coordinates, layout=layout,
-            coordinate_map=self.coordinate_map, n_batches=self._n_batches)
+            n_coordinates=self.layout.n_coordinates,
+            base=self.layout.base,
+            level=self.layout.level,
+            ordering='custom',
+            digit_order=self.layout.digit_order,
+            permutation=(*schedule[first:], *schedule[:first])
+        )
+
+        result = QTR(cores=cores,
+                     n_coordinates=self.layout.n_coordinates,
+                     layout=layout,
+                     coordinate_map=self.coordinate_map,
+                     n_batches=self._n_batches)
         result._is_row = self._is_row
         if self._bonds is not None:
             factors = self._bonds.factors
@@ -630,7 +735,8 @@ class _QuanticsMatrix(_QuanticsFormat):
                  in_coordinate_map: Optional[CoordinateMap] = None,
                  out_coordinate_map: Optional[CoordinateMap] = None,
                  n_batches: int = 0,
-                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None
+                 ) -> None:
         self.in_layout, self.in_coordinate_map = _resolve_quantization(
             in_n_coordinates, base=in_base, level=in_level, domain=in_domain,
             grid_coordinates=in_grid_coordinates, layout=in_layout,
@@ -657,19 +763,20 @@ class _QuanticsMatrix(_QuanticsFormat):
             metadata.
         """
         super().validate()
-        if (self._in_dim != self.in_layout.in_dim or
-                self._out_dim != self.out_layout.in_dim):
+        if ((self._in_dim != self.in_layout.in_dim) or
+                (self._out_dim != self.out_layout.in_dim)):
             raise ValueError(
                 'Matrix core dimensions should match paired digit layouts')
         return self
 
     def transpose(self) -> Union['QTTM', 'QTRM']:
         """
-        Transposes matrix cores and exchanges input/output coordinate spaces.
+        Swaps local matrix input/output axes without reversing sites.
 
-        Sites retain their order and values are not conjugated. This also
-        implements the ``T`` property; :meth:`adjoint` additionally conjugates
-        the cores.
+        Also available through the :attr:`T` property.
+
+        The result keeps the concrete format class and its methods. Its core
+        and bond containers are independent, sharing tensor storage.
 
         Returns
         -------
@@ -706,10 +813,6 @@ class _QuanticsMatrix(_QuanticsFormat):
         """
         Evaluates matrix entries using paired digits.
 
-        Each input/output configuration pair is evaluated for every stored
-        structural batch. ``core_batch`` indexes those formats; ``data_batch``
-        indexes the supplied pairs.
-
         Parameters
         ----------
         in_digits : torch.Tensor
@@ -725,8 +828,8 @@ class _QuanticsMatrix(_QuanticsFormat):
         torch.Tensor
             Matrix entries with shape ``(*core_batch, *data_batch)``.
         """
-        self.in_layout.decode_digits(in_digits)
-        self.out_layout.decode_digits(out_digits)
+        in_digits = self.in_layout._validate_digits(in_digits)
+        out_digits = self.out_layout._validate_digits(out_digits)
         return self.evaluate(in_digits, out_digits, n_batches=in_digits.ndim - 1)
 
     def evaluate_indices(self,
@@ -754,8 +857,8 @@ class _QuanticsMatrix(_QuanticsFormat):
                                     self.out_layout.encode_indices(out_indices))
 
     def evaluate_coordinates(self,
-                        in_coordinates: torch.Tensor,
-                        out_coordinates: torch.Tensor) -> torch.Tensor:
+                             in_coordinates: torch.Tensor,
+                             out_coordinates: torch.Tensor) -> torch.Tensor:
         """
         Evaluates matrix entries using paired coordinates.
 
@@ -786,8 +889,11 @@ class _QuanticsMatrix(_QuanticsFormat):
         """
         Evaluates every original coordinate index on a small grid.
 
-        Explicitly allocates and evaluates the full grid, independent of
-        digit-site scheduling.
+        Returns one axis per original input and output coordinate, combining
+        their digits and placing input coordinates before output coordinates.
+        In contrast, :meth:`contract_dense` returns the interleaved input and
+        output digit axes in layout order. Explicitly allocates and evaluates
+        the full grid.
 
         Returns
         -------
@@ -810,12 +916,16 @@ class _QuanticsMatrix(_QuanticsFormat):
             in_indices.repeat_interleave(out_indices.shape[0], 0),
             out_indices.repeat(in_indices.shape[0], 1))
         return values.reshape(*self._batch_shape,
-                              *self.in_layout.grid_size, *self.out_layout.grid_size)
+                              *self.in_layout.grid_size,
+                              *self.out_layout.grid_size)
 
 
 class QTTM(_QuanticsMatrix, TTM):
     """
-    Quantics open-chain matrix with separate input and output coordinate spaces.
+    Quantics tensor train operator with a
+    :class:`~tensorkrowch.formats.QuantizedLayout` and a
+    :class:`~tensorkrowch.formats.CoordinateMap` for each input and output
+    space.
 
     Each space independently accepts shorthand arguments or a prebuilt layout
     and map, as in :class:`QTT`. Shorthand layouts are ``interleaved`` and
@@ -854,16 +964,56 @@ class QTTM(_QuanticsMatrix, TTM):
 
     Examples
     --------
-    >>> matrix = tk.formats.QTTM([torch.ones(2, 3)], 1, 1,
-    ...     in_base=2, in_level=1, in_domain=torch.tensor([0., 1.]),
-    ...     out_grid_coordinates=torch.tensor([0., 2., 5.]),
-    ...     out_base=3, out_level=1)
-    >>> matrix.evaluate_coordinates(torch.tensor([[1.]]),
-    ...                             torch.tensor([[5.]])).tolist()
-    [1.0]
+    First, discretize input and output coordinates on their respective grids:
+
+    >>> in_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))
+    >>> out_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([-1., 1.]), grid_size=(4,))
+    >>> in_coordinates = torch.tensor([[0.], [0.5]])
+    >>> out_coordinates = torch.tensor([[-1.], [0.5]])
+    >>> in_indices = in_map.to_indices(in_coordinates)
+    >>> out_indices = out_map.to_indices(out_coordinates)
+    >>> in_indices.tolist(), out_indices.tolist()
+    ([[0], [2]], [[0], [3]])
+
+    Then, expand both sets of indices into the digits paired at each site:
+
+    >>> in_layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> out_layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> in_layout.encode_indices(in_indices).tolist()
+    [[0, 0], [1, 0]]
+    >>> out_layout.encode_indices(out_indices).tolist()
+    [[0, 0], [1, 1]]
+
+    Finally, construct an identity matrix on the grid indices and evaluate
+    entries:
+
+    >>> cores = [torch.eye(2).unsqueeze(1), torch.eye(2).unsqueeze(0)]
+    >>> matrix = tk.formats.QTTM(cores, 1, 1,
+    ...     in_layout=in_layout, out_layout=out_layout,
+    ...     in_coordinate_map=in_map, out_coordinate_map=out_map)
+    >>> matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()
+    [1.0, 0.0]
+
+    With two coordinates per space, interleave their digits in both layouts:
+
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))
+    >>> layout = tk.formats.QuantizedLayout(2, base=2, level=2)
+    >>> cores = [torch.eye(2).unsqueeze(1),
+    ...          torch.eye(2).reshape(1, 2, 1, 2),
+    ...          torch.eye(2).reshape(1, 2, 1, 2), torch.eye(2).unsqueeze(0)]
+    >>> matrix = tk.formats.QTTM(cores, 2, 2,
+    ...     in_layout=layout, out_layout=layout,
+    ...     in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map)
+    >>> in_coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])
+    >>> out_coordinates = torch.tensor([[0., 0.], [0.5, 0.75]])
+    >>> matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()
+    [1.0, 0.0]
     """
 
-    def as_ttm(self) -> TTM:
+    def to_ttm(self) -> TTM:
         """
         Drops Quantics metadata while retaining the represented tensor.
 
@@ -873,12 +1023,15 @@ class QTTM(_QuanticsMatrix, TTM):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        return self._as_format(TTM)
+        return self._to_format(TTM)
 
 
 class QTRM(_QuanticsMatrix, TRM):
     """
-    Quantics cyclic matrix with separate input and output coordinate spaces.
+    Quantics tensor ring operator with a
+    :class:`~tensorkrowch.formats.QuantizedLayout` and a
+    :class:`~tensorkrowch.formats.CoordinateMap` for each input and output
+    space.
 
     Each space independently accepts shorthand arguments or a prebuilt layout
     and map, as in :class:`QTT`. Shorthand layouts are ``interleaved`` and
@@ -914,9 +1067,56 @@ class QTRM(_QuanticsMatrix, TRM):
         Independent of data batches during evaluation.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores, as in the corresponding plain format.
+
+    Examples
+    --------
+    First, discretize input and output coordinates on their respective grids:
+
+    >>> in_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4,))
+    >>> out_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([-1., 1.]), grid_size=(4,))
+    >>> in_coordinates = torch.tensor([[0.], [0.5]])
+    >>> out_coordinates = torch.tensor([[-1.], [0.5]])
+    >>> in_indices = in_map.to_indices(in_coordinates)
+    >>> out_indices = out_map.to_indices(out_coordinates)
+    >>> in_indices.tolist(), out_indices.tolist()
+    ([[0], [2]], [[0], [3]])
+
+    Then, expand both sets of indices into the digits paired at each site:
+
+    >>> in_layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> out_layout = tk.formats.QuantizedLayout(1, base=2, level=2)
+    >>> in_layout.encode_indices(in_indices).tolist()
+    [[0, 0], [1, 0]]
+    >>> out_layout.encode_indices(out_indices).tolist()
+    [[0, 0], [1, 1]]
+
+    Finally, construct an identity matrix on the grid indices and evaluate entries:
+
+    >>> cores = [torch.eye(2).reshape(1, 2, 1, 2)] * 2
+    >>> matrix = tk.formats.QTRM(cores, 1, 1,
+    ...     in_layout=in_layout, out_layout=out_layout,
+    ...     in_coordinate_map=in_map, out_coordinate_map=out_map)
+    >>> matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()
+    [1.0, 0.0]
+
+    With two coordinates per space, interleave their digits in both layouts:
+
+    >>> coordinate_map = tk.formats.AffineCoordinateMap(
+    ...     domain=torch.tensor([0., 1.]), grid_size=(4, 4))
+    >>> layout = tk.formats.QuantizedLayout(2, base=2, level=2)
+    >>> cores = [torch.eye(2).reshape(1, 2, 1, 2)] * 4
+    >>> matrix = tk.formats.QTRM(cores, 2, 2,
+    ...     in_layout=layout, out_layout=layout,
+    ...     in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map)
+    >>> in_coordinates = torch.tensor([[0., 0.], [0.5, 0.25]])
+    >>> out_coordinates = torch.tensor([[0., 0.], [0.5, 0.75]])
+    >>> matrix.evaluate_coordinates(in_coordinates, out_coordinates).tolist()
+    [1.0, 0.0]
     """
 
-    def as_trm(self) -> TRM:
+    def to_trm(self) -> TRM:
         """
         Drops Quantics metadata while retaining the represented tensor.
 
@@ -926,7 +1126,40 @@ class QTRM(_QuanticsMatrix, TRM):
             Plain raw-tensor format sharing tensor storage. Coordinate maps,
             domains and digit-layout semantics are not retained.
         """
-        return self._as_format(TRM)
+        return self._to_format(TRM)
+
+    def to_qttm(self) -> QTTM:
+        """
+        Opens the ring while preserving its input and output layouts and maps.
+
+        Carries the closing index through the chain, as in
+        :meth:`~tensorkrowch.formats.TRM.to_ttm`, without truncation or dense
+        reconstruction.
+
+        Returns
+        -------
+        :class:`~tensorkrowch.formats.QTTM`
+            Open Quantics matrix representing the same entries, with structural
+            batches preserved.
+        """
+        return super().to_ttm()
+
+    def to_ttm(self) -> TTM:
+        """
+        Requires an explicit choice about retaining Quantics information.
+
+        Use :meth:`to_qttm` to open the ring while retaining Quantics, or
+        :meth:`to_trm` to remove Quantics while retaining the ring. To obtain
+        a plain TTM, call ``to_qttm().to_ttm()`` or ``to_trm().to_ttm()``.
+
+        Raises
+        ------
+        NotImplementedError
+            Direct conversion is disabled to make the intended format explicit.
+        """
+        raise NotImplementedError(
+            'Use `to_qttm()` to retain Quantics, or `to_qttm().to_ttm()` '
+            'or `to_trm().to_ttm()` to obtain a plain TTM')
 
     def rotate(self, first: int = 0) -> 'QTRM':
         """
@@ -947,22 +1180,28 @@ class QTRM(_QuanticsMatrix, TRM):
             raise TypeError('`first` should be int type')
         if not 0 <= first < self.n_sites:
             raise ValueError('`first` should lie inside the format')
+
         cores = [*self._cores[first:], *self._cores[:first]]
 
         def rotated_layout(layout: QuantizedLayout) -> QuantizedLayout:
             """Rotates a digit schedule consistently with the ring cores."""
             schedule = layout.sites()
-            return QuantizedLayout(layout.n_coordinates, layout.base, layout.level,
-                                   ordering='custom', digit_order=layout.digit_order,
-                                   permutation=(*schedule[first:], *schedule[:first]))
+            return QuantizedLayout(n_coordinates=layout.n_coordinates,
+                                   base=layout.base,
+                                   level=layout.level,
+                                   ordering='custom',
+                                   digit_order=layout.digit_order,
+                                   permutation=(*schedule[first:],
+                                                *schedule[:first]))
 
-        result = QTRM(
-            cores, self.in_layout.n_coordinates, self.out_layout.n_coordinates,
-            in_layout=rotated_layout(self.in_layout),
-            out_layout=rotated_layout(self.out_layout),
-            in_coordinate_map=self.in_coordinate_map,
-            out_coordinate_map=self.out_coordinate_map,
-            n_batches=self._n_batches)
+        result = QTRM(cores=cores,
+                      in_n_coordinates=self.in_layout.n_coordinates,
+                      out_n_coordinates=self.out_layout.n_coordinates,
+                      in_layout=rotated_layout(self.in_layout),
+                      out_layout=rotated_layout(self.out_layout),
+                      in_coordinate_map=self.in_coordinate_map,
+                      out_coordinate_map=self.out_coordinate_map,
+                      n_batches=self._n_batches)
         if self._bonds is not None:
             factors = self._bonds.factors
             result.bonds = [*factors[first:], *factors[:first]]

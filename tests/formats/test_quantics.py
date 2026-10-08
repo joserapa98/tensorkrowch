@@ -155,9 +155,9 @@ def test_quantized_grid_and_arithmetic(ordering):
     assert isinstance(format + format, tk.formats.QTT)
     assert torch.allclose((format * format).evaluate_indices(indices), values.square())
     assert torch.allclose((2 * format).to_dense_grid(), 2 * values.reshape(8, 16))
-    assert torch.allclose(format.as_tt().contract_dense(), tensor)
+    assert torch.allclose(format.to_tt().contract_dense(), tensor)
     with pytest.raises(ValueError, match='semantics'):
-        format + format.as_tt()
+        format + format.to_tt()
     detached = format.clone().detach()
     assert detached.coordinate_map.domain.data_ptr() != \
         format.coordinate_map.domain.data_ptr()
@@ -166,7 +166,7 @@ def test_quantized_grid_and_arithmetic(ordering):
     row = format.H
     assert isinstance(row, tk.formats.QTT)
     assert row.layout is layout
-    assert torch.allclose(row.as_tt() @ format.as_tt(), tensor.square().sum())
+    assert torch.allclose(row.to_tt() @ format.to_tt(), tensor.square().sum())
 
 
 @pytest.mark.parametrize('n_coordinates, base, level', [
@@ -183,8 +183,16 @@ def test_ring_coordinate_rotation_and_conversion(n_coordinates, base, level):
         *[torch.arange(size) for size in layout.grid_size]).reshape(-1, n_coordinates)
     values = format.evaluate_indices(indices)
     assert format.rotate(0).layout is layout
-    assert torch.allclose(format.to_tt().evaluate_indices(indices), values)
-    assert torch.allclose(format.H.to_tt() @ format.to_tt(), values.square().sum())
+    with pytest.raises(NotImplementedError, match='to_qtt'):
+        format.to_tt()
+    train = format.to_qtt()
+    assert type(train) is tk.formats.QTT
+    assert train.layout is layout
+    assert train.coordinate_map is format.coordinate_map
+    assert torch.allclose(train.to_tt().contract_dense(), format.contract_dense())
+    assert torch.allclose(format.to_tr().to_tt().contract_dense(), format.contract_dense())
+    assert torch.allclose(format.to_qtt().evaluate_indices(indices), values)
+    assert torch.allclose(format.H.to_qtt() @ format.to_qtt(), values.square().sum())
     for first in range(3):
         assert torch.allclose(format.rotate(first).evaluate_indices(indices), values)
         assert torch.allclose(format.H.rotate(first) @ format.rotate(first), values.square().sum())
@@ -279,7 +287,7 @@ def test_quantized_outer_product_preserves_coordinate_spaces():
             x.cores, 1, layout=output_layout,
             coordinate_map=_coordinate_map(output_layout, torch.tensor([0., 2.])))
     with pytest.raises(ValueError, match='semantics'):
-        x @ y.as_tt().H
+        x @ y.to_tt().H
 
 
 @pytest.mark.parametrize('operation', ['sum', 'scale', 'hadamard', 'apply', 'transpose'])
@@ -322,7 +330,7 @@ def test_plain_operands_reject_quantics_in_both_orders():
     quantics = tk.formats.QTT([torch.ones(2, 1), torch.ones(1, 2)], 1,
                               layout=layout,
                             coordinate_map=_coordinate_map(layout))
-    plain = quantics.as_tt()
+    plain = quantics.to_tt()
     for first, second in [(plain, quantics), (quantics, plain)]:
         with pytest.raises(ValueError, match='semantics'):
             first + second
@@ -341,7 +349,7 @@ def test_quantics_blocking_preserves_coordinate_contract():
     assert format.cores is cores
     assert format.layout is layout
     assert format.in_dim == (2, 2)
-    plain = format.as_tt()
+    plain = format.to_tt()
     grouped = plain.block([2])
     plain.unblock(grouped)
     assert torch.allclose(plain.contract_dense(), format.contract_dense())
@@ -354,12 +362,12 @@ def test_plain_conversion_owns_its_bonds(cyclic):
         format = tk.formats.QTR([torch.ones(2, 2, 2)] * 2, 1,
                                 layout=layout,
                             coordinate_map=_coordinate_map(layout))
-        plain = format.as_tr
+        plain = format.to_tr
     else:
         format = tk.formats.QTT([torch.eye(2), torch.eye(2)], 1,
                                 layout=layout,
                             coordinate_map=_coordinate_map(layout))
-        plain = format.as_tt
+        plain = format.to_tt
     format.bonds = [torch.ones(2)] * (2 if cyclic else 1)
     converted = plain()
     assert converted.bonds is not format.bonds
@@ -368,3 +376,29 @@ def test_plain_conversion_owns_its_bonds(cyclic):
     with pytest.raises(ValueError, match='factor dimensions'):
         converted.bonds.factors[0] = torch.ones(3)
     assert torch.equal(converted.bonds.factors[0], torch.full((2,), 2.))
+
+
+@pytest.mark.parametrize('n_batches', [0, 1])
+def test_quantized_ring_matrix_conversion_requires_explicit_target(n_batches):
+    layout = tk.formats.QuantizedLayout(1, 2, 1)
+    coordinate_map = _coordinate_map(layout)
+    core = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
+    if n_batches:
+        core = torch.stack([core, 2 * core])
+    format = tk.formats.QTRM(
+        [core], 1, 1, in_layout=layout, out_layout=layout,
+        in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map,
+        n_batches=n_batches)
+
+    with pytest.raises(NotImplementedError, match='to_qttm'):
+        format.to_ttm()
+    matrix = format.to_qttm()
+    assert type(matrix) is tk.formats.QTTM
+    assert matrix.in_layout is format.in_layout
+    assert matrix.out_layout is format.out_layout
+    assert matrix.in_coordinate_map is coordinate_map
+    assert matrix.out_coordinate_map is coordinate_map
+    assert matrix.batch_shape == format.batch_shape
+    assert torch.allclose(matrix.contract_dense(), format.contract_dense())
+    assert torch.allclose(matrix.to_ttm().contract_dense(), format.contract_dense())
+    assert torch.allclose(format.to_trm().to_ttm().contract_dense(), format.contract_dense())

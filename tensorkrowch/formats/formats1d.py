@@ -1474,10 +1474,10 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             this format or a solver result with the same effective dimensions.
             Clone the format first to retain its original structure. Quantics
             layouts must remain compatible; use
-            :meth:`~tensorkrowch.formats.QTT.as_tt` /
-            :meth:`~tensorkrowch.formats.QTR.as_tr` or
-            :meth:`~tensorkrowch.formats.QTTM.as_ttm` /
-            :meth:`~tensorkrowch.formats.QTRM.as_trm` to group arbitrary
+            :meth:`~tensorkrowch.formats.QTT.to_tt` /
+            :meth:`~tensorkrowch.formats.QTR.to_tr` or
+            :meth:`~tensorkrowch.formats.QTTM.to_ttm` /
+            :meth:`~tensorkrowch.formats.QTRM.to_trm` to group arbitrary
             digits in a plain format.
 
         Examples
@@ -1614,7 +1614,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         if self._quantized != other._quantized:
             raise ValueError(
                 'Quantics algebra requires compatible coordinate semantics; '
-                'use as_tt/as_tr/as_ttm/as_trm explicitly')
+                'use to_tt/to_tr/to_ttm/to_trm explicitly')
 
     def _prepare_binary_operands(
             self,
@@ -2300,6 +2300,8 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
         """
         Changes row/column orientation without conjugating coefficients.
 
+        Also available through the :attr:`T` property.
+
         The result keeps the concrete format class and its methods. Its core
         and bond containers are independent, sharing tensor storage. Core
         shapes and coefficient evaluation are unchanged. Operator core views
@@ -2329,6 +2331,8 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
     def adjoint(self) -> '_VectorFormat1D':
         """
         Changes row/column orientation and conjugates cores and bond factors.
+
+        Also available through the :attr:`H` property.
 
         Returns
         -------
@@ -2756,6 +2760,8 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
         """
         Swaps local matrix input/output axes without reversing sites.
 
+        Also available through the :attr:`T` property.
+
         The result keeps the concrete format class and its methods. Its core
         and bond containers are independent, sharing tensor storage.
 
@@ -2797,6 +2803,8 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
     def adjoint(self) -> '_MatrixFormat1D':
         """
         Returns the conjugate transpose, including explicit factors.
+
+        Also available through the :attr:`H` property.
 
         Returns
         -------

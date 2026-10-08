@@ -256,6 +256,32 @@ class QuantizedLayout:  # MARK: QuantizedLayout
             raise TypeError(f'`{name}` should be an integer tensor')
         return values.to(dtype=torch.long)
 
+    def _validate_indices(self, indices: torch.Tensor) -> torch.Tensor:
+        """Validates coordinate index dimensions and bounds, returning integers."""
+        indices = self._integer_tensor(indices, 'indices')
+        if indices.shape[-1] != self.n_coordinates:
+            raise ValueError(
+                'The last `indices` dimension should match `n_coordinates`')
+        for coordinate, size in enumerate(self.grid_size):
+            values = indices[..., coordinate]
+            if torch.any(values < 0) or torch.any(values >= size):
+                raise ValueError(
+                    f'`indices` is out of bounds for coordinate {coordinate}')
+        return indices
+
+    def _validate_digits(self, digits: torch.Tensor) -> torch.Tensor:
+        """Validates scheduled digit dimensions and bounds, returning integers."""
+        digits = self._integer_tensor(digits, 'digits')
+        if digits.shape[-1] != self.n_sites:
+            raise ValueError(
+                'The last `digits` dimension should match the layout sites '
+                '(`n_sites`)')
+        for site, base in enumerate(self.in_dim):
+            values = digits[..., site]
+            if torch.any(values < 0) or torch.any(values >= base):
+                raise ValueError(f'`digits` is out of bounds at site {site}')
+        return digits
+
     def encode_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """
         Expands integer grid indices into scheduled digit columns.
@@ -278,19 +304,12 @@ class QuantizedLayout:  # MARK: QuantizedLayout
         >>> layout.encode_indices(torch.tensor([[5]])).tolist()
         [[1, 0, 1]]
         """
-        indices = self._integer_tensor(indices, 'indices')
-        if indices.shape[-1] != self.n_coordinates:
-            raise ValueError(
-                'The last `indices` dimension should match `n_coordinates`')
+        indices = self._validate_indices(indices)
 
         # Expand each index, then arrange its digits in the chosen site order.
         digit_values = {}
-        for coordinate, (base, level, size) in enumerate(zip(
-                self.base, self.level, self.grid_size)):
+        for coordinate, (base, level) in enumerate(zip(self.base, self.level)):
             values = indices[..., coordinate]
-            if torch.any(values < 0) or torch.any(values >= size):
-                raise ValueError(
-                    f'`indices` is out of bounds for coordinate {coordinate}')
             for digit in range(level):
                 stride = base ** (level - 1 - digit)
                 digit_values[(coordinate, digit)] = torch.remainder(
@@ -315,20 +334,9 @@ class QuantizedLayout:  # MARK: QuantizedLayout
             ``torch.long`` indices with shape ``(*batch, n_coordinates)``, on
             the input device.
         """
-        digits = self._integer_tensor(digits, 'digits')
-        if digits.shape[-1] != self.n_sites:
-            raise ValueError(
-                'The last `digits` dimension should match the layout sites '
-                '(`n_sites`)')
-
-        digit_values = {}
-        for site, coordinate_digit in enumerate(self.sites()):
-            coordinate, _ = coordinate_digit
-            values = digits[..., site]
-            if torch.any(values < 0) or torch.any(values >= self.base[coordinate]):
-                raise ValueError(
-                    f'`digits` is out of bounds at site {site}')
-            digit_values[coordinate_digit] = values
+        digits = self._validate_digits(digits)
+        digit_values = {coordinate_digit: digits[..., site]
+                        for site, coordinate_digit in enumerate(self.sites())}
 
         # Combine digits by significance, independently of their site order.
         indices = []

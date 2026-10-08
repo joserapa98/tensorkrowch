@@ -286,7 +286,7 @@ The layout can also be applied to a solver result with matching blocked
 dimensions; it need not belong to the same object. Matrices retain separate
 grouped input/output dimensions. Clone a format before blocking to retain its
 original structure. Quantics layouts must remain compatible with the cores;
-use an explicit ``as_tt``/``as_tr``/``as_ttm``/``as_trm`` conversion to group
+use an explicit ``to_tt``/``to_tr``/``to_ttm``/``to_trm`` conversion to group
 arbitrary digit sites without coordinate metadata.
 ``contract_block(first, last)`` leaves external ranks open and includes internal
 factors only. ``split_block`` returns standard fused local cores, cut spectra
@@ -337,7 +337,7 @@ grid in unit space; the latter applies supplied transformation functions.
 Matrix Quantics has separate input/output layouts and maps with paired digit
 schedules. ``T`` and ``H`` swap their meaning. Algebra preserves Quantics
 classes when coordinate meanings match; incompatible layouts are rejected
-even if core sizes coincide. ``as_tt``/``as_tr``/matrix equivalents deliberately
+even if core sizes coincide. ``to_tt``/``to_tr``/matrix equivalents deliberately
 drop coordinate semantics. Reordering configurations does not reorder fitted
 cores: grouped-to-interleaved conversion would require swaps and SVDs.
 

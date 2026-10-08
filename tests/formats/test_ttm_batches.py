@@ -75,6 +75,6 @@ def test_batched_qttm_coordinates_and_plain_conversion():
             in_layout=layout, out_layout=layout)
         assert torch.allclose(actual[batch],
                               member.evaluate_indices(indices, indices))
-    plain = format.as_ttm()
+    plain = format.to_ttm()
     assert plain.batch_shape == (2,)
     assert torch.equal(plain.contract_dense(), format.contract_dense())

@@ -145,7 +145,7 @@ def _resolve_quantization(
     return layout, coordinate_map
 
 
-class _QuanticsFormat:
+class _QuanticsFormat:  # MARK: _QuanticsFormat
     """Coordinate compatibility and direct construction of Quantics results."""
 
     _quantized = True
@@ -233,7 +233,7 @@ class _QuanticsFormat:
                    n_batches=n_batches)
 
 
-class _QuanticsVector(_QuanticsFormat):
+class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
     """Coordinate semantics shared by open and cyclic Quantics vectors."""
 
     _coordinate_names = ('coordinate_map',)
@@ -420,7 +420,7 @@ class _QuanticsVector(_QuanticsFormat):
         return values.reshape(*self._batch_shape, *self.layout.grid_size)
 
 
-class QTT(_QuanticsVector, TT):
+class QTT(_QuanticsVector, TT):  # MARK: QTT
     """
     Quantics tensor train with a :class:`~tensorkrowch.formats.QuantizedLayout`
     and a :class:`~tensorkrowch.formats.CoordinateMap`.
@@ -519,7 +519,7 @@ class QTT(_QuanticsVector, TT):
         return self._to_format(TT)
 
 
-class QTR(_QuanticsVector, TR):
+class QTR(_QuanticsVector, TR):  # MARK: QTR
     """
     Quantics tensor ring with a :class:`~tensorkrowch.formats.QuantizedLayout`
     and a :class:`~tensorkrowch.formats.CoordinateMap`.
@@ -696,7 +696,7 @@ class QTR(_QuanticsVector, TR):
         return result
 
 
-class _QuanticsMatrix(_QuanticsFormat):
+class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
     """Paired input/output digit layouts of a tensorized operator."""
 
     _coordinate_names = ('in_coordinate_map', 'out_coordinate_map')
@@ -906,7 +906,7 @@ class _QuanticsMatrix(_QuanticsFormat):
                               *self.out_layout.grid_size)
 
 
-class QTTM(_QuanticsMatrix, TTM):
+class QTTM(_QuanticsMatrix, TTM):  # MARK: QTTM
     """
     Quantics tensor train operator with a
     :class:`~tensorkrowch.formats.QuantizedLayout` and a
@@ -1012,7 +1012,7 @@ class QTTM(_QuanticsMatrix, TTM):
         return self._to_format(TTM)
 
 
-class QTRM(_QuanticsMatrix, TRM):
+class QTRM(_QuanticsMatrix, TRM):  # MARK: QTRM
     """
     Quantics tensor ring operator with a
     :class:`~tensorkrowch.formats.QuantizedLayout` and a

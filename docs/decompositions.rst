@@ -103,6 +103,13 @@ TRM-SVD
 Lightweight results
 -------------------
 
+Results add historical diagnostics to their numerical format. Use
+:meth:`TensorDecomposition.to_format` to obtain the corresponding format
+without these diagnostics, retaining its cores, bonds and coordinate maps.
+
+.. autoclass:: TensorDecomposition
+    :members: as_info, error, to_format
+
 .. autoclass:: QTTDecomposition
 
 .. autoclass:: QTRDecomposition

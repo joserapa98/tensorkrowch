@@ -40,7 +40,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TTDecomposition,
+from tensorkrowch.decompositions.results import (TensorDecomposition,
+                                                 TTDecomposition,
                                                  _quantics_result)
 from tensorkrowch.decompositions.sketching.base import (RecursiveSketching,
                                                         _SketchingFitContext)
@@ -92,7 +93,6 @@ if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
     from tensorkrowch.decompositions.sources.factory import SourceLike
     from tensorkrowch.formats.quantization import Domain
-    from tensorkrowch.decompositions.results import TensorDecomposition1D
 
 
 class TTRSS(RecursiveSketching):  # MARK: TTRSS
@@ -1072,11 +1072,11 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             metadata=metadata)
 
     def _validate_result(self,
-                         result: TTDecomposition,
+                         result: TensorDecomposition,
                          context: _SketchingFitContext) -> None:
         """Checks the TT topology and final site dimensions."""
-        if not isinstance(result, TTDecomposition):
-            raise TypeError('`result` should be TTDecomposition type')
+        if not isinstance(result, TensorDecomposition) or not isinstance(result, TT):
+            raise TypeError('`result` should be a decomposition with TT format')
         if len(result.cores) != self.outputs.n_sites:
             raise ValueError('The result should contain one core per TT site')
         expected = context.state.get(
@@ -1217,7 +1217,7 @@ class _QuantizedRSSMixin:  # MARK: _QuantizedRSSMixin
             sketch_samples: Samples,
             *args,
             sample_space: Optional[str] = None,
-            **kwargs) -> 'TensorDecomposition1D':
+            **kwargs) -> 'TensorDecomposition':
         """Fits QTT/QTR cores from domain coordinates or encoded digits."""
         active_space = self.sample_space if sample_space is None else sample_space
         if active_space not in ('physical', 'digits'):

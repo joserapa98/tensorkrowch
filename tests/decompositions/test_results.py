@@ -36,36 +36,27 @@ class TestTensorDecompositionResults:  # MARK: TestTensorDecompositionResults
 
     def test_result_hierarchy_and_placeholders(self):
         result_types = tk.decompositions
+        assert not issubclass(result_types.TensorDecomposition,
+                              tk.formats.TensorFormat)
+        assert not hasattr(result_types, 'TensorDecomposition1D')
+        assert not hasattr(result_types, 'TensorDecomposition2D')
 
-        assert issubclass(result_types.TensorDecomposition1D,
-                          result_types.TensorDecomposition)
-        assert issubclass(result_types.TensorDecomposition2D,
-                          result_types.TensorDecomposition)
-        assert issubclass(result_types.TTDecomposition,
-                          result_types.TensorDecomposition1D)
-        assert issubclass(result_types.TRDecomposition,
-                          result_types.TensorDecomposition1D)
-        assert issubclass(result_types.TTMDecomposition,
-                          result_types.TensorDecomposition1D)
-        assert issubclass(result_types.TRMDecomposition,
-                          result_types.TensorDecomposition1D)
-        assert issubclass(result_types.PEPSDecomposition,
-                          result_types.TensorDecomposition2D)
-        assert issubclass(result_types.PEPODecomposition,
-                          result_types.TensorDecomposition2D)
+        for name in ('TT', 'TR', 'TTM', 'TRM', 'QTT', 'QTR', 'QTTM', 'QTRM'):
+            result_type = getattr(result_types, name + 'Decomposition')
+            format_type = getattr(tk.formats, name)
+            assert result_type.__bases__ == (
+                result_types.TensorDecomposition, format_type)
+            assert not inspect.isabstract(result_type)
 
-        for result_type in [result_types.TensorDecomposition,
-                            result_types.TensorDecomposition1D,
-                            result_types.TensorDecomposition2D,
-                            result_types.PEPSDecomposition,
-                            result_types.PEPODecomposition]:
+        for result_type in (result_types.PEPSDecomposition,
+                            result_types.PEPODecomposition):
+            assert issubclass(result_type, result_types.TensorDecomposition)
             assert inspect.isabstract(result_type)
 
-        for result_type in [result_types.TTDecomposition,
-                            result_types.TRDecomposition,
-                            result_types.TTMDecomposition,
-                            result_types.TRMDecomposition]:
-            assert not inspect.isabstract(result_type)
+        assert not issubclass(result_types.QTTDecomposition,
+                              result_types.TTDecomposition)
+        assert not issubclass(result_types.QTRDecomposition,
+                              result_types.TRDecomposition)
 
     def test_boolean_n_batches_is_rejected(self):
         with pytest.raises(TypeError, match='`n_batches` should be int type'):
@@ -803,3 +794,282 @@ def test_results_inherit_formats_and_keep_historical_metrics():
     assert type(result + result) is tk.formats.TT
     assert QuantizedLayout is tk.formats.QuantizedLayout
     assert QuantizedSourceAdapter is tk.decompositions.QuantizedSourceAdapter
+
+
+def _make_result(name, device, dtype, n_batches=0, construction='objects'):
+    batch_shape = (2,) if n_batches else ()
+    cyclic = name in ('TR', 'TRM', 'QTR', 'QTRM')
+    matrix = name.endswith('M')
+    if cyclic:
+        shape = (2, 2, 2, 2) if matrix else (2, 2, 2)
+    else:
+        shape = (2, 2, 2) if matrix else (2, 2)
+    cores = [torch.randn(*batch_shape, *shape, device=device, dtype=dtype)
+             for _ in range(2)]
+    kwargs = dict(n_batches=n_batches)
+    if name.startswith('Q'):
+        if matrix:
+            kwargs.update(in_n_coordinates=1, out_n_coordinates=2)
+            if construction == 'objects':
+                kwargs.update(
+                    in_layout=tk.formats.QuantizedLayout(1, base=2, level=2),
+                    out_layout=tk.formats.QuantizedLayout(2, base=2, level=1),
+                    in_coordinate_map=tk.formats.AffineCoordinateMap(
+                        (0., 1.), (4,)),
+                    out_coordinate_map=tk.formats.AffineCoordinateMap(
+                        (-2., 2.), (2, 2)))
+            else:
+                kwargs.update(in_base=2, in_level=2, in_domain=(0., 1.),
+                              out_base=2, out_level=1, out_domain=(-2., 2.))
+        else:
+            kwargs['n_coordinates'] = 1
+            if construction == 'objects':
+                kwargs.update(
+                    layout=tk.formats.QuantizedLayout(1, base=2, level=2),
+                    coordinate_map=tk.formats.AffineCoordinateMap(
+                        (0., 1.), (4,)))
+            else:
+                kwargs.update(base=2, level=2, domain=(0., 1.))
+
+    metrics = tk.decompositions.DecompositionMetrics()
+    result_type = getattr(tk.decompositions, name + 'Decomposition')
+    return result_type(cores, metrics=metrics, metadata={'fit': 'original'},
+                       **kwargs)
+
+
+@pytest.mark.parametrize('name', ['TT', 'TR', 'TTM', 'TRM',
+                                 'QTT', 'QTR', 'QTTM', 'QTRM'])
+@pytest.mark.parametrize('n_batches', [0, 1])
+@pytest.mark.parametrize('construction', ['objects', 'parameters'])
+def test_to_format_preserves_structure_and_shares_tensors(
+        name, n_batches, construction, device_dtype, assert_close):
+    device, dtype = device_dtype
+    result = _make_result(name, device, dtype, n_batches, construction)
+    count = result.n_sites if result._cyclic else result.n_sites - 1
+    result.bonds = [torch.tensor([1., 2.], device=device,
+                                 dtype=result.cores[0].real.dtype)
+                    for _ in range(count)]
+    if not name.endswith('M'):
+        result = result.T
+    dense = result.contract_dense()
+    format = result.to_format()
+
+    assert type(format) is getattr(tk.formats, name)
+    assert not isinstance(format, tk.decompositions.TensorDecomposition)
+    assert not hasattr(format, 'metrics')
+    assert not hasattr(format, 'metadata')
+    assert format.n_batches == result.n_batches
+    assert format.batch_shape == result.batch_shape
+    assert format.in_dim == result.in_dim
+    assert format.out_dim == result.out_dim
+    assert format.rank == result.rank
+    assert format.device == result.device
+    assert format.dtype == result.dtype
+    if not name.endswith('M'):
+        assert format.is_row
+    assert format.cores is not result.cores
+    assert all(new is old for new, old in zip(format.cores, result.cores))
+    assert format.bonds is not result.bonds
+    assert all(new is old for new, old in
+               zip(format.bonds.factors, result.bonds.factors))
+    if name.startswith('Q'):
+        if name.endswith('M'):
+            assert format.in_layout is result.in_layout
+            assert format.out_layout is result.out_layout
+            assert format.in_coordinate_map is result.in_coordinate_map
+            assert format.out_coordinate_map is result.out_coordinate_map
+            assert format.in_n_coordinates == 1
+            assert format.out_n_coordinates == 2
+        else:
+            assert format.layout is result.layout
+            assert format.coordinate_map is result.coordinate_map
+            assert format.n_coordinates == 1
+    assert_close(format.contract_dense(), dense)
+
+    # Mutations validate against the new format, without changing the result.
+    old_core = result.cores[0]
+    old_factor = result.bonds.factors[0]
+    format.cores[0] = format.cores[0] * 2
+    format.bonds.factors[0] = format.bonds.factors[0] * 3
+    assert result.cores[0] is old_core
+    assert result.bonds.factors[0] is old_factor
+    assert_close(result.contract_dense(), dense)
+    assert_close(format.contract_dense(), dense * 6)
+    with pytest.raises(ValueError):
+        format.cores[0] = (format.cores[0][..., :1, :] if name.endswith('M')
+                           else format.cores[0][..., :1])
+    assert result.metadata == {'fit': 'original'}
+
+
+@pytest.mark.parametrize('name', ['TT', 'TTM', 'QTT', 'QTTM'])
+@pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse',
+                                 'left', 'right'])
+@pytest.mark.parametrize('valid', [False, True])
+def test_to_format_preserves_vidal_gauge(name, mode, valid):
+    result = _make_result(name, 'cpu', torch.complex128)
+    result.canonicalize_vidal(mode=mode)
+    if not valid:
+        result.bonds.factors[0] = result.bonds.factors[0]
+    format = result.to_format()
+
+    assert type(format.bonds) is tk.formats.VidalGauge
+    assert format.bonds._valid is valid
+    assert list(format.bonds.powers) == list(result.bonds.powers)
+    assert all(new is old for new, old in
+               zip(format.bonds.spectra, result.bonds.spectra))
+    torch.testing.assert_close(format.contract_dense(), result.contract_dense())
+    format.bonds.powers[0] = (0, 0)
+    assert result.bonds._valid is valid
+    assert not format.bonds._valid
+
+
+@pytest.mark.parametrize('name', ['TT', 'TR', 'TTM', 'TRM',
+                                 'QTT', 'QTR', 'QTTM', 'QTRM'])
+def test_to_format_clone_preserves_autograd_and_isolates_storage(name):
+    result = _make_result(name, 'cpu', torch.complex128)
+    result.cores[0].requires_grad_()
+    format = result.to_format()
+    cloned = format.clone()
+
+    assert format.cores[0] is result.cores[0]
+    assert all(new.data_ptr() != old.data_ptr() for new, old in
+               zip(cloned.cores, result.cores))
+    cloned.contract_dense().abs().square().sum().backward()
+    assert result.cores[0].grad is not None
+    assert torch.isfinite(result.cores[0].grad).all()
+
+    before = result.contract_dense().detach().clone()
+    with torch.no_grad():
+        cloned.cores[0].zero_()
+    torch.testing.assert_close(result.contract_dense(), before)
+    with torch.no_grad():
+        format.cores[0].zero_()
+    assert result.norm() == 0
+
+
+@pytest.mark.parametrize('name', ['TT', 'TTM', 'QTT', 'QTTM'])
+def test_to_format_canonicalize_and_rounding_leave_result_unchanged(name):
+    result = _make_result(name, 'cpu', torch.float64)
+    result.canonicalize(orth_center=1)
+    before = result.contract_dense().clone()
+    format = result.to_format()
+    assert format._orth_center == 1
+    format.canonicalize(orth_center=0)
+    assert result._orth_center == 1
+    format.rounding(rank=1)
+    assert format.rank == [1]
+    assert result.rank == [2]
+    torch.testing.assert_close(result.contract_dense(), before)
+
+
+@pytest.mark.parametrize('name', ['TT', 'TR', 'QTT', 'QTR'])
+def test_result_error_and_plain_format_error(name, device_dtype):
+    device, dtype = device_dtype
+    result = _make_result(name, device, dtype)
+    format = result.to_format()
+    if name.startswith('Q'):
+        samples = torch.tensor([[0.], [.25], [.75]], device=device)
+        data = result.layout.encode_indices(
+            result.coordinate_map.to_indices(samples))
+        evaluate = result.evaluate_coordinates
+    else:
+        samples = torch.tensor([[0, 0], [0, 1], [1, 1]], device=device)
+        data = None
+        evaluate = result.evaluate
+
+    def target(values):
+        return evaluate(values).detach() * 2
+
+    recorded = result.error(target, samples, data=data)
+    measured = format.error(target, samples, data=data)
+    assert isinstance(recorded, tk.decompositions.ErrorRecord)
+    assert isinstance(measured, tk.formats.SampleError)
+    assert recorded.absolute.device.type == 'cpu'
+    assert not recorded.absolute.requires_grad
+    torch.testing.assert_close(recorded.absolute, measured.absolute.cpu())
+    torch.testing.assert_close(recorded.relative, measured.relative.cpu())
+    assert not result.metrics.errors
+
+
+@pytest.mark.parametrize('name', ['TT', 'TR', 'TTM', 'TRM',
+                                 'QTT', 'QTR', 'QTTM', 'QTRM'])
+def test_result_constructor_rejects_invalid_diagnostics_and_uses_fresh_defaults(name):
+    result = _make_result(name, 'cpu', torch.float64)
+    kwargs = {key: getattr(result, key) for key in result._format_parameters}
+    result_type = type(result)
+    with pytest.raises(TypeError, match='`metrics`'):
+        result_type(result.cores, metrics={}, **kwargs)
+    with pytest.raises(TypeError, match='`metadata`'):
+        result_type(result.cores, metadata=[], **kwargs)
+    first = result_type(result.cores, **kwargs)
+    second = result_type(result.cores, **kwargs)
+    assert first.metrics is not second.metrics
+    assert first.metadata is not second.metadata
+    assert result_type(result.cores, metrics=result.metrics,
+                       metadata=result.metadata, **kwargs).metrics is result.metrics
+
+
+@pytest.mark.parametrize('name', ['QTTM', 'QTRM'])
+def test_quantics_matrix_result_application_preserves_coordinate_spaces(name):
+    result = _make_result(name, 'cpu', torch.complex128)
+    plain = result.to_format()
+    inputs = torch.tensor([[0, 1], [1, 0]])
+    applied = result.apply(inputs)
+    expected_type = tk.formats.QTR if result._cyclic else tk.formats.QTT
+    assert type(applied) is expected_type
+    assert applied.layout is result.out_layout
+    assert applied.coordinate_map is result.out_coordinate_map
+    torch.testing.assert_close(applied.contract_dense(),
+                               plain.apply(inputs).contract_dense())
+    assert type(result + result) is type(plain)
+    torch.testing.assert_close((result + result).contract_dense(),
+                               result.contract_dense() * 2)
+
+
+@pytest.mark.parametrize('name', ['TT', 'TR', 'TTM', 'TRM',
+                                 'QTT', 'QTR', 'QTTM', 'QTRM'])
+def test_to_format_single_core_result(name):
+    cyclic = name in ('TR', 'TRM', 'QTR', 'QTRM')
+    matrix = name.endswith('M')
+    core = (torch.tensor([[1. + 2.j, 3.], [4., 5. - 6.j]]) if matrix
+            else torch.tensor([1. + 2.j, 3. - 4.j]))
+    if cyclic:
+        core = core.reshape(1, 2, 1, 2) if matrix else core.reshape(1, 2, 1)
+    kwargs = {}
+    if name.startswith('Q'):
+        if matrix:
+            kwargs.update(in_n_coordinates=1, out_n_coordinates=1,
+                          in_base=2, in_level=1, in_domain=(0., 1.),
+                          out_base=2, out_level=1, out_domain=(-1., 1.))
+        else:
+            kwargs.update(n_coordinates=1, base=2, level=1, domain=(0., 1.))
+    result = getattr(tk.decompositions, name + 'Decomposition')([core], **kwargs)
+    format = result.to_format()
+    assert type(format) is getattr(tk.formats, name)
+    assert format.cores[0] is result.cores[0]
+    torch.testing.assert_close(format.contract_dense(), result.contract_dense())
+
+
+@pytest.mark.parametrize('name', ['QTT', 'QTR', 'QTTM', 'QTRM'])
+def test_to_format_preserves_explicit_nonuniform_grid(name):
+    original = _make_result(name, 'cpu', torch.float64)
+    grid = torch.tensor([0., .1, .4, 1.], dtype=torch.float64)
+    if name.endswith('M'):
+        kwargs = dict(in_n_coordinates=1, out_n_coordinates=2,
+                      in_base=2, in_level=2, in_grid_coordinates=grid,
+                      out_base=2, out_level=1,
+                      out_grid_coordinates=(torch.tensor([-2., 2.]),
+                                            torch.tensor([-1., 3.])))
+    else:
+        kwargs = dict(n_coordinates=1, base=2, level=2, grid_coordinates=grid)
+    result = type(original)(original.cores, **kwargs)
+    format = result.to_format()
+    if name.endswith('M'):
+        in_coordinates = torch.tensor([[.1], [.4]], dtype=torch.float64)
+        out_coordinates = torch.tensor([[-2., 3.], [2., -1.]], dtype=torch.float64)
+        actual = format.evaluate_coordinates(in_coordinates, out_coordinates)
+        expected = result.evaluate_coordinates(in_coordinates, out_coordinates)
+    else:
+        actual = format.evaluate_coordinates(grid[:, None])
+        expected = result.evaluate_coordinates(grid[:, None])
+    torch.testing.assert_close(actual, expected)

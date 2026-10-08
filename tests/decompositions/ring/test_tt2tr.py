@@ -230,3 +230,25 @@ class TestTT2TR:  # MARK: TestTT2TR
         with pytest.raises(ValueError, match='positive'):
             tk.decompositions.TT2TR(
                 _rank_one_tt(), out_device=None).fit(rank=0)
+
+
+@pytest.mark.parametrize('explicit_bonds', [False, True])
+def test_tt2tr_accepts_quantics_result_with_historical_diagnostics(explicit_bonds):
+    metrics = tk.decompositions.DecompositionMetrics()
+    result = tk.decompositions.QTTDecomposition(
+        [torch.ones(2, 1), torch.ones(1, 2, 1), torch.ones(1, 2)],
+        n_coordinates=1, base=2, level=3, domain=(0., 1.),
+        metrics=metrics, metadata={'fit': 'quantics'})
+    if explicit_bonds:
+        result.bonds = [torch.tensor([2.]), torch.tensor([3.])]
+
+    algorithm = tk.decompositions.TT2TR(result)
+    assert algorithm.tt.metrics is metrics
+    assert algorithm.tt.metadata == result.metadata
+    if not explicit_bonds:
+        assert algorithm.tt is result
+    else:
+        assert algorithm.tt.bonds is None
+    torch.testing.assert_close(algorithm.tt.contract_dense(), result.contract_dense())
+    converted = algorithm.fit(rank=1)
+    torch.testing.assert_close(converted.contract_dense(), result.contract_dense())

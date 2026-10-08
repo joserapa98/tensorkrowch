@@ -44,7 +44,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 TensorDecomposition)
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
                                                      PrescribedCentralBlockSelector,
@@ -92,7 +93,6 @@ if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
     from tensorkrowch.decompositions.sources.factory import SourceLike
     from tensorkrowch.formats.quantization import Domain
-    from tensorkrowch.decompositions.results import TensorDecomposition1D
     from tensorkrowch.decompositions.als.sampling import SampleBatch
 
 
@@ -1134,10 +1134,10 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             metadata=metadata)
 
     def _validate_result(self,
-                         result: 'TensorDecomposition1D',
+                         result: 'TensorDecomposition',
                          context: Any) -> None:
-        if not isinstance(result, TRDecomposition):
-            raise TypeError('`result` should be TRDecomposition type')
+        if not isinstance(result, TensorDecomposition) or not isinstance(result, TR):
+            raise TypeError('`result` should be a decomposition with TR format')
         expected = context.state.get(
             'fitted_site_dim', self.outputs.site_dim(self.embeddings))
         if result.in_dim != expected:

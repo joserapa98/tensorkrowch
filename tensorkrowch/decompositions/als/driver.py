@@ -33,7 +33,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.results import TensorDecomposition1D
+    from tensorkrowch.decompositions.results import TensorDecomposition
 
 
 class ALSBackend(Protocol):  # MARK: ALSBackend
@@ -349,7 +349,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
         return result
 
 
-def _report_als_result(result: 'TensorDecomposition1D',
+def _report_als_result(result: 'TensorDecomposition',
                        observer: DecompositionObserver,
                        phase: str) -> None:
     """Reports the final approximation after its cores have been finalized."""

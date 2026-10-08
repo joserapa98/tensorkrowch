@@ -23,7 +23,9 @@ Tensor decomposition algorithms and their numerical results.
 A source supplies tensor entries or function values. An algorithm fixes the
 source and runs ``fit`` with numerical controls. Its result inherits a
 lightweight ``formats`` class and adds historical metrics and metadata.
-Arithmetic returns ordinary formats; model construction remains explicit.
+Arithmetic returns ordinary formats; ``to_format`` removes fit diagnostics
+while preserving the numerical representation. Model construction remains
+explicit.
 
 The direct functions return cores by default. Where supported,
 ``return_result=True`` returns
@@ -82,9 +84,7 @@ from tensorkrowch.decompositions.results import (PEPODecomposition,
                                                  TRMDecomposition,
                                                  TTDecomposition,
                                                  TTMDecomposition,
-                                                 TensorDecomposition,
-                                                 TensorDecomposition1D,
-                                                 TensorDecomposition2D)
+                                                 TensorDecomposition)
 from tensorkrowch.decompositions.ring import (ALSLoopOpener,
                                               AlternatingRingDriver,
                                               BLOSTRLoopOpener,
@@ -162,7 +162,6 @@ from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
 
 __all__ = [
     'TensorDecomposition',
-    'TensorDecomposition1D',
     'TTDecomposition',
     'TRDecomposition',
     'TTMDecomposition',
@@ -171,7 +170,6 @@ __all__ = [
     'QTRDecomposition',
     'QTTMDecomposition',
     'QTRMDecomposition',
-    'TensorDecomposition2D',
     'PEPSDecomposition',
     'PEPODecomposition',
     'GaugeMap',

@@ -28,6 +28,7 @@ from typing import (Any,
 
 import torch
 
+from tensorkrowch.formats import TT
 from tensorkrowch.formats.formats1d import _restore_cores
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
@@ -38,7 +39,9 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
-                                                 TTDecomposition)
+                                                 TTDecomposition,
+                                                 QTTDecomposition,
+                                                 TensorDecomposition)
 from tensorkrowch.decompositions.ring.blocks import (PrescribedCentralBlockSelector)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
@@ -57,15 +60,14 @@ _Device = Optional[Union[str, torch.device]]
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
-    from tensorkrowch.formats import TT
     from tensorkrowch.models import MPS
 
 
 def _as_tt_decomposition(
     tt: Union['TT', Sequence[torch.Tensor], 'MPS']
-) -> TTDecomposition:
+) -> Union[TTDecomposition, QTTDecomposition]:
     """Normalizes TT results, raw cores and open-boundary MPS adapters."""
-    if isinstance(tt, TTDecomposition):
+    if isinstance(tt, TensorDecomposition) and isinstance(tt, TT):
         if tt.n_batches:
             raise ValueError('TT-to-TR does not support decomposition batches')
         result = tt
@@ -275,7 +277,7 @@ class TT2TR:  # MARK: TT2TR
             self._tt.cores[0], out_device=out_device)
 
     @property
-    def tt(self) -> TTDecomposition:
+    def tt(self) -> Union[TTDecomposition, QTTDecomposition]:
         """Open-boundary TT fixed for repeated conversions."""
         return self._tt
 

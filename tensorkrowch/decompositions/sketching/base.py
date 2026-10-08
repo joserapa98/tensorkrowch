@@ -69,7 +69,7 @@ _SKETCHING_PHASES = (
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.results import TensorDecomposition1D
+    from tensorkrowch.decompositions.results import TensorDecomposition
 
 
 @dataclass
@@ -486,7 +486,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
         """Optional hook for topology-specific ``result`` invariants."""
 
     @abstractmethod
-    def fit(self, *args, **kwargs) -> 'TensorDecomposition1D':
+    def fit(self, *args, **kwargs) -> 'TensorDecomposition':
         """Runs one concrete recursive-sketching decomposition."""
 
     @abstractmethod
@@ -509,7 +509,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
         """Solves one topology-specific core equation."""
 
     @abstractmethod
-    def _assemble_result(self, *args, **kwargs) -> 'TensorDecomposition1D':
+    def _assemble_result(self, *args, **kwargs) -> 'TensorDecomposition':
         """Assembles the lightweight decomposition result."""
 
 

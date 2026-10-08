@@ -38,11 +38,14 @@ from typing import (Any,
 
 import torch
 
+from tensorkrowch.formats import TR
+
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.als.tr import TRALS
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 TensorDecomposition)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource,
                                                  as_tensor_source)
@@ -321,7 +324,7 @@ def _cast_source(source: TensorSource, dtype: torch.dtype) -> TensorSource:
         device=source.device)
 
 
-def _opening_from_result(result: TRDecomposition,
+def _opening_from_result(result: TensorDecomposition,
                          orientation: str) -> LoopOpening:
     """Converts an ALS ``result`` back from the requested ``orientation``."""
     result_cores = tuple(result.cores)
@@ -645,8 +648,10 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
     Parameters
     ----------
     opener : callable
-        Receives the arguments of LoopOpener.open and returns a LoopOpening or
-        TRDecomposition.
+        Receives the arguments of :meth:`LoopOpener.open` and returns a
+        :class:`LoopOpening` or a :class:`~tensorkrowch.formats.TR` format
+        carrying :class:`~tensorkrowch.decompositions.TensorDecomposition`
+        diagnostics, including Quantics results.
     capabilities : LoopOpenerCapabilities, optional
         Constraints supported by the callable. Unsupported fixed gauges or
         block sizes are rejected before invoking it.
@@ -728,7 +733,7 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
             context=context)
         if isinstance(result, LoopOpening):
             return result
-        if isinstance(result, TRDecomposition):
+        if isinstance(result, TensorDecomposition) and isinstance(result, TR):
             return _opening_from_result(result, orientation)
         raise TypeError('The adapted callable should return a LoopOpening')
 

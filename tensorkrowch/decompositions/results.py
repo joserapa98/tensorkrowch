@@ -1,8 +1,8 @@
 """
 This script contains:
 
-    Metadata and diagnostics interfaces:
-        * TensorDecomposition, TensorDecomposition1D, TensorDecomposition2D
+    Shared decomposition diagnostics:
+        * TensorDecomposition
     Format subclasses with decomposition diagnostics:
         * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition
         * QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition
@@ -10,16 +10,15 @@ This script contains:
         * PEPSDecomposition, PEPODecomposition
 """
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import (Any, Dict, List, Optional, Sequence, Tuple, Union,
-                    TYPE_CHECKING)
+from typing import (Any, ClassVar, Dict, List, Optional, Sequence, Tuple, Type,
+                    TYPE_CHECKING, Union)
 
 import torch
 
 from tensorkrowch.formats import (TensorFormat, TensorFormat1D,
                                   TT, TR, TTM, TRM,
-                                  QuantizedLayout, CoordinateMap,
+                                  QuantizedLayout,
                                   AffineCoordinateMap,
                                   QTT, QTR, QTTM, QTRM)
 from tensorkrowch.formats.formats1d import _restore_cores
@@ -32,38 +31,36 @@ if TYPE_CHECKING:
     from tensorkrowch.decompositions.sources.quantization import QuantizedSourceAdapter
 
 
-class TensorDecomposition(TensorFormat, ABC):  # MARK: TensorDecomposition
+@dataclass(init=False, eq=False)
+class TensorDecomposition:  # MARK: TensorDecomposition
     """
-    Numerical format together with historical fit diagnostics.
+    Historical fit diagnostics shared by decomposition results.
 
-    Structural operations describe the current tensors. Metrics and metadata
-    describe how the result was obtained; editing cores does not rewrite them.
+    Combine this base with a numerical format, as in :class:`TTDecomposition`
+    or :class:`QTTDecomposition`. The format owns the cores and numerical
+    operations; ``metrics`` and ``metadata`` describe how the result was
+    obtained. Editing cores does not rewrite these historical records.
+    Use :meth:`to_format` to work with the numerical format alone.
+
+    Parameters
+    ----------
+    cores : sequence of torch.Tensor
+        Cores following the public layout of the concrete format.
+    metrics : DecompositionMetrics, optional
+        Historical fit records; defaults to a new empty collection.
+    metadata : dict, optional
+        Algorithm configuration; defaults to a new empty dictionary.
+    n_batches : int, optional
+        Number of leading structural batch axes. Defaults to ``0``.
+    **kwargs
+        Additional constructor arguments of the concrete format.
     """
 
-    @abstractmethod
-    def as_info(self) -> Dict[str, Any]:
-        """
-        Returns decomposition metadata, diagnostics and current dimensions.
-        """
-
-
-class TensorDecomposition1D(TensorFormat1D, TensorDecomposition, ABC):  # MARK: TensorDecomposition1D
-    """One-dimensional formats carrying decomposition metadata and diagnostics."""
-
-
-class TensorDecomposition2D(TensorDecomposition, ABC):  # MARK: TensorDecomposition2D
-    """Reserved metadata and diagnostics interface for future 2D results."""
-
-
-@dataclass(init=False)
-class _ResultState:  # MARK: _ResultState
-    """Stores decomposition metadata and diagnostics; formats hold the tensors."""
-
-    cores: Sequence[torch.Tensor] = field()  # Numerical format cores
-    # Historical fit records
     metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
-    metadata: Dict[str, Any] = field(default_factory=dict)  # Small algorithm configuration
-    n_batches: int = field()  # Leading structural batch axes
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    _format_type: ClassVar[Type[TensorFormat]]
+    _format_parameters: ClassVar[Tuple[str, ...]] = ('n_batches',)
 
     def __init__(self,
                  cores: Sequence[torch.Tensor],
@@ -78,24 +75,6 @@ class _ResultState:  # MARK: _ResultState
         if not isinstance(self.metadata, dict):
             raise TypeError('`metadata` should be dict type')
         super().__init__(cores, n_batches=n_batches, **kwargs)
-
-    def _new_from_standard_cores(self,
-                                 cores: Sequence[torch.Tensor],
-                                 in_dim: Optional[Sequence[int]],
-                                 out_dim: Optional[Sequence[int]],
-                                 n_batches: int,
-                                 cyclic: bool,
-                                 other: Optional['TensorFormat1D'] = None,
-                                 product: bool = False) -> 'TensorFormat1D':
-        """Preserves the result contract when applying an operator to data."""
-        if (self._family == 'matrix') and product and other is None:
-            cls = TRDecomposition if cyclic else TTDecomposition
-            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
-            return cls(cores, n_batches=n_batches, metadata={
-                'operation': 'trm_apply' if cyclic else 'ttm_apply'})
-        return super()._new_from_standard_cores(
-            cores, in_dim, out_dim, n_batches, cyclic,
-            other=other, product=product)
 
     def as_info(self) -> Dict[str, Any]:
         """
@@ -135,8 +114,50 @@ class _ResultState:  # MARK: _ResultState
                            relative=record.relative, size=record.size,
                            denominator=record.denominator)
 
+    def to_format(self) -> TensorFormat:
+        """
+        Returns the numerical format without decomposition diagnostics.
 
-class TTDecomposition(_ResultState, TT, TensorDecomposition1D):  # MARK: TTDecomposition
+        Cores, bond factors, Vidal information, vector orientation and the
+        orthogonality center are preserved. Quantics results also retain their
+        layouts and coordinate maps. ``metrics`` and ``metadata`` are omitted.
+
+        Core and bond containers are independent, but tensors are reused
+        without cloning or detaching them. Replacing cores or bonds affects
+        only the new format; editing shared tensor values affects both objects.
+        Use :meth:`~tensorkrowch.formats.TensorFormat1D.clone` on the returned
+        format when independent tensor storage is needed.
+
+        Returns
+        -------
+        TensorFormat1D
+            Corresponding ``TT``, ``TR``, ``TTM``, ``TRM`` or Quantics format.
+
+        Examples
+        --------
+        >>> result = tk.decompositions.tt_svd(
+        ...     torch.eye(2), rank=2, return_result=True)
+        >>> format = result.to_format()
+        >>> type(format)
+        <class 'tensorkrowch.formats.formats1d.TT'>
+        >>> format.contract_dense()
+        tensor([[1., 0.],
+                [0., 1.]])
+        """
+        kwargs = {name: getattr(self, name) for name in self._format_parameters}
+        format = self._format_type(self.cores, **kwargs)
+        if self._bonds is not None:
+            format._bonds = self._bonds._map_tensors(
+                lambda tensor: tensor, format._on_bonds_changed)
+
+        # Preserve structural state that is not a constructor argument.
+        for name in ('_orth_center', '_is_row'):
+            if name in self.__dict__:
+                setattr(format, name, getattr(self, name))
+        return format
+
+
+class TTDecomposition(TensorDecomposition, TT):  # MARK: TTDecomposition
     """
     :class:`~tensorkrowch.formats.TT` with decomposition diagnostics.
 
@@ -168,8 +189,10 @@ class TTDecomposition(_ResultState, TT, TensorDecomposition1D):  # MARK: TTDecom
     [2]
     """
 
+    _format_type = TT
 
-class TRDecomposition(_ResultState, TR, TensorDecomposition1D):  # MARK: TRDecomposition
+
+class TRDecomposition(TensorDecomposition, TR):  # MARK: TRDecomposition
     """
     :class:`~tensorkrowch.formats.TR` with decomposition diagnostics.
 
@@ -177,8 +200,10 @@ class TRDecomposition(_ResultState, TR, TensorDecomposition1D):  # MARK: TRDecom
     :class:`TTDecomposition`; cores and numerical operations follow ``TR``.
     """
 
+    _format_type = TR
 
-class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):  # MARK: TTMDecomposition
+
+class TTMDecomposition(TensorDecomposition, TTM):  # MARK: TTMDecomposition
     """
     :class:`~tensorkrowch.formats.TTM` with decomposition diagnostics.
 
@@ -186,8 +211,28 @@ class TTMDecomposition(_ResultState, TTM, TensorDecomposition1D):  # MARK: TTMDe
     :class:`TTDecomposition`; cores and numerical operations follow ``TTM``.
     """
 
+    _format_type = TTM
 
-class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):  # MARK: TRMDecomposition
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Optional[Sequence[int]],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional['TensorFormat1D'] = None,
+                                 product: bool = False) -> 'TensorFormat1D':
+        """Preserves the result contract when applying an operator to data."""
+        if product and other is None:
+            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
+            return TTDecomposition(
+                cores, n_batches=n_batches,
+                metadata={'operation': 'ttm_apply'})
+        return super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic,
+            other=other, product=product)
+
+
+class TRMDecomposition(TensorDecomposition, TRM):  # MARK: TRMDecomposition
     """
     :class:`~tensorkrowch.formats.TRM` with decomposition diagnostics.
 
@@ -195,86 +240,98 @@ class TRMDecomposition(_ResultState, TRM, TensorDecomposition1D):  # MARK: TRMDe
     :class:`TTDecomposition`; cores and numerical operations follow ``TRM``.
     """
 
+    _format_type = TRM
 
-class _QuanticsResultState:  # MARK: _QuanticsResultState
+    def _new_from_standard_cores(self,
+                                 cores: Sequence[torch.Tensor],
+                                 in_dim: Optional[Sequence[int]],
+                                 out_dim: Optional[Sequence[int]],
+                                 n_batches: int,
+                                 cyclic: bool,
+                                 other: Optional['TensorFormat1D'] = None,
+                                 product: bool = False) -> 'TensorFormat1D':
+        """Preserves the result contract when applying an operator to data."""
+        if product and other is None:
+            cores = _restore_cores(cores, in_dim, out_dim, n_batches, cyclic)
+            return TRDecomposition(
+                cores, n_batches=n_batches,
+                metadata={'operation': 'trm_apply'})
+        return super()._new_from_standard_cores(
+            cores, in_dim, out_dim, n_batches, cyclic,
+            other=other, product=product)
+
+
+class QTTDecomposition(TensorDecomposition, QTT):  # MARK: QTTDecomposition
     """
-    Adds decomposition metadata and diagnostics after initializing the cores.
+    :class:`~tensorkrowch.formats.QTT` with decomposition diagnostics.
+
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TensorDecomposition`; coordinate arguments follow ``QTT``.
+    :meth:`to_format` returns a ``QTT`` retaining its layout and coordinate map.
     """
 
-    def __init__(self,
-                 cores: Sequence[torch.Tensor],
-                 metrics: Optional['DecompositionMetrics'] = None,
-                 metadata: Optional[Dict[str, Any]] = None,
-                 n_batches: int = 0,
-                 **kwargs) -> None:
-        super().__init__(cores, n_batches=n_batches, **kwargs)
-        if metrics is not None:
-            if not isinstance(metrics, DecompositionMetrics):
-                raise TypeError('`metrics` should be DecompositionMetrics type')
-            self.metrics = metrics
-        if metadata is not None:
-            if not isinstance(metadata, dict):
-                raise TypeError('`metadata` should be dict type')
-            self.metadata = metadata
+    _format_type = QTT
+    _format_parameters = ('n_batches', 'n_coordinates',
+                          'layout', 'coordinate_map')
 
 
-@dataclass(init=False)
-class QTTDecomposition(_QuanticsResultState, QTT, TTDecomposition):  # MARK: QTTDecomposition
-    """:class:`~tensorkrowch.formats.QTT` retaining digit and coordinate metadata."""
+class QTRDecomposition(TensorDecomposition, QTR):  # MARK: QTRDecomposition
+    """
+    :class:`~tensorkrowch.formats.QTR` with decomposition diagnostics.
 
-    n_coordinates: int = field()  # Number of original input coordinates
-    layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
-    coordinate_map: CoordinateMap = field()  # Domain and grid conversions
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TensorDecomposition`; coordinate arguments follow ``QTR``.
+    :meth:`to_format` returns a ``QTR`` retaining its layout and coordinate map.
+    """
 
-
-@dataclass(init=False)
-class QTRDecomposition(_QuanticsResultState, QTR, TRDecomposition):  # MARK: QTRDecomposition
-    """:class:`~tensorkrowch.formats.QTR` retaining digit and coordinate metadata."""
-
-    n_coordinates: int = field()  # Number of original input coordinates
-    layout: QuantizedLayout = field()  # Input coordinate-to-digit schedule
-    coordinate_map: CoordinateMap = field()  # Domain and grid conversions
+    _format_type = QTR
+    _format_parameters = ('n_batches', 'n_coordinates',
+                          'layout', 'coordinate_map')
 
 
-@dataclass(init=False)
-class QTTMDecomposition(_QuanticsResultState, QTTM,
-                       TTMDecomposition):
-    """Quantics TTM with separate input and output coordinate spaces."""
+class QTTMDecomposition(TensorDecomposition, QTTM):  # MARK: QTTMDecomposition
+    """
+    :class:`~tensorkrowch.formats.QTTM` with decomposition diagnostics.
 
-    in_n_coordinates: int = field()  # Number of original input coordinates
-    out_n_coordinates: int = field()  # Number of original output coordinates
-    in_layout: QuantizedLayout = field()  # Input digit schedule
-    out_layout: QuantizedLayout = field()  # Output digit schedule
-    in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
-    out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TensorDecomposition`; coordinate arguments follow ``QTTM``.
+    :meth:`to_format` retains both input and output coordinate spaces.
+    """
 
-
-@dataclass(init=False)
-class QTRMDecomposition(_QuanticsResultState, QTRM,
-                       TRMDecomposition):
-    """Quantics TRM with separate input and output coordinate spaces."""
-
-    in_n_coordinates: int = field()  # Number of original input coordinates
-    out_n_coordinates: int = field()  # Number of original output coordinates
-    in_layout: QuantizedLayout = field()  # Input digit schedule
-    out_layout: QuantizedLayout = field()  # Output digit schedule
-    in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
-    out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
+    _format_type = QTTM
+    _format_parameters = ('n_batches', 'in_n_coordinates', 'out_n_coordinates',
+                          'in_layout', 'out_layout',
+                          'in_coordinate_map', 'out_coordinate_map')
 
 
-class PEPSDecomposition(TensorDecomposition2D):  # MARK: PEPSDecomposition
-    """Reserved PEPS result interface."""
+class QTRMDecomposition(TensorDecomposition, QTRM):  # MARK: QTRMDecomposition
+    """
+    :class:`~tensorkrowch.formats.QTRM` with decomposition diagnostics.
+
+    Construction adds ``metrics`` and ``metadata`` as in
+    :class:`TensorDecomposition`; coordinate arguments follow ``QTRM``.
+    :meth:`to_format` retains both input and output coordinate spaces.
+    """
+
+    _format_type = QTRM
+    _format_parameters = ('n_batches', 'in_n_coordinates', 'out_n_coordinates',
+                          'in_layout', 'out_layout',
+                          'in_coordinate_map', 'out_coordinate_map')
 
 
-class PEPODecomposition(TensorDecomposition2D):  # MARK: PEPODecomposition
-    """Reserved PEPO result interface."""
+class PEPSDecomposition(TensorDecomposition, TensorFormat):  # MARK: PEPSDecomposition
+    """Reserved PEPS result interface until its numerical format is available."""
 
 
-def _quantics_result(result: 'TensorDecomposition1D',
+class PEPODecomposition(TensorDecomposition, TensorFormat):  # MARK: PEPODecomposition
+    """Reserved PEPO result interface until its numerical format is available."""
+
+
+def _quantics_result(result: 'TensorDecomposition',
                      quantization: Optional[
                          Union[QuantizedLayout, Tuple[QuantizedLayout, QuantizedLayout]]] = None,
                      *,
-                     adapter: Optional['QuantizedSourceAdapter'] = None) -> 'TensorDecomposition1D':
+                     adapter: Optional['QuantizedSourceAdapter'] = None) -> 'TensorDecomposition':
     """
     Attaches coordinate meaning to fitted cores without numerical refitting.
     """
@@ -315,5 +372,5 @@ def _quantics_result(result: 'TensorDecomposition1D',
 _DecompositionOutput = Union[
     List[torch.Tensor],
     Tuple[List[torch.Tensor], Dict[str, Any]],
-    TensorDecomposition1D,
+    TensorDecomposition,
 ]

@@ -315,3 +315,16 @@ class TestOpeningAdapters:  # MARK: TestOpeningAdapters
             tensor.to(torch.complex128),
             rtol=2e-10,
             atol=2e-10)
+
+
+def test_callable_loop_opener_accepts_quantics_decomposition_result():
+    result = tk.decompositions.QTRDecomposition(
+        [torch.ones(1, 2, 1) for _ in range(3)],
+        n_coordinates=1, base=2, level=3, domain=(0., 1.),
+        metadata={'fit': 'quantics'})
+    opener = tk.decompositions.CallableLoopOpener(
+        lambda **kwargs: result,
+        tk.decompositions.LoopOpenerCapabilities(supports_blocks=True))
+    opening = opener.open(result.contract_dense(), rank=(1, 1, 1))
+    assert opening.diagnostics['metadata'] == result.metadata
+    torch.testing.assert_close(opening.contract_dense(), result.contract_dense())

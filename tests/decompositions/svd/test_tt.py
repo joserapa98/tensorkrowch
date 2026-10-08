@@ -658,3 +658,86 @@ def test_quantized_svd_rejects_unquantized_output_sites():
         tk.decompositions.tt_svd(
             data, quantization=layout, in_features=(0, 2), rank=16,
             return_result=True)
+
+
+@pytest.mark.parametrize('renormalize', [False, True])
+@pytest.mark.parametrize('backend', ['svd', 'qr_svd'])
+@pytest.mark.parametrize('refine', [False, True])
+def test_svd_formats_across_devices(renormalize,
+                                    backend,
+                                    refine,
+                                    device_dtype,
+                                    assert_close):
+    device, dtype = device_dtype
+    generator = torch.Generator().manual_seed(47)
+    data = torch.randn(2, 3, 2, dtype=dtype, generator=generator).to(device)
+    engine_type = tk.decompositions.TTSVD
+    engine = engine_type(data, out_device=None)
+    if device == 'mps' and dtype.is_complex and backend == 'qr_svd':
+        with tk.svd_method(backend, refine=refine), pytest.raises(RuntimeError, match='geqrf.*float32'):
+            engine.fit(rank=6, renormalize=renormalize)
+        return
+    with tk.svd_method(backend, refine=refine):
+        result = engine.fit(rank=6, renormalize=renormalize, collect_metrics=True)
+        wrapped = tk.decompositions.tt_svd(data, rank=6, renormalize=renormalize,
+                                                    out_device=None, return_result=True)
+    assert isinstance(result, tk.formats.TT)
+    assert result.dtype == dtype and result.device.type == device
+    assert_close(result.contract_dense(), data)
+    assert_close(wrapped.contract_dense(), data)
+    for record in result.metrics.truncations:
+        assert record.local_abs_error.device.type == 'cpu'
+        assert not record.local_abs_error.requires_grad
+    for plain in (result.clone(), result.detach(), result.to('cpu')):
+        assert type(plain) is type(result)
+        assert plain.metrics is result.metrics
+    algebra = result + result
+    assert not isinstance(algebra, tk.decompositions.TensorDecomposition)
+    assert_close(algebra.contract_dense(), 2 * data)
+
+
+@pytest.mark.parametrize('renormalize', [False, True])
+@pytest.mark.parametrize('criteria, rank', [
+    ({'rank': 2}, 2), ({'cutoff': 0.5}, 3), ({'atol': 0.02}, 3),
+    ({'rtol': 0.001}, 3), ({'cum_percentage': 0.999}, 3),
+    ({'rank': 2, 'atol': 0.02}, 2),
+])
+def test_svd_truncation_known_spectrum_and_error_bound(criteria, rank,
+                                                       renormalize, device_dtype,
+                                                       assert_close):
+    device, dtype = device_dtype
+    spectrum = torch.tensor([4., 2., 1., 0.1], device=device)
+    data = torch.diag(spectrum).to(dtype)
+    if dtype.is_complex:
+        data = data * 1j
+    result = tk.decompositions.TTSVD(data, out_device=None).fit(
+        **criteria, renormalize=renormalize, collect_metrics=True)
+    assert result.rank == [rank]
+    expected = data.clone()
+    expected[rank:, rank:] = 0
+    assert_close(result.contract_dense(), expected)
+    achieved = (result.contract_dense() - data).norm()
+    bound = result.metrics.errors[0].absolute.to(device=device,
+                                               dtype=achieved.dtype)
+    assert_close(bound, achieved)
+
+
+@pytest.mark.parametrize('large', [False, True])
+def test_renormalized_svd_preserves_extreme_input_scale(large, device_dtype,
+                                                      assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    scale = 1e20 if real_dtype == torch.float32 else 1e200
+    if not large:
+        scale = 1 / scale
+    reference = torch.arange(1., 9., device=device).reshape(2, 2, 2).to(dtype)
+    if dtype.is_complex:
+        reference = reference * (1 + 0.5j)
+    data = reference * scale
+
+    result = tk.decompositions.TTSVD(data, out_device=None).fit(
+        rank=16, renormalize=True)
+
+    assert all(torch.isfinite(core).all() for core in result.cores)
+    # Compare in the original relative scale without overflowing a norm.
+    assert_close(result.contract_dense() / scale, reference)

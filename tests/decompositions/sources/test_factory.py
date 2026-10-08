@@ -44,3 +44,18 @@ def test_tt_decomposition_normalizes_to_tt_source():
 
     assert isinstance(source, tk.decompositions.TTTensorSource)
     assert source.in_dim == decomposition.in_dim
+
+
+@pytest.mark.parametrize('invalid', [None, 'tt', 1, object()])
+def test_factory_rejects_invalid_sources(invalid):
+    with pytest.raises(TypeError, match='source'):
+        tk.decompositions.as_tensor_source(invalid)
+
+
+def test_factory_accepts_formats_and_preserves_sources():
+    format = tk.formats.TT([torch.tensor([1., 2.])])
+    source = tk.decompositions.as_tensor_source(format)
+    assert tk.decompositions.as_tensor_source(source) is source
+    assert torch.equal(source.evaluate(tk.decompositions.ConfigurationBatch(torch.arange(2).reshape(-1, 1))), format.contract_dense())
+    with pytest.raises(TypeError, match='in_features'):
+        tk.decompositions.as_tensor_source(format, in_features=(0,))

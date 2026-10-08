@@ -1,6 +1,7 @@
 """Tests for sources/test_callable.py."""
 
 
+import pytest
 import torch
 
 import tensorkrowch as tk
@@ -99,3 +100,27 @@ def test_callable_discrete_fiber():
         source.fiber(configurations, site=1),
         torch.tensor([[0., 2., 4.], [1., 3., 5.]],
                      dtype=torch.float64))
+
+
+def test_callable_source_inference_chunking_and_changes(device_dtype, assert_close):
+    device, dtype = device_dtype
+    calls = []
+    def function(indices):
+        calls.append(indices.shape[0])
+        values = indices.to(dtype).sum(-1)
+        if dtype.is_complex:
+            values = values * (1 + 2j)
+        return values.unsqueeze(-1)
+    source = tk.decompositions.CallableTensorSource(
+        function, (2, 3), out_shape=None, device=device, batch_size=2)
+    indices = torch.tensor([[0, 0], [0, 2], [1, 1]], device=device)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(indices))
+    assert calls == [2, 1]
+    expected = indices.to(dtype).sum(-1, keepdim=True)
+    if dtype.is_complex:
+        expected = expected * (1 + 2j)
+    assert_close(values, expected)
+    assert source.dtype == dtype and source.out_shape == (1,)
+    source.function = lambda batch: batch.to(dtype).sum(-1)
+    with pytest.raises(ValueError, match='shape'):
+        source.evaluate(tk.decompositions.ConfigurationBatch(indices))

@@ -590,3 +590,35 @@ def test_quantized_als_source_and_initializer_layout_validation():
     other = tk.formats.QuantizedLayout(2, 2, 2, ordering='grouped')
     with pytest.raises(ValueError, match='fixed digit layout'):
         tk.decompositions.TTALS(torch.ones(4, 4), quantization=other).fit(initial_cores=q)
+
+
+@pytest.mark.parametrize('gauge', ['none', 'qr', 'svd'])
+@pytest.mark.parametrize('quantized', [False, True])
+def test_als_formats_devices_and_quantization(gauge,
+                                              quantized,
+                                              device_dtype,
+                                              assert_close):
+    engine = tk.decompositions.TTALS
+    device, dtype = device_dtype
+    data = torch.tensor([[[1., 2.], [2., 4.]], [[3., 6.], [6., 12.]]],
+                        dtype=dtype, device=device)
+    if dtype.is_complex:
+        data = data * (1 + 1j)
+    layout = tk.formats.QuantizedLayout(1, 2, 3)
+    problem = engine(data.reshape(8) if quantized else data,
+                     quantization=layout if quantized else None,
+                     out_device=None)
+    options = dict(rank=1, init='svd', gauge=gauge,
+                   convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2),
+                   collect_metrics=True)
+    if device == 'mps' and dtype.is_complex and gauge == 'qr':
+        with pytest.raises(RuntimeError, match='geqrf.*float32'):
+            problem.fit(**options)
+        return
+    result = problem.fit(**options)
+    dense = result.to_dense_grid() if quantized else result.contract_dense()
+    assert_close(dense, data.reshape(8) if quantized else data)
+    assert result.dtype == dtype and result.device.type == device
+    assert result.metrics.sweeps
+    assert result.metrics.sweeps[-1].abs_error.device.type == 'cpu'
+    assert result.metrics.sweeps[-1].abs_error < 5e-5 * data.norm()

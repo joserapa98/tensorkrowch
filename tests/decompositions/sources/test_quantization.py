@@ -132,3 +132,35 @@ class TestQuantizedSourceAdapter:  # MARK: TestQuantizedSourceAdapter
             torch.tensor([[0], [1], [2]])))
 
         assert torch.equal(result, torch.tensor([0.5, 0., 0.5]))
+
+
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+@pytest.mark.parametrize('sample_space', ['indices', 'digits', 'physical'])
+def test_quantized_adapter_function_evaluation_on_devices(ordering, sample_space,
+                                                         device_dtype, assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering=ordering)
+    coordinate_map = tk.formats.AffineCoordinateMap(
+        torch.tensor([[-1., 1.], [0., 2.]], dtype=real_dtype, device=device),
+        layout.grid_size)
+    def function(coordinates):
+        values = torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]).to(dtype)
+        return values * (1 + 1j) if dtype.is_complex else values
+    adapter = tk.decompositions.QuantizedSourceAdapter(
+        function, layout, coordinate_map=coordinate_map, dtype=dtype, device=device)
+    indices = torch.tensor([[0, 0], [1, 2], [3, 1]], device=device)
+    digits = layout.encode_indices(indices)
+    coordinates = coordinate_map.from_indices(indices)
+    inputs = {'indices': indices, 'digits': digits, 'physical': coordinates}[sample_space]
+    if sample_space == 'indices':
+        encoded = layout.encode_indices(inputs)
+    elif sample_space == 'physical':
+        encoded = adapter.physical_to_digits(inputs)
+    else:
+        encoded = inputs
+    assert_close(adapter.evaluate(tk.decompositions.ConfigurationBatch(encoded)), function(coordinates))
+    assert_close(adapter.digits_to_physical(encoded), coordinates)
+    with pytest.raises(ValueError, match='domain'):
+        tk.decompositions.QuantizedSourceAdapter(
+            function, layout, coordinate_map=coordinate_map, domain=torch.tensor([0., 1.]))

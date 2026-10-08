@@ -264,3 +264,20 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
             tk.decompositions.LeastSquaresSolver(column_scaling='always')
         with pytest.raises(ValueError, match='driver'):
             tk.decompositions.LeastSquaresSolver(driver='unknown')
+
+
+@pytest.mark.parametrize('column_scaling', [False, True, 'auto'])
+def test_solver_devices_complex_values_and_residuals(column_scaling,
+                                                     device_dtype, assert_close):
+    device, dtype = device_dtype
+    matrix = torch.tensor([[1., 0.], [0., 2.], [1., 1.]], dtype=dtype, device=device)
+    solution = torch.tensor([2., -1.], dtype=dtype, device=device)
+    if dtype.is_complex:
+        solution = solution + 1j * solution.flip(0)
+    target = matrix @ solution
+    solver = tk.decompositions.LeastSquaresSolver(column_scaling=column_scaling)
+    actual, info = solver.solve(matrix, target, return_record=True)
+    assert_close(actual, solution)
+    assert info.abs_residual.device.type == 'cpu'
+    assert info.abs_residual < 5e-5 * target.norm()
+    assert torch.isfinite(info.system_scale)

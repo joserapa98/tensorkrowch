@@ -54,3 +54,19 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
         with pytest.raises(ValueError):
             tk.decompositions.DenseTensorSource(
                 torch.ones(2, 3), in_features=features)
+
+
+def test_dense_source_device_fibers_and_values(device_dtype, assert_close):
+    device, dtype = device_dtype
+    tensor = torch.arange(12, dtype=torch.float32).reshape(2, 3, 2).to(dtype).to(device)
+    if dtype.is_complex:
+        tensor = tensor + 1j * tensor.flip(1)
+    source = tk.decompositions.DenseTensorSource(tensor, in_features=(0, 1))
+    indices = torch.tensor([[0, 0], [1, 2]], device=device)
+    batch = tk.decompositions.ConfigurationBatch(indices)
+    assert_close(source.evaluate(batch), tensor[indices[:, 0], indices[:, 1]])
+    assert source.out_shape == (2,)
+    assert_close(source.fiber(batch, site=1), tensor[indices[:, 0]])
+    assert_close(source.tensor, tensor)
+    with pytest.raises(ValueError):
+        source.evaluate(tk.decompositions.ConfigurationBatch(indices + 3))

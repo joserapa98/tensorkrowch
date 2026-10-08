@@ -394,3 +394,13 @@ class TestSketchingFitSpec:  # MARK: TestSketchingFitSpec
 
         assert spec.verbosity == 0
         assert not spec.diagnostics_enabled
+
+
+@pytest.mark.parametrize('error', [AssertionError, IndexError])
+def test_embedding_spec_keeps_unexpected_callback_errors(error):
+    def embedding(values):
+        raise error('Callback failure')
+
+    domains = _DomainSpec.normalize(torch.arange(2), n_sites=1)
+    with pytest.raises(error, match='Callback failure'):
+        _EmbeddingSpec.normalize(embedding, domains)

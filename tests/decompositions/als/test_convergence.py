@@ -207,3 +207,22 @@ class TestUpdatePolicy:  # MARK: TestUpdatePolicy
 
         with pytest.raises(ValueError, match='local errors'):
             policy.accepts(None, 1.)
+
+
+@pytest.mark.parametrize('damping', [0.25, 1.0])
+def test_update_policy_preserves_complex_values_and_device(damping, device_dtype,
+                                                          assert_close):
+    device, dtype = device_dtype
+    current = torch.ones(2, 2, dtype=dtype, device=device)
+    proposal = 2 * current
+    if dtype.is_complex:
+        proposal = proposal * 1j
+    policy = tk.decompositions.UpdatePolicy(damping=damping)
+    updated = policy.apply(current, proposal)
+    assert_close(updated, current + damping * (proposal - current))
+    assert_close(current, torch.ones_like(current))
+
+    other_dtype = torch.float32 if dtype.is_complex else torch.complex64
+    incompatible = torch.zeros_like(proposal, dtype=other_dtype)
+    with pytest.raises(ValueError):
+        policy.apply(current, incompatible)

@@ -85,3 +85,23 @@ def test_tt_structured_marginal_phi_matches_dense(order):
             expected = weighted.reshape(
                 left_size, dense.shape[site], right_size)
         assert torch.allclose(phi, expected)
+
+
+def test_tt_source_bonds_device_and_complex_features(device_dtype, assert_close):
+    device, dtype = device_dtype
+    first = torch.tensor([[1., 2.], [3., 4.]], dtype=dtype, device=device)
+    second = torch.tensor([[1., 2., 3.], [-1., 0., 2.]], dtype=dtype, device=device)
+    if dtype.is_complex:
+        first = first * (1 + 1j)
+    format = tk.formats.TT([first, second])
+    format.bonds = [torch.tensor([2., 3.], device=device)]
+    source = tk.decompositions.as_tensor_source(format)
+    dense = (first * format.bonds.factors[0]) @ second
+    indices = torch.tensor([[0, 2], [1, 0]], device=device)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(indices))
+    assert_close(values, dense[indices[:, 0], indices[:, 1]])
+    all_indices = torch.cartesian_prod(
+        torch.arange(2, device=device), torch.arange(3, device=device))
+    assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(
+        all_indices)).reshape(2, 3), dense)
+    assert format.bonds is not None

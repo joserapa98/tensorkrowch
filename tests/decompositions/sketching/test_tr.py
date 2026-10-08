@@ -284,6 +284,46 @@ class TestTRRS:  # MARK: TestTRRS
                 rank=1, warm_start=initial)
 
 
+@pytest.mark.parametrize('quantized', [False, True])
+def test_rss_function_formats_devices_and_sample_error(quantized,
+                                                       device_dtype,
+                                                       assert_close):
+    engine = tk.decompositions.TRRSS
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    domain = torch.tensor([0., 1.], dtype=real_dtype, device=device)
+    coordinates = torch.cartesian_prod(domain, domain, domain)
+    if quantized:
+        coordinates = torch.arange(8, dtype=real_dtype, device=device).reshape(-1, 1) / 8
+    def function(values):
+        result = torch.exp(values.sum(-1)).to(dtype)
+        return result * (1 + 1j) if dtype.is_complex else result
+    def embedding(values):
+        return tk.embeddings.basis(values.to(torch.long), dim=2).to(dtype)
+    if quantized:
+        layout = tk.formats.QuantizedLayout(1, 2, 3)
+        coordinate_map = tk.formats.AffineCoordinateMap(
+            torch.tensor([0., 1.], dtype=real_dtype, device=device), layout.grid_size)
+        problem = engine.quantized(function, layout=layout,
+                                   coordinate_map=coordinate_map,
+                                   device=device, dtype=dtype, out_device=None)
+    else:
+        problem = engine(function, embedding, domain=domain, device=device,
+                         dtype=dtype, out_device=None)
+    result = problem.fit(coordinates, rank=1, collect_metrics=True)
+    if quantized:
+        actual = result.evaluate_coordinates(coordinates)
+        error = result.error(
+            function, coordinates, data=layout.encode_indices(
+                coordinate_map.to_indices(coordinates)))
+    else:
+        inputs = embedding(coordinates)
+        actual = result.evaluate(inputs)
+        error = result.error(function, coordinates, data=inputs)
+    assert_close(actual, function(coordinates))
+    assert isinstance(error, tk.decompositions.ErrorRecord)
+    assert error.relative < 5e-5
+    assert result.dtype == dtype and result.device.type == device
 
 
 @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])

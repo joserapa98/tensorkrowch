@@ -151,12 +151,12 @@ class QuantizedSourceAdapter(_SourceEvaluationTracker):
 
     @property
     def computational_grid(self) -> Union[str, float]:
-        """Unit grid convention for the deferred Tucker integration."""
+        """Uniform grid offset stored by the coordinate map."""
         return getattr(self.coordinate_map, 'grid_offset', 'left')
 
     @property
     def out_of_domain(self) -> str:
-        """Boundary policy for the deferred Tucker integration."""
+        """Out-of-domain policy stored by the coordinate map."""
         return getattr(self.coordinate_map, 'out_of_domain', 'error')
 
     def indices_to_physical(self, indices: torch.Tensor) -> torch.Tensor:

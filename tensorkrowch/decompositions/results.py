@@ -6,7 +6,6 @@ This script contains:
     Format subclasses with decomposition diagnostics:
         * TTDecomposition, TRDecomposition, TTMDecomposition, TRMDecomposition
         * QTTDecomposition, QTRDecomposition, QTTMDecomposition, QTRMDecomposition
-        * QTTTuckerDecomposition, QTRTuckerDecomposition
     Deferred 2D results:
         * PEPSDecomposition, PEPODecomposition
 """
@@ -17,10 +16,7 @@ from typing import Any, Dict, Optional, Sequence
 
 import torch
 
-from tensorkrowch.formats import (
-    TensorFormat, TensorFormat1D, TT, TR, TTM, TRM,
-    QTT, QTR, QTTM, QTRM, QTTTucker, QTRTucker, QuantizedLayout,
-    AffineCoordinateMap, CoordinateMap)
+from tensorkrowch.formats import (TensorFormat, TensorFormat1D, TT, TR, TTM, TRM, QTT, QTR, QTTM, QTRM, QuantizedLayout, AffineCoordinateMap, CoordinateMap)
 from tensorkrowch.formats.formats1d import _restore_cores
 from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
 
@@ -183,64 +179,6 @@ class QTRMDecomposition(_QuanticsResultState, QTRM,
     out_layout: QuantizedLayout = field()  # Output digit schedule
     in_coordinate_map: CoordinateMap = field()  # Actual input-coordinate map
     out_coordinate_map: CoordinateMap = field()  # Actual output-coordinate map
-
-
-class _TuckerResultState(TensorDecomposition):
-    """Provenance for a hierarchical format with a single upper owner."""
-
-    def __init__(self, upper, factors, layout, coordinate_map, domain=None, *,
-                 coordinate_positions=None, computational_grid='endpoints',
-                 out_of_domain='error', metrics=None, metadata=None):
-        self.metrics = upper.metrics if metrics is None and isinstance(
-            upper, TensorDecomposition) else (
-                DecompositionMetrics() if metrics is None else metrics)
-        self.metadata = {} if metadata is None else metadata
-        if not isinstance(self.metrics, DecompositionMetrics):
-            raise TypeError('`metrics` should be DecompositionMetrics type')
-        if not isinstance(self.metadata, dict):
-            raise TypeError('`metadata` should be dict type')
-        super().__init__(upper, factors, layout, coordinate_map, domain,
-                         coordinate_positions=coordinate_positions,
-                         computational_grid=computational_grid,
-                         out_of_domain=out_of_domain)
-
-    input_dim = _ResultState.input_dim
-    output_dim = _ResultState.output_dim
-
-    def as_info(self) -> Dict[str, Any]:
-        info = _ResultState.as_info(self)
-        info.update(upper_rank=self.upper.rank,
-                    factor_rank=[list(rank) for rank in self.factor_rank],
-                    grid_size=list(self.layout.grid_size),
-                    coordinate_positions=list(self.coordinate_positions),
-                    out_shape=list(self.out_shape))
-        return info
-
-    def _map_tensors(self, function):
-        result = super()._map_tensors(function)
-        result.metrics = self.metrics
-        result.metadata = self.metadata
-        return result
-
-    def to(self, device=None, dtype=None, copy=False):
-        result = super().to(device=device, dtype=dtype, copy=copy)
-        result.metrics = self.metrics
-        result.metadata = self.metadata
-        return result
-
-
-class QTTTuckerDecomposition(_TuckerResultState, QTTTucker):
-    """QTT-Tucker format together with fit diagnostics."""
-
-
-class QTRTuckerDecomposition(_TuckerResultState, QTRTucker):
-    """QTR-Tucker format together with fit diagnostics."""
-
-
-# Hierarchical formats satisfy the public 1D provenance interface without
-# inheriting the flat core-container implementation a second time.
-TensorDecomposition1D.register(QTTTuckerDecomposition)
-TensorDecomposition1D.register(QTRTuckerDecomposition)
 
 
 class PEPSDecomposition(TensorDecomposition2D):

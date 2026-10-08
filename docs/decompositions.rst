@@ -29,7 +29,7 @@ Advanced ``fit`` returns a QTT/QTR/QTTM/QTRM result when quantization is
 selected. Direct SVD, ALS and RS/RSS functions continue to return core lists
 by default. ``return_result=True`` retains the object and its coordinate
 meaning without enabling metrics. Combining it with ``return_info=True`` is
-an error. Tucker wrappers retain their existing hierarchical object return.
+an error.
 
 .. code-block:: python
 
@@ -166,9 +166,6 @@ Maturity
    * - :func:`qtt_rss`, :func:`qtr_rss`
      - Experimental
      - Quantized coordinate adapters over TT-RSS and TR-RSS.
-   * - :class:`QTTTuckerRSS`, :class:`QTRTuckerRSS`
-     - Experimental
-     - Native two-level quantized factors joined by an upper TT or TR.
 
 Sampled recursive sketching
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -232,22 +229,6 @@ original variable coordinates for both layouts.
 .. autofunction:: qtt_rss
 
 .. autofunction:: qtr_rss
-
-.. autoclass:: QTTTuckerRSS
-   :members: fit
-
-.. autoclass:: QTRTuckerRSS
-   :members: fit
-
-.. autofunction:: qtt_tucker_rss
-
-.. autofunction:: qtr_tucker_rss
-
-.. autoclass:: QTTTuckerDecomposition
-   :members:
-
-.. autoclass:: QTRTuckerDecomposition
-   :members:
 
 Sources and fitting strategies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

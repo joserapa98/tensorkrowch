@@ -35,16 +35,6 @@ def _scalar_float(value: Any, name: str) -> float:
     return float(value)
 
 
-def _optional_cpu_tensor(value: Optional[torch.Tensor],
-                         name: str) -> Optional[torch.Tensor]:
-    """Detaches an optional diagnostic tensor and stores it on CPU."""
-    if value is None:
-        return None
-    if not isinstance(value, torch.Tensor):
-        raise TypeError(f'`{name}` should be torch.Tensor type')
-    return value.detach().cpu()
-
-
 def _cpu_tensor(value: Any, name: str) -> torch.Tensor:
     """Converts a numerical metric to a detached CPU tensor."""
     if not isinstance(value, torch.Tensor):

@@ -931,7 +931,7 @@ class TRRSS(TTRSS):
                     fit_view = phi
                 fitted = self._fit_input_axis(
                     site, fit_view, axis, context)
-                tensor = self._select_fitted_tensor(site, fitted)
+                tensor = fitted.tensor
                 context.state['input_query_results'].pop(key)
                 for item in site_handles[site]:
                     session.release(item)
@@ -949,9 +949,7 @@ class TRRSS(TTRSS):
                 collect_metrics=context.collect_metrics)
 
         site_dim = tuple(
-            self._select_fitted_tensor(
-                site, context.fitted_axes[site]
-            ).shape[context.fitted_axes[site].axis]
+            context.fitted_axes[site].tensor.shape[context.fitted_axes[site].axis]
             for site in range(self.outputs.n_sites))
         context.state['fitted_site_dim'] = site_dim
 
@@ -974,8 +972,9 @@ class TRRSS(TTRSS):
             embeddings=self.embeddings,
             boundary_records=[],
             embedding_function=lambda site, values, dtype:
-                self._embed_fitted_site(
-                    site, values, context, dtype))
+                self.outputs.embed_site(
+                    site, values,
+                    self.embeddings, dtype=dtype))
         truncation_records = []
         opener = _SketchLoopOpener(
             resolve_loop_opener(context.state['loop_opener']),
@@ -1018,11 +1017,9 @@ class TRRSS(TTRSS):
 
     def _evaluate_extended_cores(self, cores, samples, context):
         vectors = [
-            self._embed_fitted_site(
-                site,
-                values,
-                context,
-                dtype=cores[0].dtype).to(cores[0].device)
+            self.outputs.embed_site(
+                site, values,
+                self.embeddings, dtype=cores[0].dtype).to(cores[0].device)
             for site, values in enumerate(samples)]
         matrices = [
             torch.einsum('lpr,bp->blr', core, vector)

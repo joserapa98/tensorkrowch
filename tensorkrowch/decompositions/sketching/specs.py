@@ -228,7 +228,7 @@ class _EmbeddingSpec:
             if callable(entry):
                 try:
                     matrix = entry(domain)
-                except Exception as exc:
+                except (TypeError, ValueError, RuntimeError) as exc:
                     raise ValueError(
                         f'Embedding at site {site} failed on its domain') \
                         from exc
@@ -321,7 +321,7 @@ class _EmbeddingSpec:
                 f'(batch, {coordinate_shape})')
         try:
             result = entry(values)
-        except Exception as exc:
+        except (TypeError, ValueError, RuntimeError) as exc:
             raise ValueError(f'Embedding at site {site} failed') from exc
         if not isinstance(result, torch.Tensor):
             raise TypeError(

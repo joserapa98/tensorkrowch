@@ -234,7 +234,7 @@ class FixedEmbeddingFitter:
         try:
             matrix = self.embedding(domain) if callable(self.embedding) \
                 else self.embedding
-        except Exception as exc:
+        except (TypeError, ValueError, RuntimeError) as exc:
             raise ValueError('`embedding` failed on `domain`') from exc
         if not isinstance(matrix, torch.Tensor):
             raise TypeError('`embedding` should produce a torch.Tensor')

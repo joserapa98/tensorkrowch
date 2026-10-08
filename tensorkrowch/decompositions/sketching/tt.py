@@ -26,7 +26,7 @@ from tensorkrowch.decompositions.sketching.evaluations import (
     _EvaluationPlanBuilder,
     _EvaluationSession,
 )
-from tensorkrowch.decompositions.sketching.fitting import (FittedInputAxis, InputFitter)
+from tensorkrowch.decompositions.sketching.fitting import (InputFitter)
 from tensorkrowch.decompositions.sketching.phi import (
     PhiOperator,
     _MaterializedPhi,
@@ -447,7 +447,7 @@ class TTRSS(RecursiveSketching):
         configurations = samples.index_select(ids).to(device)
         try:
             probe = self._source_like(configurations.values)
-        except Exception as exc:
+        except (TypeError, ValueError, RuntimeError) as exc:
             raise ValueError(
                 '`function` failed on a sketch-sample batch') from exc
         if not isinstance(probe, torch.Tensor):
@@ -844,20 +844,6 @@ class TTRSS(RecursiveSketching):
             original_shape=tuple(rotated.shape),
             axis=rotated.ndim - 1)
 
-    def _select_fitted_tensor(
-            self, site: int, fitted: FittedInputAxis) -> torch.Tensor:
-        """Selects the tensor consumed by the topology-specific solve."""
-        return fitted.tensor
-
-    def _embed_fitted_site(
-            self,
-            site: int,
-            values: torch.Tensor,
-            context: _SketchingFitContext,
-            dtype: torch.dtype) -> torch.Tensor:
-        """Embeds recursion values in the fitted core input basis."""
-        return self.outputs.embed_site(
-            site, values, self.embeddings, dtype=dtype)
 
     def _decompose(self, context: _SketchingFitContext) -> TTDecomposition:
         """Executes the serial five-stage TT recursive-sketching workflow."""
@@ -923,7 +909,7 @@ class TTRSS(RecursiveSketching):
                 local_view,
                 self._current_axis(phi, site),
                 context)
-            fitted_tensors[site] = self._select_fitted_tensor(site, fitted)
+            fitted_tensors[site] = fitted.tensor
             context.state['input_query_results'].pop(site)
             session.release(main_handles[site])
             for handle in (*input_handles[site], *local_handles[site]):
@@ -966,11 +952,9 @@ class TTRSS(RecursiveSketching):
                     recursion.child_size, site_dim[site], -1)
                 gathered = b_tensor.index_select(
                     0, recursion.gather.to(b_tensor.device))
-                embedded = self._embed_fitted_site(
-                    site,
-                    recursion.new_values[0],
-                    context,
-                    dtype=b_tensor.dtype).to(b_tensor.device)
+                embedded = self.outputs.embed_site(
+                               site, recursion.new_values[0],
+                               self.embeddings, dtype=b_tensor.dtype).to(b_tensor.device)
                 a_tensors[site] = torch.einsum(
                     'bpr,bp->br', gathered, embedded)
 
@@ -1012,11 +996,9 @@ class TTRSS(RecursiveSketching):
             context: _SketchingFitContext) -> torch.Tensor:
         """Evaluates TT cores on already output-extended sample rows."""
         vectors = [
-            self._embed_fitted_site(
-                site,
-                values,
-                context,
-                dtype=cores[0].dtype).to(cores[0].device)
+            self.outputs.embed_site(
+                site, values,
+                self.embeddings, dtype=cores[0].dtype).to(cores[0].device)
             for site, values in enumerate(samples)
         ]
         if len(cores) == 1:

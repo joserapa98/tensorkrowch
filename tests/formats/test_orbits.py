@@ -6,22 +6,31 @@ import tensorkrowch as tk
 from tensorkrowch.formats.orbits import GaugeOrbit, TensorRingOrbit
 
 
-@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('topology', ['tr', 'trm'])
 @pytest.mark.parametrize('method', ['adam', 'gradient'])
-def test_ring_gauge_cancellation_and_balancing(make_format, dtype, method):
-    format = make_format('tr', 3, dtype=dtype)
+def test_ring_gauge_cancellation_and_balancing(make_format, device_dtype,
+                                               assert_close, topology, method):
+    device, dtype = device_dtype
+    format = make_format(topology, 3, dtype=dtype, device=device)
     dense = format.contract_dense()
     orbit = TensorRingOrbit(format)
-    gauges = [torch.diag(torch.linspace(1, 2, rank, dtype=torch.float64)).to(dtype)
+    gauges = [torch.diag(torch.linspace(1, 2, rank, device=device,
+                                        dtype=format.cores[0].real.dtype)).to(dtype)
               for rank in format.rank]
-    transformed = tk.formats.TR(orbit.apply(gauges))
-    assert torch.allclose(transformed.contract_dense(), dense)
+    if device == 'mps' and dtype.is_complex:
+        with pytest.raises(RuntimeError, match="doesn't support complex"):
+            format.canonicalize_minimal(method=method)
+        assert_close(format.contract_dense(), dense)
+        return
+    transformed = format.clone()
+    transformed._set_standard_cores(orbit.apply(gauges))
+    assert_close(transformed.contract_dense(), dense)
     transformed.cores[0].requires_grad_()
     before = sum(core.abs().square().sum() for core in transformed.cores)
     transformed.canonicalize_minimal(max_iter=80, method=method)
     after = sum(core.abs().square().sum() for core in transformed.cores)
     assert after < before
-    assert torch.allclose(transformed.contract_dense(), dense, rtol=1e-9, atol=1e-10)
+    assert_close(transformed.contract_dense(), dense)
     assert all(core.grad is None for core in format.cores)
     assert transformed.dtype == dtype
 
@@ -183,10 +192,10 @@ def test_minimal_stopping_options(make_format, kind, options, error):
         make_format(kind, 3).canonicalize_minimal(**options)
 
 
-@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-def test_gram_matrices_contract_batches_and_preserve_gradients(dtype):
-    left = torch.arange(12, dtype=torch.float64).reshape(2, 2, 3).to(dtype)
-    right = torch.arange(24, dtype=torch.float64).reshape(2, 3, 4).to(dtype)
+def test_gram_matrices_contract_batches_and_preserve_gradients(device_dtype, assert_close):
+    device, dtype = device_dtype
+    left = torch.arange(12).reshape(2, 2, 3).to(device=device, dtype=dtype)
+    right = torch.arange(24).reshape(2, 3, 4).to(device=device, dtype=dtype)
     if dtype.is_complex:
         left = left + 1j * left.flip(-1)
         right = right + 1j * right.flip(-1)
@@ -196,10 +205,9 @@ def test_gram_matrices_contract_batches_and_preserve_gradients(dtype):
     left_gram, right_gram = orbit.gram_matrices()[0]
     expected_left = sum(core.conj().T @ core for core in left)
     expected_right = sum(core @ core.conj().T for core in right)
-    assert torch.allclose(left_gram, expected_left)
-    assert torch.allclose(right_gram, expected_right)
-    assert torch.allclose(orbit.gram_imbalance(),
-                          (expected_left - expected_right).norm())
+    assert_close(left_gram, expected_left)
+    assert_close(right_gram, expected_right)
+    assert_close(orbit.gram_imbalance(), (expected_left - expected_right).norm())
     (left_gram.real.sum() + right_gram.real.sum()).backward()
     assert left.grad is not None and right.grad is not None
     assert GaugeOrbit([left], []).gram_matrices() == []
@@ -234,3 +242,76 @@ def test_gradient_search_needs_no_backward(make_format, monkeypatch, kind,
                                          return_info=True)
     assert info.gram_imbalance < before
     assert torch.allclose(format.contract_dense(), dense, rtol=1e-9, atol=1e-10)
+
+
+@pytest.mark.parametrize('self_bond', [False, True])
+def test_general_orbit_nondiagonal_exponential_gauges(device_dtype, assert_close,
+                                                     self_bond):
+    device, dtype = device_dtype
+    generator = torch.Generator().manual_seed(47)
+    gauge_parameter = (0.1 * torch.randn(3, 3, dtype=dtype,
+                                        generator=generator)).to(device).requires_grad_()
+    gauge = torch.matrix_exp(gauge_parameter)
+    if self_bond:
+        cores = [torch.randn(3, 2, 3, dtype=dtype, generator=generator).to(device)]
+        orbit = GaugeOrbit(cores, [(0, 0, 0, -1)])
+        original = cores[0].diagonal(dim1=0, dim2=-1).sum(-1)
+        if device == 'mps' and dtype.is_complex:
+            with pytest.raises(RuntimeError, match="doesn't support complex"):
+                orbit.apply([gauge])
+            return
+        gauged = orbit.apply([gauge])
+        actual = gauged[0].diagonal(dim1=0, dim2=-1).sum(-1)
+    else:
+        cores = [torch.randn(2, 3, 4, dtype=dtype, generator=generator).to(device),
+                 torch.randn(5, 6, 3, dtype=dtype, generator=generator).to(device)]
+        orbit = GaugeOrbit(cores, [(0, 1, 1, -1)])
+        original = torch.tensordot(cores[0], cores[1], dims=([1], [2]))
+        if device == 'mps' and dtype.is_complex:
+            with pytest.raises(RuntimeError, match="doesn't support complex"):
+                orbit.apply([gauge])
+            return
+        gauged = orbit.apply([gauge])
+        actual = torch.tensordot(gauged[0], gauged[1], dims=([1], [2]))
+    assert_close(actual, original)
+    objective = orbit.objective([gauge])
+    expected = sum(core.abs().square().sum() for core in gauged) / 2
+    assert_close(objective, expected)
+    objective.backward()
+    assert gauge_parameter.grad is not None
+    assert torch.isfinite(gauge_parameter.grad).all()
+
+
+@pytest.mark.parametrize('bond', [
+    (0, 1, 0, 1), (0, -1, 0, 1), (True, 0, 0, 1),
+    (2, 0, 0, 1), (0, 2, 0, 1), (0, 0, 0, False),
+])
+def test_orbit_rejects_invalid_site_and_axis(bond):
+    with pytest.raises(ValueError):
+        GaugeOrbit([torch.eye(2)], [bond])
+
+
+@pytest.mark.parametrize('gauges,error', [
+    ([], ValueError), ([torch.eye(2), torch.eye(2)], ValueError),
+    ([1], TypeError), ([torch.eye(3)], ValueError),
+    ([torch.eye(2, dtype=torch.complex128)], ValueError),
+    ([torch.eye(2, device='meta')], ValueError),
+])
+def test_orbit_gauge_type_shape_and_device_errors(gauges, error):
+    orbit = GaugeOrbit([torch.eye(2), torch.eye(2)], [(0, 1, 1, 0)])
+    with pytest.raises(error):
+        orbit.apply(gauges)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'ttm'])
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_minimal_open_format_information(make_format, topology, quantized, dtype):
+    format = make_format(topology, quantized=quantized, dtype=dtype)
+    before = format.contract_dense()
+    result, info = format.canonicalize_minimal(return_info=True)
+    assert result is format
+    assert info.iterations == 0 and info.converged
+    assert info.gram_imbalance is None and info.stop_reason == 'vidal'
+    assert format.bonds.powers == [(0.5, 0.5)] * (format.n_sites - 1)
+    assert torch.allclose(format.contract_dense(), before, rtol=1e-10, atol=1e-11)

@@ -30,7 +30,7 @@ def test_vidal_and_mixed_centers(make_format, topology, mode):
             elif site > orth_center:
                 matrix = core.reshape(core.shape[-3], -1)
                 assert torch.allclose(matrix @ matrix.adjoint(),
-                                      torch.eye(matrix.shape[-2], dtype=matrix.dtype),
+                                      torch.eye(matrix.shape[0], dtype=matrix.dtype),
                                       atol=1e-10, rtol=1e-10)
     format.canonicalize_vidal('implicit').canonicalize_vidal('explicit')
     assert torch.allclose(format.contract_dense(), dense)
@@ -58,8 +58,9 @@ def test_mixed_inverse_bonds_and_zero(make_format):
         result = zero.clone().canonicalize_vidal(mode)
         assert torch.isfinite(result.contract_dense()).all()
         assert result.norm() == 0
-    with pytest.raises(ValueError, match='Inverse Vidal bond'):
-        zero.canonicalize_vidal('inverse')
+    inverse = zero.clone().canonicalize_vidal('inverse')
+    assert torch.isfinite(inverse.contract_dense()).all()
+    assert inverse.norm() == 0
     assert zero.bonds is None
 
 
@@ -345,3 +346,59 @@ def test_copy_invalid_vidal_preserves_stored_factors(make_format):
     assert torch.allclose(result.contract_dense(), format.contract_dense())
     result.materialize_bonds()
     assert torch.allclose(result.contract_dense(), format.contract_dense())
+
+
+@pytest.mark.parametrize('topology', ['tt', 'ttm'])
+def test_valid_vidal_redistribution_reuses_spectra(make_format, topology,
+                                                 device_dtype, assert_close,
+                                                 monkeypatch):
+    device, dtype = device_dtype
+    format = make_format(topology, dtype=dtype, device=device)
+    if device == 'mps' and dtype.is_complex:
+        with pytest.raises(RuntimeError, match='geqrf.*float32'):
+            format.canonicalize_vidal('explicit')
+        return
+    format.canonicalize_vidal('explicit')
+    dense = format.contract_dense()
+    spectra = tuple(format.bonds.spectra)
+
+    def reject_svd(*args, **kwargs):
+        raise AssertionError('Redistributing a valid Vidal gauge should reuse its spectra')
+
+    monkeypatch.setattr(torch.linalg, 'svd', reject_svd)
+    for mode in ('implicit', 'inverse', 'left', 'right', 'explicit'):
+        format.canonicalize_vidal(mode)
+        assert all(a is b for a, b in zip(spectra, format.bonds.spectra))
+        assert_close(format.contract_dense(), dense)
+    for center in range(format.n_sites):
+        materialized = format.clone().materialize_bonds(center)
+        assert materialized.bonds is None
+        assert_close(materialized.contract_dense(), dense)
+
+
+def test_redistribution_rejects_small_positive_spectra_without_mutation():
+    diagonal = torch.diag(torch.tensor([1., 1e-18], dtype=torch.float64))
+    format = tk.formats.TT([diagonal, torch.eye(2, dtype=diagonal.dtype)])
+    format.canonicalize_vidal('right')
+    original = format.contract_dense()
+    cores = tuple(format.cores)
+    with pytest.raises(ValueError, match='rounding.*cutoff'):
+        format.redistribute_vidal(0, 'inverse')
+    assert all(a is b for a, b in zip(cores, format.cores))
+    assert torch.allclose(format.contract_dense(), original)
+    format.rounding(cutoff=1e-15).canonicalize_vidal('inverse')
+    assert format.rank == [1]
+    assert torch.isfinite(format.contract_dense()).all()
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('side', ['left', 'right'])
+def test_absorbing_each_bond_preserves_tensor(make_format, topology, side):
+    format = make_format(topology, dtype=torch.complex128)
+    format.bonds = [torch.linspace(1., 2., rank, dtype=torch.float64)
+                    for rank in format.rank]
+    dense = format.contract_dense()
+    for bond in range(len(format.rank)):
+        result = format.clone().absorb_bond(bond, side=side)
+        assert result.bonds.factors[bond] is None
+        assert torch.allclose(result.contract_dense(), dense, rtol=1e-10, atol=1e-11)

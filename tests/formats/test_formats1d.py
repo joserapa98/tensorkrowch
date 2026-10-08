@@ -14,20 +14,23 @@ import tensorkrowch as tk
 @pytest.mark.parametrize('topology', ['tr', 'trm'])
 @pytest.mark.parametrize('n_sites', [1, 2, 4])
 @pytest.mark.parametrize('n_batches', [0, 1])
-def test_rotation_and_train_conversion(make_format, topology, n_sites, n_batches):
-    format = make_format(topology, n_sites, n_batches, torch.complex128)
+def test_rotation_and_train_conversion(make_format, topology, n_sites, n_batches,
+                                       device_dtype, assert_close):
+    device, dtype = device_dtype
+    format = make_format(topology, n_sites, n_batches, dtype, device=device)
     format.bonds = [
-        torch.arange(1, rank + 1, dtype=torch.float64) for rank in format.rank]
+        torch.arange(1, rank + 1, dtype=format.cores[0].real.dtype,
+                      device=device) for rank in format.rank]
     dense = format.contract_dense()
     b, width = n_batches, 2 if topology == 'trm' else 1
     for first in range(n_sites):
         rotated = format.rotate(first)
         axes = [*range(b), *range(b + first * width, b + n_sites * width),
                 *range(b, b + first * width)]
-        assert torch.allclose(rotated.contract_dense(), dense.permute(axes))
+        assert_close(rotated.contract_dense(), dense.permute(axes))
         train = rotated.to_tt() if topology == 'tr' else rotated.to_ttm()
         assert train.batch_shape == rotated.batch_shape
-        assert torch.allclose(train.contract_dense(), rotated.contract_dense())
+        assert_close(train.contract_dense(), rotated.contract_dense())
         if n_sites > 1:
             closing = rotated.rank[-1]
             assert train.rank == [closing * rank for rank in rotated.rank[:-1]]
@@ -233,7 +236,7 @@ def test_local_update(make_format, mode):
     format = make_format('tr', 4)
     block = format.contract_block(1, 2)
     replacement = tk.formats.split_block(
-        block * 2, format.in_dim[1:3], mode=mode)
+        block * 2, format.in_dim[1:3], rank=format.rank[1], mode=mode)
     dense = format.contract_dense()
     format.replace_cores(1, replacement.cores, bonds=replacement.bonds)
     assert torch.allclose(format.contract_dense(), 2 * dense)
@@ -357,7 +360,8 @@ def test_replacement_failure_preserves_cores_and_bonds(make_format, failure):
     format.bonds = [
         torch.ones(rank, dtype=format.dtype) for rank in format.rank]
     block = format.contract_block(1, 2)
-    replacement = tk.formats.split_block(block, format.in_dim[1:3], mode='explicit')
+    replacement = tk.formats.split_block(block, format.in_dim[1:3],
+                                         rank=format.rank[1], mode='explicit')
     values = list(replacement.cores)
     bonds = replacement.bonds
     if failure == 'rank':
@@ -381,30 +385,63 @@ def test_replacement_failure_preserves_cores_and_bonds(make_format, failure):
 # Canonical
 
 
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('orth_center', [0, 1, 2])
+@pytest.mark.parametrize('n_batches', [0, 1])
+def test_canonical_cores_return_normalized_chain(make_format, dtype,
+                                                orth_center, n_batches):
+    original = make_format('tt', 3, n_batches=n_batches, dtype=dtype)
+    dense = original.contract_dense()
+    cores, log_scale = tk.formats.formats1d._canonicalize_cores(
+        original._effective_cores(), orth_center, True)
+    normalized = original.clone()
+    normalized._set_standard_cores(cores)
+    assert torch.allclose(normalized.norm(), torch.ones_like(log_scale))
+    assert torch.allclose(log_scale, original.norm().log())
+    assert torch.allclose(normalized.contract_dense() *
+                          log_scale.exp().reshape(*original.batch_shape, 1, 1, 1),
+                          dense, rtol=1e-10, atol=1e-12)
+    assert torch.equal(original.contract_dense(), dense)
+
+
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
 @pytest.mark.parametrize('n_sites', [1, 2, 4])
 @pytest.mark.parametrize('renormalize', [False, True])
-def test_qr_gauges(make_format, topology, n_sites, renormalize, monkeypatch):
-    format = make_format(topology, n_sites, dtype=torch.complex128)
+def test_qr_gauges(make_format, topology, n_sites, renormalize, monkeypatch,
+                   device_dtype, assert_close):
+    device, dtype = device_dtype
+    format = make_format(topology, n_sites, dtype=dtype, device=device)
     dense = format.contract_dense()
 
     def unexpected_svd(*args, **kwargs):
         raise AssertionError('QR canonicalization should not use SVD')
 
     monkeypatch.setattr(torch.linalg, 'svd', unexpected_svd)
+    if device == 'mps' and dtype.is_complex and n_sites > 1:
+        with pytest.raises(RuntimeError, match='geqrf.*float32'):
+            format.canonicalize(renormalize=renormalize)
+        assert_close(format.contract_dense(), dense)
+        return
+
     for orth_center in range(n_sites):
         result = format.clone().canonicalize(orth_center=orth_center,
                                               renormalize=renormalize)
-        assert torch.allclose(result.contract_dense(), dense, rtol=1e-10, atol=1e-12)
+        reconstructed = result.contract_dense()
+        relative_error = (reconstructed - dense).norm() / dense.norm()
+        assert relative_error <= 32 * torch.finfo(dense.real.dtype).eps
         for site, core in enumerate(result._effective_cores()):
             if site < orth_center:
                 matrix = core.reshape(-1, core.shape[-1])
-                assert torch.allclose(matrix.adjoint() @ matrix,
-                                      torch.eye(matrix.shape[-1], dtype=matrix.dtype))
+                if renormalize:
+                    matrix = matrix / matrix[:, 0].norm()
+                assert_close(matrix.adjoint() @ matrix,
+                             torch.eye(matrix.shape[-1], dtype=dtype, device=device))
             elif site > orth_center:
                 matrix = core.reshape(core.shape[0], -1)
-                assert torch.allclose(matrix @ matrix.adjoint(),
-                                      torch.eye(matrix.shape[0], dtype=matrix.dtype))
+                if renormalize:
+                    matrix = matrix / matrix[0].norm()
+                assert_close(matrix @ matrix.adjoint(),
+                             torch.eye(matrix.shape[0], dtype=dtype, device=device))
 
 
 def test_invalid_qr_and_zero(make_format):
@@ -1075,3 +1112,894 @@ def test_batched_ttm_retains_autograd(make_format):
     format.clone().canonicalize().contract_dense().square().sum().backward()
     assert all(core.grad is not None and torch.isfinite(core.grad).all()
                for core in original)
+
+
+# Complete constructor and binary-operation combinations
+
+
+def _reference_dense(format):
+    """Contracts public cores in one einsum, independently of sweep implementations."""
+    batch = list(range(format.n_batches))
+    n = format.n_sites
+    virtual = list(range(format.n_batches, format.n_batches + n + 1))
+    if format._cyclic:
+        virtual[-1] = virtual[0]
+    first_physical = format.n_batches + n + 1
+    arguments, output = [], list(batch)
+    for site, core in enumerate(format.cores):
+        inputs = first_physical + 2 * site
+        labels = [*batch, virtual[site], inputs, virtual[site + 1]]
+        output.append(inputs)
+        if format.out_dim is not None:
+            labels.append(inputs + 1)
+            output.append(inputs + 1)
+        if not format._cyclic:
+            if site == 0:
+                labels.remove(virtual[site])
+            if site == n - 1:
+                labels.remove(virtual[site + 1])
+        arguments.extend([core, labels])
+    return torch.einsum(*arguments, output)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('n_sites,n_batches', [(1, 0), (2, 1), (3, 2)])
+@pytest.mark.parametrize('seed', [11, 47])
+def test_constructor_shapes_storage_and_dense_oracle(make_format, topology,
+                                                    quantized, n_sites,
+                                                    n_batches, device_dtype,
+                                                    assert_close, seed):
+    device, dtype = device_dtype
+    format = make_format(topology, n_sites, n_batches, dtype,
+                         seed=seed, quantized=quantized, device=device)
+    expected = _reference_dense(format)
+    assert_close(format.contract_dense(), expected)
+    assert format.device == expected.device and format.dtype == dtype
+    assert format.batch_shape == (2,) * n_batches
+    assert format.validate() is format
+    assert format.n_sites == n_sites
+    local_axes = 4 if format.out_dim is not None else 3
+    for site, core in enumerate(format.cores):
+        omitted = (int(site == 0) + int(site == n_sites - 1)) if not format._cyclic else 0
+        assert core.ndim == n_batches + local_axes - omitted
+
+    kwargs = {'n_batches': n_batches}
+    if quantized:
+        if format.out_dim is None:
+            kwargs.update(n_coordinates=format.n_coordinates,
+                          layout=format.layout, coordinate_map=format.coordinate_map)
+        else:
+            kwargs.update(in_n_coordinates=format.in_n_coordinates,
+                          out_n_coordinates=format.out_n_coordinates,
+                          in_layout=format.in_layout, out_layout=format.out_layout,
+                          in_coordinate_map=format.in_coordinate_map,
+                          out_coordinate_map=format.out_coordinate_map)
+    for container in (list(format.cores), tuple(format.cores), iter(format.cores)):
+        peer = type(format)(container, **kwargs)
+        assert peer.cores is not format.cores
+        assert all(new is old for new, old in zip(peer.cores, format.cores))
+        assert_close(peer.contract_dense(), expected)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('invalid', ['empty', 'tensor', 'type', 'shape', 'rank',
+                                   'dtype', 'device', 'batch', 'zero_dimension'])
+def test_all_plain_constructor_errors(make_format, topology, invalid):
+    source = make_format(topology, 3, n_batches=1)
+    cores = list(source.cores)
+    if invalid == 'empty':
+        cores = []
+    elif invalid == 'tensor':
+        cores = cores[0]
+    elif invalid == 'type':
+        cores[1] = 1
+    elif invalid == 'shape':
+        cores[1] = cores[1].unsqueeze(-1)
+    elif invalid == 'rank':
+        cores[1] = cores[1][:, :1]
+    elif invalid == 'dtype':
+        cores[1] = cores[1].to(torch.complex128)
+    elif invalid == 'device':
+        cores[1] = cores[1].to('meta')
+    elif invalid == 'batch':
+        cores[1] = cores[1][:1]
+    else:
+        cores[1] = cores[1][:, :, :0]
+    with pytest.raises(TypeError if invalid in ('type', 'tensor') else ValueError):
+        type(source)(cores, n_batches=1)
+
+
+@pytest.mark.parametrize('n_batches,error', [(True, TypeError), (1.5, TypeError),
+                                          (-1, ValueError)])
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+def test_invalid_structural_batch_count(make_format, topology, n_batches, error):
+    format = make_format(topology)
+    with pytest.raises(error):
+        type(format)(format.cores, n_batches=n_batches)
+
+
+@pytest.mark.parametrize('left_topology,right_topology', list(product(['tt', 'tr'], repeat=2)))
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('n_sites', [1, 3])
+def test_independent_vector_algebra(make_format, matrix_view, left_topology,
+                                    right_topology, quantized, device_dtype,
+                                    assert_close, n_sites):
+    device, dtype = device_dtype
+    x = make_format(left_topology, n_sites, dtype=dtype, seed=11,
+                    quantized=quantized, device=device)
+    y = make_format(right_topology, n_sites, dtype=dtype, seed=47,
+                    quantized=quantized, device=device)
+    a, b = _reference_dense(x), _reference_dense(y)
+    for method in ('stacked', 'block_diagonal'):
+        summed = x.add(y, method=method)
+        assert_close(summed.contract_dense(), a + b)
+        assert_close(x.sub(y, method=method).contract_dense(), a - b)
+        assert summed._cyclic == (x._cyclic or y._cyclic)
+    assert_close((x * y).contract_dense(), a * b)
+    assert_close(x.H @ y, torch.vdot(a.flatten(), b.flatten()))
+    assert_close(x.T @ y, torch.dot(a.flatten(), b.flatten()))
+    assert_close(matrix_view(x @ y.H), torch.outer(a.flatten(), b.flatten().conj()))
+    assert_close(x.inner(y), torch.vdot(a.flatten(), b.flatten()))
+    assert_close(x.normalized_overlap(y), torch.vdot(a.flatten(), b.flatten()) / (a.norm() * b.norm()))
+    assert_close(x.fidelity(y), x.normalized_overlap(y).abs().square())
+    if device == 'mps' and dtype.is_complex and n_sites > 1:
+        with pytest.raises(RuntimeError, match='geqrf.*float32'):
+            x.distance(y)
+    else:
+        assert_close(x.distance(y), (a - b).norm())
+    assert torch.equal(x.contract_dense(), a) or torch.allclose(x.contract_dense(), a)
+    assert_close(y.contract_dense(), b)
+
+
+@pytest.mark.parametrize('left_topology,right_topology', list(product(['ttm', 'trm'], repeat=2)))
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('n_sites', [1, 3])
+def test_independent_matrix_algebra(make_format, matrix_view, left_topology,
+                                    right_topology, quantized, device_dtype,
+                                    assert_close, n_sites):
+    device, dtype = device_dtype
+    a = make_format(left_topology, n_sites, dtype=dtype, seed=11,
+                    quantized=quantized, device=device)
+    b = make_format(right_topology, n_sites, dtype=dtype, seed=47,
+                    quantized=quantized, device=device)
+    dense_a, dense_b = matrix_view(a), matrix_view(b)
+    for method in ('stacked', 'block_diagonal'):
+        assert_close(matrix_view(a.add(b, method)), dense_a + dense_b)
+        assert_close(matrix_view(a.sub(b, method)), dense_a - dense_b)
+    assert_close(matrix_view(a * b), dense_a * dense_b)
+    assert_close(matrix_view(a @ b.H), dense_a @ dense_b.adjoint())
+    assert_close(matrix_view(a.apply(b.H)), dense_a @ dense_b.adjoint())
+    assert_close((a @ b.H).trace(), torch.trace(dense_a @ dense_b.adjoint()))
+    assert_close(matrix_view(a.T), dense_a.T)
+    assert_close(matrix_view(a.H), dense_a.adjoint())
+
+
+@pytest.mark.parametrize('matrix_topology,vector_topology', list(product(['ttm', 'trm'], ['tt', 'tr'])))
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('n_batches', [0, 1])
+def test_independent_matrix_vector_products(make_format, matrix_view,
+                                            matrix_topology, vector_topology,
+                                            quantized, device_dtype,
+                                            assert_close, n_batches):
+    device, dtype = device_dtype
+    matrix = make_format(matrix_topology, 3, dtype=dtype, seed=11,
+                         n_batches=n_batches, quantized=quantized, device=device)
+    x = make_format(vector_topology, 3, dtype=dtype, seed=47,
+                    in_dim=matrix.in_dim, quantized=quantized, device=device)
+    y = make_format(vector_topology, 3, dtype=dtype, seed=73,
+                    in_dim=matrix.out_dim, quantized=quantized, device=device)
+    dense = matrix_view(matrix)
+    expected = dense @ x.contract_dense().flatten()
+    actual = matrix @ x
+    assert_close(actual.contract_dense().reshape(*matrix.batch_shape, -1), expected)
+    assert_close(matrix.apply(x).contract_dense(), actual.contract_dense())
+    right = y.H @ matrix
+    expected_right = y.contract_dense().flatten().conj() @ dense
+    assert right.is_row
+    assert_close(right.contract_dense().reshape(*matrix.batch_shape, -1), expected_right)
+    if n_batches:
+        with pytest.raises(ValueError, match='batch shapes'):
+            right @ x
+        cores = [core.expand(*matrix.batch_shape, *core.shape) for core in x.cores]
+        kwargs = {'n_batches': n_batches}
+        if quantized:
+            kwargs.update(n_coordinates=x.n_coordinates, layout=x.layout,
+                          coordinate_map=x.coordinate_map)
+        batched_x = type(x)(cores, **kwargs)
+        assert_close(right @ batched_x, expected_right @ x.contract_dense().flatten())
+    else:
+        assert_close(right @ x, expected_right @ x.contract_dense().flatten())
+    assert_close(y.apply(matrix).contract_dense().reshape(*matrix.batch_shape, -1), y.contract_dense().flatten() @ dense)
+    assert actual._cyclic == (matrix._cyclic or x._cyclic)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('operation', ['add', 'sub', 'hadamard', 'inner', 'distance'])
+def test_binary_dimension_and_site_errors(make_format, topology, operation):
+    a = make_format(topology, 3)
+    wrong_dimensions = make_format(topology, 3, in_dim=(3, 3, 2))
+    wrong_sites = make_format(topology, 2)
+    for other in (wrong_dimensions, wrong_sites):
+        with pytest.raises(ValueError):
+            getattr(a, operation)(other)
+
+
+@pytest.mark.parametrize('dtype', [torch.float32, torch.float64, torch.complex64, torch.complex128])
+def test_dtype_promotion_and_scalar_algebra(make_format, dtype):
+    a = make_format('tt', 2, dtype=dtype)
+    b = make_format('tr', 2, dtype=torch.complex128, seed=47)
+    expected = a.contract_dense().to(torch.complex128) + b.contract_dense()
+    assert (a + b).dtype == torch.complex128
+    assert torch.allclose((a + b).contract_dense(), expected, rtol=1e-5, atol=1e-6)
+    for scalar in (0, 2., 1 + 2j, torch.tensor(0.5)):
+        assert torch.allclose((a * scalar).contract_dense(), a.contract_dense() * scalar,
+                              rtol=1e-5, atol=1e-6)
+    with pytest.raises(TypeError):
+        a / 2
+
+
+@pytest.mark.parametrize('device', ['cuda', 'mps'])
+def test_accelerator_conversion_and_evaluation(make_format, device):
+    available = (torch.cuda.is_available() if device == 'cuda' else
+                 torch.backends.mps.is_available())
+    if not available:
+        pytest.skip(f'{device} is unavailable')
+    original = make_format('tt', 2, dtype=torch.float32)
+    converted = getattr(original, device)()
+    indices = torch.tensor([[0, 0], [1, 1]], device=device)
+    assert converted.device.type == device
+    assert torch.allclose(converted.evaluate(indices).cpu(),
+                          original.evaluate(indices.cpu()), rtol=1e-5, atol=1e-6)
+    assert torch.allclose(converted.cpu().contract_dense(), original.contract_dense())
+
+
+# Truncation with independent spectra and approximation bounds
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('method,refine', [('svd', False), ('svd', True),
+                                         ('qr_svd', False), ('qr_svd', True)])
+@pytest.mark.parametrize('renormalize', [False, True])
+@pytest.mark.parametrize('options,retained', [
+    ({'rank': 2}, 2), ({'cutoff': 0.2}, 3), ({'atol': 1.02}, 2),
+    ({'rtol': 0.05}, 2), ({'cum_percentage': 0.95}, 2),
+    ({'rel_error': 0.025}, 3),
+    ({'rank': 3, 'cutoff': 0.2, 'rtol': 0.05}, 2),
+])
+def test_rounding_analytic_spectrum(dense_cores, matrix, device_dtype, assert_close,
+                                    method, refine, renormalize, options, retained):
+    device, dtype = device_dtype
+    generator = torch.Generator().manual_seed(47)
+    u = torch.linalg.qr(torch.randn(4, 4, dtype=dtype, generator=generator))[0]
+    v = torch.linalg.qr(torch.randn(4, 4, dtype=dtype, generator=generator))[0]
+    spectrum = torch.tensor([4., 2., 1., 0.1], dtype=u.real.dtype)
+    dense = (u * spectrum) @ v.H
+    expected = (u[:, :retained] * spectrum[:retained]) @ v[:, :retained].H
+    in_dim = (2, 2) if matrix else (4, 4)
+    out_dim = (2, 2) if matrix else None
+    cls = tk.formats.TTM if matrix else tk.formats.TT
+    format = cls(dense_cores(dense, in_dim, out_dim)).to(device)
+    dense, expected, spectrum = dense.to(device), expected.to(device), spectrum.to(device)
+
+    with tk.svd_method(method, refine=refine):
+        if device == 'mps' and dtype.is_complex:
+            with pytest.raises(RuntimeError, match='geqrf.*float32'):
+                format.rounding(renormalize=renormalize, return_info=True, **options)
+            assert_close(format.contract_dense().reshape(4, 4), dense)
+            return
+        result, info = format.rounding(renormalize=renormalize,
+                                       return_info=True, **options)
+    actual = result.contract_dense().reshape(4, 4)
+    error = (actual - dense).norm()
+    optimal_error = spectrum[retained:].norm()
+    assert result is format and format.rank == [retained]
+    assert info.rank == tuple(format.rank)
+    assert_close(actual, expected)
+    assert_close(error, optimal_error)
+    assert_close(info.error_bound, error)
+    assert len(info.discarded_sq_norm) == 1
+    if 'rel_error' in options:
+        assert info.bound_satisfied
+        assert error <= options['rel_error'] * dense.norm()
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_random_fixed_rank_quasioptimal_rounding(dense_cores, matrix, dtype):
+    generator = torch.Generator().manual_seed(47)
+    physical = (4, 4, 4, 4) if matrix else (3, 3, 3, 3)
+    dense = torch.randn(physical, dtype=dtype, generator=generator)
+    in_dim = (2,) * 4 if matrix else physical
+    out_dim = (2,) * 4 if matrix else None
+    cls = tk.formats.TTM if matrix else tk.formats.TT
+    format = cls(dense_cores(dense, in_dim, out_dim))
+    original_rank = format.rank
+    _, info = format.rounding(rank=2, return_info=True)
+    error = (format.contract_dense().reshape(physical) - dense).norm()
+
+    # Every rank-two approximation has at least each unfolding's SVD tail error.
+    lower_bounds = [torch.linalg.svdvals(dense.reshape(
+        int(torch.tensor(physical[:site]).prod()), -1))[2:].norm()
+        for site in range(1, 4)]
+    lower_bound = torch.stack(lower_bounds).amax()
+    assert format.rank == [2, 2, 2]
+    assert any(rank > 2 for rank in original_rank)
+    assert error >= lower_bound - 1e-10
+    assert error <= 3 ** 0.5 * lower_bound + 1e-10
+    assert error <= info.error_bound + 1e-10
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('criterion', ['rank', 'cutoff', 'atol', 'rtol',
+                                      'cum_percentage', 'rel_error'])
+def test_seeded_low_rank_rounding(dense_cores, topology, quantized, criterion):
+    generator = torch.Generator().manual_seed(47)
+    matrix = topology.endswith('m')
+    physical = (4,) * 3 if matrix else (3,) * 3
+    vectors = [torch.randn(size, dtype=torch.float64, generator=generator)
+               for size in physical]
+    dense = torch.einsum('i,j,k->ijk', *vectors)
+    dense = dense / dense.norm()
+    dense = dense + 1e-4 * torch.randn(dense.shape, dtype=dense.dtype,
+                                     generator=generator)
+    in_dim = (2,) * 3 if matrix else physical
+    out_dim = (2,) * 3 if matrix else None
+    plain = getattr(tk.formats, topology.upper())(
+        dense_cores(dense, in_dim, out_dim, cyclic=topology.startswith('tr')))
+    if quantized:
+        layout = tk.formats.QuantizedLayout(3, base=in_dim)
+        coordinate_map = tk.formats.AffineCoordinateMap([0., 1.], layout.grid_size)
+        if matrix:
+            format = getattr(tk.formats, 'Q' + topology.upper())(
+                plain.cores, 3, 3, in_layout=layout, out_layout=layout,
+                in_coordinate_map=coordinate_map, out_coordinate_map=coordinate_map)
+        else:
+            format = getattr(tk.formats, 'Q' + topology.upper())(
+                plain.cores, 3, layout=layout, coordinate_map=coordinate_map)
+    else:
+        format = plain
+    options = {'rank': 1, 'cutoff': 0.01, 'atol': 1e-5, 'rtol': 1e-5,
+               'cum_percentage': 1 - 1e-5, 'rel_error': 0.01}
+    _, info = format.rounding(return_info=True, **{criterion: options[criterion]})
+    error = (format.contract_dense().reshape(physical) - dense).norm()
+    assert all(rank == 1 for rank in format.rank)
+    assert 0 < error < 0.01 * dense.norm()
+    assert error <= info.error_bound + 1e-12
+    assert torch.isfinite(info.error_bound)
+    if criterion == 'rel_error':
+        assert info.bound_satisfied
+    if quantized:
+        assert (format.in_layout if matrix else format.layout) is layout
+        assert (format.in_coordinate_map if matrix else format.coordinate_map) is coordinate_map
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('options,error', [
+    ({'rank': True}, TypeError), ({'rank': 1.5}, TypeError),
+    ({'rank': -1}, ValueError), ({'cutoff': -1.}, ValueError),
+    ({'cutoff': float('inf')}, ValueError), ({'atol': -1.}, ValueError),
+    ({'atol': float('nan')}, ValueError), ({'rtol': 1.01}, ValueError),
+    ({'rtol': True}, TypeError), ({'cum_percentage': -0.1}, ValueError),
+    ({'cum_percentage': 1.1}, ValueError), ({'rel_error': True}, TypeError),
+    ({'rel_error': float('inf')}, ValueError), ({'renormalize': 1}, TypeError),
+    ({'return_info': 1}, TypeError),
+])
+def test_rounding_validation_is_atomic(make_format, topology, options, error):
+    format = make_format(topology)
+    cores = tuple(format.cores)
+    with pytest.raises(error):
+        format.rounding(**options)
+    assert all(a is b for a, b in zip(cores, format.cores))
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+def test_batched_rounding_bounds_and_zero_batch(make_format, topology):
+    format = make_format(topology, n_batches=1)
+    format.cores[0] = torch.stack((torch.zeros_like(format.cores[0][0]),
+                                  format.cores[0][1]))
+    dense = format.contract_dense()
+    _, info = format.rounding(rel_error=0.1, return_info=True)
+    errors = (format.contract_dense() - dense).flatten(1).norm(dim=-1)
+    norms = dense.flatten(1).norm(dim=-1)
+    assert info.error_bound.shape == (2,)
+    assert errors[0] == 0 and info.error_bound[0] == 0
+    assert torch.all(errors <= info.error_bound + 1e-10)
+    assert torch.all(errors <= 0.1 * norms + 1e-10)
+    assert info.bound_satisfied
+
+
+# Local dense blocks and their separate factors
+
+
+def _contract_split(local):
+    core = local.cores[0]
+    left = core.shape[-3]
+    batch = core.shape[:-3]
+    for factor, right in zip(local.bonds, local.cores[1:]):
+        core = core.reshape(*batch, left, -1, core.shape[-1])
+        if factor is not None:
+            core = core * factor[..., None, None, :]
+        core = torch.einsum('...apr,...rqb->...apqb',
+                            core, right)
+    return core
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('n_sites', [1, 2, 3])
+@pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse', 'left', 'right'])
+@pytest.mark.parametrize('renormalize', [False, True])
+def test_split_block_exact_and_external_ranks(matrix, n_sites, device_dtype,
+                                             assert_close, mode, renormalize):
+    device, dtype = device_dtype
+    generator = torch.Generator().manual_seed(83)
+    in_dim = (2,) * n_sites
+    out_dim = (2,) * n_sites if matrix else None
+    physical = (2,) * (2 * n_sites if matrix else n_sites)
+    block = torch.randn((2, 2, *physical, 3), dtype=dtype,
+                         generator=generator).to(device)
+    local = tk.formats.split_block(block, in_dim, out_dim, n_batches=1,
+                                   mode=mode, renormalize=renormalize)
+    assert isinstance(local, tk.formats.SplitBlock)
+    assert local.cores[0].shape[-3] == 2
+    assert local.cores[-1].shape[-1] == 3
+    assert len(local.cores) == n_sites
+    assert len(local.bonds) == len(local.spectra) == n_sites - 1
+    assert_close(_contract_split(local).reshape(block.shape), block)
+    for spectrum in local.spectra:
+        assert not spectrum.is_complex()
+        assert torch.all(spectrum >= 0)
+
+
+@pytest.mark.parametrize('mode', ['explicit', 'implicit', 'inverse', 'left', 'right'])
+@pytest.mark.parametrize('options,retained', [
+    ({'rank': 2}, 2), ({'cutoff': 0.2}, 3), ({'atol': 1.02}, 2),
+    ({'rtol': 0.05}, 2), ({'cum_percentage': 0.95}, 2),
+    ({'rank': 3, 'atol': 1.02}, 2),
+])
+def test_split_block_known_spectrum(mode, options, retained):
+    values = torch.tensor([4., 2., 1., 0.1], dtype=torch.float64)
+    block = torch.diag(values).reshape(1, 4, 4, 1)
+    local = tk.formats.split_block(block, (4, 4), mode=mode, **options)
+    assert local.cores[0].shape[-1] == retained
+    assert torch.allclose(local.spectra[0], values[:retained])
+    expected = torch.diag(torch.cat((values[:retained],
+                                    torch.zeros(4 - retained, dtype=values.dtype))))
+    assert torch.allclose(_contract_split(local).reshape(4, 4), expected)
+
+
+def test_split_block_inverse_handles_zeros_and_rejects_unstable_positive_values():
+    zero = tk.formats.split_block(torch.zeros(1, 2, 2, 1, dtype=torch.float64),
+                                  (2, 2), mode='inverse')
+    assert torch.isfinite(_contract_split(zero)).all()
+    assert _contract_split(zero).norm() == 0
+    block = torch.diag(torch.tensor([1., 1e-18], dtype=torch.float64)).reshape(1, 2, 2, 1)
+    with pytest.raises(ValueError, match='rounding.*cutoff'):
+        tk.formats.split_block(block, (2, 2), mode='inverse')
+    stable = tk.formats.split_block(block, (2, 2), mode='inverse', cutoff=1e-15)
+    assert stable.spectra[0].numel() == 1
+
+
+@pytest.mark.parametrize('options,error', [
+    ({'block': [1]}, TypeError), ({'in_dim': ()}, ValueError),
+    ({'in_dim': (True, 2)}, ValueError), ({'in_dim': (2, 3)}, ValueError),
+    ({'out_dim': (2,)}, ValueError), ({'n_batches': True}, TypeError),
+    ({'n_batches': -1}, ValueError), ({'rank': 0}, ValueError),
+    ({'mode': 'mixed'}, ValueError), ({'renormalize': 1}, TypeError),
+])
+def test_split_block_invalid_arguments(options, error):
+    arguments = {'block': torch.ones(1, 2, 2, 1), 'in_dim': (2, 2)}
+    arguments.update(options)
+    with pytest.raises(error):
+        tk.formats.split_block(**arguments)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('first,last', [(0, 0), (0, 1), (1, 2), (0, 2)])
+def test_contract_block_factor_boundaries(make_format, topology, first, last):
+    format = make_format(topology, n_batches=1, dtype=torch.complex128)
+    count = format.n_sites if format._cyclic else format.n_sites - 1
+    factors = [torch.linspace(1., 2., rank).to(format.dtype)
+               for rank in format.rank[:count]]
+    format.bonds = factors
+    cores = format._standard_cores()
+    expected = cores[first]
+    left = expected.shape[-3]
+    for site in range(first, last):
+        expected = expected * factors[site][None, None, None, :]
+        expected = torch.einsum('...apr,...rqb->...apqb',
+                                expected.reshape(*format.batch_shape, left, -1,
+                                                 expected.shape[-1]), cores[site + 1])
+    actual = format.contract_block(first, last)
+    assert torch.allclose(actual.reshape(expected.shape), expected)
+    assert actual.shape[format.n_batches] == cores[first].shape[-3]
+    assert actual.shape[-1] == cores[last].shape[-1]
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+def test_factored_block_unblock_preserves_tensor(make_format, topology,
+                                                 device_dtype):
+    device, dtype = device_dtype
+    format = make_format(topology, 4, n_batches=1, dtype=dtype, device=device)
+    count = format.n_sites if format._cyclic else format.n_sites - 1
+    format.bonds = [torch.ones(2, rank, dtype=dtype, device=device) * (site + 1)
+                    for site, rank in enumerate(format.rank[:count])]
+    dense = format.contract_dense()
+    intergroup = format.bonds.factors[1]
+    layout = format.block((2, 2))
+    assert format.n_sites == 2
+    assert format.bonds.factors[0] is intergroup
+    assert format.unblock(layout) is format
+    relative_error = (format.contract_dense() - dense).norm() / dense.norm()
+    assert relative_error <= 32 * torch.finfo(dense.real.dtype).eps
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('embedded', [False, True])
+def test_evaluation_with_basis_and_vector_inputs(make_format, topology,
+                                                device_dtype, assert_close, embedded):
+    device, dtype = device_dtype
+    format = make_format(topology, n_batches=1, dtype=dtype, device=device)
+    generator = torch.Generator().manual_seed(47)
+    inputs = [torch.randint(size, (2, 3), generator=generator) for size in format.in_dim]
+    outputs = ([torch.randint(size, (2, 3), generator=generator) for size in format.out_dim]
+               if format.out_dim is not None else None)
+    in_data = [tk.embeddings.basis(indices, dim=size).to(dtype)
+               for indices, size in zip(inputs, format.in_dim)]
+    out_data = ([tk.embeddings.basis(indices, dim=size).to(dtype)
+                 for indices, size in zip(outputs, format.out_dim)]
+                if outputs is not None else None)
+    if embedded:
+        in_data = [torch.randn(data.shape, dtype=dtype, generator=generator) for data in in_data]
+        if out_data is not None:
+            out_data = [torch.randn(data.shape, dtype=dtype, generator=generator) for data in out_data]
+
+    in_data = [data.to(device) for data in in_data]
+    out_data = [data.to(device) for data in out_data] if out_data is not None else None
+
+    dense = format.contract_dense()
+    vectors = in_data if out_data is None else [
+        data for pair in zip(in_data, out_data) for data in pair]
+    expected = []
+    for sample in range(6):
+        tensor = dense
+        for data in reversed(vectors):
+            tensor = torch.tensordot(tensor, data.reshape(6, -1)[sample], dims=([-1], [0]))
+        expected.append(tensor)
+    expected = torch.stack(expected, -1).reshape(2, 2, 3)
+    actual = (format.evaluate(in_data, n_batches=2) if out_data is None else
+              format.evaluate(in_data, out_data, n_batches=2))
+    assert_close(actual, expected)
+    if not embedded:
+        integer = (format.evaluate(inputs, n_batches=2) if outputs is None else
+                   format.evaluate(inputs, outputs, n_batches=2))
+        assert_close(integer, actual)
+    if format.out_dim is not None:
+        applied = format.apply(in_data, n_batches=2)
+        assert applied.batch_shape == (2, 2, 3)
+        expected_outputs = []
+        for sample in range(6):
+            tensor = dense
+            for site in reversed(range(format.n_sites)):
+                tensor = torch.tensordot(tensor, in_data[site].reshape(6, -1)[sample],
+                                         dims=([1 + 2 * site], [0]))
+            expected_outputs.append(tensor)
+        expected_outputs = torch.stack(expected_outputs, 1).reshape(2, 2, 3, *format.out_dim)
+        assert_close(applied.contract_dense(), expected_outputs)
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_renormalized_rounding_respects_global_budget(dense_cores, matrix, dtype):
+    dense = torch.diag(torch.tensor([4., 2., 1., 0.1], dtype=dtype))
+    in_dim = (2, 2) if matrix else (4, 4)
+    out_dim = (2, 2) if matrix else None
+    cls = tk.formats.TTM if matrix else tk.formats.TT
+    format = cls(dense_cores(dense, in_dim, out_dim))
+    _, info = format.rounding(renormalize=True, rel_error=0.02, return_info=True)
+    error = (format.contract_dense().reshape(4, 4) - dense).norm()
+    assert error <= 0.02 * dense.norm() + 1e-12
+    assert error <= info.error_bound + 1e-12
+
+
+@pytest.mark.parametrize('options', [{'cutoff': 0.08}, {'atol': 0.006}])
+def test_rounding_absolute_criteria_preserve_original_scale(dense_cores, options):
+    dense = torch.diag(torch.tensor([4., 2., 1., 0.1], dtype=torch.float64))
+    original = tk.formats.TT(dense_cores(dense, (4, 4)))
+    normal = original.clone().rounding(**options)
+    stable = original.clone().rounding(renormalize=True, **options)
+    assert normal.rank == stable.rank == [4]
+    assert torch.allclose(stable.contract_dense(), dense, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('options', [
+    {'rank': 2}, {'cutoff': 1.5}, {'atol': 1.02}, {'rtol': 0.05},
+    {'cum_percentage': 0.95}, {'rel_error': 0.025},
+])
+def test_renormalized_rounding_with_different_batch_scales(dtype, options):
+    scales = torch.tensor([0.1, 1., 10.], dtype=torch.float64)
+    spectrum = torch.tensor([4., 2., 1., 0.1], dtype=dtype)
+    original = tk.formats.TT([
+        torch.eye(4, dtype=dtype).expand(3, -1, -1) * scales[:, None, None],
+        torch.diag(spectrum).expand(3, -1, -1)], n_batches=1)
+    normal, normal_info = original.clone().rounding(return_info=True, **options)
+    stable, stable_info = original.clone().rounding(
+        renormalize=True, return_info=True, **options)
+    error = (stable.contract_dense() - original.contract_dense()).flatten(1).norm(dim=-1)
+    assert stable.rank == normal.rank
+    assert torch.allclose(stable.contract_dense(), normal.contract_dense(),
+                          rtol=1e-10, atol=1e-12)
+    assert torch.allclose(stable_info.error_bound, normal_info.error_bound,
+                          rtol=1e-10, atol=1e-12)
+    assert torch.all(error <= stable_info.error_bound + 1e-12)
+
+
+@pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+@pytest.mark.parametrize('options', [{'cutoff': 1e300}, {'atol': 1e300},
+                                   {'cutoff': 0.}, {'atol': 0.}])
+def test_rounding_absolute_tolerance_extremes(dtype, options):
+    original = tk.formats.TT([
+        torch.eye(2, dtype=dtype), torch.diag(torch.tensor([4., 1.], dtype=dtype))])
+    normal = original.clone().rounding(**options)
+    stable = original.clone().rounding(renormalize=True, **options)
+    assert stable.rank == normal.rank
+    assert torch.allclose(stable.contract_dense(), normal.contract_dense())
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('magnitude', [0., 1e-150, 1e150])
+def test_rounding_normalizes_center_before_svd(make_format, monkeypatch,
+                                             topology, dtype, magnitude):
+    format = make_format(topology, 3, n_batches=1, dtype=dtype, seed=47)
+    format.cores[-1] = format.cores[-1] * magnitude
+    scale = magnitude if magnitude else 1.
+    dense = format.contract_dense() / scale
+    matrix_norms = []
+
+    def checked_svd(tensor, **kwargs):
+        matrix_norms.append(torch.linalg.vector_norm(tensor, dim=(-2, -1)))
+        assert torch.isfinite(tensor).all()
+        assert torch.all(matrix_norms[-1] <= 1 + 1e-12)
+        return tk.utils.truncated_svd(tensor, **kwargs)
+
+    monkeypatch.setattr('tensorkrowch.formats.formats1d.truncated_svd', checked_svd)
+    _, info = format.rounding(rank=1, renormalize=True, return_info=True)
+    error = (format.contract_dense() / scale - dense).flatten(1).norm(dim=-1)
+    assert matrix_norms
+    assert torch.isfinite(info.error_bound).all()
+    assert torch.all(error <= info.error_bound / scale + 1e-10)
+
+
+@pytest.mark.parametrize('topology', ['tr', 'trm'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('quantized', [False, True])
+@pytest.mark.parametrize('renormalize', [False, True])
+def test_ring_rank_cap_and_measured_error_bound(make_format, topology, dtype,
+                                               quantized, renormalize):
+    format = make_format(topology, 4, dtype=dtype, quantized=quantized, seed=47)
+    dense = format.contract_dense()
+    _, info = format.rounding(rank=1, renormalize=renormalize, return_info=True)
+    error = (format.contract_dense() - dense).norm()
+    assert format.rank == [1] * 4
+    assert error > 1e-3 * dense.norm()
+    assert error <= info.error_bound + 1e-10
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('parameterized', [False, True])
+def test_model_adapters_with_factors(make_format, topology, parameterized):
+    format = make_format(topology, dtype=torch.complex128)
+    format.bonds = [torch.ones(rank, dtype=torch.float64) * 2 for rank in format.rank]
+    dense = format.contract_dense()
+    cls = type(format)
+    if format.out_dim is None:
+        model = format.to_mps(parameterized=parameterized)
+        restored = cls.from_mps(model)
+        wrong = tk.formats.TT if format._cyclic else tk.formats.TR
+        with pytest.raises(ValueError, match='boundaries'):
+            wrong.from_mps(model)
+        with pytest.raises(TypeError):
+            cls.from_mps(torch.ones(2))
+    else:
+        model = format.to_mpo(parameterized=parameterized)
+        restored = cls.from_mpo(model)
+        wrong = tk.formats.TTM if format._cyclic else tk.formats.TRM
+        with pytest.raises(ValueError, match='boundaries'):
+            wrong.from_mpo(model)
+        with pytest.raises(TypeError):
+            cls.from_mpo(torch.ones(2))
+    assert torch.allclose(restored.contract_dense(), dense, atol=1e-11, rtol=1e-10)
+    assert torch.allclose(format.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+def test_adapter_restrictions_for_structural_batches(make_format, topology):
+    format = make_format(topology, n_batches=1)
+    if format.out_dim is None:
+        with pytest.raises(ValueError):
+            format.to_mps(parameterized=True)
+    else:
+        with pytest.raises(ValueError):
+            format.to_mpo()
+
+
+@pytest.mark.parametrize('options,error', [
+    ({'dtype': 'float64'}, TypeError), ({'copy': 1}, TypeError),
+    ({'device': 'unknown'}, RuntimeError),
+])
+def test_conversion_invalid_arguments(make_format, options, error):
+    format = make_format('tr', n_batches=1)
+    original = tuple(format.cores)
+    with pytest.raises(error):
+        format.to(**options)
+    assert all(a is b for a, b in zip(original, format.cores))
+
+
+@pytest.mark.parametrize('invalid,error', [
+    (None, TypeError), ([1, 2, 3], TypeError), ([], ValueError),
+    (torch.zeros(2, 3), TypeError), (torch.zeros(2, 4, dtype=torch.long), ValueError),
+    (torch.ones(2, 3, 4), ValueError), (torch.ones(2, 2, 3, 4), ValueError),
+    ([torch.ones(2, 2)] * 3, ValueError),
+    ([torch.zeros(2, dtype=torch.long), torch.ones(2, 3), torch.ones(2, 2)], ValueError),
+])
+def test_evaluation_rejects_invalid_data(make_format, invalid, error):
+    format = make_format('tt')
+    with pytest.raises(error):
+        format.evaluate(invalid)
+
+
+@pytest.mark.parametrize('other,error', [
+    (True, TypeError), ([1], TypeError), ('2', TypeError),
+    (torch.ones(2), ValueError), (torch.ones((), device='meta'), ValueError),
+])
+def test_scalar_scaling_errors(make_format, other, error):
+    with pytest.raises(error):
+        make_format() * other
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+def test_unary_algebra(make_format, topology):
+    format = make_format(topology, dtype=torch.complex128)
+    dense = format.contract_dense()
+    assert torch.allclose((-format).contract_dense(), -dense)
+    assert torch.allclose((2 * format).contract_dense(), 2 * dense)
+    assert torch.allclose(format.conj().contract_dense(), dense.conj())
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+def test_incompatible_structural_batches_and_devices(make_format, topology):
+    a = make_format(topology, n_batches=1)
+    b = make_format(topology, n_batches=2)
+    for operation in (lambda: a + b, lambda: a * b, lambda: a.inner(b)):
+        with pytest.raises(ValueError):
+            operation()
+    on_meta = make_format(topology).to(device='meta')
+    with pytest.raises(ValueError, match='device'):
+        a + on_meta
+    if a.out_dim is not None:
+        with pytest.raises(ValueError, match='batches'):
+            a @ b.H
+        with pytest.raises(ValueError, match='device'):
+            a @ on_meta.H
+    else:
+        with pytest.raises(ValueError, match='batch'):
+            a.H @ b
+
+
+@pytest.mark.parametrize('options,error', [
+    ({'orth_center': True}, TypeError), ({'orth_center': -1}, ValueError),
+    ({'orth_center': 3}, ValueError),
+])
+def test_materialize_bonds_center_errors(make_format, options, error):
+    format = make_format().canonicalize_vidal()
+    with pytest.raises(error):
+        format.materialize_bonds(**options)
+
+
+@pytest.mark.parametrize('bond,side,error', [
+    (True, 'left', TypeError), (-1, 'left', ValueError), (2, 'left', ValueError),
+    (0, 'center', ValueError),
+])
+def test_absorb_bond_errors(make_format, bond, side, error):
+    with pytest.raises(error):
+        make_format().absorb_bond(bond, side)
+
+
+@pytest.mark.parametrize('left,right,error', [
+    (True, 1, TypeError), (0, 1.5, TypeError), (-1, 1, ValueError),
+    (2, 1, ValueError), (0, 3, ValueError),
+])
+def test_contract_block_invalid_limits(make_format, left, right, error):
+    with pytest.raises(error):
+        make_format().contract_block(left, right)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('quantized', [False, True])
+def test_device_mutations_gradients_and_invalid_inputs(make_format, topology,
+                                                       quantized, device_dtype,
+                                                       assert_close):
+    device, dtype = device_dtype
+    format = make_format(topology, dtype=dtype, device=device, quantized=quantized)
+    dense = format.contract_dense()
+    copied = format.clone()
+    assert_close(copied.contract_dense(), dense)
+    assert all(core.device.type == device for core in copied.cores)
+    assert all(new.data_ptr() != old.data_ptr() for new, old in zip(copied.cores, format.cores))
+    copied.cores[0].requires_grad_()
+    norm = copied.norm()
+    assert_close(norm, dense.norm())
+    norm.backward()
+    assert copied.cores[0].grad is not None
+    assert torch.isfinite(copied.cores[0].grad).all()
+    assert copied.detach().cores[0].requires_grad is False
+    assert_close(copied.to('cpu').contract_dense(), dense.cpu())
+
+    mixed_dtype = torch.float32 if dtype.is_complex else torch.complex64
+    mixed = make_format(topology, dtype=mixed_dtype, device=device, quantized=quantized)
+    promoted = torch.promote_types(dtype, mixed_dtype)
+    expected = format.to(dtype=promoted).contract_dense() + mixed.to(dtype=promoted).contract_dense()
+    result = format + mixed
+    assert result.dtype == promoted and result.device.type == device
+    assert_close(result.contract_dense(), expected)
+
+    cores = list(format.cores)
+    original = cores[1]
+    other_dtype = torch.float32 if dtype.is_complex else torch.complex64
+    with pytest.raises(ValueError, match='dtype'):
+        format.cores[1] = original.real.to(other_dtype)
+    assert format.cores[1] is original
+    if device != 'cpu':
+        with pytest.raises(ValueError, match='device'):
+            format.cores[1] = original.cpu()
+        peer = make_format(topology, dtype=dtype, quantized=quantized)
+        error = RuntimeError if quantized else ValueError
+        with pytest.raises(error, match='device'):
+            format.add(peer)
+    invalid = torch.full((1, format.n_sites), -1, dtype=torch.long, device=device)
+    with pytest.raises(ValueError):
+        if format.out_dim is None:
+            format.evaluate(invalid)
+        else:
+            format.evaluate(invalid, invalid)
+    assert_close(format.contract_dense(), dense)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('parameterized', [False, True])
+def test_model_adapters_preserve_device_dtype(make_format, topology, parameterized,
+                                             device_dtype, assert_close):
+    device, dtype = device_dtype
+    format = make_format(topology, dtype=dtype, device=device)
+    if format.out_dim is None:
+        model = format.to_mps(parameterized=parameterized)
+        restored = type(format).from_mps(model)
+    else:
+        model = format.to_mpo(parameterized=parameterized)
+        restored = type(format).from_mpo(model)
+    assert restored.device.type == device and restored.dtype == dtype
+    assert_close(restored.contract_dense(), format.contract_dense())
+
+
+@pytest.mark.parametrize('operation', ['canonicalize', 'rounding'])
+@pytest.mark.parametrize('scale', ['large', 'small', 'zero'])
+def test_renormalization_preserves_extreme_finite_center(device_dtype, assert_close,
+                                                        operation, scale):
+    device, dtype = device_dtype
+    magnitude = 1e20 if dtype in (torch.float32, torch.complex64) else 1e200
+    if scale == 'small':
+        magnitude = 1 / magnitude
+    elif scale == 'zero':
+        magnitude = 0
+    values = torch.tensor([1., 2., -1.], dtype=dtype, device=device)
+    original = tk.formats.TT([values * magnitude])
+    assert torch.isfinite(original.cores[0]).all()
+    result = getattr(original.clone(), operation)(renormalize=True)
+    assert torch.isfinite(result.cores[0]).all()
+    if magnitude:
+        assert_close(result.contract_dense() / magnitude, values)
+    else:
+        assert_close(result.contract_dense(), values * 0)

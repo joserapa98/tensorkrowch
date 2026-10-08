@@ -537,15 +537,24 @@ def _unit_to_indices(unit_coordinates: torch.Tensor,
 
     unit = unit_coordinates.clamp(0, 1)
     offset = _grid_offset(grid_offset)
+    scaled = unit * (sizes - 1) if offset is None else unit * sizes
+    if offset not in (0, 1):
+        scaled = scaled - (0 if offset is None else offset) - 0.5
+
+    # Snap to an integer boundary when it lies within the rounding interval
+    tolerance = 4 * torch.finfo(unit.dtype).eps * scaled.abs().clamp_min(1)
+    boundary = scaled.round()
+    contains_boundary = (scaled - tolerance <= boundary) & \
+        (boundary <= scaled + tolerance)
+    scaled = torch.where(contains_boundary, boundary, scaled)
+
     if offset == 0:
-        indices = torch.floor(unit * sizes)
+        indices = torch.floor(scaled)
     elif offset == 1:
-        indices = torch.ceil(unit * sizes) - 1
+        indices = torch.ceil(scaled) - 1
     else:
-        scaled = (unit * (sizes - 1) if offset is None
-                  else unit * sizes - offset)
-        # Exact half-way values select the smaller index.
-        indices = torch.ceil(scaled - 0.5)
+        # Half-way values within numerical tolerance select the smaller index
+        indices = torch.ceil(scaled)
 
     return indices.clamp_min(0).minimum(sizes - 1).to(torch.long)
 
@@ -680,7 +689,8 @@ class CoordinateMap(ABC):  # MARK: CoordinateMap
 
         Applies the inverse transformation, then selects indices according to
         ``grid_offset`` in unit space. No interpolation of format values is
-        performed.
+        performed. Values within floating-point rounding tolerance of a
+        quantization boundary are treated as lying exactly on that boundary.
 
         Parameters
         ----------

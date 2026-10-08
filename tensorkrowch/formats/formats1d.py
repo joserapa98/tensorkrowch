@@ -4,6 +4,7 @@ This script contains:
     Internal functions:
         * _restore_cores
         * _from_standard_cores
+        * _normalize_tensor
         * _canonicalize_cores
         * _redistribute
         * _validate_minimal_options
@@ -39,7 +40,7 @@ Core names used in this module:
 import warnings
 from abc import abstractmethod
 from copy import copy
-from math import isfinite, prod, sqrt
+from math import isfinite, log, prod, sqrt
 from numbers import Number, Real
 from typing import (TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple,
                     Union)
@@ -102,10 +103,23 @@ def _from_standard_cores(cores: Sequence[torch.Tensor],
     return cls(cores, n_batches=n_batches)
 
 
+def _normalize_tensor(tensor: torch.Tensor,
+                      dim: Tuple[int, ...]) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Returns a normalized tensor and its logarithmic norm using safe scaling."""
+    scale = tensor.abs().amax(dim=dim, keepdim=True)
+    scale = torch.where(scale > 0, scale, torch.ones_like(scale))
+    tensor = tensor / scale
+
+    norm = torch.linalg.vector_norm(tensor, dim=dim, keepdim=True)
+    norm = torch.where(norm > 0, norm, torch.ones_like(norm))
+    return tensor / norm, (scale.log() + norm.log()).squeeze(dim)
+
+
 def _canonicalize_cores(cores: Sequence[torch.Tensor],
                         orth_center: int,
-                        renormalize: bool) -> List[torch.Tensor]:
-    """Returns QR/RQ-gauged cores without modifying a format."""
+                        renormalize: bool
+                        ) -> Tuple[List[torch.Tensor], torch.Tensor]:
+    """Returns canonical cores and, when renormalizing, their logarithmic norm."""
     cores = list(cores)
     if not all(torch.isfinite(core).all() for core in cores):
         raise ValueError('Canonicalization requires finite cores')
@@ -119,10 +133,8 @@ def _canonicalize_cores(cores: Sequence[torch.Tensor],
         matrix = core.reshape(*batch_shape, -1, core.shape[-1])
         q, r = torch.linalg.qr(matrix, mode='reduced')
         if renormalize:
-            scale = torch.linalg.vector_norm(r, dim=(-2, -1))
-            scale = torch.where(scale > 0, scale, torch.ones_like(scale))
-            r = r / scale[..., None, None]
-            log_scale = log_scale + scale.log()
+            r, log_norm = _normalize_tensor(r, dim=(-2, -1))
+            log_scale = log_scale + log_norm
         cores[site] = q.reshape(*batch_shape,
                                 core.shape[-3], core.shape[-2], q.shape[-1])
         cores[site + 1] = torch.einsum('...ab,...bpr->...apr',
@@ -134,20 +146,20 @@ def _canonicalize_cores(cores: Sequence[torch.Tensor],
         q, r = torch.linalg.qr(matrix.transpose(-2, -1), mode='reduced')
         r, q = r.transpose(-2, -1), q.transpose(-2, -1)
         if renormalize:
-            scale = torch.linalg.vector_norm(r, dim=(-2, -1))
-            scale = torch.where(scale > 0, scale, torch.ones_like(scale))
-            r = r / scale[..., None, None]
-            log_scale = log_scale + scale.log()
+            r, log_norm = _normalize_tensor(r, dim=(-2, -1))
+            log_scale = log_scale + log_norm
         cores[site] = q.reshape(*batch_shape,
                                 q.shape[-2], core.shape[-2], core.shape[-1])
         cores[site - 1] = torch.einsum('...apb,...bc->...apc',
                                        cores[site - 1], r)
 
+    # Extract the remaining norm from the center.
     if renormalize:
-        rescale = (log_scale / len(cores)).exp()[..., None, None, None]
-        cores = [core * rescale for core in cores]
+        cores[orth_center], log_norm = _normalize_tensor(
+            cores[orth_center], dim=(-3, -2, -1))
+        log_scale = log_scale + log_norm
 
-    return cores
+    return cores, log_scale
 
 
 def _redistribute(cores: List[torch.Tensor],
@@ -1069,9 +1081,9 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             Orthogonality center in ``[0, n_sites - 1]``. ``None`` selects the
             last site.
         renormalize : bool
-            Rescales intermediate factors to reduce numerical overflow or
-            underflow. Their accumulated scale is divided equally among all
-            cores, preserving the represented tensor's global scale.
+            Rescales intermediate factors and the central core to reduce
+            numerical overflow or underflow. Their accumulated scale is divided
+            equally among all cores, preserving the tensor's global scale.
 
         Returns
         -------
@@ -1094,8 +1106,11 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
 
-        cores = _canonicalize_cores(
+        cores, log_scale = _canonicalize_cores(
             self._effective_cores(), orth_center, renormalize)
+        if renormalize:
+            rescale = (log_scale / len(cores)).exp()[..., None, None, None]
+            cores = [core * rescale for core in cores]
         self._set_standard_cores(cores)
         self._orth_center = orth_center
         return self
@@ -1256,9 +1271,11 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             to setting ``rtol = 1 - cum_percentage``. It must be finite and in [0,
             1].
         renormalize : bool
-            Rescales factors during the initial canonicalization to reduce
-            numerical overflow or underflow, then divides their accumulated
-            scale equally among all cores before truncation.
+            Rescales factors and normalizes the central core before truncation,
+            keeping their accumulated scale outside the SVD sweep. The scale
+            is divided equally among all cores afterwards. If ``False``, each
+            SVD uses a temporary local scaling instead. Absolute criteria and
+            error information refer to the original tensor scale.
         rel_error : float, optional
             Finite non-negative target for the global relative Frobenius error.
         return_info : bool
@@ -1278,7 +1295,8 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         >>> info.rank
         (1,)
         >>> format.contract_dense()
-        torch.diag(torch.tensor([4., 0.]))
+        tensor([[4., 0.],
+                [0., 0.]])
 
         Clone the original to measure the achieved global relative error
         without constructing the dense tensors:
@@ -1307,8 +1325,14 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         closing = self._rank[-1] if cyclic else 1
         norm = self.norm() if rel_error is not None else None
 
-        cores = _canonicalize_cores(
+        cores, log_scale = _canonicalize_cores(
             self._effective_cores(), self.n_sites - 1, renormalize)
+
+        # Use one scale across batches so absolute criteria retain common ranks
+        common_log_scale = log_scale.amax()
+        if renormalize:
+            cores[-1] = cores[-1] * (
+                log_scale - common_log_scale).exp()[..., None, None, None]
 
         cuts = len(cores) if cyclic else max(1, len(cores) - 1)
         delta = rel_error * norm / sqrt(cuts * closing) if norm is not None \
@@ -1321,20 +1345,27 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
                                                  torch.Tensor,
                                                  torch.Tensor]:
             """Truncates a scaled matrix and collects its discarded mass."""
-            scale = matrix.abs().amax()
-            scale = torch.where(scale > 0, scale, torch.ones_like(scale))
+            cut_log_scale = common_log_scale
+            if not renormalize:
+                scale = matrix.abs().amax()
+                scale = torch.where(scale > 0, scale, torch.ones_like(scale))
+                matrix = matrix / scale
+                cut_log_scale = scale.log()
             limit = torch.finfo(matrix.real.dtype).max
 
-            scaled_cutoff = None if cutoff is None else min(
-                cutoff / scale.item(), limit)
-            scaled_atol = None if atol is None else min(
-                atol / scale.item() / scale.item(), limit)
+            scaled_cutoff = None if cutoff is None else (
+                (log(cutoff) if cutoff else -torch.inf) - cut_log_scale
+                ).exp().clamp(max=limit).item()
+            scaled_atol = None if atol is None else (
+                (log(atol) if atol else -torch.inf) - 2 * cut_log_scale
+                ).exp().clamp(max=limit).item()
             if delta is not None:
-                scaled_delta = (delta / scale).square().min().item()
-                scaled_atol = min(scaled_delta, limit) if scaled_atol is None else min(
-                    scaled_atol, scaled_delta)
+                scaled_delta = (2 * (delta.log() - cut_log_scale)).exp().clamp(
+                    max=limit).min().item()
+                scaled_atol = min(scaled_delta, limit) if scaled_atol is None \
+                    else min(scaled_atol, scaled_delta)
 
-            decomposition = truncated_svd(tensor=matrix / scale,
+            decomposition = truncated_svd(tensor=matrix,
                                           rank=rank,
                                           cutoff=scaled_cutoff,
                                           atol=scaled_atol,
@@ -1344,11 +1375,14 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             u, s, vh = decomposition[:3]
 
             if collect:
-                discarded = decomposition[3].discarded_sq_norm.sqrt() * scale
+                discarded = (decomposition[3].discarded_sq_norm.log() / 2 +
+                             cut_log_scale).exp()
                 discarded_norms.append(discarded)
                 records.append(discarded.square())
 
-            return u, s * scale, vh
+            if not renormalize:
+                s = s * scale
+            return u, s, vh
 
         # Rings also require reducing their closing bond.
         if cyclic and (len(cores) == 1):
@@ -1373,6 +1407,10 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             cores[site - 1] = torch.einsum('...apb,...bc->...apc',
                                            cores[site - 1],
                                            u * s.unsqueeze(-2))
+
+        if renormalize:
+            rescale = (common_log_scale / len(cores)).exp()
+            cores = [core * rescale for core in cores]
 
         self._set_standard_cores(cores)
         self._orth_center = None if cyclic else 0
@@ -1815,7 +1853,8 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         >>> product.rank
         [4]
         >>> product.contract_dense()
-        torch.tensor([[2., 6.], [12., 20.]])
+        tensor([[ 2.,  6.],
+                [12., 20.]])
         """
         left_cores, right_cores, batch_shape, cyclic = \
             self._prepare_binary_operands(other)
@@ -3284,7 +3323,7 @@ class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
             spectra = self._bonds.spectra
             old_powers = self._bonds.powers
         else:
-            cores = _canonicalize_cores(self._effective_cores(), 0, False)
+            cores, _ = _canonicalize_cores(self._effective_cores(), 0, False)
             spectra = []
             batch_shape = self._batch_shape
 

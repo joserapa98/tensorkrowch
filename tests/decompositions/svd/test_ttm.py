@@ -585,3 +585,40 @@ def test_quantized_matrix_independent_coordinate_counts(ordering, device_dtype,
         assert result.dtype == dtype and result.device.type == device
     with pytest.raises(TypeError, match='QuanticsMatrixSource'):
         tk.decompositions.TTMSVD.quantized(expected)
+
+
+@pytest.mark.parametrize('criteria', [{}, {'rank': 1}, {'cutoff': 1e-5},
+                                     {'atol': 1e-8}, {'rtol': 1e-6},
+                                     {'cum_percentage': 0.999999}])
+@pytest.mark.parametrize('renormalize', [False, True])
+def test_qttm_svd_function(criteria, renormalize, device_dtype, assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    coefficient = 1 + 1j if dtype.is_complex else 1
+    source = tk.decompositions.QuanticsMatrixSource(
+        lambda inputs, outputs: torch.exp(
+            coefficient * (inputs.sum(-1) + outputs.sum(-1))).to(dtype),
+        in_n_coordinates=1, out_n_coordinates=1,
+        in_base=2, out_base=2, in_level=3, out_level=3,
+        in_domain=torch.tensor([0., 1.], device=device, dtype=real_dtype),
+        out_domain=torch.tensor([0., 1.], device=device, dtype=real_dtype),
+        device=device, dtype=dtype)
+
+    options = dict(criteria, renormalize=renormalize, collect_metrics=True)
+    result = tk.decompositions.qttm_svd(
+        source, out_device=None, **options)
+    expected = tk.decompositions.TTMSVD.quantized(
+        source, out_device=None).fit(**options)
+
+    assert isinstance(result, tk.decompositions.QTTMDecomposition)
+    assert result.device == torch.device(device)
+    assert result.dtype == dtype
+    assert result.metrics.truncations
+    assert_close(result.contract_dense(), expected.contract_dense())
+    assert_close(result.to_dense_grid(), source.to_dense_grid())
+    assert result.as_info()['metadata']['algorithm'] == 'ttm_svd'
+
+
+def test_qttm_svd_rejects_dense_input():
+    with pytest.raises(TypeError, match='source'):
+        tk.decompositions.qttm_svd(torch.ones(2, 2, 2, 2))

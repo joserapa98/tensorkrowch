@@ -6,6 +6,7 @@ This script contains:
 
     TRM-SVD function:
         * trm_svd
+        * qtrm_svd
 """
 
 from typing import List, Optional, Sequence, Tuple, Union
@@ -17,7 +18,8 @@ from tensorkrowch.decompositions.metrics import _ratio_from_log_norms
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TRMDecomposition,
+from tensorkrowch.decompositions.results import (QTRMDecomposition,
+                                                 TRMDecomposition,
                                                  _quantics_result)
 from tensorkrowch.decompositions.sources.quantics import QuanticsMatrixSource
 from tensorkrowch.decompositions.svd._matrix import (_Dimension,
@@ -509,7 +511,114 @@ def trm_svd(tensor: torch.Tensor,
     return result
 
 
+
+
+def qtrm_svd(source: QuanticsMatrixSource,
+             center: Optional[int] = None,
+             *,
+             rank: Optional[int] = None,
+             cutoff: Optional[float] = None,
+             atol: Optional[float] = None,
+             rtol: Optional[float] = None,
+             cum_percentage: Optional[float] = None,
+             renormalize: bool = False,
+             out_device: Optional[Union[str, torch.device]] = 'cpu',
+             verbose: Union[bool, int] = 0,
+             collect_metrics: bool = False) -> QTRMDecomposition:
+    r"""
+    Decomposes a discretized coordinate callable into QTRM cores.
+
+    Materializes the full digit tensor from ``source`` and runs
+    :meth:`TRMSVD.fit` through :meth:`TRMSVD.quantized`. The result retains
+    the source's layouts and coordinate maps for coordinate evaluation.
+    Construct ``source`` first to choose its discretization; this function
+    only controls the decomposition.
+
+    Parameters
+    ----------
+    source : QuanticsMatrixSource
+        Callable with its digit layout and coordinate maps.
+    center : int, optional
+        Interior cut from which the cyclic decomposition starts. If omitted,
+        uses the middle of the digit chain.
+    rank : int, optional
+        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
+        this many singular values are retained. The initial bipartition
+        retains at most ``rank ** 2`` singular values before its selected ``rank``
+        is factorized into two TRM ranks.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
+
+    renormalize : bool
+        If ``True``, normalizes residuals before SVDs and accumulates their
+        scales logarithmically before redistributing them over final cores.
+    out_device : str or torch.device, optional
+        Device where finalized cores are stored. If ``None``, they remain on
+        the source device. The default is ``"cpu"``.
+    verbose : bool or int
+        Console verbosity level:
+
+        - ``0`` or ``False``: no console output;
+        - ``1`` or ``True``: phase title, input configuration, cut progress
+          and final summary;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
+        - ``3``: level 2 output followed by every final core.
+
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
+
+    Returns
+    -------
+    QTRMDecomposition
+        Quantics decomposition with cores, coordinate information and
+        optional metrics.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.QuanticsMatrixSource(
+    ...     lambda inputs, outputs: torch.exp(
+    ...         inputs.sum(-1) + outputs.sum(-1)),
+    ...     in_n_coordinates=1, out_n_coordinates=1,
+    ...     in_base=2, out_base=2, in_level=3, out_level=3,
+    ...     in_domain=(0., 1.), out_domain=(0., 1.))
+    >>> result = tk.decompositions.qtrm_svd(source, rank=1)
+    >>> result.evaluate_indices(
+    ...     torch.tensor([[0], [4]]), torch.tensor([[0], [0]]))
+    tensor([1.0000, 1.6487])
+    """
+    return TRMSVD.quantized(
+        source=source,
+        center=center,
+        out_device=out_device).fit(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            renormalize=renormalize,
+            collect_metrics=collect_metrics,
+            verbose=verbose)
+
+
 __all__ = [
     'TRMSVD',
     'trm_svd',
+    'qtrm_svd',
 ]

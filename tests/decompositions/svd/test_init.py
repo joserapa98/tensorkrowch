@@ -215,3 +215,35 @@ def test_function_returns_decomposition_without_metrics(name):
     assert isinstance(result, result_type)
     assert not result.metrics.truncations
     assert torch.allclose(result.contract_dense(), torch.ones(2, 2, 2, 2))
+
+
+@pytest.mark.parametrize('name', ['tt', 'tr', 'ttm', 'trm'])
+def test_quantics_function_exports_and_default_result(name):
+    module = __import__('tensorkrowch.decompositions.svd.' + name,
+                        fromlist=['q' + name + '_svd'])
+    function = getattr(tk.decompositions, 'q' + name + '_svd')
+    assert function is getattr(module, 'q' + name + '_svd')
+    assert function is getattr(tk.decompositions.svd, 'q' + name + '_svd')
+
+    if name.endswith('m'):
+        source = tk.decompositions.QuanticsMatrixSource(
+            lambda inputs, outputs: inputs[:, 0] + outputs[:, 0],
+            in_n_coordinates=1, out_n_coordinates=1,
+            in_base=2, out_base=2, in_level=2, out_level=2,
+            in_domain=(0., 1.), out_domain=(0., 1.))
+    else:
+        source = tk.decompositions.QuanticsVectorSource(
+            lambda coordinates: coordinates[:, 0],
+            n_coordinates=1, base=2, level=2, domain=(0., 1.))
+
+    result = function(source)
+    assert isinstance(result, getattr(tk.decompositions,
+                                      'Q' + name.upper() + 'Decomposition'))
+    assert result.device == torch.device('cpu')
+    assert not result.metrics.truncations
+    torch.testing.assert_close(result.to_dense_grid(), source.to_dense_grid())
+
+    with pytest.raises(ValueError, match='rank'):
+        function(source, rank=0)
+    with pytest.raises(TypeError, match='collect_metrics'):
+        function(source, collect_metrics=1)

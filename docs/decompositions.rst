@@ -42,7 +42,7 @@ continuous callable evaluation with a user-supplied embedding.
        lambda coordinates: torch.exp(coordinates.sum(-1)),
        n_coordinates=2, base=2, level=(3, 4),
        domain=torch.tensor([[0., 1.], [-1., 1.]]))
-   qtt = tk.decompositions.TTSVD.quantized(source).fit(rank=2)
+   qtt = tk.decompositions.qtt_svd(source, rank=2)
    fitted = tk.decompositions.TTALS.quantized(source).fit(
        initial_cores=qtt,
        convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
@@ -74,6 +74,8 @@ TT-SVD
 
 .. autofunction:: tt_svd
 
+.. autofunction:: qtt_svd
+
 TTM-SVD
 ^^^^^^^
 
@@ -81,6 +83,8 @@ TTM-SVD
    :members: fit, quantized
 
 .. autofunction:: ttm_svd
+
+.. autofunction:: qttm_svd
 
 TR-SVD
 ^^^^^^
@@ -90,6 +94,8 @@ TR-SVD
 
 .. autofunction:: tr_svd
 
+.. autofunction:: qtr_svd
+
 TRM-SVD
 ^^^^^^^
 
@@ -97,6 +103,8 @@ TRM-SVD
    :members: fit, quantized
 
 .. autofunction:: trm_svd
+
+.. autofunction:: qtrm_svd
 
 Lightweight results
 -------------------

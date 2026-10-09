@@ -32,6 +32,13 @@ Simple functional interfaces:
     ttm_svd(...)  = TTMSVD(...).fit(...)
     trm_svd(...)  = TRMSVD(...).fit(...)
 
+Quantics functional interfaces:
+
+    qtt_svd(source)  = TTSVD.quantized(source).fit(...)
+    qtr_svd(source)  = TRSVD.quantized(source).fit(...)
+    qttm_svd(source) = TTMSVD.quantized(source).fit(...)
+    qtrm_svd(source) = TRMSVD.quantized(source).fit(...)
+
 Shared internal infrastructure:
 
     svd.utils
@@ -55,10 +62,10 @@ interfaces instantiate the corresponding engine, run one fit and return its
 decomposition object, including cores, metadata and optional metrics.
 """
 
-from tensorkrowch.decompositions.svd.tr import TRSVD, tr_svd
-from tensorkrowch.decompositions.svd.trm import TRMSVD, trm_svd
-from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd
-from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd
+from tensorkrowch.decompositions.svd.tr import TRSVD, qtr_svd, tr_svd
+from tensorkrowch.decompositions.svd.trm import TRMSVD, qtrm_svd, trm_svd
+from tensorkrowch.decompositions.svd.tt import TTSVD, qtt_svd, tt_svd
+from tensorkrowch.decompositions.svd.ttm import TTMSVD, qttm_svd, ttm_svd
 
 
 __all__ = [
@@ -67,7 +74,11 @@ __all__ = [
     'TTMSVD',
     'TRMSVD',
     'tt_svd',
+    'qtt_svd',
     'tr_svd',
+    'qtr_svd',
     'ttm_svd',
+    'qttm_svd',
     'trm_svd',
+    'qtrm_svd',
 ]

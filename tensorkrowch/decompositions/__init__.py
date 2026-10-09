@@ -9,6 +9,8 @@ Tensor decomposition algorithms and their numerical results.
 
     Algorithms:
         * TTSVD, TRSVD, TTMSVD, TRMSVD
+        * tt_svd, tr_svd, ttm_svd, trm_svd
+        * qtt_svd, qtr_svd, qttm_svd, qtrm_svd
         * TTALS, TRALS
         * TT2TR
         * TTRSS, TRRSS, TTRS, TRRS
@@ -151,6 +153,10 @@ from tensorkrowch.decompositions.svd import (TRMSVD,
                                              TRSVD,
                                              TTMSVD,
                                              TTSVD,
+                                             qtr_svd,
+                                             qtrm_svd,
+                                             qtt_svd,
+                                             qttm_svd,
                                              tr_svd,
                                              trm_svd,
                                              tt_svd,
@@ -242,9 +248,13 @@ __all__ = [
     'TRSVD',
     'TRMSVD',
     'tt_svd',
+    'qtt_svd',
     'ttm_svd',
+    'qttm_svd',
     'tr_svd',
+    'qtr_svd',
     'trm_svd',
+    'qtrm_svd',
     'vec_to_mps',
     'mat_to_mpo',
     'EvaluationView',

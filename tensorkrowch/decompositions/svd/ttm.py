@@ -354,14 +354,12 @@ def ttm_svd(tensor: torch.Tensor,
             renormalize: bool = False,
             out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
-            return_info: bool = False,
-            return_result: bool = False) -> '_DecompositionOutput':
+            collect_metrics: bool = False) -> TTMDecomposition:
     r"""
     Decomposes a dense ``tensor`` or matrix into TTM cores.
 
     This is the simple functional interface. Use :class:`TTMSVD` to repeat
-    fits of the same ``tensor`` or matrix or to access the lightweight result
-    object. If several truncation criteria are specified, their most
+    fits of the same ``tensor`` or matrix. If several truncation criteria are specified, their most
     restrictive ``rank`` is used at every cut and at least one singular value is
     retained.
 
@@ -433,45 +431,35 @@ def ttm_svd(tensor: torch.Tensor,
         - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
-    return_info : bool
-        If ``True``, also returns ranks, dimensions, metadata and structured
-        error and timing metrics. With the default ``False`` and
-        ``verbose=0``, diagnostic norm reductions, records and synchronized
-        timings are skipped.
-
-    return_result : bool
-        Returns the numerical result object without enabling metrics.
-        Incompatible with ``return_info``.
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
 
     Returns
     -------
-    list[torch.Tensor] or tuple
-        TTM cores by default. If ``return_info=True``, returns
-        ``(cores, info)`` with ranks and structured metrics.
+    TTMDecomposition
+        Decomposition with cores and metadata. Access ``cores`` for the
+        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        for structured information.
 
     Examples
     --------
     Decompose a grouped two-site ``tensor``:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = tk.decompositions.ttm_svd(tensor, ordering='grouped', rank=2)
-    >>> [tuple(core.shape) for core in cores]
+    >>> result = tk.decompositions.ttm_svd(tensor, ordering='grouped', rank=2)
+    >>> [tuple(core.shape) for core in result.cores]
     [(2, 2, 3), (2, 2, 3)]
 
     Tensorize an ordinary matrix with heterogeneous site dimensions:
 
     >>> matrix = torch.arange(144.).reshape(12, 12)
-    >>> cores = tk.decompositions.ttm_svd(
+    >>> result = tk.decompositions.ttm_svd(
     ...     matrix, in_dim=(3, 4), out_dim=(2, 6))
-    >>> [tuple(core.shape) for core in cores]
+    >>> [tuple(core.shape) for core in result.cores]
     [(3, 6, 2), (6, 4, 6)]
     """
-    if not isinstance(return_result, bool):
-        raise TypeError('`return_result` should be bool type')
-    if return_info and return_result:
-        raise ValueError('`return_info` and `return_result` are incompatible')
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
     result = TTMSVD(
         tensor=tensor,
         in_dim=in_dim,
@@ -484,14 +472,9 @@ def ttm_svd(tensor: torch.Tensor,
             rtol=rtol,
             cum_percentage=cum_percentage,
             renormalize=renormalize,
-            collect_metrics=return_info,
+            collect_metrics=collect_metrics,
             verbose=verbose)
-    if return_result:
-        return result
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
-
+    return result
 
 def mat_to_mpo(mat: torch.Tensor,
                rank: Optional[int] = None,
@@ -564,7 +547,7 @@ def mat_to_mpo(mat: torch.Tensor,
     The canonical replacement keeps the historical interleaved ordering:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.ttm_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.ttm_svd(tensor, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2)]
     """
@@ -577,7 +560,10 @@ def mat_to_mpo(mat: torch.Tensor,
     if mat.ndim < 2 or (mat.ndim % 2):
         raise ValueError('`mat` have an even number of dimensions')
 
-    return ttm_svd(
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+
+    result = ttm_svd(
         tensor=mat,
         ordering='interleaved',
         rank=rank,
@@ -588,7 +574,10 @@ def mat_to_mpo(mat: torch.Tensor,
         renormalize=renormalize,
         out_device=None,
         verbose=verbose,
-        return_info=return_info)
+        collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
 
 
 __all__ = [

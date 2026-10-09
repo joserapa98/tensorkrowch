@@ -8,7 +8,7 @@ This script contains:
         * trm_svd
 """
 
-from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -25,10 +25,6 @@ from tensorkrowch.decompositions.svd._matrix import (_Dimension,
 from tensorkrowch.decompositions.svd.tr import TRSVD
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm)
-
-
-if TYPE_CHECKING:
-    from tensorkrowch.decompositions.results import _DecompositionOutput
 
 
 class TRMSVD:  # MARK: TRMSVD
@@ -389,14 +385,12 @@ def trm_svd(tensor: torch.Tensor,
             renormalize: bool = False,
             out_device: Optional[Union[str, torch.device]] = 'cpu',
             verbose: Union[bool, int] = 0,
-            return_info: bool = False,
-            return_result: bool = False) -> '_DecompositionOutput':
+            collect_metrics: bool = False) -> TRMDecomposition:
     r"""
     Decomposes a dense ``tensor`` or matrix into cyclic TRM cores.
 
     This is the simple functional interface. Use :class:`TRMSVD` to repeat
-    fits of the same ``tensor`` or matrix or to access the lightweight result
-    object. The input/output pair of every site is fused, decomposed through
+    fits of the same ``tensor`` or matrix. The input/output pair of every site is fused, decomposed through
     TR-SVD and reopened without another factorization.
 
     A tensorized input can have interleaved shape
@@ -468,45 +462,35 @@ def trm_svd(tensor: torch.Tensor,
         - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
-    return_info : bool
-        If ``True``, also returns ranks, dimensions, ``rank`` factorization,
-        metadata and structured local metrics. With the default ``False`` and
-        ``verbose=0``, diagnostic norm reductions, records and synchronized
-        timings are skipped.
-
-    return_result : bool
-        Returns the numerical result object without enabling metrics.
-        Incompatible with ``return_info``.
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
 
     Returns
     -------
-    list[torch.Tensor] or tuple
-        TRM cores by default. If ``return_info=True``, returns ``(cores, info)``
-        with ranks and structured metrics.
+    TRMDecomposition
+        Decomposition with cores and metadata. Access ``cores`` for the
+        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        for structured information.
 
     Examples
     --------
     Decompose a grouped two-site ``tensor`` with a shared ``rank`` cap:
 
     >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> cores = tk.decompositions.trm_svd(tensor, ordering='grouped', rank=2)
-    >>> [tuple(core.shape) for core in cores]
+    >>> result = tk.decompositions.trm_svd(tensor, ordering='grouped', rank=2)
+    >>> [tuple(core.shape) for core in result.cores]
     [(2, 2, 2, 3), (2, 2, 2, 3)]
 
     Tensorize an ordinary matrix with heterogeneous site dimensions:
 
     >>> matrix = torch.arange(144.).reshape(12, 12)
-    >>> cores = tk.decompositions.trm_svd(
+    >>> result = tk.decompositions.trm_svd(
     ...     matrix, in_dim=(3, 4), out_dim=(2, 6), rank=3)
-    >>> len(cores)
+    >>> len(result.cores)
     2
     """
-    if not isinstance(return_result, bool):
-        raise TypeError('`return_result` should be bool type')
-    if return_info and return_result:
-        raise ValueError('`return_info` and `return_result` are incompatible')
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
     result = TRMSVD(
         tensor=tensor,
         in_dim=in_dim,
@@ -520,17 +504,10 @@ def trm_svd(tensor: torch.Tensor,
             rtol=rtol,
             cum_percentage=cum_percentage,
             renormalize=renormalize,
-            collect_metrics=return_info,
+            collect_metrics=collect_metrics,
             verbose=verbose)
-    if return_result:
-        return result
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
-__all__ = [
-    'TRMSVD',
-    'trm_svd',
-]
+    return result
+
 
 __all__ = [
     'TRMSVD',

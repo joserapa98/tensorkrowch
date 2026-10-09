@@ -84,7 +84,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         def fake_tt_svd(**kwargs):
             calls.append(kwargs)
-            return 'tt-result'
+            return tk.decompositions.TTDecomposition([torch.ones(2)])
 
         monkeypatch.setattr(tt_module, 'tt_svd', fake_tt_svd)
         with pytest.warns(FutureWarning, match='`vec_to_mps` is deprecated'):
@@ -100,7 +100,8 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
                 verbose=2,
                 return_info=True)
 
-        assert result == 'tt-result'
+        assert result[0][0].shape == (2,)
+        assert result[1]['topology'] == 'tt'
         assert calls == [{
             'tensor': tensor,
             'n_batches': 1,
@@ -112,7 +113,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
             'renormalize': True,
             'out_device': None,
             'verbose': 2,
-            'return_info': True,
+            'collect_metrics': True,
         }]
 
     def test_mat_to_mpo_preserves_keywords_and_delegates(self, monkeypatch):
@@ -121,7 +122,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         def fake_ttm_svd(**kwargs):
             calls.append(kwargs)
-            return 'ttm-result'
+            return tk.decompositions.TTMDecomposition([torch.ones(2, 3)])
 
         monkeypatch.setattr(ttm_module, 'ttm_svd', fake_ttm_svd)
         with pytest.warns(FutureWarning, match='`mat_to_mpo` is deprecated'):
@@ -136,7 +137,8 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
                 verbose=2,
                 return_info=True)
 
-        assert result == 'ttm-result'
+        assert result[0][0].shape == (2, 3)
+        assert result[1]['topology'] == 'ttm'
         assert calls == [{
             'tensor': tensor,
             'ordering': 'interleaved',
@@ -148,7 +150,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
             'renormalize': True,
             'out_device': None,
             'verbose': 2,
-            'return_info': True,
+            'collect_metrics': True,
         }]
 
     @pytest.mark.parametrize(
@@ -195,3 +197,21 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         messages = [str(warning.message) for warning in caught]
         assert not any('deprecated' in message for message in messages)
+
+
+@pytest.mark.parametrize('name', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('argument', ['return_result', 'return_info'])
+def test_function_output_options_are_removed(name, argument):
+    function = getattr(tk.decompositions, name + '_svd')
+    with pytest.raises(TypeError, match=argument):
+        function(torch.ones(2, 2, 2, 2), **{argument: True})
+
+
+@pytest.mark.parametrize('name', ['tt', 'tr', 'ttm', 'trm'])
+def test_function_returns_decomposition_without_metrics(name):
+    function = getattr(tk.decompositions, name + '_svd')
+    result_type = getattr(tk.decompositions, name.upper() + 'Decomposition')
+    result = function(torch.ones(2, 2, 2, 2), rank=1)
+    assert isinstance(result, result_type)
+    assert not result.metrics.truncations
+    assert torch.allclose(result.contract_dense(), torch.ones(2, 2, 2, 2))

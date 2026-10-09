@@ -482,9 +482,10 @@ class TestTRMSVDFunction:  # MARK: TestTRMSVDFunction
             return original_fit(self, *args, **kwargs)
 
         monkeypatch.setattr(trm_module.TRMSVD, 'fit', tracked_fit)
-        cores = tk.decompositions.trm_svd(tensor, rank=2)
-        info_cores, info = tk.decompositions.trm_svd(
-            tensor, rank=2, return_info=True)
+        cores = tk.decompositions.trm_svd(tensor, rank=2).cores
+        result = tk.decompositions.trm_svd(
+            tensor, rank=2, collect_metrics=True)
+        info_cores, info = result.cores, result.as_info()
 
         assert collect_metrics_calls == [False, True]
         assert info['topology'] == 'trm'
@@ -496,10 +497,10 @@ class TestTRMSVDFunction:  # MARK: TestTRMSVDFunction
         assert len(info['metrics']['truncations']) == 1
         assert len(cores) == len(info_cores) == 2
 
-    def test_return_info_validation(self):
-        with pytest.raises(TypeError, match='`return_info` should be bool type'):
+    def test_collect_metrics_validation(self):
+        with pytest.raises(TypeError, match='`collect_metrics` should be bool type'):
             tk.decompositions.trm_svd(
-                torch.ones(2, 3, 4, 5), return_info=1)
+                torch.ones(2, 3, 4, 5), collect_metrics=1)
 
 
 @pytest.mark.parametrize('large', [False, True])
@@ -547,7 +548,7 @@ def test_matrix_formats_devices_and_application(raw_layout,
         tensor, in_dim=(2, 2),
         out_dim=(2, 2),
         ordering='grouped' if raw_layout != 'interleaved' else 'interleaved',
-        rank=8, out_device=None, return_result=True)
+        rank=8, out_device=None)
     dense = result.contract_dense().permute(0, 2, 1, 3).reshape(4, 4)
     assert_close(dense, matrix)
     data = torch.tensor([1., 2., -1., 0.5], dtype=dtype, device=device)

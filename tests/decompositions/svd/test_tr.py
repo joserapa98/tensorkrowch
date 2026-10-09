@@ -554,11 +554,12 @@ class TestTRSVDFunction:  # MARK: TestTRSVDFunction
             return original_fit(self, *args, **kwargs)
 
         monkeypatch.setattr(tr_module.TRSVD, 'fit', tracked_fit)
-        cores = tk.decompositions.tr_svd(tensor, rank=2)
-        info_cores, info = tk.decompositions.tr_svd(
+        cores = tk.decompositions.tr_svd(tensor, rank=2).cores
+        result = tk.decompositions.tr_svd(
             tensor,
             rank=2,
-            return_info=True)
+            collect_metrics=True)
+        info_cores, info = result.cores, result.as_info()
 
         assert collect_metrics_calls == [False, True]
         assert info['topology'] == 'tr'
@@ -569,10 +570,10 @@ class TestTRSVDFunction:  # MARK: TestTRSVDFunction
         assert len(info['metrics']['truncations']) == 3
         assert len(cores) == len(info_cores) == 4
 
-    def test_return_info_validation(self):
-        with pytest.raises(TypeError, match='`return_info` should be bool type'):
+    def test_collect_metrics_validation(self):
+        with pytest.raises(TypeError, match='`collect_metrics` should be bool type'):
             tk.decompositions.tr_svd(
-                torch.ones(2, 3), return_info=1)
+                torch.ones(2, 3), collect_metrics=1)
 
 
 @pytest.mark.parametrize('large', [False, True])
@@ -620,7 +621,7 @@ def test_svd_formats_across_devices(renormalize,
     with tk.svd_method(backend, refine=refine):
         result = engine.fit(rank=6, renormalize=renormalize, collect_metrics=True)
         wrapped = tk.decompositions.tr_svd(data, rank=6, renormalize=renormalize,
-                                                    out_device=None, return_result=True)
+                                                    out_device=None)
     assert isinstance(result, tk.formats.TR)
     assert result.dtype == dtype and result.device.type == device
     assert_close(result.contract_dense(), data)

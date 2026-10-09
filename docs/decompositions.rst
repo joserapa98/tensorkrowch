@@ -62,6 +62,10 @@ Completion remains a problem on explicitly supplied discrete tensor indices.
 SVD decompositions
 ------------------
 
+The functional SVD interfaces return decomposition objects directly. Access
+``result.cores`` for the tensors or ``result.as_info()`` for structured
+information. Set ``collect_metrics=True`` to collect error and timing metrics.
+
 TT-SVD
 ^^^^^^
 

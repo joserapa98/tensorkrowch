@@ -556,20 +556,19 @@ def tt_svd(tensor: torch.Tensor,
            renormalize: bool = False,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
-           return_info: bool = False,
-           return_result: bool = False) -> '_DecompositionOutput':
+           collect_metrics: bool = False) -> TTDecomposition:
     r"""
     Decomposes a dense ``tensor`` into TT cores by consecutive SVDs.
 
-    This is the simple functional interface. Use :class:`TTSVD` to repeat
-    fits of the same ``tensor`` or to access the lightweight result object. If
+    This functional interface returns a :class:`TTDecomposition`. Use
+    :class:`TTSVD` to repeat fits of the same ``tensor``. If
     several truncation criteria are specified, their most restrictive ``rank`` is
     used at every cut and at least one singular value is retained.
 
     The input should have shape ``(*batch_shape, d_1, ..., d_n)``. The first
     ``n_batches`` axes are interpreted as optional batch dimensions, while
     every remaining axis defines the input dimension of one TT site. The
-    function therefore returns ``n`` open-boundary cores. To obtain a TT with
+    function therefore stores ``n`` open-boundary cores. To obtain a TT with
     a particular sequence of input dimensions, reshape ``tensor`` to those
     dimensions before calling this function.
 
@@ -630,46 +629,36 @@ def tt_svd(tensor: torch.Tensor,
         - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
-    return_info : bool
-        If ``True``, also returns ranks, dimensions, metadata and structured
-        error and timing metrics. With the default ``False`` and
-        ``verbose=0``, diagnostic norm reductions, records and synchronized
-        timings are skipped.
-
-    return_result : bool
-        Returns the numerical result object without enabling metrics.
-        Incompatible with ``return_info``.
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
 
     Returns
     -------
-    list[torch.Tensor] or tuple
-        TT cores by default. If ``return_info=True``, returns
-        ``(cores, info)`` with ranks and structured metrics.
+    TTDecomposition
+        Decomposition with cores and metadata. Access ``cores`` for the
+        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        for structured information.
 
     Examples
     --------
     Decompose a four-site ``tensor`` and inspect the resulting core shapes:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
 
     Request structured ranks, errors and timings when they are needed:
 
-    >>> cores, info = tk.decompositions.tt_svd(
-    ...     tensor, rank=2, return_info=True)
-    >>> info['rank']
+    >>> result = tk.decompositions.tt_svd(
+    ...     tensor, rank=2, collect_metrics=True)
+    >>> result.as_info()['rank']
     [2, 2, 2]
-    >>> len(info['metrics']['truncations'])
+    >>> len(result.as_info()['metrics']['truncations'])
     3
     """
-    if not isinstance(return_result, bool):
-        raise TypeError('`return_result` should be bool type')
-    if return_info and return_result:
-        raise ValueError('`return_info` and `return_result` are incompatible')
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
     result = TTSVD(
         tensor=tensor,
         n_batches=n_batches,
@@ -680,14 +669,9 @@ def tt_svd(tensor: torch.Tensor,
             rtol=rtol,
             cum_percentage=cum_percentage,
             renormalize=renormalize,
-            collect_metrics=return_info,
+            collect_metrics=collect_metrics,
             verbose=verbose)
-    if return_result:
-        return result
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
-
+    return result
 
 def vec_to_mps(vec: torch.Tensor,
                n_batches: int = 0,
@@ -763,7 +747,7 @@ def vec_to_mps(vec: torch.Tensor,
     names:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
     """
@@ -779,7 +763,10 @@ def vec_to_mps(vec: torch.Tensor,
         raise ValueError(
             '`n_batches` should be between 0 and the rank of `vec`')
 
-    return tt_svd(
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+
+    result = tt_svd(
         tensor=vec,
         n_batches=n_batches,
         rank=rank,
@@ -790,7 +777,10 @@ def vec_to_mps(vec: torch.Tensor,
         renormalize=renormalize,
         out_device=None,
         verbose=verbose,
-        return_info=return_info)
+        collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
 
 
 __all__ = [

@@ -195,7 +195,7 @@ class TensorDecomposition:  # MARK: TensorDecomposition
         Examples
         --------
         >>> result = tk.decompositions.tt_svd(
-        ...     torch.eye(2), rank=2, return_result=True)
+        ...     torch.eye(2), rank=2)
         >>> format = result.to_format()
         >>> type(format)
         <class 'tensorkrowch.formats.formats1d.TT'>

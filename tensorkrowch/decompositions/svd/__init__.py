@@ -52,7 +52,7 @@ Shared internal infrastructure:
 The engine classes fix the tensor and structural arguments at construction and
 allow repeated calls to fit() with different truncation options. The functional
 interfaces instantiate the corresponding engine, run one fit and return its
-cores, optionally together with decomposition information.
+decomposition object, including cores, metadata and optional metrics.
 """
 
 from tensorkrowch.decompositions.svd.tr import TRSVD, tr_svd

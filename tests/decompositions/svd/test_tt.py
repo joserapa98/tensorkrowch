@@ -576,11 +576,12 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
         tensor = torch.randn(2, 3, 4, dtype=torch.float64)
 
         with tk.svd_method(svd_method):
-            cores, info = tk.decompositions.tt_svd(
+            result = tk.decompositions.tt_svd(
                 tensor,
                 rank=2,
                 out_device=None,
-                return_info=True)
+                collect_metrics=True)
+            cores, info = result.cores, result.as_info()
             with pytest.warns(
                     FutureWarning, match='`vec_to_mps` is deprecated'):
                 legacy_cores = tk.decompositions.vec_to_mps(tensor, rank=2)
@@ -590,10 +591,10 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
         for core, legacy_core in zip(cores, legacy_cores):
             assert torch.allclose(core, legacy_core)
 
-    def test_return_info_validation(self):
-        with pytest.raises(TypeError, match='`return_info` should be bool type'):
+    def test_collect_metrics_validation(self):
+        with pytest.raises(TypeError, match='`collect_metrics` should be bool type'):
             tk.decompositions.tt_svd(
-                torch.ones(2, 3), return_info=1)
+                torch.ones(2, 3), collect_metrics=1)
 
     def test_return_info_selects_diagnostics_path(self, monkeypatch):
         tensor = torch.randn(2, 3, 4)
@@ -607,10 +608,11 @@ class TestTTSVDFunction:  # MARK: TestTTSVDFunction
         monkeypatch.setattr(
             tt_module, 'truncated_svd', tracked_truncated_svd)
         tk.decompositions.tt_svd(tensor, rank=2)
-        _, info = tk.decompositions.tt_svd(
+        result = tk.decompositions.tt_svd(
             tensor,
             rank=2,
-            return_info=True)
+            collect_metrics=True)
+        _, info = result.cores, result.as_info()
 
         assert return_info_calls == [False, False, True, True]
         assert len(info['metrics']['errors']) == 1
@@ -644,7 +646,7 @@ def test_svd_formats_across_devices(renormalize,
     with tk.svd_method(backend, refine=refine):
         result = engine.fit(rank=6, renormalize=renormalize, collect_metrics=True)
         wrapped = tk.decompositions.tt_svd(data, rank=6, renormalize=renormalize,
-                                                    out_device=None, return_result=True)
+                                                    out_device=None)
     assert isinstance(result, tk.formats.TT)
     assert result.dtype == dtype and result.device.type == device
     assert_close(result.contract_dense(), data)

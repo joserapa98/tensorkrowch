@@ -3,7 +3,7 @@ Decompositions
 
 .. currentmodule:: tensorkrowch.decompositions
 
-Formats and fit provenance
+Formats and fit metadata
 --------------------------
 
 Results inherit the numerical representations documented in :doc:`formats`.
@@ -19,45 +19,50 @@ Quantics preparation
 --------------------
 
 Quantics discretization belongs to the callable source. Construct a
-:class:`QuanticsVectorSource` with ``base``, ``level`` and ``domain`` (or
+:class:`CallableQuanticsSource` with ``base``, ``level`` and ``domain`` (or
 ``grid_coordinates``), or supply a prebuilt
 :class:`~tensorkrowch.formats.QuantizedLayout` and
 :class:`~tensorkrowch.formats.CoordinateMap`. Dense tensors and tensor sources
 retain their fixed axes and are never automatically split into digits.
 
-``TTSVD.quantized(source)`` and ``TRSVD.quantized(source)`` materialize the
-full digit tensor before fitting. ``TTALS.quantized(source)`` and
-``TRALS.quantized(source)`` query the source on digit configurations during
-runtime. RSS ``quantized`` and ``qtt_rss``/``qtr_rss`` use basis embeddings
-at every digit site; their samples are domain coordinates by default, or
-already encoded digits with ``sample_space="digits"``. Ordinary RSS retains
-continuous callable evaluation with a user-supplied embedding.
+``TTSVD(source)`` and ``TRSVD(source)`` materialize the full digit tensor.
+``TTALS(source)`` and ``TRALS(source)`` query finite entries during fitting.
+``TTRSS(source)`` and ``TRRSS(source)`` use basis embeddings for discrete
+sources, including Quantics. Domain-coordinate samples are converted by the
+source's map and layout; an index ``ConfigurationBatch`` supplies digits
+explicitly. Continuous sources retain user-supplied embeddings.
 
 .. code-block:: python
 
    import torch
    import tensorkrowch as tk
 
-   source = tk.decompositions.QuanticsVectorSource(
+   source = tk.decompositions.CallableQuanticsSource(
        lambda coordinates: torch.exp(coordinates.sum(-1)),
        n_coordinates=2, base=2, level=(3, 4),
        domain=torch.tensor([[0., 1.], [-1., 1.]]))
    qtt = tk.decompositions.qtt_svd(source, rank=2)
-   fitted = tk.decompositions.TTALS.quantized(source).fit(
+   fitted = tk.decompositions.TTALS(source).fit(
        initial_cores=qtt,
        convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
    coordinates = torch.tensor([[0., -1.], [0.5, 0.]])
    values = fitted.evaluate_coordinates(coordinates)
 
-For matrix SVD, :class:`QuanticsMatrixSource` owns independent input/output
-layouts and coordinate maps. ``TTMSVD.quantized(source)`` and
-``TRMSVD.quantized(source)`` materialize paired digit axes and return
-QTTM/QTRM results. Matrix ALS/RSS is not implemented.
+Matrix grouping is defined with ``DenseTensorSource.matrix``,
+``SparseTensorSource.matrix``, ``CallableTensorSource.matrix`` or
+``CallableQuanticsSource.matrix``. The shared algorithms fuse input/output
+pairs and return the corresponding matrix format. Quantics results retain
+their maps and layouts independently of the source.
 
-Quantics results retain their layouts and maps independently of the source.
-``to_dense_grid`` restores the original coordinate axes;
-``to_dense_digits`` on the source returns the digit axes used by SVD.
-Completion remains a problem on explicitly supplied discrete tensor indices.
+Dataset sources use ``from_data``. Discrete empirical masses belong to
+``SparseTensorSource``; continuous values belong to ``CallableSource``;
+``CallableQuanticsSource`` discretizes the dataset first. Callable routes can
+use :func:`gaussian_kernel` or a custom kernel with its own keyword arguments.
+
+For ALS, ``mask`` is another boolean source: ``True`` participates and
+``False`` is missing. Without a mask, sparse entries outside the stored
+support are known zeros. A sparse boolean mask coalesces duplicate entries
+with logical OR and can include observed numerical zeros.
 
 SVD decompositions
 ------------------
@@ -70,7 +75,7 @@ TT-SVD
 ^^^^^^
 
 .. autoclass:: TTSVD
-   :members: fit, quantized
+   :members: fit
 
 .. autofunction:: tt_svd
 
@@ -80,7 +85,7 @@ TTM-SVD
 ^^^^^^^
 
 .. autoclass:: TTMSVD
-   :members: fit, quantized
+   :members: fit
 
 .. autofunction:: ttm_svd
 
@@ -90,7 +95,7 @@ TR-SVD
 ^^^^^^
 
 .. autoclass:: TRSVD
-   :members: fit, quantized
+   :members: fit
 
 .. autofunction:: tr_svd
 
@@ -100,7 +105,7 @@ TRM-SVD
 ^^^^^^^
 
 .. autoclass:: TRMSVD
-   :members: fit, quantized
+   :members: fit
 
 .. autofunction:: trm_svd
 
@@ -185,12 +190,12 @@ Sampled recursive sketching
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: TTRSS
-   :members: fit, quantized
+   :members: fit
 
 .. autofunction:: tt_rss
 
 .. autoclass:: TRRSS
-   :members: fit, quantized
+   :members: fit
 
 .. autofunction:: tr_rss
 
@@ -248,29 +253,25 @@ Sources and fitting strategies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The source abstraction is shared by ALS and sketching. Specialized sparse and
-TT sources evaluate their native representations directly instead of building
+format sources evaluate their native representations directly instead of building
 a TensorKrowch graph or densifying the complete tensor.
+
+.. autoclass:: DenseTensorSource
+   :members:
+
+.. autoclass:: CallableSource
+   :members:
 
 .. autoclass:: CallableTensorSource
    :members:
 
-.. autoclass:: QuanticsVectorSource
-   :members: evaluate, evaluate_digits, evaluate_indices, evaluate_coordinates,
-             coordinates_to_digits, digits_to_coordinates, fiber,
-             to_dense_grid, to_dense_digits
-
-.. autoclass:: QuanticsMatrixSource
-   :members: evaluate_digits, evaluate_indices, evaluate_coordinates,
-             coordinates_to_digits, digits_to_coordinates,
-             to_dense_grid, to_dense_digits
+.. autoclass:: CallableQuanticsSource
+   :members: evaluate, fiber, matrix, from_data, contract_dense_grid_axes, contract_dense
 
 .. autoclass:: SparseTensorSource
    :members:
 
-.. autoclass:: EmpiricalDistribution
-   :members:
-
-.. autoclass:: TTTensorSource
+.. autoclass:: FormatSource
    :members:
 
 .. autoclass:: FixedEmbeddingFitter
@@ -331,7 +332,7 @@ Sparse and TT-backed sources:
        indices, values, in_dim=(2, 2))
    sparse_result = tk.decompositions.TTRS(sparse).fit(rank=2)
 
-   tt_source = tk.decompositions.TTTensorSource(sparse_result)
+   tt_source = tk.decompositions.FormatSource(sparse_result)
    projected_again = tk.decompositions.TTRS(tt_source).fit(rank=2)
 
 Quantized RSS for a two-variable physical function:

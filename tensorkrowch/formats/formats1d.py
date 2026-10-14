@@ -459,6 +459,10 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
     n_batches : int
         Number of leading structural batch axes shared by all cores.
         Independent of data batches during evaluation.
+    in_sites, out_sites : sequence[int], optional
+        Default sites evaluated on each side, in data order. Unselected axes
+        remain open. ``out_sites`` applies to matrices; initially all sites
+        are selected. Individual evaluations may override these defaults.
     bonds : sequence of torch.Tensor or None, optional
         Diagonal factors between cores. The factor list is copied, but its
         tensors are reused without cloning or detaching them. Factors are
@@ -474,7 +478,8 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
                  cores: Sequence[torch.Tensor],
                  n_batches: int = 0,
                  *,
-                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None,
+                 in_sites: Optional[Sequence[int]] = None
                  ) -> None:
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
@@ -485,6 +490,8 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         self._orth_center = None
         self._bonds = None
         self._set_cores(cores, bonds)
+        self._in_sites = self._selection(in_sites, 'in_sites')
+        self._out_sites = ()
 
     @property
     def n_sites(self) -> int:
@@ -500,6 +507,44 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
     def out_dim(self) -> Optional[Tuple[int, ...]]:
         """Output dimension per site for a matrix format."""
         return self._out_dim
+
+    def _selection(self, sites: Optional[Sequence[int]], name: str
+                   ) -> Tuple[int, ...]:
+        """Checks a selection of distinct chain sites."""
+        if sites is None:
+            return tuple(range(self.n_sites))
+        if isinstance(sites, (str, bytes)):
+            raise TypeError(f'`{name}` should be a sequence of integers')
+        try:
+            sites = tuple(sites)
+        except TypeError as exc:
+            raise TypeError(f'`{name}` should be a sequence of integers') from exc
+        if any(isinstance(site, bool) or not isinstance(site, int)
+               for site in sites):
+            raise TypeError(f'`{name}` should contain integers')
+        if len(set(sites)) != len(sites) or any(
+                site < 0 or site >= self.n_sites for site in sites):
+            raise ValueError(f'`{name}` should contain distinct valid sites')
+        return sites
+
+    @property
+    def in_sites(self) -> Tuple[int, ...]:
+        """Input sites evaluated by default, in data order."""
+        return self._in_sites
+
+    @in_sites.setter
+    def in_sites(self, sites: Sequence[int]) -> None:
+        self._in_sites = self._selection(sites, 'in_sites')
+
+    @property
+    def out_shape(self) -> Tuple[int, ...]:
+        """Free axes of the default evaluation, with input axes before outputs."""
+        shape = tuple(dim for site, dim in enumerate(self._in_dim)
+                      if site not in self._in_sites)
+        if self._out_dim is not None:
+            shape += tuple(dim for site, dim in enumerate(self._out_dim)
+                           if site not in self._out_sites)
+        return shape
 
     @property
     def rank(self) -> List[int]:
@@ -786,7 +831,10 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
                                  other: Optional['TensorFormat1D'] = None,
                                  product: bool = False) -> 'TensorFormat1D':
         """Builds an algebra result with the operand coordinate semantics."""
-        return _from_standard_cores(cores, in_dim, out_dim, n_batches, cyclic)
+        result = _from_standard_cores(cores, in_dim, out_dim, n_batches, cyclic)
+        if not product and result.n_sites == self.n_sites:
+            result._in_sites, result._out_sites = self._in_sites, self._out_sites
+        return result
 
     @property
     def bonds(self) -> Optional[BondFactors1D]:
@@ -1503,7 +1551,8 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             Positive group sizes whose sum is ``n_sites``. Physical dimensions
             are multiplied within each group; matrix inputs and outputs stay
             separate. Internal factors are absorbed and factors between groups
-            are retained.
+            are retained. Each group must contain either selected or free
+            sites on each side, preserving the evaluation defaults.
 
         Returns
         -------
@@ -1535,6 +1584,17 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         if sum(groups) != self.n_sites:
             raise ValueError('Block sizes should sum to the number of sites')
 
+        selections = []
+        for sites in (self._in_sites, self._out_sites):
+            selected, first = [], 0
+            for group, size in enumerate(groups):
+                flags = [site in sites for site in range(first, first + size)]
+                if any(flags) and not all(flags):
+                    raise ValueError('Blocks should not mix selected and free sites')
+                if all(flags):
+                    selected.append(group)
+                first += size
+            selections.append(tuple(selected))
         layout = BlockLayout(groups, self._in_dim, self._out_dim)
         cores, in_dim, out_dim, factors = [], [], [], []
         first = 0
@@ -1564,6 +1624,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         self._set_standard_cores(cores, bonds,
                                  in_dim=tuple(in_dim),
                                  out_dim=tuple(out_dim) if out_dim else None)
+        self._in_sites, self._out_sites = selections
         return layout
 
     def unblock(self, layout: BlockLayout, **kwargs) -> 'TensorFormat1D':
@@ -1597,6 +1658,14 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             raise ValueError(
                 'Blocked vector/matrix family should match the layout')
 
+        selections = []
+        for selected in (self._in_sites, self._out_sites):
+            sites, first = [], 0
+            for group, size in enumerate(layout.groups):
+                if group in selected:
+                    sites.extend(range(first, first + size))
+                first += size
+            selections.append(tuple(sites))
         cores, first = [], 0
         effective_cores = self._effective_cores()
         for site, size in enumerate(layout.groups):
@@ -1643,6 +1712,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         self._set_standard_cores(cores,
                                  in_dim=layout.in_dim,
                                  out_dim=layout.out_dim)
+        self._in_sites, self._out_sites = selections
         return self
 
     def _check_semantics(self,
@@ -1989,10 +2059,6 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             result = result @ matrix
         return result
 
-    @abstractmethod
-    def _contract_local_matrices(
-            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
-        """Contracts local matrices according to the open or cyclic topology."""
 
     def _check_overlap_compatibility(
             self, other: 'TensorFormat1D') -> None:
@@ -2189,6 +2255,78 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         """
         return self.normalized_overlap(other).abs().square()
 
+    def _evaluate_sites(self,
+                        in_data: Optional[EvaluationData],
+                        in_sites: Sequence[int],
+                        out_data: Optional[EvaluationData],
+                        out_sites: Sequence[int],
+                        n_batches: int) -> torch.Tensor:
+        """Contracts selected local axes while preserving the free axes."""
+        groups = []
+        data_shape = None
+        for data, sites, dimensions in (
+                (in_data, in_sites, self._in_dim),
+                (out_data, out_sites, self._out_dim)):
+            dims = tuple(dimensions[site] for site in sites)
+            values, discrete, shape = self._prepare_data(
+                data, dims, len(set(dims)) <= 1, n_batches)
+            if data is not None:
+                if data_shape is not None and shape != data_shape:
+                    raise ValueError('Input and output data should share batch shapes')
+                data_shape = shape
+            groups.append((dict(zip(sites, values)), discrete))
+        data_shape = () if data_shape is None else data_shape
+        c, d = prod(self._batch_shape), prod(data_shape)
+        cores = self._operator_cores() if self._out_dim is not None else [
+            core.unsqueeze(-1) for core in self._effective_cores()]
+        state = None
+        free = []
+
+        for site, core in enumerate(cores):
+            left, in_dim, right, out_dim = core.shape[-4:]
+            core = core.reshape(c, 1, left, in_dim, right, out_dim).expand(
+                c, d, left, in_dim, right, out_dim)
+            for axis, (values, discrete) in zip((3, 5), groups):
+                if site not in values:
+                    if axis == 3 or self._out_dim is not None:
+                        free.append((axis, site, core.shape[axis]))
+                    continue
+                value = values[site]
+                if discrete:
+                    shape = [1, d, 1, 1, 1, 1]
+                    index = value.reshape(shape).long()
+                    extent = list(core.shape)
+                    extent[axis] = 1
+                    core = core.gather(axis, index.expand(extent))
+                elif axis == 3:
+                    vectors = value.reshape(d, in_dim)
+                    dtype = torch.promote_types(core.dtype, vectors.dtype)
+                    core = torch.einsum('di,cdliro->cdlro',
+                                        vectors.to(dtype), core.to(dtype)).unsqueeze(3)
+                else:
+                    vectors = value.reshape(d, out_dim)
+                    dtype = torch.promote_types(core.dtype, vectors.dtype)
+                    core = torch.einsum('do,cdliro->cdlir',
+                                        vectors.to(dtype), core.to(dtype)).unsqueeze(-1)
+            core = core.movedim(-1, -2).flatten(-3, -2)
+            if state is None:
+                state = core
+            else:
+                dtype = torch.promote_types(state.dtype, core.dtype)
+                state = torch.einsum('cdlpr,cdriq->cdlpiq',
+                                     state.to(dtype), core.to(dtype))
+                state = state.reshape(c, d, state.shape[2],
+                                      state.shape[3] * state.shape[4], right)
+
+        result = state.diagonal(dim1=2, dim2=-1).sum(-1)
+        result = result.reshape((*self._batch_shape, *data_shape,
+                                 *(dim for _, _, dim in free)))
+        if self._out_dim is not None:
+            start = len(self._batch_shape) + len(data_shape)
+            order = sorted(range(len(free)), key=lambda i: free[i][:2])
+            result = result.permute(*range(start), *(start + i for i in order))
+        return result
+
     def _prepare_data(
             self,
             data: EvaluationData,
@@ -2201,6 +2339,17 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
             raise ValueError('`n_batches` should be non-negative')
+
+        if not dimensions:
+            if data is None:
+                return [], True, ()
+            if isinstance(data, torch.Tensor):
+                if data.ndim != n_batches + 1 or data.shape[-1] != 0:
+                    raise ValueError('Empty selections require empty index data')
+                return [], True, tuple(data.shape[:n_batches])
+            if len(data):
+                raise ValueError('Empty selections require empty data')
+            return [], True, ()
 
         n_sites = len(dimensions)
         if isinstance(data, torch.Tensor):
@@ -2468,94 +2617,54 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
         """Calls :meth:`matmul` with the same operand."""
         return self.matmul(other)
 
-    def apply(self, other: '_MatrixFormat1D') -> '_VectorFormat1D':
-        """
-        Applies an operator from the right without conjugating this vector.
 
-        Parameters
-        ----------
-        other : TTM or TRM
-            Operator whose output dimensions match this vector's dimensions.
-
-        Returns
-        -------
-        TT or TR
-            Vector with the original orientation. Columns contain the
-            coefficients of ``(self.T @ other).T``; rows return ``self @ other``.
-        """
-        if not isinstance(other, _MatrixFormat1D):
-            raise TypeError('`other` should be a matrix format')
-        return self @ other if self._is_row else (self.T @ other).T
-
-    def _local_matrices(
-            self,
-            site_data: Sequence[torch.Tensor],
-            discrete: bool,
-            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
-        """Contracts TT/TR cores with one input at each site."""
-        matrices = []
-        for core, site_value in zip(self._effective_cores(), site_data):
-            left_rank, site_in_dim, right_rank = core.shape[-3:]
-            core = core.reshape(-1, left_rank, site_in_dim, right_rank)
-
-            if discrete:
-                indices = site_value.reshape(-1).to(torch.long)
-                matrix = core[:, :, indices, :].permute(0, 2, 1, 3)
-            else:
-                vectors = site_value.reshape(-1, site_in_dim)
-                matrix = torch.einsum('dp,clpr->cdlr',
-                                      vectors, core.to(dtype=vectors.dtype))
-
-            matrices.append(matrix.reshape(*self._batch_shape,
-                                           *data_batch_shape,
-                                           left_rank,
-                                           right_rank))
-        return matrices
 
     def evaluate(self,
-                 data: EvaluationData,
-                 n_batches: int = 1) -> torch.Tensor:
+                 data: Optional[EvaluationData] = None,
+                 n_batches: int = 1,
+                 *,
+                 in_sites: Optional[Sequence[int]] = None) -> torch.Tensor:
         """
-        Evaluates integer configurations or local embedded feature vectors.
+        Evaluates selected sites using integer indices or embedded vectors.
 
         Parameters
         ----------
-        data : torch.Tensor or sequence of torch.Tensor
-            Integer configurations of shape ``(*data_batch, n_sites)``, or
-            embedded feature vectors of shape ``(*data_batch, n_sites, in_dim)``
-            for uniform dimensions. For heterogeneous dimensions, pass one
-            tensor per site. Each site tensor has shape ``(*data_batch,)`` for
-            indices or ``(*data_batch, in_dim[site])`` for embeddings.
+        data : torch.Tensor or sequence of torch.Tensor, optional
+            Integer configurations of shape ``(*data_batch, n_selected)``,
+            or embedded vectors of shape ``(*data_batch, n_selected, in_dim)``
+            for uniform selected dimensions. For heterogeneous dimensions,
+            pass one tensor per selected site. An empty selection needs no data.
         n_batches : int
-            Number of leading data batch axes. These are independent of
-            structural batch axes stored in the cores.
+            Number of leading data batch axes, independent of core batches.
+        in_sites : sequence[int], optional
+            Distinct sites in data order. Defaults to the stored ``in_sites``;
+            a new format selects all sites.
 
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *data_batch)``. Structural
-            batches and data batches remain independent.
+            Shape ``(*core_batch, *data_batch, *out_shape)``. Unselected site
+            axes remain open in chain order. A selection override determines
+            the returned shape without changing the format's defaults.
 
         Examples
         --------
         >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
         >>> format.evaluate(torch.tensor([[0, 0], [0, 1]])).tolist()
         [1.0, 0.0]
-        >>> embeddings = torch.ones(1, 2, 2)
-        >>> format.evaluate(embeddings).tolist()
-        [2.0]
+        >>> format.evaluate(torch.tensor([[1]]), in_sites=(0,)).tolist()
+        [[0.0, 1.0]]
         """
-        site_data, discrete, data_batch_shape = self._prepare_data(
-            data, self._in_dim, self._same_in_dim, n_batches)
-        matrices = self._local_matrices(
-            site_data, discrete, data_batch_shape)
-        return self._contract_local_matrices(matrices)
+        sites = self.in_sites if in_sites is None else self._selection(
+            in_sites, 'in_sites')
+        return self._evaluate_sites(data, sites, None, (), n_batches)
 
     def __call__(self,
-                 data: EvaluationData,
-                 n_batches: int = 1) -> torch.Tensor:
+                 data: Optional[EvaluationData] = None,
+                 n_batches: int = 1,
+                 **kwargs) -> torch.Tensor:
         """Calls :meth:`evaluate` with the same input conventions."""
-        return self.evaluate(data, n_batches=n_batches)
+        return self.evaluate(data, n_batches=n_batches, **kwargs)
 
     def error(self,
               function: Callable[..., torch.Tensor],
@@ -2571,8 +2680,8 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
         function : callable
             Target callable invoked as ``function(samples, **kwargs)``,
             receiving a tensor for packed samples or a tuple of site tensors
-            for sequence samples. The callable returns one scalar per sample,
-            with shape ``data_batch``. When the cores store a structural batch
+            for sequence samples. The callable returns shape ``(*data_batch, *out_shape)``;
+            selecting all sites gives one scalar per sample. When the cores store a structural batch
             of formats, each format is compared with the same target values.
             For example, four formats evaluated on ten samples produce
             approximations of shape ``(4, 10)``, compared with target values
@@ -2650,7 +2759,8 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
 
         approximation = self.evaluate(samples if data is None else data,
                                       n_batches=n_batches)
-        if approximation.shape != (*self._batch_shape, *data_batch_shape):
+        if approximation.shape != (*self._batch_shape, *data_batch_shape,
+                                   *self.out_shape):
             raise ValueError(
                 '`data` and `samples` should have matching batch shapes')
 
@@ -2662,7 +2772,7 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
         approximation = approximation.to(dtype=dtype)
         target = target.to(device=approximation.device, dtype=dtype)
 
-        target = target.reshape(data_batch_shape)
+        target = target.reshape((*data_batch_shape, *self.out_shape))
         if self._n_batches:
             target = target.reshape(
                 *((1,) * self._n_batches), *target.shape)
@@ -2774,6 +2884,26 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
 
     _family = 'matrix'
 
+    def __init__(self,
+                 cores: Sequence[torch.Tensor],
+                 n_batches: int = 0,
+                 *,
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None,
+                 in_sites: Optional[Sequence[int]] = None,
+                 out_sites: Optional[Sequence[int]] = None) -> None:
+        super().__init__(cores, n_batches=n_batches, bonds=bonds,
+                         in_sites=in_sites)
+        self._out_sites = self._selection(out_sites, 'out_sites')
+
+    @property
+    def out_sites(self) -> Tuple[int, ...]:
+        """Output-side sites evaluated by default, in data order."""
+        return self._out_sites
+
+    @out_sites.setter
+    def out_sites(self, sites: Sequence[int]) -> None:
+        self._out_sites = self._selection(sites, 'out_sites')
+
     def _standard_cores(self) -> List[torch.Tensor]:
         """Adds unit boundary axes and combines matrix input/output axes."""
         cores = list(self._cores)
@@ -2833,6 +2963,7 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
             result._bonds = self._bonds._map_tensors(
                 lambda tensor: tensor, result._on_bonds_changed)
 
+        result._in_sites, result._out_sites = self._out_sites, self._in_sites
         result._in_dim, result._out_dim = self._out_dim, self._in_dim
         result._same_in_dim, result._same_out_dim = (
             self._same_out_dim, self._same_in_dim)
@@ -3031,118 +3162,63 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
             output_cores, self._out_dim, None,
             self._n_batches + n_batches, self._cyclic, product=True)
 
-    def _local_matrices(
-            self,
-            in_data_by_site: Sequence[torch.Tensor],
-            out_data_by_site: Sequence[torch.Tensor],
-            in_discrete: bool,
-            out_discrete: bool,
-            data_batch_shape: Tuple[int, ...]) -> List[torch.Tensor]:
-        """Builds local matrices for paired matrix-entry evaluation."""
-        matrices = []
-        for core, in_site_data, out_site_data in zip(
-                self._operator_cores(), in_data_by_site, out_data_by_site):
-            left_rank, in_dim, right_rank, out_dim = core.shape[-4:]
-            core = core.reshape(-1, left_rank, in_dim, right_rank, out_dim)
-
-            if in_discrete and out_discrete:
-                in_indices = in_site_data.reshape(-1).to(torch.long)
-                out_indices = out_site_data.reshape(-1).to(torch.long)
-                fused = in_indices * out_dim + out_indices
-                matrix = core.permute(0, 1, 3, 2, 4).reshape(
-                    -1, left_rank, right_rank, in_dim * out_dim)
-                matrix = matrix[..., fused].permute(0, 3, 1, 2)
-            elif in_discrete:
-                indices = in_site_data.reshape(-1).to(torch.long)
-                vectors = out_site_data.reshape(-1, out_dim)
-                selected = core.index_select(2, indices).to(dtype=vectors.dtype)
-                matrix = torch.einsum('cldro,do->cdlr', selected, vectors)
-            elif out_discrete:
-                indices = out_site_data.reshape(-1).to(torch.long)
-                vectors = in_site_data.reshape(-1, in_dim)
-                selected = core.index_select(4, indices).to(dtype=vectors.dtype)
-                matrix = torch.einsum('clird,di->cdlr', selected, vectors)
-            else:
-                in_vectors = in_site_data.reshape(-1, in_dim)
-                out_vectors = out_site_data.reshape(-1, out_dim)
-                dtype = torch.promote_types(in_vectors.dtype, out_vectors.dtype)
-                matrix = torch.einsum('di,do,cliro->cdlr',
-                                      in_vectors.to(dtype=dtype),
-                                      out_vectors.to(dtype=dtype),
-                                      core.to(dtype=dtype))
-
-            matrices.append(matrix.reshape(*self._batch_shape,
-                                           *data_batch_shape,
-                                           left_rank,
-                                           right_rank))
-        return matrices
 
     def evaluate(self,
-                 in_data: EvaluationData,
-                 out_data: EvaluationData,
-                 n_batches: int = 1) -> torch.Tensor:
+                 in_data: Optional[EvaluationData] = None,
+                 out_data: Optional[EvaluationData] = None,
+                 n_batches: int = 1,
+                 *,
+                 in_sites: Optional[Sequence[int]] = None,
+                 out_sites: Optional[Sequence[int]] = None) -> torch.Tensor:
         """
-        Evaluates paired integer configurations or local embedded feature
-        vectors.
+        Evaluates selected input and output sites, keeping other axes open.
 
         Parameters
         ----------
-        in_data : torch.Tensor or sequence of torch.Tensor
-            Integer configurations of shape ``(*data_batch, n_sites)``, or
-            embedded feature vectors of shape ``(*data_batch, n_sites, in_dim)``
-            for uniform dimensions. For heterogeneous dimensions, pass one
-            tensor per site. Each site tensor has shape ``(*data_batch,)`` for
-            indices or ``(*data_batch, in_dim[site])`` for embeddings.
-        out_data : torch.Tensor or sequence of torch.Tensor
-            Output configurations or embeddings in the same layouts as
-            ``in_data``, using ``out_dim`` instead of ``in_dim``. Both data
-            batch shapes should match.
+        in_data, out_data : torch.Tensor or sequence of torch.Tensor, optional
+            Indices of shape ``(*data_batch, n_selected)`` or embedded vectors
+            of shape ``(*data_batch, n_selected, site_dim)``. Use a sequence
+            for different dimensions. Data follow their selection's order.
+            An empty selection needs no data.
         n_batches : int
-            Number of leading data batch axes. These are independent of
-            structural batch axes stored in the cores.
+            Number of leading data batch axes, independent of core batches.
+        in_sites, out_sites : sequence[int], optional
+            Distinct sites to evaluate on each side. Omitted selections use
+            the format's defaults. All sites are selected initially.
 
         Returns
         -------
         torch.Tensor
-            Values with shape ``(*core_batch, *data_batch)``. Structural
-            batches and data batches remain independent. Embedded contractions
-            use supplied vectors directly, without implicit conjugation.
+            Shape ``(*core_batch, *data_batch, *in_out_shape, *out_out_shape)``.
+            Free input axes precede free output axes, each in chain order.
+            Embedded vectors are contracted without implicit conjugation.
 
         Examples
         --------
-        >>> matrix = tk.formats.TTM([torch.diag(torch.tensor([2., 3.]))])
-        >>> indices = torch.tensor([[0], [1]])
-        >>> matrix.evaluate(indices, indices).tolist()
-        [2.0, 3.0]
-        >>> embeddings = torch.ones(1, 1, 2)
-        >>> matrix.evaluate(embeddings, embeddings).tolist()
-        [5.0]
+        >>> matrix = tk.formats.TTM([torch.eye(2)])
+        >>> matrix.evaluate(torch.tensor([[1]]), out_sites=())
+        tensor([[0., 1.]])
         """
-        in_data_by_site, in_discrete, data_batch_shape = self._prepare_data(
-            in_data, self._in_dim, self._same_in_dim, n_batches)
-        out_data_by_site, out_discrete, out_batch_shape = self._prepare_data(
-            out_data, self._out_dim, self._same_out_dim, n_batches)
-        if out_batch_shape != data_batch_shape:
-            raise ValueError(
-                'Input and output data should have the same batch shape')
-
-        matrices = self._local_matrices(
-            in_data_by_site, out_data_by_site,
-            in_discrete, out_discrete, data_batch_shape)
-        return self._contract_local_matrices(matrices)
+        in_sites = self.in_sites if in_sites is None else self._selection(
+            in_sites, 'in_sites')
+        out_sites = self.out_sites if out_sites is None else self._selection(
+            out_sites, 'out_sites')
+        return self._evaluate_sites(in_data, in_sites, out_data, out_sites,
+                                    n_batches)
 
     def __call__(self,
-                 in_data: Union[EvaluationData, TensorFormat1D],
+                 in_data: EvaluationData,
                  out_data: Optional[EvaluationData] = None,
-                 n_batches: int = 1
-                 ) -> Union[torch.Tensor, TensorFormat1D]:
-        """
-        Calls :meth:`evaluate` with paired inputs, or :meth:`apply` when
-        ``out_data`` is omitted, using the same input conventions.
-        """
+                 n_batches: int = 1,
+                 **kwargs) -> Union[torch.Tensor, TensorFormat1D]:
+        """Evaluates paired data or applies the matrix to separable inputs."""
+        if isinstance(in_data, TensorFormat1D):
+            raise TypeError('Use `@` to multiply formats')
         if out_data is None:
+            if kwargs:
+                raise TypeError('Site selections belong to `evaluate`')
             return self.apply(in_data, n_batches=n_batches)
-        return self.evaluate(in_data, out_data, n_batches=n_batches)
+        return self.evaluate(in_data, out_data, n_batches=n_batches, **kwargs)
 
     def to_mpo(self,
                parameterized: bool = False,
@@ -3228,10 +3304,6 @@ class _MatrixFormat1D(TensorFormat1D):  # MARK: _MatrixFormat1D
 class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
     """Canonical forms and contractions shared by open chains."""
 
-    def _contract_local_matrices(
-            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
-        """Contracts selected matrices along an open chain."""
-        return self._contract_open_chain(matrices).squeeze(-1).squeeze(-1)
 
     def canonicalize_vidal(self,
                            mode: str = 'implicit',
@@ -3514,11 +3586,6 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
 
     _cyclic = True
 
-    def _contract_local_matrices(
-            self, matrices: Sequence[torch.Tensor]) -> torch.Tensor:
-        """Contracts selected matrices and closes the ring."""
-        return self._contract_open_chain(matrices).diagonal(
-            dim1=-2, dim2=-1).sum(-1)
 
     def rotate(self, first: int = 0) -> 'TensorFormat1D':
         """
@@ -3556,6 +3623,12 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
 
         result = self._new_from_standard_cores(
             cores, in_dim, out_dim, self._n_batches, True)
+        result._in_sites = tuple(range(self.n_sites)) if self._in_sites == tuple(
+            range(self.n_sites)) else tuple((site - first) % self.n_sites
+                                           for site in self._in_sites)
+        result._out_sites = tuple(range(self.n_sites)) if self._out_sites == tuple(
+            range(self.n_sites)) else tuple((site - first) % self.n_sites
+                                           for site in self._out_sites)
         if self._bonds is not None:
             result.bonds = [self._bonds.factors[site] for site in order]
         return result

@@ -167,7 +167,10 @@ class _QuanticsFormat:  # MARK: _QuanticsFormat
 
     def _to_format(self, cls: Type[TensorFormat1D]) -> TensorFormat1D:
         """Drops coordinate metadata while retaining cores and bond factors."""
-        result = cls(self._cores, n_batches=self._n_batches)
+        kwargs = {'n_batches': self._n_batches, 'in_sites': self._in_sites}
+        if self._out_dim is not None:
+            kwargs['out_sites'] = self._out_sites
+        result = cls(self._cores, **kwargs)
         if self._bonds is not None:
             result._bonds = self._bonds._map_tensors(
                 lambda tensor: tensor, result._on_bonds_changed)
@@ -220,7 +223,9 @@ class _QuanticsFormat:  # MARK: _QuanticsFormat
                 out_layout=self.out_layout,
                 in_coordinate_map=input_format.in_coordinate_map,
                 out_coordinate_map=self.out_coordinate_map,
-                n_batches=n_batches)
+                n_batches=n_batches,
+                in_sites=None if product else self._in_sites,
+                out_sites=None if product else self._out_sites)
 
         cls = QTR if cyclic else QTT
         layout = self.out_layout if product else self.layout
@@ -230,7 +235,8 @@ class _QuanticsFormat:  # MARK: _QuanticsFormat
                    n_coordinates=layout.n_coordinates,
                    layout=layout,
                    coordinate_map=coordinate_map,
-                   n_batches=n_batches)
+                   n_batches=n_batches,
+                in_sites=None if product else self._in_sites)
 
 
 class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
@@ -250,13 +256,15 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
                  layout: Optional[QuantizedLayout] = None,
                  coordinate_map: Optional[CoordinateMap] = None,
                  n_batches: int = 0,
-                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None) -> None:
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None,
+                 in_sites: Optional[Sequence[int]] = None) -> None:
         self.layout, self.coordinate_map = _resolve_quantization(
             n_coordinates, base=base, level=level, domain=domain,
             grid_coordinates=grid_coordinates, layout=layout,
             coordinate_map=coordinate_map)
         self.n_coordinates = n_coordinates
-        super().__init__(cores, n_batches=n_batches, bonds=bonds)
+        super().__init__(cores, n_batches=n_batches, bonds=bonds,
+                         in_sites=in_sites)
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -332,7 +340,8 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         [1.0, 0.0, 1.0]
         """
         digits = self.layout._validate_digits(digits).to(self.device)
-        return self.evaluate(digits, n_batches=digits.ndim - 1)
+        return self.evaluate(digits, n_batches=digits.ndim - 1,
+                             in_sites=tuple(range(self.n_sites)))
 
     def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """
@@ -397,10 +406,9 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         indices = self.coordinate_map.to_indices(coordinates)
         return self.evaluate_indices(indices)
 
-    def to_dense_grid(self) -> torch.Tensor:
+    def contract_dense_grid_axes(self) -> torch.Tensor:
         """
-        Evaluates every original coordinate index on a small grid. Explicitly
-        allocates and evaluates the full grid.
+        Contracts the tensor and combines digits into original grid axes.
 
         Returns one axis per original coordinate, combining its digits and
         restoring coordinate order independently of the layout schedule.
@@ -413,11 +421,10 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
             Values with shape ``(*core_batch, *grid_size)``, in
             original coordinate order.
         """
-        axes = [torch.arange(size, device=self.device)
-                for size in self.layout.grid_size]
-        indices = torch.cartesian_prod(*axes).reshape(-1, self.layout.n_coordinates)
-        values = self.evaluate_indices(indices)
-        return values.reshape(*self._batch_shape, *self.layout.grid_size)
+        order = sorted(range(self.n_sites), key=self.layout.sites().__getitem__)
+        dense = self.contract_dense().permute(
+            *range(self._n_batches), *(self._n_batches + site for site in order))
+        return dense.reshape(*self._batch_shape, *self.layout.grid_size)
 
 
 class QTT(_QuanticsVector, TT):  # MARK: QTT
@@ -693,6 +700,12 @@ class QTR(_QuanticsVector, TR):  # MARK: QTR
         if self._bonds is not None:
             factors = self._bonds.factors
             result.bonds = [*factors[first:], *factors[:first]]
+        result._in_sites = tuple(range(self.n_sites)) if self._in_sites == tuple(
+            range(self.n_sites)) else tuple((site - first) % self.n_sites
+                                           for site in self._in_sites)
+        result._out_sites = tuple(range(self.n_sites)) if self._out_sites == tuple(
+            range(self.n_sites)) else tuple((site - first) % self.n_sites
+                                           for site in self._out_sites)
         return result
 
 
@@ -721,7 +734,9 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
                  in_coordinate_map: Optional[CoordinateMap] = None,
                  out_coordinate_map: Optional[CoordinateMap] = None,
                  n_batches: int = 0,
-                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None
+                 bonds: Optional[Sequence[Optional[torch.Tensor]]] = None,
+                 in_sites: Optional[Sequence[int]] = None,
+                 out_sites: Optional[Sequence[int]] = None
                  ) -> None:
         self.in_layout, self.in_coordinate_map = _resolve_quantization(
             in_n_coordinates, base=in_base, level=in_level, domain=in_domain,
@@ -736,7 +751,8 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
                 '`in_layout` and `out_layout` should have equal `n_sites`')
         self.in_n_coordinates = in_n_coordinates
         self.out_n_coordinates = out_n_coordinates
-        super().__init__(cores, n_batches=n_batches, bonds=bonds)
+        super().__init__(cores, n_batches=n_batches, bonds=bonds,
+                         in_sites=in_sites, out_sites=out_sites)
 
     def validate(self) -> TensorFormat1D:
         """
@@ -816,7 +832,9 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
         """
         in_digits = self.in_layout._validate_digits(in_digits)
         out_digits = self.out_layout._validate_digits(out_digits)
-        return self.evaluate(in_digits, out_digits, n_batches=in_digits.ndim - 1)
+        return self.evaluate(in_digits, out_digits, n_batches=in_digits.ndim - 1,
+                             in_sites=tuple(range(self.n_sites)),
+                             out_sites=tuple(range(self.n_sites)))
 
     def evaluate_indices(self,
                          in_indices: torch.Tensor,
@@ -871,15 +889,15 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
         out_indices = self.out_coordinate_map.to_indices(out_coordinates)
         return self.evaluate_indices(in_indices, out_indices)
 
-    def to_dense_grid(self) -> torch.Tensor:
+    def contract_dense_grid_axes(self) -> torch.Tensor:
         """
-        Evaluates every original coordinate index on a small grid.
+        Contracts the tensor and combines digits into original grid axes.
 
         Returns one axis per original input and output coordinate, combining
         their digits and placing input coordinates before output coordinates.
         In contrast, :meth:`contract_dense` returns the interleaved input and
-        output digit axes in layout order. Explicitly allocates and evaluates
-        the full grid.
+        output digit axes in layout order. Both methods materialize
+        the complete tensor.
 
         Returns
         -------
@@ -888,22 +906,16 @@ class _QuanticsMatrix(_QuanticsFormat):  # MARK: _QuanticsMatrix
             ``(*core_batch, *input_grid_size, *output_grid_size)``, placing all
             input coordinates before all output coordinates.
         """
-        input_axes = [torch.arange(size, device=self.device)
-                      for size in self.in_layout.grid_size]
-        output_axes = [torch.arange(size, device=self.device)
-                       for size in self.out_layout.grid_size]
-        in_indices = torch.cartesian_prod(*input_axes).reshape(
-            -1, self.in_layout.n_coordinates)
-        out_indices = torch.cartesian_prod(*output_axes).reshape(
-            -1, self.out_layout.n_coordinates)
-
-        # Evaluate the Cartesian product of input and output configurations.
-        values = self.evaluate_indices(
-            in_indices.repeat_interleave(out_indices.shape[0], 0),
-            out_indices.repeat(in_indices.shape[0], 1))
-        return values.reshape(*self._batch_shape,
-                              *self.in_layout.grid_size,
-                              *self.out_layout.grid_size)
+        in_order = sorted(range(self.n_sites),
+                          key=self.in_layout.sites().__getitem__)
+        out_order = sorted(range(self.n_sites),
+                           key=self.out_layout.sites().__getitem__)
+        dense = self.contract_dense().permute(
+            *range(self._n_batches),
+            *(self._n_batches + 2 * site for site in in_order),
+            *(self._n_batches + 2 * site + 1 for site in out_order))
+        return dense.reshape(*self._batch_shape, *self.in_layout.grid_size,
+                             *self.out_layout.grid_size)
 
 
 class QTTM(_QuanticsMatrix, TTM):  # MARK: QTTM
@@ -1191,4 +1203,10 @@ class QTRM(_QuanticsMatrix, TRM):  # MARK: QTRM
         if self._bonds is not None:
             factors = self._bonds.factors
             result.bonds = [*factors[first:], *factors[:first]]
+        result._in_sites = tuple(range(self.n_sites)) if self._in_sites == tuple(
+            range(self.n_sites)) else tuple((site - first) % self.n_sites
+                                           for site in self._in_sites)
+        result._out_sites = tuple(range(self.n_sites)) if self._out_sites == tuple(
+            range(self.n_sites)) else tuple((site - first) % self.n_sites
+                                           for site in self._out_sites)
         return result

@@ -14,6 +14,13 @@ from data with repeated contractions.
 :class:`QTR`, :class:`QTTM` and :class:`QTRM` add coordinate quantization.
 
 
+Evaluation selects ``in_sites`` and, for matrices, ``out_sites``; remaining
+axes form the output tensor. Matrix ``apply`` contracts every input dimension
+and returns an output format. Use ``@`` for products between formats.
+``contract_dense`` materializes the site axes; Quantics
+``contract_dense_grid_axes`` groups their digits into original coordinate axes.
+
+
 Cores and bond factors
 ----------------------
 

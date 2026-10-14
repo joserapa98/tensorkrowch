@@ -165,7 +165,7 @@ def test_matrix_coordinate_counts_can_differ_with_equal_site_counts():
         out_base=(2, 3), out_level=1, out_domain=torch.tensor([0., 1.]))
 
     assert matrix.in_layout.n_sites == matrix.out_layout.n_sites == 2
-    assert matrix.to_dense_grid().shape == (4, 2, 3)
+    assert matrix.contract_dense_grid_axes().shape == (4, 2, 3)
 
 
 @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
@@ -183,10 +183,10 @@ def test_quantized_grid_and_arithmetic(ordering, dense_cores):
             layout, torch.tensor([[0., 7.], [0., 15.]])))
     assert torch.allclose(format.evaluate_indices(indices), values)
     assert torch.allclose(format.evaluate_coordinates(indices.to(torch.float64)), values)
-    assert torch.allclose(format.to_dense_grid(), values.reshape(8, 16))
+    assert torch.allclose(format.contract_dense_grid_axes(), values.reshape(8, 16))
     assert isinstance(format + format, tk.formats.QTT)
     assert torch.allclose((format * format).evaluate_indices(indices), values.square())
-    assert torch.allclose((2 * format).to_dense_grid(), 2 * values.reshape(8, 16))
+    assert torch.allclose((2 * format).contract_dense_grid_axes(), 2 * values.reshape(8, 16))
     assert torch.allclose(format.to_tt().contract_dense(), tensor)
     with pytest.raises(ValueError, match='semantics'):
         format + format.to_tt()
@@ -272,7 +272,7 @@ def test_quantized_evaluation_keeps_structural_and_data_batches(cyclic):
     expected = values[:, indices[..., 0]]
     assert torch.equal(format.evaluate_indices(indices), expected)
     assert torch.equal(format.evaluate_digits(layout.encode_indices(indices)), expected)
-    assert torch.equal(format.to_dense_grid(), values)
+    assert torch.equal(format.contract_dense_grid_axes(), values)
 
 
 def test_quantized_matrix_transpose_apply(dense_cores):
@@ -528,7 +528,7 @@ def test_matrix_independent_quantization_paths(make_format, cyclic, in_path, out
                       for name, value in _quantics_arguments(out_path, 1, 4).items()})
     cls = tk.formats.QTRM if cyclic else tk.formats.QTTM
     format = cls(plain.cores, 2, 1, **arguments)
-    assert format.to_dense_grid().shape == (4, 4, 16)
+    assert format.contract_dense_grid_axes().shape == (4, 4, 16)
     assert torch.allclose(format.contract_dense(), plain.contract_dense())
     transposed = format.T
     assert transposed.in_layout == format.out_layout
@@ -586,7 +586,7 @@ def test_exponential_evaluation_on_and_between_grid_points(exponential_format,
     assert_close(format.evaluate_digits(digits), expected)
     assert_close(format.evaluate_indices(indices), expected)
     assert_close(format.evaluate_coordinates(coordinates), expected)
-    assert_close(format.to_dense_grid(), expected.reshape(4, 9))
+    assert_close(format.contract_dense_grid_axes(), expected.reshape(4, 9))
     assert format.contract_dense().shape == format.layout.in_dim
 
     # Arbitrary domain coordinates evaluate the selected grid point's function.
@@ -626,7 +626,7 @@ def test_matrix_dense_grid_and_evaluations(make_format, cyclic, dtype):
     assert torch.allclose(format.evaluate_indices(in_indices, out_indices), expected)
     assert torch.allclose(format.evaluate_coordinates(in_map.from_indices(in_indices),
                                                       out_map.from_indices(out_indices)), expected)
-    assert torch.allclose(format.to_dense_grid(), expected.reshape(2, 8, 27))
+    assert torch.allclose(format.contract_dense_grid_axes(), expected.reshape(2, 8, 27))
 
 
 @pytest.mark.parametrize('method', ['evaluate_digits', 'evaluate_indices', 'evaluate_coordinates'])
@@ -685,8 +685,8 @@ def test_quantics_ring_rotation_with_factors(make_format, topology, first,
         outputs = torch.tensor([[0, 0, 0, 0], [2, 1, 2, 1]], device=device)
         assert_close(rotated.evaluate_indices(indices, outputs),
                       format.evaluate_indices(indices, outputs))
-    dense = format.to_dense_grid()
-    relative_error = (rotated.to_dense_grid() - dense).norm() / dense.norm()
+    dense = format.contract_dense_grid_axes()
+    relative_error = (rotated.contract_dense_grid_axes() - dense).norm() / dense.norm()
     assert relative_error <= 32 * torch.finfo(dense.real.dtype).eps
 
 
@@ -762,3 +762,28 @@ def test_exponential_at_float32_domain_grid_points(cyclic):
                  layout=layout, coordinate_map=coordinate_map)
     assert torch.allclose(format.evaluate_indices(indices), values)
     assert torch.allclose(format.evaluate_coordinates(coordinates), values)
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_quantics_partial_digit_evaluation(make_format, device_dtype, assert_close,
+                                            matrix, cyclic):
+    device, dtype = device_dtype
+    topology = ('tr' if cyclic else 'tt') + ('m' if matrix else '')
+    format = make_format(topology, 3, dtype=dtype, quantized=True, device=device)
+    data = torch.tensor([[1]], device=device)
+    if matrix:
+        actual = format.evaluate(data, data, in_sites=(0,), out_sites=(2,))
+        expected = format.contract_dense()[1, :, :, :, :, 1].permute(1, 3, 0, 2)
+    else:
+        actual = format.evaluate(data, in_sites=(1,))
+        expected = format.contract_dense()[:, 1, :]
+    assert_close(actual[0], expected)
+    format.in_sites = (0,)
+    plain = format.to_trm() if matrix and cyclic else (
+        format.to_ttm() if matrix else format.to_tr() if cyclic else format.to_tt())
+    assert plain.in_sites == (0,)
+    result = format + format
+    assert result.in_sites == (0,)
+    if cyclic:
+        assert format.rotate(1).in_sites == (2,)

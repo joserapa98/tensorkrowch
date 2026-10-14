@@ -828,7 +828,7 @@ def test_apply_and_matrix_products(make_format, matrix_topology, vector_topology
                          matrix_topology == 'trm' else 'tt')
     right = y.T @ a
     assert torch.allclose(right.contract_dense().flatten(), (matrix @ vector) @ matrix)
-    assert torch.allclose(y.apply(a).contract_dense(), right.T.contract_dense())
+    assert torch.allclose((y.T @ a).T.contract_dense(), right.T.contract_dense())
     assert torch.allclose((y.H @ a).contract_dense().flatten(),
                           (matrix @ vector).conj() @ matrix)
     assert torch.allclose(_matrix(a @ a.H), matrix @ matrix.adjoint())
@@ -1310,7 +1310,7 @@ def test_independent_matrix_vector_products(make_format, matrix_view,
         assert_close(right @ batched_x, expected_right @ x.contract_dense().flatten())
     else:
         assert_close(right @ x, expected_right @ x.contract_dense().flatten())
-    assert_close(y.apply(matrix).contract_dense().reshape(*matrix.batch_shape, -1), y.contract_dense().flatten() @ dense)
+    assert_close((y.T @ matrix).T.contract_dense().reshape(*matrix.batch_shape, -1), y.contract_dense().flatten() @ dense)
     assert actual._cyclic == (matrix._cyclic or x._cyclic)
 
 
@@ -2003,3 +2003,120 @@ def test_renormalization_preserves_extreme_finite_center(device_dtype, assert_cl
         assert_close(result.contract_dense() / magnitude, values)
     else:
         assert_close(result.contract_dense(), values * 0)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('structural_batches', [0, 1])
+@pytest.mark.parametrize('data_batches', [0, 1, 2])
+@pytest.mark.parametrize('embedded', [False, True])
+@pytest.mark.parametrize('selection', [(), (0, 1, 2), (2, 0)])
+def test_partial_evaluation_dense_oracle(make_format, device_dtype, assert_close,
+                                         topology, structural_batches,
+                                         data_batches, embedded, selection):
+    device, dtype = device_dtype
+    format = make_format(topology, 3, structural_batches, dtype, device=device)
+    matrix = format.out_dim is not None
+    out_sites = (1,) if matrix else ()
+    batch_shape = (2,) * data_batches
+    count = 2 ** data_batches
+    groups = []
+    for sites, dims in ((selection, format.in_dim),
+                        (out_sites, format.out_dim)):
+        values = []
+        for site in sites:
+            if embedded:
+                value = torch.arange(1, dims[site] + 1, device=device,
+                                     dtype=format.cores[0].real.dtype).to(dtype)
+                if dtype.is_complex:
+                    value = value * (1 + 0.3j)
+                value = value.expand(*batch_shape, dims[site])
+            else:
+                value = torch.ones(batch_shape, dtype=torch.long, device=device)
+            values.append(value)
+        groups.append(values if values else torch.empty(
+            *batch_shape, 0, dtype=torch.long, device=device))
+
+    actual = (format.evaluate(groups[0], groups[1], data_batches,
+                              in_sites=selection, out_sites=out_sites) if matrix
+              else format.evaluate(groups[0], data_batches, in_sites=selection))
+    expected = []
+    for sample in range(count):
+        dense = format.contract_dense()
+        axes = []
+        for side, sites in enumerate((selection, out_sites)):
+            for offset, site in enumerate(sites):
+                axis = structural_batches + (2 * site + side if matrix else site)
+                value = groups[side][offset].reshape(count, -1)[sample]
+                axes.append((axis, value))
+        for axis, value in sorted(axes, reverse=True, key=lambda item: item[0]):
+            if embedded:
+                dense = torch.tensordot(dense, value, dims=([axis], [0]))
+            else:
+                dense = dense.select(axis, int(value.item()))
+        if matrix:
+            free = [(side, site) for site in range(3) for side in range(2)
+                    if site not in (selection if side == 0 else out_sites)]
+            order = sorted(range(len(free)), key=lambda index: free[index])
+            dense = dense.permute(*range(structural_batches),
+                                  *(structural_batches + i for i in order))
+        expected.append(dense)
+    expected = torch.stack(expected, structural_batches).reshape(
+        (*format.batch_shape, *batch_shape, *expected[0].shape[structural_batches:]))
+    assert_close(actual, expected)
+
+
+@pytest.mark.parametrize('sites, error', [((True,), TypeError),
+                                         ((1.5,), TypeError),
+                                         ((0, 0), ValueError),
+                                         ((2,), ValueError),
+                                         ('01', TypeError)])
+def test_evaluation_selection_errors(sites, error):
+    with pytest.raises(error, match='in_sites'):
+        tk.formats.TT([torch.eye(2), torch.eye(2)], in_sites=sites)
+
+
+def test_evaluation_defaults_and_algebra_selection():
+    format = tk.formats.TT([torch.eye(2), torch.eye(2)], in_sites=(0,))
+    assert format.out_shape == (2,)
+    torch.testing.assert_close(format(torch.tensor([[1]])), torch.tensor([[0., 1.]]))
+    for result in (format.clone(), format + format, format * format):
+        assert result.in_sites == (0,)
+    format.in_sites = ()
+    torch.testing.assert_close(format(), torch.eye(2))
+    assert not hasattr(format, 'apply')
+    matrix = tk.formats.TTM([torch.eye(2)], in_sites=(), out_sites=(0,))
+    assert matrix.out_shape == (2,)
+    assert matrix.T.in_sites == (0,)
+    assert matrix.T.out_sites == ()
+    with pytest.raises(TypeError, match='@'):
+        matrix(tk.formats.TT([torch.ones(2)]))
+
+
+def test_partial_evaluation_empty_batch_and_blocking(make_format):
+    format = make_format('tt', 4)
+    format.in_sites = (0, 1)
+    dense = format.contract_dense()
+    layout = format.block((2, 2))
+    assert format.in_sites == (0,)
+    format.unblock(layout)
+    assert format.in_sites == (0, 1)
+    torch.testing.assert_close(format.contract_dense(), dense)
+    format.in_sites = (0,)
+    with pytest.raises(ValueError, match='mix selected'):
+        format.block((2, 2))
+    assert format.evaluate(torch.empty(0, 1, dtype=torch.long)).shape == (0, *format.in_dim[1:])
+
+
+def test_partial_sample_error_and_gradients():
+    first = torch.eye(2, dtype=torch.float64, requires_grad=True)
+    second = torch.eye(2, dtype=torch.float64, requires_grad=True)
+    format = tk.formats.TT([first, second], in_sites=(0,))
+    indices = torch.tensor([[0], [1]])
+    record = format.error(lambda data: torch.eye(2, dtype=torch.float64), indices)
+    assert record.absolute == 0
+    assert record.relative == 0
+    assert record.size == 2
+    vectors = torch.tensor([[2., 3.]], dtype=torch.float64, requires_grad=True)
+    format.evaluate([vectors]).square().sum().backward()
+    torch.testing.assert_close(vectors.grad, 2 * vectors.detach())
+    assert first.grad is not None and second.grad is not None

@@ -1585,11 +1585,15 @@ class TestMPS:  # MARK: TestMPS
                                       rtol=1e-5)
                 prefixes[batch].append(indices[batch, step].item())
 
-    def test_sample_canonical_matches_right_environments(self, monkeypatch):
+    @pytest.mark.parametrize('out_features', [[], [0], [1]])
+    def test_sample_canonical_matches_right_environments(self,
+                                                         monkeypatch,
+                                                         out_features):
         mps = tk.models.MPS(n_sites=4,
                             phys_dim=2,
                             bond_dim=2,
-                            boundary='obc')
+                            boundary='obc',
+                            out_features=out_features)
         mps.canonicalize(orth_center=0, mode='svd')
 
         captured = self._capture_multinomial_probs(monkeypatch)
@@ -1637,6 +1641,192 @@ class TestMPS:  # MARK: TestMPS
 
         with pytest.raises(ValueError, match='no input nodes'):
             mps.sample(n_samples=2)
+
+    def _assert_sample_matches_exact(self,
+                                     mps,
+                                     monkeypatch,
+                                     condition_ids=None,
+                                     **sample_kwargs):
+        # Every local distribution the sweep draws from, for every sample,
+        # against the conditionals of the exact Born distribution.
+        configs, probs = self._exact_input_distribution(mps)
+        phys_dims = [mps.phys_dim[site] for site in mps.in_features]
+
+        if condition_ids is None:
+            n_rows = 1
+            sample_kwargs['n_samples'] = 1
+        else:
+            n_rows = condition_ids.shape[0]
+            sample_kwargs['in_condition'] = self._basis_data_for_configs(
+                mps, condition_ids, phys_dims)
+
+        captured = self._capture_multinomial_probs(monkeypatch)
+        _, indices = mps.sample(return_indices=True, **sample_kwargs)
+        monkeypatch.undo()
+
+        assert len(captured) == len(phys_dims)
+        for row in range(n_rows):
+            prefix = []
+            for step, local_probs in enumerate(captured):
+                expected = self._conditional_probs_from_exact(
+                    configs=configs,
+                    probs=probs,
+                    step=step,
+                    prefix=prefix,
+                    phys_dim=phys_dims[step],
+                    condition=None if condition_ids is None
+                    else condition_ids[row])
+                assert torch.allclose(local_probs[row].cpu(),
+                                      expected.cpu().to(local_probs.dtype),
+                                      atol=1e-5,
+                                      rtol=1e-5)
+                prefix.append(indices[row, step].item())
+
+    @staticmethod
+    def _condition_ids(phys_dims, n_rows=3):
+        generator = torch.Generator().manual_seed(0)
+        return torch.stack([torch.randint(dim, (n_rows,), generator=generator)
+                            for dim in phys_dims], dim=1)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('dtype', [None, torch.complex64])
+    @pytest.mark.parametrize('out_features',
+                             [[], [0], [2], [4], [0, 4], [1, 3]])
+    @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('renormalize', AUTO_BOOL_CASES)
+    def test_sample_exact_with_outputs_and_mixed_dims(self,
+                                                      monkeypatch,
+                                                      boundary,
+                                                      dtype,
+                                                      out_features,
+                                                      conditioned,
+                                                      renormalize):
+        torch.manual_seed(0)
+        kwargs = {} if dtype is None else {'dtype': dtype}
+        phys_dim = [2, 3, 2, 3, 2]
+        mps = tk.models.MPS(n_sites=5,
+                            phys_dim=phys_dim,
+                            bond_dim=3,
+                            boundary=boundary,
+                            out_features=out_features,
+                            **kwargs)
+
+        condition_ids = None
+        if conditioned:
+            condition_ids = self._condition_ids(
+                [phys_dim[site] for site in mps.in_features])
+        self._assert_sample_matches_exact(mps,
+                                          monkeypatch,
+                                          condition_ids=condition_ids,
+                                          renormalize=renormalize)
+
+    @pytest.mark.parametrize('model,out_position',
+                             [('MPSLayer', 0), ('MPSLayer', 2),
+                              ('MPSLayer', 3)])
+    @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
+    def test_sample_exact_for_layers(self,
+                                     monkeypatch,
+                                     model,
+                                     out_position,
+                                     conditioned):
+        torch.manual_seed(0)
+        mps = getattr(tk.models, model)(n_sites=4,
+                                        in_dim=2,
+                                        out_dim=3,
+                                        bond_dim=3,
+                                        out_position=out_position)
+
+        condition_ids = self._condition_ids([2] * 3) if conditioned else None
+        self._assert_sample_matches_exact(mps,
+                                          monkeypatch,
+                                          condition_ids=condition_ids)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
+    def test_sample_renormalize_keeps_long_chains_exact(self,
+                                                        monkeypatch,
+                                                        boundary,
+                                                        conditioned):
+        # 40 sites: the local distributions with and without renormalized
+        # environments agree (float64, so the reference does not overflow).
+        torch.manual_seed(0)
+        mps = tk.models.MPS(n_sites=40,
+                            phys_dim=2,
+                            bond_dim=4,
+                            boundary=boundary,
+                            out_features=[20],
+                            dtype=torch.float64)
+        kwargs = dict(n_samples=3)
+        if conditioned:
+            kwargs['in_condition'] = tk.embeddings.basis(
+                self._condition_ids([2] * 39), dim=2).to(torch.float64)
+
+        local_probs = {}
+        for renormalize in (False, True):
+            captured = self._capture_multinomial_probs(monkeypatch)
+            mps.sample(renormalize=renormalize, **kwargs)
+            monkeypatch.undo()
+            local_probs[renormalize] = captured
+
+        assert len(local_probs[True]) == 39
+        for p, q in zip(local_probs[False], local_probs[True]):
+            assert torch.allclose(p, q, atol=1e-10, rtol=1e-8)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
+    def test_sample_many_marginalized_sites(self,
+                                            monkeypatch,
+                                            boundary,
+                                            conditioned):
+        # 20 output sites of dimension 3 around 4 inputs. Summing each output
+        # inside |psi|^2 joins ket and bra there; a single layer would carry
+        # one vector per combination of output values (3**20).
+        torch.manual_seed(0)
+        in_features = [0, 7, 16, 23]
+        mps = tk.models.MPS(n_sites=24,
+                            phys_dim=[2 if site in in_features else 3
+                                      for site in range(24)],
+                            bond_dim=3,
+                            boundary=boundary,
+                            out_features=[site for site in range(24)
+                                          if site not in in_features],
+                            dtype=torch.float64)
+
+        condition_ids = self._condition_ids([2] * 4) if conditioned else None
+        self._assert_sample_matches_exact(mps,
+                                          monkeypatch,
+                                          condition_ids=condition_ids,
+                                          renormalize=True)
+
+    def test_sample_leaves_other_methods_unchanged(self):
+        torch.manual_seed(0)
+        mps = tk.models.MPS(n_sites=4,
+                            phys_dim=2,
+                            bond_dim=3,
+                            boundary='obc',
+                            out_features=[1])
+        data = tk.embeddings.basis(torch.randint(0, 2, (5, 3)), dim=2)\
+            .to(mps.mats_env[0].dtype)
+        condition = tk.embeddings.basis(torch.randint(0, 2, (2, 3)), dim=2)\
+            .to(mps.mats_env[0].dtype)
+
+        def results():
+            forward = mps(data, marginalize_output=True)
+            mps.reset()
+            mps.unset_data_nodes()
+            norm = mps.norm()
+            mps.reset()
+            return forward, norm
+
+        expected = results()
+        n_nodes = len(mps.nodes)
+        for sample_kwargs in [dict(n_samples=3),
+                              dict(in_condition=condition),
+                              dict(n_samples=3)]:
+            mps.sample(**sample_kwargs)
+            for result, reference in zip(results(), expected):
+                assert torch.allclose(result, reference)
+            assert len(mps.nodes) == n_nodes
     ############################
     # SAMPLE: work in progress #
     ############################

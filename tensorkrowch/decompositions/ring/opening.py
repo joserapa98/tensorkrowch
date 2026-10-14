@@ -38,11 +38,14 @@ from typing import (Any,
 
 import torch
 
+from tensorkrowch.formats import TR
+
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.als.tr import TRALS
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 TensorDecomposition)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource,
                                                  as_tensor_source)
@@ -53,7 +56,7 @@ _Context = Optional[Mapping[str, Any]]
 
 
 @dataclass(frozen=True)
-class LoopOpenerCapabilities:
+class LoopOpenerCapabilities:  # MARK: LoopOpenerCapabilities
     """Declares the constraints accepted by a loop-opening strategy."""
 
     supports_fixed_left: bool = False  # Whether the opener can preserve a left gauge
@@ -76,8 +79,10 @@ class LoopOpenerCapabilities:
                 fixed_left: bool,
                 fixed_right: bool,
                 block_size: int) -> None:
-        """Raises before execution when requested constraints are
-        unsupported."""
+        """
+        Raises before execution when requested constraints are
+        unsupported.
+        """
         if fixed_left and not self.supports_fixed_left:
             raise ValueError('The loop opener does not support a fixed left gauge')
         if fixed_right and not self.supports_fixed_right:
@@ -91,13 +96,14 @@ class LoopOpenerCapabilities:
 
 
 @dataclass(frozen=True)
-class LoopOpening:
-    """Stores gauges, local TR cores and diagnostics from one loop opening.
+class LoopOpening:  # MARK: LoopOpening
+    """
+    Stores gauges, local TR ``cores`` and ``diagnostics`` from one loop opening.
 
-    ``left_gauge`` and ``right_gauge`` are the environment cores surrounding
-    the local physical ``cores``. When both are present, ``all_cores`` follows
+    ``left_gauge`` and ``right_gauge`` are the environment ``cores`` surrounding
+    the local input ``cores``. When both are present, ``all_cores`` follows
     standard TR order and contracts to the local target. ``rank[k]`` is the
-    right-link rank of ``all_cores[k]``.
+    right-link ``rank`` of ``all_cores[k]``.
     """
 
     left_gauge: Optional[torch.Tensor]  # Left external gauge core
@@ -153,14 +159,17 @@ class LoopOpening:
             if core is not None)
 
     def contract_dense(self) -> torch.Tensor:
-        """Contracts the complete local opening without constructing a
-        model."""
+        """
+        Contracts the complete local opening without constructing a
+        model.
+        """
         return TRDecomposition(self.all_cores).contract_dense()
 
 
 @runtime_checkable
-class LoopOpener(Protocol):
-    """Solves one local cyclic factorization with explicit gauge constraints.
+class LoopOpener(Protocol):  # MARK: LoopOpener
+    """
+    Solves one local cyclic factorization with explicit gauge constraints.
 
     An opening represents its target as left gauge, input core(s) and right
     gauge. Capabilities declare whether a strategy accepts either or both fixed
@@ -174,14 +183,15 @@ class LoopOpener(Protocol):
         """Returns constraints supported by this strategy."""
 
     def open(self,
-             target,
+             target: Any,
              rank: _Rank,
              *,
              fixed_left: Optional[torch.Tensor] = None,
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Opens a local tensor into gauges and input cores.
+        """
+        Opens a local tensor into gauges and input cores.
 
         Parameters
         ----------
@@ -197,7 +207,7 @@ class LoopOpener(Protocol):
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            target order, including when the algorithm uses a mirrored local
+            ``target`` order, including when the algorithm uses a mirrored local
             problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
@@ -212,7 +222,7 @@ class LoopOpener(Protocol):
 
 
 def _normalize_context(context: _Context) -> Mapping[str, Any]:
-    """Copies an optional opening context after validating its type."""
+    """Copies an optional opening ``context`` after validating its type."""
     if context is None:
         return {}
     if not isinstance(context, Mapping):
@@ -221,7 +231,7 @@ def _normalize_context(context: _Context) -> Mapping[str, Any]:
 
 
 def _normalize_orientation(orientation: str) -> str:
-    """Validates the explicit opening orientation."""
+    """Validates the explicit opening ``orientation``."""
     if not isinstance(orientation, str):
         raise TypeError('`orientation` should be str type')
     if orientation not in ('right', 'left'):
@@ -230,7 +240,9 @@ def _normalize_orientation(orientation: str) -> str:
 
 
 def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
-    """Normalizes a shared rank or one right-link rank per local site."""
+    """
+    Normalizes a shared ``rank`` or one right-link ``rank`` per local site.
+    """
     if isinstance(rank, bool):
         raise TypeError('`rank` should be int or a sequence of ints')
     if isinstance(rank, int):
@@ -260,12 +272,17 @@ def _mirror_rank(rank: Sequence[int]) -> Tuple[int, ...]:
 
 
 def _mirror_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
-    """Mirrors standard TR cores while preserving their represented tensor."""
+    """
+    Mirrors standard TR ``cores`` while preserving their represented tensor.
+    """
     return tuple(core.permute(2, 1, 0) for core in reversed(cores))
 
 
-def _source_from_context(target, context: Mapping[str, Any]) -> TensorSource:
-    """Normalizes a local target through the shared TensorSource contract."""
+def _source_from_context(target: Any,
+                         context: Mapping[str, Any]) -> TensorSource:
+    """
+    Normalizes a local ``target`` through the shared TensorSource contract.
+    """
     return as_tensor_source(
         target,
         in_dim=context.get('in_dim'),
@@ -276,7 +293,7 @@ def _source_from_context(target, context: Mapping[str, Any]) -> TensorSource:
 
 
 def _mirror_source(source: TensorSource) -> TensorSource:
-    """Creates a lazy source whose variables are in reverse site order."""
+    """Creates a lazy ``source`` whose variables are in reverse site order."""
     def evaluate(indices: torch.Tensor) -> torch.Tensor:
         configurations = ConfigurationBatch(
             indices.flip(1), kind='indices')
@@ -290,9 +307,8 @@ def _mirror_source(source: TensorSource) -> TensorSource:
         device=source.device)
 
 
-def _cast_source(source: TensorSource,
-                 dtype: torch.dtype) -> TensorSource:
-    """Lazily casts target values to an initializer's numerical dtype."""
+def _cast_source(source: TensorSource, dtype: torch.dtype) -> TensorSource:
+    """Lazily casts target values to an initializer's numerical ``dtype``."""
     if source.dtype == dtype:
         return source
 
@@ -308,9 +324,9 @@ def _cast_source(source: TensorSource,
         device=source.device)
 
 
-def _opening_from_result(result: TRDecomposition,
+def _opening_from_result(result: TensorDecomposition,
                          orientation: str) -> LoopOpening:
-    """Converts an ALS result back from the requested orientation."""
+    """Converts an ALS ``result`` back from the requested ``orientation``."""
     result_cores = tuple(result.cores)
     if orientation == 'left':
         result_cores = _mirror_cores(result_cores)
@@ -327,8 +343,9 @@ def _opening_from_result(result: TRDecomposition,
         })
 
 
-class ALSLoopOpener:
-    """Opens local loops using a reusable, encapsulated TR-ALS policy.
+class ALSLoopOpener:  # MARK: ALSLoopOpener
+    """
+    Opens local loops using a reusable, encapsulated TR-ALS policy.
 
     Parameters
     ----------
@@ -362,14 +379,15 @@ class ALSLoopOpener:
         return self._capabilities
 
     def open(self,
-             target,
+             target: Any,
              rank: _Rank,
              *,
              fixed_left: Optional[torch.Tensor] = None,
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Fits a local TR with zero or one fixed environment gauge.
+        """
+        Fits a local TR with zero or one fixed environment gauge.
 
         Parameters
         ----------
@@ -389,7 +407,7 @@ class ALSLoopOpener:
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            target order, including when the algorithm uses a mirrored local
+            ``target`` order, including when the algorithm uses a mirrored local
             problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
@@ -398,7 +416,7 @@ class ALSLoopOpener:
         Returns
         -------
         LoopOpening
-            Gauges and cores in original target order with optional local
+            Gauges and cores in original ``target`` order with optional local
             metrics.
         """
         orientation = _normalize_orientation(orientation)
@@ -473,8 +491,9 @@ class ALSLoopOpener:
         return _opening_from_result(result, orientation)
 
 
-class FixedGaugeCoreOpener:
-    """Solves the single remaining input core with both gauges fixed.
+class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
+    """
+    Solves the single remaining input core with both gauges fixed.
 
     The full effective local design is solved once using LeastSquaresSolver.
     The external maps remain fixed; they are not pseudoinverted separately.
@@ -493,8 +512,7 @@ class FixedGaugeCoreOpener:
         supports_two_fixed_gauges=True,
         supports_blocks=False)
 
-    def __init__(self,
-                 solver: Optional[LeastSquaresSolver] = None) -> None:
+    def __init__(self, solver: Optional[LeastSquaresSolver] = None) -> None:
         if solver is None:
             solver = LeastSquaresSolver()
         elif not isinstance(solver, LeastSquaresSolver):
@@ -507,14 +525,15 @@ class FixedGaugeCoreOpener:
         return self._capabilities
 
     def open(self,
-             target,
+             target: Any,
              rank: _Rank,
              *,
              fixed_left: Optional[torch.Tensor] = None,
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Solves the unique unknown core by one dense least-squares system.
+        """
+        Solves the unique unknown core by one dense least-squares system.
 
         Parameters
         ----------
@@ -534,7 +553,7 @@ class FixedGaugeCoreOpener:
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            target order, including when the algorithm uses a mirrored local
+            ``target`` order, including when the algorithm uses a mirrored local
             problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
@@ -543,7 +562,7 @@ class FixedGaugeCoreOpener:
         Returns
         -------
         LoopOpening
-            Gauges and cores in original target order with optional local
+            Gauges and cores in original ``target`` order with optional local
             metrics.
         """
         orientation = _normalize_orientation(orientation)
@@ -622,14 +641,17 @@ class FixedGaugeCoreOpener:
             })
 
 
-class CallableLoopOpener:
-    """Adapts a callable to the loop-opening protocol.
+class CallableLoopOpener:  # MARK: CallableLoopOpener
+    """
+    Adapts a callable to the loop-opening protocol.
 
     Parameters
     ----------
     opener : callable
-        Receives the arguments of LoopOpener.open and returns a LoopOpening or
-        TRDecomposition.
+        Receives the arguments of :meth:`LoopOpener.open` and returns a
+        :class:`LoopOpening` or a :class:`~tensorkrowch.formats.TR` format
+        carrying :class:`~tensorkrowch.decompositions.TensorDecomposition`
+        diagnostics, including Quantics results.
     capabilities : LoopOpenerCapabilities, optional
         Constraints supported by the callable. Unsupported fixed gauges or
         block sizes are rejected before invoking it.
@@ -654,14 +676,15 @@ class CallableLoopOpener:
         return self._capabilities
 
     def open(self,
-             target,
+             target: Any,
              rank: _Rank,
              *,
              fixed_left: Optional[torch.Tensor] = None,
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Validates constraints and normalizes the callable result.
+        """
+        Validates constraints and normalizes the callable result.
 
         Parameters
         ----------
@@ -681,7 +704,7 @@ class CallableLoopOpener:
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            target order, including when the algorithm uses a mirrored local
+            ``target`` order, including when the algorithm uses a mirrored local
             problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
@@ -690,7 +713,7 @@ class CallableLoopOpener:
         Returns
         -------
         LoopOpening
-            Gauges and cores in original target order with optional local
+            Gauges and cores in original ``target`` order with optional local
             metrics.
         """
         orientation = _normalize_orientation(orientation)
@@ -710,13 +733,14 @@ class CallableLoopOpener:
             context=context)
         if isinstance(result, LoopOpening):
             return result
-        if isinstance(result, TRDecomposition):
+        if isinstance(result, TensorDecomposition) and isinstance(result, TR):
             return _opening_from_result(result, orientation)
         raise TypeError('The adapted callable should return a LoopOpening')
 
 
-class CompositeLoopOpener:
-    """Initializes an opening and refines it under the requested gauge
+class CompositeLoopOpener:  # MARK: CompositeLoopOpener
+    """
+    Initializes an opening and refines it under the requested gauge
     constraints.
 
     The initializer opens the target without fixed gauges. Its cores initialize
@@ -756,14 +780,15 @@ class CompositeLoopOpener:
         return self.refiner.capabilities
 
     def open(self,
-             target,
+             target: Any,
              rank: _Rank,
              *,
              fixed_left: Optional[torch.Tensor] = None,
              fixed_right: Optional[torch.Tensor] = None,
              orientation: str = 'right',
              context: _Context = None) -> LoopOpening:
-        """Initializes without constraints and refines with requested gauges.
+        """
+        Initializes without constraints and refines with requested gauges.
 
         Parameters
         ----------
@@ -783,7 +808,7 @@ class CompositeLoopOpener:
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            target order, including when the algorithm uses a mirrored local
+            ``target`` order, including when the algorithm uses a mirrored local
             problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
@@ -792,7 +817,7 @@ class CompositeLoopOpener:
         Returns
         -------
         LoopOpening
-            Gauges and cores in original target order with optional local
+            Gauges and cores in original ``target`` order with optional local
             metrics.
         """
         orientation = _normalize_orientation(orientation)
@@ -846,7 +871,7 @@ class CompositeLoopOpener:
             diagnostics=diagnostics)
 
 
-def resolve_loop_opener(loop_opener) -> LoopOpener:
+def resolve_loop_opener(loop_opener: Any) -> LoopOpener:
     """Normalizes simple ALS presets, advanced strategies and callables."""
     def als_opener() -> ALSLoopOpener:
         return ALSLoopOpener({

@@ -1,16 +1,16 @@
-"""Tests for the canonical SVD API and deprecated compatibility wrappers."""
+"""Tests for svd/init."""
 
 import inspect
 import warnings
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
+import tensorkrowch.decompositions.svd.trm as trm_module
 import tensorkrowch.decompositions.svd.tt as tt_module
 import tensorkrowch.decompositions.svd.ttm as ttm_module
-import tensorkrowch.decompositions.svd.trm as trm_module
 
 
 class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
@@ -84,7 +84,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         def fake_tt_svd(**kwargs):
             calls.append(kwargs)
-            return 'tt-result'
+            return tk.decompositions.TTDecomposition([torch.ones(2)])
 
         monkeypatch.setattr(tt_module, 'tt_svd', fake_tt_svd)
         with pytest.warns(FutureWarning, match='`vec_to_mps` is deprecated'):
@@ -100,7 +100,8 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
                 verbose=2,
                 return_info=True)
 
-        assert result == 'tt-result'
+        assert result[0][0].shape == (2,)
+        assert result[1]['topology'] == 'tt'
         assert calls == [{
             'tensor': tensor,
             'n_batches': 1,
@@ -112,7 +113,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
             'renormalize': True,
             'out_device': None,
             'verbose': 2,
-            'return_info': True,
+            'collect_metrics': True,
         }]
 
     def test_mat_to_mpo_preserves_keywords_and_delegates(self, monkeypatch):
@@ -121,7 +122,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         def fake_ttm_svd(**kwargs):
             calls.append(kwargs)
-            return 'ttm-result'
+            return tk.decompositions.TTMDecomposition([torch.ones(2, 3)])
 
         monkeypatch.setattr(ttm_module, 'ttm_svd', fake_ttm_svd)
         with pytest.warns(FutureWarning, match='`mat_to_mpo` is deprecated'):
@@ -136,10 +137,11 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
                 verbose=2,
                 return_info=True)
 
-        assert result == 'ttm-result'
+        assert result[0][0].shape == (2, 3)
+        assert result[1]['topology'] == 'ttm'
         assert calls == [{
             'tensor': tensor,
-            'layout': 'interleaved',
+            'ordering': 'interleaved',
             'rank': 2,
             'cutoff': 0.1,
             'atol': 0.2,
@@ -148,7 +150,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
             'renormalize': True,
             'out_device': None,
             'verbose': 2,
-            'return_info': True,
+            'collect_metrics': True,
         }]
 
     @pytest.mark.parametrize(
@@ -195,3 +197,53 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         messages = [str(warning.message) for warning in caught]
         assert not any('deprecated' in message for message in messages)
+
+
+@pytest.mark.parametrize('name', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('argument', ['return_result', 'return_info'])
+def test_function_output_options_are_removed(name, argument):
+    function = getattr(tk.decompositions, name + '_svd')
+    with pytest.raises(TypeError, match=argument):
+        function(torch.ones(2, 2, 2, 2), **{argument: True})
+
+
+@pytest.mark.parametrize('name', ['tt', 'tr', 'ttm', 'trm'])
+def test_function_returns_decomposition_without_metrics(name):
+    function = getattr(tk.decompositions, name + '_svd')
+    result_type = getattr(tk.decompositions, name.upper() + 'Decomposition')
+    result = function(torch.ones(2, 2, 2, 2), rank=1)
+    assert isinstance(result, result_type)
+    assert not result.metrics.truncations
+    assert torch.allclose(result.contract_dense(), torch.ones(2, 2, 2, 2))
+
+
+@pytest.mark.parametrize('name', ['tt', 'tr', 'ttm', 'trm'])
+def test_quantics_function_exports_and_default_result(name):
+    module = __import__('tensorkrowch.decompositions.svd.' + name,
+                        fromlist=['q' + name + '_svd'])
+    function = getattr(tk.decompositions, 'q' + name + '_svd')
+    assert function is getattr(module, 'q' + name + '_svd')
+    assert function is getattr(tk.decompositions.svd, 'q' + name + '_svd')
+
+    if name.endswith('m'):
+        source = tk.decompositions.QuanticsMatrixSource(
+            lambda inputs, outputs: inputs[:, 0] + outputs[:, 0],
+            in_n_coordinates=1, out_n_coordinates=1,
+            in_base=2, out_base=2, in_level=2, out_level=2,
+            in_domain=(0., 1.), out_domain=(0., 1.))
+    else:
+        source = tk.decompositions.QuanticsVectorSource(
+            lambda coordinates: coordinates[:, 0],
+            n_coordinates=1, base=2, level=2, domain=(0., 1.))
+
+    result = function(source)
+    assert isinstance(result, getattr(tk.decompositions,
+                                      'Q' + name.upper() + 'Decomposition'))
+    assert result.device == torch.device('cpu')
+    assert not result.metrics.truncations
+    torch.testing.assert_close(result.to_dense_grid(), source.to_dense_grid())
+
+    with pytest.raises(ValueError, match='rank'):
+        function(source, rank=0)
+    with pytest.raises(TypeError, match='collect_metrics'):
+        function(source, collect_metrics=1)

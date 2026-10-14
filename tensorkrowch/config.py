@@ -125,7 +125,7 @@ def svd_method(method: Text,
     --------
     >>> tensor = torch.arange(8.).reshape(2, 2, 2)
     >>> with tk.svd_method('qr_svd', refine=True):
-    ...     cores = tk.decompositions.tt_svd(tensor, rank=2)
+    ...     cores = tk.decompositions.tt_svd(tensor, rank=2).cores
     ...     active_settings = (tk.get_svd_method(), tk.get_svd_refinement())
     >>> active_settings
     ('qr_svd', True)

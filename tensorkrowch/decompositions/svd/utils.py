@@ -24,7 +24,7 @@ _Dimension = Optional[Union[int, Sequence[int]]]
 
 
 @dataclass(frozen=True)
-class _SVDProgress:
+class _SVDProgress:  # MARK: _SVDProgress
     """Emits one live event for each completed SVD cut."""
 
     observer: DecompositionObserver  # Consumer of live SVD events
@@ -36,16 +36,15 @@ class _SVDProgress:
                      site: int,
                      record: TruncationRecord,
                      elapsed: float) -> None:
-        """Emits a completed cut using its global site position."""
+        """Emits a completed cut using its global ``site`` position."""
         abs_error = record.local_abs_error
         rel_error = record.local_rel_error
         if abs_error.ndim:
             abs_error = torch.linalg.vector_norm(abs_error)
             local_norm = torch.linalg.vector_norm(record.local_norm)
-            rel_error = torch.where(
-                local_norm > 0,
-                abs_error / local_norm,
-                torch.zeros_like(abs_error))
+            rel_error = torch.where(local_norm > 0,
+                                    abs_error / local_norm,
+                                    torch.zeros_like(abs_error))
         values = {
             'full_rank': record.full_rank,
             'selected_rank': record.selected_rank,
@@ -54,6 +53,7 @@ class _SVDProgress:
         }
         if self.subphase is not None:
             values['subphase'] = self.subphase
+
         self.observer.emit(DecompositionEvent(
             name='cut_complete',
             phase=self.phase,
@@ -63,10 +63,9 @@ class _SVDProgress:
 
 
 def _tensor_norm_components(tensor: torch.Tensor,
-                            dim: _Dimension = None) -> Tuple[
-                                torch.Tensor,
-                                torch.Tensor,
-                                torch.Tensor]:
+                            dim: _Dimension = None) -> Tuple[torch.Tensor,
+                                                             torch.Tensor,
+                                                             torch.Tensor]:
     """Returns stable scale factors and the log-norm of tensors."""
     absolute = tensor.abs()
     if dim is None:
@@ -86,17 +85,16 @@ def _tensor_norm_components(tensor: torch.Tensor,
 
     safe_scaled_norm = torch.where(
         positive, scaled_norm, torch.ones_like(scaled_norm))
-    log_norm = torch.where(
-        positive,
-        safe_scale.log() + safe_scaled_norm.log(),
-        torch.full_like(safe_scale, -torch.inf))
+    log_norm = torch.where(positive,
+                           safe_scale.log() + safe_scaled_norm.log(),
+                           torch.full_like(safe_scale, -torch.inf))
     return safe_scale, safe_scaled_norm, log_norm
 
 
 def _log_tensor_norm(tensor: torch.Tensor,
                      dim: _Dimension = None,
                      keepdim: bool = False) -> torch.Tensor:
-    """Computes a tensor log-norm without squaring the original scale."""
+    """Computes a ``tensor`` log-norm without squaring the original scale."""
     if dim is None:
         if not tensor.numel():
             return tensor.real.new_tensor(-torch.inf)
@@ -123,10 +121,9 @@ def _log_tensor_norm(tensor: torch.Tensor,
 
 
 def _normalize_tensor(tensor: torch.Tensor,
-                      dim: _Dimension = None):
+                      dim: _Dimension = None) -> Tuple[torch.Tensor, torch.Tensor]:
     """Normalizes tensors and returns their log-norms without overflow."""
-    safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(
-        tensor, dim)
+    safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(tensor, dim)
     scaled = tensor / safe_scale
     normalized = scaled / safe_scaled_norm
     if dim is None:
@@ -139,4 +136,8 @@ def _normalize_tensor(tensor: torch.Tensor,
     return normalized, log_norm
 
 
-__all__ = ['_SVDProgress', '_log_tensor_norm', '_normalize_tensor']
+__all__ = [
+    '_SVDProgress',
+    '_log_tensor_norm',
+    '_normalize_tensor',
+]

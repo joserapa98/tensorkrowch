@@ -31,19 +31,20 @@ from typing import Callable, Optional, Protocol, Sequence, Tuple
 import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
+
+from tensorkrowch.decompositions.als.problem import ObservedEntries
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
                                                       _ravel_indices,
                                                       _unravel_indices)
 
-from tensorkrowch.decompositions.als.problem import ObservedEntries
-
 
 @dataclass(frozen=True)
-class SampleBatch:
-    """Rows drawn for one ALS design together with immutable probabilities.
+class SampleBatch:  # MARK: SampleBatch
+    """
+    Rows drawn for one ALS design together with immutable ``probabilities``.
 
-    ``probabilities`` are the probabilities used when the ids were drawn.
+    ``probabilities`` are the ``probabilities`` used when the ``ids`` were drawn.
     ``weights`` must equal ``1 / sqrt(n_samples * probabilities)`` and remain
     unchanged while the batch is reused.
     """
@@ -116,10 +117,9 @@ class SampleBatch:
             return True
         return self.proposal_core_versions == tuple(current_core_versions)
 
-    def gather_and_weight(
-            self,
-            environment: torch.Tensor,
-            target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def gather_and_weight(self,
+                          environment: torch.Tensor,
+                          target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Selects global rows and applies their sampling weights."""
         if not isinstance(environment, torch.Tensor):
             raise TypeError('`environment` should be torch.Tensor type')
@@ -153,7 +153,7 @@ class SampleBatch:
 
 
 @dataclass(frozen=True)
-class _RowSamplingState:
+class _RowSamplingState:  # MARK: _RowSamplingState
     """Immutable state passed to row samplers by ALS drivers."""
 
     n_rows: int  # Number of possible global rows
@@ -192,7 +192,7 @@ class _RowSamplingState:
         return replace(self, core_versions=tuple(versions))
 
 
-class RowSampler(Protocol):
+class RowSampler(Protocol):  # MARK: RowSampler
     """Protocol for selecting and weighting rows of a local ALS design."""
 
     @property
@@ -213,7 +213,7 @@ class RowSampler(Protocol):
     def update_after_core(self,
                           state: _RowSamplingState,
                           site: int) -> _RowSamplingState:
-        """Updates proposal state after a core commit."""
+        """Updates proposal ``state`` after a core commit."""
 
 
 def _validate_draw(state: _RowSamplingState,
@@ -238,7 +238,7 @@ def _sample_batch(ids: torch.Tensor,
                   site: int,
                   proposal_core_versions: Tuple[int, ...] = (),
                   proposal_exact: bool = True) -> SampleBatch:
-    """Builds weights from immutable draw probabilities."""
+    """Builds weights from immutable draw ``probabilities``."""
     weights = (ids.numel() * probabilities).rsqrt()
     return SampleBatch(
         ids=ids,
@@ -250,7 +250,7 @@ def _sample_batch(ids: torch.Tensor,
         site=site)
 
 
-class ExactRows:
+class ExactRows:  # MARK: ExactRows
     """Deterministic sampler containing every row exactly once."""
 
     proposal_exact = True
@@ -278,13 +278,16 @@ class ExactRows:
     def update_after_core(self,
                           state: _RowSamplingState,
                           site: int) -> _RowSamplingState:
-        """Increments the core version; exact rows remain
-        design-independent."""
+        """
+        Increments the core version; exact rows remain
+        design-independent.
+        """
         return state.update_core(site)
 
 
-class ObservedRows:
-    """Deterministic non-refreshable rows from fixed observations.
+class ObservedRows:  # MARK: ObservedRows
+    """
+    Deterministic non-refreshable rows from fixed observations.
 
     Parameters
     ----------
@@ -330,7 +333,7 @@ class ObservedRows:
         return state.update_core(site)
 
 
-class UniformRows:
+class UniformRows:  # MARK: UniformRows
     """Uniform row sampling with replacement."""
 
     proposal_exact = True
@@ -387,8 +390,7 @@ def _region_metrics(cores: Sequence[torch.Tensor]) -> Sequence[torch.Tensor]:
 
 def _sample_region(cores: Sequence[torch.Tensor],
                    n_samples: int,
-                   generator: Optional[torch.Generator]
-                   ) -> Tuple[torch.Tensor, torch.Tensor]:
+                   generator: Optional[torch.Generator]) -> Tuple[torch.Tensor, torch.Tensor]:
     """Samples a chain region from its normalized row-norm distribution."""
     if not cores:
         device = torch.device('cpu') if generator is None \
@@ -423,7 +425,7 @@ def _sample_region(cores: Sequence[torch.Tensor],
 
 def _region_row_probability(cores: Sequence[torch.Tensor],
                             indices: torch.Tensor) -> torch.Tensor:
-    """Evaluates normalized row-norm probabilities for selected indices."""
+    """Evaluates normalized row-norm probabilities for selected ``indices``."""
     if not cores:
         return torch.ones(
             indices.shape[0], device=indices.device,
@@ -439,8 +441,9 @@ def _region_row_probability(cores: Sequence[torch.Tensor],
     return row_norm / total
 
 
-class TTLeverageRows:
-    """Samples TT local-design rows from mixed-canonical leverage scores.
+class TTLeverageRows:  # MARK: TTLeverageRows
+    """
+    Samples TT local-design rows from mixed-canonical leverage scores.
 
     The exact mixed-canonical construction follows *Efficient Leverage Score
     Sampling for Tensor Train Decomposition* (2024), available in this `paper
@@ -489,7 +492,8 @@ class TTLeverageRows:
 
     @staticmethod
     def _right_sampling_cores(
-            cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
+        cores: Sequence[torch.Tensor]
+    ) -> Tuple[torch.Tensor, ...]:
         """Reverses a right-canonical region into left-sampling form."""
         return tuple(
             core.permute(2, 1, 0).conj() for core in reversed(cores))
@@ -505,8 +509,8 @@ class TTLeverageRows:
         return cores
 
     @staticmethod
-    def _validate_mixed_canonical(
-            cores: Sequence[torch.Tensor], site: int) -> None:
+    def _validate_mixed_canonical(cores: Sequence[torch.Tensor],
+                                  site: int) -> None:
         """Checks the isometries that turn row norms into leverage scores."""
         real_dtype = cores[0].real.dtype
         tolerance = 100 * torch.finfo(real_dtype).eps * max(
@@ -530,11 +534,10 @@ class TTLeverageRows:
                 raise ValueError(
                     'Cores right of the leverage site should be right-isometric')
 
-    def _probabilities_from_indices(
-            self,
-            cores: Sequence[torch.Tensor],
-            site: int,
-            indices: torch.Tensor) -> torch.Tensor:
+    def _probabilities_from_indices(self,
+                                    cores: Sequence[torch.Tensor],
+                                    site: int,
+                                    indices: torch.Tensor) -> torch.Tensor:
         """Evaluates mixed probabilities after canonical validation."""
         in_dim = tuple(core.shape[1] for core in cores)
         left_probability = _region_row_probability(
@@ -643,8 +646,9 @@ class TTLeverageRows:
         return state.update_core(site)
 
 
-class TRProductLeverageRows:
-    """Samples an approximate product-leverage proposal for TR designs.
+class TRProductLeverageRows:  # MARK: TRProductLeverageRows
+    """
+    Samples an approximate product-leverage proposal for TR designs.
 
     This implements the product proposal from Algorithm 2 of *A Sampling-Based
     Method for Tensor Ring Decomposition* (2021), available in this `paper
@@ -714,7 +718,7 @@ class TRProductLeverageRows:
 
     @staticmethod
     def _row_leverage(matrix: torch.Tensor) -> torch.Tensor:
-        """Computes normalized numerical row leverage of one matrix."""
+        """Computes normalized numerical row leverage of one ``matrix``."""
         u, singular_values, _ = torch.linalg.svd(
             matrix, full_matrices=False)
         if singular_values.numel() == 0:
@@ -731,15 +735,15 @@ class TRProductLeverageRows:
 
     @staticmethod
     def _input_leverage(core: torch.Tensor) -> torch.Tensor:
-        """Returns row leverage of the core's mode-input unfolding."""
+        """Returns row leverage of the ``core``'s mode-input unfolding."""
         left_rank, in_dim, right_rank = core.shape
         unfolding = core.permute(1, 0, 2).reshape(
             in_dim, left_rank * right_rank)
         return TRProductLeverageRows._row_leverage(unfolding)
 
     @staticmethod
-    def _site_probabilities(
-            cores: Sequence[torch.Tensor], site: int) -> Tuple[torch.Tensor, ...]:
+    def _site_probabilities(cores: Sequence[torch.Tensor],
+                            site: int) -> Tuple[torch.Tensor, ...]:
         """Returns independent unfolding-leverage marginals."""
         probabilities = []
         for current, core in enumerate(cores):
@@ -752,22 +756,22 @@ class TRProductLeverageRows:
             probabilities.append(probability)
         return tuple(probabilities)
 
-    def _probabilities_from_indices(
-            self,
-            cores: Sequence[torch.Tensor],
-            site: int,
-            indices: torch.Tensor) -> torch.Tensor:
+    def _probabilities_from_indices(self,
+                                    cores: Sequence[torch.Tensor],
+                                    site: int,
+                                    indices: torch.Tensor) -> torch.Tensor:
         """Evaluates the mixed product proposal at selected rows."""
         marginals = self._site_probabilities(cores, site)
         return self._mixed_probabilities(
             marginals, indices, prod(core.shape[1] for core in cores))
 
-    def _mixed_probabilities(
-            self,
-            marginals: Sequence[torch.Tensor],
-            indices: torch.Tensor,
-            n_rows: int) -> torch.Tensor:
-        """Evaluates already-computed marginals and their uniform mixture."""
+    def _mixed_probabilities(self,
+                             marginals: Sequence[torch.Tensor],
+                             indices: torch.Tensor,
+                             n_rows: int) -> torch.Tensor:
+        """
+        Evaluates already-computed ``marginals`` and their uniform mixture.
+        """
         product_probability = marginals[0].index_select(0, indices[:, 0])
         for current, marginal in enumerate(marginals[1:], 1):
             product_probability = product_probability * marginal.index_select(
@@ -876,7 +880,7 @@ class TRProductLeverageRows:
 
 
 @dataclass(frozen=True)
-class _TRExactLeverageState:
+class _TRExactLeverageState:  # MARK: _TRExactLeverageState
     """Contractions defining one exact cyclic leverage distribution."""
 
     order: Tuple[int, ...]  # Site order used by the contraction or construction
@@ -886,8 +890,9 @@ class _TRExactLeverageState:
     numerical_rank: int  # Numerical rank at the specified tolerance
 
 
-class TRExactLeverageRows:
-    """Samples exact leverage rows of a cyclic TR local design.
+class TRExactLeverageRows:  # MARK: TRExactLeverageRows
+    """
+    Samples exact leverage rows of a cyclic TR local design.
 
     This specializes Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
     Decomposition Algorithms for Arbitrary Tensor Networks* (2022), available
@@ -951,9 +956,8 @@ class TRExactLeverageRows:
         return cores
 
     @staticmethod
-    def _suffix_metrics(
-            cores: Sequence[torch.Tensor],
-            order: Sequence[int]) -> Tuple[torch.Tensor, ...]:
+    def _suffix_metrics(cores: Sequence[torch.Tensor],
+                        order: Sequence[int]) -> Tuple[torch.Tensor, ...]:
         """Contracts suffix double layers after summing their input edges."""
         end_rank = cores[order[-1]].shape[-1] if order \
             else cores[0].shape[0]
@@ -971,8 +975,8 @@ class TRExactLeverageRows:
 
     @staticmethod
     def _gram_pseudoinverse(
-            suffix_metric: torch.Tensor
-            ) -> Tuple[torch.Tensor, int]:
+        suffix_metric: torch.Tensor
+    ) -> Tuple[torch.Tensor, int]:
         """Builds the Hermitian Gram pseudoinverse and numerical rank."""
         gram = suffix_metric.conj().permute(1, 0, 3, 2)
         gram = gram.reshape(
@@ -993,11 +997,10 @@ class TRExactLeverageRows:
         return pseudoinverse, numerical_rank
 
     @classmethod
-    def _exact_state(
-            cls,
-            cores: Sequence[torch.Tensor],
-            site: int) -> _TRExactLeverageState:
-        """Creates the double-layer state for one active TR site."""
+    def _exact_state(cls,
+                     cores: Sequence[torch.Tensor],
+                     site: int) -> _TRExactLeverageState:
+        """Creates the double-layer state for one active TR ``site``."""
         order = (*range(site + 1, len(cores)), *range(site))
         suffix_metrics = cls._suffix_metrics(cores, order)
         pseudoinverse, numerical_rank = cls._gram_pseudoinverse(
@@ -1009,10 +1012,9 @@ class TRExactLeverageRows:
             numerical_rank=numerical_rank)
 
     @staticmethod
-    def _environment_features(
-            cores: Sequence[torch.Tensor],
-            site: int,
-            indices: torch.Tensor) -> torch.Tensor:
+    def _environment_features(cores: Sequence[torch.Tensor],
+                              site: int,
+                              indices: torch.Tensor) -> torch.Tensor:
         """Contracts selected cyclic environments in local column order."""
         order = (*range(site + 1, len(cores)), *range(site))
         if not order:
@@ -1030,12 +1032,11 @@ class TRExactLeverageRows:
         return environment.transpose(-2, -1).reshape(indices.shape[0], -1)
 
     @classmethod
-    def _environment_probabilities(
-            cls,
-            cores: Sequence[torch.Tensor],
-            site: int,
-            indices: torch.Tensor,
-            exact_state: _TRExactLeverageState) -> torch.Tensor:
+    def _environment_probabilities(cls,
+                                   cores: Sequence[torch.Tensor],
+                                   site: int,
+                                   indices: torch.Tensor,
+                                   exact_state: _TRExactLeverageState) -> torch.Tensor:
         """Evaluates normalized exact environment leverage probabilities."""
         features = cls._environment_features(cores, site, indices)
         scores = torch.einsum(
@@ -1049,12 +1050,11 @@ class TRExactLeverageRows:
         return scores.clamp_min(0) / exact_state.numerical_rank
 
     @staticmethod
-    def _conditional_scores(
-            candidates: torch.Tensor,
-            suffix_metric: torch.Tensor,
-            pseudoinverse: torch.Tensor,
-            left_rank: int,
-            right_rank: int) -> torch.Tensor:
+    def _conditional_scores(candidates: torch.Tensor,
+                            suffix_metric: torch.Tensor,
+                            pseudoinverse: torch.Tensor,
+                            left_rank: int,
+                            right_rank: int) -> torch.Tensor:
         """Contracts all suffixes for every candidate next input value."""
         phi = pseudoinverse.reshape(
             left_rank, right_rank, left_rank, right_rank)
@@ -1189,8 +1189,9 @@ class TRExactLeverageRows:
 
 
 @dataclass(frozen=True)
-class SampleRefreshPolicy:
-    """Deterministic generation policy for reusable sampled rows.
+class SampleRefreshPolicy:  # MARK: SampleRefreshPolicy
+    """
+    Deterministic generation policy for reusable sampled rows.
 
     A refresh returns a new immutable batch and invokes ``invalidate`` once.
     Non-refreshable samplers, especially ``ObservedRows``, keep the original
@@ -1220,9 +1221,11 @@ class SampleRefreshPolicy:
                generator: Optional[torch.Generator],
                sweep: int,
                current: Optional[SampleBatch] = None,
-               invalidate: Optional[Callable[[Optional[SampleBatch],
-                                              SampleBatch], None]] = None
-               ) -> Tuple[SampleBatch, _RowSamplingState, bool]:
+               invalidate: Optional[
+                   Callable[[Optional[SampleBatch], SampleBatch], None]] = None) -> Tuple[
+            SampleBatch,
+            _RowSamplingState,
+            bool]:
         """Reuses or redraws a batch and centralizes refresh invalidation."""
         target_generation = self.generation(sweep)
         if current is not None:

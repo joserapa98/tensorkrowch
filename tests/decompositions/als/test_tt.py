@@ -1,11 +1,12 @@
 """Tests for exact tensor train alternating least squares."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.observers import HistoryObserver
+
 
 def _exact_tt(dtype=torch.float64):
     """Returns a small heterogeneous TT and its dense contraction."""
@@ -539,3 +540,92 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
                     n_samples=8,
                     convergence=tk.decompositions.ConvergencePolicy(
                         max_sweeps=1))
+
+
+
+
+
+
+
+
+@pytest.mark.parametrize('gauge', ['none', 'qr', 'svd'])
+@pytest.mark.parametrize('quantized', [False, True])
+def test_als_formats_devices_and_quantization(gauge,
+                                              quantized,
+                                              device_dtype,
+                                              assert_close):
+    engine = tk.decompositions.TTALS
+    device, dtype = device_dtype
+    data = torch.tensor([[[1., 2.], [2., 4.]], [[3., 6.], [6., 12.]]],
+                        dtype=dtype, device=device)
+    if dtype.is_complex:
+        data = data * (1 + 1j)
+    if quantized:
+        real_dtype = data.real.dtype
+        source = tk.decompositions.QuanticsVectorSource(
+            lambda coordinates: torch.exp(coordinates[:, 0]).to(dtype) *
+            ((1 + 1j) if dtype.is_complex else 1),
+            1, base=2, level=3,
+            domain=torch.tensor([0., 1.], dtype=real_dtype, device=device),
+            dtype=dtype, device=device)
+        problem = engine.quantized(source, out_device=None)
+        data = source.to_dense_grid()
+    else:
+        problem = engine(data, out_device=None)
+    options = dict(rank=1, init='svd', gauge=gauge,
+                   convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2),
+                   collect_metrics=True)
+    if device == 'mps' and dtype.is_complex and gauge == 'qr':
+        with pytest.raises(RuntimeError, match='geqrf.*float32'):
+            problem.fit(**options)
+        return
+    result = problem.fit(**options)
+    dense = result.to_dense_grid() if quantized else result.contract_dense()
+    assert_close(dense, data.reshape(8) if quantized else data)
+    assert result.dtype == dtype and result.device.type == device
+    assert result.metrics.sweeps
+    assert result.metrics.sweeps[-1].abs_error.device.type == 'cpu'
+    assert result.metrics.sweeps[-1].abs_error < 5e-5 * data.norm()
+
+
+@pytest.mark.parametrize('ordering', ['interleaved', 'grouped'])
+def test_quantized_als_callable_and_repeated_fits(ordering):
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering=ordering)
+    coordinate_map = tk.formats.AffineCoordinateMap(
+        torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64), layout.grid_size)
+    source = tk.decompositions.QuanticsVectorSource(
+        lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
+        2, layout=layout, coordinate_map=coordinate_map)
+    engine = tk.decompositions.TTALS.quantized(source, out_device=None)
+    for _ in range(2):
+        result = engine.fit(rank=2, init='svd',
+                            convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+        torch.testing.assert_close(result.to_dense_grid(), source.to_dense_grid())
+        coordinates = torch.tensor([[0., 0.], [0.75, 0.75]], dtype=torch.float64)
+        torch.testing.assert_close(result.evaluate_coordinates(coordinates),
+                                   source.function(coordinates))
+        assert not result.metrics.sweeps
+    other = tk.decompositions.QuanticsVectorSource(
+        source.function, 2, layout=tk.formats.QuantizedLayout(
+            2, 2, 2, ordering='grouped' if ordering == 'interleaved' else 'interleaved'),
+        coordinate_map=coordinate_map)
+    with pytest.raises(ValueError, match='fixed digit layout'):
+        tk.decompositions.TTALS.quantized(other).fit(initial_cores=result)
+    with pytest.raises(TypeError, match='QuanticsVectorSource'):
+        tk.decompositions.TTALS.quantized(torch.ones(4, 4))
+
+
+def test_tensor_and_completion_axes_are_not_quantized():
+    data = torch.arange(16., dtype=torch.float64).reshape(4, 4)
+    engine = tk.decompositions.TTALS(data)
+    assert engine.in_dim == (4, 4)
+    indices = torch.tensor([[0, 0], [1, 3]])
+    values = torch.tensor([1., 2.])
+    weights = torch.tensor([2., 3.])
+    completion = tk.decompositions.TTALS.completion(
+        indices, values, in_dim=(4, 4), weights=weights)
+    observed = completion.problem.observations
+    assert completion.in_dim == (4, 4)
+    torch.testing.assert_close(observed.indices, indices)
+    torch.testing.assert_close(observed.values, values)
+    torch.testing.assert_close(observed.weights, weights)

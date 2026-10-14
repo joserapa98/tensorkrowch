@@ -11,18 +11,15 @@ This script contains:
 
     TT-SVD function:
         * tt_svd
+        * qtt_svd
 """
 
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, TYPE_CHECKING, Tuple, Union
 import warnings
 
 import torch
-
-from tensorkrowch.formats import QuantizedLayout
-from tensorkrowch.decompositions.results import _quantics_result
-from tensorkrowch.decompositions.sources.quantization import _quantize_tensor
 
 from tensorkrowch.utils import truncated_svd
 
@@ -35,14 +32,21 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TTDecomposition
+from tensorkrowch.decompositions.results import (QTTDecomposition,
+                                                 TTDecomposition,
+                                                 _quantics_result)
+from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm,
                                                    _normalize_tensor)
 
 
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.results import _DecompositionOutput
+
+
 @dataclass
-class _TTSVDErrorState:
+class _TTSVDErrorState:  # MARK: _TTSVDErrorState
     """Holds error quantities that are only needed for diagnostics."""
 
     norm: torch.Tensor  # Input norm, optionally resolved by batch
@@ -51,7 +55,7 @@ class _TTSVDErrorState:
 
 
 @dataclass
-class _TTSVDFitContext:
+class _TTSVDFitContext:  # MARK: _TTSVDFitContext
     """Holds numerical state local to one TT-SVD fit."""
 
     batch_shape: Tuple[int, ...]  # Leading dimensions treated as batches
@@ -63,7 +67,7 @@ class _TTSVDFitContext:
 
 
 @dataclass
-class _TTSVDSplit:
+class _TTSVDSplit:  # MARK: _TTSVDSplit
     """Contains the outputs and diagnostics of one TT-SVD cut."""
 
     core: torch.Tensor  # Finalized TT core produced at this cut
@@ -72,8 +76,9 @@ class _TTSVDSplit:
     record: Optional[TruncationRecord]  # Optional truncation diagnostics
 
 
-class TTSVD:
-    """Decomposes a fixed dense tensor into a tensor train.
+class TTSVD:  # MARK: TTSVD
+    """
+    Decomposes a fixed dense tensor into a tensor train.
 
     The tensor and its batch dimensions are fixed when this object is created.
     :meth:`fit` can then be called repeatedly with different truncation
@@ -100,15 +105,8 @@ class TTSVD:
                  tensor: torch.Tensor,
                  n_batches: int = 0,
                  *,
-                 quantization: Optional[QuantizedLayout] = None,
-                 in_features: Optional[Sequence[int]] = None,
-                 out_device: Optional[
-                     Union[str, torch.device]] = 'cpu') -> None:
-        self._quantization = quantization
-        if quantization is not None:
-            tensor = _quantize_tensor(tensor, quantization, n_batches, in_features)
-        elif in_features is not None:
-            raise ValueError("in_features requires quantization")
+                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
+        self._quantics_source = None
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
@@ -125,6 +123,36 @@ class TTSVD:
         self._runtime = _RuntimePolicy.from_tensor(
             tensor, out_device=out_device)
 
+    @classmethod
+    def quantized(cls,
+                  source: QuanticsVectorSource,
+                  *,
+                  out_device: Optional[Union[str, torch.device]] = 'cpu'
+                  ) -> 'TTSVD':
+        """
+        Creates a Quantics SVD problem from a discretized coordinate callable.
+
+        Materializes the full digit tensor once. Its axes follow the source's
+        layout; the fitted result retains the source's coordinate maps.
+
+        Parameters
+        ----------
+        source : QuanticsVectorSource
+            Callable and discretization to approximate.
+        out_device : str or torch.device, optional
+            Device receiving finalized cores. ``None`` retains the source device.
+
+        Returns
+        -------
+        TTSVD
+            Reusable problem returning a Quantics decomposition from :meth:`fit`.
+        """
+        if not isinstance(source, QuanticsVectorSource):
+            raise TypeError('`source` should be QuanticsVectorSource type')
+        instance = cls(source.to_dense_digits(), out_device=out_device)
+        instance._quantics_source = source
+        return instance
+
     @property
     def tensor(self) -> torch.Tensor:
         """Dense tensor fixed for repeated fits."""
@@ -140,7 +168,9 @@ class TTSVD:
                     site: int,
                     previous_rank: int,
                     context: _TTSVDFitContext) -> _TTSVDSplit:
-        """Splits one site and updates its error and normalization state."""
+        """
+        Splits one ``site`` and updates its error and normalization state.
+        """
         residual = residual.reshape(
             *context.batch_shape,
             previous_rank * context.in_dim[site],
@@ -221,11 +251,12 @@ class TTSVD:
             selected_rank=selected_rank,
             record=record)
 
-    def _redistribute_scale(
-            self,
-            cores: List[torch.Tensor],
-            context: _TTSVDFitContext) -> List[torch.Tensor]:
-        """Redistributes the extracted norm and finalizes all pending cores."""
+    def _redistribute_scale(self,
+                            cores: List[torch.Tensor],
+                            context: _TTSVDFitContext) -> List[torch.Tensor]:
+        """
+        Redistributes the extracted norm and finalizes all pending ``cores``.
+        """
         if not context.renormalize:
             cores[-1] = self._runtime.finalize(cores[-1])
             return cores
@@ -244,12 +275,11 @@ class TTSVD:
         core_scale = self._runtime.finalize(core_scale)
         return [core * core_scale for core in cores]
 
-    def _fit_validated(
-            self,
-            truncation: _TruncationSpec,
-            renormalize: bool,
-            collect_metrics: bool,
-            progress: Optional[_SVDProgress] = None) -> TTDecomposition:
+    def _fit_validated(self,
+                       truncation: _TruncationSpec,
+                       renormalize: bool,
+                       collect_metrics: bool,
+                       progress: Optional[_SVDProgress] = None) -> TTDecomposition:
         """Runs TT-SVD from already validated fit options."""
         tensor = self._runtime.prepare(self._tensor)
         batch_shape = tuple(tensor.shape[:self._n_batches])
@@ -346,7 +376,8 @@ class TTSVD:
             renormalize: bool = False,
             collect_metrics: bool = False,
             verbose: Union[bool, int] = 0) -> TTDecomposition:
-        r"""Runs TT-SVD with a shared truncation policy at every cut.
+        r"""
+        Runs TT-SVD with a shared truncation policy at every cut.
 
         The active exact SVD backend is selected through
         :func:`tensorkrowch.set_svd_method` or
@@ -355,7 +386,7 @@ class TTSVD:
         reconstruction errors are returned in ``result.metrics``.
 
         If several truncation criteria are specified, each one provides an
-        upper bound for the selected rank and the most restrictive bound is
+        upper bound for the selected ``rank`` and the most restrictive bound is
         used. At least one singular value is always retained. The same
         criteria are applied at every TT cut.
 
@@ -377,7 +408,7 @@ class TTSVD:
         Parameters
         ----------
         rank : int, optional
-            Maximum rank allowed at every link. At each SVD cut, at most this
+            Maximum ``rank`` allowed at every link. At each SVD cut, at most this
             many singular values are retained.
         cutoff : float, optional
             Minimum singular value to keep. It must be finite and
@@ -399,8 +430,8 @@ class TTSVD:
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-                cum\_percentage
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}}
+                \ge cum\_percentage
 
         renormalize : bool
             If ``True``, normalizes the residual before every SVD and
@@ -420,7 +451,7 @@ class TTSVD:
             - ``0`` or ``False``: no console output;
             - ``1`` or ``True``: phase title, input configuration, cut
               progress and final summary;
-            - ``2``: detailed per-cut rank, error and timing information;
+            - ``2``: detailed per-cut ``rank``, error and timing information;
             - ``3``: level 2 output followed by every final core.
 
         Returns
@@ -514,7 +545,7 @@ class TTSVD:
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantization)
+        return _quantics_result(result, self._quantics_source)
 
 
 def tt_svd(tensor: torch.Tensor,
@@ -527,21 +558,19 @@ def tt_svd(tensor: torch.Tensor,
            renormalize: bool = False,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
-           return_info: bool = False,
-           return_result: bool = False,
-           quantization: Optional[QuantizedLayout] = None,
-           in_features: Optional[Sequence[int]] = None):
-    r"""Decomposes a dense tensor into TT cores by consecutive SVDs.
+           collect_metrics: bool = False) -> TTDecomposition:
+    r"""
+    Decomposes a dense ``tensor`` into TT cores by consecutive SVDs.
 
-    This is the simple functional interface. Use :class:`TTSVD` to repeat
-    fits of the same tensor or to access the lightweight result object. If
-    several truncation criteria are specified, their most restrictive rank is
+    This functional interface returns a :class:`TTDecomposition`. Use
+    :class:`TTSVD` to repeat fits of the same ``tensor``. If
+    several truncation criteria are specified, their most restrictive ``rank`` is
     used at every cut and at least one singular value is retained.
 
     The input should have shape ``(*batch_shape, d_1, ..., d_n)``. The first
     ``n_batches`` axes are interpreted as optional batch dimensions, while
     every remaining axis defines the input dimension of one TT site. The
-    function therefore returns ``n`` open-boundary cores. To obtain a TT with
+    function therefore stores ``n`` open-boundary cores. To obtain a TT with
     a particular sequence of input dimensions, reshape ``tensor`` to those
     dimensions before calling this function.
 
@@ -549,18 +578,18 @@ def tt_svd(tensor: torch.Tensor,
     ``(*batch_shape, d_1, rank_1)``, interior cores have shape
     ``(*batch_shape, rank_{k-1}, d_k, rank_k)``, and the final core has shape
     ``(*batch_shape, rank_{n-1}, d_n)``. For one site, the only core has the
-    same shape as the input tensor.
+    same shape as the input ``tensor``.
 
     Parameters
     ----------
     tensor : torch.Tensor
-        Dense tensor whose optional leading batch axes are followed by one
+        Dense ``tensor`` whose optional leading batch axes are followed by one
         input dimension per TT site.
     n_batches : int
-        Number of leading tensor axes interpreted as batch dimensions. At
+        Number of leading ``tensor`` axes interpreted as batch dimensions. At
         least one non-batch input dimension should remain.
     rank : int, optional
-        Maximum rank allowed at every link. At each SVD cut, at most this many
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -582,14 +611,14 @@ def tt_svd(tensor: torch.Tensor,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
         If ``True``, normalizes the residual before every SVD, accumulates its
         scale logarithmically and evenly redistributes the complete scale over
         the final cores. Absolute criteria and reported errors preserve the
-        scale of the original tensor.
+        scale of the original ``tensor``.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. If ``None``, they remain on
         the input device. The default is ``"cpu"``.
@@ -599,73 +628,147 @@ def tt_svd(tensor: torch.Tensor,
         - ``0`` or ``False``: no console output;
         - ``1`` or ``True``: phase title, input configuration, cut progress
           and final summary;
-        - ``2``: detailed per-cut rank, error and timing information;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
-    return_info : bool
-        If ``True``, also returns ranks, dimensions, metadata and structured
-        error and timing metrics. With the default ``False`` and
-        ``verbose=0``, diagnostic norm reductions, records and synchronized
-        timings are skipped.
-
-    return_result : bool
-        Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with return_info.
-    quantization : QuantizedLayout or pair of layouts, optional
-        Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
-    in_features : sequence[int], optional
-        Raw axes to quantize, in coordinate order. Must include every
-        non-batch axis. Requires ``quantization``.
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
 
     Returns
     -------
-    list[torch.Tensor] or tuple
-        TT cores by default. If ``return_info=True``, returns
-        ``(cores, info)`` with ranks and structured metrics.
+    TTDecomposition
+        Decomposition with cores and metadata. Access ``cores`` for the
+        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        for structured information.
 
     Examples
     --------
-    Decompose a four-site tensor and inspect the resulting core shapes:
+    Decompose a four-site ``tensor`` and inspect the resulting core shapes:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
 
     Request structured ranks, errors and timings when they are needed:
 
-    >>> cores, info = tk.decompositions.tt_svd(
-    ...     tensor, rank=2, return_info=True)
-    >>> info['rank']
+    >>> result = tk.decompositions.tt_svd(
+    ...     tensor, rank=2, collect_metrics=True)
+    >>> result.as_info()['rank']
     [2, 2, 2]
-    >>> len(info['metrics']['truncations'])
+    >>> len(result.as_info()['metrics']['truncations'])
     3
     """
-    if not isinstance(return_result, bool):
-        raise TypeError('`return_result` should be bool type')
-    if return_info and return_result:
-        raise ValueError('`return_info` and `return_result` are incompatible')
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
     result = TTSVD(
         tensor=tensor,
         n_batches=n_batches,
-        out_device=out_device, quantization=quantization,
-        in_features=in_features).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
             rtol=rtol,
             cum_percentage=cum_percentage,
             renormalize=renormalize,
-            collect_metrics=return_info,
+            collect_metrics=collect_metrics,
             verbose=verbose)
-    if return_result:
-        return result
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
+    return result
+
+
+def qtt_svd(source: QuanticsVectorSource,
+            *,
+            rank: Optional[int] = None,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            renormalize: bool = False,
+            out_device: Optional[Union[str, torch.device]] = 'cpu',
+            verbose: Union[bool, int] = 0,
+            collect_metrics: bool = False) -> QTTDecomposition:
+    r"""
+    Decomposes a discretized coordinate callable into QTT cores.
+
+    Materializes the full digit tensor from ``source`` and runs
+    :meth:`TTSVD.fit` through :meth:`TTSVD.quantized`. The result retains
+    the source's layouts and coordinate maps for coordinate evaluation.
+    Construct ``source`` first to choose its discretization; this function
+    only controls the decomposition.
+
+    Parameters
+    ----------
+    source : QuanticsVectorSource
+        Callable with its digit layout and coordinate map.
+    rank : int, optional
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
+        singular values are retained.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
+
+    renormalize : bool
+        If ``True``, normalizes the residual before every SVD, accumulates its
+        scale logarithmically and evenly redistributes the complete scale over
+        the final cores. Absolute criteria and reported errors preserve the
+        scale of the original sampled tensor.
+    out_device : str or torch.device, optional
+        Device where finalized cores are stored. If ``None``, they remain on
+        the source device. The default is ``"cpu"``.
+    verbose : bool or int
+        Console verbosity level:
+
+        - ``0`` or ``False``: no console output;
+        - ``1`` or ``True``: phase title, input configuration, cut progress
+          and final summary;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
+        - ``3``: level 2 output followed by every final core.
+
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
+
+    Returns
+    -------
+    QTTDecomposition
+        Quantics decomposition with cores, coordinate information and
+        optional metrics.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.QuanticsVectorSource(
+    ...     lambda coordinates: torch.exp(coordinates.sum(-1)),
+    ...     n_coordinates=1, base=2, level=3, domain=(0., 1.))
+    >>> result = tk.decompositions.qtt_svd(source, rank=1)
+    >>> result.evaluate_indices(torch.tensor([[0], [4]]))
+    tensor([1.0000, 1.6487])
+    """
+    return TTSVD.quantized(
+        source=source,
+        out_device=out_device).fit(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            renormalize=renormalize,
+            collect_metrics=collect_metrics,
+            verbose=verbose)
 
 
 def vec_to_mps(vec: torch.Tensor,
@@ -677,8 +780,9 @@ def vec_to_mps(vec: torch.Tensor,
                cum_percentage: Optional[float] = None,
                renormalize: bool = False,
                verbose: Union[bool, int] = 0,
-               return_info: bool = False):
-    r"""Compatibility wrapper for :func:`tt_svd`.
+               return_info: bool = False) -> '_DecompositionOutput':
+    r"""
+    Compatibility wrapper for :func:`tt_svd`.
 
     .. deprecated:: 1.2
         Use :func:`tt_svd` for TT terminology, explicit output-device policy
@@ -696,7 +800,7 @@ def vec_to_mps(vec: torch.Tensor,
     n_batches : int
         Number of leading tensor axes interpreted as batch dimensions.
     rank : int, optional
-        Maximum rank allowed at every link. At each SVD cut, at most this many
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -718,7 +822,7 @@ def vec_to_mps(vec: torch.Tensor,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -741,7 +845,7 @@ def vec_to_mps(vec: torch.Tensor,
     names:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tt_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tt_svd(tensor, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
     """
@@ -757,7 +861,10 @@ def vec_to_mps(vec: torch.Tensor,
         raise ValueError(
             '`n_batches` should be between 0 and the rank of `vec`')
 
-    return tt_svd(
+    if not isinstance(return_info, bool):
+        raise TypeError('`return_info` should be bool type')
+
+    result = tt_svd(
         tensor=vec,
         n_batches=n_batches,
         rank=rank,
@@ -768,7 +875,15 @@ def vec_to_mps(vec: torch.Tensor,
         renormalize=renormalize,
         out_device=None,
         verbose=verbose,
-        return_info=return_info)
+        collect_metrics=return_info)
+    if return_info:
+        return result.cores, result.as_info()
+    return result.cores
 
 
-__all__ = ['TTSVD', 'tt_svd', 'vec_to_mps']
+__all__ = [
+    'TTSVD',
+    'tt_svd',
+    'qtt_svd',
+    'vec_to_mps',
+]

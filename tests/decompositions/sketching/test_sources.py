@@ -1,18 +1,16 @@
 """Tests for tensor-source capabilities consumed by sketching methods."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.sources import (
-    SketchContractableSource,
-    SupportTensorSource,
-    _iter_support,
-    _resolve_rs_source,
-)
-from tests.decompositions.als._oracles import (contract_tt_dense,
-                                               make_tt_cores)
+from tensorkrowch.decompositions.sketching.sources import (SketchContractableSource,
+                                                           SupportTensorSource,
+                                                           _iter_support,
+                                                           _resolve_rs_source)
+
+from tests.decompositions.als._oracles import contract_tt_dense, make_tt_cores
 
 
 def _compact_tt(cores):

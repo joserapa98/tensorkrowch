@@ -26,7 +26,7 @@ def _rescale_absolute_tolerance(value: Optional[float],
 
 
 @dataclass(frozen=True)
-class _TruncationSpec:
+class _TruncationSpec:  # MARK: _TruncationSpec
     """Groups truncation criteria shared by consecutive SVD cuts."""
 
     rank: Optional[int] = None  # Maximum rank retained by each SVD
@@ -36,12 +36,11 @@ class _TruncationSpec:
     cum_percentage: Optional[float] = None  # Retained spectral-energy fraction
 
     def __post_init__(self) -> None:
-        _validate_truncation(
-            rank=self.rank,
-            cutoff=self.cutoff,
-            atol=self.atol,
-            rtol=self.rtol,
-            cum_percentage=self.cum_percentage)
+        _validate_truncation(rank=self.rank,
+                             cutoff=self.cutoff,
+                             atol=self.atol,
+                             rtol=self.rtol,
+                             cum_percentage=self.cum_percentage)
 
     def as_kwargs(self) -> Dict[str, Union[int, float, None]]:
         """Returns keyword arguments accepted by ``truncated_svd``."""
@@ -58,9 +57,8 @@ class _TruncationSpec:
         """Whether normalization changes an active absolute criterion."""
         return (self.cutoff not in (None, 0)) or (self.atol not in (None, 0))
 
-    def as_normalized_kwargs(
-            self,
-            log_scale: float) -> Dict[str, Union[int, float, None]]:
+    def as_normalized_kwargs(self,
+                             log_scale: float) -> Dict[str, Union[int, float, None]]:
         """Returns criteria expressed in a matrix's normalized scale."""
         kwargs = self.as_kwargs()
         kwargs['cutoff'] = _rescale_absolute_tolerance(
@@ -70,4 +68,6 @@ class _TruncationSpec:
         return kwargs
 
 
-__all__ = ['_TruncationSpec']
+__all__ = [
+    '_TruncationSpec',
+]

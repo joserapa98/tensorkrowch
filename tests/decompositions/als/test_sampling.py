@@ -3,13 +3,13 @@
 from math import prod
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.als.sampling import _RowSamplingState
-from tests.decompositions.als._oracles import (dense_local_design,
-                                               make_tr_cores)
+
+from tests.decompositions.als._oracles import dense_local_design, make_tr_cores
 
 
 def _mixed_canonical_cores(tensor, site, rank=2):

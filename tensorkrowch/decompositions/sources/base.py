@@ -29,6 +29,7 @@ from typing import (Optional,
 import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
+
 from tensorkrowch.decompositions.metrics import EvaluationStats
 
 
@@ -36,8 +37,9 @@ ConfigurationValues = Union[torch.Tensor, Sequence[torch.Tensor]]
 
 
 @dataclass(frozen=True)
-class ConfigurationBatch:
-    """Batch of discrete indices or possibly continuous features.
+class ConfigurationBatch:  # MARK: ConfigurationBatch
+    """
+    Batch of discrete indices or possibly continuous features.
 
     ``values`` can be a packed tensor whose first two dimensions are ``(batch,
     n_sites)``, or a sequence containing one tensor per site. For discrete
@@ -56,7 +58,7 @@ class ConfigurationBatch:
         heterogeneous batch must share its leading batch dimension, device and
         dtype.
     kind : {``"indices"``, ``"features"``}
-        Meaning of the values at every site. ``"indices"`` is the default and
+        Meaning of the ``values`` at every site. ``"indices"`` is the default and
         requires scalar integers. ``"features"`` accepts scalar or
         vector-valued inputs for callables.
     """
@@ -193,8 +195,9 @@ class ConfigurationBatch:
 
 
 @runtime_checkable
-class TensorSource(Protocol):
-    """Provides values for a fixed tensor or function without imposing an
+class TensorSource(Protocol):  # MARK: TensorSource
+    """
+    Provides values for a fixed tensor or function without imposing an
     algorithm.
 
     ``in_dim`` declares one input dimension per site. It bounds discrete
@@ -227,7 +230,8 @@ class TensorSource(Protocol):
         """Device on which evaluations are performed."""
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates configurations in their original order.
+        """
+        Evaluates ``configurations`` in their original order.
 
         Parameters
         ----------
@@ -246,8 +250,9 @@ class TensorSource(Protocol):
 
 
 @runtime_checkable
-class FiberTensorSource(TensorSource, Protocol):
-    """Optional source capability for evaluating one varying input site.
+class FiberTensorSource(TensorSource, Protocol):  # MARK: FiberTensorSource
+    """
+    Optional source capability for evaluating one varying input site.
 
     A fiber fixes the input at every site except one. For each configuration
     in a batch, :meth:`fiber` replaces that site's value with every candidate
@@ -258,40 +263,41 @@ class FiberTensorSource(TensorSource, Protocol):
               configurations: ConfigurationBatch,
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates a source while varying one site of each configuration.
+        """
+        Evaluates a source while varying one ``site`` of each configuration.
 
         For example, if a scalar source represents ``f(i, j)`` and a base
         configuration is ``(i=1, j=0)``, setting ``site=1`` and
         ``values=[0, 1, 2]`` returns ``[f(1, 0), f(1, 1), f(1, 2)]`` for that
-        configuration. Other configurations in the batch are expanded in the
+        configuration. Other ``configurations`` in the batch are expanded in the
         same way, without changing their order.
 
         Parameters
         ----------
         configurations : ConfigurationBatch
-            Base configurations in batch order. Their values at sites other
+            Base ``configurations`` in batch order. Their ``values`` at sites other
             than ``site`` remain fixed; the value at ``site`` is replaced.
         site : int
-            Zero-based input site whose value varies.
+            Zero-based input ``site`` whose value varies.
         values : torch.Tensor, optional
-            Candidate values for the selected site. Discrete indices have shape
+            Candidate ``values`` for the selected ``site``. Discrete indices have shape
             ``(n_values,)``; features have shape
             ``(n_values, *feature_shape[site])``. If omitted for discrete
             indices, the source evaluates every index in
-            ``range(in_dim[site])``. Feature fibers require explicit values
+            ``range(in_dim[site])``. Feature fibers require explicit ``values``
             because there is no finite default grid for a continuous domain.
 
         Returns
         -------
         torch.Tensor
             Values with shape ``(batch, n_values, *out_shape)``. The first
-            axis follows the input configurations; the second follows
+            axis follows the input ``configurations``; the second follows
             ``values`` (or increasing discrete indices when omitted). A scalar
             source has ``out_shape=()`` and returns ``(batch, n_values)``.
         """
 
 
-class _SourceEvaluationTracker:
+class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
     """Adds inexpensive cumulative evaluation counters to built-in sources."""
 
     @property
@@ -316,8 +322,9 @@ class _SourceEvaluationTracker:
                            batches: int = 1,
                            unique_points: Optional[int] = None,
                            cache_hits: int = 0) -> None:
-        """Records one successful source query without tensor
-        synchronization."""
+        """
+        Records one successful source query without tensor synchronization.
+        """
         if unique_points is None:
             unique_points = points
         self._requested_points += points
@@ -350,7 +357,9 @@ def _normalize_in_dim(in_dim: Sequence[int]) -> Tuple[int, ...]:
 def _discrete_indices(configurations: ConfigurationBatch,
                       in_dim: Sequence[int],
                       device: torch.device) -> torch.Tensor:
-    """Validates discrete configurations and returns packed long indices."""
+    """
+    Validates discrete ``configurations`` and returns packed long indices.
+    """
     if not isinstance(configurations, ConfigurationBatch):
         raise TypeError(
             '`configurations` should be ConfigurationBatch type')
@@ -370,7 +379,7 @@ def _discrete_indices(configurations: ConfigurationBatch,
 
 def _ravel_indices(indices: torch.Tensor,
                    in_dim: Sequence[int]) -> torch.Tensor:
-    """Converts global multi-indices to flat row ids."""
+    """Converts global multi-``indices`` to flat row ids."""
     strides = []
     for site in range(len(in_dim)):
         strides.append(prod(in_dim[site + 1:]))
@@ -392,11 +401,12 @@ def _unravel_indices(flat_ids: torch.Tensor,
     return torch.stack(sites, dim=1)
 
 
-def _fiber_configurations(
-        configurations: ConfigurationBatch,
-        site: int,
-        values: torch.Tensor) -> Tuple[ConfigurationBatch, int]:
-    """Expands packed base configurations over a one-site value grid."""
+def _fiber_configurations(configurations: ConfigurationBatch,
+                          site: int,
+                          values: torch.Tensor) -> Tuple[ConfigurationBatch, int]:
+    """
+    Expands packed base ``configurations`` over a one-``site`` value grid.
+    """
     if not isinstance(site, int):
         raise TypeError('`site` should be int type')
     if (site < 0) or (site >= configurations.n_sites):

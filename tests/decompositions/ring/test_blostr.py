@@ -1,8 +1,8 @@
 """Tests for the isolated experimental BLOSTR decomposition."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 from tests.decompositions.als._oracles import contract_tr_dense

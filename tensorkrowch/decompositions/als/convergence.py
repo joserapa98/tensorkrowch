@@ -16,8 +16,9 @@ from tensorkrowch.decompositions.metrics import SweepRecord
 
 
 @dataclass(frozen=True)
-class UpdatePolicy:
-    """Controls damping and acceptance of a local least-squares proposal.
+class UpdatePolicy:  # MARK: UpdatePolicy
+    """
+    Controls ``damping`` and ``acceptance`` of a local least-squares proposal.
 
     The accepted update is formed before any gauge factorization or absorption.
     Acceptance compares residuals of the same local system; it is separate from
@@ -27,7 +28,7 @@ class UpdatePolicy:
     ----------
     damping : float
         Fraction of the proposal step, in ``(0, 1]``. The default ``1`` accepts
-        the full step before applying the acceptance rule.
+        the full step before applying the ``acceptance`` rule.
     acceptance : {"always", "non_increasing"}
         Whether to accept every damped proposal or only one whose local
         residual is no larger than that of the current core.
@@ -51,7 +52,7 @@ class UpdatePolicy:
     def apply(self,
               current: torch.Tensor,
               proposal: torch.Tensor) -> torch.Tensor:
-        """Returns the damped proposal without mutating either input."""
+        """Returns the damped ``proposal`` without mutating either input."""
         if not isinstance(current, torch.Tensor) or \
                 not isinstance(proposal, torch.Tensor):
             raise TypeError('Updates should be torch.Tensor objects')
@@ -77,13 +78,14 @@ class UpdatePolicy:
 
 
 @dataclass(frozen=True)
-class ConvergencePolicy:
-    """Defines ALS stopping rules at complete sweep boundaries.
+class ConvergencePolicy:  # MARK: ConvergencePolicy
+    """
+    Defines ALS stopping rules at complete sweep boundaries.
 
     Error, stability and best-state policies require a fixed comparable
     objective: the full tensor for exact ALS or the permanent observed set for
     completion. Renewable uniform/leverage batches support a sweep budget and
-    an optional callback, because their local residuals are not global
+    an optional ``callback``, because their local residuals are not global
     validation errors.
 
     Parameters
@@ -106,7 +108,7 @@ class ConvergencePolicy:
         False.
     callback : callable, optional
         Called as ``callback(sweep_record, cores)`` after a complete sweep.
-        Return True to stop. Cores are the current state; the callback should
+        Return True to stop. Cores are the current state; the ``callback`` should
         not mutate them or the backend caches.
     """
 
@@ -186,4 +188,7 @@ class ConvergencePolicy:
         return None, stable_sweeps
 
 
-__all__ = ['UpdatePolicy', 'ConvergencePolicy']
+__all__ = [
+    'UpdatePolicy',
+    'ConvergencePolicy',
+]

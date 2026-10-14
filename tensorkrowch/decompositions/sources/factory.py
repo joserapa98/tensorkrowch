@@ -11,38 +11,37 @@ from typing import Callable, Optional, Sequence, Union
 import torch
 
 from tensorkrowch.formats import TT
+from tensorkrowch.models.mps import MPS
 
-from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sources.base import TensorSource
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 from tensorkrowch.decompositions.sources.tt import TTTensorSource
-from tensorkrowch.models.mps import MPS
 
 
-SourceLike = Union[TensorSource, TTDecomposition, MPS, torch.Tensor, Callable]
+SourceLike = Union[TensorSource, TT, MPS, torch.Tensor, Callable]
 
 
-def as_tensor_source(
-        source: SourceLike,
-        in_dim: Optional[Sequence[int]] = None,
-        out_shape: Optional[Sequence[int]] = (),
-        dtype: Optional[torch.dtype] = None,
-        device: Union[str, torch.device] = 'cpu',
-        batch_size: Optional[int] = None,
-        *,
-        in_features: Optional[Sequence[int]] = None) -> TensorSource:
-    """Normalizes a tensor, callable, TT or MPS into a tensor source.
+def as_tensor_source(source: SourceLike,
+                     in_dim: Optional[Sequence[int]] = None,
+                     out_shape: Optional[Sequence[int]] = (),
+                     dtype: Optional[torch.dtype] = None,
+                     device: Union[str, torch.device] = 'cpu',
+                     batch_size: Optional[int] = None,
+                     *,
+                     in_features: Optional[Sequence[int]] = None) -> TensorSource:
+    """
+    Normalizes a tensor, callable, TT or MPS into a tensor ``source``.
 
     Existing sources are returned unchanged. A dense tensor is wrapped without
-    copying it, and a TT result or open-boundary MPS is evaluated
+    copying it, and a TT format or open-boundary MPS is evaluated
     directly from its cores. Runtime overrides describe callables; existing
-    sources retain their own device and dtype.
+    sources retain their own ``device`` and ``dtype``.
 
     Parameters
     ----------
-    source : TensorSource, TTDecomposition, torch.Tensor, MPS or callable
+    source : TensorSource, TT, torch.Tensor, MPS or callable
         Value provider to normalize. An MPS must have open boundaries. A
         callable receives packed configurations or a tuple of site tensors and
         must preserve their leading batch dimension.
@@ -56,9 +55,9 @@ def as_tensor_source(
         Callable output shape after the batch axis. The default ``()`` denotes
         a scalar; ``None`` infers the shape on first evaluation.
     dtype : torch.dtype, optional
-        Callable output dtype, inferred on first evaluation when omitted.
+        Callable output ``dtype``, inferred on first evaluation when omitted.
     device : str or torch.device
-        Callable evaluation device. The default is ``"cpu"``.
+        Callable evaluation ``device``. The default is ``"cpu"``.
     batch_size : int, optional
         Maximum configurations per callable invocation.
 
@@ -95,7 +94,9 @@ def as_tensor_source(
     if isinstance(source, TensorSource):
         return source
     raise TypeError(
-        '`source` should be a TensorSource, TTDecomposition, MPS, tensor or callable')
+        '`source` should be a TensorSource, TT, MPS, tensor or callable')
 
 
-__all__ = ['as_tensor_source']
+__all__ = [
+    'as_tensor_source',
+]

@@ -9,29 +9,29 @@ This script contains:
 
     TR-SVD function:
         * tr_svd
+        * qtr_svd
 """
 
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from math import prod
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
-from tensorkrowch.formats import QuantizedLayout
-from tensorkrowch.decompositions.results import _quantics_result
-from tensorkrowch.decompositions.sources.quantization import _quantize_tensor
-
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.metrics import (_ratio_from_log_norms,
-                                                 DecompositionMetrics,
+from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TimingRecord,
-                                                 TruncationRecord)
+                                                 TruncationRecord,
+                                                 _ratio_from_log_norms)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import TRDecomposition
+from tensorkrowch.decompositions.results import (QTRDecomposition,
+                                                 TRDecomposition,
+                                                 _quantics_result)
+from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
 from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm)
@@ -41,7 +41,7 @@ _Rank = Optional[int]
 
 
 @dataclass(frozen=True)
-class _TRRankPolicy:
+class _TRRankPolicy:  # MARK: _TRRankPolicy
     """Stores the shared rank constraints for one TR-SVD fit."""
 
     mode: str  # Rank discovery or shared-cap policy
@@ -49,8 +49,9 @@ class _TRRankPolicy:
     rank_cap: Optional[int]  # Cap for every final TR link
 
 
-class TRSVD:
-    """Decomposes a fixed dense tensor into a tensor ring.
+class TRSVD:  # MARK: TRSVD
+    """
+    Decomposes a fixed dense tensor into a tensor ring.
 
     The tensor and a preferred interior cut are fixed when this object is
     created. :meth:`fit` can then be called repeatedly with different
@@ -87,15 +88,8 @@ class TRSVD:
                  tensor: torch.Tensor,
                  center: Optional[int] = None,
                  *,
-                 quantization: Optional[QuantizedLayout] = None,
-                 in_features: Optional[Sequence[int]] = None,
-                 out_device: Optional[
-                     Union[str, torch.device]] = 'cpu') -> None:
-        self._quantization = quantization
-        if quantization is not None:
-            tensor = _quantize_tensor(tensor, quantization, 0, in_features)
-        elif in_features is not None:
-            raise ValueError("in_features requires quantization")
+                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
+        self._quantics_source = None
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if tensor.ndim < 2:
@@ -116,12 +110,46 @@ class TRSVD:
 
     @staticmethod
     def _validate_center(center: int, n_sites: int) -> None:
-        """Validates that a center identifies an interior chain cut."""
+        """Validates that a ``center`` identifies an interior chain cut."""
         if isinstance(center, bool) or not isinstance(center, int):
             raise TypeError('`center` should be int type')
         if (center < 1) or (center >= n_sites):
             raise ValueError(
                 '`center` should satisfy 1 <= center < tensor.ndim')
+
+    @classmethod
+    def quantized(cls,
+                  source: QuanticsVectorSource,
+                  center: Optional[int] = None,
+                  *,
+                  out_device: Optional[Union[str, torch.device]] = 'cpu'
+                  ) -> 'TRSVD':
+        """
+        Creates a Quantics SVD problem from a discretized coordinate callable.
+
+        Materializes the full digit tensor once. Its axes follow the source's
+        layout; the fitted result retains the source's coordinate maps.
+
+        Parameters
+        ----------
+        source : QuanticsVectorSource
+            Callable and discretization to approximate.
+        center : int, optional
+            Preferred interior cut, as in the ordinary constructor.
+        out_device : str or torch.device, optional
+            Device receiving finalized cores. ``None`` retains the source device.
+
+        Returns
+        -------
+        TRSVD
+            Reusable problem returning a Quantics decomposition from :meth:`fit`.
+        """
+        if not isinstance(source, QuanticsVectorSource):
+            raise TypeError('`source` should be QuanticsVectorSource type')
+        instance = cls(source.to_dense_digits(), center=center,
+                       out_device=out_device)
+        instance._quantics_source = source
+        return instance
 
     @property
     def tensor(self) -> torch.Tensor:
@@ -135,7 +163,7 @@ class TRSVD:
 
     @staticmethod
     def _resolve_rank_policy(rank: _Rank) -> _TRRankPolicy:
-        """Builds the TR rank policy from a validated shared rank."""
+        """Builds the TR ``rank`` policy from a validated shared ``rank``."""
 
         if rank is None:
             return _TRRankPolicy(
@@ -170,16 +198,17 @@ class TRSVD:
         _, _, cycle_rank, center_rank = min(candidates)
         return cycle_rank, center_rank
 
-    def _decompose_subchain(
-            self,
-            subchain: torch.Tensor,
-            in_dim: Tuple[int, ...],
-            truncation: _TruncationSpec,
-            renormalize: bool,
-            collect_metrics: bool,
-            progress: Optional[_SVDProgress] = None) -> Tuple[
-                List[torch.Tensor], Optional[DecompositionMetrics]]:
-        """Applies TT-SVD while preserving a subchain's boundary ranks."""
+    def _decompose_subchain(self,
+                            subchain: torch.Tensor,
+                            in_dim: Tuple[int, ...],
+                            truncation: _TruncationSpec,
+                            renormalize: bool,
+                            collect_metrics: bool,
+                            progress: Optional[
+                                _SVDProgress] = None) -> Tuple[
+            List[torch.Tensor],
+            Optional[DecompositionMetrics]]:
+        """Applies TT-SVD while preserving a ``subchain``'s boundary ranks."""
         left_rank = subchain.shape[0]
         right_rank = subchain.shape[-1]
         if len(in_dim) == 1:
@@ -236,13 +265,12 @@ class TRSVD:
         ]
         return replace(timing, name=name, children=children)
 
-    def _fit_validated(
-            self,
-            center: int,
-            truncation: _TruncationSpec,
-            renormalize: bool,
-            collect_metrics: bool,
-            progress: Optional[_SVDProgress] = None) -> TRDecomposition:
+    def _fit_validated(self,
+                       center: int,
+                       truncation: _TruncationSpec,
+                       renormalize: bool,
+                       collect_metrics: bool,
+                       progress: Optional[_SVDProgress] = None) -> TRDecomposition:
         """Runs the cyclic SVD kernel from already validated fit options."""
         rank_policy = self._resolve_rank_policy(rank=truncation.rank)
         initial_truncation = (
@@ -400,7 +428,8 @@ class TRSVD:
             renormalize: bool = False,
             collect_metrics: bool = False,
             verbose: Union[bool, int] = 0) -> TRDecomposition:
-        r"""Runs TR-SVD from an interior bipartition of the fixed tensor.
+        r"""
+        Runs TR-SVD from an interior bipartition of the fixed tensor.
 
         The active exact SVD backend is selected through
         :func:`tensorkrowch.set_svd_method` or
@@ -410,15 +439,15 @@ class TRSVD:
         TR-SVD truncations are not all orthogonal in one common scale.
 
         If ``rank`` is an integer, it is a shared upper bound for every TR
-        rank and its square bounds the initial bipartition. Local truncation
-        criteria may therefore select a different effective rank at each
+        ``rank`` and its square bounds the initial bipartition. Local truncation
+        criteria may therefore select a different effective ``rank`` at each
         site. With ``None``, ranks are discovered from the selected SVD
-        dimensions. The selected rank is split with the smallest admissible
+        dimensions. The selected ``rank`` is split with the smallest admissible
         product and the most balanced pair breaks ties. Any extra capacity
         required by the cap is padded only with structural zeros and recorded
         in ``result.metadata``.
 
-        Here, ``initial_rank`` is the rank actually selected by the initial
+        Here, ``initial_rank`` is the ``rank`` actually selected by the initial
         SVD, whereas ``initial_capacity`` is the product of the two TR ranks
         used to represent it. Their difference is ``initial_padding``. For
         example, an ``initial_rank`` of 7 may use ranks 2 and 4, giving an
@@ -426,20 +455,20 @@ class TRSVD:
 
         The fixed tensor should have shape ``(d_1, ..., d_n)``, with one input
         dimension per TR site. The returned cores all have shape
-        ``(rank_{k-1}, d_k, rank_k)``, where the left rank of the first core
-        matches the right rank of the last core. Consequently, the result
+        ``(rank_{k-1}, d_k, rank_k)``, where the left ``rank`` of the first core
+        matches the right ``rank`` of the last core. Consequently, the result
         always represents a cyclic TR.
 
         Parameters
         ----------
         center : int, optional
-            Interior cut used for this fit. If omitted, the center fixed at
+            Interior cut used for this fit. If omitted, the ``center`` fixed at
             construction is used.
         rank : int, optional
-            Maximum rank allowed at every link. At each subchain SVD cut, at
+            Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
             most this many singular values are retained. The initial
             bipartition retains at most ``rank ** 2`` singular values before
-            its selected rank is factorized into two TR ranks.
+            its selected ``rank`` is factorized into two TR ranks.
         cutoff : float, optional
             Minimum singular value to keep. It must be finite and
             non-negative. Singular values ``<= cutoff`` are removed.
@@ -460,7 +489,7 @@ class TRSVD:
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         renormalize : bool
@@ -479,7 +508,7 @@ class TRSVD:
             - ``0`` or ``False``: no console output;
             - ``1`` or ``True``: phase title, input configuration, cut
               progress and final summary;
-            - ``2``: detailed per-cut rank, error and timing information;
+            - ``2``: detailed per-cut ``rank``, error and timing information;
             - ``3``: level 2 output followed by every final core.
 
         Returns
@@ -491,7 +520,7 @@ class TRSVD:
 
         Examples
         --------
-        Fix a tensor and compare shared rank caps at the middle cut:
+        Fix a tensor and compare shared ``rank`` caps at the middle cut:
 
         >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
         >>> decomposer = tk.decompositions.TRSVD(tensor)
@@ -582,7 +611,7 @@ class TRSVD:
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantization)
+        return _quantics_result(result, self._quantics_source)
 
 
 def tr_svd(tensor: torch.Tensor,
@@ -595,44 +624,42 @@ def tr_svd(tensor: torch.Tensor,
            renormalize: bool = False,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
-           return_info: bool = False,
-           return_result: bool = False,
-           quantization: Optional[QuantizedLayout] = None,
-           in_features: Optional[Sequence[int]] = None):
-    r"""Decomposes a dense tensor into TR cores through an interior SVD.
+           collect_metrics: bool = False) -> TRDecomposition:
+    r"""
+    Decomposes a dense ``tensor`` into TR cores through an interior SVD.
 
     This is the simple functional interface. Use :class:`TRSVD` to repeat
-    fits of the same tensor or to access the lightweight result object. The
-    initial SVD rank is opened as cyclic and interior ranks, after which both
-    tensor blocks are decomposed through TT-SVD.
+    fits of the same ``tensor`` or to reuse the decomposition engine. The
+    initial SVD ``rank`` is opened as cyclic and interior ranks, after which both
+    ``tensor`` blocks are decomposed through TT-SVD.
 
     The input should have shape ``(d_1, ..., d_n)``, with one input dimension
     per site and at least two sites. Every returned core has shape
-    ``(rank_{k-1}, d_k, rank_k)`` and the last right rank matches the first
-    left rank, closing the TR.
+    ``(rank_{k-1}, d_k, rank_k)`` and the last right ``rank`` matches the first
+    left ``rank``, closing the TR.
 
     An integer ``rank`` is a shared upper bound, while local truncation may
     select different effective ranks across the chain. With ``None``, the
-    initial SVD rank is split using the smallest admissible product and the
+    initial SVD ``rank`` is split using the smallest admissible product and the
     most balanced pair breaks ties. Any extra capacity required by the cap
     contains structural zeros and is reported in ``info['metadata']``.
 
-    Here, ``initial_rank`` is the rank selected by the initial SVD, while
+    Here, ``initial_rank`` is the ``rank`` selected by the initial SVD, while
     ``initial_capacity`` is the product of the two TR ranks used to represent
-    it. For example, rank 7 may be stored with ranks 2 and 4, so the capacity
+    it. For example, ``rank`` 7 may be stored with ranks 2 and 4, so the capacity
     is 8 and ``initial_padding`` is 1.
 
     Parameters
     ----------
     tensor : torch.Tensor
-        Dense tensor with one input dimension per TR site.
+        Dense ``tensor`` with one input dimension per TR site.
     center : int, optional
         Interior cut satisfying ``1 <= center < tensor.ndim``. The default is
         the middle cut.
     rank : int, optional
-        Maximum rank allowed at every link. At each subchain SVD cut, at most
+        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
         this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected rank
+        retains at most ``rank ** 2`` singular values before its selected ``rank``
         is factorized into two TR ranks.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
@@ -654,7 +681,7 @@ def tr_svd(tensor: torch.Tensor,
 
         .. math::
 
-            \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -669,74 +696,165 @@ def tr_svd(tensor: torch.Tensor,
         - ``0`` or ``False``: no console output;
         - ``1`` or ``True``: phase title, input configuration, cut progress
           and final summary;
-        - ``2``: detailed per-cut rank, error and timing information;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
         - ``3``: level 2 output followed by every final core.
 
-    return_info : bool
-        If ``True``, also returns ranks, dimensions, rank factorization,
-        metadata and structured local metrics. With the default ``False`` and
-        ``verbose=0``, diagnostic norm reductions, records and synchronized
-        timings are skipped.
-
-    return_result : bool
-        Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with return_info.
-    quantization : QuantizedLayout or pair of layouts, optional
-        Raw variable-to-digit schedule. Matrix SVD requires an input/output
-        layout pair with matching numbers of digit sites. No padding is implicit.
-    in_features : sequence[int], optional
-        Raw axes to quantize, in coordinate order. Must include every
-        non-batch axis. Requires ``quantization``.
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
 
     Returns
     -------
-    list[torch.Tensor] or tuple
-        TR cores by default. If ``return_info=True``, returns ``(cores, info)``
-        with ranks and structured metrics.
+    TRDecomposition
+        Decomposition with cores and metadata. Access ``cores`` for the
+        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
+        for structured information.
 
     Examples
     --------
-    Decompose a four-site tensor with a shared rank cap:
+    Decompose a four-site ``tensor`` with a shared ``rank`` cap:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tr_svd(tensor, rank=2)
+    >>> cores = tk.decompositions.tr_svd(tensor, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2), (2, 2, 2), (2, 2, 2)]
 
-    Inspect the initial padding required by a shared rank cap:
+    Inspect the initial padding required by a shared ``rank`` cap:
 
     >>> singular_values = torch.tensor([5., 3., 1., 0.])
-    >>> _, info = tk.decompositions.tr_svd(torch.diag(singular_values),
-    ...                                  rank=2, cutoff=0, return_info=True)
-    >>> info['rank']
+    >>> result = tk.decompositions.tr_svd(torch.diag(singular_values),
+    ...                                  rank=2, cutoff=0, collect_metrics=True)
+    >>> result.as_info()['rank']
     [2, 2]
-    >>> info['metadata']['initial_padding']
+    >>> result.as_info()['metadata']['initial_padding']
     1
     """
-    if not isinstance(return_result, bool):
-        raise TypeError('`return_result` should be bool type')
-    if return_info and return_result:
-        raise ValueError('`return_info` and `return_result` are incompatible')
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
     result = TRSVD(
         tensor=tensor,
         center=center,
-        out_device=out_device, quantization=quantization,
-        in_features=in_features).fit(
+        out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
             atol=atol,
             rtol=rtol,
             cum_percentage=cum_percentage,
             renormalize=renormalize,
-            collect_metrics=return_info,
+            collect_metrics=collect_metrics,
             verbose=verbose)
-    if return_result:
-        return result
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
+    return result
 
 
-__all__ = ['TRSVD', 'tr_svd']
+
+
+def qtr_svd(source: QuanticsVectorSource,
+            center: Optional[int] = None,
+            *,
+            rank: Optional[int] = None,
+            cutoff: Optional[float] = None,
+            atol: Optional[float] = None,
+            rtol: Optional[float] = None,
+            cum_percentage: Optional[float] = None,
+            renormalize: bool = False,
+            out_device: Optional[Union[str, torch.device]] = 'cpu',
+            verbose: Union[bool, int] = 0,
+            collect_metrics: bool = False) -> QTRDecomposition:
+    r"""
+    Decomposes a discretized coordinate callable into QTR cores.
+
+    Materializes the full digit tensor from ``source`` and runs
+    :meth:`TRSVD.fit` through :meth:`TRSVD.quantized`. The result retains
+    the source's layouts and coordinate maps for coordinate evaluation.
+    Construct ``source`` first to choose its discretization; this function
+    only controls the decomposition.
+
+    Parameters
+    ----------
+    source : QuanticsVectorSource
+        Callable with its digit layout and coordinate map.
+    center : int, optional
+        Interior cut from which the cyclic decomposition starts. If omitted,
+        uses the middle of the digit chain.
+    rank : int, optional
+        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
+        this many singular values are retained. The initial bipartition
+        retains at most ``rank ** 2`` singular values before its selected ``rank``
+        is factorized into two TR ranks.
+    cutoff : float, optional
+        Minimum singular value to keep. It must be finite and non-negative.
+        Singular values ``<= cutoff`` are removed.
+    atol : float, optional
+        Absolute tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the accumulated sum of squares is ``<= atol``. It must be finite and
+        non-negative.
+    rtol : float, optional
+        Relative tolerance over the tail sum of squared singular values.
+        Starting from the smallest singular value, values are discarded while
+        the tail sum of squares divided by the total sum of squares is
+        ``<= rtol``. It must be finite and in ``[0, 1]``.
+    cum_percentage : float, optional
+        Minimum fraction of squared singular-value mass to keep. Equivalent to
+        setting ``rtol = 1 - cum_percentage``. It must be finite and in
+        ``[0, 1]``.
+
+    renormalize : bool
+        If ``True``, normalizes residuals before SVDs and accumulates their
+        scales logarithmically before redistributing them over final cores.
+    out_device : str or torch.device, optional
+        Device where finalized cores are stored. If ``None``, they remain on
+        the source device. The default is ``"cpu"``.
+    verbose : bool or int
+        Console verbosity level:
+
+        - ``0`` or ``False``: no console output;
+        - ``1`` or ``True``: phase title, input configuration, cut progress
+          and final summary;
+        - ``2``: detailed per-cut ``rank``, error and timing information;
+        - ``3``: level 2 output followed by every final core.
+
+    collect_metrics : bool
+        Whether to collect structured error, truncation and timing metrics.
+        With ``False`` and ``verbose=0``, diagnostic reductions and
+        synchronized timings are skipped.
+
+    Returns
+    -------
+    QTRDecomposition
+        Quantics decomposition with cores, coordinate information and
+        optional metrics.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.QuanticsVectorSource(
+    ...     lambda coordinates: torch.exp(coordinates.sum(-1)),
+    ...     n_coordinates=1, base=2, level=3, domain=(0., 1.))
+    >>> result = tk.decompositions.qtr_svd(source, rank=1)
+    >>> result.evaluate_indices(torch.tensor([[0], [4]]))
+    tensor([1.0000, 1.6487])
+    """
+    return TRSVD.quantized(
+        source=source,
+        center=center,
+        out_device=out_device).fit(
+            rank=rank,
+            cutoff=cutoff,
+            atol=atol,
+            rtol=rtol,
+            cum_percentage=cum_percentage,
+            renormalize=renormalize,
+            collect_metrics=collect_metrics,
+            verbose=verbose)
+
+
+__all__ = [
+    'TRSVD',
+    'tr_svd',
+    'qtr_svd',
+]
+
+__all__ = [
+    'TRSVD',
+    'tr_svd',
+    'qtr_svd',
+]

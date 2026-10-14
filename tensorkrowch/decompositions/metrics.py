@@ -35,16 +35,6 @@ def _scalar_float(value: Any, name: str) -> float:
     return float(value)
 
 
-def _optional_cpu_tensor(value: Optional[torch.Tensor],
-                         name: str) -> Optional[torch.Tensor]:
-    """Detaches an optional diagnostic tensor and stores it on CPU."""
-    if value is None:
-        return None
-    if not isinstance(value, torch.Tensor):
-        raise TypeError(f'`{name}` should be torch.Tensor type')
-    return value.detach().cpu()
-
-
 def _cpu_tensor(value: Any, name: str) -> torch.Tensor:
     """Converts a numerical metric to a detached CPU tensor."""
     if not isinstance(value, torch.Tensor):
@@ -61,16 +51,15 @@ def _ratio_from_log_norms(log_numerator: torch.Tensor,
     safe_log_denominator = torch.where(
         positive, log_denominator, torch.zeros_like(log_denominator))
     ratio = (log_numerator - safe_log_denominator).exp()
-    zero_ratio = torch.where(
-        torch.isneginf(log_numerator),
-        torch.zeros_like(log_numerator),
-        torch.full_like(log_numerator, torch.inf))
+    zero_ratio = torch.where(torch.isneginf(log_numerator),
+                             torch.zeros_like(log_numerator),
+                             torch.full_like(log_numerator, torch.inf))
     return torch.where(positive, ratio, zero_ratio)
 
 
 def _norm_from_log(log_norm: torch.Tensor,
-                   reference_norm: Optional[
-                       torch.Tensor] = None) -> torch.Tensor:
+                   reference_norm: Optional[torch.Tensor] = None
+                   ) -> torch.Tensor:
     """Materializes a log-norm, relative to a finite reference if possible."""
     if reference_norm is None:
         return log_norm.exp()
@@ -79,10 +68,9 @@ def _norm_from_log(log_norm: torch.Tensor,
     safe_reference = torch.where(
         positive, reference_norm, torch.ones_like(reference_norm))
     value = (log_norm - safe_reference.log()).exp() * safe_reference
-    zero_reference_value = torch.where(
-        torch.isneginf(log_norm),
-        torch.zeros_like(log_norm),
-        torch.full_like(log_norm, torch.inf))
+    zero_reference_value = torch.where(torch.isneginf(log_norm),
+                                       torch.zeros_like(log_norm),
+                                       torch.full_like(log_norm, torch.inf))
     return torch.where(positive, value, zero_reference_value)
 
 
@@ -103,8 +91,10 @@ def _record_as_dict(record: Any) -> Dict[str, Any]:
 
 
 @dataclass(frozen=True)
-class ErrorRecord:
-    """Stores an absolute/relative error measured on a specified target."""
+class ErrorRecord:  # MARK: ErrorRecord
+    """
+    Stores an ``absolute``/``relative`` error measured on a specified target.
+    """
 
     kind: str  # Target or mechanism on which the error was measured
     absolute: torch.Tensor  # Absolute error, optionally resolved by batch
@@ -147,7 +137,7 @@ class ErrorRecord:
 
 
 @dataclass(frozen=True)
-class TruncationRecord:
+class TruncationRecord:  # MARK: TruncationRecord
     """Stores ranks and discarded energy for one truncation cut."""
 
     site: int  # Site immediately to the left of the truncation cut
@@ -162,6 +152,59 @@ class TruncationRecord:
     global_rel_contribution: Optional[torch.Tensor] = None  # Global error term
     svd_method: Optional[str] = None  # Compact SVD implementation used
     phase: Optional[str] = None  # Algorithmic phase containing this cut
+
+    def __post_init__(self) -> None:
+        for name in ('site', 'full_rank', 'selected_rank'):
+            value = getattr(self, name)
+            if not isinstance(value, int):
+                raise TypeError(f'`{name}` should be int type')
+
+        if self.site < 0:
+            raise ValueError('`site` should be non-negative')
+        if self.full_rank < 1:
+            raise ValueError('`full_rank` should be positive')
+        if (self.selected_rank < 1) or (
+                self.selected_rank > self.full_rank):
+            raise ValueError(
+                '`selected_rank` should be between 1 and `full_rank`')
+
+        non_negative_fields = (
+            'local_abs_error',
+            'local_rel_error',
+            'singular_values',
+            'local_norm',
+            'global_rel_contribution',
+        )
+        for name in non_negative_fields:
+            value = getattr(self, name)
+            if value is None:
+                continue
+            value = _cpu_tensor(value, name)
+            if torch.any(value < 0):
+                raise ValueError(f'`{name}` should be non-negative')
+            object.__setattr__(self, name, value)
+
+        discarded_sq_norm = self.discarded_sq_norm
+        if discarded_sq_norm is None:
+            discarded_sq_norm = self.local_abs_error.square()
+        else:
+            discarded_sq_norm = _cpu_tensor(
+                discarded_sq_norm, 'discarded_sq_norm')
+            if torch.any(discarded_sq_norm < 0):
+                raise ValueError('`discarded_sq_norm` should be non-negative')
+        object.__setattr__(self, 'discarded_sq_norm', discarded_sq_norm)
+
+        if self.log_scale is not None:
+            log_scale = _cpu_tensor(self.log_scale, 'log_scale')
+            if not torch.isfinite(log_scale).all():
+                raise ValueError('`log_scale` should be finite')
+            object.__setattr__(self, 'log_scale', log_scale)
+
+        if (self.svd_method is not None) and (
+                self.svd_method not in ('svd', 'qr_svd')):
+            raise ValueError('`svd_method` should be "svd" or "qr_svd"')
+        if (self.phase is not None) and (not isinstance(self.phase, str)):
+            raise TypeError('`phase` should be str type')
 
     @classmethod
     def from_svd_info(cls,
@@ -227,74 +270,21 @@ class TruncationRecord:
                 discarded_log_norm, global_norm.log())
 
         return cls(
-            site=site,
-            full_rank=info.full_rank,
-            selected_rank=info.selected_rank,
-            local_abs_error=local_abs_error,
-            local_rel_error=local_rel_error,
-            singular_values=singular_values,
-            local_norm=local_norm,
-            log_scale=(log_scale_tensor if log_scale is not None else None),
-            global_rel_contribution=global_rel_contribution,
-            svd_method=info.svd_method,
+                site=site,
+                full_rank=info.full_rank,
+                selected_rank=info.selected_rank,
+                local_abs_error=local_abs_error,
+                local_rel_error=local_rel_error,
+                singular_values=singular_values,
+                local_norm=local_norm,
+                log_scale=(log_scale_tensor if log_scale is not None else None),
+                global_rel_contribution=global_rel_contribution,
+                svd_method=info.svd_method,
         )
-
-    def __post_init__(self) -> None:
-        for name in ('site', 'full_rank', 'selected_rank'):
-            value = getattr(self, name)
-            if not isinstance(value, int):
-                raise TypeError(f'`{name}` should be int type')
-
-        if self.site < 0:
-            raise ValueError('`site` should be non-negative')
-        if self.full_rank < 1:
-            raise ValueError('`full_rank` should be positive')
-        if (self.selected_rank < 1) or \
-                (self.selected_rank > self.full_rank):
-            raise ValueError(
-                '`selected_rank` should be between 1 and `full_rank`')
-
-        non_negative_fields = (
-            'local_abs_error',
-            'local_rel_error',
-            'singular_values',
-            'local_norm',
-            'global_rel_contribution',
-        )
-        for name in non_negative_fields:
-            value = getattr(self, name)
-            if value is None:
-                continue
-            value = _cpu_tensor(value, name)
-            if torch.any(value < 0):
-                raise ValueError(f'`{name}` should be non-negative')
-            object.__setattr__(self, name, value)
-
-        discarded_sq_norm = self.discarded_sq_norm
-        if discarded_sq_norm is None:
-            discarded_sq_norm = self.local_abs_error.square()
-        else:
-            discarded_sq_norm = _cpu_tensor(
-                discarded_sq_norm, 'discarded_sq_norm')
-            if torch.any(discarded_sq_norm < 0):
-                raise ValueError('`discarded_sq_norm` should be non-negative')
-        object.__setattr__(self, 'discarded_sq_norm', discarded_sq_norm)
-
-        if self.log_scale is not None:
-            log_scale = _cpu_tensor(self.log_scale, 'log_scale')
-            if not torch.isfinite(log_scale).all():
-                raise ValueError('`log_scale` should be finite')
-            object.__setattr__(self, 'log_scale', log_scale)
-
-        if (self.svd_method is not None) and \
-                (self.svd_method not in ('svd', 'qr_svd')):
-            raise ValueError('`svd_method` should be "svd" or "qr_svd"')
-        if (self.phase is not None) and (not isinstance(self.phase, str)):
-            raise TypeError('`phase` should be str type')
 
 
 @dataclass(frozen=True)
-class LocalSolveRecord:
+class LocalSolveRecord:  # MARK: LocalSolveRecord
     """Stores diagnostics for one local least-squares solve."""
 
     environment_shape: Tuple[int, int]  # Shape of the original local design matrix
@@ -389,8 +379,8 @@ class LocalSolveRecord:
 
 
 @dataclass(frozen=True)
-class InputFitRecord:
-    """Stores diagnostics for fitting one sampled Phi input axis."""
+class InputFitRecord:  # MARK: InputFitRecord
+    """Stores diagnostics for fitting one sampled Phi input ``axis``."""
 
     method: str
     axis: int
@@ -431,8 +421,10 @@ class InputFitRecord:
 
 
 @dataclass(frozen=True)
-class RangeProjectionRecord:
-    """Stores dimensions, approximation error and cost of a range projection."""
+class RangeProjectionRecord:  # MARK: RangeProjectionRecord
+    """
+    Stores dimensions, approximation error and cost of a range projection.
+    """
 
     method: str
     input_shape: Tuple[int, int]
@@ -483,7 +475,7 @@ class RangeProjectionRecord:
 
 
 @dataclass(frozen=True)
-class GaugeRecord:
+class GaugeRecord:  # MARK: GaugeRecord
     """Stores rank, conditioning and cancellation diagnostics for one gauge."""
 
     orientation: str  # Left or right interpretation of the gauge axes
@@ -553,8 +545,10 @@ class GaugeRecord:
 
 
 @dataclass(frozen=True)
-class SweepRecord:
-    """Stores objective metrics measured once at the end of an ALS sweep."""
+class SweepRecord:  # MARK: SweepRecord
+    """
+    Stores objective metrics measured once at the end of an ALS ``sweep``.
+    """
 
     sweep: int  # Zero-based directional sweep index
     # Absolute fixed-objective error at the end of the sweep
@@ -602,8 +596,8 @@ class SweepRecord:
 
 
 @dataclass(frozen=True)
-class TimingRecord:
-    """Stores elapsed time for a decomposition phase or site."""
+class TimingRecord:  # MARK: TimingRecord
+    """Stores ``elapsed`` time for a decomposition phase or ``site``."""
 
     name: str  # Timed phase or operation
     elapsed: float  # Elapsed wall-clock time in seconds
@@ -633,7 +627,7 @@ class TimingRecord:
 
 
 @dataclass(frozen=True)
-class EvaluationStats:
+class EvaluationStats:  # MARK: EvaluationStats
     """Counts point evaluations performed by a tensor source or session."""
 
     requested_points: int = 0
@@ -669,8 +663,8 @@ class EvaluationStats:
 
 
 @dataclass(frozen=True)
-class FidelityRecord:
-    """Stores a phase-aware normalized overlap and its fidelity."""
+class FidelityRecord:  # MARK: FidelityRecord
+    """Stores a phase-aware normalized overlap and its ``fidelity``."""
 
     # Complex normalized overlap with its original phase
     normalized_overlap: torch.Tensor
@@ -698,7 +692,7 @@ class FidelityRecord:
 
 
 @dataclass
-class DecompositionMetrics:
+class DecompositionMetrics:  # MARK: DecompositionMetrics
     """Collects structured records produced during a decomposition fit."""
 
     errors: List[ErrorRecord] = field(default_factory=list)  # Global errors
@@ -754,7 +748,9 @@ class DecompositionMetrics:
             raise TypeError('`warnings` should contain strings')
 
     def as_info(self) -> Dict[str, Any]:
-        """Returns a dictionary suitable for functional ``return_info`` APIs."""
+        """
+        Returns a dictionary suitable for functional ``return_info`` APIs.
+        """
         info = {
             'errors': [_record_as_dict(record) for record in self.errors],
             'truncations': [

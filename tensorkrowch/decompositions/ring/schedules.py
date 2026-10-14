@@ -1,8 +1,17 @@
-"""Experimental serial schedules for independent tensor ring openings."""
+"""
+This script contains:
+
+    Classes:
+        * AlternatingRingDriver
+
+    Functions:
+        * _block_selection
+        * _gauge_stability
+"""
 
 from dataclasses import replace
 from math import prod
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple, Union
 import warnings
 
 import torch
@@ -10,22 +19,21 @@ import torch
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector)
-from tensorkrowch.decompositions.ring.driver import (
-    BidirectionalRingDriver,
-    BidirectionalRingResult,
-    RingTargetProvider,
-    _normalize_context,
-    _validate_provider,
-)
+from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
+                                                     BidirectionalRingResult,
+                                                     RingTargetProvider,
+                                                     _normalize_context,
+                                                     _validate_provider)
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeMap,
                                                      GaugeRecursion)
 from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
-                                                      LoopOpener)
+                                                      LoopOpener,
+                                                      LoopOpening)
 
 
 def _block_selection(provider: RingTargetProvider,
-                     rank,
+                     rank: Union[int, Sequence[int]],
                      sites: Tuple[int, ...],
                      context: Mapping[str, Any]) -> BlockSelection:
     """Builds the result descriptor for the first independent anchor."""
@@ -44,7 +52,7 @@ def _block_selection(provider: RingTargetProvider,
         growth=((sites[0], sites[-1]),))
 
 
-def _gauge_stability(opening, sites: Tuple[int, ...]):
+def _gauge_stability(opening: Any, sites: Tuple[int, ...]) -> Dict[str, Any]:
     """Returns rank-revealing SVD diagnostics for both outgoing gauges."""
     diagnostics = []
     for orientation, gauge in (
@@ -74,8 +82,9 @@ def _gauge_stability(opening, sites: Tuple[int, ...]):
     return tuple(diagnostics)
 
 
-class AlternatingRingDriver:
-    """Runs a serial anchor/fixed-block schedule for a tensor ring.
+class AlternatingRingDriver:  # MARK: AlternatingRingDriver
+    """
+    Runs a serial anchor/fixed-block schedule for a tensor ring.
 
     Independent anchor blocks are opened first with two free gauges. Every
     intervening block is then solved with the gauges recursively propagated
@@ -91,7 +100,7 @@ class AlternatingRingDriver:
 
     def fit(self,
             provider: RingTargetProvider,
-            rank,
+            rank: Union[int, Sequence[int]],
             opener: LoopOpener,
             recursion: GaugeRecursion,
             *,
@@ -103,8 +112,7 @@ class AlternatingRingDriver:
             fallback_driver: Optional[BidirectionalRingDriver] = None,
             block_selector: Optional[CentralBlockSelector] = None,
             center: Optional[int] = None,
-            context: Optional[Mapping[str, Any]] = None
-            ) -> BidirectionalRingResult:
+            context: Optional[Mapping[str, Any]] = None) -> BidirectionalRingResult:
         """Executes the experimental alternating schedule serially."""
         in_dim = _validate_provider(provider)
         if not isinstance(opener, LoopOpener):
@@ -196,17 +204,17 @@ class AlternatingRingDriver:
         return None
 
     @staticmethod
-    def _fallback(reason,
-                  fallback,
-                  driver,
-                  provider,
-                  rank,
-                  opener,
-                  recursion,
-                  block_selector,
-                  center,
-                  context):
-        """Runs center-out with an explicit diagnostic, or raises."""
+    def _fallback(reason: Any,
+                  fallback: Any,
+                  driver: Any,
+                  provider: Any,
+                  rank: Union[int, Sequence[int]],
+                  opener: Any,
+                  recursion: Any,
+                  block_selector: Any,
+                  center: Any,
+                  context: Any) -> BidirectionalRingResult:
+        """Runs ``center``-out with an explicit diagnostic, or raises."""
         if not fallback:
             raise ValueError(
                 'Alternating ring schedule is unavailable: ' + reason)
@@ -226,16 +234,16 @@ class AlternatingRingDriver:
         })
 
     @staticmethod
-    def _open_anchor(provider,
-                     rank,
-                     opener,
-                     sites,
-                     context,
-                     cores,
-                     openings,
-                     order,
-                     directions,
-                     metrics):
+    def _open_anchor(provider: Any,
+                     rank: Union[int, Sequence[int]],
+                     opener: Any,
+                     sites: Sequence[int],
+                     context: Any,
+                     cores: Sequence[torch.Tensor],
+                     openings: Any,
+                     order: Sequence[int],
+                     directions: Any,
+                     metrics: Optional['DecompositionMetrics']) -> LoopOpening:
         """Opens and stores one independent anchor block."""
         target = provider.local_target(sites, context)
         opening = BidirectionalRingDriver._open(
@@ -254,20 +262,20 @@ class AlternatingRingDriver:
         return opening
 
     @staticmethod
-    def _open_fixed(provider,
-                    rank,
-                    opener,
-                    recursion,
-                    sites,
-                    left_sites,
-                    right_sites,
-                    context,
-                    cores,
-                    openings,
-                    order,
-                    directions,
-                    metrics,
-                    recursion_diagnostics):
+    def _open_fixed(provider: Any,
+                    rank: Union[int, Sequence[int]],
+                    opener: Any,
+                    recursion: Any,
+                    sites: Sequence[int],
+                    left_sites: Any,
+                    right_sites: Any,
+                    context: Any,
+                    cores: Sequence[torch.Tensor],
+                    openings: Any,
+                    order: Sequence[int],
+                    directions: Any,
+                    metrics: Optional['DecompositionMetrics'],
+                    recursion_diagnostics: Any) -> None:
         """Solves one intervening block from its two anchor gauges."""
         target = provider.local_target(sites, context)
         fixed_left = BidirectionalRingDriver._advance(
@@ -307,16 +315,16 @@ class AlternatingRingDriver:
             directions, metrics)
 
     def _fit_cyclic(self,
-                    provider,
-                    rank,
-                    opener,
-                    fixed_opener,
-                    recursion,
-                    block_size,
-                    anchor_offset,
-                    stability_diagnostics,
-                    context):
-        """Runs alternating free/fixed blocks around a cyclic provider."""
+                    provider: Any,
+                    rank: Union[int, Sequence[int]],
+                    opener: Any,
+                    fixed_opener: Any,
+                    recursion: Any,
+                    block_size: Any,
+                    anchor_offset: Any,
+                    stability_diagnostics: Any,
+                    context: Any) -> BidirectionalRingResult:
+        """Runs alternating free/fixed blocks around a cyclic ``provider``."""
         n_sites = len(provider.in_dim)
         offset = anchor_offset * block_size
         ordered = tuple(range(offset, n_sites)) + tuple(range(offset))
@@ -367,13 +375,13 @@ class AlternatingRingDriver:
             })
 
     def _fit_open(self,
-                  provider,
-                  rank,
-                  opener,
-                  fixed_opener,
-                  recursion,
-                  stability_diagnostics,
-                  context):
+                  provider: Any,
+                  rank: Union[int, Sequence[int]],
+                  opener: Any,
+                  fixed_opener: Any,
+                  recursion: Any,
+                  stability_diagnostics: Any,
+                  context: Any) -> BidirectionalRingResult:
         """Runs odd internal anchors and closes both open target boundaries."""
         n_sites = len(provider.in_dim)
         anchors = tuple((site,) for site in range(1, n_sites - 1, 2))
@@ -444,4 +452,6 @@ class AlternatingRingDriver:
             })
 
 
-__all__ = ['AlternatingRingDriver']
+__all__ = [
+    'AlternatingRingDriver',
+]

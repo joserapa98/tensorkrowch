@@ -11,6 +11,7 @@ from typing import Optional, Sequence, Tuple
 import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
+
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
@@ -20,8 +21,9 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _unravel_indices)
 
 
-class SparseTensorSource(_SourceEvaluationTracker):
-    """Sparse tensor source with declared zeros outside its support.
+class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
+    """
+    Sparse tensor source with declared zeros outside its support.
 
     Repeated support indices are coalesced by summing their values, matching
     sparse COO semantics. In contrast with matrix/tensor completion,
@@ -146,8 +148,9 @@ class SparseTensorSource(_SourceEvaluationTracker):
             configurations.batch_size, n_values, *self._out_shape)
 
 
-class EmpiricalDistribution(SparseTensorSource):
-    """Normalized sparse empirical distribution built from a dataset.
+class EmpiricalDistribution(SparseTensorSource):  # MARK: EmpiricalDistribution
+    """
+    Normalized sparse empirical distribution built from a dataset.
 
     Parameters
     ----------
@@ -215,4 +218,7 @@ class EmpiricalDistribution(SparseTensorSource):
             in_dim=normalized_in_dim)
 
 
-__all__ = ['SparseTensorSource', 'EmpiricalDistribution']
+__all__ = [
+    'SparseTensorSource',
+    'EmpiricalDistribution',
+]

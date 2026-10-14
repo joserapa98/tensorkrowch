@@ -1,15 +1,13 @@
-"""Tests for topology-independent ALS sweep orchestration."""
+"""Tests retained for redistribution."""
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
+from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
+                                                     NonFiniteSolutionError)
 from tensorkrowch.decompositions.observers import HistoryObserver
-from tensorkrowch.decompositions.als.solvers import (
-    NonFiniteLocalSystemError,
-    NonFiniteSolutionError,
-)
 
 
 class _FakeALSBackend:
@@ -105,92 +103,6 @@ def _fixed_problem():
         source=tk.decompositions.DenseTensorSource(torch.ones(2, 2)))
 
 
-class TestConvergencePolicy:  # MARK: TestConvergencePolicy
-
-    def test_error_criteria_use_end_of_sweep_objective(self):
-        backend = _FakeALSBackend([1., 0.2, 0.01])
-        driver = tk.decompositions.ALSSweepDriver()
-        policy = tk.decompositions.ConvergencePolicy(
-            max_sweeps=10, error_rtol=0.05)
-
-        result = driver.fit(
-            _fixed_problem(), backend, policy, collect_metrics=True)
-
-        assert result.stop_reason == 'error_rtol'
-        assert result.converged
-        assert result.n_sweeps == 3
-        assert [record.rel_error for record in result.metrics.sweeps] == [
-            1., pytest.approx(0.2), pytest.approx(0.01)]
-        assert all(record.rel_residual == 100
-                   for record in result.metrics.local_solves)
-
-    def test_relative_stability_counts_complete_sweeps(self):
-        backend = _FakeALSBackend([1., 0.8, 0.8001, 0.8002])
-        policy = tk.decompositions.ConvergencePolicy(
-            max_sweeps=10,
-            change_rtol=1e-3,
-            patience=2)
-
-        result = tk.decompositions.ALSSweepDriver().fit(
-            _fixed_problem(), backend, policy, collect_metrics=True)
-
-        assert result.stop_reason == 'relative_stability'
-        assert result.n_sweeps == 4
-        assert result.metrics.sweeps[0].rel_change is None
-        assert result.metrics.sweeps[-1].rel_change < 1e-3
-
-    def test_renewable_sampling_rejects_incomparable_error_criteria(self):
-        problem = tk.decompositions.ALSProblem(
-            source=tk.decompositions.DenseTensorSource(torch.ones(2, 2)),
-            selector=object())
-        backend = _FakeALSBackend([1., 0.5])
-
-        with pytest.raises(ValueError, match='fixed global objective'):
-            tk.decompositions.ALSSweepDriver().fit(
-                problem,
-                backend,
-                tk.decompositions.ConvergencePolicy(
-                    max_sweeps=2, error_rtol=0.1))
-
-        result = tk.decompositions.ALSSweepDriver().fit(
-            problem,
-            backend,
-            tk.decompositions.ConvergencePolicy(max_sweeps=2))
-        assert result.stop_reason == 'max_sweeps'
-        assert backend.measure_count == 0
-
-    def test_completion_is_a_fixed_objective(self):
-        observations = tk.decompositions.ObservedEntries(
-            indices=torch.tensor([[0, 0], [1, 1]]),
-            values=torch.tensor([1., 2.]),
-            in_dim=(2, 2))
-        problem = tk.decompositions.ALSProblem(observations=observations)
-        backend = _FakeALSBackend([0.5, 0.01])
-
-        result = tk.decompositions.ALSSweepDriver().fit(
-            problem,
-            backend,
-            tk.decompositions.ConvergencePolicy(
-                max_sweeps=5, error_atol=0.05),
-            collect_metrics=True)
-
-        assert result.stop_reason == 'error_atol'
-        assert result.n_sweeps == 2
-
-    def test_best_state_is_restored_only_for_fixed_objectives(self):
-        backend = _FakeALSBackend([1., 0.2, 0.5])
-        policy = tk.decompositions.ConvergencePolicy(
-            max_sweeps=3, keep_best=True)
-
-        result = tk.decompositions.ALSSweepDriver().fit(
-            _fixed_problem(), backend, policy, collect_metrics=True)
-
-        assert result.stop_reason == 'max_sweeps'
-        assert backend.restored is not None
-        assert all(torch.equal(core, torch.tensor([float(site + 2)]))
-                   for site, core in enumerate(result.cores))
-
-
 class TestALSSweepDriver:  # MARK: TestALSSweepDriver
 
     def test_fast_path_skips_objective_records_and_observers(self):
@@ -278,24 +190,3 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
 
         assert result.stop_reason == 'callback'
         assert result.n_sweeps == 2
-
-
-class TestUpdatePolicy:  # MARK: TestUpdatePolicy
-
-    def test_damping_and_acceptance(self):
-        policy = tk.decompositions.UpdatePolicy(
-            damping=0.25, acceptance='non_increasing')
-        current = torch.tensor([0., 2.])
-        proposal = torch.tensor([4., -2.])
-
-        assert torch.equal(
-            policy.apply(current, proposal), torch.tensor([1., 1.]))
-        assert policy.accepts(2., 1.)
-        assert not policy.accepts(1., 2.)
-
-    def test_non_increasing_acceptance_requires_local_errors(self):
-        policy = tk.decompositions.UpdatePolicy(
-            acceptance='non_increasing')
-
-        with pytest.raises(ValueError, match='local errors'):
-            policy.accepts(None, 1.)

@@ -3,32 +3,26 @@
 from dataclasses import FrozenInstanceError
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.evaluations import (
-    _EvaluationPlanBuilder,
-    _EvaluationSession,
-)
-from tensorkrowch.decompositions.sketching.phi import (
-    PhiOperator,
-    _MaterializedPhi,
-)
+from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder,
+                                                               _EvaluationSession)
+from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
+                                                       _MaterializedPhi)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
-from tensorkrowch.decompositions.sketching.transforms import (
-    CallableGlobalValueTransform,
-    CallableLocalValueTransform,
-    CompositeGlobalValueTransform,
-    CompositeLocalValueTransform,
-    IdentityGlobalValueTransform,
-    IdentityLocalValueTransform,
-    LocalTransformContext,
-    _apply_local_transform,
-    _collect_local_queries,
-    _prepare_global_transform,
-    _structured_path_allowed,
-)
+from tensorkrowch.decompositions.sketching.transforms import (CallableGlobalValueTransform,
+                                                              CallableLocalValueTransform,
+                                                              CompositeGlobalValueTransform,
+                                                              CompositeLocalValueTransform,
+                                                              IdentityGlobalValueTransform,
+                                                              IdentityLocalValueTransform,
+                                                              LocalTransformContext,
+                                                              _apply_local_transform,
+                                                              _collect_local_queries,
+                                                              _prepare_global_transform,
+                                                              _structured_path_allowed)
 
 
 def _one_site_phi(source, values=None):

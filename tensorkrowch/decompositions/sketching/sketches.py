@@ -1,31 +1,68 @@
-"""Sketch operators and core-determining systems for TT-RS."""
+"""
+This script contains:
+
+    Classes:
+        * _SketchWeights
+        * SketchOperator
+        * SketchSystemBuilder
+        * CoreDeterminingSystem
+        * _SupportSketchSystemBuilder
+        * _SampledStructuredSystemBuilder
+        * _MarginalStructuredSystemBuilder
+        * _TTStackStructuredSystemBuilder
+        * SampledSketch
+        * MarginalSketch
+        * TTStackSketch
+
+    Functions:
+        * _normalize_rank
+        * _ravel_subset
+        * _one_hot_ids
+        * _selected_ids
+        * _sample_states
+        * _unravel_ids
+        * _structured_capability
+        * _validate_structured_batch_size
+        * _gaussian
+        * _left_orthogonal
+        * _right_orthogonal
+"""
 
 from dataclasses import dataclass, field
 from math import prod, sqrt
-from typing import (Any, Mapping, Optional, Protocol, Sequence, Tuple,
-                    Union, runtime_checkable)
+from typing import (Any,
+                    Mapping,
+                    Optional,
+                    Protocol,
+                    Sequence,
+                    TYPE_CHECKING,
+                    Tuple,
+                    Union,
+                    runtime_checkable)
 
 import torch
 
-from tensorkrowch.utils import _INTEGER_DTYPES
+from tensorkrowch.utils import _INTEGER_DTYPES, truncated_svd
+
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TruncationRecord)
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.sketching.sources import (
-    SupportTensorSource,
-    _iter_support,
-)
+from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource,
+                                                           _iter_support)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource)
-from tensorkrowch.utils import truncated_svd
 
 
 _Rank = Union[int, Sequence[int]]
 
 
+if TYPE_CHECKING:
+    from tensorkrowch.decompositions.sketching.sources import SketchContractableSource
+
+
 def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
-    """Normalizes one shared rank cap or one cap per open TT link."""
+    """Normalizes one shared ``rank`` cap or one cap per open TT link."""
     if isinstance(rank, bool):
         raise TypeError('`rank` should be int or a sequence of ints')
     if isinstance(rank, int):
@@ -51,7 +88,7 @@ def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
 
 def _ravel_subset(indices: torch.Tensor,
                   dimensions: Sequence[int]) -> torch.Tensor:
-    """Ravels a non-empty consecutive subset of discrete indices."""
+    """Ravels a non-empty consecutive subset of discrete ``indices``."""
     strides = indices.new_tensor([
         prod(dimensions[site + 1:])
         for site in range(len(dimensions))
@@ -62,7 +99,7 @@ def _ravel_subset(indices: torch.Tensor,
 def _one_hot_ids(ids: torch.Tensor,
                  size: int,
                  dtype: torch.dtype) -> torch.Tensor:
-    """Creates feature rows while mapping negative ids to zero."""
+    """Creates feature rows while mapping negative ``ids`` to zero."""
     result = torch.zeros(
         ids.shape[0], size, dtype=dtype, device=ids.device)
     valid = ids >= 0
@@ -73,7 +110,9 @@ def _one_hot_ids(ids: torch.Tensor,
 
 def _selected_ids(values: torch.Tensor,
                   reference: torch.Tensor) -> torch.Tensor:
-    """Maps sorted flat values to sorted reference positions or ``-1``."""
+    """
+    Maps sorted flat ``values`` to sorted ``reference`` positions or ``-1``.
+    """
     positions = torch.searchsorted(reference, values)
     safe = positions.clamp(max=max(reference.numel() - 1, 0))
     result = torch.full_like(positions, -1)
@@ -96,8 +135,7 @@ def _sample_states(values: torch.Tensor,
     return states.index_select(0, permutation).sort().values
 
 
-def _unravel_ids(ids: torch.Tensor,
-                 dimensions: Sequence[int]) -> torch.Tensor:
+def _unravel_ids(ids: torch.Tensor, dimensions: Sequence[int]) -> torch.Tensor:
     """Unravels flat consecutive-site indices in row-major order."""
     if not dimensions:
         return ids.new_empty((ids.shape[0], 0))
@@ -111,8 +149,9 @@ def _unravel_ids(ids: torch.Tensor,
     return torch.stack(result, dim=1)
 
 
-def _structured_capability(source: TensorSource, name: str):
-    """Returns one optional structured source kernel by capability."""
+def _structured_capability(source: TensorSource,
+                           name: str) -> Optional['SketchContractableSource']:
+    """Returns one optional structured ``source`` kernel by capability."""
     capability = getattr(source, name, None)
     return capability if callable(capability) else None
 
@@ -127,8 +166,10 @@ def _validate_structured_batch_size(batch_size: Optional[int]) -> None:
 
 
 @dataclass(frozen=True)
-class _SketchWeights:
-    """Evaluated left/right sketches and recursive left local blocks."""
+class _SketchWeights:  # MARK: _SketchWeights
+    """
+    Evaluated ``left``/``right`` sketches and recursive ``left`` local blocks.
+    """
 
     left: Sequence[torch.Tensor]
     right: Sequence[torch.Tensor]
@@ -152,28 +193,28 @@ class _SketchWeights:
 
 
 @runtime_checkable
-class SketchOperator(Protocol):
+class SketchOperator(Protocol):  # MARK: SketchOperator
     """Protocol for operators that construct a validated TT-RS system."""
 
     def builder(self, source: TensorSource) -> 'SketchSystemBuilder':
-        """Returns the source-bound core-determining-system builder."""
+        """Returns the ``source``-bound core-determining-system builder."""
 
 
 @runtime_checkable
-class SketchSystemBuilder(Protocol):
+class SketchSystemBuilder(Protocol):  # MARK: SketchSystemBuilder
     """Protocol for constructing local TT-RS equations from one source."""
 
     def build(self,
               *,
               batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> 'CoreDeterminingSystem':
+              generator: Optional[torch.Generator] = None) -> 'CoreDeterminingSystem':
         """Builds sketched local tensors and recursive left blocks."""
 
 
 @dataclass(frozen=True)
-class CoreDeterminingSystem:
-    """Stores the TT-RS local tensors and solves their coupled equations.
+class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
+    """
+    Stores the TT-RS local tensors and solves their coupled equations.
 
     ``phi[k]`` is the source contracted with the recursive left sketch through
     site ``k - 1`` and the right sketch after site ``k``. ``left_blocks[k]``
@@ -307,12 +348,10 @@ class CoreDeterminingSystem:
             })
 
 
-class _SupportSketchSystemBuilder:
+class _SupportSketchSystemBuilder:  # MARK: _SupportSketchSystemBuilder
     """Contracts finite support, enumerating only non-support sources."""
 
-    def __init__(self,
-                 source: TensorSource,
-                 operator: SketchOperator) -> None:
+    def __init__(self, source: TensorSource, operator: SketchOperator) -> None:
         if not isinstance(source, TensorSource):
             raise TypeError('`source` should implement TensorSource')
         if tuple(source.out_shape) != ():
@@ -325,8 +364,7 @@ class _SupportSketchSystemBuilder:
     def build(self,
               *,
               batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
+              generator: Optional[torch.Generator] = None) -> CoreDeterminingSystem:
         """Builds all Phi tensors in support-linear memory when possible."""
         if isinstance(self.source, SupportTensorSource):
             batches = list(_iter_support(self.source, batch_size=batch_size))
@@ -392,18 +430,19 @@ class _SupportSketchSystemBuilder:
             })
 
 
-class _SampledStructuredSystemBuilder:
+class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
     """Builds sampled equations from exact TT prefix/suffix kernels."""
 
-    def __init__(self, source: TensorSource, operator: 'SampledSketch') -> None:
+    def __init__(self,
+                 source: TensorSource,
+                 operator: 'SampledSketch') -> None:
         self.source = source
         self.operator = operator
 
     def build(self,
               *,
               batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
+              generator: Optional[torch.Generator] = None) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
         dimensions = self.source.in_dim
         device = self.source.device
@@ -491,18 +530,19 @@ class _SampledStructuredSystemBuilder:
             })
 
 
-class _MarginalStructuredSystemBuilder:
+class _MarginalStructuredSystemBuilder:  # MARK: _MarginalStructuredSystemBuilder
     """Builds Markov marginal equations from direct TT contractions."""
 
-    def __init__(self, source: TensorSource, operator: 'MarginalSketch') -> None:
+    def __init__(self,
+                 source: TensorSource,
+                 operator: 'MarginalSketch') -> None:
         self.source = source
         self.operator = operator
 
     def build(self,
               *,
               batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
+              generator: Optional[torch.Generator] = None) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
         del generator
         dimensions = self.source.in_dim
@@ -533,18 +573,19 @@ class _MarginalStructuredSystemBuilder:
             })
 
 
-class _TTStackStructuredSystemBuilder:
+class _TTStackStructuredSystemBuilder:  # MARK: _TTStackStructuredSystemBuilder
     """Builds Gaussian TT-stack equations by double-layer contraction."""
 
-    def __init__(self, source: TensorSource, operator: 'TTStackSketch') -> None:
+    def __init__(self,
+                 source: TensorSource,
+                 operator: 'TTStackSketch') -> None:
         self.source = source
         self.operator = operator
 
     def build(self,
               *,
               batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
+              generator: Optional[torch.Generator] = None) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
         left_cores, right_cores, blocks = self.operator._components(
             self.source.in_dim,
@@ -581,8 +622,9 @@ class _TTStackStructuredSystemBuilder:
             })
 
 
-class SampledSketch:
-    """Recursive one-hot sketches induced by correlated configurations.
+class SampledSketch:  # MARK: SampledSketch
+    """
+    Recursive one-hot sketches induced by correlated configurations.
 
     For a sparse source the default configurations are its non-zero support.
     Prefix and suffix states are kept correlated; missing Cartesian-product
@@ -612,7 +654,11 @@ class SampledSketch:
             return _SampledStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _weights(self, indices, in_dim, dtype, generator):
+    def _weights(self,
+                 indices: torch.Tensor,
+                 in_dim: Optional[Sequence[int]],
+                 dtype: Optional[torch.dtype],
+                 generator: Optional[torch.Generator]) -> torch.Tensor:
         reference = indices if self.samples is None else self.samples.to(
             device=indices.device, dtype=torch.long)
         if reference.shape[1] != len(in_dim):
@@ -666,8 +712,9 @@ class SampledSketch:
                 states.numel() for states in prefix_states)})
 
 
-class MarginalSketch:
-    """Marginal sketches that retain a local neighborhood at every cut.
+class MarginalSketch:  # MARK: MarginalSketch
+    """
+    Marginal sketches that retain a local neighborhood at every cut.
 
     :meth:`markov` implements the neighbor-preserving sketches of Section 5.1
     of `Generative modeling via tensor train sketching
@@ -694,8 +741,7 @@ class MarginalSketch:
     @classmethod
     def markov(cls,
                order: int = 1,
-               factor: Optional[Sequence[torch.Tensor]] = None
-               ) -> 'MarginalSketch':
+               factor: Optional[Sequence[torch.Tensor]] = None) -> 'MarginalSketch':
         """Builds the standard neighbor-preserving Markov marginal sketch."""
         return cls(order=order, factor=factor)
 
@@ -705,7 +751,10 @@ class MarginalSketch:
             return _MarginalStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _left_blocks(self, in_dim, dtype, device):
+    def _left_blocks(self,
+                     in_dim: Optional[Sequence[int]],
+                     dtype: Optional[torch.dtype],
+                     device: Optional[Union[str, torch.device]]) -> Tuple[torch.Tensor, ...]:
         """Constructs recursive Markov blocks independently of source rows."""
         blocks = []
         for site in range(len(in_dim) - 1):
@@ -731,7 +780,11 @@ class MarginalSketch:
             blocks.append(block)
         return blocks
 
-    def _weights(self, indices, in_dim, dtype, generator):
+    def _weights(self,
+                 indices: torch.Tensor,
+                 in_dim: Optional[Sequence[int]],
+                 dtype: Optional[torch.dtype],
+                 generator: Optional[torch.Generator]) -> torch.Tensor:
         del generator
         if self.factor is not None and len(self.factor) != len(in_dim):
             raise ValueError('`factor` should contain one vector per site')
@@ -770,14 +823,18 @@ class MarginalSketch:
             })
 
 
-def _gaussian(shape, dtype, device, generator, scale):
-    """Draws real or complex Gaussian entries with explicit scale."""
+def _gaussian(shape: Sequence[int],
+              dtype: Optional[torch.dtype],
+              device: Optional[Union[str, torch.device]],
+              generator: Optional[torch.Generator],
+              scale: float) -> torch.Tensor:
+    """Draws real or complex Gaussian entries with explicit ``scale``."""
     return torch.randn(
         *shape, dtype=dtype, device=device, generator=generator) * scale
 
 
 def _left_orthogonal(core: torch.Tensor) -> torch.Tensor:
-    """Orthogonalizes the outgoing columns of one TT core."""
+    """Orthogonalizes the outgoing columns of one TT ``core``."""
     matrix = core.reshape(-1, core.shape[-1])
     if matrix.shape[0] >= matrix.shape[1]:
         matrix = torch.linalg.qr(matrix, mode='reduced').Q
@@ -787,7 +844,7 @@ def _left_orthogonal(core: torch.Tensor) -> torch.Tensor:
 
 
 def _right_orthogonal(core: torch.Tensor) -> torch.Tensor:
-    """Orthogonalizes the incoming rows of one TT core."""
+    """Orthogonalizes the incoming rows of one TT ``core``."""
     matrix = core.reshape(core.shape[0], -1)
     if matrix.shape[1] >= matrix.shape[0]:
         matrix = torch.linalg.qr(matrix.T, mode='reduced').Q.T
@@ -796,8 +853,9 @@ def _right_orthogonal(core: torch.Tensor) -> torch.Tensor:
     return matrix.reshape(core.shape)
 
 
-class TTStackSketch:
-    """Stacked Gaussian TT sketch with distinct stack and internal ranks.
+class TTStackSketch:  # MARK: TTStackSketch
+    """
+    Stacked Gaussian TT sketch with distinct stack and internal ranks.
 
     ``tt_rank=1`` is the separable Khatri-Rao limit. ``n_stacks=1`` is one
     Gaussian TT projection with ``tt_rank`` output rows at every partial cut.
@@ -835,7 +893,11 @@ class TTStackSketch:
             return _TTStackStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
-    def _components(self, in_dim, dtype, device, generator):
+    def _components(self,
+                    in_dim: Optional[Sequence[int]],
+                    dtype: Optional[torch.dtype],
+                    device: Optional[Union[str, torch.device]],
+                    generator: Optional[torch.Generator]) -> Any:
         """Draws TT stacks and constructs their recursive left blocks."""
         feature_dim = self.tt_rank * self.n_stacks
         scale = 1 / sqrt(self.tt_rank)
@@ -882,7 +944,11 @@ class TTStackSketch:
             blocks.append(block)
         return tuple(left_cores), tuple(right_cores), tuple(blocks)
 
-    def _weights(self, indices, in_dim, dtype, generator):
+    def _weights(self,
+                 indices: torch.Tensor,
+                 in_dim: Optional[Sequence[int]],
+                 dtype: Optional[torch.dtype],
+                 generator: Optional[torch.Generator]) -> torch.Tensor:
         feature_dim = self.tt_rank * self.n_stacks
         device = indices.device
         stack_scale = 1 / sqrt(self.n_stacks)

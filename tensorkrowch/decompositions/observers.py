@@ -4,22 +4,21 @@ This script contains:
     Class for decomposition events:
         * DecompositionEvent
 
+    Observer utilities:
+        * _normalize_verbosity
+        * _resolve_observer
+
     Classes for decomposition observers:
         * DecompositionObserver
         * NullObserver
         * HistoryObserver
         * ConsoleObserver
         * _CompositeObserver
-
-    Observer utilities:
-        * _normalize_verbosity
-        * _resolve_observer
 """
 
-from dataclasses import dataclass, field
 import sys
-from typing import (Any, Dict, List, Optional, Protocol, Sequence, TextIO,
-                    Union)
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Protocol, Sequence, TextIO, Union
 
 import torch
 
@@ -27,7 +26,7 @@ from tensorkrowch.decompositions.metrics import DecompositionMetrics
 
 
 @dataclass(frozen=True)
-class DecompositionEvent:
+class DecompositionEvent:  # MARK: DecompositionEvent
     """Describes one structured event emitted by a decomposition driver."""
 
     name: str  # Event type consumed by observers
@@ -68,17 +67,28 @@ class DecompositionEvent:
         object.__setattr__(self, 'values', dict(self.values))
 
 
-class DecompositionObserver(Protocol):
+def _normalize_verbosity(verbose: Union[bool, int]) -> int:
+    """Normalizes boolean and integer verbosity levels."""
+    if isinstance(verbose, bool):
+        return int(verbose)
+    if not isinstance(verbose, int):
+        raise TypeError('`verbose` should be bool or int type')
+    if (verbose < 0) or (verbose > 3):
+        raise ValueError('`verbose` should be between 0 and 3')
+    return verbose
+
+
+class DecompositionObserver(Protocol):  # MARK: DecompositionObserver
     """Protocol implemented by decomposition event consumers."""
 
     def emit(self, event: DecompositionEvent) -> None:
-        """Consumes one decomposition event."""
+        """Consumes one decomposition ``event``."""
 
     def close(self, metrics: DecompositionMetrics) -> None:
-        """Consumes the metrics produced by a completed fit."""
+        """Consumes the ``metrics`` produced by a completed fit."""
 
 
-class NullObserver:
+class NullObserver:  # MARK: NullObserver
     """Discards decomposition events."""
 
     def emit(self, event: DecompositionEvent) -> None:
@@ -88,7 +98,7 @@ class NullObserver:
         pass
 
 
-class HistoryObserver:
+class HistoryObserver:  # MARK: HistoryObserver
     """Stores structured events and the metrics from the latest fit."""
 
     def __init__(self) -> None:
@@ -106,7 +116,7 @@ class HistoryObserver:
         self.metrics = metrics
 
 
-class ConsoleObserver:
+class ConsoleObserver:  # MARK: ConsoleObserver
     """Prints hierarchical decomposition progress for a verbosity level."""
 
     def __init__(self,
@@ -116,18 +126,6 @@ class ConsoleObserver:
         self.stream = sys.stdout if stream is None else stream
         if not hasattr(self.stream, 'write'):
             raise TypeError('`stream` should be a text stream')
-
-    def _print_values(self, values: Dict[str, Any]) -> None:
-        labels = {
-            'in_dim': 'input dim',
-            'out_dim': 'output dim',
-            'out_device': 'output device',
-        }
-        for name, value in values.items():
-            label = labels.get(name, name.replace('_', ' '))
-            print(
-                f'  {label}: {self._format_value(name, value)}',
-                file=self.stream)
 
     @staticmethod
     def _format_value(name: str, value: Any) -> Any:
@@ -152,6 +150,18 @@ class ConsoleObserver:
         else:
             return value
         return f'{formatted} s' if name == 'elapsed' else formatted
+
+    def _print_values(self, values: Dict[str, Any]) -> None:
+        labels = {
+            'in_dim': 'input dim',
+            'out_dim': 'output dim',
+            'out_device': 'output device',
+        }
+        for name, value in values.items():
+            label = labels.get(name, name.replace('_', ' '))
+            print(
+                f'  {label}: {self._format_value(name, value)}',
+                file=self.stream)
 
     def emit(self, event: DecompositionEvent) -> None:
         if not isinstance(event, DecompositionEvent):
@@ -238,7 +248,7 @@ class ConsoleObserver:
             raise TypeError('`metrics` should be DecompositionMetrics type')
 
 
-class _CompositeObserver:
+class _CompositeObserver:  # MARK: _CompositeObserver
     """Forwards decomposition events to several observers."""
 
     def __init__(self, observers: Sequence[DecompositionObserver]) -> None:
@@ -253,21 +263,12 @@ class _CompositeObserver:
             observer.close(metrics)
 
 
-def _normalize_verbosity(verbose: Union[bool, int]) -> int:
-    """Normalizes boolean and integer verbosity levels."""
-    if isinstance(verbose, bool):
-        return int(verbose)
-    if not isinstance(verbose, int):
-        raise TypeError('`verbose` should be bool or int type')
-    if (verbose < 0) or (verbose > 3):
-        raise ValueError('`verbose` should be between 0 and 3')
-    return verbose
-
-
-def _resolve_observer(
-        verbose: Union[bool, int],
-        observer: Optional[DecompositionObserver]) -> DecompositionObserver:
-    """Combines an optional observer with the selected console verbosity."""
+def _resolve_observer(verbose: Union[bool, int],
+                      observer: Optional[DecompositionObserver]
+                      ) -> DecompositionObserver:
+    """
+    Combines an optional ``observer`` with the selected console verbosity.
+    """
     verbosity = _normalize_verbosity(verbose)
     if observer is not None:
         if not callable(getattr(observer, 'emit', None)) or \

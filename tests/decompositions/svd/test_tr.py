@@ -4,8 +4,8 @@ import inspect
 from math import sqrt
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tr as tr_module
@@ -554,11 +554,12 @@ class TestTRSVDFunction:  # MARK: TestTRSVDFunction
             return original_fit(self, *args, **kwargs)
 
         monkeypatch.setattr(tr_module.TRSVD, 'fit', tracked_fit)
-        cores = tk.decompositions.tr_svd(tensor, rank=2)
-        info_cores, info = tk.decompositions.tr_svd(
+        cores = tk.decompositions.tr_svd(tensor, rank=2).cores
+        result = tk.decompositions.tr_svd(
             tensor,
             rank=2,
-            return_info=True)
+            collect_metrics=True)
+        info_cores, info = result.cores, result.as_info()
 
         assert collect_metrics_calls == [False, True]
         assert info['topology'] == 'tr'
@@ -569,7 +570,147 @@ class TestTRSVDFunction:  # MARK: TestTRSVDFunction
         assert len(info['metrics']['truncations']) == 3
         assert len(cores) == len(info_cores) == 4
 
-    def test_return_info_validation(self):
-        with pytest.raises(TypeError, match='`return_info` should be bool type'):
+    def test_collect_metrics_validation(self):
+        with pytest.raises(TypeError, match='`collect_metrics` should be bool type'):
             tk.decompositions.tr_svd(
-                torch.ones(2, 3), return_info=1)
+                torch.ones(2, 3), collect_metrics=1)
+
+
+@pytest.mark.parametrize('large', [False, True])
+def test_renormalized_svd_preserves_extreme_input_scale(large, device_dtype,
+                                                      assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    scale = 1e20 if real_dtype == torch.float32 else 1e200
+    if not large:
+        scale = 1 / scale
+    reference = torch.arange(1., 9., device=device).reshape(2, 2, 2).to(dtype)
+    if dtype.is_complex:
+        reference = reference * (1 + 0.5j)
+    data = reference * scale
+
+    result = tk.decompositions.TRSVD(data, out_device=None).fit(
+        rank=16, renormalize=True)
+
+    assert all(torch.isfinite(core).all() for core in result.cores)
+    # Compare in the original relative scale without overflowing a norm.
+    assert_close(result.contract_dense() / scale, reference)
+
+
+
+
+
+
+@pytest.mark.parametrize('renormalize', [False, True])
+@pytest.mark.parametrize('backend', ['svd', 'qr_svd'])
+@pytest.mark.parametrize('refine', [False, True])
+def test_svd_formats_across_devices(renormalize,
+                                    backend,
+                                    refine,
+                                    device_dtype,
+                                    assert_close):
+    device, dtype = device_dtype
+    generator = torch.Generator().manual_seed(47)
+    data = torch.randn(2, 3, 2, dtype=dtype, generator=generator).to(device)
+    engine_type = tk.decompositions.TRSVD
+    engine = engine_type(data, out_device=None)
+    if device == 'mps' and dtype.is_complex and backend == 'qr_svd':
+        with tk.svd_method(backend, refine=refine), pytest.raises(RuntimeError, match='geqrf.*float32'):
+            engine.fit(rank=6, renormalize=renormalize)
+        return
+    with tk.svd_method(backend, refine=refine):
+        result = engine.fit(rank=6, renormalize=renormalize, collect_metrics=True)
+        wrapped = tk.decompositions.tr_svd(data, rank=6, renormalize=renormalize,
+                                                    out_device=None)
+    assert isinstance(result, tk.formats.TR)
+    assert result.dtype == dtype and result.device.type == device
+    assert_close(result.contract_dense(), data)
+    assert_close(wrapped.contract_dense(), data)
+    for record in result.metrics.truncations:
+        assert record.local_abs_error.device.type == 'cpu'
+        assert not record.local_abs_error.requires_grad
+    for plain in (result.clone(), result.detach(), result.to('cpu')):
+        assert type(plain) is type(result)
+        assert plain.metrics is result.metrics
+    algebra = result + result
+    assert not isinstance(algebra, tk.decompositions.TensorDecomposition)
+    assert_close(algebra.contract_dense(), 2 * data)
+
+
+@pytest.mark.parametrize('ordering', ['interleaved', 'grouped'])
+def test_quantized_svd_preserves_callable_grid(ordering, device_dtype, assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    layout = tk.formats.QuantizedLayout(2, 2, (2, 2), ordering=ordering)
+    coordinate_map = tk.formats.AffineCoordinateMap(
+        torch.tensor([[-1., 1.], [2., 3.]], dtype=real_dtype, device=device),
+        layout.grid_size)
+
+    def function(coordinates):
+        value = (coordinates[:, 0] + 2 * coordinates[:, 1]).to(dtype)
+        return value * (1 + 1j) if dtype.is_complex else value
+
+    source = tk.decompositions.QuanticsVectorSource(
+        function, 2, layout=layout, coordinate_map=coordinate_map,
+        dtype=dtype, device=device)
+    engine = tk.decompositions.TRSVD.quantized(source, out_device=None)
+    for _ in range(2):
+        result = engine.fit(rank=16)
+        assert isinstance(result, tk.decompositions.QTRDecomposition)
+        assert result.layout == layout
+        assert_close(result.to_dense_grid(), source.to_dense_grid())
+        indices = torch.tensor([[0, 0], [3, 3], [2, 1]], device=device)
+        assert_close(result.evaluate_indices(indices), source.evaluate_indices(indices))
+        assert not result.metrics.truncations
+        assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
+        assert result.dtype == dtype and result.device.type == device
+        assert_close(result.coordinate_map.from_indices(indices),
+                     coordinate_map.from_indices(indices))
+
+
+def test_dense_svd_has_fixed_axes_and_no_quantization():
+    data = torch.arange(16., dtype=torch.float64).reshape(4, 4)
+    result = tk.decompositions.TRSVD(data).fit(rank=4)
+    assert result.in_dim == (4, 4)
+    assert not isinstance(result, tk.formats.QTR)
+    torch.testing.assert_close(result.contract_dense(), data)
+    with pytest.raises(TypeError, match='QuanticsVectorSource'):
+        tk.decompositions.TRSVD.quantized(data)
+    with pytest.raises(TypeError, match='quantization'):
+        tk.decompositions.tr_svd(data, quantization=tk.formats.QuantizedLayout(2, 2, 2))
+
+
+@pytest.mark.parametrize('criteria', [{}, {'rank': 1}, {'cutoff': 1e-5},
+                                     {'atol': 1e-8}, {'rtol': 1e-6},
+                                     {'cum_percentage': 0.999999}])
+@pytest.mark.parametrize('renormalize', [False, True])
+def test_qtr_svd_function(criteria, renormalize, device_dtype, assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    coefficient = 1 + 1j if dtype.is_complex else 1
+    source = tk.decompositions.QuanticsVectorSource(
+        lambda coordinates: torch.exp(
+            coefficient * coordinates.sum(-1)).to(dtype),
+        n_coordinates=1, base=2, level=3,
+        domain=torch.tensor([0., 1.], device=device, dtype=real_dtype),
+        device=device, dtype=dtype)
+
+    options = dict(criteria, renormalize=renormalize, collect_metrics=True)
+    options['center'] = 1
+    result = tk.decompositions.qtr_svd(
+        source, out_device=None, **options)
+    expected = tk.decompositions.TRSVD.quantized(
+        source, out_device=None).fit(**options)
+
+    assert isinstance(result, tk.decompositions.QTRDecomposition)
+    assert result.device == torch.device(device)
+    assert result.dtype == dtype
+    assert result.metrics.truncations
+    assert_close(result.contract_dense(), expected.contract_dense())
+    assert_close(result.to_dense_grid(), source.to_dense_grid())
+    assert result.as_info()['metadata']['algorithm'] == 'tr_svd'
+
+
+def test_qtr_svd_rejects_dense_input():
+    with pytest.raises(TypeError, match='source'):
+        tk.decompositions.qtr_svd(torch.ones(2, 2, 2, 2))

@@ -3,16 +3,14 @@
 import math
 
 import pytest
-
 import torch
+
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.phi import (_MaterializedPhi)
 from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
-from tensorkrowch.decompositions.sketching.specs import (
-    _DomainSpec,
-    _EmbeddingSpec,
-)
+from tensorkrowch.decompositions.sketching.phi import _MaterializedPhi
+from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
+                                                         _EmbeddingSpec)
 
 
 class _FiberOnlyPhi:
@@ -360,3 +358,13 @@ class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
         with pytest.raises(ValueError, match='match'):
             fitter.required_queries(
                 phi, axis=0, domain=torch.arange(2.))
+
+
+@pytest.mark.parametrize('error', [AssertionError, IndexError])
+def test_fixed_embedding_keeps_unexpected_callback_errors(error):
+    def embedding(values):
+        raise error('Callback failure')
+
+    fitter = tk.decompositions.FixedEmbeddingFitter(embedding)
+    with pytest.raises(error, match='Callback failure'):
+        fitter.fit(_materialized(torch.ones(2)), axis=0, domain=torch.arange(2))

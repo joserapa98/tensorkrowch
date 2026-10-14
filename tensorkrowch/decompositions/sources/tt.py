@@ -5,26 +5,26 @@ This script contains:
         * TTTensorSource
 """
 
-from typing import Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.formats import TT, TTM
+from tensorkrowch.models.mps import MPS
+from tensorkrowch.utils import _INTEGER_DTYPES
 
-from tensorkrowch.decompositions.results import (TTDecomposition,
-                                                 TTMDecomposition)
+from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices)
-from tensorkrowch.models.mps import MPS
 
 
-class TTTensorSource(_SourceEvaluationTracker):
-    """Scalar tensor source represented directly by TT cores.
+class TTTensorSource(_SourceEvaluationTracker):  # MARK: TTTensorSource
+    """
+    Scalar tensor source represented directly by TT cores.
 
     The source contracts raw PyTorch cores without constructing a TensorKrowch
-    graph. It accepts a :class:`~tensorkrowch.decompositions.TTDecomposition`,
+    graph. It accepts a :class:`~tensorkrowch.formats.TT` (including decomposition results),
     an open-boundary :class:`~tensorkrowch.models.MPS` or a core sequence with
     the same conventions. The MPS supplies its raw tensors. Keeping the
     specialized contractions here avoids routing repeated
@@ -32,13 +32,12 @@ class TTTensorSource(_SourceEvaluationTracker):
 
     Parameters
     ----------
-    tensor : TTDecomposition, MPS or sequence of torch.Tensor
-        Lightweight TT result, open-boundary MPS or raw TT cores.
+    tensor : TT, MPS or sequence of torch.Tensor
+        Lightweight TT format, open-boundary MPS or raw TT cores.
     """
 
-    def __init__(
-            self,
-            tensor: Union[TTDecomposition, Sequence[torch.Tensor], MPS]) -> None:
+    def __init__(self,
+                 tensor: Union[TT, Sequence[torch.Tensor], MPS]) -> None:
         self._initialize_evaluation_stats()
         if isinstance(tensor, MPS):
             if tensor.boundary != 'obc':
@@ -52,18 +51,18 @@ class TTTensorSource(_SourceEvaluationTracker):
         else:
             if isinstance(tensor, torch.Tensor):
                 raise TypeError(
-                    '`tensor` should be TTDecomposition, MPS or a core sequence')
+                    '`tensor` should be TT, MPS or a core sequence')
             try:
                 cores = list(tensor)
             except TypeError as exc:
                 raise TypeError(
-                    '`tensor` should be TTDecomposition, MPS or a core sequence') \
+                    '`tensor` should be TT, MPS or a core sequence') \
                     from exc
         if not cores:
             raise ValueError('`tensor` should contain at least one core')
         if not all(isinstance(core, torch.Tensor) for core in cores):
             raise TypeError(
-                '`tensor` should be TTDecomposition, MPS or a sequence of '
+                '`tensor` should be TT, MPS or a sequence of '
                 'torch.Tensor cores')
 
         if len(cores) == 1:
@@ -134,15 +133,14 @@ class TTTensorSource(_SourceEvaluationTracker):
         return self.cores[0].device
 
     @staticmethod
-    def _standard_ttm_cores(
-            sketch: TTMDecomposition) -> Tuple[torch.Tensor, ...]:
+    def _standard_ttm_cores(sketch: TTM) -> Tuple[torch.Tensor, ...]:
         """Returns TTM cores with left, input, output and right axes."""
         if sketch.n_batches:
             raise ValueError('Batched TTM sketches are not supported')
         return tuple(core.permute(0, 1, 3, 2)
                      for core in sketch._operator_cores())
 
-    def _selected_matrices(self, indices: torch.Tensor):
+    def _selected_matrices(self, indices: torch.Tensor) -> List[torch.Tensor]:
         """Selects one TT matrix per configuration and site."""
         return [
             core[:, indices[:, site], :].permute(1, 0, 2)
@@ -171,9 +169,9 @@ class TTTensorSource(_SourceEvaluationTracker):
                     f'`{name}` is out of bounds at partial site {offset}')
         return indices
 
-    def left_environments(self,
-                          configurations: torch.Tensor) -> torch.Tensor:
-        """Contracts exact prefixes into their outgoing TT environments.
+    def left_environments(self, configurations: torch.Tensor) -> torch.Tensor:
+        """
+        Contracts exact prefixes into their outgoing TT environments.
 
         ``configurations`` has shape ``(rows, prefix_sites)``. An empty prefix
         returns one unit boundary row. This kernel records no source
@@ -189,9 +187,9 @@ class TTTensorSource(_SourceEvaluationTracker):
                 'ba,bar->br', environment, matrices)
         return environment
 
-    def right_environments(self,
-                           configurations: torch.Tensor) -> torch.Tensor:
-        """Contracts exact suffixes into their incoming TT environments.
+    def right_environments(self, configurations: torch.Tensor) -> torch.Tensor:
+        """
+        Contracts exact suffixes into their incoming TT environments.
 
         ``configurations`` has shape ``(rows, suffix_sites)`` and is aligned
         with the final source sites. An empty suffix returns the unit boundary.
@@ -246,8 +244,7 @@ class TTTensorSource(_SourceEvaluationTracker):
     def marginal_phi(self,
                      site: int,
                      order: int = 1,
-                     factor: Optional[Sequence[torch.Tensor]] = None
-                     ) -> torch.Tensor:
+                     factor: Optional[Sequence[torch.Tensor]] = None) -> torch.Tensor:
         """Contracts a local Markov marginal without densifying the source."""
         if isinstance(order, bool) or not isinstance(order, int):
             raise TypeError('`order` should be int type')
@@ -293,11 +290,10 @@ class TTTensorSource(_SourceEvaluationTracker):
                 -1, core.shape[0])
         return self.local_phi(site, left, right, factor=factors[site])
 
-    def tt_sketch_phis(
-            self,
-            left_cores: Sequence[Sequence[torch.Tensor]],
-            right_cores: Sequence[Sequence[torch.Tensor]],
-            boundary_scale: float = 1.0) -> Tuple[torch.Tensor, ...]:
+    def tt_sketch_phis(self,
+                       left_cores: Sequence[Sequence[torch.Tensor]],
+                       right_cores: Sequence[Sequence[torch.Tensor]],
+                       boundary_scale: float = 1.0) -> Tuple[torch.Tensor, ...]:
         """Contracts stacked TT sketch networks into every local Phi."""
         left_cores = tuple(tuple(stack) for stack in left_cores)
         right_cores = tuple(tuple(stack) for stack in right_cores)
@@ -347,7 +343,7 @@ class TTTensorSource(_SourceEvaluationTracker):
                      for site in range(len(self.cores)))
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates discrete configurations by batched TT contraction."""
+        """Evaluates discrete ``configurations`` by batched TT contraction."""
         indices = _discrete_indices(
             configurations, self._in_dim, self.device)
         matrices = self._selected_matrices(indices)
@@ -362,7 +358,9 @@ class TTTensorSource(_SourceEvaluationTracker):
               configurations: ConfigurationBatch,
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Contracts both TT environments and leaves one input site open."""
+        """
+        Contracts both TT environments and leaves one input ``site`` open.
+        """
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
         if (site < 0) or (site >= len(self._in_dim)):
@@ -395,18 +393,16 @@ class TTTensorSource(_SourceEvaluationTracker):
         self._record_evaluation(points=indices.shape[0] * values.shape[0])
         return result
 
-    def contract_sketch(
-            self,
-            sketch: Union['TTTensorSource', TTDecomposition, TTMDecomposition,
-                          Sequence[torch.Tensor]],
-            conjugate_sketch: bool = True
-            ) -> Union[torch.Tensor, TTDecomposition]:
-        """Contracts the source input indices with a scalar TT or TTM sketch.
+    def contract_sketch(self,
+                        sketch: Union['TTTensorSource', TT, TTM, Sequence[torch.Tensor]],
+                        conjugate_sketch: bool = True) -> Union[torch.Tensor, TTDecomposition]:
+        """
+        Contracts the source input indices with a scalar TT or TTM ``sketch``.
 
-        A scalar TT sketch returns its inner product with the source. A TTM
-        sketch returns a lightweight :class:`TTDecomposition` over the TTM
+        A scalar TT ``sketch`` returns its inner product with the source. A TTM
+        ``sketch`` returns a lightweight :class:`TTDecomposition` over the TTM
         output indices, keeping the contraction structured. By default the
-        sketch is conjugated, as in a complex linear range projection.
+        ``sketch`` is conjugated, as in a complex linear range projection.
         """
         if not isinstance(conjugate_sketch, bool):
             raise TypeError('`conjugate_sketch` should be bool type')
@@ -464,4 +460,6 @@ class TTTensorSource(_SourceEvaluationTracker):
         return environment.squeeze()
 
 
-__all__ = ['TTTensorSource']
+__all__ = [
+    'TTTensorSource',
+]

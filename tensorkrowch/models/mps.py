@@ -2057,7 +2057,9 @@ class MPS(TensorNetwork):  # MARK: MPS
                                 embedding: Optional[Callable],
                                 phys_dim: int,
                                 reference: torch.Tensor) -> torch.Tensor:
-        """Embeds one sampling domain."""
+        """Embeds one sampling domain: ``(domain_size,)`` to
+        ``(domain_size, phys_dim)``, or a per-sample ``(n_samples, domain_size)``
+        to ``(n_samples, domain_size, phys_dim)``."""
         if embedding is None:
             if torch.is_floating_point(domain):
                 rounded = domain.round()
@@ -2073,12 +2075,17 @@ class MPS(TensorNetwork):  # MARK: MPS
         if not isinstance(embedded, torch.Tensor):
             raise TypeError('`embedding` should return torch.Tensor')
 
-        if embedded.ndim >= 3 and embedded.shape[-2] == 1:
-            embedded = embedded.squeeze(-2)
+        if domain.ndim == 1:
+            if embedded.ndim >= 3 and embedded.shape[-2] == 1:
+                embedded = embedded.squeeze(-2)
 
-        if (embedded.ndim != 2) or (embedded.shape[-1] != phys_dim):
+            if (embedded.ndim != 2) or (embedded.shape[-1] != phys_dim):
+                raise ValueError(
+                    'Embedded domains should have shape (domain_size, phys_dim)')
+        elif embedded.shape != (*domain.shape, phys_dim):
             raise ValueError(
-                'Embedded domains should have shape (domain_size, phys_dim)')
+                'Embedded per-sample domains should have shape '
+                '(n_samples, domain_size, phys_dim)')
 
         if not torch.is_floating_point(embedded) and \
                 not torch.is_complex(embedded):
@@ -2090,7 +2097,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                                 domain,
                                 embedding,
                                 embedding_matrices,
-                                build_matrices: bool
+                                build_matrices: bool,
+                                n_samples: int
                                 ) -> Tuple[List[torch.Tensor],
                                            List[torch.Tensor],
                                            List[torch.Tensor],
@@ -2165,9 +2173,19 @@ class MPS(TensorNetwork):  # MARK: MPS
                     self._phys_dim[site], device=self._mats_env[site].device)
             elif not isinstance(domains[i], torch.Tensor):
                 raise TypeError('`domain` should be torch.Tensor type')
-            if domains[i].ndim != 1:
+            if domains[i].ndim not in (1, 2):
                 raise ValueError(
-                    'Each element of `domain` should be a rank-1 tensor')
+                    'Each element of `domain` should be a rank-1 tensor, or '
+                    'a rank-2 tensor with one domain per sample')
+            if domains[i].ndim == 2:
+                if domains[i].shape[0] != n_samples:
+                    raise ValueError(
+                        'Per-sample domains should have `n_samples` rows')
+                if build_matrices:
+                    raise ValueError(
+                        '`build_matrices` needs one domain shared by all '
+                        'samples: a per-sample metric would make the right '
+                        'environments per sample')
             if domains[i].numel() < 1:
                 raise ValueError('`domain` tensors cannot be empty')
 
@@ -2217,7 +2235,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     raise ValueError(
                         '`embedding_matrices` should have shape '
                         '(phys_dim, phys_dim)')
-                aux_weights = torch.ones(aux_domain.shape[0],
+                aux_weights = torch.ones(aux_domain.shape[-1],
                                          device=aux_domain.device,
                                          dtype=torch.get_default_dtype())
             elif build_matrices:
@@ -2248,7 +2266,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                                        device=reference.device,
                                        dtype=reference.dtype)
                 aux_weights = torch.ones(
-                    aux_domain.shape[0],
+                    aux_domain.shape[-1],
                     device=aux_domain.device,
                     dtype=reference.tensor.real.dtype)
 
@@ -2410,10 +2428,15 @@ class MPS(TensorNetwork):  # MARK: MPS
             sampled input nodes, with ``len(in_features)`` elements, or by all
             MPS sites, with ``n_sites`` elements. In the latter case,
             entries at output sites are ignored. If ``None``, each input node
-            uses ``torch.arange(phys_dim)``.
+            uses ``torch.arange(phys_dim)``. Each tensor is either rank-1,
+            ``(domain_size,)``, one domain for all samples, or rank-2,
+            ``(n_samples, domain_size)``, one domain per sample (e.g. a window
+            around each sample's current value). Per-sample domains cannot be
+            combined with ``build_matrices``.
         embedding : callable, list[callable] or tuple[callable], optional
             Embedding applied to the domains before contraction. The callable
-            should return tensors with shape ``(domain_size, phys_dim)``. If
+            should return tensors with shape ``(domain_size, phys_dim)``, or
+            ``(n_samples, domain_size, phys_dim)`` for a per-sample domain. If
             ``None``, domains are embedded with
             :func:`~tensorkrowch.embeddings.basis`.
         embedding_matrices : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor], optional
@@ -2520,7 +2543,8 @@ class MPS(TensorNetwork):  # MARK: MPS
             domain=domain,
             embedding=embedding,
             embedding_matrices=embedding_matrices,
-            build_matrices=build_matrices)
+            build_matrices=build_matrices,
+            n_samples=n_samples)
 
         # Sampling builds a temporary double layer in the current network.
         if self._resultant_nodes:
@@ -2665,9 +2689,13 @@ class MPS(TensorNetwork):  # MARK: MPS
                 candidate.disconnect('input')
                 copied_candidate.disconnect('input')
 
+                # A per-sample domain shares the samples' batch edge.
+                per_sample = domains[input_idx].ndim == 2
                 candidate_data = Node(
                     tensor=embeddings[input_idx],
-                    axes_names=('domain_batch', 'feature'),
+                    axes_names=(('batch', 'domain_batch', 'feature')
+                                if per_sample
+                                else ('domain_batch', 'feature')),
                     name='sample_candidate_data',
                     network=self,
                     data=True)
@@ -2694,7 +2722,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
                 domain_axis = probs_node.get_axis_num('domain_batch')
                 probs = probs_node.tensor.movedim(domain_axis, -1)
-                probs = probs.reshape(-1, embeddings[input_idx].shape[0])
+                probs = probs.reshape(-1, embeddings[input_idx].shape[-2])
                 if probs.shape[0] == 1 and n_samples > 1:
                     probs = probs.expand(n_samples, -1)
 
@@ -2706,7 +2734,13 @@ class MPS(TensorNetwork):  # MARK: MPS
                                         generator=generator).squeeze(1)
 
                 sample_indices.append(ids)
-                samples.append(domains[input_idx][ids])
+                if per_sample:
+                    rows = torch.arange(n_samples, device=ids.device)
+                    samples.append(domains[input_idx][rows, ids])
+                    selected_embedding = embeddings[input_idx][rows, ids]
+                else:
+                    samples.append(domains[input_idx][ids])
+                    selected_embedding = embeddings[input_idx][ids]
 
                 # Absorb the selected values into the reusable left environment.
                 selected = node.permute(node.axes_names)
@@ -2717,7 +2751,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 copied_selected.disconnect('input')
 
                 selected_data = Node(
-                    tensor=embeddings[input_idx][ids],
+                    tensor=selected_embedding,
                     axes_names=('batch', 'feature'),
                     name='sample_selected_data',
                     network=self,

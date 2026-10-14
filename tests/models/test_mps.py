@@ -2066,6 +2066,103 @@ class TestMPS:  # MARK: TestMPS
         expected = torch.tensor([0.5, 1.5, 1.]) / 3
         assert torch.allclose(captured[0][0].cpu(), expected)
 
+    @pytest.mark.parametrize('condition', AUTO_BOOL_CASES)
+    def test_sample_per_sample_domain_equal_rows_matches_shared(self,
+                                                                monkeypatch,
+                                                                condition):
+        mps = tk.models.MPS(n_sites=4,
+                            phys_dim=3,
+                            bond_dim=3,
+                            boundary='obc',
+                            out_features=[2])
+        domain = torch.linspace(-1, 1, 5)
+        kwargs = dict(n_samples=3, embedding=tk.embeddings.poly)
+        if condition:
+            kwargs['in_condition'] = tk.embeddings.poly(
+                2 * torch.rand(3, 3) - 1, degree=2).to(mps.mats_env[0].dtype)
+
+        captured = self._capture_multinomial_probs(monkeypatch)
+        shared, _ = mps.sample(domain=domain, return_indices=True, **kwargs)
+        shared_probs = [p.clone() for p in captured]
+        captured.clear()
+        per_sample, _ = mps.sample(domain=domain.expand(3, -1),
+                                   return_indices=True,
+                                   **kwargs)
+
+        assert len(captured) == len(shared_probs) == 3
+        for p, q in zip(captured, shared_probs):
+            assert torch.allclose(p, q, atol=1e-6)
+        assert torch.equal(per_sample, shared)
+
+    def test_sample_per_sample_domain_values_come_from_own_row(self):
+        mps = tk.models.MPS(n_sites=3, phys_dim=2, bond_dim=2, boundary='obc')
+        domain = torch.arange(3 * 4, dtype=torch.float).view(3, 4) / 12
+        samples = mps.sample(n_samples=3,
+                             domain=domain,
+                             embedding=tk.embeddings.unit)
+        for row in range(3):
+            assert torch.isin(samples[row], domain[row]).all()
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
+    def test_sample_per_sample_domain_matches_exact(self,
+                                                    monkeypatch,
+                                                    boundary,
+                                                    conditioned):
+        # Each sample draws from its own subset of the basis values: the
+        # exact conditional restricted to that subset.
+        torch.manual_seed(0)
+        mps = tk.models.MPS(n_sites=4,
+                            phys_dim=3,
+                            bond_dim=3,
+                            boundary=boundary,
+                            out_features=[2])
+        domain = torch.tensor([[0, 2], [1, 0], [2, 1]])
+        kwargs = dict(n_samples=3)
+        condition_ids = None
+        if conditioned:
+            condition_ids = self._condition_ids([3] * 3)
+            kwargs['in_condition'] = self._basis_data_for_configs(
+                mps, condition_ids, [3] * 3)
+
+        configs, probs = self._exact_input_distribution(mps)
+        captured = self._capture_multinomial_probs(monkeypatch)
+        samples = mps.sample(domain=domain, **kwargs)
+        monkeypatch.undo()
+
+        assert len(captured) == 3
+        for row in range(3):
+            prefix = []
+            for step, local_probs in enumerate(captured):
+                full = self._conditional_probs_from_exact(
+                    configs=configs,
+                    probs=probs,
+                    step=step,
+                    prefix=prefix,
+                    phys_dim=3,
+                    condition=None if condition_ids is None
+                    else condition_ids[row])
+                expected = full[domain[row]] / full[domain[row]].sum()
+                assert torch.allclose(local_probs[row].cpu(),
+                                      expected.cpu(),
+                                      atol=1e-5,
+                                      rtol=1e-5)
+                assert samples[row, step] in domain[row]
+                prefix.append(samples[row, step].item())
+
+    def test_sample_per_sample_domain_rejects_wrong_rows_and_build_matrices(
+            self):
+        mps = tk.models.MPS(n_sites=3, phys_dim=2, bond_dim=2, boundary='obc')
+        with pytest.raises(ValueError, match='`n_samples` rows'):
+            mps.sample(n_samples=3,
+                       domain=torch.rand(2, 4),
+                       embedding=tk.embeddings.unit)
+        with pytest.raises(ValueError, match='`build_matrices`'):
+            mps.sample(n_samples=2,
+                       domain=torch.rand(2, 4).sort(-1).values,
+                       embedding=tk.embeddings.unit,
+                       build_matrices=True)
+
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n_features,boundary,middle_site', ENTROPY_CASES)
     def test_entropy(self, runtime, n_features, boundary, middle_site):

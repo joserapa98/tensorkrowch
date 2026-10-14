@@ -19,7 +19,7 @@ Terminology:
     * Coordinates are continuous input values in their original domains.
     * A grid provides discrete coordinate values; an index selects one per
       coordinate.
-    * Digits expand each index in its chosen base and select TT core inputs.
+    * Digits expand each index in its chosen base and select core inputs.
     * A layout fixes the order of these digit sites across coordinates.
 
 Thus ``evaluate_coordinates`` maps coordinates to grid indices, and
@@ -263,6 +263,8 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
             grid_coordinates=grid_coordinates, layout=layout,
             coordinate_map=coordinate_map)
         self.n_coordinates = n_coordinates
+        if in_sites is not None:
+            self._in_sites = tuple(in_sites)
         super().__init__(cores, n_batches=n_batches, bonds=bonds,
                          in_sites=in_sites)
 
@@ -311,9 +313,12 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
             metadata.
         """
         super().validate()
-        if self._in_dim != self.layout.in_dim:
-            raise ValueError(
-                'Digit core dimensions should match `layout.in_dim`')
+        sites = tuple(range(self.n_sites)) if self.n_sites == self.layout.n_sites \
+            else getattr(self, '_in_sites', tuple(range(self.n_sites)))
+        if len(sites) != self.layout.n_sites or any(
+                site >= self.n_sites for site in sites) or tuple(
+                    self._in_dim[site] for site in sites) != self.layout.in_dim:
+            raise ValueError('Digit core dimensions should match `layout.in_dim`')
         return self
 
     def evaluate_digits(self, digits: torch.Tensor) -> torch.Tensor:
@@ -341,7 +346,9 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
         """
         digits = self.layout._validate_digits(digits).to(self.device)
         return self.evaluate(digits, n_batches=digits.ndim - 1,
-                             in_sites=tuple(range(self.n_sites)))
+                             in_sites=(tuple(range(self.n_sites))
+                                       if self.n_sites == self.layout.n_sites
+                                       else self._in_sites))
 
     def evaluate_indices(self, indices: torch.Tensor) -> torch.Tensor:
         """
@@ -421,10 +428,17 @@ class _QuanticsVector(_QuanticsFormat):  # MARK: _QuanticsVector
             Values with shape ``(*core_batch, *grid_size)``, in
             original coordinate order.
         """
-        order = sorted(range(self.n_sites), key=self.layout.sites().__getitem__)
+        sites = tuple(range(self.n_sites)) if self.n_sites == self.layout.n_sites \
+            else self._in_sites
+        order = sorted(range(len(sites)), key=self.layout.sites().__getitem__)
+        response = tuple(site for site in range(self.n_sites) if site not in sites)
         dense = self.contract_dense().permute(
-            *range(self._n_batches), *(self._n_batches + site for site in order))
-        return dense.reshape(*self._batch_shape, *self.layout.grid_size)
+            *range(self._n_batches),
+            *(self._n_batches + sites[index] for index in order),
+            *(self._n_batches + site for site in response))
+        return dense.reshape(*self._batch_shape, *self.layout.grid_size,
+                             *(self._in_dim[site] for site in response))
+
 
 
 class QTT(_QuanticsVector, TT):  # MARK: QTT
@@ -432,7 +446,9 @@ class QTT(_QuanticsVector, TT):  # MARK: QTT
     Quantics tensor train with a :class:`~tensorkrowch.formats.QuantizedLayout`
     and a :class:`~tensorkrowch.formats.CoordinateMap`.
 
-    Every core represents one digit site; evaluation contracts all sites.
+    Normally every core represents a digit site. When tensor-valued functions
+    add response cores, ``in_sites`` locates the digit sites in layout order;
+    coordinate evaluation leaves the response axes open.
 
     Shorthand construction uses ``base``, ``level`` and either ``domain`` or
     ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;
@@ -531,7 +547,9 @@ class QTR(_QuanticsVector, TR):  # MARK: QTR
     Quantics tensor ring with a :class:`~tensorkrowch.formats.QuantizedLayout`
     and a :class:`~tensorkrowch.formats.CoordinateMap`.
 
-    Every core represents one digit site; evaluation contracts all sites.
+    Normally every core represents a digit site. When tensor-valued functions
+    add response cores, ``in_sites`` locates the digit sites in layout order;
+    coordinate evaluation leaves the response axes open.
 
     Shorthand construction uses ``base``, ``level`` and either ``domain`` or
     ``grid_coordinates``. Its layout is ``interleaved`` and ``coarse_to_fine``;
@@ -682,7 +700,8 @@ class QTR(_QuanticsVector, TR):  # MARK: QTR
 
         cores = [*self._cores[first:], *self._cores[:first]]
         schedule = self.layout.sites()
-        layout = self.layout if first == 0 else QuantizedLayout(
+        layout = self.layout if first == 0 or self.n_sites != self.layout.n_sites \
+            else QuantizedLayout(
             n_coordinates=self.layout.n_coordinates,
             base=self.layout.base,
             level=self.layout.level,
@@ -695,7 +714,10 @@ class QTR(_QuanticsVector, TR):  # MARK: QTR
                      n_coordinates=self.layout.n_coordinates,
                      layout=layout,
                      coordinate_map=self.coordinate_map,
-                     n_batches=self._n_batches)
+                     n_batches=self._n_batches,
+                     in_sites=tuple((site - first) % self.n_sites
+                                    for site in self._in_sites)
+                     if self.n_sites != self.layout.n_sites else None)
         result._is_row = self._is_row
         if self._bonds is not None:
             factors = self._bonds.factors

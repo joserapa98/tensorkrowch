@@ -787,3 +787,25 @@ def test_quantics_partial_digit_evaluation(make_format, device_dtype, assert_clo
     assert result.in_sites == (0,)
     if cyclic:
         assert format.rotate(1).in_sites == (2,)
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_quantics_vector_response_sites(cyclic):
+    layout = tk.formats.QuantizedLayout(1, 2, 2)
+    coordinate_map = tk.formats.AffineCoordinateMap((0., 1.), layout.grid_size)
+    cores = [torch.ones(1, 2, 1), torch.arange(3.).reshape(1, 3, 1),
+             torch.ones(1, 2, 1)]
+    if not cyclic:
+        cores = [cores[0].squeeze(0), cores[1], cores[2].squeeze(-1)]
+    cls = tk.formats.QTR if cyclic else tk.formats.QTT
+    format = cls(cores, 1, layout=layout, coordinate_map=coordinate_map, in_sites=(0, 2))
+    coordinates = torch.tensor([[0.], [0.5]])
+    expected = torch.tensor([[0., 1., 2.], [0., 1., 2.]])
+    torch.testing.assert_close(format.evaluate_coordinates(coordinates), expected)
+    torch.testing.assert_close(format.contract_dense_grid_axes(),
+                               torch.arange(3.).expand(4, 3))
+    torch.testing.assert_close(format.clone().evaluate_coordinates(coordinates), expected)
+    format.rounding(rank=1)
+    torch.testing.assert_close(format.evaluate_coordinates(coordinates), expected)
+    if cyclic:
+        torch.testing.assert_close(format.rotate(1).evaluate_coordinates(coordinates), expected)

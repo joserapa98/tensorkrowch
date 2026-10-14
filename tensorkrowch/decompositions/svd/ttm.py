@@ -1,353 +1,68 @@
 """
 This script contains:
 
-    Class for TTM-SVD decompositions:
+    Matrix SVD interface:
         * TTMSVD
-
-    TTM-SVD function:
         * ttm_svd
         * qttm_svd
+        * mat_to_mpo
 """
 
-from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Optional, TYPE_CHECKING, Union
 import warnings
 
 import torch
 
-from tensorkrowch.decompositions._truncation import _TruncationSpec
-from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   _normalize_verbosity,
-                                                   _resolve_observer)
-from tensorkrowch.decompositions.results import (QTTMDecomposition,
-                                                 TTMDecomposition,
-                                                 _quantics_result)
-from tensorkrowch.decompositions.sources.quantics import QuanticsMatrixSource
-from tensorkrowch.decompositions.svd._matrix import (_Dimension,
-                                                     _prepare_matrix_input)
+from tensorkrowch.decompositions.results import (TTMDecomposition,
+                                                 QTTMDecomposition)
+from tensorkrowch.decompositions.sources.dense import DenseTensorSource
+from tensorkrowch.decompositions.sources.factory import SourceLike
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.svd.tt import TTSVD
-from tensorkrowch.decompositions.svd.utils import _SVDProgress
-
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
 
 
-class TTMSVD:  # MARK: TTMSVD
+class TTMSVD(TTSVD):  # MARK: TTMSVD
     """
-    Decomposes a fixed dense tensor into a tensor train matrix.
+    Decomposes a matrix source using the shared TT-SVD algorithm.
 
-    The tensor, its input/output dimensions and its axis ordering are fixed when
-    this object is created. :meth:`fit` can then be called repeatedly with
-    different truncation criteria. The numerical sweep is performed by
-    :class:`~tensorkrowch.decompositions.TTSVD` after fusing each local
-    input/output pair, so both algorithms share the same truncation, error,
-    normalization and SVD-backend semantics.
-
-    A tensorized input can use either ``ordering="interleaved"`` with shape
-    ``(in_1, out_1, ..., in_n, out_n)`` or ``ordering="grouped"`` with shape
-    ``(in_1, ..., in_n, out_1, ..., out_n)``. When ``in_dim`` and
-    ``out_dim`` are provided, a two-dimensional tensor is instead treated
-    as a matrix with shape ``(prod(in_dim), prod(out_dim))`` and is
-    tensorized internally. TTM batch dimensions are not supported.
+    The source owns paired dimensions and axis ordering. Input/output pairs
+    are fused for the numerical sweep and restored in the returned matrix
+    decomposition. Quantics source metadata selects a Quantics result.
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense tensor or matrix fixed for repeated fits.
-    in_dim : int or sequence[int], optional
-        Input dimension of each site. It is required together with
-        ``out_dim`` for the matrix input route and otherwise can be omitted
-        because dimensions are inferred from ``tensor``.
-    out_dim : int or sequence[int], optional
-        Output dimension of each site. It should contain the same number of
-        sites as ``in_dim``.
-    ordering : {"interleaved", "grouped"}
-        Axis ordering of a tensorized input. The default is ``"interleaved"``.
-        It does not alter the two matrix axes in the explicit-dimension route.
+    source : TensorSource or torch.Tensor
+        Matrix source, or a tensor with interleaved input/output site axes.
+        Use ``DenseTensorSource.matrix`` to tensorize an ordinary matrix or
+        specify a different axis ordering.
     out_device : str or torch.device, optional
-        Device where finalized cores are stored. The default is ``"cpu"``.
-        If ``None``, cores remain on the input device.
+        Device for finalized cores. ``None`` retains the evaluation device.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource.matrix(
+    ...     torch.eye(4), in_dim=(2, 2), out_dim=(2, 2))
+    >>> result = tk.decompositions.TTMSVD(source).fit(rank=2)
+    >>> result.in_dim
+    (2, 2)
     """
 
-    def __init__(self,
-                 tensor: torch.Tensor,
-                 in_dim: _Dimension = None,
-                 out_dim: _Dimension = None,
-                 *,
-                 ordering: str = 'interleaved',
+    def __init__(self, source: 'SourceLike', *,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
-        self._quantics_source = None
-        matrix_input = _prepare_matrix_input(
-            tensor, in_dim, out_dim, ordering, 'TTM')
-
-        self._tensor = tensor
-        self._in_dim = matrix_input.in_dim
-        self._out_dim = matrix_input.out_dim
-        self._ordering = ordering
-        self._matrix_input = matrix_input.matrix_input
-        self._engine = TTSVD(
-            matrix_input.fused,
-            out_device=out_device)
-
-    @classmethod
-    def quantized(cls,
-                  source: QuanticsMatrixSource,
-                  *,
-                  out_device: Optional[Union[str, torch.device]] = 'cpu'
-                  ) -> 'TTMSVD':
-        """
-        Creates a Quantics SVD problem from a discretized coordinate callable.
-
-        Materializes the full digit tensor once. Its axes follow the source's
-        layout; the fitted result retains the source's coordinate maps.
-
-        Parameters
-        ----------
-        source : QuanticsMatrixSource
-            Callable and discretization to approximate.
-        out_device : str or torch.device, optional
-            Device receiving finalized cores. ``None`` retains the source device.
-
-        Returns
-        -------
-        TTMSVD
-            Reusable problem returning a Quantics decomposition from :meth:`fit`.
-        """
-        if not isinstance(source, QuanticsMatrixSource):
-            raise TypeError('`source` should be QuanticsMatrixSource type')
-        instance = cls(source.to_dense_digits(), out_device=out_device)
-        instance._quantics_source = source
-        return instance
-
-    @property
-    def tensor(self) -> torch.Tensor:
-        """Dense tensor or matrix fixed for repeated fits."""
-        return self._tensor
-
-    @property
-    def in_dim(self) -> Tuple[int, ...]:
-        """Input dimension associated with every TTM site."""
-        return self._in_dim
-
-    @property
-    def out_dim(self) -> Tuple[int, ...]:
-        """Output dimension associated with every TTM site."""
-        return self._out_dim
-
-    @property
-    def ordering(self) -> str:
-        """Axis ordering specified for the fixed input tensor."""
-        return self._ordering
-
-    def _unfuse_in_out_axes(self,
-                            cores: Sequence[torch.Tensor]) -> List[torch.Tensor]:
-        """Reopens fused TT input axes into TTM input/output axes."""
-        if len(cores) == 1:
-            return [cores[0].reshape(self._in_dim[0], self._out_dim[0])]
-
-        ttm_cores = []
-        first = cores[0].reshape(
-            self._in_dim[0], self._out_dim[0], cores[0].shape[-1])
-        ttm_cores.append(first.permute(0, 2, 1))
-
-        for site, core in enumerate(cores[1:-1], 1):
-            core = core.reshape(
-                core.shape[0],
-                self._in_dim[site],
-                self._out_dim[site],
-                core.shape[-1])
-            ttm_cores.append(core.permute(0, 1, 3, 2))
-
-        last = cores[-1].reshape(
-            cores[-1].shape[0],
-            self._in_dim[-1],
-            self._out_dim[-1])
-        ttm_cores.append(last)
-        return ttm_cores
-
-    def fit(self,
-            rank: Optional[int] = None,
-            cutoff: Optional[float] = None,
-            atol: Optional[float] = None,
-            rtol: Optional[float] = None,
-            cum_percentage: Optional[float] = None,
-            renormalize: bool = False,
-            collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0) -> TTMDecomposition:
-        r"""
-        Runs TTM-SVD with a shared truncation policy at every cut.
-
-        The active exact SVD backend is selected through
-        :func:`tensorkrowch.set_svd_method` or
-        :func:`tensorkrowch.svd_method`. When metrics are collected, local
-        discarded energies and their accumulated absolute and relative
-        reconstruction errors are returned in ``result.metrics``.
-
-        If several truncation criteria are specified, each one provides an
-        upper bound for the selected ``rank`` and the most restrictive bound is
-        used. At least one singular value is always retained. The same
-        criteria are applied at every TTM cut.
-
-        The fixed tensor is normalized to interleaved shape
-        ``(in_1, out_1, ..., in_n, out_n)``. A grouped tensor has initial shape
-        ``(in_1, ..., in_n, out_1, ..., out_n)`` and is interleaved internally.
-        A matrix has shape ``(prod(in_dim), prod(out_dim))`` and requires
-        explicit input/output dimensions. Each local pair is then fused and
-        decomposed through TT-SVD without an additional factorization.
-
-        For more than one site, the returned cores have shapes
-        ``(in_1, rank_1, out_1)``,
-        ``(rank_{k-1}, in_k, rank_k, out_k)`` at interior sites, and
-        ``(rank_{n-1}, in_n, out_n)`` at the last site. A one-site tensor is
-        returned as a single core with shape ``(in_1, out_1)``. Consequently,
-        the result always represents an open-boundary TTM.
-
-        Parameters
-        ----------
-        rank : int, optional
-            Maximum ``rank`` allowed at every link. At each SVD cut, at most this
-            many singular values are retained.
-        cutoff : float, optional
-            Minimum singular value to keep. It must be finite and
-            non-negative. Singular values ``<= cutoff`` are removed.
-        atol : float, optional
-            Absolute tolerance over the tail sum of squared singular values.
-            Starting from the smallest singular value, values are discarded while
-            the accumulated sum of squares is ``<= atol``. It must be finite
-            and non-negative.
-        rtol : float, optional
-            Relative tolerance over the tail sum of squared singular values.
-            Starting from the smallest singular value, values are discarded while
-            the tail sum of squares divided by the total sum of squares is
-            ``<= rtol``. It must be finite and in ``[0, 1]``.
-        cum_percentage : float, optional
-            Minimum fraction of squared singular-value mass to keep. Equivalent to
-            setting ``rtol = 1 - cum_percentage``. It must be finite and in
-            ``[0, 1]``.
-
-            .. math::
-
-        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-                cum\_percentage
-
-        renormalize : bool
-            If ``True``, normalizes the residual before every SVD and
-            accumulates the extracted scale logarithmically. The complete
-            scale is evenly redistributed over the final cores. Absolute
-            truncation criteria and reported errors remain expressed in the
-            scale of the original tensor.
-        collect_metrics : bool
-            If ``True``, collects local truncation records, accumulated errors
-            and synchronized timings in ``result.metrics``. The default is
-            ``False`` to avoid diagnostic norm reductions, records and device
-            synchronizations. Metrics are always collected when console output
-            is requested.
-        verbose : bool or int
-            Console verbosity level:
-
-            - ``0`` or ``False``: no console output;
-            - ``1`` or ``True``: phase title, input configuration, cut
-              progress and final summary;
-            - ``2``: detailed per-cut ``rank``, error and timing information;
-            - ``3``: level 2 output followed by every final core.
-
-        Returns
-        -------
-        TTMDecomposition
-            Lightweight result containing cores and ranks. Its structured
-            metrics are empty unless ``collect_metrics=True`` or
-            ``verbose>0``.
-
-        Examples
-        --------
-        Fix a grouped tensor once and compare two maximum ranks:
-
-        >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-        >>> decomposer = tk.decompositions.TTMSVD(tensor, ordering='grouped')
-        >>> rank_one = decomposer.fit(rank=1)
-        >>> rank_two = decomposer.fit(rank=2)
-        >>> rank_one.rank
-        [1]
-        >>> rank_two.rank
-        [2]
-        """
-        if not isinstance(renormalize, bool):
-            raise TypeError('`renormalize` should be bool type')
-        if not isinstance(collect_metrics, bool):
-            raise TypeError('`collect_metrics` should be bool type')
-        truncation = _TruncationSpec(
-            rank=rank,
-            cutoff=cutoff,
-            atol=atol,
-            rtol=rtol,
-            cum_percentage=cum_percentage)
-        verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity)
-        fit_observer = (
-            _resolve_observer(verbosity, None) if emit_events else None)
-        collect_metrics = collect_metrics or emit_events
-
-        if fit_observer is not None:
-            fit_observer.emit(DecompositionEvent(
-                name='start',
-                phase='TTM-SVD',
-                values={
-                    'sites': len(self._in_dim),
-                    'in_dim': self._in_dim,
-                    'out_dim': self._out_dim,
-                    'ordering': self._ordering,
-                    'matrix_input': self._matrix_input,
-                    'renormalize': renormalize,
-                }))
-
-        tt_result = self._engine._fit_validated(
-            truncation=truncation,
-            renormalize=renormalize,
-            collect_metrics=collect_metrics,
-            progress=(
-                _SVDProgress(
-                    observer=fit_observer,
-                    phase='TTM-SVD')
-                if fit_observer is not None else None))
-        cores = self._unfuse_in_out_axes(tt_result.cores)
-        result = TTMDecomposition(
-            cores=cores,
-            metrics=tt_result.metrics,
-            metadata={
-                'algorithm': 'ttm_svd',
-                'ordering': self._ordering,
-                'matrix_input': self._matrix_input,
-                'renormalize': renormalize,
-            })
-
-        if fit_observer is not None:
-            timing = result.metrics.timings[0]
-            error = result.metrics.errors[0]
-            fit_observer.emit(DecompositionEvent(
-                name='summary',
-                phase='TTM-SVD',
-                values={
-                    'rank': result.rank,
-                    'absolute_error': error.absolute,
-                    'relative_error': error.relative,
-                    'elapsed': timing.elapsed,
-                }))
-            for site, core in enumerate(result.cores):
-                fit_observer.emit(DecompositionEvent(
-                    name='core',
-                    phase='TTM-SVD',
-                    level=3,
-                    site=site,
-                    values={'shape': tuple(core.shape), 'tensor': core}))
-            fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantics_source)
+        if isinstance(source, torch.Tensor):
+            source = DenseTensorSource.matrix(source)
+        if not callable(getattr(source, 'contract_dense', None)):
+            raise TypeError('`source` should provide `contract_dense`')
+        if not getattr(source, 'is_matrix', False):
+            raise ValueError('`source` should describe paired matrix axes')
+        super().__init__(source, out_device=out_device)
 
 
-def ttm_svd(tensor: torch.Tensor,
-            in_dim: _Dimension = None,
-            out_dim: _Dimension = None,
+def ttm_svd(source: 'SourceLike',
             *,
-            ordering: str = 'interleaved',
             rank: Optional[int] = None,
             cutoff: Optional[float] = None,
             atol: Optional[float] = None,
@@ -358,38 +73,18 @@ def ttm_svd(tensor: torch.Tensor,
             verbose: Union[bool, int] = 0,
             collect_metrics: bool = False) -> TTMDecomposition:
     r"""
-    Decomposes a dense ``tensor`` or matrix into TTM cores.
+    Decomposes a finite source using :class:`TTMSVD`.
 
-    This is the simple functional interface. Use :class:`TTMSVD` to repeat
-    fits of the same ``tensor`` or matrix. If several truncation criteria are specified, their most
-    restrictive ``rank`` is used at every cut and at least one singular value is
-    retained.
-
-    A tensorized input can have interleaved shape
-    ``(in_1, out_1, ..., in_n, out_n)`` or grouped shape
-    ``(in_1, ..., in_n, out_1, ..., out_n)``, selected through ``ordering``. A
-    two-dimensional matrix can be split into several sites by supplying
-    ``in_dim`` and ``out_dim``; their products should match its two axes.
-    All routes are normalized internally to the same interleaved order.
-
-    For multiple sites, the first core has shape
-    ``(in_1, rank_1, out_1)``, interior cores have shape
-    ``(rank_{k-1}, in_k, rank_k, out_k)``, and the final core has shape
-    ``(rank_{n-1}, in_n, out_n)``. For one site, the only core has shape
-    ``(in_1, out_1)``. These shapes are compatible with
-    :class:`~tensorkrowch.models.MPO`.
+    The source owns its dimensions, batch axes and matrix ordering. A plain
+    tensor is wrapped as a dense source. The result retains Quantics metadata
+    when the source describes a coordinate discretization.
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense ``tensor`` or matrix to decompose.
-    in_dim : int or sequence[int], optional
-        Input dimension per site. Provide it together with ``out_dim`` to
-        tensorize a matrix, or omit both arguments to infer dimensions.
-    out_dim : int or sequence[int], optional
-        Output dimension per site.
-    ordering : {"interleaved", "grouped"}
-        Axis ``ordering`` of a tensorized input. The default is ``"interleaved"``.
+    source : TensorSource or torch.Tensor
+        Finite tensor values with source-owned dimensions and runtime. For
+        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
+        use ``CallableQuanticsSource``.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
@@ -413,7 +108,7 @@ def ttm_svd(tensor: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -447,26 +142,14 @@ def ttm_svd(tensor: torch.Tensor,
 
     Examples
     --------
-    Decompose a grouped two-site ``tensor``:
-
-    >>> tensor = torch.arange(36.).reshape(2, 2, 3, 3)
-    >>> result = tk.decompositions.ttm_svd(tensor, ordering='grouped', rank=2)
-    >>> [tuple(core.shape) for core in result.cores]
-    [(2, 2, 3), (2, 2, 3)]
-
-    Tensorize an ordinary matrix with heterogeneous site dimensions:
-
-    >>> matrix = torch.arange(144.).reshape(12, 12)
-    >>> result = tk.decompositions.ttm_svd(
-    ...     matrix, in_dim=(3, 4), out_dim=(2, 6))
-    >>> [tuple(core.shape) for core in result.cores]
-    [(3, 6, 2), (6, 4, 6)]
+    >>> source = tk.decompositions.DenseTensorSource.matrix(
+    ...     torch.arange(16.).reshape(2, 2, 2, 2))
+    >>> result = tk.decompositions.ttm_svd(source, rank=2)
+    >>> result.in_dim
+    (2, 2)
     """
     result = TTMSVD(
-        tensor=tensor,
-        in_dim=in_dim,
-        out_dim=out_dim,
-        ordering=ordering,
+        source=source,
         out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
@@ -479,7 +162,7 @@ def ttm_svd(tensor: torch.Tensor,
     return result
 
 
-def qttm_svd(source: QuanticsMatrixSource,
+def qttm_svd(source: CallableQuanticsSource,
              *,
              rank: Optional[int] = None,
              cutoff: Optional[float] = None,
@@ -494,14 +177,14 @@ def qttm_svd(source: QuanticsMatrixSource,
     Decomposes a discretized coordinate callable into QTTM cores.
 
     Materializes the full digit tensor from ``source`` and runs
-    :meth:`TTMSVD.fit` through :meth:`TTMSVD.quantized`. The result retains
+    :meth:`TTMSVD.fit` through :class:`TTMSVD`. The result retains
     the source's layouts and coordinate maps for coordinate evaluation.
     Construct ``source`` first to choose its discretization; this function
     only controls the decomposition.
 
     Parameters
     ----------
-    source : QuanticsMatrixSource
+    source : CallableQuanticsSource
         Callable with its digit layout and coordinate maps.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
@@ -554,7 +237,7 @@ def qttm_svd(source: QuanticsMatrixSource,
 
     Examples
     --------
-    >>> source = tk.decompositions.QuanticsMatrixSource(
+    >>> source = tk.decompositions.CallableQuanticsSource.matrix(
     ...     lambda inputs, outputs: torch.exp(
     ...         inputs.sum(-1) + outputs.sum(-1)),
     ...     in_n_coordinates=1, out_n_coordinates=1,
@@ -565,7 +248,9 @@ def qttm_svd(source: QuanticsMatrixSource,
     ...     torch.tensor([[0], [4]]), torch.tensor([[0], [0]]))
     tensor([1.0000, 1.6487])
     """
-    return TTMSVD.quantized(
+    if not isinstance(source, CallableQuanticsSource):
+        raise TypeError('`source` should be CallableQuanticsSource type')
+    return TTMSVD(
         source=source,
         out_device=out_device).fit(
             rank=rank,
@@ -627,7 +312,7 @@ def mat_to_mpo(mat: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -666,8 +351,7 @@ def mat_to_mpo(mat: torch.Tensor,
         raise TypeError('`return_info` should be bool type')
 
     result = ttm_svd(
-        tensor=mat,
-        ordering='interleaved',
+        source=DenseTensorSource.matrix(mat),
         rank=rank,
         cutoff=cutoff,
         atol=atol,

@@ -247,7 +247,8 @@ class PhiOperator:  # MARK: PhiOperator
             input_sites = output_spec.input_positions
         input_region = SiteRegion(input_sites)
         if len(input_region) != output_spec.n_input_sites or \
-                len(input_region) != len(source.in_dim):
+                len(input_region) != (len(source.in_dim) if source.in_dim is not None
+                                      else (source.n_sites or len(input_region))):
             raise ValueError(
                 '`input_sites` should contain one site per source input')
         if output_sites is None:
@@ -328,7 +329,7 @@ class PhiOperator:  # MARK: PhiOperator
         self.output_spec = output_spec
         self.input_sites = input_region.sites
         self.output_sites = output_region.sites
-        self.input_kind = input_kind
+        self.input_kind = getattr(source, 'input_kind', None) if input_kind is None else input_kind
         self.shape = tuple(shape)
         self.layout = tuple(layout)
         self._last_stats = None

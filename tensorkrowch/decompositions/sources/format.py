@@ -2,7 +2,7 @@
 This script contains:
 
     Public classes:
-        * TTTensorSource
+        * FormatSource
 """
 
 from typing import List, Optional, Sequence, Tuple, Union
@@ -10,6 +10,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 import torch
 
 from tensorkrowch.formats import TT, TTM
+from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.models.mps import MPS
 from tensorkrowch.utils import _INTEGER_DTYPES
 
@@ -19,117 +20,71 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _discrete_indices)
 
 
-class TTTensorSource(_SourceEvaluationTracker):  # MARK: TTTensorSource
+class FormatSource(_SourceEvaluationTracker):  # MARK: FormatSource
     """
-    Scalar tensor source represented directly by TT cores.
+    Finite tensor source represented directly by a lightweight format.
 
-    The source contracts raw PyTorch cores without constructing a TensorKrowch
-    graph. It accepts a :class:`~tensorkrowch.formats.TT` (including decomposition results),
-    an open-boundary :class:`~tensorkrowch.models.MPS` or a core sequence with
-    the same conventions. The MPS supplies its raw tensors. Keeping the
-    specialized contractions here avoids routing repeated
-    ALS/sketching evaluations through a TensorKrowch graph.
+    The source uses the format's evaluation and contraction methods. TT/TR
+    vectors and their matrix versions are accepted; Quantics formats instead
+    require an explicit callable Quantics source. Vector ``in_sites`` determines
+    the response axes. Matrix evaluations receive inputs and return all outputs.
+    Specialized sketch kernels apply only to unbatched scalar open TT formats.
 
     Parameters
     ----------
-    tensor : TT, MPS or sequence of torch.Tensor
-        Lightweight TT format, open-boundary MPS or raw TT cores.
+    tensor : TensorFormat1D, MPS or sequence of torch.Tensor
+        Lightweight vector/matrix format, MPS or raw TT cores. MPS boundaries
+        determine TT versus TR.
     """
 
     def __init__(self,
-                 tensor: Union[TT, Sequence[torch.Tensor], MPS]) -> None:
+                 tensor: Union[TensorFormat1D, Sequence[torch.Tensor], MPS]) -> None:
         self._initialize_evaluation_stats()
         if isinstance(tensor, MPS):
-            if tensor.boundary != 'obc':
-                raise ValueError(
-                    'Only open-boundary MPS models can define TT sources')
-            tensor = tensor.tensors
-        if isinstance(tensor, TT):
-            if tensor.n_batches:
-                raise ValueError('Batched TT sources are not supported')
-            cores = list(tensor._effective_cores())
-        else:
-            if isinstance(tensor, torch.Tensor):
-                raise TypeError(
-                    '`tensor` should be TT, MPS or a core sequence')
-            try:
-                cores = list(tensor)
-            except TypeError as exc:
-                raise TypeError(
-                    '`tensor` should be TT, MPS or a core sequence') \
-                    from exc
-        if not cores:
-            raise ValueError('`tensor` should contain at least one core')
-        if not all(isinstance(core, torch.Tensor) for core in cores):
-            raise TypeError(
-                '`tensor` should be TT, MPS or a sequence of '
-                'torch.Tensor cores')
-
-        if len(cores) == 1:
-            if cores[0].ndim == 1:
-                standard_cores = [cores[0].reshape(1, -1, 1)]
-            elif (cores[0].ndim == 3) and \
-                    (cores[0].shape[0] == cores[0].shape[-1] == 1):
-                standard_cores = [cores[0]]
-            else:
-                raise ValueError(
-                    'A one-site TT core should contain only its input dimension')
-        else:
-            standard_cores = []
-            first = cores[0]
-            if first.ndim == 2:
-                first = first.unsqueeze(0)
-            if (first.ndim != 3) or (first.shape[0] != 1):
-                raise ValueError(
-                    'The first TT core should have a unit left boundary rank')
-            standard_cores.append(first)
-
-            for core in cores[1:-1]:
-                if core.ndim != 3:
-                    raise ValueError(
-                        'Interior TT cores should have left, input and right '
-                        'rank dimensions')
-                standard_cores.append(core)
-
-            last = cores[-1]
-            if last.ndim == 2:
-                last = last.unsqueeze(-1)
-            if (last.ndim != 3) or (last.shape[-1] != 1):
-                raise ValueError(
-                    'The last TT core should have a unit right boundary rank')
-            standard_cores.append(last)
-
-        device = standard_cores[0].device
-        dtype = standard_cores[0].dtype
-        for site, core in enumerate(standard_cores):
-            if core.device != device:
-                raise ValueError('All TT cores should be on the same device')
-            if core.dtype != dtype:
-                raise ValueError('All TT cores should have the same dtype')
-            if site and (core.shape[0] != standard_cores[site - 1].shape[-1]):
-                raise ValueError('Adjacent TT ranks should match')
-
-        self.cores = standard_cores
-        self._in_dim = tuple(core.shape[1] for core in standard_cores)
+            tensor = tensor.to_tr() if tensor.boundary == 'pbc' else tensor.to_tt()
+        if not isinstance(tensor, TensorFormat1D):
+            cores = tuple(tensor)
+            if not cores or not all(isinstance(core, torch.Tensor) for core in cores):
+                raise TypeError('`tensor` should contain torch.Tensor cores')
+            if cores and cores[0].ndim == 3 and cores[-1].ndim == 3:
+                cores = (cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1)) \
+                    if len(cores) > 1 else (cores[0].squeeze(0).squeeze(-1),)
+            tensor = TT(cores)
+        if tensor._quantized:
+            raise TypeError('Quantics formats require an explicit Quantics source')
+        self.format = tensor
+        self.cores = list(tensor._effective_cores())
+        self._in_dim = tensor.in_dim if tensor.out_dim is not None else tuple(
+            tensor.in_dim[site] for site in tensor.in_sites)
+        self._structured = isinstance(tensor, TT) and not tensor._cyclic and \
+            not tensor.n_batches and tensor.in_sites == tuple(range(tensor.n_sites))
+        if tensor.out_dim is not None:
+            self._matrix_dims = tensor.in_dim, tensor.out_dim
+        self.n_batches = tensor.n_batches
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
-        """Input dimension at every TT site."""
+        """Dimension at every evaluated input site."""
         return self._in_dim
 
     @property
+    def in_sites(self) -> Tuple[int, ...]:
+        """Input positions in the represented vector format."""
+        return self.format.in_sites
+
+    @property
     def out_shape(self) -> Tuple[int, ...]:
-        """Empty shape because this source is scalar."""
-        return ()
+        """Response dimensions left open by input evaluation."""
+        return self.format.out_dim if self.is_matrix else self.format.out_shape
 
     @property
     def dtype(self) -> torch.dtype:
-        """Dtype shared by the TT cores."""
+        """Dtype shared by the cores."""
         return self.cores[0].dtype
 
     @property
     def device(self) -> torch.device:
-        """Device shared by the TT cores."""
+        """Device shared by the cores."""
         return self.cores[0].device
 
     @staticmethod
@@ -343,16 +298,34 @@ class TTTensorSource(_SourceEvaluationTracker):  # MARK: TTTensorSource
                      for site in range(len(self.cores)))
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates discrete ``configurations`` by batched TT contraction."""
-        indices = _discrete_indices(
-            configurations, self._in_dim, self.device)
-        matrices = self._selected_matrices(indices)
-        result = matrices[0]
-        for matrix in matrices[1:]:
-            result = result @ matrix
-        result = result[:, 0, 0]
+        """
+        Evaluates discrete configurations through the backing format.
+
+        Parameters
+        ----------
+        configurations : ConfigurationBatch
+            One integer index per selected vector input or matrix input site.
+
+        Returns
+        -------
+        torch.Tensor
+            Values with shape ``(batch, *core_batch, *out_shape)``. Matrix
+            output axes remain open; vectors retain their selected inputs.
+        """
+        indices = _discrete_indices(configurations, self._in_dim, self.device)
+        if self.is_matrix:
+            result = self.format.evaluate(indices, in_sites=range(self.format.n_sites),
+                                          out_sites=())
+        else:
+            result = self.format.evaluate(indices, in_sites=self.in_sites)
+        if self.n_batches:
+            result = result.movedim(self.n_batches, 0)
         self._record_evaluation(points=indices.shape[0])
         return result
+
+    def contract_dense(self) -> torch.Tensor:
+        """Contracts the backing format without changing its stored cores."""
+        return self.format.contract_dense()
 
     def fiber(self,
               configurations: ConfigurationBatch,
@@ -394,7 +367,7 @@ class TTTensorSource(_SourceEvaluationTracker):  # MARK: TTTensorSource
         return result
 
     def contract_sketch(self,
-                        sketch: Union['TTTensorSource', TT, TTM, Sequence[torch.Tensor]],
+                        sketch: Union['FormatSource', TT, TTM, Sequence[torch.Tensor]],
                         conjugate_sketch: bool = True) -> Union[torch.Tensor, TTDecomposition]:
         """
         Contracts the source input indices with a scalar TT or TTM ``sketch``.
@@ -437,8 +410,8 @@ class TTTensorSource(_SourceEvaluationTracker):  # MARK: TTTensorSource
                 points=0, batches=0, unique_points=0)
             return TTDecomposition(compact_cores)
 
-        sketch_source = sketch if isinstance(sketch, TTTensorSource) \
-            else TTTensorSource(sketch)
+        sketch_source = sketch if isinstance(sketch, FormatSource) \
+            else FormatSource(sketch)
         if sketch_source.in_dim != self._in_dim:
             raise ValueError(
                 'Source and sketch should have matching input dimensions')
@@ -461,5 +434,5 @@ class TTTensorSource(_SourceEvaluationTracker):  # MARK: TTTensorSource
 
 
 __all__ = [
-    'TTTensorSource',
+    'FormatSource',
 ]

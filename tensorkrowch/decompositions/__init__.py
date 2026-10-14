@@ -3,9 +3,9 @@ Tensor decomposition algorithms and their numerical results.
 
     Sources:
         * TensorSource, ConfigurationBatch
-        * DenseTensorSource, CallableTensorSource
-        * SparseTensorSource, EmpiricalDistribution, TTTensorSource
-        * QuanticsVectorSource, QuanticsMatrixSource
+        * DenseTensorSource, CallableSource, CallableTensorSource
+        * SparseTensorSource, FormatSource
+        * CallableQuanticsSource
 
     Algorithms:
         * TTSVD, TRSVD, TTMSVD, TRMSVD
@@ -29,7 +29,8 @@ Arithmetic returns ordinary formats; ``to_format`` removes fit diagnostics
 while preserving the numerical representation. Model construction remains
 explicit.
 
-The direct functions return cores by default. Where supported,
+SVD functions return decomposition objects. The other direct functions
+retain their documented core-return controls. Where supported,
 ``return_result=True`` returns
 the numerical result object, while ``return_info=True`` returns cores and
 diagnostics. These two return controls are mutually exclusive.
@@ -45,7 +46,6 @@ from tensorkrowch.decompositions.als import (ALSProblem,
                                              GaugePolicy,
                                              LeastSquaresSolver,
                                              NoGauge,
-                                             ObservedEntries,
                                              ObservedRows,
                                              QRGauge,
                                              RowSampler,
@@ -141,14 +141,13 @@ from tensorkrowch.decompositions.sketching import (BasisFitter,
 from tensorkrowch.decompositions.sources import (CallableTensorSource,
                                                  ConfigurationBatch,
                                                  DenseTensorSource,
-                                                 EmpiricalDistribution,
-                                                 FiberTensorSource,
                                                  SparseTensorSource,
-                                                 TTTensorSource,
+                                                 FiberTensorSource,
+                                                 FormatSource,
                                                  TensorSource,
                                                  as_tensor_source)
-from tensorkrowch.decompositions.sources.quantics import (QuanticsMatrixSource,
-                                                          QuanticsVectorSource)
+from tensorkrowch.decompositions.sources.callable import CallableSource
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.svd import (TRMSVD,
                                              TRSVD,
                                              TTMSVD,
@@ -164,6 +163,8 @@ from tensorkrowch.decompositions.svd import (TRMSVD,
 from tensorkrowch.decompositions.svd.tt import vec_to_mps
 from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
 
+
+from tensorkrowch.decompositions.sources.kernels import gaussian_kernel
 
 __all__ = [
     'TensorDecomposition',
@@ -207,14 +208,14 @@ __all__ = [
     'ConfigurationBatch',
     'TensorSource',
     'FiberTensorSource',
+    'CallableSource',
     'CallableTensorSource',
     'DenseTensorSource',
     'SparseTensorSource',
-    'EmpiricalDistribution',
-    'TTTensorSource',
+    'FormatSource',
     'as_tensor_source',
+    'gaussian_kernel',
     'ALSProblem',
-    'ObservedEntries',
     'LeastSquaresSolver',
     'SampleBatch',
     'RowSampler',
@@ -272,8 +273,7 @@ __all__ = [
     'RangeProjector',
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
-    'QuanticsVectorSource',
-    'QuanticsMatrixSource',
+    'CallableQuanticsSource',
     'GlobalValueTransform',
     'IdentityGlobalValueTransform',
     'CallableGlobalValueTransform',

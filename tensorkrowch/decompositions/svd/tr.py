@@ -28,11 +28,12 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (QTRDecomposition,
+from tensorkrowch.decompositions.results import (TensorDecomposition, QTRDecomposition,
                                                  TRDecomposition,
-                                                 _quantics_result)
-from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
-from tensorkrowch.decompositions.svd.tt import TTSVD
+                                                 _result_from_source)
+from tensorkrowch.decompositions.sources.factory import SourceLike
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
+from tensorkrowch.decompositions.svd.tt import TTSVD, _prepare_svd_source
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm)
 
@@ -73,40 +74,44 @@ class TRSVD:  # MARK: TRSVD
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense tensor with one input dimension per TR site. At least two sites
-        are required.
+    source : TensorSource or torch.Tensor
+        Finite tensor values with source-owned dimensions and runtime. For
+        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
+        use ``CallableQuanticsSource``.
     center : int, optional
         Interior cut between sites ``center - 1`` and ``center``. It should
         satisfy ``1 <= center < tensor.ndim``. The default is the middle cut.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the tensor's device.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(2, 2, 2))
+    >>> result = tk.decompositions.TRSVD(source).fit(rank=1)
+    >>> result.rank
+    [1, 1, 1]
     """
 
-    def __init__(self,
-                 tensor: torch.Tensor,
-                 center: Optional[int] = None,
-                 *,
+    def __init__(self, source: 'SourceLike', center: Optional[int] = None, *,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
-        self._quantics_source = None
-        if not isinstance(tensor, torch.Tensor):
-            raise TypeError('`tensor` should be torch.Tensor type')
+        self._source, tensor, batches = _prepare_svd_source(source)
+        if batches:
+            raise ValueError('TR-SVD does not support `n_batches`')
         if tensor.ndim < 2:
-            raise ValueError('`tensor` should contain at least two TR sites')
-        if any(value < 1 for value in tensor.shape):
-            raise ValueError('TR input dimensions should be positive')
-
-        if center is None:
-            center = tensor.ndim // 2
-        else:
-            self._validate_center(center, tensor.ndim)
-
-        self._tensor = tensor
+            raise ValueError('The source should contain at least two TR sites')
+        center = tensor.ndim // 2 if center is None else center
+        self._validate_center(center, tensor.ndim)
         self._center = center
-        self._runtime = _RuntimePolicy.from_tensor(
-            tensor,
-            out_device=out_device)
+        self._tensor = tensor
+        self._runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
+        self._phase = 'TRM-SVD' if getattr(
+            self._source, 'is_matrix', False) else 'TR-SVD'
+
+    @property
+    def source(self) -> SourceLike:
+        """Original source describing the fixed decomposition input."""
+        return self._source
 
     @staticmethod
     def _validate_center(center: int, n_sites: int) -> None:
@@ -117,44 +122,7 @@ class TRSVD:  # MARK: TRSVD
             raise ValueError(
                 '`center` should satisfy 1 <= center < tensor.ndim')
 
-    @classmethod
-    def quantized(cls,
-                  source: QuanticsVectorSource,
-                  center: Optional[int] = None,
-                  *,
-                  out_device: Optional[Union[str, torch.device]] = 'cpu'
-                  ) -> 'TRSVD':
-        """
-        Creates a Quantics SVD problem from a discretized coordinate callable.
 
-        Materializes the full digit tensor once. Its axes follow the source's
-        layout; the fitted result retains the source's coordinate maps.
-
-        Parameters
-        ----------
-        source : QuanticsVectorSource
-            Callable and discretization to approximate.
-        center : int, optional
-            Preferred interior cut, as in the ordinary constructor.
-        out_device : str or torch.device, optional
-            Device receiving finalized cores. ``None`` retains the source device.
-
-        Returns
-        -------
-        TRSVD
-            Reusable problem returning a Quantics decomposition from :meth:`fit`.
-        """
-        if not isinstance(source, QuanticsVectorSource):
-            raise TypeError('`source` should be QuanticsVectorSource type')
-        instance = cls(source.to_dense_digits(), center=center,
-                       out_device=out_device)
-        instance._quantics_source = source
-        return instance
-
-    @property
-    def tensor(self) -> torch.Tensor:
-        """Dense tensor fixed for repeated fits."""
-        return self._tensor
 
     @property
     def center(self) -> int:
@@ -427,7 +395,7 @@ class TRSVD:  # MARK: TRSVD
             cum_percentage: Optional[float] = None,
             renormalize: bool = False,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0) -> TRDecomposition:
+            verbose: Union[bool, int] = 0) -> 'TensorDecomposition':
         r"""
         Runs TR-SVD from an interior bipartition of the fixed tensor.
 
@@ -489,7 +457,7 @@ class TRSVD:  # MARK: TRSVD
 
             .. math::
 
-        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         renormalize : bool
@@ -555,10 +523,12 @@ class TRSVD:  # MARK: TRSVD
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
                 name='start',
-                phase='TR-SVD',
+                phase=self._phase,
                 values={
                     'sites': len(in_dim),
-                    'in_dim': in_dim,
+                    'in_dim': self._source.in_dim if getattr(
+                        self._source, 'is_matrix', False) else in_dim,
+                    'out_dim': getattr(self._source, 'out_dim', None),
                     'center': center,
                     'rank_mode': (
                         'discovery' if truncation.rank is None else 'shared'),
@@ -567,7 +537,7 @@ class TRSVD:  # MARK: TRSVD
         progress = (
             None if fit_observer is None else _SVDProgress(
                 observer=fit_observer,
-                phase='TR-SVD'))
+                phase=self._phase))
         result = self._fit_validated(
             center=center,
             truncation=truncation,
@@ -592,7 +562,7 @@ class TRSVD:  # MARK: TRSVD
                 abs_log_error, target_log_norm)
             fit_observer.emit(DecompositionEvent(
                 name='summary',
-                phase='TR-SVD',
+                phase=self._phase,
                 values={
                     'rank': result.rank,
                     'center': center,
@@ -603,18 +573,19 @@ class TRSVD:  # MARK: TRSVD
                     'relative_error': rel_error,
                     'elapsed': timing.elapsed,
                 }))
-            for site, core in enumerate(result.cores):
+            displayed = _result_from_source(result, self._source)
+            for site, core in enumerate(displayed.cores):
                 fit_observer.emit(DecompositionEvent(
                     name='core',
-                    phase='TR-SVD',
+                    phase=self._phase,
                     level=3,
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantics_source)
+        return _result_from_source(result, self._source)
 
 
-def tr_svd(tensor: torch.Tensor,
+def tr_svd(source: 'SourceLike',
            center: Optional[int] = None,
            rank: _Rank = None,
            cutoff: Optional[float] = None,
@@ -624,35 +595,20 @@ def tr_svd(tensor: torch.Tensor,
            renormalize: bool = False,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
-           collect_metrics: bool = False) -> TRDecomposition:
+           collect_metrics: bool = False) -> 'TensorDecomposition':
     r"""
-    Decomposes a dense ``tensor`` into TR cores through an interior SVD.
+    Decomposes a finite source using :class:`TRSVD`.
 
-    This is the simple functional interface. Use :class:`TRSVD` to repeat
-    fits of the same ``tensor`` or to reuse the decomposition engine. The
-    initial SVD ``rank`` is opened as cyclic and interior ranks, after which both
-    ``tensor`` blocks are decomposed through TT-SVD.
-
-    The input should have shape ``(d_1, ..., d_n)``, with one input dimension
-    per site and at least two sites. Every returned core has shape
-    ``(rank_{k-1}, d_k, rank_k)`` and the last right ``rank`` matches the first
-    left ``rank``, closing the TR.
-
-    An integer ``rank`` is a shared upper bound, while local truncation may
-    select different effective ranks across the chain. With ``None``, the
-    initial SVD ``rank`` is split using the smallest admissible product and the
-    most balanced pair breaks ties. Any extra capacity required by the cap
-    contains structural zeros and is reported in ``info['metadata']``.
-
-    Here, ``initial_rank`` is the ``rank`` selected by the initial SVD, while
-    ``initial_capacity`` is the product of the two TR ranks used to represent
-    it. For example, ``rank`` 7 may be stored with ranks 2 and 4, so the capacity
-    is 8 and ``initial_padding`` is 1.
+    The source owns its dimensions, batch axes and matrix ordering. A plain
+    tensor is wrapped as a dense source. The result retains Quantics metadata
+    when the source describes a coordinate discretization.
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense ``tensor`` with one input dimension per TR site.
+    source : TensorSource or torch.Tensor
+        Finite tensor values with source-owned dimensions and runtime. For
+        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
+        use ``CallableQuanticsSource``.
     center : int, optional
         Interior cut satisfying ``1 <= center < tensor.ndim``. The default is
         the middle cut.
@@ -681,7 +637,7 @@ def tr_svd(tensor: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -713,25 +669,14 @@ def tr_svd(tensor: torch.Tensor,
 
     Examples
     --------
-    Decompose a four-site ``tensor`` with a shared ``rank`` cap:
-
-    >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tr_svd(tensor, rank=2).cores
-    >>> [tuple(core.shape) for core in cores]
-    [(2, 2, 2), (2, 2, 2), (2, 2, 2), (2, 2, 2)]
-
-    Inspect the initial padding required by a shared ``rank`` cap:
-
-    >>> singular_values = torch.tensor([5., 3., 1., 0.])
-    >>> result = tk.decompositions.tr_svd(torch.diag(singular_values),
-    ...                                  rank=2, cutoff=0, collect_metrics=True)
-    >>> result.as_info()['rank']
-    [2, 2]
-    >>> result.as_info()['metadata']['initial_padding']
-    1
+    >>> source = tk.decompositions.DenseTensorSource(
+    ...     torch.arange(16.).reshape(2, 2, 2, 2))
+    >>> result = tk.decompositions.tr_svd(source, rank=2)
+    >>> result.in_dim
+    (2, 2, 2, 2)
     """
     result = TRSVD(
-        tensor=tensor,
+        source=source,
         center=center,
         out_device=out_device).fit(
             rank=rank,
@@ -747,7 +692,7 @@ def tr_svd(tensor: torch.Tensor,
 
 
 
-def qtr_svd(source: QuanticsVectorSource,
+def qtr_svd(source: CallableQuanticsSource,
             center: Optional[int] = None,
             *,
             rank: Optional[int] = None,
@@ -763,14 +708,14 @@ def qtr_svd(source: QuanticsVectorSource,
     Decomposes a discretized coordinate callable into QTR cores.
 
     Materializes the full digit tensor from ``source`` and runs
-    :meth:`TRSVD.fit` through :meth:`TRSVD.quantized`. The result retains
+    :meth:`TRSVD.fit` through :class:`TRSVD`. The result retains
     the source's layouts and coordinate maps for coordinate evaluation.
     Construct ``source`` first to choose its discretization; this function
     only controls the decomposition.
 
     Parameters
     ----------
-    source : QuanticsVectorSource
+    source : CallableQuanticsSource
         Callable with its digit layout and coordinate map.
     center : int, optional
         Interior cut from which the cyclic decomposition starts. If omitted,
@@ -826,14 +771,16 @@ def qtr_svd(source: QuanticsVectorSource,
 
     Examples
     --------
-    >>> source = tk.decompositions.QuanticsVectorSource(
+    >>> source = tk.decompositions.CallableQuanticsSource(
     ...     lambda coordinates: torch.exp(coordinates.sum(-1)),
     ...     n_coordinates=1, base=2, level=3, domain=(0., 1.))
     >>> result = tk.decompositions.qtr_svd(source, rank=1)
     >>> result.evaluate_indices(torch.tensor([[0], [4]]))
     tensor([1.0000, 1.6487])
     """
-    return TRSVD.quantized(
+    if not isinstance(source, CallableQuanticsSource):
+        raise TypeError('`source` should be CallableQuanticsSource type')
+    return TRSVD(
         source=source,
         center=center,
         out_device=out_device).fit(

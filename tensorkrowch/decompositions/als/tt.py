@@ -27,7 +27,7 @@ from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
-from tensorkrowch.formats import TT
+from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.formats.quantics import _QuanticsVector
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
@@ -42,7 +42,7 @@ from tensorkrowch.decompositions.als.gauges import (GaugePolicy,
                                                     QRGauge,
                                                     SVDGauge,
                                                     resolve_gauge_policy)
-from tensorkrowch.decompositions.als.problem import ALSProblem, ObservedEntries
+from tensorkrowch.decompositions.als.problem import ALSProblem, _ObservedEntries
 from tensorkrowch.decompositions.als.sampling import (ObservedRows,
                                                       RowSampler,
                                                       SampleBatch,
@@ -58,24 +58,26 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TTDecomposition,
-                                                 _quantics_result)
+                                                 _result_from_source)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 as_tensor_source)
-from tensorkrowch.decompositions.sources.base import _unravel_indices
-from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
+                                                 as_tensor_source,
+                                                 SparseTensorSource, TensorSource)
+from tensorkrowch.decompositions.sources.base import _unravel_indices, _tensor_view
+from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.svd.tt import TTSVD
 
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
     from tensorkrowch.decompositions.sources.factory import SourceLike
-    from tensorkrowch.formats import TensorFormat1D
 
 
 def _standard_tt_cores(cores: Union[TTDecomposition, Sequence[torch.Tensor]],
                        in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight or standard OBC core shapes."""
-    if isinstance(cores, TT):
+    if isinstance(cores, TensorFormat1D):
+        if cores._cyclic:
+            raise ValueError('Initial cores should have open topology')
         if cores.n_batches:
             raise ValueError('Batched TT cores are not supported by TT-ALS')
         cores = cores._effective_cores()
@@ -330,10 +332,15 @@ class _TTALSBackend:  # MARK: _TTALSBackend
             observation_weights = observation_weights.to(environment.dtype)
             environment = environment * observation_weights.unsqueeze(1)
             target = target * observation_weights
-        if self.problem.weights is not None:
-            weights = self.problem.weights.reshape(-1).to(environment.dtype)
-            environment = environment * weights.unsqueeze(1)
-            target = target * weights
+        if self.problem.observations is None:
+            ids = self.sample_batch.ids if self.sample_batch is not None else \
+                torch.arange(prod(self.problem.in_dim), device=target.device)
+            indices = _unravel_indices(ids, self.problem.in_dim)
+            weights = self.problem.entry_weights(indices)
+            if weights is not None:
+                weights = weights.to(environment.dtype)
+                environment = environment * weights.unsqueeze(1)
+                target = target * weights
 
         regularization_scale = None
         if (self.solver.l2_reg_mode == 'absolute') and \
@@ -399,8 +406,11 @@ class _TTALSBackend:  # MARK: _TTALSBackend
         approximation = _contract_standard_tt(self.cache.cores).reshape(-1)
         residual = approximation - self.full_target
         target = self.full_target
-        if problem.weights is not None:
-            weights = problem.weights.reshape(-1).to(residual.dtype)
+        indices = _unravel_indices(torch.arange(target.numel(),
+                                                device=target.device),
+                                    problem.in_dim)
+        weights = problem.entry_weights(indices)
+        if weights is not None:
             residual = residual * weights
             target = target * weights
         absolute = torch.linalg.vector_norm(residual)
@@ -600,6 +610,12 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
         sample_weights = batch.weights.to(environment.dtype)
         environment = environment * sample_weights.unsqueeze(1)
         target = target * sample_weights
+        weights = self.problem.entry_weights(indices)
+        if weights is not None:
+            weights = weights.to(environment.dtype)
+            environment = environment * weights.unsqueeze(1)
+            target = target * weights
+
 
         regularization_scale = None
         if (self.solver.l2_reg_mode == 'absolute') and \
@@ -668,7 +684,7 @@ class TTALS:  # MARK: TTALS
     Approximates a fixed scalar tensor problem by TT-ALS.
 
     The source and its discrete input dimensions are fixed on construction;
-    :meth:`completion` instead fixes a permanent set of observed entries.
+    a boolean ``mask`` instead fixes a permanent set of observed entries.
     Repeated calls to :meth:`fit` may then compare initializations, ranks,
     gauges, solvers and convergence policies without rebuilding the source
     adapter. Exact ALS enumerates the complete discrete tensor once. Uniform
@@ -683,18 +699,14 @@ class TTALS:  # MARK: TTALS
 
     Parameters
     ----------
-    source : TensorSource, TTDecomposition, torch.Tensor or callable
-        Scalar tensor or function to approximate. A callable receives batches
-        of integer configurations with shape ``(batch, sites)``.
-    in_dim : sequence of int, optional
-        Input dimension at every site. It is required for callables and may be
-        omitted when the source already declares it.
-    dtype : torch.dtype, optional
-        Callable output dtype. Existing sources and tensors retain their dtype.
-    device : str or torch.device, optional
-        Device used by a callable source. Existing sources retain their device.
-    batch_size : int, optional
-        Maximum callable evaluation batch used while enumerating the target.
+    source : TensorSource or torch.Tensor
+        Finite tensor values. Callable dimensions belong to an explicit
+        ``CallableTensorSource`` or ``CallableQuanticsSource``.
+    mask : TensorSource or torch.Tensor, optional
+        Boolean tensor of participating entries. ``True`` participates;
+        ``False`` is missing. A sparse mask fixes its stored true entries.
+    weights : torch.Tensor, optional
+        Non-negative multiplicative residual weights in scalar tensor order.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the computation device.
@@ -702,56 +714,44 @@ class TTALS:  # MARK: TTALS
 
     def __init__(self,
                  source: 'SourceLike',
-                 in_dim: Optional[Sequence[int]] = None,
                  *,
+                 mask: Optional['TensorSource'] = None,
                  weights: Optional[torch.Tensor] = None,
-                 dtype: Optional[torch.dtype] = None,
-                 device: Union[str, torch.device] = 'cpu',
-                 batch_size: Optional[int] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
-        self.source = as_tensor_source(
-            source,
-            in_dim=in_dim,
-            out_shape=(),
-            dtype=dtype,
-            device=device,
-            batch_size=batch_size)
-        self._quantics_source = self.source \
-            if isinstance(self.source, QuanticsVectorSource) else None
-        self.problem = ALSProblem(source=self.source, weights=weights)
-        self.out_device = None if out_device is None \
-            else torch.device(out_device)
+        self._source = as_tensor_source(source)
+        if not self._source.is_discrete_tensor:
+            raise ValueError('`source` should represent a discrete tensor')
+        if getattr(self._source, 'n_batches', 0):
+            raise ValueError('Batched sources are not supported by ALS')
+        tensor_source = _tensor_view(self._source)
+        if isinstance(mask, torch.Tensor) and getattr(self._source, 'is_matrix', False) and \
+                tuple(mask.shape) != tensor_source.in_dim:
+            mask = DenseTensorSource.matrix(
+                mask, self._source.in_dim, self._source.out_dim,
+                ordering=getattr(self._source, '_ordering', 'interleaved'))
+        mask_source = None if mask is None else _tensor_view(as_tensor_source(mask))
+        self.problem = ALSProblem(source=tensor_source, mask=mask_source,
+                                  weights=weights)
+
+        # A sparse boolean mask directly supplies the fixed participating rows.
+        if isinstance(mask_source, SparseTensorSource):
+            if mask_source._values.dtype != torch.bool:
+                raise TypeError('`mask` should contain boolean values')
+            indices = mask_source._indices[mask_source._values]
+            values = tensor_source.evaluate(ConfigurationBatch(indices))
+            row_weights = self.problem.entry_weights(indices)
+            self.problem.observations = _ObservedEntries(
+                indices, values, tensor_source.in_dim,
+                None if row_weights is None else row_weights.to(values.real.dtype))
+
+        self.out_device = None if out_device is None else torch.device(out_device)
         self._configurations = None
         self._target = None
 
-    @classmethod
-    def quantized(cls,
-                  source: QuanticsVectorSource,
-                  *,
-                  weights: Optional[torch.Tensor] = None,
-                  out_device: Optional[Union[str, torch.device]] = 'cpu'
-                  ) -> 'TTALS':
-        """
-        Creates an ALS problem on the digit sites of a coordinate callable.
-
-        Parameters
-        ----------
-        source : QuanticsVectorSource
-            Callable with its fixed layout and coordinate map.
-        weights : torch.Tensor, optional
-            Residual weights with shape ``source.in_dim``, already in digit
-            site order. Tensor axes are not quantized or reordered.
-        out_device : str or torch.device, optional
-            Device receiving finalized cores. ``None`` retains the source device.
-
-        Returns
-        -------
-        TTALS or TRALS
-            Reusable problem returning the corresponding Quantics result.
-        """
-        if not isinstance(source, QuanticsVectorSource):
-            raise TypeError('`source` should be QuanticsVectorSource type')
-        return cls(source, weights=weights, out_device=out_device)
+    @property
+    def source(self) -> 'TensorSource':
+        """Original source, including its tensor or coordinate metadata."""
+        return self._source
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -764,15 +764,15 @@ class TTALS:  # MARK: TTALS
         """
         if self.problem.observations is not None:
             return self.problem.observations.values
-        if self.source.dtype is not None:
+        if self.problem.source.dtype is not None:
             return torch.empty(
-                (), device=self.source.device, dtype=self.source.dtype)
+                (), device=self.problem.source.device, dtype=self.problem.source.dtype)
 
         indices = torch.zeros(
             (1, len(self.in_dim)),
-            device=self.source.device,
+            device=self.problem.source.device,
             dtype=torch.long)
-        value = self.source.evaluate(
+        value = self.problem.source.evaluate(
             ConfigurationBatch(indices, kind='indices'))
         if value.shape != (1,):
             raise ValueError(
@@ -788,14 +788,14 @@ class TTALS:  # MARK: TTALS
     def _exact_target(self) -> Tuple[ConfigurationBatch, torch.Tensor]:
         """Enumerates and caches the scalar source in global row order."""
         if self._target is None:
-            if self.source is None:
+            if self.problem.source is None:
                 raise ValueError(
                     'Completion does not define unknown target entries')
             flat_ids = torch.arange(
-                prod(self.in_dim), device=self.source.device)
+                prod(self.in_dim), device=self.problem.source.device)
             indices = _unravel_indices(flat_ids, self.in_dim)
             configurations = ConfigurationBatch(indices, kind='indices')
-            target = self.source.evaluate(configurations)
+            target = self.problem.source.evaluate(configurations)
             if target.shape != (flat_ids.numel(),):
                 raise ValueError(
                     'TT-ALS currently requires a scalar tensor source')
@@ -937,84 +937,6 @@ class TTALS:  # MARK: TTALS
         final_cores = TTEnvironmentCache._validate_cores(final_cores)
         return final_cores, tuple(fixed_sites)
 
-    @classmethod
-    def completion(cls,
-                   observations: Union['ObservedEntries', torch.Tensor],
-                   values: Optional[torch.Tensor] = None,
-                   in_dim: Optional[Sequence[int]] = None,
-                   weights: Optional[torch.Tensor] = None,
-                   *,
-                   out_device: Optional[Union[str, torch.device]] = 'cpu') -> 'TTALS':
-        """
-        Creates TT-ALS for a permanently observed completion objective.
-
-        ``observations`` may already be :class:`ObservedEntries` or may be an
-        integer tensor of global multi-indices. In the latter case, ``values``
-        and the complete ``in_dim`` are required. Entries outside this fixed
-        set remain unknown and are never interpreted as zeros.
-
-        Parameters
-        ----------
-        observations : ObservedEntries or torch.Tensor
-            Fixed ``observations`` or integer multi-indices with shape
-            ``(observations, sites)``.
-        values : torch.Tensor, optional
-            Scalar value at every supplied index.
-        in_dim : sequence of int, optional
-            Complete input dimension, required with raw indices.
-        weights : torch.Tensor, optional
-            Non-negative multiplicative weight per observed value.
-        out_device : str or torch.device, optional
-            Device where finalized cores are stored. The default is ``"cpu"``.
-
-        Returns
-        -------
-        TTALS
-            Reusable completion decomposition whose :meth:`fit` defaults to
-            fixed observed rows.
-
-        Examples
-        --------
-        >>> indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
-        >>> values = torch.tensor([1., 2., 4.])
-        >>> decomposition = tk.decompositions.TTALS.completion(
-        ...     indices, values, in_dim=(2, 2))
-        >>> result = decomposition.fit(rank=2)
-        """
-        if isinstance(observations, ObservedEntries):
-            if (values is not None) or (in_dim is not None) or \
-                    (weights is not None):
-                raise ValueError(
-                    '`values`, `in_dim` and `weights` belong inside an '
-                    'existing ObservedEntries object')
-            observed_entries = observations
-        else:
-            if not isinstance(observations, torch.Tensor):
-                raise TypeError(
-                    '`observations` should be ObservedEntries or torch.Tensor')
-            if values is None:
-                raise ValueError('`values` is required with observation indices')
-            if in_dim is None:
-                raise ValueError(
-                    '`in_dim` is required with observation indices')
-            observed_entries = ObservedEntries(
-                indices=observations,
-                values=values,
-                in_dim=in_dim,
-                weights=weights)
-        if observed_entries.out_shape:
-            raise ValueError(
-                'TT-ALS completion currently requires scalar observations')
-
-        instance = cls.__new__(cls)
-        instance._quantics_source = None
-        instance.source = None
-        instance.problem = ALSProblem(observations=observed_entries)
-        instance.out_device = None if out_device is None \
-            else torch.device(out_device)
-        instance._configurations = None
-        instance._target = None
-        return instance
 
     def fit(self,
             rank: Optional[int] = None,
@@ -1069,7 +991,7 @@ class TTALS:  # MARK: TTALS
             before factorization so no factor is ever discarded.
         sampling : {``"exact"``, ``"uniform"``, ``"leverage"``,
             ``"observed"``}, optional Row strategy. The default is ``"exact"``
-            for a known source and ``"observed"`` for :meth:`completion`.
+            for a known source and ``"observed"`` for a boolean ``mask``.
         n_samples : int, optional
             Number of uniformly sampled global configurations per generation.
             It is required only for ``sampling="uniform"``.
@@ -1121,8 +1043,8 @@ class TTALS:  # MARK: TTALS
         >>> model = tk.models.MPS(tensors=result.cores)
         """
         if isinstance(initial_cores, _QuanticsVector) and \
-                self._quantics_source is not None:
-            if initial_cores.layout != self._quantics_source.layout:
+                self._source is not None:
+            if initial_cores.layout != self._source.layout:
                 raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
@@ -1158,7 +1080,7 @@ class TTALS:  # MARK: TTALS
                     'Completion should use its permanently observed rows')
         elif sampling == 'observed':
             raise ValueError(
-                '`sampling="observed"` requires TTALS.completion')
+                '`sampling="observed"` requires a sparse boolean `mask`')
         if sampling in ('uniform', 'leverage'):
             if isinstance(n_samples, bool) or \
                     (not isinstance(n_samples, int)) or (n_samples < 1):
@@ -1202,7 +1124,7 @@ class TTALS:  # MARK: TTALS
             runtime_reference = target
         elif sampling in ('uniform', 'leverage'):
             sampler = UniformRows()
-            problem = ALSProblem(source=self.source, selector=sampler)
+            problem = replace(self.problem, selector=sampler)
             runtime_reference = self._runtime_reference()
         else:
             sampler = ObservedRows(self.problem.observations)
@@ -1310,12 +1232,12 @@ class TTALS:  # MARK: TTALS
             })
         if fit_observer is not None:
             _report_als_result(result, fit_observer, 'TT-ALS')
-        return _quantics_result(result, self._quantics_source)
+        return _result_from_source(result, self._source)
 
 
 def tt_als(source: 'SourceLike',
            rank: Optional[int] = None,
-           in_dim: Optional[Sequence[int]] = None,
+           mask: Optional['TensorSource'] = None,
            initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
            init: str = 'random',
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
@@ -1339,9 +1261,6 @@ def tt_als(source: 'SourceLike',
            damping: float = 1.0,
            acceptance: str = 'always',
            renormalize: bool = True,
-           dtype: Optional[torch.dtype] = None,
-           device: Union[str, torch.device] = 'cpu',
-           batch_size: Optional[int] = None,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
@@ -1351,9 +1270,9 @@ def tt_als(source: 'SourceLike',
     Approximates a scalar tensor ``source`` with tensor train ALS.
 
     This is the simple functional interface. ``source`` may be a dense tensor,
-    callable, :class:`TensorSource` or existing :class:`TTDecomposition`.
-    Callables require ``in_dim`` and receive integer configurations with shape
-    ``(batch, sites)``. Use :class:`TTALS` for repeated fits of the same ``source``
+    :class:`TensorSource` or existing :class:`TTDecomposition`. Define callable
+    inputs with ``CallableTensorSource``. Use :class:`TTALS` for repeated fits
+    of the same ``source``
     or to pass advanced policy objects directly.
 
     With ``sampling="leverage"``, the exact mixed-canonical method follows
@@ -1364,12 +1283,10 @@ def tt_als(source: 'SourceLike',
 
     Parameters
     ----------
-    source : TensorSource, TTDecomposition, torch.Tensor or callable
+    source : TensorSource, TensorFormat1D or torch.Tensor
         Scalar discrete tensor or function to approximate.
     rank : int, optional
         Shared maximum TT ``rank``. Required without ``initial_cores``.
-    in_dim : sequence of int, optional
-        Input dimension at every site; required for callables.
     initial_cores : sequence of torch.Tensor or TTDecomposition, optional
         Initial TT approximation.
     init : {``"random"``, ``"svd"``}
@@ -1414,12 +1331,6 @@ def tt_als(source: 'SourceLike',
         Optional local ``acceptance`` rule.
     renormalize : bool
         Whether environments accumulate removed norms logarithmically.
-    dtype : torch.dtype, optional
-        Declared callable output ``dtype``.
-    device : str or torch.device
-        Callable evaluation ``device``.
-    batch_size : int, optional
-        Callable evaluation batch size.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
     generator : torch.Generator, optional
@@ -1468,13 +1379,7 @@ def tt_als(source: 'SourceLike',
     update_policy = UpdatePolicy(
         damping=damping,
         acceptance=acceptance)
-    result = TTALS(
-        source=source,
-        in_dim=in_dim,
-        dtype=dtype,
-        device=device,
-        batch_size=batch_size,
-        out_device=out_device).fit(
+    result = TTALS(source, mask=mask, out_device=out_device).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,

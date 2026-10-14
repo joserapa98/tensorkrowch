@@ -344,7 +344,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         original_fit = tr_module.TTSVD._fit_validated
 
         def tracked_fit(self, *args, **kwargs):
-            fit_shapes.append(tuple(self.tensor.shape))
+            fit_shapes.append(tuple(self.source.tensor.shape))
             truncation_ids.append(id(kwargs['truncation']))
             return original_fit(self, *args, **kwargs)
 
@@ -364,7 +364,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         original_fit = tr_module.TTSVD._fit_validated
 
         def tracked_fit(self, *args, **kwargs):
-            fit_shapes.append(tuple(self.tensor.shape))
+            fit_shapes.append(tuple(self.source.tensor.shape))
             return original_fit(self, *args, **kwargs)
 
         monkeypatch.setattr(tr_module.TTSVD, '_fit_validated', tracked_fit)
@@ -477,7 +477,7 @@ class TestTRSVD:  # MARK: TestTRSVD
         'constructor, kwargs, error_type, match',
         [
             (([1, 2],), {}, TypeError,
-             '`tensor` should be torch.Tensor type'),
+             '`source` should provide'),
             ((torch.ones(2),), {}, ValueError,
              'at least two TR sites'),
             ((torch.ones(2, 3),), {'center': 0}, ValueError,
@@ -650,17 +650,17 @@ def test_quantized_svd_preserves_callable_grid(ordering, device_dtype, assert_cl
         value = (coordinates[:, 0] + 2 * coordinates[:, 1]).to(dtype)
         return value * (1 + 1j) if dtype.is_complex else value
 
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         function, 2, layout=layout, coordinate_map=coordinate_map,
         dtype=dtype, device=device)
-    engine = tk.decompositions.TRSVD.quantized(source, out_device=None)
+    engine = tk.decompositions.TRSVD(source, out_device=None)
     for _ in range(2):
         result = engine.fit(rank=16)
         assert isinstance(result, tk.decompositions.QTRDecomposition)
         assert result.layout == layout
-        assert_close(result.to_dense_grid(), source.to_dense_grid())
+        assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
         indices = torch.tensor([[0, 0], [3, 3], [2, 1]], device=device)
-        assert_close(result.evaluate_indices(indices), source.evaluate_indices(indices))
+        assert_close(result.evaluate_indices(indices), source.evaluate(tk.decompositions.ConfigurationBatch(source.layout.encode_indices(indices))))
         assert not result.metrics.truncations
         assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
         assert result.dtype == dtype and result.device.type == device
@@ -674,8 +674,7 @@ def test_dense_svd_has_fixed_axes_and_no_quantization():
     assert result.in_dim == (4, 4)
     assert not isinstance(result, tk.formats.QTR)
     torch.testing.assert_close(result.contract_dense(), data)
-    with pytest.raises(TypeError, match='QuanticsVectorSource'):
-        tk.decompositions.TRSVD.quantized(data)
+    assert tk.decompositions.TRSVD(data).source.is_discrete_tensor
     with pytest.raises(TypeError, match='quantization'):
         tk.decompositions.tr_svd(data, quantization=tk.formats.QuantizedLayout(2, 2, 2))
 
@@ -688,7 +687,7 @@ def test_qtr_svd_function(criteria, renormalize, device_dtype, assert_close):
     device, dtype = device_dtype
     real_dtype = torch.empty((), dtype=dtype).real.dtype
     coefficient = 1 + 1j if dtype.is_complex else 1
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         lambda coordinates: torch.exp(
             coefficient * coordinates.sum(-1)).to(dtype),
         n_coordinates=1, base=2, level=3,
@@ -699,7 +698,7 @@ def test_qtr_svd_function(criteria, renormalize, device_dtype, assert_close):
     options['center'] = 1
     result = tk.decompositions.qtr_svd(
         source, out_device=None, **options)
-    expected = tk.decompositions.TRSVD.quantized(
+    expected = tk.decompositions.TRSVD(
         source, out_device=None).fit(**options)
 
     assert isinstance(result, tk.decompositions.QTRDecomposition)
@@ -707,7 +706,7 @@ def test_qtr_svd_function(criteria, renormalize, device_dtype, assert_close):
     assert result.dtype == dtype
     assert result.metrics.truncations
     assert_close(result.contract_dense(), expected.contract_dense())
-    assert_close(result.to_dense_grid(), source.to_dense_grid())
+    assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
     assert result.as_info()['metadata']['algorithm'] == 'tr_svd'
 
 

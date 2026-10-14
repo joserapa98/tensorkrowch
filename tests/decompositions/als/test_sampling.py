@@ -6,6 +6,7 @@ import pytest
 import torch
 
 import tensorkrowch as tk
+from tensorkrowch.decompositions.als.problem import _ObservedEntries
 
 from tensorkrowch.decompositions.als.sampling import _RowSamplingState
 
@@ -125,7 +126,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
             atol=2e-2)
 
     def test_observed_rows_are_fixed_and_unit_weighted(self):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 1], [1, 0], [1, 2]]),
             values=torch.tensor([2., 3., 4.]),
             in_dim=(2, 3))
@@ -218,7 +219,7 @@ class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
         assert invalidations == [(None, 0), (0, 1)]
 
     def test_completion_never_refreshes_observed_rows(self):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
             in_dim=(2, 2))

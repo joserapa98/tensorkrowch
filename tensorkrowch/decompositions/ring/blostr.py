@@ -44,6 +44,8 @@ import warnings
 
 import torch
 
+from tensorkrowch.decompositions.ring.opening import _source_from_context
+
 from tensorkrowch.utils import truncated_svd
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
@@ -58,8 +60,6 @@ from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.ring.gauges import ExperimentalWarning
 from tensorkrowch.decompositions.ring.opening import (LoopOpenerCapabilities,
                                                       LoopOpening)
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 as_tensor_source)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -566,24 +566,7 @@ def _fit_blostr(tensor: torch.Tensor,
 def _materialize_target(target: Any,
                         context: Mapping[str, Any]) -> torch.Tensor:
     """Materializes a scalar local source for the spectral algorithm."""
-    source = as_tensor_source(
-        target,
-        in_dim=context.get('in_dim'),
-        out_shape=(),
-        dtype=context.get('dtype'),
-        device=context.get('device', 'cpu'),
-        batch_size=context.get('batch_size'))
-    axes = [
-        torch.arange(dimension, device=source.device)
-        for dimension in source.in_dim
-    ]
-    indices = torch.cartesian_prod(*axes)
-    if len(source.in_dim) == 1:
-        indices = indices.unsqueeze(1)
-    values = source.evaluate(ConfigurationBatch(indices, kind='indices'))
-    if values.shape != (indices.shape[0],):
-        raise ValueError('BLOSTR requires a scalar tensor source')
-    return values.reshape(source.in_dim)
+    return _source_from_context(target, context).contract_dense()
 
 
 def _mirror_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
@@ -812,7 +795,7 @@ def tr_blostr(tensor: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
     out_device : str or torch.device, optional
         Final core storage device. ``None`` keeps the input device.

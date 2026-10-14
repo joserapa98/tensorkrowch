@@ -163,7 +163,7 @@ class TestStructuredTTBackend:  # MARK: TestStructuredTTBackend
             torch.randn(2, 2, 2, dtype=dtype, generator=generator),
             torch.randn(2, 2, 1, dtype=dtype, generator=generator),
         ]
-        tt_source = tk.decompositions.TTTensorSource(cores)
+        tt_source = tk.decompositions.FormatSource(cores)
         dense = tk.decompositions.TTDecomposition([
             cores[0].squeeze(0), cores[1], cores[2].squeeze(-1)
         ]).contract_dense()

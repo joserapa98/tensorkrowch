@@ -291,7 +291,8 @@ class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
         """
         if not isinstance(request, _EvaluationRequest):
             raise TypeError('`request` should be _EvaluationRequest type')
-        if request.configurations.n_sites != len(self.source.in_dim):
+        if request.configurations.n_sites != (len(self.source.in_dim) if self.source.in_dim is not None
+                                                    else (self.source.n_sites or request.configurations.n_sites)):
             raise ValueError(
                 'Configurations should contain one value per source input site')
 

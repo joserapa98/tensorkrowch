@@ -26,7 +26,7 @@ from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
-from tensorkrowch.formats import TR
+from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.formats.quantics import _QuanticsVector
 
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
@@ -57,8 +57,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
-                                                 _quantics_result)
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
+                                                 _result_from_source)
+from tensorkrowch.decompositions.sources import (TensorSource, ConfigurationBatch,
                                                  FiberTensorSource)
 from tensorkrowch.decompositions.sources.base import _unravel_indices
 from tensorkrowch.decompositions.svd.tr import TRSVD
@@ -70,14 +70,14 @@ _Rank = Optional[Union[int, Sequence[int]]]
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
     from tensorkrowch.decompositions.sources.factory import SourceLike
-    from tensorkrowch.formats import TensorFormat1D
-    from tensorkrowch.decompositions.als.problem import ObservedEntries
 
 
 def _standard_tr_cores(cores: Union[TRDecomposition, Sequence[torch.Tensor]],
                        in_dim: Sequence[int]) -> Tuple[torch.Tensor, ...]:
     """Normalizes lightweight TR ``cores`` to standard cyclic shapes."""
-    if isinstance(cores, TR):
+    if isinstance(cores, TensorFormat1D):
+        if not cores._cyclic:
+            raise ValueError('Initial cores should have cyclic topology')
         if cores.n_batches:
             raise ValueError('Batched TR cores are not supported by TR-ALS')
         cores = cores._effective_cores()
@@ -359,10 +359,15 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             observation_weights = observation_weights.to(environment.dtype)
             environment = environment * observation_weights.unsqueeze(1)
             target = target * observation_weights
-        if self.problem.weights is not None:
-            weights = self.problem.weights.reshape(-1).to(environment.dtype)
-            environment = environment * weights.unsqueeze(1)
-            target = target * weights
+        if self.problem.observations is None:
+            ids = self.sample_batch.ids if self.sample_batch is not None else \
+                torch.arange(prod(self.problem.in_dim), device=target.device)
+            indices = _unravel_indices(ids, self.problem.in_dim)
+            weights = self.problem.entry_weights(indices)
+            if weights is not None:
+                weights = weights.to(environment.dtype)
+                environment = environment * weights.unsqueeze(1)
+                target = target * weights
 
         regularization_scale = None
         if (self.solver.l2_reg_mode == 'absolute') and \
@@ -430,8 +435,11 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         approximation = _contract_standard_tr(self.cache.cores).reshape(-1)
         residual = approximation - self.full_target
         target = self.full_target
-        if problem.weights is not None:
-            weights = problem.weights.reshape(-1).to(residual.dtype)
+        indices = _unravel_indices(torch.arange(target.numel(),
+                                                device=target.device),
+                                    problem.in_dim)
+        weights = problem.entry_weights(indices)
+        if weights is not None:
             residual = residual * weights
             target = target * weights
         absolute = torch.linalg.vector_norm(residual)
@@ -565,6 +573,12 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
         sample_weights = batch.weights.to(environment.dtype)
         environment = environment * sample_weights.unsqueeze(1)
         target = target * sample_weights
+        weights = self.problem.entry_weights(indices)
+        if weights is not None:
+            weights = weights.to(environment.dtype)
+            environment = environment * weights.unsqueeze(1)
+            target = target * weights
+
 
         regularization_scale = None
         if (self.solver.l2_reg_mode == 'absolute') and \
@@ -643,7 +657,7 @@ class TRALS(TTALS):  # MARK: TRALS
 
     The source and input dimensions are fixed on construction. Repeated
     :meth:`fit` calls may compare cyclic ranks, initialization, gauges, segment
-    partitions, sampling and convergence policies. Use :meth:`completion` to
+    partitions, sampling and convergence policies. Use a boolean ``mask`` to
     fix one permanent observed objective.
 
     Each fit returns a :class:`~tensorkrowch.decompositions.TRDecomposition`
@@ -667,18 +681,14 @@ class TRALS(TTALS):  # MARK: TRALS
 
     Parameters
     ----------
-    source : TensorSource, TTDecomposition, torch.Tensor or callable
-        Scalar tensor or function to approximate. A callable receives batches
-        of integer configurations with shape ``(batch, sites)``.
-    in_dim : sequence of int, optional
-        Input dimension at every site. It is required for callables and may be
-        omitted when the source already declares it.
-    dtype : torch.dtype, optional
-        Callable output dtype. Existing sources and tensors retain their dtype.
-    device : str or torch.device, optional
-        Device used by a callable source. Existing sources retain their device.
-    batch_size : int, optional
-        Maximum callable evaluation batch used while enumerating the target.
+    source : TensorSource or torch.Tensor
+        Finite tensor values. Callable dimensions belong to an explicit
+        ``CallableTensorSource`` or ``CallableQuanticsSource``.
+    mask : TensorSource or torch.Tensor, optional
+        Boolean tensor of participating entries. ``True`` participates;
+        ``False`` is missing. A sparse mask fixes its stored true entries.
+    weights : torch.Tensor, optional
+        Non-negative multiplicative residual weights in scalar tensor order.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the computation device.
@@ -780,59 +790,10 @@ class TRALS(TTALS):  # MARK: TRALS
         final_cores = TRSegmentEnvironmentCache._validate_cores(final_cores)
         return final_cores, tuple(fixed_sites)
 
-    @classmethod
-    def completion(cls,
-                   observations: Union['ObservedEntries', torch.Tensor],
-                   values: Optional[torch.Tensor] = None,
-                   in_dim: Optional[Sequence[int]] = None,
-                   weights: Optional[torch.Tensor] = None,
-                   *,
-                   out_device: Optional[Union[str, torch.device]] = 'cpu') -> 'TRALS':
-        """
-        Creates TR-ALS for a permanently observed completion objective.
-
-        ``observations`` may already be :class:`ObservedEntries` or may be an
-        integer tensor of global multi-indices. In the latter case, ``values``
-        and the complete ``in_dim`` are required. Entries outside this fixed
-        set remain unknown and are never interpreted as zeros.
-
-        Parameters
-        ----------
-        observations : ObservedEntries or torch.Tensor
-            Fixed ``observations`` or integer multi-indices with shape
-            ``(observations, sites)``.
-        values : torch.Tensor, optional
-            Scalar value at every supplied index.
-        in_dim : sequence of int, optional
-            Complete input dimension, required with raw indices.
-        weights : torch.Tensor, optional
-            Non-negative multiplicative weight per observed value.
-        out_device : str or torch.device, optional
-            Device where finalized cores are stored. The default is ``"cpu"``.
-
-        Returns
-        -------
-        TRALS
-            Reusable completion decomposition whose :meth:`fit` defaults to
-            fixed observed rows.
-
-        Examples
-        --------
-        >>> indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
-        >>> values = torch.tensor([1., 2., 4.])
-        >>> decomposition = tk.decompositions.TRALS.completion(
-        ...     indices, values, in_dim=(2, 2))
-        >>> result = decomposition.fit(rank=2)
-        """
-        return super().completion(
-            observations=observations,
-            values=values,
-            in_dim=in_dim,
-            weights=weights,
-            out_device=out_device)
 
     def fit(self,
             rank: _Rank = None,
+           mask: Optional['TensorSource'] = None,
             initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
             init: str = 'random',
             fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
@@ -943,8 +904,8 @@ class TRALS(TTALS):  # MARK: TRALS
         'pbc'
         """
         if isinstance(initial_cores, _QuanticsVector) and \
-                self._quantics_source is not None:
-            if initial_cores.layout != self._quantics_source.layout:
+                self._source is not None:
+            if initial_cores.layout != self._source.layout:
                 raise ValueError('Quantics initial cores should match the fixed digit layout')
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
@@ -981,7 +942,7 @@ class TRALS(TTALS):  # MARK: TRALS
                     'Completion should use its permanently observed rows')
         elif sampling == 'observed':
             raise ValueError(
-                '`sampling="observed"` requires TRALS.completion')
+                '`sampling="observed"` requires a sparse boolean `mask`')
         if sampling in ('uniform', 'leverage'):
             if isinstance(n_samples, bool) or \
                     (not isinstance(n_samples, int)) or (n_samples < 1):
@@ -1019,7 +980,7 @@ class TRALS(TTALS):  # MARK: TRALS
             runtime_reference = target
         elif sampling in ('uniform', 'leverage'):
             sampler = UniformRows()
-            problem = ALSProblem(source=self.source, selector=sampler)
+            problem = replace(self.problem, selector=sampler)
             runtime_reference = self._runtime_reference()
         else:
             sampler = ObservedRows(self.problem.observations)
@@ -1133,12 +1094,12 @@ class TRALS(TTALS):  # MARK: TRALS
             })
         if fit_observer is not None:
             _report_als_result(result, fit_observer, 'TR-ALS')
-        return _quantics_result(result, self._quantics_source)
+        return _result_from_source(result, self._source)
 
 
 def tr_als(source: 'SourceLike',
            rank: _Rank = None,
-           in_dim: Optional[Sequence[int]] = None,
+           mask: Optional['TensorSource'] = None,
            initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
            init: str = 'random',
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
@@ -1164,9 +1125,6 @@ def tr_als(source: 'SourceLike',
            acceptance: str = 'always',
            normalize: bool = True,
            renormalize: bool = True,
-           dtype: Optional[torch.dtype] = None,
-           device: Union[str, torch.device] = 'cpu',
-           batch_size: Optional[int] = None,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
@@ -1193,8 +1151,6 @@ def tr_als(source: 'SourceLike',
         Scalar discrete tensor or function to approximate.
     rank : int or sequence of int, optional
         Shared ``rank`` or one upper bound for every right link.
-    in_dim : sequence of int, optional
-        Input dimension at every site; required for callables.
     initial_cores : sequence of torch.Tensor or TRDecomposition, optional
         Initial cyclic approximation in standard core shapes.
     init : {``"random"``, ``"svd"``}
@@ -1256,12 +1212,6 @@ def tr_als(source: 'SourceLike',
         never rescaled.
     renormalize : bool
         Whether environments remove global norms and retain log-scales.
-    dtype : torch.dtype, optional
-        Declared callable output ``dtype``.
-    device : str or torch.device
-        Callable evaluation ``device``.
-    batch_size : int, optional
-        Callable evaluation batch size.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
     generator : torch.Generator, optional
@@ -1303,13 +1253,7 @@ def tr_als(source: 'SourceLike',
     update_policy = UpdatePolicy(
         damping=damping,
         acceptance=acceptance)
-    result = TRALS(
-        source=source,
-        in_dim=in_dim,
-        dtype=dtype,
-        device=device,
-        batch_size=batch_size,
-        out_device=out_device).fit(
+    result = TRALS(source, mask=mask, out_device=out_device).fit(
             rank=rank,
             initial_cores=initial_cores,
             init=init,

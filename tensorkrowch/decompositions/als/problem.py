@@ -2,7 +2,7 @@
 This script contains:
 
     Public classes:
-        * ObservedEntries
+        * _ObservedEntries
         * ALSProblem
 
     Internal functions:
@@ -35,7 +35,7 @@ def _zero_safe_relative_error(absolute: torch.Tensor,
 
 
 @dataclass(frozen=True)
-class ObservedEntries:  # MARK: ObservedEntries
+class _ObservedEntries:  # MARK: _ObservedEntries
     """
     Fixed entries defining a matrix/tensor completion objective.
 
@@ -193,7 +193,7 @@ class ALSProblem:  # MARK: ALSProblem
     """
     Composition of a tensor ``source`` and its ALS objective semantics.
 
-    A ``source`` supplies known tensor/function values. ``ObservedEntries`` instead
+    A ``source`` supplies known tensor/function values. ``_ObservedEntries`` instead
     defines a completion objective and may be used without a ``source`` because
     values outside the observed set are unknown. Sampling strategies are added
     separately and do not change either meaning.
@@ -201,10 +201,11 @@ class ALSProblem:  # MARK: ALSProblem
 
     source: Optional[TensorSource] = None  # Shared provider of target values
     # Permanent completion observations, when present
-    observations: Optional[ObservedEntries] = None
+    observations: Optional[_ObservedEntries] = None
     selector: Optional[Any] = None  # Row-selection strategy for a known source
     # Multiplicative residual weights in row order
     weights: Optional[torch.Tensor] = None
+    mask: Optional[TensorSource] = None
     loss: str = 'l2'  # Objective loss identifier
 
     def __post_init__(self) -> None:
@@ -214,9 +215,9 @@ class ALSProblem:  # MARK: ALSProblem
                 (not isinstance(self.source, TensorSource)):
             raise TypeError('`source` should implement TensorSource')
         if (self.observations is not None) and \
-                (not isinstance(self.observations, ObservedEntries)):
+                (not isinstance(self.observations, _ObservedEntries)):
             raise TypeError(
-                '`observations` should be ObservedEntries type')
+                '`observations` should be _ObservedEntries type')
         if self.loss != 'l2':
             raise ValueError("`loss` should currently be 'l2'")
 
@@ -231,10 +232,21 @@ class ALSProblem:  # MARK: ALSProblem
                 raise ValueError(
                     'Source and observations should have matching output shapes')
 
+        if self.mask is not None:
+            if not self.mask.is_discrete_tensor or self.mask.in_dim != self.in_dim:
+                raise ValueError('`mask` should have the source tensor dimensions')
+            indices = torch.zeros((1, len(self.in_dim)), dtype=torch.long,
+                                  device=self.source.device)
+            values = self.mask.evaluate(ConfigurationBatch(indices))
+            if values.dtype != torch.bool or values.shape != (1,):
+                raise TypeError('`mask` should return one boolean per entry')
+            if self.mask.device != self.source.device:
+                raise ValueError('`mask` and `source` should share a device')
+
         if self.weights is not None:
             if self.observations is not None:
                 raise ValueError(
-                    'Completion weights belong to `ObservedEntries`')
+                    'Observed weights belong to `_ObservedEntries`')
             if not isinstance(self.weights, torch.Tensor):
                 raise TypeError('`weights` should be torch.Tensor type')
             out_shape = self.source.out_shape
@@ -281,6 +293,16 @@ class ALSProblem:  # MARK: ALSProblem
                 'Completion targets are known only at observed entries')
         return self.source.evaluate(configurations)
 
+    def entry_weights(self, indices: torch.Tensor) -> Optional[torch.Tensor]:
+        """Returns residual weights, with false mask entries excluded."""
+        weights = None
+        if self.weights is not None:
+            weights = self.weights[tuple(indices.unbind(1))]
+        if self.mask is not None:
+            selected = self.mask.evaluate(ConfigurationBatch(indices))
+            weights = selected if weights is None else weights * selected
+        return weights
+
     def objective_error(self,
                         approximation: torch.Tensor,
                         configurations: Optional[
@@ -303,11 +325,10 @@ class ALSProblem:  # MARK: ALSProblem
                 '`approximation` should match evaluated source values')
         residual = approximation - target
         weighted_target = target
-        if self.weights is not None:
-            indices = _discrete_indices(
-                configurations, self.in_dim, self.source.device)
-            weights = self.weights[tuple(
-                indices[:, site] for site in range(indices.shape[1]))]
+        indices = _discrete_indices(configurations, self.in_dim,
+                                    self.source.device)
+        weights = self.entry_weights(indices)
+        if weights is not None:
             residual = residual * weights
             weighted_target = target * weights
         absolute = torch.linalg.vector_norm(residual)
@@ -318,5 +339,4 @@ class ALSProblem:  # MARK: ALSProblem
 
 __all__ = [
     'ALSProblem',
-    'ObservedEntries',
 ]

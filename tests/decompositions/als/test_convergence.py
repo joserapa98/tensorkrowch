@@ -4,6 +4,7 @@ import pytest
 import torch
 
 import tensorkrowch as tk
+from tensorkrowch.decompositions.als.problem import _ObservedEntries
 
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
                                                      NonFiniteSolutionError)
@@ -157,7 +158,7 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         assert backend.measure_count == 0
 
     def test_completion_is_a_fixed_objective(self):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
             in_dim=(2, 2))

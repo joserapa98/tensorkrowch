@@ -95,8 +95,7 @@ class TestTTSVD:  # MARK: TestTTSVD
 
         with tk.svd_method(svd_method):
             result = tk.decompositions.TTSVD(
-                tensor,
-                n_batches=n_batches,
+                tk.decompositions.DenseTensorSource(tensor, n_batches=n_batches),
                 out_device=None).fit(renormalize=renormalize)
 
         assert result.batch_shape == batch_shape
@@ -200,7 +199,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         tensor[0] = 0
 
         result = tk.decompositions.TTSVD(
-            tensor, n_batches=1, out_device=None).fit(
+            tk.decompositions.DenseTensorSource(tensor, n_batches=1), out_device=None).fit(
                 rank=2,
                 renormalize=renormalize,
                 collect_metrics=True)
@@ -398,8 +397,7 @@ class TestTTSVD:  # MARK: TestTTSVD
             tensor = torch.stack([tensor, tensor])
 
         result = tk.decompositions.TTSVD(
-            tensor,
-            n_batches=n_batches,
+            tk.decompositions.DenseTensorSource(tensor, n_batches=n_batches),
             out_device=None).fit(
                 renormalize=True,
                 **kwargs)
@@ -475,7 +473,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         tensor = torch.arange(48.).reshape(2, 2, 3, 4)
 
         tk.decompositions.TTSVD(
-            tensor, n_batches=1, out_device=None).fit(
+            tk.decompositions.DenseTensorSource(tensor, n_batches=1), out_device=None).fit(
                 rank=2,
                 verbose=2)
 
@@ -510,18 +508,18 @@ class TestTTSVD:  # MARK: TestTTSVD
     @pytest.mark.parametrize(
         'constructor, error_type, match',
         [
-            (([1, 2],), TypeError, '`tensor` should be torch.Tensor type'),
+            (([1, 2],), TypeError, 'should be torch.Tensor type'),
             ((torch.ones(2), True), TypeError,
              '`n_batches` should be int type'),
-            ((torch.ones(2), 1), ValueError, 'leave at least one'),
-            ((torch.ones(2), -1), ValueError, 'leave at least one'),
+            ((torch.ones(2), 1), ValueError, 'leave input axes'),
+            ((torch.ones(2), -1), ValueError, 'leave input axes'),
             ((torch.empty(2, 0),), ValueError,
-             'TT input and batch dimensions should be positive'),
+             'Input dimensions should be positive'),
         ],
     )
     def test_constructor_errors(self, constructor, error_type, match):
         with pytest.raises(error_type, match=match):
-            tk.decompositions.TTSVD(*constructor)
+            tk.decompositions.TTSVD(tk.decompositions.DenseTensorSource(constructor[0], n_batches=constructor[1] if len(constructor) > 1 else 0))
 
     @pytest.mark.parametrize(
         'kwargs, error_type, match',
@@ -722,17 +720,17 @@ def test_quantized_svd_preserves_callable_grid(ordering, device_dtype, assert_cl
         value = (coordinates[:, 0] + 2 * coordinates[:, 1]).to(dtype)
         return value * (1 + 1j) if dtype.is_complex else value
 
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         function, 2, layout=layout, coordinate_map=coordinate_map,
         dtype=dtype, device=device)
-    engine = tk.decompositions.TTSVD.quantized(source, out_device=None)
+    engine = tk.decompositions.TTSVD(source, out_device=None)
     for _ in range(2):
         result = engine.fit(rank=16)
         assert isinstance(result, tk.decompositions.QTTDecomposition)
         assert result.layout == layout
-        assert_close(result.to_dense_grid(), source.to_dense_grid())
+        assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
         indices = torch.tensor([[0, 0], [3, 3], [2, 1]], device=device)
-        assert_close(result.evaluate_indices(indices), source.evaluate_indices(indices))
+        assert_close(result.evaluate_indices(indices), source.evaluate(tk.decompositions.ConfigurationBatch(source.layout.encode_indices(indices))))
         assert not result.metrics.truncations
         assert not isinstance(result + result, tk.decompositions.TensorDecomposition)
         assert result.dtype == dtype and result.device.type == device
@@ -746,8 +744,7 @@ def test_dense_svd_has_fixed_axes_and_no_quantization():
     assert result.in_dim == (4, 4)
     assert not isinstance(result, tk.formats.QTT)
     torch.testing.assert_close(result.contract_dense(), data)
-    with pytest.raises(TypeError, match='QuanticsVectorSource'):
-        tk.decompositions.TTSVD.quantized(data)
+    assert tk.decompositions.TTSVD(data).source.is_discrete_tensor
     with pytest.raises(TypeError, match='quantization'):
         tk.decompositions.tt_svd(data, quantization=tk.formats.QuantizedLayout(2, 2, 2))
 
@@ -760,7 +757,7 @@ def test_qtt_svd_function(criteria, renormalize, device_dtype, assert_close):
     device, dtype = device_dtype
     real_dtype = torch.empty((), dtype=dtype).real.dtype
     coefficient = 1 + 1j if dtype.is_complex else 1
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         lambda coordinates: torch.exp(
             coefficient * coordinates.sum(-1)).to(dtype),
         n_coordinates=1, base=2, level=3,
@@ -770,7 +767,7 @@ def test_qtt_svd_function(criteria, renormalize, device_dtype, assert_close):
     options = dict(criteria, renormalize=renormalize, collect_metrics=True)
     result = tk.decompositions.qtt_svd(
         source, out_device=None, **options)
-    expected = tk.decompositions.TTSVD.quantized(
+    expected = tk.decompositions.TTSVD(
         source, out_device=None).fit(**options)
 
     assert isinstance(result, tk.decompositions.QTTDecomposition)
@@ -778,10 +775,23 @@ def test_qtt_svd_function(criteria, renormalize, device_dtype, assert_close):
     assert result.dtype == dtype
     assert result.metrics.truncations
     assert_close(result.contract_dense(), expected.contract_dense())
-    assert_close(result.to_dense_grid(), source.to_dense_grid())
+    assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
     assert result.as_info()['metadata']['algorithm'] == 'tt_svd'
 
 
 def test_qtt_svd_rejects_dense_input():
     with pytest.raises(TypeError, match='source'):
         tk.decompositions.qtt_svd(torch.ones(2, 2, 2, 2))
+
+
+def test_dense_contraction_capability_does_not_require_a_builtin_source(capsys):
+    class Source:
+        def contract_dense(self):
+            return torch.ones(2, 2)
+
+    source = Source()
+    engine = tk.decompositions.TTSVD(source)
+    result = engine.fit(rank=1, verbose=1)
+    assert engine.source is source
+    torch.testing.assert_close(result.contract_dense(), torch.ones(2, 2))
+    assert 'TT-SVD' in capsys.readouterr().out

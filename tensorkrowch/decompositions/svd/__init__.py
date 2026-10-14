@@ -1,65 +1,24 @@
 """
-Singular-value decomposition algorithms for tensor networks.
+Singular-value decomposition algorithms for tensor trains and tensor rings.
 
-Public vector decomposition engines:
+    Public engines:
+        * TTSVD, TRSVD
+        * TTMSVD, TRMSVD
 
-    TTSVD.fit()
-        └─ successive open-boundary SVD cuts ──────> TTDecomposition
+    Public functions:
+        * tt_svd, tr_svd, ttm_svd, trm_svd
+        * qtt_svd, qtr_svd, qttm_svd, qtrm_svd
 
-    TRSVD.fit()
-        ├─ initial interior bipartition
-        ├─ split the central rank into cyclic ranks
-        └─ TTSVD on the left and right subchains ─> TRDecomposition
+    Workflow:
+        source.contract_dense() -> dense site axes
+        Matrix source -> fuse input/output pairs
+        TTSVD / TRSVD -> numerical TT / TR cores
+        Source metadata -> vector/matrix/Quantics decomposition
 
-Public matrix decomposition engines:
-
-    TTMSVD.fit()
-        ├─ _prepare_matrix_input() ────────────────> _MatrixInput
-        ├─ fuse each local (in, out) pair
-        ├─ TTSVD.fit()
-        └─ reopen local pairs ────────────────────> TTMDecomposition
-
-    TRMSVD.fit()
-        ├─ _prepare_matrix_input() ────────────────> _MatrixInput
-        ├─ fuse each local (in, out) pair
-        ├─ TRSVD.fit()
-        └─ reopen local pairs ────────────────────> TRMDecomposition
-
-Simple functional interfaces:
-
-    tt_svd(...)   = TTSVD(...).fit(...)
-    tr_svd(...)   = TRSVD(...).fit(...)
-    ttm_svd(...)  = TTMSVD(...).fit(...)
-    trm_svd(...)  = TRMSVD(...).fit(...)
-
-Quantics functional interfaces:
-
-    qtt_svd(source)  = TTSVD.quantized(source).fit(...)
-    qtr_svd(source)  = TRSVD.quantized(source).fit(...)
-    qttm_svd(source) = TTMSVD.quantized(source).fit(...)
-    qtrm_svd(source) = TRMSVD.quantized(source).fit(...)
-
-Shared internal infrastructure:
-
-    svd.utils
-        Stable tensor normalization and logarithmic norm calculations.
-
-    _TruncationSpec
-        Shared rank and singular-value truncation criteria.
-
-    _SVDProgress
-        Shared live reporting of completed SVD cuts.
-
-    _MatrixInput
-        Normalized matrix dimensions and interleaved/fused dense tensors.
-
-    _prepare_matrix_input(...)
-        Validates and converts dense matrix inputs into _MatrixInput.
-
-The engine classes fix the tensor and structural arguments at construction and
-allow repeated calls to fit() with different truncation options. The functional
-interfaces instantiate the corresponding engine, run one fit and return its
-decomposition object, including cores, metadata and optional metrics.
+The source owns dimensions, ordering and evaluation runtime. Engines fix it
+at construction; ``fit`` controls truncation and numerical normalization.
+``TTMSVD`` and ``TRMSVD`` restrict the same shared algorithms to matrix sources.
+The functional interfaces return decomposition objects directly.
 """
 
 from tensorkrowch.decompositions.svd.tr import TRSVD, qtr_svd, tr_svd

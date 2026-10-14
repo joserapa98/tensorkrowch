@@ -8,7 +8,6 @@ This script contains:
         * SketchGaugeRecursion
         * _SketchTargetProvider
         * TRRSS
-        * _QuantizedTRRSS
         * TRRS
 
     Functions:
@@ -44,7 +43,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TRDecomposition,
+from tensorkrowch.decompositions.results import (TTDecomposition, _result_from_source, TRDecomposition,
                                                  TensorDecomposition)
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
@@ -65,24 +64,20 @@ from tensorkrowch.decompositions.ring.tt2tr import TT2TR
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder,
                                                                _EvaluationSession)
-from tensorkrowch.decompositions.sketching.fitting import InputFitter
 from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
                                                        _MaterializedPhi)
-from tensorkrowch.decompositions.sketching.projections import RangeProjector
 from tensorkrowch.decompositions.sketching.sketches import SketchOperator
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
+from tensorkrowch.decompositions.sources.base import ConfigurationBatch
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
-from tensorkrowch.decompositions.sketching.transforms import (GlobalValueTransform,
-                                                              LocalValueTransform,
-                                                              _apply_local_transform,
+from tensorkrowch.decompositions.sketching.transforms import (_apply_local_transform,
                                                               _collect_local_queries,
                                                               _prepare_global_transform)
 from tensorkrowch.decompositions.sketching.tt import (Device,
                                                       Samples,
                                                       TTRS,
-                                                      TTRSS,
-                                                      _QuantizedRSSMixin)
-from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
+                                                      TTRSS)
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
 
 _Rank = Union[int, Sequence[int]]
@@ -458,56 +453,6 @@ class TRRSS(TTRSS):  # MARK: TRRSS
     [1, 1, 1, 1]
     """
 
-    @classmethod
-    def quantized(cls,
-                  source: QuanticsVectorSource,
-                  *,
-                  sample_space: str = 'coordinates',
-                  out_device: Device = 'cpu',
-                  input_fitters: Optional[Sequence[InputFitter]] = None,
-                  range_projector: Optional[RangeProjector] = None,
-                  global_transform: Optional[GlobalValueTransform] = None,
-                  local_transform: Optional[LocalValueTransform] = None,
-                  local_solver: Optional[LeastSquaresSolver] = None,
-                  synchronize_timers: bool = True) -> 'TRRSS':
-        """
-        Creates a Quantics RSS problem with basis-embedded digit sites.
-
-        Parameters
-        ----------
-        source : QuanticsVectorSource
-            Scalar coordinate callable with its fixed layout and map.
-        sample_space : {"coordinates", "digits"}, optional
-            Space of the sketch samples passed to :meth:`fit`. Coordinates are
-            quantized through the source; digits already follow its site order.
-        out_device : str or torch.device, optional
-            Device receiving finalized cores. ``None`` retains the source device.
-        input_fitters : sequence of InputFitter, optional
-            Site fitting strategies, as in the ordinary constructor.
-        range_projector : RangeProjector, optional
-            Range projection strategy.
-        global_transform, local_transform : optional
-            Value transforms used by the ordinary RSS workflow.
-        local_solver : LeastSquaresSolver, optional
-            Solver for the core-determining systems.
-        synchronize_timers : bool, optional
-            Synchronizes device operations when collecting timings.
-
-        Returns
-        -------
-        TRRSS
-            Reusable problem returning a Quantics decomposition.
-        """
-        return _QuantizedTRRSS(
-            source=source,
-            sample_space=sample_space,
-            out_device=out_device,
-            input_fitters=input_fitters,
-            range_projector=range_projector,
-            global_transform=global_transform,
-            local_transform=local_transform,
-            local_solver=local_solver,
-            synchronize_timers=synchronize_timers)
 
     def fit(self,
             sketch_samples: Samples,
@@ -596,7 +541,7 @@ class TRRSS(TTRSS):  # MARK: TRRSS
 
             .. math::
 
-        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         batch_size : int, optional
@@ -1107,26 +1052,32 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                 'shape': tuple(core.shape),
             })
             context.emit('core', site=site, level=3, values={'tensor': core})
-        return TRDecomposition(
+        result = TRDecomposition(
             cores=[context.runtime.finalize(core) for core in context.cores],
+            in_sites=self.outputs.input_positions,
             metrics=context.metrics,
             metadata=metadata)
+        return _result_from_source(result, self._source_like) if \
+            getattr(self._source_like, 'is_matrix', False) or isinstance(
+                self._source_like, CallableQuanticsSource) else result
 
     def _validate_result(self,
                          result: 'TensorDecomposition',
                          context: Any) -> None:
-        if not isinstance(result, TensorDecomposition) or not isinstance(result, TR):
+        if not isinstance(result, TensorDecomposition) or not result._cyclic:
             raise TypeError('`result` should be a decomposition with TR format')
+        if result.out_dim is not None:
+            dimensions = tuple(dim for pair in zip(result.in_dim, result.out_dim)
+                               for dim in pair)
+            if dimensions != self.outputs.site_dim(self.embeddings):
+                raise ValueError('The result matrix dimensions are inconsistent')
+            return
         expected = context.state.get(
             'fitted_site_dim', self.outputs.site_dim(self.embeddings))
         if result.in_dim != expected:
             raise ValueError('The result input dimensions are inconsistent')
 
 
-class _QuantizedTRRSS(_QuantizedRSSMixin, TRRSS):  # MARK: _QuantizedTRRSS
-    """Internal TRRSS specialization that normalizes QTR domain samples."""
-
-    _quantized_algorithm = 'qtr_rss'
 
 
 def _merge_rs_metrics(tt_metrics: DecompositionMetrics,
@@ -1173,39 +1124,28 @@ class TRRS(TTRS):  # MARK: TRRS
     :class:`~tensorkrowch.models.MPS` with
     ``tk.models.MPS(tensors=result.cores)``.
 
-    Parameters are the same as :class:`TTRS`; exactly one of ``source`` and
-    ``dataset`` is required.
+    Parameters are the same as :class:`TTRS`. Dataset sources are constructed
+    separately with ``SparseTensorSource.from_data``.
 
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> decomposer = tk.decompositions.TRRS(dataset=dataset, in_dim=(2, 2, 2))
+    >>> decomposer = tk.decompositions.TRRS(
+    ...     tk.decompositions.SparseTensorSource.from_data(
+    ...         dataset, in_dim=(2, 2, 2)))
     >>> result = decomposer.fit(rank=1)
     >>> result.rank
     [1, 1, 1]
     """
 
     def __init__(self,
-                 source: 'SourceLike' = None,
+                 source: 'SourceLike',
                  *,
-                 dataset: Optional[torch.Tensor] = None,
-                 in_dim: Optional[Sequence[int]] = None,
-                 weights: Optional[torch.Tensor] = None,
                  sketch_operator: Optional[SketchOperator] = None,
-                 dtype: Optional[torch.dtype] = None,
-                 device: Device = None,
                  out_device: Device = 'cpu',
                  synchronize_timers: bool = True) -> None:
-        super().__init__(
-            source=source,
-            dataset=dataset,
-            in_dim=in_dim,
-            weights=weights,
-            sketch_operator=sketch_operator,
-            dtype=dtype,
-            device=device,
-            out_device=None,
-            synchronize_timers=synchronize_timers)
+        super().__init__(source, sketch_operator=sketch_operator,
+                         out_device=None, synchronize_timers=synchronize_timers)
         self._tr_out_device = out_device
 
     @torch.no_grad()
@@ -1332,6 +1272,11 @@ class TRRS(TTRS):  # MARK: TRRS
             strict_system=strict_system,
             verbose=0,
             collect_metrics=collect_metrics)
+        if tt_result.out_dim is not None:
+            cores = tt_result._effective_cores()
+            tt_result = TTDecomposition(
+                (cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1)),
+                metrics=tt_result.metrics, metadata=tt_result.metadata)
         tr_result = TT2TR(
             tt_result,
             out_device=self._tr_out_device).fit(
@@ -1402,15 +1347,12 @@ class TRRS(TTRS):  # MARK: TRRS
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return result
+        return _result_from_source(result, self._source)
 
 
 @torch.no_grad()
-def tr_rs(source: 'SourceLike' = None,
+def tr_rs(source: 'SourceLike',
           *,
-          dataset: Optional[torch.Tensor] = None,
-          in_dim: Optional[Sequence[int]] = None,
-          weights: Optional[torch.Tensor] = None,
           sketch_operator: Optional[SketchOperator] = None,
           rank: int = 1,
           center: Optional[int] = None,
@@ -1427,8 +1369,6 @@ def tr_rs(source: 'SourceLike' = None,
           rtol: Optional[float] = None,
           cum_percentage: Optional[float] = None,
           batch_size: Optional[int] = None,
-          dtype: Optional[torch.dtype] = None,
-          device: Device = None,
           generator: Optional[torch.Generator] = None,
           strict_system: bool = False,
           out_device: Device = 'cpu',
@@ -1446,7 +1386,9 @@ def tr_rs(source: 'SourceLike' = None,
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
-    >>> cores = tk.decompositions.tr_rs(dataset=dataset, in_dim=(2, 2, 2), rank=1)
+    >>> cores = tk.decompositions.tr_rs(
+    ...     tk.decompositions.SparseTensorSource.from_data(
+    ...         dataset, in_dim=(2, 2, 2)), rank=1)
     >>> len(cores)
     3
     """
@@ -1458,12 +1400,7 @@ def tr_rs(source: 'SourceLike' = None,
         raise TypeError('`return_info` should be bool type')
     result = TRRS(
         source=source,
-        dataset=dataset,
-        in_dim=in_dim,
-        weights=weights,
         sketch_operator=sketch_operator,
-        dtype=dtype,
-        device=device,
         out_device=out_device).fit(
             rank=rank,
             center=center,
@@ -1492,7 +1429,7 @@ def tr_rs(source: 'SourceLike' = None,
 
 
 @torch.no_grad()
-def qtr_rss(source: QuanticsVectorSource,
+def qtr_rss(source: CallableQuanticsSource,
             sketch_samples: Samples,
             *,
             sample_space: str = 'coordinates',
@@ -1523,7 +1460,7 @@ def qtr_rss(source: QuanticsVectorSource,
 
     Examples
     --------
-    >>> source = tk.decompositions.QuanticsVectorSource(
+    >>> source = tk.decompositions.CallableQuanticsSource(
     ...     lambda coordinates: 1 + coordinates[:, 0], 1,
     ...     base=2, level=3, domain=torch.tensor([0., 1.]))
     >>> samples = torch.arange(8).float().reshape(-1, 1) / 8
@@ -1537,7 +1474,11 @@ def qtr_rss(source: QuanticsVectorSource,
         raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
-    decomposer = TRRSS.quantized(source, sample_space=sample_space,
+    if sample_space not in ('coordinates', 'digits'):
+        raise ValueError("`sample_space` should be 'coordinates' or 'digits'")
+    if sample_space == 'digits':
+        sketch_samples = ConfigurationBatch(sketch_samples)
+    decomposer = TRRSS(source=source,
                                 out_device=out_device)
     result = decomposer.fit(
         sketch_samples,
@@ -1651,7 +1592,7 @@ def tr_rss(function: Callable,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     batch_size : int, optional
@@ -1699,7 +1640,7 @@ def tr_rss(function: Callable,
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     result = TRRSS(
-        function=function,
+        source=function,
         embedding=embedding,
         in_dim=in_dim,
         domain=domain,

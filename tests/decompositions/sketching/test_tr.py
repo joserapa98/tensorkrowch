@@ -1,5 +1,7 @@
 """Tests for Tensor Ring recursive sketching from samples."""
 
+import math
+
 import pytest
 import torch
 
@@ -25,10 +27,7 @@ class TestTRRSS:
 
     def test_rank_one_function_matches_dense_tensor(self):
         function, embedding, samples, domain = _rank_one_problem()
-        result = tk.decompositions.TRRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain).fit(
+        result = tk.decompositions.TRRSS(embedding=embedding, domain=domain, source=function).fit(
                 samples,
                 rank=1,
                 collect_metrics=True)
@@ -45,10 +44,7 @@ class TestTRRSS:
     def test_repeated_fits_are_independent_and_functional_api_is_compatible(
             self):
         function, embedding, samples, domain = _rank_one_problem()
-        decomposer = tk.decompositions.TRRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain)
+        decomposer = tk.decompositions.TRRSS(embedding=embedding, domain=domain, source=function)
         first = decomposer.fit(samples, rank=1)
         second = decomposer.fit(samples, rank=1)
         cores, info = tk.decompositions.tr_rss(
@@ -77,11 +73,7 @@ class TestTRRSS:
                 right[None, None, :]
 
         labels = torch.arange(samples.shape[0]).remainder(4)
-        result = tk.decompositions.TRRSS(
-            function=tensor_function,
-            embedding=embedding,
-            domain=domain,
-            out_position=(1, 4)).fit(
+        result = tk.decompositions.TRRSS(embedding=embedding, domain=domain, out_position=(1, 4), source=tensor_function).fit(
                 samples,
                 labels=labels,
                 rank=1,
@@ -93,10 +85,7 @@ class TestTRRSS:
 
     def test_adaptive_block_discovers_ranks_and_padding_is_opt_in(self):
         function, embedding, samples, domain = _rank_one_problem(n_sites=5)
-        decomposer = tk.decompositions.TRRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain)
+        decomposer = tk.decompositions.TRRSS(embedding=embedding, domain=domain, source=function)
         adaptive = decomposer.fit(
             samples,
             rank=(2, 2, 2, 2, 2),
@@ -120,10 +109,7 @@ class TestTRRSS:
     def test_alternating_schedule_solves_odd_ring_in_two_stages(self):
         function, embedding, samples, domain = _rank_one_problem(n_sites=5)
         with pytest.warns(tk.decompositions.ExperimentalWarning):
-            result = tk.decompositions.TRRSS(
-                function=function,
-                embedding=embedding,
-                domain=domain).fit(
+            result = tk.decompositions.TRRSS(embedding=embedding, domain=domain, source=function).fit(
                     samples,
                     rank=1,
                     schedule='alternating',
@@ -137,10 +123,7 @@ class TestTRRSS:
     def test_alternating_schedule_records_even_ring_fallback(self):
         function, embedding, samples, domain = _rank_one_problem(n_sites=4)
         with pytest.warns(tk.decompositions.ExperimentalWarning):
-            result = tk.decompositions.TRRSS(
-                function=function,
-                embedding=embedding,
-                domain=domain).fit(
+            result = tk.decompositions.TRRSS(embedding=embedding, domain=domain, source=function).fit(
                     samples,
                     rank=1,
                     schedule='alternating')
@@ -173,7 +156,7 @@ class TestQTRRSS:  # MARK: TestQTRRSS
         indices, physical = _physical_grid(
             layout, coordinate_map, torch.tensor([0., 1.]))
 
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda values: torch.ones_like(values[:, 0]),
             layout.n_coordinates,
             layout=layout,
@@ -239,22 +222,18 @@ class TestTRRS:  # MARK: TestTRRS
         dataset = torch.tensor([
             [0, 0, 0], [0, 0, 0], [1, 1, 1]])
         with pytest.warns(tk.decompositions.ExperimentalWarning):
-            cores, info = tk.decompositions.tr_rs(
-                dataset=dataset,
-                in_dim=(2, 2, 2),
-                rank=1,
-                return_info=True)
+            cores, info = tk.decompositions.tr_rs(tk.decompositions.SparseTensorSource.from_data(dataset, in_dim=(2, 2, 2)), rank=1, return_info=True)
 
         result = tk.decompositions.TRDecomposition(cores)
         assert result.rank == [1, 1, 1]
-        assert info['metadata']['source_type'] == 'EmpiricalDistribution'
+        assert info['metadata']['source_type'] == 'SparseTensorSource'
         assert info['metrics']['fidelities'][0]['fidelity'] > 1 - 1e-5
 
     def test_tt_source_uses_structured_contractions(self):
         _, dense = _rank_one_sparse()
         tt = tk.decompositions.TTSVD(
             dense, out_device=None).fit(rank=1)
-        source = tk.decompositions.TTTensorSource(tt)
+        source = tk.decompositions.FormatSource(tt)
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TRRS(
                 source, out_device=None).fit(rank=1)
@@ -307,14 +286,14 @@ def test_rss_function_formats_devices_and_sample_error(quantized,
         layout = tk.formats.QuantizedLayout(1, 2, 3)
         coordinate_map = tk.formats.AffineCoordinateMap(
             torch.tensor([0., 1.], dtype=real_dtype, device=device), layout.grid_size)
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             function,
             layout.n_coordinates,
             layout=layout,
             coordinate_map=coordinate_map,
             device=device,
             dtype=dtype)
-        problem = engine.quantized(
+        problem = engine(source=
             source,
             out_device=None)
     else:
@@ -337,7 +316,7 @@ def test_rss_function_formats_devices_and_sample_error(quantized,
 
 
 @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])
-def test_quantized_rss_rejects_tensor_outputs(out_shape):
+def test_quantized_rss_preserves_tensor_outputs(out_shape):
     layout = tk.formats.QuantizedLayout(1, base=2, level=3)
     physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
@@ -345,17 +324,17 @@ def test_quantized_rss_rejects_tensor_outputs(out_shape):
         return torch.ones(values.shape[0], *out_shape, dtype=values.dtype,
                           device=values.device)
 
-    with pytest.raises(ValueError, match='out_shape'):
-        source = tk.decompositions.QuanticsVectorSource(
-            function,
-            layout.n_coordinates,
-            layout=layout,
-            coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
-        tk.decompositions.qtr_rss(
-            source,
-            physical,
-            rank=4,
-            return_result=True)
+    source = tk.decompositions.CallableQuanticsSource(
+        function,
+        layout.n_coordinates,
+        layout=layout,
+        coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
+    result = tk.decompositions.TRRSS(source).fit(
+        physical.repeat_interleave(math.prod(out_shape), 0),
+            labels=torch.arange(math.prod(out_shape)).repeat(physical.shape[0]),
+        rank=1, generator=torch.Generator().manual_seed(0))
+    assert result.out_shape == out_shape
+    torch.testing.assert_close(result.evaluate_coordinates(physical), function(physical))
 
 
 @pytest.mark.parametrize('singleton_axis', [False, True])
@@ -367,15 +346,33 @@ def test_quantized_rss_accepts_scalar_outputs(singleton_axis):
         result = torch.ones_like(values[:, 0])
         return result.unsqueeze(-1) if singleton_axis else result
 
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         function,
         layout.n_coordinates,
         layout=layout,
         coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
-    result = tk.decompositions.qtr_rss(
-        source,
+    result = tk.decompositions.TRRSS(source).fit(
         physical,
-        rank=1,
-        return_result=True)
+        rank=1,)
     assert result.n_sites == layout.n_sites
     assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))
+
+
+def test_matrix_source_returns_matrix_ring():
+    source = tk.decompositions.DenseTensorSource.matrix(
+        torch.ones(2, 2, 2, 2, dtype=torch.float64))
+    samples = torch.cartesian_prod(torch.arange(2), torch.arange(2)).repeat_interleave(4, 0)
+    result = tk.decompositions.TRRSS(source).fit(
+        samples, labels=torch.arange(4).repeat(4), rank=1,
+        generator=torch.Generator().manual_seed(0))
+    assert isinstance(result, tk.decompositions.TRMDecomposition)
+    torch.testing.assert_close(result.contract_dense(), source.contract_dense())
+
+
+def test_matrix_rs_reuses_the_numerical_tensor_view():
+    source = tk.decompositions.DenseTensorSource.matrix(torch.ones(2, 2, 2, 2, 2, 2))
+    with pytest.warns(tk.decompositions.ExperimentalWarning):
+        result = tk.decompositions.TRRS(
+            source, sketch_operator=tk.decompositions.SampledSketch()).fit(rank=1)
+    assert isinstance(result, tk.decompositions.TRMDecomposition)
+    torch.testing.assert_close(result.contract_dense(), source.contract_dense())

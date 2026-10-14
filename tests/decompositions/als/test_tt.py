@@ -4,6 +4,7 @@ import pytest
 import torch
 
 import tensorkrowch as tk
+from tensorkrowch.decompositions.als.problem import _ObservedEntries
 
 from tensorkrowch.decompositions.observers import HistoryObserver
 
@@ -69,11 +70,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
         def function(indices):
             return dense[indices[:, 0], indices[:, 1], indices[:, 2]]
 
-        result = tk.decompositions.TTALS(
-            function,
-            in_dim=(2, 2, 2),
-            dtype=torch.complex128,
-            out_device=None).fit(
+        result = tk.decompositions.TTALS(tk.decompositions.CallableTensorSource(function, in_dim=(2, 2, 2), dtype=torch.complex128, out_shape=()), out_device=None).fit(
                 rank=2,
                 init='svd',
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -91,11 +88,7 @@ class TestTTALSExact:  # MARK: TestTTALSExact
             evaluations.append(indices.clone())
             return dense[indices[:, 0], indices[:, 1], indices[:, 2]]
 
-        decomposition = tk.decompositions.TTALS(
-            function,
-            in_dim=(2, 2, 2),
-            dtype=torch.float64,
-            out_device=None)
+        decomposition = tk.decompositions.TTALS(tk.decompositions.CallableTensorSource(function, in_dim=(2, 2, 2), dtype=torch.float64, out_shape=()), out_device=None)
         convergence = tk.decompositions.ConvergencePolicy(max_sweeps=1)
 
         first = decomposition.fit(
@@ -206,13 +199,12 @@ class TestTTALSValidationAndWrapper:  # MARK: TestTTALSValidationAndWrapper
             tk.decompositions.TTALS(tensor).fit(
                 rank=1, initial_cores=initial)
 
-    def test_vector_output_is_rejected_explicitly(self):
-        tensor = torch.randn(2, 2, 3)
-        source = tk.decompositions.DenseTensorSource(
-            tensor, in_features=(0, 1))
-
-        with pytest.raises(ValueError, match='scalar tensor source'):
-            tk.decompositions.TTALS(source).fit(rank=2)
+    def test_vector_output_uses_response_sites(self):
+        tensor = torch.arange(12., dtype=torch.float64).reshape(2, 2, 3)
+        source = tk.decompositions.DenseTensorSource(tensor, in_sites=(0, 1))
+        result = tk.decompositions.TTALS(source).fit(rank=3, init='svd')
+        assert result.in_sites == (0, 1) and result.out_shape == (3,)
+        torch.testing.assert_close(result.contract_dense(), tensor)
 
     def test_functional_wrapper_returns_cores_and_optional_info(self):
         _, tensor = _exact_tt()
@@ -279,11 +271,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
         tensor = left[:, None] * right
         indices = torch.cartesian_prod(torch.arange(3), torch.arange(4))[:-1]
         values = tensor[indices[:, 0], indices[:, 1]]
-        decomposition = tk.decompositions.TTALS.completion(
-            indices,
-            values,
-            in_dim=tensor.shape,
-            out_device=None)
+        decomposition = tk.decompositions.TTALS(tk.decompositions.SparseTensorSource(indices, values, tensor.shape), mask=tk.decompositions.SparseTensorSource(indices, torch.ones(indices.shape[0], dtype=torch.bool, device=indices.device), tensor.shape), out_device=None)
 
         result = decomposition.fit(
             rank=1,
@@ -307,7 +295,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
         ])
         values = tensor[indices[:, 0], indices[:, 1], indices[:, 2]]
         weights = torch.tensor([2., 1., 0.5, 3.], dtype=torch.float64)
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=indices,
             values=values,
             in_dim=tensor.shape,
@@ -318,8 +306,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
             import_module('tensorkrowch.decompositions.als.tt'),
             '_resolve_observer', lambda *args: history)
 
-        result = tk.decompositions.TTALS.completion(
-            observations, out_device=None).fit(
+        result = tk.decompositions.TTALS(tk.decompositions.SparseTensorSource(observations.indices, observations.values, observations.in_dim), mask=tk.decompositions.SparseTensorSource(observations.indices, torch.ones(observations.indices.shape[0], dtype=torch.bool, device=observations.indices.device), observations.in_dim), weights=None if observations.weights is None else tk.decompositions.SparseTensorSource(observations.indices, observations.weights, observations.in_dim).contract_dense(), out_device=None).fit(
                 rank=2,
                 generator=torch.Generator().manual_seed(51),
                 convergence=tk.decompositions.ConvergencePolicy(
@@ -337,10 +324,7 @@ class TestTTALSCompletion:  # MARK: TestTTALSCompletion
                 if event.name == 'sample_refresh'] == [0]
 
     def test_completion_rejects_exact_or_svd_initialization(self):
-        decomposition = tk.decompositions.TTALS.completion(
-            torch.tensor([[0, 0], [1, 1]]),
-            torch.tensor([1., 2.]),
-            in_dim=(2, 2))
+        decomposition = tk.decompositions.TTALS(tk.decompositions.SparseTensorSource(torch.tensor([[0, 0], [1, 1]]), torch.tensor([1., 2.]), (2, 2)), mask=tk.decompositions.SparseTensorSource(torch.tensor([[0, 0], [1, 1]]), torch.ones(torch.tensor([[0, 0], [1, 1]]).shape[0], dtype=torch.bool, device=torch.tensor([[0, 0], [1, 1]]).device), (2, 2)), out_device='cpu')
 
         with pytest.raises(ValueError, match='permanently observed'):
             decomposition.fit(rank=2, sampling='exact')
@@ -364,11 +348,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
         monkeypatch.setattr(
             import_module('tensorkrowch.decompositions.als.tt'),
             '_resolve_observer', lambda *args: history)
-        result = tk.decompositions.TTALS(
-            function,
-            in_dim=tensor.shape,
-            dtype=torch.float64,
-            out_device=None).fit(
+        result = tk.decompositions.TTALS(tk.decompositions.CallableTensorSource(function, in_dim=tensor.shape, dtype=torch.float64, out_shape=()), out_device=None).fit(
                 rank=2,
                 sampling='uniform',
                 n_samples=12,
@@ -498,10 +478,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
             return tensor[tuple(indices[:, site]
                                 for site in range(indices.shape[1]))]
 
-        tk.decompositions.TTALS(
-            function,
-            in_dim=tensor.shape,
-            dtype=torch.float64).fit(
+        tk.decompositions.TTALS(tk.decompositions.CallableTensorSource(function, in_dim=tensor.shape, dtype=torch.float64, out_shape=())).fit(
                 rank=2,
                 sampling='leverage',
                 n_samples=7,
@@ -562,14 +539,14 @@ def test_als_formats_devices_and_quantization(gauge,
         data = data * (1 + 1j)
     if quantized:
         real_dtype = data.real.dtype
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda coordinates: torch.exp(coordinates[:, 0]).to(dtype) *
             ((1 + 1j) if dtype.is_complex else 1),
             1, base=2, level=3,
             domain=torch.tensor([0., 1.], dtype=real_dtype, device=device),
             dtype=dtype, device=device)
-        problem = engine.quantized(source, out_device=None)
-        data = source.to_dense_grid()
+        problem = engine(source, out_device=None)
+        data = source.contract_dense_grid_axes()
     else:
         problem = engine(data, out_device=None)
     options = dict(rank=1, init='svd', gauge=gauge,
@@ -580,7 +557,7 @@ def test_als_formats_devices_and_quantization(gauge,
             problem.fit(**options)
         return
     result = problem.fit(**options)
-    dense = result.to_dense_grid() if quantized else result.contract_dense()
+    dense = result.contract_dense_grid_axes() if quantized else result.contract_dense()
     assert_close(dense, data.reshape(8) if quantized else data)
     assert result.dtype == dtype and result.device.type == device
     assert result.metrics.sweeps
@@ -593,26 +570,25 @@ def test_quantized_als_callable_and_repeated_fits(ordering):
     layout = tk.formats.QuantizedLayout(2, 2, 2, ordering=ordering)
     coordinate_map = tk.formats.AffineCoordinateMap(
         torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64), layout.grid_size)
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
         2, layout=layout, coordinate_map=coordinate_map)
-    engine = tk.decompositions.TTALS.quantized(source, out_device=None)
+    engine = tk.decompositions.TTALS(source, out_device=None)
     for _ in range(2):
         result = engine.fit(rank=2, init='svd',
                             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
-        torch.testing.assert_close(result.to_dense_grid(), source.to_dense_grid())
+        torch.testing.assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
         coordinates = torch.tensor([[0., 0.], [0.75, 0.75]], dtype=torch.float64)
         torch.testing.assert_close(result.evaluate_coordinates(coordinates),
                                    source.function(coordinates))
         assert not result.metrics.sweeps
-    other = tk.decompositions.QuanticsVectorSource(
+    other = tk.decompositions.CallableQuanticsSource(
         source.function, 2, layout=tk.formats.QuantizedLayout(
             2, 2, 2, ordering='grouped' if ordering == 'interleaved' else 'interleaved'),
         coordinate_map=coordinate_map)
     with pytest.raises(ValueError, match='fixed digit layout'):
-        tk.decompositions.TTALS.quantized(other).fit(initial_cores=result)
-    with pytest.raises(TypeError, match='QuanticsVectorSource'):
-        tk.decompositions.TTALS.quantized(torch.ones(4, 4))
+        tk.decompositions.TTALS(other).fit(initial_cores=result)
+    assert tk.decompositions.TTALS(torch.ones(4, 4)).source.is_discrete_tensor
 
 
 def test_tensor_and_completion_axes_are_not_quantized():
@@ -622,10 +598,101 @@ def test_tensor_and_completion_axes_are_not_quantized():
     indices = torch.tensor([[0, 0], [1, 3]])
     values = torch.tensor([1., 2.])
     weights = torch.tensor([2., 3.])
-    completion = tk.decompositions.TTALS.completion(
-        indices, values, in_dim=(4, 4), weights=weights)
+    completion = tk.decompositions.TTALS(tk.decompositions.SparseTensorSource(indices, values, (4, 4)), mask=tk.decompositions.SparseTensorSource(indices, torch.ones(indices.shape[0], dtype=torch.bool, device=indices.device), (4, 4)), weights=tk.decompositions.SparseTensorSource(indices, weights, (4, 4)).contract_dense(), out_device='cpu')
     observed = completion.problem.observations
     assert completion.in_dim == (4, 4)
     torch.testing.assert_close(observed.indices, indices)
     torch.testing.assert_close(observed.values, values)
     torch.testing.assert_close(observed.weights, weights)
+
+
+@pytest.mark.parametrize('mask_kind', ['dense', 'sparse', 'callable'])
+@pytest.mark.parametrize('sampling', ['exact', 'uniform', 'leverage'])
+def test_boolean_masks_include_observed_zeros(mask_kind, sampling, device_dtype, assert_close):
+    device, dtype = device_dtype
+    tensor = torch.tensor([[0., 2.], [3., 9.]], dtype=dtype, device=device)
+    selected = torch.tensor([[True, True], [True, False]], device=device)
+    if mask_kind == 'dense':
+        mask = tk.decompositions.DenseTensorSource(selected)
+    elif mask_kind == 'sparse':
+        indices = torch.tensor([[0, 0], [0, 1], [1, 0], [0, 0]], device=device)
+        mask = tk.decompositions.SparseTensorSource(
+            indices, torch.ones(4, device=device, dtype=torch.bool), (2, 2))
+    else:
+        mask = tk.decompositions.CallableTensorSource(
+            lambda indices: selected[tuple(indices.T)], (2, 2),
+            dtype=torch.bool, device=device, out_shape=())
+    engine = tk.decompositions.TTALS(tensor, mask=mask, out_device=None)
+    options = {'rank': 2, 'generator': torch.Generator(device=device).manual_seed(120),
+               'collect_metrics': True,
+               'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=2)}
+    if mask_kind == 'sparse':
+        if sampling != 'exact':
+            with pytest.raises(ValueError, match='permanently observed'):
+                engine.fit(sampling=sampling, n_samples=8, **options)
+            return
+    elif sampling != 'exact':
+        options.update(sampling=sampling, n_samples=128)
+    result = engine.fit(**options)
+    approximation = result.contract_dense()
+    assert_close(approximation[selected], tensor[selected])
+    error = torch.linalg.vector_norm((approximation - tensor)[selected])
+    if sampling == 'exact' or mask_kind == 'sparse':
+        assert result.metrics.sweeps[-1].abs_error == pytest.approx(error.item(), abs=5e-5)
+    assert engine.source.tensor is tensor
+
+
+@pytest.mark.parametrize('source_kind', ['dense', 'callable', 'format'])
+def test_matrix_sources_use_shared_als(source_kind, device_dtype, assert_close):
+    device, dtype = device_dtype
+    tensor = torch.arange(16., device=device).to(dtype).reshape(2, 2, 2, 2)
+    if dtype.is_complex:
+        tensor = tensor * (1 + 1j)
+    if source_kind == 'dense':
+        source = tk.decompositions.DenseTensorSource.matrix(tensor)
+    elif source_kind == 'callable':
+        source = tk.decompositions.CallableTensorSource.matrix(
+            lambda indices: tensor.permute(0, 2, 1, 3)[tuple(indices.T)],
+            (2, 2), (2, 2), dtype=dtype, device=device)
+    else:
+        source = tk.decompositions.FormatSource(
+            tk.decompositions.TTMSVD(tensor, out_device=None).fit().to_format())
+    result = tk.decompositions.TTALS(source, out_device=None).fit(
+        rank=4, init='svd',
+        convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    assert isinstance(result, tk.decompositions.TTMDecomposition)
+    assert_close(result.contract_dense(), tensor)
+    assert result.to_format().out_dim == (2, 2)
+
+
+def test_masks_reject_wrong_dimensions_and_numeric_values():
+    target = torch.ones(2, 2)
+    for mask in (torch.ones(2, 3, dtype=torch.bool), torch.ones(2, 2)):
+        with pytest.raises((TypeError, ValueError)):
+            tk.decompositions.TTALS(target, mask=mask)
+    source = tk.decompositions.CallableSource(lambda x: x.sum(-1), 2)
+    with pytest.raises(ValueError, match='discrete tensor'):
+        tk.decompositions.TTALS(source)
+
+
+def test_quantics_matrix_source_retains_both_layouts():
+    source = tk.decompositions.CallableQuanticsSource.matrix(
+        lambda inputs, outputs: torch.exp(inputs.sum(-1) + outputs.sum(-1)),
+        1, 1, in_base=2, out_base=2, in_level=2, out_level=2,
+        in_domain=(0., 1.), out_domain=(0., 1.))
+    engine = tk.decompositions.TTALS(source)
+    result = engine.fit(rank=1, init='svd',
+                        convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    assert isinstance(result, tk.decompositions.QTTMDecomposition)
+    assert result.in_layout is source.in_layout and result.out_layout is source.out_layout
+    torch.testing.assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
+
+
+def test_matrix_mask_and_initial_cores_share_source_grouping():
+    tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
+    source = tk.decompositions.DenseTensorSource.matrix(tensor)
+    initial = tk.decompositions.TTSVD(source).fit()
+    engine = tk.decompositions.TTALS(source, mask=torch.ones_like(tensor, dtype=torch.bool))
+    result = engine.fit(initial_cores=initial,
+                        convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
+    torch.testing.assert_close(result.contract_dense(), tensor)

@@ -32,7 +32,7 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
-from tensorkrowch.decompositions.als.problem import ObservedEntries
+from tensorkrowch.decompositions.als.problem import _ObservedEntries
 from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
                                                       _ravel_indices,
@@ -291,7 +291,7 @@ class ObservedRows:  # MARK: ObservedRows
 
     Parameters
     ----------
-    observations : ObservedEntries
+    observations : _ObservedEntries
         Permanent observations to enumerate. Their ids and residual weights are
         reused unchanged; this selector is not refreshable.
     """
@@ -299,9 +299,9 @@ class ObservedRows:  # MARK: ObservedRows
     proposal_exact = True
     refreshable = False
 
-    def __init__(self, observations: ObservedEntries) -> None:
-        if not isinstance(observations, ObservedEntries):
-            raise TypeError('`observations` should be ObservedEntries type')
+    def __init__(self, observations: _ObservedEntries) -> None:
+        if not isinstance(observations, _ObservedEntries):
+            raise TypeError('`observations` should be _ObservedEntries type')
         self.observations = observations
 
     def draw(self,

@@ -99,10 +99,7 @@ class TestGlobalValueTransform:  # MARK: TestGlobalValueTransform
             calls.append(indices.shape[0])
             return indices[:, 0].to(torch.float64)
 
-        source = tk.decompositions.CallableTensorSource(
-            function,
-            in_dim=(3,),
-            dtype=torch.float64)
+        source = tk.decompositions.CallableTensorSource(function, (3,), dtype=torch.float64)
         phi = _one_site_phi(source, torch.tensor([0, 1]))
 
         def required_points(view, context):
@@ -274,7 +271,7 @@ class TestLocalValueTransform:  # MARK: TestLocalValueTransform
             _apply_local_transform(transform, base)
 
     def test_empirical_values_admit_a_generic_local_kernel_transform(self):
-        source = tk.decompositions.EmpiricalDistribution(
+        source = tk.decompositions.SparseTensorSource.from_data(
             dataset=torch.tensor([[0], [0], [2], [2]]),
             in_dim=(3,))
         phi = _one_site_phi(source)

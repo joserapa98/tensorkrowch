@@ -72,9 +72,9 @@ def test_callable_receives_heterogeneous_coordinates():
         x, vector = values
         return x + vector.sum(dim=1)
 
-    source = tk.decompositions.CallableTensorSource(
+    source = tk.decompositions.CallableSource(
         function,
-        in_dim=(1, 1),
+        n_sites=2,
         dtype=torch.float64)
     configurations = tk.decompositions.ConfigurationBatch(
         (
@@ -124,3 +124,61 @@ def test_callable_source_inference_chunking_and_changes(device_dtype, assert_clo
     source.function = lambda batch: batch.to(dtype).sum(-1)
     with pytest.raises(ValueError, match='shape'):
         source.evaluate(tk.decompositions.ConfigurationBatch(indices))
+
+
+@pytest.mark.parametrize('kind', ['continuous', 'discrete'])
+@pytest.mark.parametrize('kernel', [None, tk.decompositions.gaussian_kernel])
+def test_dataset_sources_reuse_evaluation_and_kernels(kind, kernel, device_dtype, assert_close):
+    device, dtype = device_dtype
+    real_dtype = torch.empty((), dtype=dtype).real.dtype
+    dataset = torch.tensor([[0, 0], [0, 0], [1, 1]], device=device)
+    if kind == 'continuous':
+        dataset = dataset.to(real_dtype)
+        cls = tk.decompositions.CallableSource
+        options = {}
+        query_kind = 'features'
+    else:
+        cls = tk.decompositions.CallableTensorSource
+        options = {'in_dim': (2, 2)}
+        query_kind = 'indices'
+    weights = torch.tensor([1., 2., 1.], dtype=real_dtype, device=device)
+    source = cls.from_data(dataset, weights=weights, kernel=kernel, **options,
+                           **({'bandwidth': 0.5} if kernel is not None else {}))
+    query = torch.tensor([[0, 0], [1, 1], [0, 1]], device=device)
+    if kind == 'continuous':
+        query = query.to(real_dtype)
+    expected = torch.tensor([0.75, 0.25, 0.], device=device, dtype=real_dtype)
+    if kernel is not None:
+        expected = kernel(query, dataset, bandwidth=0.5).to(real_dtype) @ (weights / weights.sum())
+    assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(query, kind=query_kind)),
+                 expected)
+    assert source.is_discrete_tensor == (kind == 'discrete')
+    if kind == 'continuous':
+        with pytest.raises(ValueError, match='discrete tensor'):
+            source.contract_dense()
+    else:
+        assert_close(source.contract_dense()[tuple(query.T)], expected)
+
+
+@pytest.mark.parametrize('kwargs', [{'weights': torch.tensor([-1., 1.])},
+                                    {'weights': torch.tensor([0., 0.])},
+                                    {'weights': torch.ones(3)}])
+def test_data_source_rejects_invalid_masses(kwargs):
+    with pytest.raises(ValueError):
+        tk.decompositions.CallableSource.from_data(torch.zeros(2, 1), **kwargs)
+
+
+def test_custom_kernel_preserves_complex_values_and_receives_dataset():
+    data = torch.tensor([[0.], [1.]])
+    seen = []
+
+    def kernel(query, dataset, scale):
+        seen.append(dataset)
+        return (query[:, None, 0] + dataset[None, :, 0]) * scale
+
+    source = tk.decompositions.CallableSource.from_data(
+        data, kernel=kernel, scale=1 + 2j)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.tensor([[0.5]]), kind='features'))
+    torch.testing.assert_close(values, torch.tensor([1 + 2j]))
+    assert seen[0] is data

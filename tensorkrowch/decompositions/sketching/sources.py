@@ -6,7 +6,6 @@ This script contains:
         * SupportTensorSource
 
     Functions:
-        * _resolve_rs_source
         * _iter_support
 """
 
@@ -14,7 +13,6 @@ from typing import (Iterator,
                     Optional,
                     Protocol,
                     Sequence,
-                    TYPE_CHECKING,
                     Tuple,
                     Union,
                     runtime_checkable)
@@ -24,9 +22,7 @@ import torch
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 EmpiricalDistribution,
-                                                 TensorSource,
-                                                 as_tensor_source)
+                                                 TensorSource)
 
 
 TTStructuredSketch = Union[
@@ -34,10 +30,6 @@ TTStructuredSketch = Union[
     TTMDecomposition,
     Sequence[torch.Tensor],
 ]
-
-
-if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sources.factory import SourceLike
 
 
 @runtime_checkable
@@ -61,38 +53,6 @@ class SupportTensorSource(TensorSource, Protocol):  # MARK: SupportTensorSource
     @property
     def support_values(self) -> torch.Tensor:
         """Returns values aligned with :attr:`support`."""
-
-
-def _resolve_rs_source(*,
-                       source: 'SourceLike' = None,
-                       dataset: Optional[torch.Tensor] = None,
-                       in_dim: Optional[Sequence[int]] = None,
-                       weights: Optional[torch.Tensor] = None,
-                       dtype: Optional[torch.dtype] = None,
-                       device: Optional[Union[str, torch.device]] = None) -> TensorSource:
-    """
-    Normalizes the mutually exclusive ``source``/``dataset`` RS input contract.
-    """
-    if (source is None) == (dataset is None):
-        raise ValueError('Exactly one of `source` and `dataset` is required')
-    if dataset is not None:
-        if device is not None:
-            dataset = dataset.to(device=device)
-            if weights is not None:
-                weights = weights.to(device=device)
-        return EmpiricalDistribution(
-            dataset=dataset,
-            in_dim=in_dim,
-            weights=weights,
-            dtype=dtype)
-    if weights is not None:
-        raise ValueError('`weights` can only be passed together with `dataset`')
-    return as_tensor_source(
-        source,
-        in_dim=in_dim,
-        out_shape=(),
-        dtype=dtype,
-        device='cpu' if device is None else device)
 
 
 def _iter_support(source: SupportTensorSource,

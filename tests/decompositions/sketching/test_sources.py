@@ -7,8 +7,7 @@ import tensorkrowch as tk
 
 from tensorkrowch.decompositions.sketching.sources import (SketchContractableSource,
                                                            SupportTensorSource,
-                                                           _iter_support,
-                                                           _resolve_rs_source)
+                                                           _iter_support)
 
 from tests.decompositions.als._oracles import contract_tt_dense, make_tt_cores
 
@@ -80,7 +79,7 @@ class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
         assert source.evaluation_stats == tk.decompositions.EvaluationStats()
 
     def test_sparse_and_empirical_sources_keep_sparse_lookup_semantics(self):
-        distribution = tk.decompositions.EmpiricalDistribution(
+        distribution = tk.decompositions.SparseTensorSource.from_data(
             dataset=torch.tensor([[0, 1], [0, 1], [1, 0]]),
             in_dim=(2, 2),
             weights=torch.tensor([1., 2., 3.], dtype=torch.float64),
@@ -106,7 +105,7 @@ class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
         sketch_cores = make_tt_cores(
             dtype=dtype,
             generator=torch.Generator().manual_seed(32))
-        source = tk.decompositions.TTTensorSource(source_cores)
+        source = tk.decompositions.FormatSource(source_cores)
         sketch = tk.decompositions.TTDecomposition(_compact_tt(sketch_cores))
 
         result = source.contract_sketch(sketch)
@@ -126,7 +125,7 @@ class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
         sketch_cores = make_tt_cores(
             dtype=torch.complex128,
             generator=torch.Generator().manual_seed(34))
-        source = tk.decompositions.TTTensorSource(source_cores)
+        source = tk.decompositions.FormatSource(source_cores)
 
         result = source.contract_sketch(
             _compact_tt(sketch_cores), conjugate_sketch=False)
@@ -144,7 +143,7 @@ class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
             in_dim=in_dim,
             dtype=dtype,
             generator=torch.Generator().manual_seed(35))
-        source = tk.decompositions.TTTensorSource(source_cores)
+        source = tk.decompositions.FormatSource(source_cores)
         sketch = _random_ttm(
             in_dim,
             out_dim,
@@ -163,7 +162,7 @@ class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
         assert torch.allclose(result.contract_dense(), expected)
 
     def test_structured_sketch_validates_in_dimensions(self):
-        source = tk.decompositions.TTTensorSource(
+        source = tk.decompositions.FormatSource(
             make_tt_cores(in_dim=(2, 3), rank=(2,)))
         sketch = tk.decompositions.TTDecomposition(
             _compact_tt(make_tt_cores(in_dim=(2, 4), rank=(2,))))
@@ -184,7 +183,7 @@ class TestMPSAdapter:  # MARK: TestMPSAdapter
         configurations = tk.decompositions.ConfigurationBatch(
             torch.tensor([[0, 0, 0], [1, 2, 1]]))
 
-        assert isinstance(source, tk.decompositions.TTTensorSource)
+        assert isinstance(source, tk.decompositions.FormatSource)
         assert torch.allclose(
             source.evaluate(configurations),
             torch.stack((
@@ -199,26 +198,29 @@ class TestMPSAdapter:  # MARK: TestMPSAdapter
             bond_dim=2,
             boundary='pbc')
 
-        with pytest.raises(ValueError, match='open-boundary'):
-            tk.decompositions.as_tensor_source(model)
+        source = tk.decompositions.as_tensor_source(model)
+        assert source.format._cyclic
+        indices = torch.tensor([[0, 0, 0], [1, 1, 1]])
+        torch.testing.assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(indices)),
+                                   source.format.evaluate(indices))
 
     def test_mpo_is_not_treated_as_an_mps(self):
         model = tk.models.MPO(n_features=2, in_dim=2, out_dim=2, bond_dim=2)
 
-        with pytest.raises(TypeError, match='MPS or a sequence'):
-            tk.decompositions.TTTensorSource(model)
+        with pytest.raises(TypeError, match='cores'):
+            tk.decompositions.FormatSource(model)
 
 
 class TestRSInputSources:  # MARK: TestRSInputSources
 
     def test_dataset_is_normalized_and_duplicate_weights_are_coalesced(self):
         dataset = torch.tensor([[0, 1], [0, 1], [1, 0]])
-        source = _resolve_rs_source(
+        source = tk.decompositions.SparseTensorSource.from_data(
             dataset=dataset,
             in_dim=(2, 2),
             weights=torch.tensor([1., 2., 3.], dtype=torch.float64))
 
-        assert isinstance(source, tk.decompositions.EmpiricalDistribution)
+        assert isinstance(source, tk.decompositions.SparseTensorSource)
         assert isinstance(source, SupportTensorSource)
         assert torch.equal(
             source.support.as_tensor(), torch.tensor([[0, 1], [1, 0]]))
@@ -226,15 +228,10 @@ class TestRSInputSources:  # MARK: TestRSInputSources
             source.support_values,
             torch.tensor([0.5, 0.5], dtype=torch.float64))
 
-    def test_requires_exactly_one_source_form_and_scopes_weights(self):
-        sparse = tk.decompositions.SparseTensorSource(
-            torch.tensor([[0, 0]]), torch.tensor([1.]), (2, 2))
-        with pytest.raises(ValueError, match='Exactly one'):
-            _resolve_rs_source()
-        with pytest.raises(ValueError, match='Exactly one'):
-            _resolve_rs_source(source=sparse, dataset=torch.tensor([[0, 0]]))
-        with pytest.raises(ValueError, match='only be passed'):
-            _resolve_rs_source(source=sparse, weights=torch.tensor([1.]))
+    def test_rs_rejects_non_discrete_sources(self):
+        source = tk.decompositions.CallableSource(lambda x: x.sum(-1), 2)
+        with pytest.raises(ValueError, match='discrete tensor'):
+            tk.decompositions.TTRS(source)
 
     def test_support_iterator_batches_only_declared_nonzero_entries(self):
         source = tk.decompositions.SparseTensorSource(

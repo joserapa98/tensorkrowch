@@ -25,8 +25,7 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sources.quantics import (QuanticsMatrixSource,
-                                                              QuanticsVectorSource)
+    from tensorkrowch.decompositions.sources.base import TensorSource
 
 
 @dataclass(init=False, eq=False)
@@ -69,7 +68,7 @@ class TensorDecomposition:  # MARK: TensorDecomposition
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     _format_type: ClassVar[Type[TensorFormat]]
-    _format_parameters: ClassVar[Tuple[str, ...]] = ('n_batches',)
+    _format_parameters: ClassVar[Tuple[str, ...]] = ('n_batches', 'in_sites')
 
     def __init__(self,
                  cores: Sequence[torch.Tensor],
@@ -339,6 +338,7 @@ class TTMDecomposition(TensorDecomposition, TTM):  # MARK: TTMDecomposition
     """
 
     _format_type = TTM
+    _format_parameters = ('n_batches', 'in_sites', 'out_sites')
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -399,6 +399,7 @@ class TRMDecomposition(TensorDecomposition, TRM):  # MARK: TRMDecomposition
     """
 
     _format_type = TRM
+    _format_parameters = ('n_batches', 'in_sites', 'out_sites')
 
     def _new_from_standard_cores(self,
                                  cores: Sequence[torch.Tensor],
@@ -482,12 +483,12 @@ class QTTDecomposition(TensorDecomposition, QTT):  # MARK: QTTDecomposition
     >>> coordinates = torch.tensor([[0.], [0.25], [0.75]])
     >>> result.evaluate_coordinates(coordinates).tolist()
     [1.0, 0.0, 1.0]
-    >>> result.to_format().to_dense_grid().tolist()
+    >>> result.to_format().contract_dense_grid_axes().tolist()
     [1.0, 0.0, 0.0, 1.0]
     """
 
     _format_type = QTT
-    _format_parameters = ('n_batches', 'n_coordinates',
+    _format_parameters = ('n_batches', 'in_sites', 'n_coordinates',
                           'layout', 'coordinate_map')
 
 
@@ -555,12 +556,12 @@ class QTRDecomposition(TensorDecomposition, QTR):  # MARK: QTRDecomposition
     >>> coordinates = torch.tensor([[0.], [0.25], [0.75]])
     >>> result.evaluate_coordinates(coordinates).tolist()
     [3.0, 4.0, 8.0]
-    >>> result.to_format().to_dense_grid().tolist()
+    >>> result.to_format().contract_dense_grid_axes().tolist()
     [3.0, 4.0, 6.0, 8.0]
     """
 
     _format_type = QTR
-    _format_parameters = ('n_batches', 'n_coordinates',
+    _format_parameters = ('n_batches', 'in_sites', 'n_coordinates',
                           'layout', 'coordinate_map')
 
 
@@ -634,7 +635,7 @@ class QTTMDecomposition(TensorDecomposition, QTTM):  # MARK: QTTMDecomposition
     """
 
     _format_type = QTTM
-    _format_parameters = ('n_batches',
+    _format_parameters = ('n_batches', 'in_sites', 'out_sites',
                           'in_n_coordinates', 'out_n_coordinates',
                           'in_layout', 'out_layout',
                           'in_coordinate_map', 'out_coordinate_map')
@@ -710,51 +711,72 @@ class QTRMDecomposition(TensorDecomposition, QTRM):  # MARK: QTRMDecomposition
     """
 
     _format_type = QTRM
-    _format_parameters = ('n_batches',
+    _format_parameters = ('n_batches', 'in_sites', 'out_sites',
                           'in_n_coordinates', 'out_n_coordinates',
                           'in_layout', 'out_layout',
                           'in_coordinate_map', 'out_coordinate_map')
 
 
-def _quantics_result(
-        result: TensorDecomposition,
-        source: Optional[Union['QuanticsVectorSource',
-                               'QuanticsMatrixSource']] = None
-    ) -> TensorDecomposition:
-    """Attaches the Quantics source's layout and maps to fitted cores."""
+def _result_from_source(result: TensorDecomposition, source: Optional['TensorSource'] = None
+                        ) -> TensorDecomposition:
+    """Restores paired axes and source coordinate/evaluation semantics."""
     if source is None:
         return result
-
-    from tensorkrowch.decompositions.sources.quantics import QuanticsMatrixSource
-
-    kwargs = dict(metrics=result.metrics,
-                  metadata=dict(result.metadata),
+    cyclic = result._cyclic
+    kwargs = dict(metrics=result.metrics, metadata=dict(result.metadata),
                   n_batches=result.n_batches)
-    if isinstance(source, QuanticsMatrixSource):
-        cls = QTRMDecomposition if result.topology == 'trm' else QTTMDecomposition
-        layouts = (source.in_layout, source.out_layout)
-        kwargs.update(in_n_coordinates=source.in_n_coordinates,
-                      out_n_coordinates=source.out_n_coordinates,
-                      in_layout=source.in_layout,
-                      out_layout=source.out_layout,
-                      in_coordinate_map=source.in_coordinate_map,
-                      out_coordinate_map=source.out_coordinate_map)
+    cores = result.cores
+    if getattr(source, 'is_matrix', False):
+        inputs, outputs = source.in_dim, source.out_dim
+        if result.n_sites == 2 * len(inputs):
+            # RSS creates adjacent input/output sites before assembling a matrix.
+            standard = result._effective_cores()
+            paired = [torch.einsum('aib,boc->aioc', standard[2 * site],
+                                    standard[2 * site + 1]).flatten(1, 2)
+                      for site in range(len(inputs))]
+            cores = _restore_cores(paired, inputs, outputs,
+                                   result.n_batches, cyclic)
+        elif result.out_dim is None:
+            cores = _restore_cores(result._effective_cores(), inputs, outputs,
+                                   result.n_batches, cyclic)
+        cls = TRMDecomposition if cyclic else TTMDecomposition
+        algorithm = kwargs['metadata'].get('algorithm')
+        if algorithm in ('tt_svd', 'tr_svd'):
+            kwargs['metadata']['algorithm'] = algorithm.replace('_svd', 'm_svd')
+        kwargs['metadata'].update(ordering=getattr(source, '_ordering', 'interleaved'),
+                                  matrix_input=getattr(source, '_matrix_input', False))
     else:
-        cls = QTRDecomposition if result.topology == 'tr' else QTTDecomposition
-        layouts = (source.layout,)
-        kwargs.update(n_coordinates=source.n_coordinates,
-                      layout=source.layout,
-                      coordinate_map=source.coordinate_map)
-
-    wrapped = cls(result.cores, **kwargs)
-    if 'quantization' not in wrapped.metadata:
-        wrapped.metadata['quantization'] = [
-            {'base': layout.base,
-             'level': layout.level,
-             'sites': layout.sites(),
-             'grid_size': layout.grid_size}
-            for layout in layouts]
-    return wrapped.to(device=result.device)
+        cls = TRDecomposition if cyclic else TTDecomposition
+        sites = result.in_sites if 'rss' in result.metadata.get('algorithm', '') else \
+            getattr(source, 'in_sites', tuple(range(result.n_sites)))
+        kwargs['in_sites'] = sites
+    layout = getattr(source, 'layout', None)
+    if layout is not None:
+        if getattr(source, 'is_matrix', False):
+            cls = QTRMDecomposition if cyclic else QTTMDecomposition
+            layouts = (source.in_layout, source.out_layout)
+            kwargs.update(in_n_coordinates=source.in_n_coordinates,
+                          out_n_coordinates=source.out_n_coordinates,
+                          in_layout=source.in_layout, out_layout=source.out_layout,
+                          in_coordinate_map=source.in_coordinate_map,
+                          out_coordinate_map=source.out_coordinate_map)
+        else:
+            cls = QTRDecomposition if cyclic else QTTDecomposition
+            layouts = (layout,)
+            kwargs.update(n_coordinates=source.n_coordinates, layout=layout,
+                          coordinate_map=source.coordinate_map)
+        algorithm = kwargs['metadata'].get('algorithm', '')
+        if algorithm.endswith('_rss'):
+            kwargs['metadata']['algorithm'] = 'q' + algorithm
+        quantization = [
+            {'n_coordinates': item.n_coordinates, 'base': item.base,
+             'level': item.level, 'ordering': item.ordering,
+             'digit_order': item.digit_order, 'sites': item.sites(),
+             'grid_size': item.grid_size} for item in layouts]
+        kwargs['metadata'].setdefault('quantization', quantization[0]
+                                      if len(layouts) == 1 else quantization)
+    wrapped = cls(cores, **kwargs)
+    return wrapped.to(device=result.device) if layout is not None else wrapped
 
 
 _DecompositionOutput = Union[

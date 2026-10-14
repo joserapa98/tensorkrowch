@@ -3,8 +3,6 @@ This script contains:
 
     Classes:
         * TTRSS
-        * _QuantizedRSSMixin
-        * _QuantizedTTRSS
         * TTRS
 
     Functions:
@@ -41,7 +39,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TTDecomposition,
-                                                 _quantics_result)
+                                                 _result_from_source)
 from tensorkrowch.decompositions.sketching.base import (RecursiveSketching,
                                                         _SketchingFitContext)
 from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder,
@@ -55,8 +53,7 @@ from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
 from tensorkrowch.decompositions.sketching.sketches import (MarginalSketch,
                                                             SketchOperator)
-from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource,
-                                                           _resolve_rs_source)
+from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource)
 from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
                                                          _EmbeddingSpec,
                                                          _OutputSpec,
@@ -66,11 +63,11 @@ from tensorkrowch.decompositions.sketching.transforms import (GlobalValueTransfo
                                                               _apply_local_transform,
                                                               _collect_local_queries,
                                                               _prepare_global_transform)
-from tensorkrowch.decompositions.sources import (CallableTensorSource,
+from tensorkrowch.decompositions.sources import (CallableSource,
                                                  ConfigurationBatch,
-                                                 TensorSource,
-                                                 as_tensor_source)
-from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
+                                                 TensorSource, as_tensor_source)
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
+from tensorkrowch.decompositions.sources.base import _tensor_view
 
 
 Domain = Optional[Union[torch.Tensor, Sequence[torch.Tensor]]]
@@ -114,38 +111,40 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
 
     Parameters
     ----------
-    function : callable or TensorSource, optional
-        Scalar- or vector-valued object to approximate. A callable receives a
-        tensor with shape ``(batch_size, n_features)`` or
-        ``(batch_size, n_features, in_dim)`` and returns shape
-        ``(batch_size, out_dim)``. A scalar callable uses
-        ``out_dim = 1``.
-    embedding : callable, torch.Tensor or sequence
-        Shared input embedding or one entry per input site. A site callable
-        maps shape ``(batch_size, *coordinate_shape)`` to
-        ``(batch_size, in_dim)``; a tensor stores its finite-domain matrix.
-    in_dim : int or sequence of int, optional
-        Expected embedding dimension. One integer is broadcast to every input
-        site. If omitted, dimensions are inferred from the embeddings.
+    source : TensorSource, torch.Tensor or callable
+        Function or tensor to approximate. A raw callable is wrapped as
+        ``CallableSource``. Finite sources use basis embeddings by default.
+    embedding : callable, torch.Tensor or sequence, optional
+        Shared embedding or one per input site. Required for continuous
+        sources. An embedding maps site values to vectors of size ``in_dim``.
+    in_dim : int or sequence[int], optional
+        Expected embedding dimensions; otherwise inferred from embeddings.
     domain : torch.Tensor or sequence of torch.Tensor, optional
-        Finite values used to fit the embedding. One tensor is broadcast to
-        every input site; a sequence supplies one domain per site. If omitted,
-        each domain is inferred from the corresponding sketch samples.
-    domain_multiplier : int, optional
-        Maximum inferred-domain size in multiples of ``in_dim``.
-    out_position : int or sequence of int, optional
-        Position of each tensor-output axis. By default the output sites split
-        the input chain into groups as evenly as possible.
-    source : TensorSource, optional
-        Explicit source alternative to ``function``. Exactly one of
-        ``function`` and ``source`` should be supplied.
+        Domain values used to fit the embeddings, inferred from samples when
+        omitted. Finite sources supply their index domains by default.
+    domain_multiplier : int
+        Maximum inferred-domain size in multiples of the embedding dimension.
+    out_position : int or sequence[int], optional
+        Positions of response sites in a vector chain. Matrix sources place
+        each output site next to its input before combining their cores.
     device : str or torch.device, optional
-        Device used for source evaluations and numerical decomposition.
+        Evaluation device. Existing sources retain their device.
     dtype : torch.dtype, optional
-        Dtype used for callable values, fitted tensors and resulting cores.
-    out_device : str, torch.device or None, optional
-        Device receiving completed cores. The default is CPU; ``None`` keeps
-        them on the compute device.
+        Declared function output dtype. Existing sources retain their dtype.
+    out_device : str or torch.device, optional
+        Device receiving completed cores; ``None`` retains the source device.
+    input_fitters : sequence of InputFitter, optional
+        Fitters for the final site embeddings; inferred when omitted.
+    range_projector : RangeProjector, optional
+        Projection strategy for sampled ranges.
+    global_transform : GlobalValueTransform, optional
+        Transformation applied to the deduplicated source evaluation plan.
+    local_transform : LocalValueTransform, optional
+        Transformation applied to local Phi values.
+    local_solver : LeastSquaresSolver, optional
+        Solver for local core-determining equations.
+    synchronize_timers : bool
+        Whether optional timing measurements synchronize device operations.
 
     Examples
     --------
@@ -164,14 +163,13 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
     """
 
     def __init__(self,
-                 function: Callable = None,
+                 source: 'SourceLike',
                  embedding: Optional[Embedding] = None,
                  in_dim: Optional[Union[int, Sequence[int]]] = None,
                  domain: Domain = None,
                  domain_multiplier: int = 1,
                  out_position: Optional[Union[int, Sequence[int]]] = None,
                  *,
-                 source: Optional[TensorSource] = None,
                  device: Device = None,
                  dtype: Optional[torch.dtype] = None,
                  out_device: Device = 'cpu',
@@ -181,14 +179,22 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                  local_transform: Optional[LocalValueTransform] = None,
                  local_solver: Optional[LeastSquaresSolver] = None,
                  synchronize_timers: bool = True) -> None:
-        if (function is None) == (source is None):
-            raise ValueError(
-                'Exactly one of `function` and `source` should be provided')
-        source_like = function if source is None else source
-        if source is None and not callable(source_like):
-            raise TypeError('`function` should be callable')
-        if source is not None and not isinstance(source, TensorSource):
-            raise TypeError('`source` should implement TensorSource')
+        source_like = as_tensor_source(source) if isinstance(source, torch.Tensor) \
+            else source
+        if not isinstance(source_like, TensorSource):
+            if not callable(source_like):
+                raise TypeError('`source` should be a tensor source or callable')
+            source_like = CallableSource(source_like, out_shape=None,
+                                         dtype=dtype, device=device or 'cpu')
+        source = source_like
+        if getattr(source, 'n_batches', 0):
+            raise ValueError('Batched sources are not supported by RSS')
+        if source.is_discrete_tensor and embedding is None:
+            embedding = tuple(torch.eye(dim, device=source.device)
+                              for dim in source.in_dim)
+            domain = tuple(torch.arange(dim, device=source.device)
+                           for dim in source.in_dim)
+            in_dim = source.in_dim
         if embedding is None:
             raise TypeError('`embedding` should be provided')
         if not (callable(embedding) or isinstance(embedding, torch.Tensor)):
@@ -256,11 +262,13 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             raise TypeError('`synchronize_timers` should be bool type')
 
         self._source_like = source_like
+        self._source = source_like
         self._embedding = embedding
         self._in_dim_option = in_dim
         self._domain = domain
         self._domain_multiplier = domain_multiplier
-        self._out_position = out_position
+        self._out_position = tuple(2 * site + 1 for site in range(len(source.out_dim))) \
+            if getattr(source, 'is_matrix', False) else out_position
         self._device = None if device is None else \
             torch.empty(0, device=device).device
         self._dtype = dtype
@@ -274,64 +282,19 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         self._synchronize_timers = synchronize_timers
         self._input_kind = 'features'
 
-    @classmethod
-    def quantized(cls,
-                  source: QuanticsVectorSource,
-                  *,
-                  sample_space: str = 'coordinates',
-                  out_device: Device = 'cpu',
-                  input_fitters: Optional[Sequence[InputFitter]] = None,
-                  range_projector: Optional[RangeProjector] = None,
-                  global_transform: Optional[GlobalValueTransform] = None,
-                  local_transform: Optional[LocalValueTransform] = None,
-                  local_solver: Optional[LeastSquaresSolver] = None,
-                  synchronize_timers: bool = True) -> 'TTRSS':
-        """
-        Creates a Quantics RSS problem with basis-embedded digit sites.
-
-        Parameters
-        ----------
-        source : QuanticsVectorSource
-            Scalar coordinate callable with its fixed layout and map.
-        sample_space : {"coordinates", "digits"}, optional
-            Space of the sketch samples passed to :meth:`fit`. Coordinates are
-            quantized through the source; digits already follow its site order.
-        out_device : str or torch.device, optional
-            Device receiving finalized cores. ``None`` retains the source device.
-        input_fitters : sequence of InputFitter, optional
-            Site fitting strategies, as in the ordinary constructor.
-        range_projector : RangeProjector, optional
-            Range projection strategy.
-        global_transform, local_transform : optional
-            Value transforms used by the ordinary RSS workflow.
-        local_solver : LeastSquaresSolver, optional
-            Solver for the core-determining systems.
-        synchronize_timers : bool, optional
-            Synchronizes device operations when collecting timings.
-
-        Returns
-        -------
-        TTRSS
-            Reusable problem returning a Quantics decomposition.
-        """
-        return _QuantizedTTRSS(
-            source=source,
-            sample_space=sample_space,
-            out_device=out_device,
-            input_fitters=input_fitters,
-            range_projector=range_projector,
-            global_transform=global_transform,
-            local_transform=local_transform,
-            local_solver=local_solver,
-            synchronize_timers=synchronize_timers)
 
     def _normalize_samples(self,
                            sketch_samples: Samples) -> ConfigurationBatch:
         """Normalizes packed or heterogeneous samples for the fixed source."""
-        kind = 'features'
-        if isinstance(self._source_like, TensorSource) and \
-                not isinstance(self._source_like, CallableTensorSource):
-            kind = 'indices'
+        source = self._source_like
+        kind = getattr(source, 'input_kind', 'features')
+        if isinstance(source, CallableQuanticsSource) and not (
+                isinstance(sketch_samples, ConfigurationBatch) and
+                sketch_samples.kind == 'indices'):
+            coordinates = sketch_samples.values if isinstance(
+                sketch_samples, ConfigurationBatch) else sketch_samples
+            indices = source.coordinate_map.to_indices(coordinates)
+            sketch_samples = ConfigurationBatch(source.layout.encode_indices(indices))
         if isinstance(sketch_samples, ConfigurationBatch):
             samples = sketch_samples
             if samples.kind != kind:
@@ -342,7 +305,9 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         if samples.batch_size < 1:
             raise ValueError('`sketch_samples` should contain samples')
         if isinstance(self._source_like, TensorSource) and \
-                samples.n_sites != len(self._source_like.in_dim):
+                samples.n_sites != (len(self._source_like.in_dim)
+                                   if self._source_like.in_dim is not None
+                                   else (self._source_like.n_sites or samples.n_sites)):
             raise ValueError(
                 '`source` and `sketch_samples` should share input sites')
         return samples
@@ -400,38 +365,19 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
 
     def _source_probe(self,
                       samples: ConfigurationBatch,
-                      n_input_sites: int) -> Tuple[torch.Tensor, Optional[TensorSource]]:
-        """Evaluates one row and returns any already-constructed source."""
-        if isinstance(self._source_like, TensorSource):
-            source = self._source_like
-            if len(source.in_dim) != n_input_sites:
-                raise ValueError(
-                    '`source` and `sketch_samples` should share input sites')
-            if self._device is not None and source.device != self._device:
-                raise ValueError('`source` and `device` should match')
-            self._input_kind = 'features' \
-                if isinstance(source, CallableTensorSource) else 'indices'
-            ids = torch.zeros(1, dtype=torch.long, device=samples.device)
-            configurations = samples.index_select(ids).to(source.device)
-            probe = source.evaluate(configurations)
-            if self._dtype is not None and probe.dtype != self._dtype:
-                raise ValueError('`source` and `dtype` should match')
-            return probe, source
-
-        device = torch.device('cpu') if self._device is None else self._device
+                      n_input_sites: int) -> Tuple[torch.Tensor, TensorSource]:
+        """Evaluates one row using the fixed source's input convention."""
+        source = self._source_like
+        if source.in_dim is not None and len(source.in_dim) != n_input_sites:
+            raise ValueError('`source` and `sketch_samples` should share input sites')
+        if self._device is not None and source.device != self._device:
+            raise ValueError('`source` and `device` should match')
+        self._input_kind = getattr(source, 'input_kind', 'indices')
         ids = torch.zeros(1, dtype=torch.long, device=samples.device)
-        configurations = samples.index_select(ids).to(device)
-        try:
-            probe = self._source_like(configurations.values)
-        except (TypeError, ValueError, RuntimeError) as exc:
-            raise ValueError(
-                '`function` failed on a sketch-sample batch') from exc
-        if not isinstance(probe, torch.Tensor):
-            raise TypeError('`function` should return a torch.Tensor')
-        if probe.device != configurations.device:
-            raise ValueError(
-                '`function` should return values on the compute device')
-        return probe, None
+        probe = source.evaluate(samples.index_select(ids).to(source.device))
+        if self._dtype is not None and probe.dtype != self._dtype:
+            raise ValueError('`source` and `dtype` should match')
+        return probe, source
 
     def _initialize_fit(self,
                         sketch_samples: Samples,
@@ -479,23 +425,6 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         out_position = self._out_position
         outputs = _OutputSpec.normalize(
             probe, n_input_sites, out_position=out_position)
-
-        if source is None:
-            function = self._source_like
-
-            def typed_function(values: torch.Tensor) -> torch.Tensor:
-                result = function(values)
-                if not isinstance(result, torch.Tensor):
-                    raise TypeError(
-                        '`function` should return a torch.Tensor')
-                return result.to(dtype=dtype)
-
-            source = as_tensor_source(
-                typed_function,
-                in_dim=domains.n_values,
-                out_shape=tuple(probe.shape[1:]),
-                dtype=dtype,
-                device=device)
 
         RecursiveSketching.__init__(
             self,
@@ -637,7 +566,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
 
             .. math::
 
-        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         batch_size : int, optional
@@ -1037,17 +966,27 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             context.emit(
                 'core', site=site, level=3, values={'tensor': core})
         cores = [context.runtime.finalize(core) for core in context.cores]
-        return TTDecomposition(
+        result = TTDecomposition(
             cores=cores,
+            in_sites=self.outputs.input_positions,
             metrics=context.metrics,
             metadata=metadata)
+        return _result_from_source(result, self._source_like) if \
+            getattr(self._source_like, 'is_matrix', False) or isinstance(
+                self._source_like, CallableQuanticsSource) else result
 
     def _validate_result(self,
                          result: TensorDecomposition,
                          context: _SketchingFitContext) -> None:
         """Checks the TT topology and final site dimensions."""
-        if not isinstance(result, TensorDecomposition) or not isinstance(result, TT):
+        if not isinstance(result, TensorDecomposition) or result._cyclic:
             raise TypeError('`result` should be a decomposition with TT format')
+        if result.out_dim is not None:
+            dimensions = tuple(dim for pair in zip(result.in_dim, result.out_dim)
+                               for dim in pair)
+            if dimensions != self.outputs.site_dim(self.embeddings):
+                raise ValueError('The result matrix dimensions are inconsistent')
+            return
         if len(result.cores) != self.outputs.n_sites:
             raise ValueError('The result should contain one core per TT site')
         expected = context.state.get(
@@ -1056,93 +995,8 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             raise ValueError('The result input dimensions are inconsistent')
 
 
-class _QuantizedRSSMixin:  # MARK: _QuantizedRSSMixin
-    """Encodes coordinate samples before the ordinary basis-embedded RSS fit."""
-
-    def __init__(self,
-                 source: QuanticsVectorSource,
-                 *,
-                 sample_space: str = 'coordinates',
-                 **kwargs) -> None:
-        if not isinstance(source, QuanticsVectorSource):
-            raise TypeError('`source` should be QuanticsVectorSource type')
-        if sample_space not in ('coordinates', 'digits'):
-            raise ValueError("`sample_space` should be 'coordinates' or 'digits'")
-        self.sample_space = sample_space
-        self._fit_sample_space = sample_space
-        embeddings = tuple(torch.eye(dim) for dim in source.in_dim)
-        domains = tuple(torch.arange(dim) for dim in source.in_dim)
-        super().__init__(source=source, embedding=embeddings,
-                         in_dim=source.in_dim, domain=domains, **kwargs)
-
-    def _normalize_samples(self,
-                           sketch_samples: Samples) -> ConfigurationBatch:
-        """Encodes coordinates or validates already encoded digit samples."""
-        if self._fit_sample_space == 'digits':
-            return super()._normalize_samples(sketch_samples)
-
-        if isinstance(sketch_samples, ConfigurationBatch):
-            # Repeated normalization receives the already encoded index batch.
-            if sketch_samples.kind == 'indices':
-                return super()._normalize_samples(sketch_samples)
-            if not sketch_samples.packed:
-                raise ValueError('Coordinate sketch samples should be packed')
-            coordinates = sketch_samples.values
-        else:
-            coordinates = sketch_samples
-        digits = self._source_like.coordinates_to_digits(coordinates)
-        return super()._normalize_samples(ConfigurationBatch(digits))
-
-    def fit(self,
-            sketch_samples: Samples,
-            *args,
-            sample_space: Optional[str] = None,
-            **kwargs) -> TensorDecomposition:
-        """
-        Fits Quantics cores from coordinate samples or encoded digits.
-
-        Parameters
-        ----------
-        sketch_samples : torch.Tensor or ConfigurationBatch
-            Domain coordinates by default. Digit samples follow the source's
-            layout and may be supplied as an index ``ConfigurationBatch``.
-        sample_space : {"coordinates", "digits"}, optional
-            Overrides the constructor's sample space for this fit.
-
-        Returns
-        -------
-        QTTDecomposition or QTRDecomposition
-            Fitted cores with the source's layout and coordinate map. Other
-            fitting arguments are those of the ordinary RSS :meth:`fit`.
-        """
-        active_space = self.sample_space if sample_space is None else sample_space
-        if active_space not in ('coordinates', 'digits'):
-            raise ValueError("`sample_space` should be 'coordinates' or 'digits'")
-        self._fit_sample_space = active_space
-        try:
-            result = super().fit(sketch_samples, *args, **kwargs)
-        finally:
-            self._fit_sample_space = self.sample_space
-        source = self._source_like
-        result.metadata['quantization'] = {
-            'n_coordinates': source.n_coordinates,
-            'base': source.layout.base,
-            'level': source.layout.level,
-            'ordering': source.layout.ordering,
-            'digit_order': source.layout.digit_order,
-            'sites': source.layout.sites(),
-            'grid_size': source.layout.grid_size,
-            'coordinate_map': type(source.coordinate_map).__name__,
-            'sample_space': active_space,
-        }
-        result.metadata['algorithm'] = self._quantized_algorithm
-        return _quantics_result(result, self._source_like)
 
 
-class _QuantizedTTRSS(_QuantizedRSSMixin, TTRSS):  # MARK: _QuantizedTTRSS
-    """Internal TTRSS specialization that encodes QTT coordinate samples."""
-
-    _quantized_algorithm = 'qtt_rss'
 
 
 class TTRS:  # MARK: TTRS
@@ -1152,7 +1006,7 @@ class TTRS:  # MARK: TTRS
     Unlike :class:`TTRSS`, this class projects the complete discrete source and
     therefore does not receive ``sketch_samples`` in :meth:`fit`. The source
     may be supplied directly, or built from a dataset as a normalized
-    :class:`~tensorkrowch.decompositions.EmpiricalDistribution`. Sparse and
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`. Sparse and
     empirical sources are contracted only on their declared non-zero support.
 
     The implementation follows the core-determining equations of
@@ -1169,32 +1023,23 @@ class TTRS:  # MARK: TTRS
 
     Parameters
     ----------
-    source : TensorSource, TTDecomposition, torch.Tensor or callable, optional
-        Complete discrete scalar source. Exactly one of ``source`` and
-        ``dataset`` is required. Sources without explicit support use a finite
-        grid fallback until their structured backend is selected.
-    dataset : torch.Tensor, optional
-        Integer observations with shape ``(samples, sites)``. Duplicates are
-        coalesced into an empirical distribution.
-    in_dim : sequence of int, optional
-        Complete dimensions. Required for callable sources and optional for a
-        dataset, where it otherwise follows the largest observed indices.
-    weights : torch.Tensor, optional
-        Non-negative empirical mass per dataset row.
+    source : TensorSource or torch.Tensor
+        Finite tensor source. Sources with support or structured contraction
+        capabilities use those directly; others use finite-grid evaluations.
     sketch_operator : SketchOperator, optional
-        Operator that provides a compatible :class:`SketchSystemBuilder`.
-    dtype : torch.dtype, optional
-        Empirical/callable value dtype.
-    device : str or torch.device, optional
-        Device for a dataset or callable source.
-    out_device : str, torch.device or None, optional
-        Device receiving completed cores. The default is CPU; ``None`` keeps
-        the source device.
+        Operator constructing the recursive sketches. Defaults to
+        ``MarginalSketch.markov()``.
+    out_device : str or torch.device, optional
+        Device receiving completed cores; ``None`` retains the source device.
+    synchronize_timers : bool
+        Whether optional timing measurements synchronize device operations.
 
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> decomposer = tk.decompositions.TTRS(dataset=dataset, in_dim=(2, 2))
+    >>> decomposer = tk.decompositions.TTRS(
+    ...     tk.decompositions.SparseTensorSource.from_data(
+    ...         dataset, in_dim=(2, 2)))
     >>> result = decomposer.fit(rank=2)
     >>> result.in_dim
     (2, 2)
@@ -1203,23 +1048,15 @@ class TTRS:  # MARK: TTRS
     """
 
     def __init__(self,
-                 source: 'SourceLike' = None,
+                 source: 'SourceLike',
                  *,
-                 dataset: Optional[torch.Tensor] = None,
-                 in_dim: Optional[Sequence[int]] = None,
-                 weights: Optional[torch.Tensor] = None,
                  sketch_operator: Optional[SketchOperator] = None,
-                 dtype: Optional[torch.dtype] = None,
-                 device: Device = None,
                  out_device: Device = 'cpu',
                  synchronize_timers: bool = True) -> None:
-        self._source = _resolve_rs_source(
-            source=source,
-            dataset=dataset,
-            in_dim=in_dim,
-            weights=weights,
-            dtype=dtype,
-            device=device)
+        self._source = as_tensor_source(source)
+        self._tensor_source = _tensor_view(self._source)
+        if getattr(self._source, 'n_batches', 0):
+            raise ValueError('Batched sources are not supported by RS')
         if sketch_operator is None:
             sketch_operator = MarginalSketch.markov()
         elif not isinstance(sketch_operator, SketchOperator):
@@ -1286,7 +1123,7 @@ class TTRS:  # MARK: TTRS
 
             .. math::
 
-        \f        rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
                 cum\_percentage
 
         batch_size : int, optional
@@ -1351,7 +1188,7 @@ class TTRS:  # MARK: TTRS
                 }))
         timer = None
         start = perf_counter() if need_diagnostics else None
-        system = self.sketch_operator.builder(self._source).build(
+        system = self.sketch_operator.builder(self._tensor_source).build(
             batch_size=batch_size,
             generator=generator)
         result = system.solve(
@@ -1427,18 +1264,16 @@ class TTRS:  # MARK: TTRS
             out_device=self.out_device,
             dtype=active.dtype,
             synchronize_timers=self.synchronize_timers)
-        return TTDecomposition(
+        result = TTDecomposition(
             [runtime.finalize(core) for core in active.cores],
             metrics=active.metrics,
             metadata=active.metadata)
+        return _result_from_source(result, self._source)
 
 
 @torch.no_grad()
-def tt_rs(source: 'SourceLike' = None,
+def tt_rs(source: 'SourceLike',
           *,
-          dataset: Optional[torch.Tensor] = None,
-          in_dim: Optional[Sequence[int]] = None,
-          weights: Optional[torch.Tensor] = None,
           sketch_operator: Optional[SketchOperator] = None,
           rank: _Rank = 1,
           cutoff: Optional[float] = None,
@@ -1446,8 +1281,6 @@ def tt_rs(source: 'SourceLike' = None,
           rtol: Optional[float] = None,
           cum_percentage: Optional[float] = None,
           batch_size: Optional[int] = None,
-          dtype: Optional[torch.dtype] = None,
-          device: Device = None,
           generator: Optional[torch.Generator] = None,
           strict_system: bool = False,
           out_device: Device = 'cpu',
@@ -1458,14 +1291,15 @@ def tt_rs(source: 'SourceLike' = None,
     Projects a complete discrete ``source`` into TT cores with TT-RS.
 
     This simple interface constructs :class:`TTRS`, calls :meth:`TTRS.fit`
-    and returns only the cores unless ``return_info=True``. Exactly one of
-    ``source`` and ``dataset`` is required; a ``dataset`` is normalized into an
-    empirical distribution and is not interpreted as RSS sketch samples.
+    and returns only the cores unless ``return_info=True``. The source owns its dimensions and evaluation rules. Use
+    ``SparseTensorSource.from_data`` for empirical distributions.
 
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
-    >>> cores = tk.decompositions.tt_rs(dataset=dataset, in_dim=(2, 2), rank=2)
+    >>> cores = tk.decompositions.tt_rs(
+    ...     tk.decompositions.SparseTensorSource.from_data(
+    ...         dataset, in_dim=(2, 2)), rank=2)
     >>> len(cores)
     2
     """
@@ -1477,12 +1311,7 @@ def tt_rs(source: 'SourceLike' = None,
         raise TypeError('`return_info` should be bool type')
     result = TTRS(
         source=source,
-        dataset=dataset,
-        in_dim=in_dim,
-        weights=weights,
         sketch_operator=sketch_operator,
-        dtype=dtype,
-        device=device,
         out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
@@ -1502,7 +1331,7 @@ def tt_rs(source: 'SourceLike' = None,
 
 
 @torch.no_grad()
-def qtt_rss(source: QuanticsVectorSource,
+def qtt_rss(source: CallableQuanticsSource,
             sketch_samples: Samples,
             *,
             sample_space: str = 'coordinates',
@@ -1532,7 +1361,7 @@ def qtt_rss(source: QuanticsVectorSource,
 
     Examples
     --------
-    >>> source = tk.decompositions.QuanticsVectorSource(
+    >>> source = tk.decompositions.CallableQuanticsSource(
     ...     lambda coordinates: 1 + coordinates[:, 0], 1,
     ...     base=2, level=2, domain=torch.tensor([0., 1.]))
     >>> samples = torch.arange(4).float().reshape(-1, 1) / 4
@@ -1546,7 +1375,11 @@ def qtt_rss(source: QuanticsVectorSource,
         raise ValueError('`return_info` and `return_result` are incompatible')
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
-    decomposer = TTRSS.quantized(source, sample_space=sample_space,
+    if sample_space not in ('coordinates', 'digits'):
+        raise ValueError("`sample_space` should be 'coordinates' or 'digits'")
+    if sample_space == 'digits':
+        sketch_samples = ConfigurationBatch(sketch_samples)
+    decomposer = TTRSS(source=source,
                                 out_device=out_device)
     result = decomposer.fit(
         sketch_samples,
@@ -1655,7 +1488,7 @@ def tt_rss(function: Callable,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     batch_size : int, optional
@@ -1722,7 +1555,7 @@ def tt_rss(function: Callable,
         raise TypeError('`return_info` should be bool type')
     start = perf_counter() if return_info else None
     decomposer = TTRSS(
-        function=function,
+        source=function,
         embedding=embedding,
         in_dim=in_dim,
         domain=domain,

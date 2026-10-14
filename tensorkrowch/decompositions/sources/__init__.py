@@ -1,56 +1,51 @@
 """
-Tensor sources shared by ALS and recursive sketching.
+Sources shared by tensor decomposition algorithms.
 
-        as_tensor_source(tensor / callable / TT / TensorSource)
-            ├─ DenseTensorSource
-            ├─ CallableTensorSource
-            ├─ SparseTensorSource / EmpiricalDistribution
-            ├─ QuanticsVectorSource (coordinate callable + layout/map)
-            └─ TTTensorSource
+    Input objects:
+        * DenseTensorSource, SparseTensorSource, FormatSource
+        * CallableSource, CallableTensorSource, CallableQuanticsSource
+        * ConfigurationBatch, TensorSource, FiberTensorSource
+        * gaussian_kernel, as_tensor_source
 
-        ConfigurationBatch
-            └─ packed indices or heterogeneous features ─> source.evaluate()
+    Evaluation:
+        ConfigurationBatch -> source.evaluate() -> values
+        Finite source -> source.contract_dense() -> tensor
+        CallableQuanticsSource:
+            digit indices -> QuantizedLayout -> grid indices
+            grid indices -> CoordinateMap -> domain coordinates -> callable
 
-        FiberTensorSource
-            └─ optional source.fiber() over one varying input site
+    Algorithms:
+        Finite sources -> SVD / ALS / RS
+        Continuous or finite sources + samples -> RSS
+        Source matrix/Quantics metadata -> corresponding result format
 
-        QuanticsMatrixSource
-            └─ paired digit axes ─> TTMSVD.quantized() / TRMSVD.quantized()
-
-        TensorSource
-            ├─ ALSProblem ─> TTALS / TRALS
-            └─ sketching Phi operators and evaluation sessions
-
-    Sources supply values and runtime metadata. ALSProblem separately defines the
-    observed or sampled objective. Sparse sources are zero outside their support;
-    unobserved entries in completion remain unknown. All implementations operate
-    on raw PyTorch tensors without constructing a TensorKrowch graph.
-
+Dataset constructors reuse the same evaluation methods. Sparse values outside
+stored indices are zero. In ALS a separate boolean mask determines participating
+entries; ``True`` participates, including entries whose target value is zero.
 """
 
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       FiberTensorSource,
                                                       TensorSource)
-from tensorkrowch.decompositions.sources.callable import CallableTensorSource
+from tensorkrowch.decompositions.sources.callable import (CallableSource,
+                                                          CallableTensorSource)
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.factory import as_tensor_source
-from tensorkrowch.decompositions.sources.quantics import (QuanticsMatrixSource,
-                                                          QuanticsVectorSource)
-from tensorkrowch.decompositions.sources.sparse import (EmpiricalDistribution,
-                                                        SparseTensorSource)
-from tensorkrowch.decompositions.sources.tt import TTTensorSource
-
+from tensorkrowch.decompositions.sources.format import FormatSource
+from tensorkrowch.decompositions.sources.kernels import gaussian_kernel
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
+from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 
 __all__ = [
     'ConfigurationBatch',
     'TensorSource',
     'FiberTensorSource',
+    'CallableSource',
     'CallableTensorSource',
-    'QuanticsVectorSource',
-    'QuanticsMatrixSource',
+    'CallableQuanticsSource',
     'DenseTensorSource',
     'SparseTensorSource',
-    'EmpiricalDistribution',
-    'TTTensorSource',
+    'FormatSource',
     'as_tensor_source',
+    'gaussian_kernel',
 ]

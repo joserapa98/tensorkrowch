@@ -6,10 +6,10 @@ import tensorkrowch as tk
 
 
 def test_sketching_shared_public_infrastructure():
-    assert tk.decompositions.TTRSS.quantized is not None
-    assert tk.decompositions.TRRSS.quantized is not None
+    assert not hasattr(tk.decompositions.TTRSS, 'quantized')
+    assert not hasattr(tk.decompositions.TRRSS, 'quantized')
     layout = tk.formats.QuantizedLayout(1, 2, 3)
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         lambda coordinates: torch.ones_like(coordinates[:, 0]), 1,
         layout=layout, coordinate_map=tk.formats.AffineCoordinateMap(
             [0., 1.], layout.grid_size))

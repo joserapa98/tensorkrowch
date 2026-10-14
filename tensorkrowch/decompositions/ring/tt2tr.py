@@ -52,7 +52,7 @@ from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
                                                       LoopOpener,
                                                       resolve_loop_opener)
 from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
-from tensorkrowch.decompositions.sources.tt import TTTensorSource
+from tensorkrowch.decompositions.sources.format import FormatSource
 
 
 _Device = Optional[Union[str, torch.device]]
@@ -77,7 +77,7 @@ def _as_tt_decomposition(
             result = TTDecomposition(cores, metrics=tt.metrics,
                                      metadata=tt.metadata)
     else:
-        source = TTTensorSource(tt)
+        source = FormatSource(tt)
         compact_cores = list(source.cores)
         if len(compact_cores) == 1:
             compact_cores[0] = compact_cores[0].reshape(-1)
@@ -114,7 +114,7 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
     boundary_mode = 'open'
 
     def __post_init__(self) -> None:
-        source = TTTensorSource(self.tt)
+        source = FormatSource(self.tt.to_tt() if self.tt._quantized else self.tt)
         self.cores = tuple(source.cores)
         self.in_dim = source.in_dim
 

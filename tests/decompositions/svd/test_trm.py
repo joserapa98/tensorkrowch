@@ -77,9 +77,9 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         assert fit_parameters.index('center') < fit_parameters.index('rank')
         assert 'observer' not in fit_parameters
-        assert {'in_dim', 'out_dim', 'center', 'out_device'} <= set(
+        assert {'source', 'center', 'out_device'} <= set(
             inspect.signature(tk.decompositions.TRMSVD).parameters)
-        assert {'in_dim', 'out_dim', 'center', 'out_device'} <= set(
+        assert {'source', 'center', 'out_device'} <= set(
             function_parameters)
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
@@ -193,8 +193,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         with tk.svd_method(svd_method):
             grouped_result = tk.decompositions.TRMSVD(
-                grouped,
-                ordering='grouped',
+                tk.decompositions.DenseTensorSource.matrix(grouped, ordering='grouped'),
                 out_device=None).fit(
                     rank=3, renormalize=renormalize)
             interleaved_result = tk.decompositions.TRMSVD(
@@ -202,9 +201,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
                 out_device=None).fit(
                     rank=3, renormalize=renormalize)
             matrix_result = tk.decompositions.TRMSVD(
-                matrix,
-                in_dim=in_dim,
-                out_dim=out_dim,
+                tk.decompositions.DenseTensorSource.matrix(matrix, in_dim=in_dim, out_dim=out_dim),
                 out_device=None).fit(
                     rank=3, renormalize=renormalize)
 
@@ -313,7 +310,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         original_fit = tr_module.TRSVD._fit_validated
 
         def tracked_fit(self, *args, **kwargs):
-            calls.append(tuple(self.tensor.shape))
+            calls.append(tuple(self._tensor.shape))
             return original_fit(self, *args, **kwargs)
 
         monkeypatch.setattr(tr_module.TRSVD, '_fit_validated', tracked_fit)
@@ -355,7 +352,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         monkeypatch.setattr(
             tr_module._RuntimePolicy, 'timer', unexpected_timer)
-        monkeypatch.setattr(trm_module, 'DecompositionEvent', unexpected_event)
+        monkeypatch.setattr(tr_module, 'DecompositionEvent', unexpected_event)
         result = tk.decompositions.TRMSVD(
             torch.randn(2, 3, 2, 4),
             out_device=None).fit(rank=2)
@@ -402,9 +399,9 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         'constructor, kwargs, error_type, match',
         [
             (([1, 2],), {}, TypeError,
-             '`tensor` should be torch.Tensor type'),
+             'should be torch.Tensor type'),
             ((torch.ones(2, 3),), {}, ValueError,
-             'requires at least two sites'),
+             'at least two TR sites'),
             ((torch.ones(2, 3, 4, 5),), {'ordering': 1}, TypeError,
              '`ordering` should be str type'),
             ((torch.ones(2, 3, 4, 5),), {'ordering': 'other'}, ValueError,
@@ -424,7 +421,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
                                 error_type,
                                 match):
         with pytest.raises(error_type, match=match):
-            tk.decompositions.TRMSVD(*constructor, **kwargs)
+            tk.decompositions.TRMSVD(tk.decompositions.DenseTensorSource.matrix(*constructor, **kwargs))
 
     @pytest.mark.parametrize(
         'kwargs, error_type, match',
@@ -457,8 +454,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         def reconstruct(value):
             return tk.decompositions.TRMSVD(
-                value,
-                ordering='grouped',
+                tk.decompositions.DenseTensorSource.matrix(value, ordering='grouped'),
                 out_device=None).fit().contract_dense()
 
         with tk.svd_method('qr_svd'):
@@ -516,7 +512,7 @@ def test_renormalized_svd_preserves_extreme_input_scale(large, device_dtype,
         reference = reference * (1 + 0.5j)
     data = reference * scale
 
-    result = tk.decompositions.TRMSVD(data, in_dim=(2, 2), out_dim=(2, 2), out_device=None).fit(
+    result = tk.decompositions.TRMSVD(tk.decompositions.DenseTensorSource.matrix(data, in_dim=(2, 2), out_dim=(2, 2)), out_device=None).fit(
         rank=16, renormalize=True)
 
     assert all(torch.isfinite(core).all() for core in result.cores)
@@ -545,9 +541,7 @@ def test_matrix_formats_devices_and_application(raw_layout,
         if raw_layout == 'interleaved':
             tensor = tensor.permute(0, 2, 1, 3)
     result = tk.decompositions.trm_svd(
-        tensor, in_dim=(2, 2),
-        out_dim=(2, 2),
-        ordering='grouped' if raw_layout != 'interleaved' else 'interleaved',
+        tk.decompositions.DenseTensorSource.matrix(tensor, in_dim=(2, 2), out_dim=(2, 2), ordering='grouped' if raw_layout != 'interleaved' else 'interleaved'),
         rank=8, out_device=None)
     dense = result.contract_dense().permute(0, 2, 1, 3).reshape(4, 4)
     assert_close(dense, matrix)
@@ -581,26 +575,27 @@ def test_quantized_matrix_independent_coordinate_counts(ordering, device_dtype,
         value = (inputs[:, 0] + 2 * inputs[:, 1] + outputs[:, 0]).to(dtype)
         return value * (1 + 2j) if dtype.is_complex else value
 
-    source = tk.decompositions.QuanticsMatrixSource(
+    source = tk.decompositions.CallableQuanticsSource.matrix(
         function, 2, 1, in_layout=in_layout, out_layout=out_layout,
         in_coordinate_map=in_map, out_coordinate_map=out_map,
         dtype=dtype, device=device)
-    engine = tk.decompositions.TRMSVD.quantized(source, out_device=None)
-    expected = source.to_dense_grid()
+    engine = tk.decompositions.TRMSVD(source, out_device=None)
+    expected = source.contract_dense_grid_axes()
     for _ in range(2):
         result = engine.fit(rank=12)
         assert isinstance(result, tk.decompositions.QTRMDecomposition)
         assert result.in_n_coordinates == 2 and result.out_n_coordinates == 1
-        assert_close(result.to_dense_grid(), expected)
-        assert_close(result.H.to_dense_grid().reshape(9, 4),
+        assert_close(result.contract_dense_grid_axes(), expected)
+        assert_close(result.H.contract_dense_grid_axes().reshape(9, 4),
                      expected.reshape(4, 9).H)
         in_indices = torch.tensor([[0, 1], [1, 0]], device=device)
         out_indices = torch.tensor([[3], [7]], device=device)
         assert_close(result.evaluate_indices(in_indices, out_indices),
-                     source.evaluate_indices(in_indices, out_indices))
+                     source.function(source.in_coordinate_map.from_indices(in_indices),
+                                     source.out_coordinate_map.from_indices(out_indices)))
         assert result.dtype == dtype and result.device.type == device
-    with pytest.raises(TypeError, match='QuanticsMatrixSource'):
-        tk.decompositions.TRMSVD.quantized(expected)
+    with pytest.raises(ValueError, match='even number'):
+        tk.decompositions.TRMSVD(expected)
 
 
 @pytest.mark.parametrize('criteria', [{}, {'rank': 1}, {'cutoff': 1e-5},
@@ -611,7 +606,7 @@ def test_qtrm_svd_function(criteria, renormalize, device_dtype, assert_close):
     device, dtype = device_dtype
     real_dtype = torch.empty((), dtype=dtype).real.dtype
     coefficient = 1 + 1j if dtype.is_complex else 1
-    source = tk.decompositions.QuanticsMatrixSource(
+    source = tk.decompositions.CallableQuanticsSource.matrix(
         lambda inputs, outputs: torch.exp(
             coefficient * (inputs.sum(-1) + outputs.sum(-1))).to(dtype),
         in_n_coordinates=1, out_n_coordinates=1,
@@ -624,7 +619,7 @@ def test_qtrm_svd_function(criteria, renormalize, device_dtype, assert_close):
     options['center'] = 1
     result = tk.decompositions.qtrm_svd(
         source, out_device=None, **options)
-    expected = tk.decompositions.TRMSVD.quantized(
+    expected = tk.decompositions.TRMSVD(
         source, out_device=None).fit(**options)
 
     assert isinstance(result, tk.decompositions.QTRMDecomposition)
@@ -632,7 +627,7 @@ def test_qtrm_svd_function(criteria, renormalize, device_dtype, assert_close):
     assert result.dtype == dtype
     assert result.metrics.truncations
     assert_close(result.contract_dense(), expected.contract_dense())
-    assert_close(result.to_dense_grid(), source.to_dense_grid())
+    assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
     assert result.as_info()['metadata']['algorithm'] == 'trm_svd'
 
 

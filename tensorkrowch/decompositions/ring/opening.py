@@ -46,9 +46,10 @@ from tensorkrowch.decompositions.als.tr import TRALS
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TensorDecomposition)
+from tensorkrowch.decompositions.sources.callable import CallableTensorSource
+from tensorkrowch.decompositions.sources.factory import as_tensor_source
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 TensorSource,
-                                                 as_tensor_source)
+                                                 TensorSource)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -283,7 +284,9 @@ def _source_from_context(target: Any,
     """
     Normalizes a local ``target`` through the shared TensorSource contract.
     """
-    return as_tensor_source(
+    if isinstance(target, (torch.Tensor, TensorSource)):
+        return as_tensor_source(target)
+    return CallableTensorSource(
         target,
         in_dim=context.get('in_dim'),
         out_shape=(),
@@ -299,7 +302,7 @@ def _mirror_source(source: TensorSource) -> TensorSource:
             indices.flip(1), kind='indices')
         return source.evaluate(configurations)
 
-    return as_tensor_source(
+    return CallableTensorSource(
         evaluate,
         in_dim=tuple(reversed(source.in_dim)),
         out_shape=(),
@@ -316,7 +319,7 @@ def _cast_source(source: TensorSource, dtype: torch.dtype) -> TensorSource:
         configurations = ConfigurationBatch(indices, kind='indices')
         return source.evaluate(configurations).to(dtype=dtype)
 
-    return as_tensor_source(
+    return CallableTensorSource(
         evaluate,
         in_dim=source.in_dim,
         out_shape=(),

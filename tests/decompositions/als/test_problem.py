@@ -6,12 +6,13 @@ import pytest
 import torch
 
 import tensorkrowch as tk
+from tensorkrowch.decompositions.als.problem import _ObservedEntries
 
 
 class TestObservedEntries:  # MARK: TestObservedEntries
 
     def test_repeated_equal_observations_are_deduplicated(self):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[1, 2], [0, 1], [1, 2]]),
             values=torch.tensor([4., 3., 4.]),
             in_dim=(2, 3),
@@ -33,14 +34,14 @@ class TestObservedEntries:  # MARK: TestObservedEntries
     def test_conflicting_repeated_observations_are_rejected(
             self, values, weights, match):
         with pytest.raises(ValueError, match=match):
-            tk.decompositions.ObservedEntries(
+            _ObservedEntries(
                 indices=torch.tensor([[0, 1], [0, 1]]),
                 values=values,
                 in_dim=(2, 2),
                 weights=weights)
 
     def test_weighted_absolute_and_relative_errors(self):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([3., 4.]),
             in_dim=(2, 2),
@@ -59,7 +60,7 @@ class TestObservedEntries:  # MARK: TestObservedEntries
     def test_zero_target_relative_error_policy(self,
                                                approximation,
                                                expected):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([0., 0.]),
             in_dim=(2, 2))
@@ -86,7 +87,7 @@ class TestALSProblem:  # MARK: TestALSProblem
         assert problem.has_fixed_objective
 
     def test_completion_objective_never_queries_unknown_entries(self):
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 1], [1, 0]]),
             values=torch.tensor([2., 3.]),
             in_dim=(2, 2))
@@ -107,7 +108,7 @@ class TestALSProblem:  # MARK: TestALSProblem
             in_dim=(2, 2))
         missing = tk.decompositions.ConfigurationBatch(
             torch.tensor([[1, 1]]))
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 1]]),
             values=torch.tensor([2.]),
             in_dim=(2, 2))
@@ -120,7 +121,7 @@ class TestALSProblem:  # MARK: TestALSProblem
 
     def test_source_and_observations_require_matching_shapes(self):
         source = tk.decompositions.DenseTensorSource(torch.ones(2, 3))
-        observations = tk.decompositions.ObservedEntries(
+        observations = _ObservedEntries(
             indices=torch.tensor([[0, 0]]),
             values=torch.tensor([1.]),
             in_dim=(2, 2))

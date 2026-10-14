@@ -201,7 +201,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
             raise TypeError('`embeddings` should be _EmbeddingSpec type')
         if not isinstance(outputs, _OutputSpec):
             raise TypeError('`outputs` should be _OutputSpec type')
-        if domains.n_sites != len(source.in_dim) or \
+        if domains.n_sites != (len(source.in_dim) if source.in_dim is not None else source.n_sites) or \
                 embeddings.n_sites != domains.n_sites or \
                 outputs.n_input_sites != domains.n_sites:
             raise ValueError(
@@ -216,7 +216,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
         if not isinstance(synchronize_timers, bool):
             raise TypeError('`synchronize_timers` should be bool type')
 
-        self.source = source
+        self._source = source
         self.domains = domains
         self.embeddings = embeddings
         self.outputs = outputs
@@ -250,6 +250,11 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
             raise ValueError(
                 '`input_fitters` should contain one fitter per final site')
         self.input_fitters = tuple(input_fitters)
+
+    @property
+    def source(self) -> TensorSource:
+        """Source supplying the values of the fitted function."""
+        return self._source
 
     def _default_input_fitters(self) -> Tuple[InputFitter, ...]:
         """Builds cached fixed-embedding and exact output-basis fitters."""

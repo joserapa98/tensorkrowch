@@ -25,7 +25,7 @@ def test_base_tt_source_absorbs_bonds_without_mutating_format():
 def test_tt_source_evaluation_and_fibers_match_dense(dtype):
     cores = make_tt_cores(
         dtype=dtype, generator=torch.Generator().manual_seed(11))
-    source = tk.decompositions.TTTensorSource(cores)
+    source = tk.decompositions.FormatSource(cores)
     dense = contract_tt_dense(cores)
     configurations = tk.decompositions.ConfigurationBatch(torch.tensor(
         list(product(*(range(dim) for dim in dense.shape)))))
@@ -43,7 +43,7 @@ def test_tt_source_evaluation_and_fibers_match_dense(dtype):
 def test_tt_structured_prefix_suffix_and_phi_match_dense(dtype):
     cores = make_tt_cores(
         dtype=dtype, generator=torch.Generator().manual_seed(13))
-    source = tk.decompositions.TTTensorSource(cores)
+    source = tk.decompositions.FormatSource(cores)
     dense = contract_tt_dense(cores)
     prefixes = torch.arange(dense.shape[0]).reshape(-1, 1)
     suffixes = torch.arange(dense.shape[2]).reshape(-1, 1)
@@ -59,7 +59,7 @@ def test_tt_structured_prefix_suffix_and_phi_match_dense(dtype):
 @pytest.mark.parametrize('order', [1, 2])
 def test_tt_structured_marginal_phi_matches_dense(order):
     cores = make_tt_cores(generator=torch.Generator().manual_seed(14))
-    source = tk.decompositions.TTTensorSource(cores)
+    source = tk.decompositions.FormatSource(cores)
     dense = contract_tt_dense(cores)
     factor = (
         torch.tensor([1., 2.]),
@@ -105,3 +105,34 @@ def test_tt_source_bonds_device_and_complex_features(device_dtype, assert_close)
     assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(
         all_indices)).reshape(2, 3), dense)
     assert format.bonds is not None
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+@pytest.mark.parametrize('matrix', [False, True])
+def test_all_plain_format_families(cyclic, matrix, device_dtype, assert_close):
+    device, dtype = device_dtype
+    cores = [torch.ones(1, 2, 1, dtype=dtype, device=device) for _ in range(3)]
+    if matrix:
+        cores = [core.unsqueeze(-1).expand(1, 2, 1, 3).clone() for core in cores]
+    if not cyclic:
+        cores = [cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-2 if matrix else -1)]
+    cls = tk.formats.TRM if cyclic and matrix else tk.formats.TTM if matrix else tk.formats.TR if cyclic else tk.formats.TT
+    format = cls(cores)
+    source = tk.decompositions.FormatSource(format)
+    indices = torch.tensor([[0, 0, 0], [1, 1, 1]], device=device)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(indices))
+    expected = torch.ones((2, 3, 3, 3) if matrix else (2,), dtype=dtype, device=device)
+    assert_close(values, expected)
+    assert_close(source.contract_dense(), format.contract_dense())
+
+
+def test_batched_partial_format_source_orders_configuration_axis_first():
+    tensor = torch.arange(24., dtype=torch.float64).reshape(2, 2, 2, 3)
+    format = tk.decompositions.TTSVD(
+        tk.decompositions.DenseTensorSource(tensor, n_batches=1)).fit().to_format()
+    format.in_sites = (0, 1)
+    source = tk.decompositions.FormatSource(format)
+    indices = torch.tensor([[0, 1], [1, 0], [0, 0]])
+    expected = torch.stack([tensor[:, i, j] for i, j in indices])
+    torch.testing.assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(indices)),
+                               expected)

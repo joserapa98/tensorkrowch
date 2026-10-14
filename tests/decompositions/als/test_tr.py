@@ -142,11 +142,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         monkeypatch.setattr(
             import_module('tensorkrowch.decompositions.als.tr'),
             '_resolve_observer', lambda *args: history)
-        result = tk.decompositions.TRALS(
-            function,
-            in_dim=tensor.shape,
-            dtype=torch.float64,
-            out_device=None).fit(
+        result = tk.decompositions.TRALS(tk.decompositions.CallableTensorSource(function, in_dim=tensor.shape, dtype=torch.float64, out_shape=()), out_device=None).fit(
                 rank=2,
                 sampling='uniform',
                 n_samples=12,
@@ -175,11 +171,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         ])
         values = tensor[tuple(indices[:, site]
                               for site in range(indices.shape[1]))]
-        decomposition = tk.decompositions.TRALS.completion(
-            indices,
-            values,
-            in_dim=tensor.shape,
-            out_device=None)
+        decomposition = tk.decompositions.TRALS(tk.decompositions.SparseTensorSource(indices, values, tensor.shape), mask=tk.decompositions.SparseTensorSource(indices, torch.ones(indices.shape[0], dtype=torch.bool, device=indices.device), tensor.shape), out_device=None)
         result = decomposition.fit(
             rank=2,
             generator=torch.Generator().manual_seed(104),
@@ -204,11 +196,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             return tensor[tuple(indices[:, site]
                                 for site in range(indices.shape[1]))]
 
-        result = tk.decompositions.TRALS(
-            function,
-            in_dim=tensor.shape,
-            dtype=torch.float64,
-            out_device=None).fit(
+        result = tk.decompositions.TRALS(tk.decompositions.CallableTensorSource(function, in_dim=tensor.shape, dtype=torch.float64, out_shape=()), out_device=None).fit(
                 rank=2,
                 gauge='none',
                 sampling='leverage',
@@ -254,11 +242,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             return tensor[tuple(indices[:, site]
                                 for site in range(indices.shape[1]))]
 
-        result = tk.decompositions.TRALS(
-            function,
-            in_dim=tensor.shape,
-            dtype=torch.float64,
-            out_device=None).fit(
+        result = tk.decompositions.TRALS(tk.decompositions.CallableTensorSource(function, in_dim=tensor.shape, dtype=torch.float64, out_shape=()), out_device=None).fit(
                 rank=2,
                 gauge='none',
                 sampling='leverage',
@@ -387,14 +371,14 @@ def test_als_formats_devices_and_quantization(gauge,
         data = data * (1 + 1j)
     if quantized:
         real_dtype = data.real.dtype
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda coordinates: torch.exp(coordinates[:, 0]).to(dtype) *
             ((1 + 1j) if dtype.is_complex else 1),
             1, base=2, level=3,
             domain=torch.tensor([0., 1.], dtype=real_dtype, device=device),
             dtype=dtype, device=device)
-        problem = engine.quantized(source, out_device=None)
-        data = source.to_dense_grid()
+        problem = engine(source, out_device=None)
+        data = source.contract_dense_grid_axes()
     else:
         problem = engine(data, out_device=None)
     options = dict(rank=1, init='svd', gauge=gauge,
@@ -405,7 +389,7 @@ def test_als_formats_devices_and_quantization(gauge,
             problem.fit(**options)
         return
     result = problem.fit(**options)
-    dense = result.to_dense_grid() if quantized else result.contract_dense()
+    dense = result.contract_dense_grid_axes() if quantized else result.contract_dense()
     assert_close(dense, data.reshape(8) if quantized else data)
     assert result.dtype == dtype and result.device.type == device
     assert result.metrics.sweeps
@@ -418,26 +402,25 @@ def test_quantized_als_callable_and_repeated_fits(ordering):
     layout = tk.formats.QuantizedLayout(2, 2, 2, ordering=ordering)
     coordinate_map = tk.formats.AffineCoordinateMap(
         torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64), layout.grid_size)
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         lambda coordinates: torch.exp(coordinates[:, 0] + 2 * coordinates[:, 1]),
         2, layout=layout, coordinate_map=coordinate_map)
-    engine = tk.decompositions.TRALS.quantized(source, out_device=None)
+    engine = tk.decompositions.TRALS(source, out_device=None)
     for _ in range(2):
         result = engine.fit(rank=2, init='svd',
                             convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
-        torch.testing.assert_close(result.to_dense_grid(), source.to_dense_grid())
+        torch.testing.assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
         coordinates = torch.tensor([[0., 0.], [0.75, 0.75]], dtype=torch.float64)
         torch.testing.assert_close(result.evaluate_coordinates(coordinates),
                                    source.function(coordinates))
         assert not result.metrics.sweeps
-    other = tk.decompositions.QuanticsVectorSource(
+    other = tk.decompositions.CallableQuanticsSource(
         source.function, 2, layout=tk.formats.QuantizedLayout(
             2, 2, 2, ordering='grouped' if ordering == 'interleaved' else 'interleaved'),
         coordinate_map=coordinate_map)
     with pytest.raises(ValueError, match='fixed digit layout'):
-        tk.decompositions.TRALS.quantized(other).fit(initial_cores=result)
-    with pytest.raises(TypeError, match='QuanticsVectorSource'):
-        tk.decompositions.TRALS.quantized(torch.ones(4, 4))
+        tk.decompositions.TRALS(other).fit(initial_cores=result)
+    assert tk.decompositions.TRALS(torch.ones(4, 4)).source.is_discrete_tensor
 
 
 def test_tensor_and_completion_axes_are_not_quantized():
@@ -447,10 +430,20 @@ def test_tensor_and_completion_axes_are_not_quantized():
     indices = torch.tensor([[0, 0], [1, 3]])
     values = torch.tensor([1., 2.])
     weights = torch.tensor([2., 3.])
-    completion = tk.decompositions.TRALS.completion(
-        indices, values, in_dim=(4, 4), weights=weights)
+    completion = tk.decompositions.TRALS(tk.decompositions.SparseTensorSource(indices, values, (4, 4)), mask=tk.decompositions.SparseTensorSource(indices, torch.ones(indices.shape[0], dtype=torch.bool, device=indices.device), (4, 4)), weights=tk.decompositions.SparseTensorSource(indices, weights, (4, 4)).contract_dense(), out_device='cpu')
     observed = completion.problem.observations
     assert completion.in_dim == (4, 4)
     torch.testing.assert_close(observed.indices, indices)
     torch.testing.assert_close(observed.values, values)
     torch.testing.assert_close(observed.weights, weights)
+
+
+def test_masked_ring_uses_only_participating_entries():
+    tensor = torch.arange(8., dtype=torch.float64).reshape(2, 2, 2)
+    mask = torch.ones(2, 2, 2, dtype=torch.bool)
+    mask[1, 1, 1] = False
+    engine = tk.decompositions.TRALS(tensor, mask=mask, out_device=None)
+    result = engine.fit(rank=2, init='svd', collect_metrics=True,
+                        convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2))
+    expected = torch.linalg.vector_norm((result.contract_dense() - tensor)[mask])
+    assert result.metrics.sweeps[-1].abs_error == pytest.approx(expected.item(), abs=1e-10)

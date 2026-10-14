@@ -1,5 +1,7 @@
 """Tests for the refactored TT recursive-sketching decomposition."""
 
+import math
+
 import pytest
 import torch
 
@@ -27,10 +29,7 @@ class TestTTRSS:
 
     def test_class_returns_lightweight_result_and_reuses_fixed_problem(self):
         function, embedding, samples, domain = _problem()
-        decomposer = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain)
+        decomposer = tk.decompositions.TTRSS(embedding=embedding, domain=domain, source=function)
 
         first = decomposer.fit(
             samples,
@@ -50,10 +49,7 @@ class TestTTRSS:
 
     def test_refactored_math_matches_dense_tensor(self):
         function, embedding, samples, domain = _problem()
-        result = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain).fit(
+        result = tk.decompositions.TTRSS(embedding=embedding, domain=domain, source=function).fit(
                 samples,
                 rank=2,
                 generator=torch.Generator().manual_seed(92))
@@ -67,10 +63,7 @@ class TestTTRSS:
     def test_one_global_evaluation_plan_and_structured_records(self):
         function, embedding, samples, domain = _problem()
         observer = HistoryObserver()
-        result = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain).fit(
+        result = tk.decompositions.TTRSS(embedding=embedding, domain=domain, source=function).fit(
                 samples,
                 rank=2,
                 generator=torch.Generator().manual_seed(93),
@@ -96,10 +89,7 @@ class TestTTRSS:
 
     def test_nonlegacy_mode_uses_shared_range_projector(self):
         function, embedding, samples, domain = _problem()
-        result = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain).fit(
+        result = tk.decompositions.TTRSS(embedding=embedding, domain=domain, source=function).fit(
                 samples,
                 rank=2,
                 generator=torch.Generator().manual_seed(95),
@@ -118,9 +108,9 @@ class TestTTRSS:
 
     def test_explicit_callable_source_uses_the_same_fit_contract(self):
         function, embedding, samples, domain = _problem()
-        source = tk.decompositions.CallableTensorSource(
+        source = tk.decompositions.CallableSource(
             function,
-            in_dim=(2, 2, 2),
+            n_sites=3,
             out_shape=(1,),
             dtype=torch.float64)
         result = tk.decompositions.TTRSS(
@@ -173,11 +163,7 @@ class TestTTRSS:
                 (torch.ones(values.shape[0], 1, dtype=values.dtype), values),
                 dim=1),
         )
-        result = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embeddings,
-            in_dim=(2, 3),
-            domain=(scalar_domain, vector_domain)).fit(
+        result = tk.decompositions.TTRSS(embedding=embeddings, in_dim=(2, 3), domain=(scalar_domain, vector_domain), source=function).fit(
                 (first, second),
                 rank=2,
                 collect_metrics=True)
@@ -196,11 +182,7 @@ class TestTTRSS:
             ).reshape(-1, 2, 2)
 
         labels = torch.arange(samples.shape[0]).remainder(4)
-        result = tk.decompositions.TTRSS(
-            function=tensor_function,
-            embedding=embedding,
-            domain=domain,
-            out_position=(0, 4)).fit(
+        result = tk.decompositions.TTRSS(embedding=embedding, domain=domain, out_position=(0, 4), source=tensor_function).fit(
                 samples,
                 labels=labels,
                 rank=4,
@@ -213,11 +195,7 @@ class TestTTRSS:
 
     def test_projection_controls_total_metrics_and_out_device(self):
         function, embedding, samples, domain = _problem()
-        result = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain,
-            out_device=None).fit(
+        result = tk.decompositions.TTRSS(embedding=embedding, domain=domain, out_device=None, source=function).fit(
                 samples,
                 rank=2,
                 random_projection=True,
@@ -234,21 +212,11 @@ class TestTTRSS:
     def test_in_dim_and_warm_start_are_explicit(self):
         function, embedding, samples, domain = _problem()
         with pytest.raises(ValueError, match='in_dim'):
-            tk.decompositions.TTRSS(
-                function=function,
-                embedding=embedding,
-                in_dim=3,
-                domain=domain).fit(samples, rank=2)
+            tk.decompositions.TTRSS(embedding=embedding, in_dim=3, domain=domain, source=function).fit(samples, rank=2)
 
-        result = tk.decompositions.TTRSS(
-            function=function,
-            embedding=embedding,
-            domain=domain).fit(samples, rank=2)
+        result = tk.decompositions.TTRSS(embedding=embedding, domain=domain, source=function).fit(samples, rank=2)
         with pytest.raises(NotImplementedError, match='warm-start'):
-            tk.decompositions.TTRSS(
-                function=function,
-                embedding=embedding,
-                domain=domain).fit(
+            tk.decompositions.TTRSS(embedding=embedding, domain=domain, source=function).fit(
                     samples, rank=2, warm_start=result)
 
 
@@ -279,7 +247,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         def function(values):
             return 1 + values[:, 0] + 2 * values[:, 1]
 
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             function,
             layout.n_coordinates,
             layout=layout,
@@ -298,7 +266,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             rtol=1e-9, atol=1e-11)
         assert info['metadata']['algorithm'] == 'qtt_rss'
         assert info['metadata']['quantization']['ordering'] == ordering
-        assert info['metadata']['quantization']['sample_space'] == 'coordinates'
+        assert info['metadata']['quantization']['sites'] == layout.sites()
 
     def test_class_reuses_problem_with_physical_or_digit_samples(self):
         layout = tk.formats.QuantizedLayout(1, base=2, level=3)
@@ -307,28 +275,25 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         indices, physical = _physical_grid(
             layout, coordinate_map, torch.tensor([0., 1.]))
         digits = layout.encode_indices(indices)
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda values: 1 + values[:, 0],
             layout.n_coordinates,
             layout=layout,
             coordinate_map=coordinate_map)
-        decomposer = tk.decompositions.TTRSS.quantized(
+        decomposer = tk.decompositions.TTRSS(source=
             source)
 
         physical_result = decomposer.fit(
             physical, rank=2, legacy_projection=False)
         digit_result = decomposer.fit(
-            digits,
+            tk.decompositions.ConfigurationBatch(digits),
             rank=2,
-            legacy_projection=False,
-            sample_space='digits')
+            legacy_projection=False)
 
         assert torch.allclose(
             physical_result.contract_dense(), digit_result.contract_dense())
-        assert physical_result.metadata['quantization']['sample_space'] == \
-            'coordinates'
-        assert digit_result.metadata['quantization']['sample_space'] == \
-            'digits'
+        assert physical_result.layout == digit_result.layout
+        assert physical_result.layout == digit_result.layout
 
     def test_digit_samples_allow_forward_only_warp(self):
         layout = tk.formats.QuantizedLayout(1, base=2, level=2)
@@ -338,7 +303,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         indices = torch.arange(4).reshape(-1, 1)
         digits = layout.encode_indices(indices)
 
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda values: 1 + values[:, 0],
             layout.n_coordinates,
             layout=layout,
@@ -356,7 +321,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         assert torch.allclose(result.evaluate(digits), 1 + physical[:, 0])
 
     @pytest.mark.parametrize('out_shape', [(2,), (2, 2)])
-    def test_quantized_rss_rejects_tensor_outputs(self, out_shape):
+    def test_quantized_rss_preserves_tensor_outputs(self, out_shape):
         layout = tk.formats.QuantizedLayout(1, base=2, level=3)
         physical = torch.arange(8, dtype=torch.float64).reshape(-1, 1) / 7
 
@@ -364,17 +329,17 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             return torch.ones(values.shape[0], *out_shape, dtype=values.dtype,
                               device=values.device)
 
-        with pytest.raises(ValueError, match='out_shape'):
-            source = tk.decompositions.QuanticsVectorSource(
-                function,
-                layout.n_coordinates,
-                layout=layout,
-                coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
-            tk.decompositions.qtt_rss(
-                source,
-                physical,
-                rank=4,
-                return_result=True)
+        source = tk.decompositions.CallableQuanticsSource(
+            function,
+            layout.n_coordinates,
+            layout=layout,
+            coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
+        result = tk.decompositions.TTRSS(source).fit(
+            physical.repeat_interleave(math.prod(out_shape), 0),
+                labels=torch.arange(math.prod(out_shape)).repeat(physical.shape[0]),
+            rank=4,)
+        assert result.out_shape == out_shape
+        torch.testing.assert_close(result.evaluate_coordinates(physical), function(physical))
 
     @pytest.mark.parametrize('singleton_axis', [False, True])
     def test_quantized_rss_accepts_scalar_outputs(self, singleton_axis):
@@ -385,16 +350,14 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             result = torch.ones_like(values[:, 0])
             return result.unsqueeze(-1) if singleton_axis else result
 
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             function,
             layout.n_coordinates,
             layout=layout,
             coordinate_map=tk.formats.AffineCoordinateMap(torch.tensor([0., 1.], dtype=torch.float64), layout.grid_size, grid_offset="endpoints"))
-        result = tk.decompositions.qtt_rss(
-            source,
+        result = tk.decompositions.TTRSS(source).fit(
             physical,
-            rank=1,
-            return_result=True)
+            rank=1,)
         assert result.n_sites == layout.n_sites
         assert torch.allclose(result.evaluate_coordinates(physical), torch.ones(8, dtype=torch.float64))
 
@@ -403,12 +366,12 @@ class TestQTTRSS:  # MARK: TestQTTRSS
         coordinate_map = tk.formats.FunctionalCoordinateMap(
             None, layout.grid_size, grid_offset="endpoints",
             forward_function=lambda unit, domain: unit.square())
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda values: values[:, 0],
             layout.n_coordinates,
             layout=layout,
             coordinate_map=coordinate_map)
-        decomposer = tk.decompositions.TTRSS.quantized(
+        decomposer = tk.decompositions.TTRSS(source=
             source)
 
         with pytest.raises(NotImplementedError, match='inverse'):
@@ -456,24 +419,20 @@ class TestTTRS:  # MARK: TestTTRS
     def test_dataset_and_functional_api_are_distinct_from_rss_samples(self):
         dataset = torch.tensor([
             [0, 0], [0, 0], [0, 1], [1, 0], [1, 1], [1, 1]])
-        cores, info = tk.decompositions.tt_rs(
-            dataset=dataset,
-            in_dim=(2, 2),
-            rank=2,
-            return_info=True)
+        cores, info = tk.decompositions.tt_rs(tk.decompositions.SparseTensorSource.from_data(dataset, in_dim=(2, 2)), rank=2, return_info=True)
         expected = torch.tensor(
             [[2., 1.], [1., 2.]], dtype=torch.get_default_dtype()) / 6
 
         result = tk.decompositions.TTDecomposition(cores)
         assert torch.allclose(result.contract_dense(), expected)
-        assert info['metadata']['source_type'] == 'EmpiricalDistribution'
+        assert info['metadata']['source_type'] == 'SparseTensorSource'
         assert info['metrics']['errors'][0]['kind'] == 'source_support'
 
     def test_tt_source_uses_structured_contractions(self):
         source, dense = _rank_one_sparse()
         tt = tk.decompositions.TTSVD(
             dense, out_device=None).fit(rank=1)
-        tt_source = tk.decompositions.TTTensorSource(tt)
+        tt_source = tk.decompositions.FormatSource(tt)
         result = tk.decompositions.TTRS(
             tt_source,
             sketch_operator=tk.decompositions.MarginalSketch.markov(),
@@ -847,17 +806,15 @@ def test_quantized_rss_result_retains_coordinates_without_source():
         return 1 + values[:, 0] + 2 * values[:, 1]
 
     reference = weakref.ref(function)
-    source = tk.decompositions.QuanticsVectorSource(
+    source = tk.decompositions.CallableQuanticsSource(
         function,
         layout.n_coordinates,
         layout=layout,
         coordinate_map=tk.formats.AffineCoordinateMap(domain, layout.grid_size, grid_offset="endpoints"))
-    result = tk.decompositions.qtt_rss(
-        source,
+    result = tk.decompositions.TTRSS(source).fit(
         coordinates,
         rank=4,
-        legacy_projection=False,
-        return_result=True)
+        legacy_projection=False,)
     assert isinstance(result, tk.decompositions.QTTDecomposition)
     del function, source
     gc.collect()
@@ -890,14 +847,14 @@ def test_rss_function_formats_devices_and_sample_error(quantized,
         layout = tk.formats.QuantizedLayout(1, 2, 3)
         coordinate_map = tk.formats.AffineCoordinateMap(
             torch.tensor([0., 1.], dtype=real_dtype, device=device), layout.grid_size)
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             function,
             layout.n_coordinates,
             layout=layout,
             coordinate_map=coordinate_map,
             device=device,
             dtype=dtype)
-        problem = engine.quantized(
+        problem = engine(source=
             source,
             out_device=None)
     else:
@@ -928,3 +885,57 @@ def test_rss_keeps_unexpected_function_errors(error):
         function, embedding=torch.eye(2), domain=torch.arange(2))
     with pytest.raises(error, match='Callback failure'):
         engine.fit(sketch_samples=torch.zeros(2, 2, dtype=torch.long), rank=1)
+
+
+@pytest.mark.parametrize('quantics', [False, True])
+def test_matrix_sources_are_paired_after_rss(quantics, device_dtype, assert_close):
+    device, dtype = device_dtype
+    if quantics:
+        real_dtype = torch.empty((), dtype=dtype).real.dtype
+        def function(inputs, outputs):
+            return torch.exp(inputs.sum(-1) + outputs.sum(-1)).to(dtype)
+        source = tk.decompositions.CallableQuanticsSource.matrix(
+            function, 1, 1, in_base=2, out_base=2, in_level=2, out_level=2,
+            in_domain=torch.tensor([0., 1.], dtype=real_dtype, device=device),
+            out_domain=torch.tensor([0., 1.], dtype=real_dtype, device=device),
+            device=device, dtype=dtype)
+        samples = torch.arange(4, device=device, dtype=real_dtype)[:, None] / 4
+    else:
+        tensor = torch.ones(2, 2, 2, 2, dtype=dtype, device=device)
+        source = tk.decompositions.DenseTensorSource.matrix(tensor)
+        samples = torch.cartesian_prod(torch.arange(2), torch.arange(2)).to(device)
+    samples = samples.repeat_interleave(4, 0)
+    labels = torch.arange(4, device=device).repeat(4)
+    result = tk.decompositions.TTRSS(source, out_device=None).fit(samples, labels, rank=1)
+    assert result.out_dim == (2, 2)
+    assert_close(result.contract_dense(), source.contract_dense())
+    assert isinstance(result, tk.decompositions.QTTMDecomposition if quantics
+                      else tk.decompositions.TTMDecomposition)
+
+
+def test_finite_quantics_source_is_inferred_by_rs():
+    source = tk.decompositions.CallableQuanticsSource(
+        lambda x: torch.exp(x[:, 0]), 1, base=2, level=3, domain=(0., 1.))
+    engine = tk.decompositions.TTRS(source, sketch_operator=tk.decompositions.SampledSketch())
+    result = engine.fit(rank=1)
+    assert engine.source is source
+    assert isinstance(result, tk.decompositions.QTTDecomposition)
+    torch.testing.assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
+
+
+def test_continuous_matrix_rss_uses_output_basis_sites():
+    def function(coordinates):
+        left = 1 + coordinates[:, 0]
+        right = 1 + coordinates[:, 1]
+        return torch.einsum('b,b,i,j->bij', left, right,
+                            torch.tensor([1., 2.]), torch.tensor([3., 4.]))
+    source = tk.decompositions.CallableSource.matrix(function, (2, 2), (2, 2))
+    coordinates = torch.cartesian_prod(torch.tensor([0., 1.]), torch.tensor([0., 1.]))
+    samples = coordinates.repeat_interleave(4, 0)
+    result = tk.decompositions.TTRSS(source, embedding=lambda x: torch.stack(
+        (torch.ones_like(x), x), -1), domain=(torch.tensor([0., 1.]),) * 2).fit(
+            samples, labels=torch.arange(4).repeat(4), rank=1)
+    assert isinstance(result, tk.decompositions.TTMDecomposition)
+    embedded = torch.stack((torch.ones_like(coordinates), coordinates), -1)
+    torch.testing.assert_close(result.evaluate(embedded, in_sites=(0, 1), out_sites=()),
+                               function(coordinates))

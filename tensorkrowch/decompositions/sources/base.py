@@ -3,6 +3,7 @@ This script contains:
 
     Internal classes:
         * _SourceEvaluationTracker
+        * _TensorView
 
     Public classes:
         * ConfigurationBatch
@@ -200,8 +201,10 @@ class TensorSource(Protocol):  # MARK: TensorSource
     Provides values for a fixed tensor or function without imposing an
     algorithm.
 
-    ``in_dim`` declares one input dimension per site. It bounds discrete
-    indices but does not bound continuous features passed to a callable.
+    ``is_discrete_tensor`` identifies finite indexed tensors. Their ``in_dim``
+    bounds each discrete input index. Continuous sources receive feature configurations instead. Their ``in_dim``
+    is normally ``None``; matrix callables can declare paired dimensions
+    without representing a discrete tensor.
     ``out_shape`` describes the tensor returned after each configuration; it
     is ``()`` for scalar sources and may be ``None`` until a callable is first
     evaluated. ``dtype`` can likewise be inferred on first evaluation.
@@ -214,8 +217,12 @@ class TensorSource(Protocol):  # MARK: TensorSource
     """
 
     @property
-    def in_dim(self) -> Tuple[int, ...]:
-        """Discrete input dimension at every site."""
+    def is_discrete_tensor(self) -> bool:
+        """Whether the source defines all entries of a finite indexed tensor."""
+
+    @property
+    def in_dim(self) -> Optional[Tuple[int, ...]]:
+        """Discrete dimensions, or ``None`` for continuous inputs."""
 
     @property
     def out_shape(self) -> Optional[Tuple[int, ...]]:
@@ -299,6 +306,62 @@ class FiberTensorSource(TensorSource, Protocol):  # MARK: FiberTensorSource
 
 class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
     """Adds inexpensive cumulative evaluation counters to built-in sources."""
+
+    input_kind = 'indices'
+    n_batches = 0
+    _matrix_dims = None
+
+    @property
+    def is_discrete_tensor(self) -> bool:
+        """Whether all configurations index a fixed finite tensor."""
+        return self.input_kind == 'indices' and self.in_dim is not None
+
+    @property
+    def is_matrix(self) -> bool:
+        """Whether local axes are paired as matrix inputs and outputs."""
+        return self._matrix_dims is not None
+
+    @property
+    def out_dim(self) -> Optional[Tuple[int, ...]]:
+        """Local output dimensions when the source has matrix grouping."""
+        return self._matrix_dims[1] if self.is_matrix else None
+
+    @property
+    def in_sites(self) -> Tuple[int, ...]:
+        """Positions of function inputs in the represented vector chain."""
+        return tuple(range(len(self.in_dim))) if self.in_dim is not None else \
+            tuple(range(self.n_sites or 0))
+
+    def contract_dense(self) -> torch.Tensor:
+        """
+        Evaluates the complete finite tensor in its represented axis order.
+
+        Returns
+        -------
+        torch.Tensor
+            Input-site axes followed by response axes for vectors, or paired
+            input/output axes for matrices. Continuous sources need an explicit
+            discretization before this operation is defined.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.CallableTensorSource(
+        ...     lambda indices: indices.sum(-1).float(), in_dim=(2, 2))
+        >>> source.contract_dense()
+        tensor([[0., 1.],
+                [1., 2.]])
+        """
+        if not self.is_discrete_tensor:
+            raise ValueError('`source` should represent a discrete tensor')
+        indices = _unravel_indices(torch.arange(prod(self.in_dim),
+                                                device=self.device), self.in_dim)
+        values = self.evaluate(ConfigurationBatch(indices))
+        tensor = values.reshape(*self.in_dim, *values.shape[1:])
+        if self.is_matrix and self.out_shape:
+            n = len(self.in_dim)
+            tensor = tensor.permute(*(axis for site in range(n)
+                                      for axis in (site, n + site)))
+        return tensor
 
     @property
     def evaluation_stats(self) -> EvaluationStats:
@@ -436,6 +499,105 @@ def _fiber_configurations(configurations: ConfigurationBatch,
     expanded = expanded.reshape(
         packed.shape[0] * n_values, *packed.shape[1:])
     return ConfigurationBatch(expanded, kind=configurations.kind), n_values
+
+
+
+
+def _data_weights(dataset: torch.Tensor,
+                  weights: Optional[torch.Tensor] = None,
+                  dtype: Optional[torch.dtype] = None) -> torch.Tensor:
+    """Validates a finite dataset and normalizes non-negative sample weights."""
+    if not isinstance(dataset, torch.Tensor):
+        raise TypeError('`dataset` should be torch.Tensor type')
+    if dataset.ndim != 2 or not dataset.shape[0] or not dataset.shape[1]:
+        raise ValueError('`dataset` should have non-empty sample and site axes')
+    if dataset.is_complex() or not torch.isfinite(dataset).all():
+        raise ValueError('`dataset` should contain finite real coordinates')
+    dtype = torch.get_default_dtype() if dtype is None else dtype
+    if not isinstance(dtype, torch.dtype):
+        raise TypeError('`dtype` should be torch.dtype type')
+    if weights is None:
+        weights = torch.ones(dataset.shape[0], dtype=dtype, device=dataset.device)
+    if not isinstance(weights, torch.Tensor):
+        raise TypeError('`weights` should be torch.Tensor type')
+    if weights.shape != (dataset.shape[0],) or weights.device != dataset.device:
+        raise ValueError('`weights` should match dataset samples and device')
+    if weights.is_complex() or not torch.isfinite(weights).all() or torch.any(weights < 0):
+        raise ValueError('`weights` should be finite, real and non-negative')
+    if not weights.is_floating_point():
+        weights = weights.to(dtype)
+    total = weights.sum()
+    if not torch.isfinite(total) or total <= 0:
+        raise ValueError('The total sample weight should be positive')
+    return weights / total
+
+
+class _TensorView(_SourceEvaluationTracker):  # MARK: _TensorView
+    """Presents complete scalar entries in the source's final chain layout."""
+
+    def __init__(self, source: TensorSource) -> None:
+        self._initialize_evaluation_stats()
+        self.source = source
+        self._input_sites = getattr(source, 'in_sites', tuple(range(len(source.in_dim))))
+        if source.out_shape is None:
+            source.evaluate(ConfigurationBatch(torch.zeros(
+                1, len(source.in_dim), device=source.device, dtype=torch.long)))
+        self._matrix_dims = (source.in_dim, source.out_dim) if getattr(
+            source, 'is_matrix', False) else None
+        if self.is_matrix:
+            self._in_dim = tuple(a * b for a, b in zip(*self._matrix_dims))
+        else:
+            dimensions = [None] * (len(source.in_dim) + len(source.out_shape))
+            for site, dim in zip(self._input_sites, source.in_dim):
+                dimensions[site] = dim
+            free = (site for site in range(len(dimensions)) if site not in self._input_sites)
+            for site, dim in zip(free, source.out_shape):
+                dimensions[site] = dim
+            self._in_dim = tuple(dimensions)
+        self.n_batches = getattr(source, 'n_batches', 0)
+
+    @property
+    def in_dim(self) -> Tuple[int, ...]:
+        return self._in_dim
+
+    @property
+    def out_shape(self) -> Tuple[int, ...]:
+        return ()
+
+    @property
+    def dtype(self) -> Optional[torch.dtype]:
+        return self.source.dtype
+
+    @property
+    def device(self) -> torch.device:
+        return self.source.device
+
+    def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
+        """Selects response indices or decodes fused input/output pairs."""
+        indices = _discrete_indices(configurations, self._in_dim, self.device)
+        if self.is_matrix:
+            sizes = indices.new_tensor(self._matrix_dims[1])
+            inputs, outputs = indices // sizes, indices % sizes
+        else:
+            inputs = indices[:, self._input_sites]
+            free = [site for site in range(len(self.in_dim))
+                    if site not in self._input_sites]
+            outputs = indices[:, free]
+        values = self.source.evaluate(ConfigurationBatch(inputs))
+        if not self.source.out_shape:
+            return values
+        labels = _ravel_indices(outputs, self.source.out_shape)
+        return values.reshape(indices.shape[0], -1).gather(1, labels[:, None]).squeeze(1)
+
+
+def _tensor_view(source: TensorSource) -> TensorSource:
+    """Prepares a scalar chain view without materializing the source."""
+    if not source.is_discrete_tensor:
+        raise ValueError('`source` should represent a discrete tensor')
+    if getattr(source, 'is_matrix', False) or source.out_shape != () or tuple(
+            getattr(source, 'in_sites', range(len(source.in_dim)))) != tuple(range(len(source.in_dim))):
+        return _TensorView(source)
+    return source
 
 
 __all__ = [

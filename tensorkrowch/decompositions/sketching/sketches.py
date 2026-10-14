@@ -152,6 +152,8 @@ def _unravel_ids(ids: torch.Tensor, dimensions: Sequence[int]) -> torch.Tensor:
 def _structured_capability(source: TensorSource,
                            name: str) -> Optional['SketchContractableSource']:
     """Returns one optional structured ``source`` kernel by capability."""
+    if not getattr(source, '_structured', True):
+        return None
     capability = getattr(source, name, None)
     return capability if callable(capability) else None
 

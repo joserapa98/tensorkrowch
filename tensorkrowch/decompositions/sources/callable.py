@@ -2,9 +2,14 @@
 This script contains:
 
     Public classes:
+        * CallableSource
         * CallableTensorSource
+
+    Internal classes:
+        * _DataEvaluator
 """
 
+from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
@@ -13,12 +18,14 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
                                                       _fiber_configurations,
-                                                      _normalize_in_dim)
+                                                      _normalize_in_dim,
+                                                      _data_weights)
+from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 
 
-class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSource
+class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
     """
-    Tensor source evaluated by a user callable.
+    Continuous function evaluated by a user callable.
 
     Packed configurations are passed to ``function`` as a tensor. A
     heterogeneous configuration batch is passed as a tuple containing one
@@ -29,12 +36,12 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
     ----------
     function : callable
         Function evaluated on configuration batches.
-    in_dim : sequence of int
-        Discrete input dimension at every site. These dimensions also provide
-        the default grid for discrete fibers.
+    n_sites : int, optional
+        Number of continuous input sites, inferred on first evaluation when
+        omitted. Each site can receive a scalar or an embedded vector.
     out_shape : sequence of int or None, optional
-        Declared function output shape. The default ``()`` denotes a scalar.
-        ``None`` infers the shape from the first non-empty evaluation.
+        Declared response shape. The default ``None`` discovers it on the
+        first non-empty evaluation; ``()`` requires scalar responses.
     dtype : torch.dtype or None, optional
         Declared output dtype. ``None`` infers it from the first evaluation.
     device : str or torch.device, optional
@@ -43,10 +50,12 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
         Maximum number of configurations passed to one callable invocation.
     """
 
+    input_kind = 'features'
+
     def __init__(self,
                  function: Callable,
-                 in_dim: Sequence[int],
-                 out_shape: Optional[Sequence[int]] = (),
+                 n_sites: Optional[int] = None,
+                 out_shape: Optional[Sequence[int]] = None,
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
                  batch_size: Optional[int] = None) -> None:
@@ -76,15 +85,24 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
                 raise ValueError('`batch_size` should be a positive integer')
 
         self.function = function
-        self._in_dim = _normalize_in_dim(in_dim)
+        if n_sites is not None and (isinstance(n_sites, bool) or
+                                    not isinstance(n_sites, int) or n_sites < 1):
+            raise ValueError('`n_sites` should be a positive integer')
+        self._in_dim = None
+        self._n_sites = n_sites
         self._out_shape = normalized_out_shape
         self._dtype = dtype
         self._device = torch.empty(0, device=device).device
         self.batch_size = batch_size
 
     @property
-    def in_dim(self) -> Tuple[int, ...]:
-        """Discrete input dimension at every site."""
+    def n_sites(self) -> Optional[int]:
+        """Number of input sites, possibly unknown before first evaluation."""
+        return self._n_sites
+
+    @property
+    def in_dim(self) -> Optional[Tuple[int, ...]]:
+        """Discrete dimensions, or ``None`` for continuous features."""
         return self._in_dim
 
     @property
@@ -107,13 +125,17 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
         """Evaluates and validates one callable batch."""
         argument = configurations.values
         result = self.function(argument)
+        return self._validate_result(result, configurations.batch_size)
+
+    def _validate_result(self, result: torch.Tensor, batch_size: int) -> torch.Tensor:
+        """Checks batch shape and stable result runtime metadata."""
         if not isinstance(result, torch.Tensor):
             raise TypeError('`function` should return a torch.Tensor')
         if result.device != self._device:
             raise ValueError(
                 '`function` should return values on the source device')
         if (result.ndim < 1) or \
-                (result.shape[0] != configurations.batch_size):
+                (result.shape[0] != batch_size):
             raise ValueError(
                 '`function` should preserve the configuration batch dimension')
 
@@ -130,15 +152,33 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
         return result
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates ``configurations`` in deterministic contiguous batches."""
+        """
+        Evaluates configurations using the source's input convention.
+
+        Parameters
+        ----------
+        configurations : ConfigurationBatch
+            Continuous features for ``CallableSource``; discrete indices for
+            ``CallableTensorSource`` and its Quantics subclass.
+
+        Returns
+        -------
+        torch.Tensor
+            Values with shape ``(batch, *out_shape)``, preserving input order
+            and autograd. ``batch_size`` bounds each callable invocation.
+        """
         if not isinstance(configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
-        if configurations.n_sites != len(self._in_dim):
+        if self.n_sites is None:
+            self._n_sites = configurations.n_sites
+        if configurations.n_sites != self.n_sites:
             raise ValueError(
                 'Configurations should contain one value per input site')
         configurations = configurations.to(self._device)
-        if configurations.kind == 'indices':
+        if configurations.kind != self.input_kind:
+            raise ValueError(f'Configurations should have kind `{self.input_kind}`')
+        if self.input_kind == 'indices':
             _discrete_indices(
                 configurations, self._in_dim, self._device)
 
@@ -178,12 +218,16 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
         """
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self._in_dim)):
+        if self.n_sites is None:
+            self._n_sites = configurations.n_sites
+        if (site < 0) or (site >= self.n_sites):
             raise ValueError('`site` should identify an input site')
         if values is None:
             if configurations.kind != 'indices':
                 raise ValueError(
                     'Coordinate fibers require explicit `values`')
+            if not self.is_discrete_tensor:
+                raise ValueError('Continuous fibers require explicit `values`')
             values = torch.arange(
                 self._in_dim[site], device=configurations.device)
         expanded, n_values = _fiber_configurations(
@@ -192,7 +236,146 @@ class CallableTensorSource(_SourceEvaluationTracker):  # MARK: CallableTensorSou
         return result.reshape(
             configurations.batch_size, n_values, *result.shape[1:])
 
+    @classmethod
+    def from_data(cls, dataset: torch.Tensor,
+                  weights: Optional[torch.Tensor] = None,
+                  *, kernel: Optional[Callable] = None,
+                  in_dim: Optional[Sequence[int]] = None,
+                  **kernel_kwargs) -> 'CallableSource':
+        """
+        Constructs a scalar vector source from exact samples or a kernel.
+
+        Parameters
+        ----------
+        dataset : torch.Tensor
+            Real sample coordinates, or indices for a discrete callable.
+        weights : torch.Tensor, optional
+            Non-negative weights normalized to total mass one.
+        kernel : callable, optional
+            Receives ``(coordinates, dataset, **kernel_kwargs)`` and returns
+            ``(batch, samples)`` values. ``None`` uses exact coordinate matches.
+        in_dim : sequence[int], optional
+            Required for ``CallableTensorSource``; absent for continuous sources.
+        **kernel_kwargs
+            Parameters owned by the selected kernel, such as ``bandwidth``.
+
+        Returns
+        -------
+        CallableSource or CallableTensorSource
+            Source reusing the class's validation, batching and statistics.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.CallableSource.from_data(
+        ...     torch.tensor([[0.1], [0.4], [0.1]]))
+        >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+        ...     torch.tensor([[0.1], [0.3]]), kind='features'))
+        tensor([0.6667, 0.0000])
+        """
+        mass = _data_weights(dataset, weights,
+                             dataset.dtype if dataset.is_floating_point() else None)
+        if kernel is not None and not callable(kernel):
+            raise TypeError('`kernel` should be callable')
+        if kernel is None and kernel_kwargs:
+            raise ValueError('Kernel parameters require a `kernel`')
+        if cls.input_kind == 'indices' and kernel is None:
+            return SparseTensorSource.from_data(dataset, in_dim=in_dim, weights=weights)
+        evaluator = _DataEvaluator(dataset, mass, kernel, kernel_kwargs)
+        if cls.input_kind == 'indices':
+            if in_dim is None:
+                raise ValueError('Discrete data callables require `in_dim`')
+            return cls(evaluator, in_dim, out_shape=(), dtype=mass.dtype if kernel is None else None,
+                       device=dataset.device)
+        if in_dim is not None:
+            raise ValueError('Continuous data callables do not define `in_dim`')
+        return cls(evaluator, dataset.shape[1], out_shape=(), dtype=mass.dtype if kernel is None else None,
+                   device=dataset.device)
+
+    @classmethod
+    def matrix(cls, function: Callable, in_dim: Sequence[int],
+               out_dim: Sequence[int], **kwargs) -> 'CallableSource':
+        """
+        Constructs a callable with one paired output dimension per input.
+
+        Parameters
+        ----------
+        function : callable
+            Evaluates input configurations and returns all output axes.
+        in_dim, out_dim : sequence[int]
+            Paired local dimensions. Output shape must match ``out_dim``.
+        **kwargs
+            Callable runtime options.
+
+        Returns
+        -------
+        CallableSource or CallableTensorSource
+            Source with explicit local matrix grouping.
+        """
+        inputs, outputs = _normalize_in_dim(in_dim), _normalize_in_dim(out_dim)
+        if len(inputs) != len(outputs):
+            raise ValueError('Matrix dimensions should have equal lengths')
+        source = cls(function, inputs if cls.input_kind == 'indices' else len(inputs),
+                     out_shape=outputs, **kwargs)
+        source._matrix_dims = inputs, outputs
+        source._in_dim = inputs
+        return source
+
+
+@dataclass
+class _DataEvaluator:  # MARK: _DataEvaluator
+    """Evaluates exact sample masses or a weighted user kernel."""
+
+    dataset: torch.Tensor
+    weights: torch.Tensor
+    kernel: Optional[Callable]
+    kwargs: dict
+
+    def __call__(self, coordinates: torch.Tensor) -> torch.Tensor:
+        """Returns one mass or kernel value per queried configuration."""
+        if self.kernel is None:
+            dtype = torch.promote_types(coordinates.dtype, self.dataset.dtype)
+            values = (coordinates.to(dtype)[:, None] ==
+                      self.dataset.to(dtype)[None]).all(-1).to(self.weights.dtype)
+        else:
+            values = self.kernel(coordinates, self.dataset, **self.kwargs)
+            if not isinstance(values, torch.Tensor) or values.shape != (
+                    coordinates.shape[0], self.dataset.shape[0]):
+                raise ValueError('`kernel` should return `(batch, samples)` values')
+        dtype = torch.promote_types(values.dtype, self.weights.dtype)
+        return values.to(dtype) @ self.weights.to(device=values.device, dtype=dtype)
+
+
+class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
+    """
+    Callable-backed finite tensor evaluated on discrete indices.
+
+    Parameters
+    ----------
+    function : callable
+        Receives integer configurations and preserves their leading batch axis.
+    in_dim : sequence[int]
+        Positive finite dimensions of the indexed input sites.
+    **kwargs
+        Output shape, dtype, device and batching options of ``CallableSource``.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.CallableTensorSource(
+    ...     lambda indices: indices.sum(-1).float(), in_dim=(2, 3))
+    >>> source.contract_dense()
+    tensor([[0., 1., 2.],
+            [1., 2., 3.]])
+    """
+
+    input_kind = 'indices'
+
+    def __init__(self, function: Callable, in_dim: Sequence[int], **kwargs) -> None:
+        dimensions = _normalize_in_dim(in_dim)
+        super().__init__(function, len(dimensions), **kwargs)
+        self._in_dim = dimensions
+
 
 __all__ = [
+    'CallableSource',
     'CallableTensorSource',
 ]

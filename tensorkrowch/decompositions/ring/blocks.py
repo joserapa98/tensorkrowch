@@ -597,7 +597,7 @@ def split_block_ttsvd(block: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
     renormalize : bool
         Whether the TT-SVD subroutine extracts intermediate scales. Default is

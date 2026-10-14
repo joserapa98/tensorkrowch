@@ -3,9 +3,13 @@ This script contains:
 
     Public classes:
         * SparseTensorSource
-        * EmpiricalDistribution
+
+    Internal classes:
+        * _SparseLookup
 """
 
+from dataclasses import dataclass, field
+from math import prod
 from typing import Optional, Sequence, Tuple
 
 import torch
@@ -17,8 +21,42 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _discrete_indices,
                                                       _fiber_configurations,
                                                       _normalize_in_dim,
+                                                      _data_weights,
                                                       _ravel_indices,
                                                       _unravel_indices)
+
+
+@dataclass
+class _SparseLookup:  # MARK: _SparseLookup
+    """Stores coalesced indexed values and performs ordered sparse lookups."""
+
+    indices: torch.Tensor
+    values: torch.Tensor
+    in_dim: Tuple[int, ...]
+    flat_ids: torch.Tensor = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        flat_ids = _ravel_indices(self.indices, self.in_dim)
+        self.flat_ids, inverse = torch.unique(flat_ids, sorted=True,
+                                              return_inverse=True)
+        values = self.values
+        if values.dtype == torch.bool:
+            values = values.to(torch.long)
+        combined = values.new_zeros((self.flat_ids.numel(), *values.shape[1:]))
+        self.values = combined.index_add(0, inverse, values).to(self.values.dtype)
+        self.indices = _unravel_indices(self.flat_ids, self.in_dim)
+
+    def __call__(self, indices: torch.Tensor) -> torch.Tensor:
+        """Returns stored values or zero for absent configurations."""
+        flat_ids = _ravel_indices(indices, self.in_dim)
+        positions = torch.searchsorted(self.flat_ids, flat_ids)
+        result = self.values.new_zeros((flat_ids.numel(), *self.values.shape[1:]))
+        if self.flat_ids.numel():
+            safe = positions.clamp(max=self.flat_ids.numel() - 1)
+            matched = (positions < self.flat_ids.numel()) & (
+                self.flat_ids.index_select(0, safe) == flat_ids)
+            result[matched] = self.values.index_select(0, safe[matched])
+        return result
 
 
 class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
@@ -58,8 +96,8 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
                 '`values` and `indices` should have the same leading size')
         if values.device != indices.device:
             raise ValueError('`values` and `indices` should share a device')
-        if not (values.is_floating_point() or values.is_complex()):
-            raise TypeError('`values` should have a floating or complex dtype')
+        if not (values.is_floating_point() or values.is_complex() or values.dtype == torch.bool):
+            raise TypeError('`values` should have a floating, complex or boolean dtype')
 
         self._in_dim = _normalize_in_dim(in_dim)
         if indices.shape[1] != len(self._in_dim):
@@ -69,16 +107,9 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
             self._in_dim,
             values.device)
 
-        flat_ids = _ravel_indices(indices, self._in_dim)
-        unique_ids, inverse = torch.unique(
-            flat_ids, sorted=True, return_inverse=True)
-        coalesced_values = values.new_zeros(
-            (unique_ids.numel(), *values.shape[1:]))
-        coalesced_values.index_add_(0, inverse, values)
-
-        self._flat_ids = unique_ids
-        self._indices = _unravel_indices(unique_ids, self._in_dim)
-        self._values = coalesced_values
+        self._lookup = _SparseLookup(indices, values, self._in_dim)
+        self._indices, self._values = self._lookup.indices, self._lookup.values
+        self._flat_ids = self._lookup.flat_ids
         self._out_shape = tuple(values.shape[1:])
 
     @property
@@ -115,17 +146,16 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
         """Evaluates sparse values, returning zero outside the support."""
         indices = _discrete_indices(
             configurations, self._in_dim, self.device)
-        flat_ids = _ravel_indices(indices, self._in_dim)
-        positions = torch.searchsorted(self._flat_ids, flat_ids)
-        safe_positions = positions.clamp(max=max(self._flat_ids.numel() - 1,
-                                                 0))
-        result = self._values.new_zeros(
-            (flat_ids.numel(), *self._out_shape))
-        if self._flat_ids.numel():
-            matched = (positions < self._flat_ids.numel()) & \
-                (self._flat_ids.index_select(0, safe_positions) == flat_ids)
-            result[matched] = self._values.index_select(
-                0, safe_positions[matched])
+        if self.is_matrix:
+            outputs = _unravel_indices(torch.arange(prod(self.out_dim),
+                                                    device=self.device), self.out_dim)
+            inputs = indices[:, None].expand(-1, outputs.shape[0], -1)
+            outputs = outputs[None].expand(indices.shape[0], -1, -1)
+            paired = torch.stack((inputs, outputs), -1).flatten(-2)
+            result = self._lookup(paired.reshape(-1, paired.shape[-1]))
+            result = result.reshape(indices.shape[0], *self.out_dim)
+        else:
+            result = self._lookup(indices)
         self._record_evaluation(points=indices.shape[0])
         return result
 
@@ -148,77 +178,83 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
             configurations.batch_size, n_values, *self._out_shape)
 
 
-class EmpiricalDistribution(SparseTensorSource):  # MARK: EmpiricalDistribution
-    """
-    Normalized sparse empirical distribution built from a dataset.
+    @classmethod
+    def from_data(cls,
+                  dataset: torch.Tensor,
+                  in_dim: Optional[Sequence[int]] = None,
+                  weights: Optional[torch.Tensor] = None,
+                  dtype: Optional[torch.dtype] = None) -> 'SparseTensorSource':
+        """
+        Constructs a discrete empirical distribution from sample indices.
 
-    Parameters
-    ----------
-    dataset : torch.Tensor
-        Integer observations with shape ``(samples, sites)``.
-    in_dim : sequence of int, optional
-        Complete discrete input dimension. If omitted, each dimension is one
-        plus the largest observed index.
-    weights : torch.Tensor, optional
-        Non-negative mass assigned to every observation before normalization.
-        Repeated observations are accumulated.
-    dtype : torch.dtype, optional
-        Probability dtype used when ``weights`` is omitted or integral.
-    """
+        Parameters
+        ----------
+        dataset : torch.Tensor
+            Integer samples with shape ``(samples, sites)``. Repeats accumulate.
+        in_dim : sequence[int], optional
+            Complete dimensions; inferred from observed maxima when omitted.
+        weights : torch.Tensor, optional
+            Non-negative sample weights, normalized to total mass one.
+        dtype : torch.dtype, optional
+            Dtype for uniform or integral weights.
 
-    def __init__(self,
-                 dataset: torch.Tensor,
-                 in_dim: Optional[Sequence[int]] = None,
-                 weights: Optional[torch.Tensor] = None,
-                 dtype: Optional[torch.dtype] = None) -> None:
-        if not isinstance(dataset, torch.Tensor):
-            raise TypeError('`dataset` should be torch.Tensor type')
-        if (dataset.ndim != 2) or (dataset.dtype not in _INTEGER_DTYPES):
-            raise TypeError(
-                '`dataset` should be a two-dimensional integer tensor')
-        if dataset.shape[0] < 1:
-            raise ValueError('`dataset` should contain at least one sample')
+        Returns
+        -------
+        SparseTensorSource
+            Vector source with known zeros outside the observed support.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.SparseTensorSource.from_data(
+        ...     torch.tensor([[0], [2], [0]]), in_dim=(3,))
+        >>> source.contract_dense()
+        tensor([0.6667, 0.0000, 0.3333])
+        """
+        weights = _data_weights(dataset, weights, dtype)
+        if dataset.dtype not in _INTEGER_DTYPES:
+            raise TypeError('`dataset` should contain integer indices')
+        if torch.any(dataset < 0):
+            raise ValueError('`dataset` indices should be non-negative')
         if in_dim is None:
-            if torch.any(dataset < 0):
-                raise ValueError('`dataset` indices should be non-negative')
-            in_dim = tuple(
-                int(dataset[:, site].max().item()) + 1
-                for site in range(dataset.shape[1]))
-        normalized_in_dim = _normalize_in_dim(in_dim)
+            in_dim = tuple(int(value) + 1 for value in dataset.amax(0))
+        return cls(dataset, weights, in_dim)
 
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if not isinstance(dtype, torch.dtype):
-            raise TypeError('`dtype` should be torch.dtype type')
-        if weights is None:
-            mass = torch.ones(
-                dataset.shape[0], device=dataset.device, dtype=dtype)
-        else:
-            if not isinstance(weights, torch.Tensor):
-                raise TypeError('`weights` should be torch.Tensor type')
-            if weights.shape != (dataset.shape[0],):
-                raise ValueError('`weights` should contain one value per sample')
-            if weights.device != dataset.device:
-                raise ValueError('`weights` and `dataset` should share a device')
-            if not (weights.is_floating_point() or weights.is_complex()):
-                mass = weights.to(dtype=dtype)
-            else:
-                mass = weights
-            if mass.is_complex():
-                raise TypeError('`weights` should have a real dtype')
-            if (not torch.isfinite(mass).all()) or torch.any(mass < 0):
-                raise ValueError('`weights` should be finite and non-negative')
-        total = mass.sum()
-        if (not torch.isfinite(total)) or (total <= 0):
-            raise ValueError('The total empirical mass should be positive')
+    def contract_dense(self) -> torch.Tensor:
+        """Materializes the tensor by placing its stored entries into zeros."""
+        shape = self._entry_dim if self.is_matrix else (*self._in_dim, *self.out_shape)
+        tensor = self._values.new_zeros(shape)
+        tensor[tuple(self._indices.T)] = self._values
+        return tensor
 
-        super().__init__(
-            indices=dataset,
-            values=mass / total,
-            in_dim=normalized_in_dim)
+    @classmethod
+    def matrix(cls, indices: torch.Tensor, values: torch.Tensor,
+               in_dim: Sequence[int], out_dim: Sequence[int]) -> 'SparseTensorSource':
+        """
+        Constructs a matrix source from interleaved entry indices.
+
+        Parameters
+        ----------
+        indices : torch.Tensor
+            Integer pairs with shape ``(entries, 2 * sites)``.
+        values : torch.Tensor
+            Scalar entry values.
+        in_dim, out_dim : sequence[int]
+            Dimensions of each paired matrix site.
+
+        Returns
+        -------
+        SparseTensorSource
+            Source retaining paired axes for matrix decomposition.
+        """
+        inputs, outputs = _normalize_in_dim(in_dim), _normalize_in_dim(out_dim)
+        if len(inputs) != len(outputs):
+            raise ValueError('`in_dim` and `out_dim` should have equal lengths')
+        source = cls(indices, values, tuple(dim for pair in zip(inputs, outputs)
+                                            for dim in pair))
+        source._entry_dim = source._in_dim
+        source._matrix_dims = inputs, outputs
+        source._in_dim, source._out_shape = inputs, outputs
+        return source
 
 
-__all__ = [
-    'SparseTensorSource',
-    'EmpiricalDistribution',
-]
+__all__ = ['SparseTensorSource']

@@ -36,10 +36,10 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
 
         assert 'out_device' in tt_init
         assert 'out_device' in tt_function
-        assert {'in_dim', 'out_dim', 'out_device'} <= set(ttm_init)
-        assert {'in_dim', 'out_dim', 'out_device'} <= set(ttm_function)
-        assert {'in_dim', 'out_dim', 'center', 'out_device'} <= set(trm_init)
-        assert {'in_dim', 'out_dim', 'center', 'out_device'} <= set(
+        assert {'source', 'out_device'} <= set(ttm_init)
+        assert {'source', 'out_device'} <= set(ttm_function)
+        assert {'source', 'center', 'out_device'} <= set(trm_init)
+        assert {'source', 'center', 'out_device'} <= set(
             trm_function)
         assert 'observer' not in inspect.signature(
             tk.decompositions.TTSVD.fit).parameters
@@ -103,8 +103,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
         assert result[0][0].shape == (2,)
         assert result[1]['topology'] == 'tt'
         assert calls == [{
-            'tensor': tensor,
-            'n_batches': 1,
+            'source': calls[0]['source'],
             'rank': 2,
             'cutoff': 0.1,
             'atol': 0.2,
@@ -140,8 +139,7 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
         assert result[0][0].shape == (2, 3)
         assert result[1]['topology'] == 'ttm'
         assert calls == [{
-            'tensor': tensor,
-            'ordering': 'interleaved',
+            'source': calls[0]['source'],
             'rank': 2,
             'cutoff': 0.1,
             'atol': 0.2,
@@ -226,13 +224,13 @@ def test_quantics_function_exports_and_default_result(name):
     assert function is getattr(tk.decompositions.svd, 'q' + name + '_svd')
 
     if name.endswith('m'):
-        source = tk.decompositions.QuanticsMatrixSource(
+        source = tk.decompositions.CallableQuanticsSource.matrix(
             lambda inputs, outputs: inputs[:, 0] + outputs[:, 0],
             in_n_coordinates=1, out_n_coordinates=1,
             in_base=2, out_base=2, in_level=2, out_level=2,
             in_domain=(0., 1.), out_domain=(0., 1.))
     else:
-        source = tk.decompositions.QuanticsVectorSource(
+        source = tk.decompositions.CallableQuanticsSource(
             lambda coordinates: coordinates[:, 0],
             n_coordinates=1, base=2, level=2, domain=(0., 1.))
 
@@ -241,7 +239,7 @@ def test_quantics_function_exports_and_default_result(name):
                                       'Q' + name.upper() + 'Decomposition'))
     assert result.device == torch.device('cpu')
     assert not result.metrics.truncations
-    torch.testing.assert_close(result.to_dense_grid(), source.to_dense_grid())
+    torch.testing.assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
 
     with pytest.raises(ValueError, match='rank'):
         function(source, rank=0)

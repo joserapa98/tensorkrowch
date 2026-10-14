@@ -6,8 +6,9 @@ Public engines and functional interfaces:
     tt_als(...) = TTALS(source).fit(...) ─> TTDecomposition
     tr_als(...) = TRALS(source).fit(...) ─> TRDecomposition
 
-    TTALS.completion(...) / TRALS.completion(...)
-        └─ ObservedEntries ─> fixed weighted objective on observed entries
+    TTALS(source, mask=...) / TRALS(source, mask=...)
+        └─ True entries participate; False entries are missing
+        └─ sparse boolean masks supply fixed participating rows
 
 Shared execution:
 
@@ -29,7 +30,7 @@ Topology-specific backends:
         ├─ TRSegmentEnvironmentCache for exact, uniform and observed rows
         └─ product or experimental exact leverage with complete input fibers
 
-TRALS reuses TTALS source preparation and completion construction, while its
+TRALS reuses TTALS source and mask preparation, while its
 backends own cyclic ranks, contractions and gauge receivers. The common driver
 contains no TT/TR contraction logic. Renewable sample residuals are local
 measurements and cannot replace a fixed objective for convergence. Public
@@ -50,7 +51,7 @@ from tensorkrowch.decompositions.als.gauges import (GaugePolicy,
                                                     NoGauge,
                                                     QRGauge,
                                                     SVDGauge)
-from tensorkrowch.decompositions.als.problem import ALSProblem, ObservedEntries
+from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.sampling import (ExactRows,
                                                       ObservedRows,
                                                       RowSampler,
@@ -67,7 +68,6 @@ from tensorkrowch.decompositions.als.tt import TTALS, tt_als
 
 __all__ = [
     'ALSProblem',
-    'ObservedEntries',
     'LeastSquaresSolver',
     'SampleBatch',
     'RowSampler',

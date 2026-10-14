@@ -32,10 +32,12 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (QTTDecomposition,
+from tensorkrowch.decompositions.results import (TensorDecomposition, QTTDecomposition,
                                                  TTDecomposition,
-                                                 _quantics_result)
-from tensorkrowch.decompositions.sources.quantics import QuanticsVectorSource
+                                                 _result_from_source)
+from tensorkrowch.decompositions.sources.dense import DenseTensorSource
+from tensorkrowch.decompositions.sources.factory import SourceLike
+from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _log_tensor_norm,
                                                    _normalize_tensor)
@@ -43,6 +45,30 @@ from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
+
+
+def _prepare_svd_source(source: SourceLike):
+    """Obtains canonical dense site axes from a source's materialization."""
+    if isinstance(source, torch.Tensor):
+        source = DenseTensorSource(source)
+    if not callable(getattr(source, 'contract_dense', None)):
+        raise TypeError('`source` should provide `contract_dense`')
+    if not getattr(source, 'is_discrete_tensor', True):
+        raise ValueError('`source` should represent a discrete tensor')
+    tensor = source.contract_dense()
+    if not isinstance(tensor, torch.Tensor):
+        raise TypeError('`contract_dense` should return a torch.Tensor')
+    batches = getattr(source, 'n_batches', 0)
+    if isinstance(batches, bool) or not isinstance(batches, int):
+        raise TypeError('`n_batches` should be int type')
+    if batches < 0 or batches >= tensor.ndim or any(size < 1 for size in tensor.shape):
+        raise ValueError('The source should have positive finite input dimensions')
+    if not (tensor.is_floating_point() or tensor.is_complex()):
+        raise TypeError('Decomposition target values should be floating or complex')
+    if getattr(source, 'is_matrix', False):
+        dims = tuple(a * b for a, b in zip(source.in_dim, source.out_dim))
+        tensor = tensor.reshape(*tensor.shape[:batches], *dims)
+    return source, tensor, batches
 
 
 @dataclass
@@ -91,77 +117,38 @@ class TTSVD:  # MARK: TTSVD
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense tensor with optional leading batch dimensions.
-    n_batches : int
-        Number of leading batch dimensions. At least one non-batch dimension
-        must remain.
+    source : TensorSource or torch.Tensor
+        Finite tensor values with source-owned dimensions and runtime. For
+        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
+        use ``CallableQuanticsSource``.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the tensor's device.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(2, 2, 2))
+    >>> result = tk.decompositions.TTSVD(source).fit(rank=1)
+    >>> result.rank
+    [1, 1]
     """
 
-    def __init__(self,
-                 tensor: torch.Tensor,
-                 n_batches: int = 0,
-                 *,
+    def __init__(self, source: 'SourceLike', *,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
-        self._quantics_source = None
-        if not isinstance(tensor, torch.Tensor):
-            raise TypeError('`tensor` should be torch.Tensor type')
-        if isinstance(n_batches, bool) or not isinstance(n_batches, int):
-            raise TypeError('`n_batches` should be int type')
-        if (n_batches < 0) or (n_batches >= tensor.ndim):
-            raise ValueError(
-                '`n_batches` should leave at least one tensor dimension')
-        if any(dim < 1 for dim in tensor.shape):
-            raise ValueError(
-                'TT input and batch dimensions should be positive')
-
+        self._source, tensor, batches = _prepare_svd_source(source)
+        self._n_batches = batches
         self._tensor = tensor
-        self._n_batches = n_batches
-        self._runtime = _RuntimePolicy.from_tensor(
-            tensor, out_device=out_device)
-
-    @classmethod
-    def quantized(cls,
-                  source: QuanticsVectorSource,
-                  *,
-                  out_device: Optional[Union[str, torch.device]] = 'cpu'
-                  ) -> 'TTSVD':
-        """
-        Creates a Quantics SVD problem from a discretized coordinate callable.
-
-        Materializes the full digit tensor once. Its axes follow the source's
-        layout; the fitted result retains the source's coordinate maps.
-
-        Parameters
-        ----------
-        source : QuanticsVectorSource
-            Callable and discretization to approximate.
-        out_device : str or torch.device, optional
-            Device receiving finalized cores. ``None`` retains the source device.
-
-        Returns
-        -------
-        TTSVD
-            Reusable problem returning a Quantics decomposition from :meth:`fit`.
-        """
-        if not isinstance(source, QuanticsVectorSource):
-            raise TypeError('`source` should be QuanticsVectorSource type')
-        instance = cls(source.to_dense_digits(), out_device=out_device)
-        instance._quantics_source = source
-        return instance
+        self._runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
+        self._phase = 'TTM-SVD' if getattr(
+            self._source, 'is_matrix', False) else 'TT-SVD'
 
     @property
-    def tensor(self) -> torch.Tensor:
-        """Dense tensor fixed for repeated fits."""
-        return self._tensor
+    def source(self) -> SourceLike:
+        """Original source describing the fixed decomposition input."""
+        return self._source
 
-    @property
-    def n_batches(self) -> int:
-        """Number of leading batch dimensions."""
-        return self._n_batches
+
+
 
     def _split_site(self,
                     residual: torch.Tensor,
@@ -375,7 +362,7 @@ class TTSVD:  # MARK: TTSVD
             cum_percentage: Optional[float] = None,
             renormalize: bool = False,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0) -> TTDecomposition:
+            verbose: Union[bool, int] = 0) -> 'TensorDecomposition':
         r"""
         Runs TT-SVD with a shared truncation policy at every cut.
 
@@ -498,16 +485,18 @@ class TTSVD:  # MARK: TTSVD
             in_dim = tuple(self._tensor.shape[self._n_batches:])
             fit_observer.emit(DecompositionEvent(
                 name='start',
-                phase='TT-SVD',
+                phase=self._phase,
                 values={
                     'sites': len(in_dim),
                     'batch_shape': batch_shape,
-                    'in_dim': in_dim,
+                    'in_dim': self._source.in_dim if getattr(
+                        self._source, 'is_matrix', False) else in_dim,
+                    'out_dim': getattr(self._source, 'out_dim', None),
                     'renormalize': renormalize,
                 }))
             progress = _SVDProgress(
                 observer=fit_observer,
-                phase='TT-SVD')
+                phase=self._phase)
         else:
             progress = None
         result = self._fit_validated(
@@ -530,26 +519,26 @@ class TTSVD:  # MARK: TTSVD
                     torch.zeros_like(abs_error))
             fit_observer.emit(DecompositionEvent(
                 name='summary',
-                phase='TT-SVD',
+                phase=self._phase,
                 values={
                     'rank': result.rank,
                     'absolute_error': abs_error,
                     'relative_error': rel_error,
                     'elapsed': timing.elapsed,
                 }))
-            for site, core in enumerate(result.cores):
+            displayed = _result_from_source(result, self._source)
+            for site, core in enumerate(displayed.cores):
                 fit_observer.emit(DecompositionEvent(
                     name='core',
-                    phase='TT-SVD',
+                    phase=self._phase,
                     level=3,
                     site=site,
                     values={'shape': tuple(core.shape), 'tensor': core}))
             fit_observer.close(result.metrics)
-        return _quantics_result(result, self._quantics_source)
+        return _result_from_source(result, self._source)
 
 
-def tt_svd(tensor: torch.Tensor,
-           n_batches: int = 0,
+def tt_svd(source: 'SourceLike',
            rank: Optional[int] = None,
            cutoff: Optional[float] = None,
            atol: Optional[float] = None,
@@ -558,36 +547,20 @@ def tt_svd(tensor: torch.Tensor,
            renormalize: bool = False,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            verbose: Union[bool, int] = 0,
-           collect_metrics: bool = False) -> TTDecomposition:
+           collect_metrics: bool = False) -> 'TensorDecomposition':
     r"""
-    Decomposes a dense ``tensor`` into TT cores by consecutive SVDs.
+    Decomposes a finite source using :class:`TTSVD`.
 
-    This functional interface returns a :class:`TTDecomposition`. Use
-    :class:`TTSVD` to repeat fits of the same ``tensor``. If
-    several truncation criteria are specified, their most restrictive ``rank`` is
-    used at every cut and at least one singular value is retained.
-
-    The input should have shape ``(*batch_shape, d_1, ..., d_n)``. The first
-    ``n_batches`` axes are interpreted as optional batch dimensions, while
-    every remaining axis defines the input dimension of one TT site. The
-    function therefore stores ``n`` open-boundary cores. To obtain a TT with
-    a particular sequence of input dimensions, reshape ``tensor`` to those
-    dimensions before calling this function.
-
-    For multiple sites, the first core has shape
-    ``(*batch_shape, d_1, rank_1)``, interior cores have shape
-    ``(*batch_shape, rank_{k-1}, d_k, rank_k)``, and the final core has shape
-    ``(*batch_shape, rank_{n-1}, d_n)``. For one site, the only core has the
-    same shape as the input ``tensor``.
+    The source owns its dimensions, batch axes and matrix ordering. A plain
+    tensor is wrapped as a dense source. The result retains Quantics metadata
+    when the source describes a coordinate discretization.
 
     Parameters
     ----------
-    tensor : torch.Tensor
-        Dense ``tensor`` whose optional leading batch axes are followed by one
-        input dimension per TT site.
-    n_batches : int
-        Number of leading ``tensor`` axes interpreted as batch dimensions. At
-        least one non-batch input dimension should remain.
+    source : TensorSource or torch.Tensor
+        Finite tensor values with source-owned dimensions and runtime. For
+        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
+        use ``CallableQuanticsSource``.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
         singular values are retained.
@@ -611,7 +584,7 @@ def tt_svd(tensor: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -645,25 +618,14 @@ def tt_svd(tensor: torch.Tensor,
 
     Examples
     --------
-    Decompose a four-site ``tensor`` and inspect the resulting core shapes:
-
-    >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.tt_svd(tensor, rank=2).cores
-    >>> [tuple(core.shape) for core in cores]
-    [(2, 2), (2, 2, 2), (2, 2, 2), (2, 2)]
-
-    Request structured ranks, errors and timings when they are needed:
-
-    >>> result = tk.decompositions.tt_svd(
-    ...     tensor, rank=2, collect_metrics=True)
-    >>> result.as_info()['rank']
-    [2, 2, 2]
-    >>> len(result.as_info()['metrics']['truncations'])
-    3
+    >>> source = tk.decompositions.DenseTensorSource(
+    ...     torch.arange(16.).reshape(2, 2, 2, 2))
+    >>> result = tk.decompositions.tt_svd(source, rank=2)
+    >>> result.in_dim
+    (2, 2, 2, 2)
     """
     result = TTSVD(
-        tensor=tensor,
-        n_batches=n_batches,
+        source=source,
         out_device=out_device).fit(
             rank=rank,
             cutoff=cutoff,
@@ -676,7 +638,7 @@ def tt_svd(tensor: torch.Tensor,
     return result
 
 
-def qtt_svd(source: QuanticsVectorSource,
+def qtt_svd(source: CallableQuanticsSource,
             *,
             rank: Optional[int] = None,
             cutoff: Optional[float] = None,
@@ -691,14 +653,14 @@ def qtt_svd(source: QuanticsVectorSource,
     Decomposes a discretized coordinate callable into QTT cores.
 
     Materializes the full digit tensor from ``source`` and runs
-    :meth:`TTSVD.fit` through :meth:`TTSVD.quantized`. The result retains
+    :meth:`TTSVD.fit` through :class:`TTSVD`. The result retains
     the source's layouts and coordinate maps for coordinate evaluation.
     Construct ``source`` first to choose its discretization; this function
     only controls the decomposition.
 
     Parameters
     ----------
-    source : QuanticsVectorSource
+    source : CallableQuanticsSource
         Callable with its digit layout and coordinate map.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
@@ -751,14 +713,16 @@ def qtt_svd(source: QuanticsVectorSource,
 
     Examples
     --------
-    >>> source = tk.decompositions.QuanticsVectorSource(
+    >>> source = tk.decompositions.CallableQuanticsSource(
     ...     lambda coordinates: torch.exp(coordinates.sum(-1)),
     ...     n_coordinates=1, base=2, level=3, domain=(0., 1.))
     >>> result = tk.decompositions.qtt_svd(source, rank=1)
     >>> result.evaluate_indices(torch.tensor([[0], [4]]))
     tensor([1.0000, 1.6487])
     """
-    return TTSVD.quantized(
+    if not isinstance(source, CallableQuanticsSource):
+        raise TypeError('`source` should be CallableQuanticsSource type')
+    return TTSVD(
         source=source,
         out_device=out_device).fit(
             rank=rank,
@@ -822,7 +786,7 @@ def vec_to_mps(vec: torch.Tensor,
 
         .. math::
 
-        \f    rac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
+        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
             cum\_percentage
 
     renormalize : bool
@@ -865,8 +829,7 @@ def vec_to_mps(vec: torch.Tensor,
         raise TypeError('`return_info` should be bool type')
 
     result = tt_svd(
-        tensor=vec,
-        n_batches=n_batches,
+        source=DenseTensorSource(vec, n_batches=n_batches),
         rank=rank,
         cutoff=cutoff,
         atol=atol,

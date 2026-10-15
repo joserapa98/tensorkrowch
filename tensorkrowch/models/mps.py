@@ -1941,8 +1941,16 @@ class MPS(TensorNetwork):  # MARK: MPS
         return torch.trapezoid(grid_basis, x=domain, dim=0)
 
     @staticmethod
-    def _probabilities_from_amplitudes(probs: torch.Tensor) -> torch.Tensor:
-        """Cleans and row-normalizes Born probabilities."""
+    def _probabilities_from_amplitudes(probs: torch.Tensor
+                                       ) -> Tuple[torch.Tensor, int]:
+        """Cleans and row-normalizes Born probabilities.
+
+        A row with no usable weight (all zero, or any value non-finite) is
+        made uniform; returns the probabilities and the number of such rows.
+        """
+        unusable = ~torch.isfinite(probs).all(dim=1)
+        probs = torch.where(unusable[:, None], torch.zeros_like(probs), probs)
+
         if torch.is_complex(probs):
             scale = probs.abs().max().detach()
             imag = probs.imag.abs().max().detach()
@@ -1956,9 +1964,6 @@ class MPS(TensorNetwork):  # MARK: MPS
         if not torch.is_floating_point(probs):
             probs = probs.float()
 
-        if not torch.isfinite(probs).all():
-            raise ValueError('Probabilities contain non-finite values')
-
         finfo = torch.finfo(probs.dtype)
         scale = probs.abs().max().detach().clamp_min(1)
         tol = 1000 * finfo.eps * scale
@@ -1966,13 +1971,14 @@ class MPS(TensorNetwork):  # MARK: MPS
             raise ValueError(
                 'Some probabilities are negative beyond numerical tolerance')
 
+        # Dividing by the row maximum first keeps the sum finite.
         probs = probs.clamp_min(0)
-        norm = probs.sum(dim=1, keepdim=True)
-        if (norm <= 0).any() or (not torch.isfinite(norm).all()):
-            raise ValueError(
-                'Cannot sample from a zero or non-finite probability row')
-
-        return probs / norm
+        row_max = probs.amax(dim=1, keepdim=True)
+        unusable = unusable | (row_max.squeeze(1) <= 0)
+        probs = torch.where(unusable[:, None], torch.ones_like(probs),
+                            probs / row_max.clamp_min(finfo.tiny))
+        n_unusable = int(unusable.sum())
+        return probs / probs.sum(dim=1, keepdim=True), n_unusable
 
     def _sample_apply_embedding(self,
                                 domain: torch.Tensor,
@@ -2796,6 +2802,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         samples = []
         sample_indices = []
         input_idx = 0
+        n_unusable = 0
 
         for site in range(n_sites):
             if site not in self._in_features:
@@ -2812,7 +2819,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                 embedded=embeddings[input_idx])
 
             probs = probs * quadrature_weights[input_idx].reshape(1, -1)
-            probs = self._probabilities_from_amplitudes(probs)
+            probs, unusable = self._probabilities_from_amplitudes(probs)
+            n_unusable += unusable
             ids = torch.multinomial(probs,
                                     num_samples=1,
                                     replacement=True,
@@ -2839,6 +2847,11 @@ class MPS(TensorNetwork):  # MARK: MPS
         sample_indices = torch.stack(sample_indices, dim=1)
 
         self.reset()
+
+        if n_unusable:
+            warnings.warn(
+                f'{n_unusable} of {samples.numel()} draws had no usable '
+                'weight (all zero or non-finite); drawn uniformly')
 
         if return_indices:
             return samples, sample_indices

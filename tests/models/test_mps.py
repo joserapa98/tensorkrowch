@@ -2088,6 +2088,44 @@ class TestMPS:  # MARK: TestMPS
         expected = torch.tensor([0.5, 1.5, 1.]) / 3
         assert torch.allclose(captured[0][0].cpu(), expected)
 
+    def test_sample_unusable_rows_become_uniform_and_are_counted(self):
+        probs = torch.tensor([[0., 0., 0.],
+                              [1., float('nan'), 2.],
+                              [float('inf'), 1., 0.],
+                              [1., 0., 3.]])
+        clean, n_unusable = tk.models.MPS._probabilities_from_amplitudes(probs)
+        assert n_unusable == 3
+        assert torch.allclose(clean[:3], torch.full((3, 3), 1 / 3))
+        assert torch.allclose(clean[3], torch.tensor([0.25, 0., 0.75]))
+
+    def test_sample_huge_finite_weights_keep_their_ratios(self):
+        # Each weight is finite, but a row sum would overflow float32.
+        probs = torch.tensor([[3e38, 3e38, 0.], [1e-40, 3e-40, 0.]])
+        clean, n_unusable = tk.models.MPS._probabilities_from_amplitudes(probs)
+        assert n_unusable == 0
+        assert torch.allclose(clean,
+                              torch.tensor([[0.5, 0.5, 0.], [0.25, 0.75, 0.]]))
+
+    def test_sample_complex_weights_use_the_real_part(self):
+        probs = torch.tensor([[1 + 0j, 3 + 0j], [0j, 0j]])
+        clean, n_unusable = tk.models.MPS._probabilities_from_amplitudes(probs)
+        assert n_unusable == 1
+        assert torch.allclose(clean, torch.tensor([[0.25, 0.75], [0.5, 0.5]]))
+
+    def test_sample_negative_weights_still_raise(self):
+        with pytest.raises(ValueError, match='negative'):
+            tk.models.MPS._probabilities_from_amplitudes(
+                torch.tensor([[1., -0.5]]))
+
+    def test_sample_with_no_usable_weight_warns_once_with_the_count(self):
+        mps = tk.models.MPS(n_sites=3, phys_dim=2, bond_dim=2, boundary='obc')
+        for node in mps.mats_env:
+            node.tensor = torch.zeros_like(node.tensor)
+        with pytest.warns(UserWarning, match='12 of 12 draws') as record:
+            samples = mps.sample(n_samples=4)
+        assert len([w for w in record if 'usable' in str(w.message)]) == 1
+        assert samples.shape == (4, 3)
+
     @pytest.mark.parametrize('condition', AUTO_BOOL_CASES)
     def test_sample_per_sample_domain_equal_rows_matches_shared(self,
                                                                 monkeypatch,

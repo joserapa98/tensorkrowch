@@ -979,14 +979,35 @@ class MPS(TensorNetwork):  # MARK: MPS
                 return []
 
     @staticmethod
+    def _absorb_data(result_node: AbstractNode,
+                     node: AbstractNode) -> AbstractNode:
+        """
+        Contracts ``result_node`` with the ``data`` node connected to the
+        ``"input"`` edge of ``node``, if there is one. This only happens when
+        contracting with ``zipup_input = True``.
+        """
+        if 'input' in node.axes_names:
+            data_node = node.neighbours('input')
+            if (data_node is not None) and data_node.is_data():
+                # Data first, as in ``_input_contraction``, so that batch
+                # edges come first
+                return data_node @ result_node
+        return result_node
+
+    @staticmethod
     def _inline_contraction(mats_env: List[AbstractNode],
                             renormalize: bool = False,
                             from_left: bool = True) -> Node:
-        """Contracts sequence of MPS nodes (matrices) inline."""
+        """
+        Contracts sequence of MPS nodes (matrices) inline. Nodes still
+        connected to ``data`` nodes (``zipup_input = True``) are followed by
+        their ``data`` nodes.
+        """
         if from_left:
-            result_node = mats_env[0]
+            result_node = MPS._absorb_data(mats_env[0], mats_env[0])
             for node in mats_env[1:]:
                 result_node @= node
+                result_node = MPS._absorb_data(result_node, node)
                 
                 if renormalize:
                     right_axes = []
@@ -999,9 +1020,10 @@ class MPS(TensorNetwork):  # MARK: MPS
             return result_node
         
         else:
-            result_node = mats_env[-1]
+            result_node = MPS._absorb_data(mats_env[-1], mats_env[-1])
             for node in mats_env[-2::-1]:
                 result_node = node @ result_node
+                result_node = MPS._absorb_data(result_node, node)
                 
                 if renormalize:
                     left_axes = []
@@ -1142,7 +1164,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                  embedding_matrices: Optional[
                                         Union[torch.Tensor,
                                               Sequence[torch.Tensor]]] = None,
-                 mpo: Optional[MPO] = None
+                 mpo: Optional[MPO] = None,
+                 zipup_input: bool = False
                  ) -> Node:
         """
         Contracts the whole MPS.
@@ -1189,6 +1212,31 @@ class MPS(TensorNetwork):  # MARK: MPS
         other (output) nodes are marginalized, the result will be a tensor
         with shape ``(100, 100)`` rather than just ``(100,)``.
         
+        By default, all input nodes are first contracted with their ``data``
+        nodes, giving one matrix (with batch edges) per input node, and then
+        these matrices are contracted. All of them exist at the same time, and
+        are kept for the backward pass if gradients are needed, so memory
+        grows like ``batch_size`` x number of sites x bond dimension squared.
+        
+        With ``zipup_input = True``, each region of input nodes is instead
+        contracted as two MPS are contracted via zip-up: a single resultant
+        node absorbs an input node, then its ``data`` node, then the next
+        input node, and so on. Starting from a boundary node (``"obc"``), the
+        resultant node is a vector (per batch element), so memory grows like
+        ``batch_size`` x number of sites x bond dimension (times the physical
+        dimension, if gradients with respect to the data are needed). In
+        regions that do not start at a boundary node (``"pbc"``, or input
+        regions between output nodes), the resultant node is a matrix, and
+        nothing is saved. The number of operations is roughly the same, but
+        they are performed one site at a time.
+        
+        Hence ``zipup_input = True`` is better for long MPS with large bond
+        dimension and batch size, compared to the physical dimension, where
+        the matrices of the default would not fit in memory or would take most
+        of the time. The default is better for short MPS, small bond
+        dimensions, small batches or large physical dimensions, where fewer
+        and larger operations are performed.
+        
         Parameters
         ----------
         inline_input : bool
@@ -1206,7 +1254,8 @@ class MPS(TensorNetwork):  # MARK: MPS
             this undesired behavior by extracting the norm of each node on a
             logarithmic scale. The renormalization only occurs when multiplying
             sequences of matrices, once the `input` contractions have been
-            already performed, including contracting against embedding matrices
+            already performed (with ``zipup_input = True``, after each ``data``
+            node is absorbed), including contracting against embedding matrices
             or MPOs when ``marginalize_output = True``.
         marginalize_output : bool
             Boolean indicating whether output nodes should be marginalized. If
@@ -1228,6 +1277,13 @@ class MPS(TensorNetwork):  # MARK: MPS
             MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
             is performed by calling ``mps(marginalize_output=True, mpo=mpo)``,
             without passing extra data tensors.
+        zipup_input : bool
+            Boolean indicating whether input ``data`` nodes should be contracted
+            one at a time into the resultant node of each region of input
+            nodes, right after their input nodes (see above), instead of with
+            all the input nodes before the regions are contracted. If ``True``,
+            ``inline_input`` and ``inline_mats`` are ignored, since both are
+            implied.
 
         Returns
         -------
@@ -1269,14 +1325,19 @@ class MPS(TensorNetwork):  # MARK: MPS
         in_regions = self.in_regions
         out_regions = self.out_regions
         
-        mats_in_env = self._input_contraction(
-            nodes_env=self.in_env,
-            input_nodes=[node.neighbours('input') for node in self.in_env],
-            inline_input=inline_input)
+        if zipup_input:
+            # Input nodes stay connected to their data nodes, which are
+            # absorbed in ``_inline_contraction``
+            mats_in_env = self.in_env
+        else:
+            mats_in_env = self._input_contraction(
+                nodes_env=self.in_env,
+                input_nodes=[node.neighbours('input') for node in self.in_env],
+                inline_input=inline_input)
         
         in_results = []
         for region in in_regions:
-            if inline_mats:
+            if inline_mats or zipup_input:
                 result = self._contract_envs_inline(
                     mats_env=mats_in_env[:len(region)],
                     renormalize=renormalize)

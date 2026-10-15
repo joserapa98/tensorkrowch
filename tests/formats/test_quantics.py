@@ -17,7 +17,7 @@ def test_quantics_replacement_restores_layout_and_metadata():
     cores = format.cores
     with pytest.raises(ValueError, match='layout.in_dim'):
         cores[0] = torch.ones(4, 3)
-    with pytest.raises(ValueError, match='layout.in_dim'):
+    with pytest.raises(ValueError, match='in_sites'):
         format.cores = [torch.ones(2)]
     assert format.cores is cores
     assert format.in_dim == layout.in_dim and format.rank == [3]
@@ -380,7 +380,7 @@ def test_quantics_blocking_preserves_coordinate_contract():
                             layout=layout,
                             coordinate_map=_coordinate_map(layout))
     cores = format.cores
-    with pytest.raises(ValueError, match='layout'):
+    with pytest.raises(ValueError, match='in_sites'):
         format.block([2])
     assert format.cores is cores
     assert format.layout is layout

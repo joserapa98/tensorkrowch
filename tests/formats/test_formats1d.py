@@ -2102,7 +2102,7 @@ def test_partial_evaluation_empty_batch_and_blocking(make_format):
     assert format.in_sites == (0, 1)
     torch.testing.assert_close(format.contract_dense(), dense)
     format.in_sites = (0,)
-    with pytest.raises(ValueError, match='mix selected'):
+    with pytest.raises(ValueError, match='all sites or none'):
         format.block((2, 2))
     assert format.evaluate(torch.empty(0, 1, dtype=torch.long)).shape == (0, *format.in_dim[1:])
 

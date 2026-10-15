@@ -203,11 +203,12 @@ class GaugeOrbit:
         >>> orbit = tk.formats.GaugeOrbit([2 * torch.eye(2), torch.eye(2)],
         ...                               [(0, 1, 1, 0)])
         >>> left, right = orbit.gram_matrices()[0]
-        >>> left, right
-        (tensor([[4., 0.],
-                 [0., 4.]]),
-         tensor([[1., 0.],
-                 [0., 1.]]))
+        >>> left
+        tensor([[4., 0.],
+                [0., 4.]])
+        >>> right
+        tensor([[1., 0.],
+                [0., 1.]])
         """
         grams = []
         for left_site, left_axis, right_site, right_axis in self.bonds:

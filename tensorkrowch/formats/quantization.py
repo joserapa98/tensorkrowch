@@ -110,8 +110,10 @@ class QuantizedLayout:  # MARK: QuantizedLayout
         coordinate.
     ordering : {"interleaved", "grouped", "custom"}
         Final digit-site schedule. Defaults to ``"interleaved"``.
-    digit_order : {"coarse_to_fine", "fine_to_coarse"}
-        Direction of digit positions within each coordinate.
+    digit_order : str or sequence of str
+        ``"coarse_to_fine"`` or ``"fine_to_coarse"``, shared by all
+        coordinates or specified once per coordinate. Stored as a tuple.
+        With ``ordering="custom"``, ``permutation`` determines the schedule.
     permutation : sequence of tuple[int, int], optional
         Complete site schedule of ``(coordinate, digit)`` pairs when
         ``ordering="custom"``.
@@ -125,13 +127,20 @@ class QuantizedLayout:  # MARK: QuantizedLayout
     [[0, 1, 1, 0, 1, 1]]
     >>> layout.decode_digits(digits).tolist()
     [[3, 5]]
+
+    Each coordinate can traverse its digit positions in a different direction:
+
+    >>> layout = tk.formats.QuantizedLayout(
+    ...     2, level=3, digit_order=['coarse_to_fine', 'fine_to_coarse'])
+    >>> layout.sites()
+    ((0, 0), (1, 2), (0, 1), (1, 1), (0, 2), (1, 0))
     """
 
     n_coordinates: int
     base: IntegerSpec = 2
     level: IntegerSpec = 1
     ordering: str = 'interleaved'
-    digit_order: str = 'coarse_to_fine'
+    digit_order: Union[str, Sequence[str]] = 'coarse_to_fine'
     permutation: Optional[Sequence[CoordinateDigit]] = None
 
     def __post_init__(self) -> None:
@@ -148,9 +157,23 @@ class QuantizedLayout:  # MARK: QuantizedLayout
         if self.ordering not in ('grouped', 'interleaved', 'custom'):
             raise ValueError(
                 "`ordering` should be 'grouped', 'interleaved' or 'custom'")
-        if self.digit_order not in ('coarse_to_fine', 'fine_to_coarse'):
+        if isinstance(self.digit_order, str):
+            digit_order = (self.digit_order,) * self.n_coordinates
+        else:
+            try:
+                digit_order = tuple(self.digit_order)
+            except TypeError as exc:
+                raise TypeError(
+                    '`digit_order` should be str or a sequence of strings') from exc
+            if len(digit_order) != self.n_coordinates:
+                raise ValueError(
+                    '`digit_order` should contain one value per coordinate')
+        if any(not isinstance(order, str) for order in digit_order):
+            raise TypeError('`digit_order` values should be strings')
+        if any(order not in ('coarse_to_fine', 'fine_to_coarse')
+               for order in digit_order):
             raise ValueError(
-                "`digit_order` should be 'coarse_to_fine' or "
+                "`digit_order` values should be 'coarse_to_fine' or "
                 "'fine_to_coarse'")
 
         maximum = torch.iinfo(torch.long).max
@@ -193,6 +216,7 @@ class QuantizedLayout:  # MARK: QuantizedLayout
         # Freeze normalized specifications rather than the original containers.
         object.__setattr__(self, 'base', base)
         object.__setattr__(self, 'level', level)
+        object.__setattr__(self, 'digit_order', digit_order)
         object.__setattr__(self, 'permutation', permutation)
 
     @property
@@ -232,9 +256,9 @@ class QuantizedLayout:  # MARK: QuantizedLayout
         if self.ordering == 'custom':
             return tuple(self.permutation)
         coordinate_digits = tuple(
-            range(level) if self.digit_order == 'coarse_to_fine'
+            range(level) if order == 'coarse_to_fine'
             else range(level - 1, -1, -1)
-            for level in self.level)
+            for level, order in zip(self.level, self.digit_order))
         if self.ordering == 'grouped':
             return tuple(
                 (coordinate, digit)

@@ -11,13 +11,14 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
     def test_defaults_and_no_grid_inference(self):
         layout = tk.formats.QuantizedLayout(2, base=(2, 3), level=(2, 1))
         assert layout.ordering == 'interleaved'
-        assert layout.digit_order == 'coarse_to_fine'
+        assert layout.digit_order == ('coarse_to_fine', 'coarse_to_fine')
         assert layout.grid_size == (4, 3)
         assert not hasattr(type(layout), 'from_grid')
 
     @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
     @pytest.mark.parametrize(
-        'digit_order', ['coarse_to_fine', 'fine_to_coarse'])
+        'digit_order', ['coarse_to_fine', 'fine_to_coarse',
+                        ['coarse_to_fine', 'fine_to_coarse', 'coarse_to_fine']])
     def test_multicoordinate_roundtrip(self, ordering, digit_order):
         layout = tk.formats.QuantizedLayout(
             n_coordinates=3,
@@ -64,6 +65,23 @@ class TestQuantizedLayout:  # MARK: TestQuantizedLayout
             (0, 2), (0, 1), (0, 0), (1, 1), (1, 0))
         assert interleaved.sites() == (
             (0, 2), (1, 1), (0, 1), (1, 0), (0, 0))
+
+    @pytest.mark.parametrize('ordering,expected', [
+        ('grouped', ((0, 0), (0, 1), (0, 2), (1, 1), (1, 0))),
+        ('interleaved', ((0, 0), (1, 1), (0, 1), (1, 0), (0, 2))),
+    ])
+    def test_independent_coordinate_digit_orders(self, ordering, expected):
+        orders = ['coarse_to_fine', 'fine_to_coarse']
+        layout = tk.formats.QuantizedLayout(
+            2, base=(2, 3), level=(3, 2), ordering=ordering,
+            digit_order=orders)
+        orders[0] = 'fine_to_coarse'
+        assert layout.digit_order == ('coarse_to_fine', 'fine_to_coarse')
+        assert layout.sites() == expected
+        shared = tk.formats.QuantizedLayout(2, digit_order='fine_to_coarse')
+        explicit = tk.formats.QuantizedLayout(
+            2, digit_order=('fine_to_coarse', 'fine_to_coarse'))
+        assert shared == explicit
 
     def test_custom_permutation_and_reordering_are_reversible(self):
         grouped = tk.formats.QuantizedLayout(
@@ -290,7 +308,8 @@ class TestExplicitGridMap:  # MARK: TestExplicitGridMap
 
 
 @pytest.mark.parametrize('ordering', ['grouped', 'interleaved', 'custom'])
-@pytest.mark.parametrize('digit_order', ['coarse_to_fine', 'fine_to_coarse'])
+@pytest.mark.parametrize('digit_order', ['coarse_to_fine', 'fine_to_coarse',
+                                        ('coarse_to_fine', 'fine_to_coarse')])
 @pytest.mark.parametrize('dtype', [torch.int8, torch.int16, torch.int32, torch.int64, torch.uint8])
 def test_all_grid_indices_and_site_order(ordering, digit_order, dtype):
     permutation = ((1, 1), (0, 0), (1, 0), (0, 1)) if ordering == 'custom' else None
@@ -319,6 +338,12 @@ def test_all_grid_indices_and_site_order(ordering, digit_order, dtype):
     ({'base': '2'}, TypeError), ({'level': [1, 1]}, ValueError),
     ({'level': False}, TypeError), ({'ordering': 'diagonal'}, ValueError),
     ({'digit_order': 'coarse_to_grain'}, ValueError),
+    ({'digit_order': None}, TypeError),
+    ({'digit_order': True}, TypeError),
+    ({'digit_order': []}, ValueError),
+    ({'digit_order': ['coarse_to_fine', 'fine_to_coarse']}, ValueError),
+    ({'digit_order': [1]}, TypeError),
+    ({'digit_order': ['unknown']}, ValueError),
     ({'permutation': ((0, 0),)}, ValueError),
     ({'ordering': 'custom', 'permutation': 1}, TypeError),
     ({'ordering': 'custom', 'permutation': ((False, 0),)}, TypeError),

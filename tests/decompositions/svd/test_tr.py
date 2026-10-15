@@ -638,10 +638,14 @@ def test_svd_formats_across_devices(renormalize,
 
 
 @pytest.mark.parametrize('ordering', ['interleaved', 'grouped'])
-def test_quantized_svd_preserves_callable_grid(ordering, device_dtype, assert_close):
+@pytest.mark.parametrize('digit_order', [
+    'coarse_to_fine', ('coarse_to_fine', 'fine_to_coarse')])
+def test_quantized_svd_preserves_callable_grid(ordering, digit_order,
+                                               device_dtype, assert_close):
     device, dtype = device_dtype
     real_dtype = torch.empty((), dtype=dtype).real.dtype
-    layout = tk.formats.QuantizedLayout(2, 2, (2, 2), ordering=ordering)
+    layout = tk.formats.QuantizedLayout(2, 2, (2, 2), ordering=ordering,
+                                       digit_order=digit_order)
     coordinate_map = tk.formats.AffineCoordinateMap(
         torch.tensor([[-1., 1.], [2., 3.]], dtype=real_dtype, device=device),
         layout.grid_size)

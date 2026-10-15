@@ -10,7 +10,9 @@ from tensorkrowch.decompositions.sources.base import _tensor_view
 class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
 
     @pytest.mark.parametrize('ordering', ['interleaved', 'grouped', 'custom'])
-    @pytest.mark.parametrize('digit_order', ['coarse_to_fine', 'fine_to_coarse'])
+    @pytest.mark.parametrize('digit_order', [
+        'coarse_to_fine', 'fine_to_coarse',
+        ('coarse_to_fine', 'fine_to_coarse')])
     def test_evaluation_and_materialization(self, ordering, digit_order,
                                            device_dtype, assert_close):
         device, dtype = device_dtype
@@ -61,7 +63,7 @@ class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
         expected = source.coordinate_map.from_indices(torch.arange(4)[:, None]).sum(-1)
         torch.testing.assert_close(source.contract_dense_grid_axes(), expected)
         assert source.layout.ordering == 'interleaved'
-        assert source.layout.digit_order == 'coarse_to_fine'
+        assert source.layout.digit_order == ('coarse_to_fine',)
 
     def test_fibers_chunking_empty_batches_and_gradients(self):
         calls = []

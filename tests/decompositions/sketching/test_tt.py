@@ -794,10 +794,13 @@ class TestGeneralizedTTRSS:  # MARK: TestGeneralizedTTRSS
         assert 'tensor(' not in capsys.readouterr().out
 
 
-def test_quantized_rss_result_retains_coordinates_without_source():
+@pytest.mark.parametrize('digit_order', [
+    'coarse_to_fine', ('coarse_to_fine', 'fine_to_coarse')])
+def test_quantized_rss_result_retains_coordinates_without_source(digit_order):
     import gc
     import weakref
-    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved')
+    layout = tk.formats.QuantizedLayout(2, 2, 2, ordering='interleaved',
+                                       digit_order=digit_order)
     domain = torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64)
     indices = torch.cartesian_prod(torch.arange(4), torch.arange(4))
     coordinates = indices.to(torch.float64) / 3

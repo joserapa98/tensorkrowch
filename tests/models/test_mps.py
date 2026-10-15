@@ -1720,9 +1720,31 @@ class TestMPS:  # MARK: TestMPS
                                           condition_ids=condition_ids,
                                           renormalize=renormalize)
 
+    @pytest.mark.parametrize('out_features', [[], [1]])
+    @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
+    def test_sample_exact_for_uniform_mps(self,
+                                          monkeypatch,
+                                          out_features,
+                                          conditioned):
+        torch.manual_seed(0)
+        mps = tk.models.UMPS(n_sites=4,
+                             phys_dim=2,
+                             bond_dim=3,
+                             out_features=out_features)
+
+        condition_ids = None
+        if conditioned:
+            condition_ids = self._condition_ids([2] * len(mps.in_features))
+        self._assert_sample_matches_exact(mps,
+                                          monkeypatch,
+                                          condition_ids=condition_ids)
+
+    # UMPSLayer with out_position=0 fails in forward already (stacked edges
+    # of different sizes), so it is left out here.
     @pytest.mark.parametrize('model,out_position',
                              [('MPSLayer', 0), ('MPSLayer', 2),
-                              ('MPSLayer', 3)])
+                              ('MPSLayer', 3), ('UMPSLayer', 1),
+                              ('UMPSLayer', 3)])
     @pytest.mark.parametrize('conditioned', AUTO_BOOL_CASES)
     def test_sample_exact_for_layers(self,
                                      monkeypatch,

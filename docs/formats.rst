@@ -112,6 +112,8 @@ Quantics formats combine cores with a :class:`QuantizedLayout` and a
 its integer indices into digits and orders those digits along the chain.
 The layout orders digit values; ``in_sites`` and ``out_sites`` locate their
 cores. Evaluation supplies every digit, while other axes remain open.
+``QuantizedLayout.digit_order`` accepts a shared direction or one per
+coordinate, for example ``['coarse_to_fine', 'fine_to_coarse']``.
 
 There are three construction options:
 

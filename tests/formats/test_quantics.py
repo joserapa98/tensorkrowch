@@ -512,7 +512,7 @@ def test_all_quantics_construction_paths(make_format, topology, path, device_dty
     assert format.device.type == device
     for layout in layouts:
         assert layout.ordering == 'interleaved'
-        assert layout.digit_order == 'coarse_to_fine'
+        assert layout.digit_order == ('coarse_to_fine',) * layout.n_coordinates
         assert layout.grid_size == (4, 4)
 
 

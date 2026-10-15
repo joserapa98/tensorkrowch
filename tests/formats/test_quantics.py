@@ -15,9 +15,9 @@ def test_quantics_replacement_restores_layout_and_metadata():
         [torch.ones(2, 3), torch.ones(3, 2)], layout.n_coordinates,
         layout=layout, coordinate_map=_coordinate_map(layout))
     cores = format.cores
-    with pytest.raises(ValueError, match='[Dd]igit core dimensions'):
+    with pytest.raises(ValueError, match='layout.in_dim'):
         cores[0] = torch.ones(4, 3)
-    with pytest.raises(ValueError, match='[Dd]igit core dimensions'):
+    with pytest.raises(ValueError, match='layout.in_dim'):
         format.cores = [torch.ones(2)]
     assert format.cores is cores
     assert format.in_dim == layout.in_dim and format.rank == [3]
@@ -28,7 +28,7 @@ def test_quantics_replacement_restores_layout_and_metadata():
                              in_coordinate_map=_coordinate_map(layout),
                              out_coordinate_map=_coordinate_map(layout))
     previous = matrix.cores[0]
-    with pytest.raises(ValueError, match='paired digit layouts'):
+    with pytest.raises(ValueError, match='in_layout.in_dim'):
         matrix.cores[0] = torch.ones(4, 3, 2)
     assert matrix.cores[0] is previous
     assert matrix.in_dim == matrix.out_dim == layout.in_dim
@@ -138,7 +138,7 @@ def test_matrix_shorthand_resolves_input_and_output_separately():
     assert matrix.evaluate_coordinates(
         torch.tensor([[1.]]), torch.tensor([[5.]])).item() == 1
 
-    with pytest.raises(ValueError, match='equal `n_sites`'):
+    with pytest.raises(ValueError, match='all digit sites'):
         tk.formats.QTTM([torch.ones(2, 3)], 1, 1,
                         in_base=2, in_level=2, in_domain=torch.tensor([0., 1.]),
                         out_base=3, out_level=1, out_domain=torch.tensor([0., 1.]))
@@ -766,31 +766,34 @@ def test_exponential_at_float32_domain_grid_points(cyclic):
 
 @pytest.mark.parametrize('matrix', [False, True])
 @pytest.mark.parametrize('cyclic', [False, True])
-def test_quantics_partial_digit_evaluation(make_format, device_dtype, assert_close,
-                                            matrix, cyclic):
+def test_quantics_requires_complete_digit_evaluation(make_format, device_dtype,
+                                                      matrix, cyclic):
     device, dtype = device_dtype
     topology = ('tr' if cyclic else 'tt') + ('m' if matrix else '')
     format = make_format(topology, 3, dtype=dtype, quantized=True, device=device)
     data = torch.tensor([[1]], device=device)
     if matrix:
-        actual = format.evaluate(data, data, in_sites=(0,), out_sites=(2,))
-        expected = format.contract_dense()[1, :, :, :, :, 1].permute(1, 3, 0, 2)
+        with pytest.raises(ValueError, match='all digit sites'):
+            format.evaluate(data, data, in_sites=(0,), out_sites=(2,))
+        with pytest.raises(ValueError, match='all digit sites'):
+            format.out_sites = (2,)
     else:
-        actual = format.evaluate(data, in_sites=(1,))
-        expected = format.contract_dense()[:, 1, :]
-    assert_close(actual[0], expected)
-    format.in_sites = (0,)
+        with pytest.raises(ValueError, match='all digit sites'):
+            format.evaluate(data, in_sites=(1,))
+    with pytest.raises(ValueError, match='all digit sites'):
+        format.in_sites = (0,)
+    assert format.in_sites == (0, 1, 2)
     plain = format.to_trm() if matrix and cyclic else (
         format.to_ttm() if matrix else format.to_tr() if cyclic else format.to_tt())
-    assert plain.in_sites == (0,)
+    assert plain.in_sites == (0, 1, 2)
     result = format + format
-    assert result.in_sites == (0,)
+    assert result.in_sites == (0, 1, 2)
     if cyclic:
-        assert format.rotate(1).in_sites == (2,)
+        assert format.rotate(1).in_sites == (2, 0, 1)
 
 
 @pytest.mark.parametrize('cyclic', [False, True])
-def test_quantics_vector_response_sites(cyclic):
+def test_quantics_vector_output_sites(cyclic):
     layout = tk.formats.QuantizedLayout(1, 2, 2)
     coordinate_map = tk.formats.AffineCoordinateMap((0., 1.), layout.grid_size)
     cores = [torch.ones(1, 2, 1), torch.arange(3.).reshape(1, 3, 1),
@@ -809,3 +812,77 @@ def test_quantics_vector_response_sites(cyclic):
     torch.testing.assert_close(format.evaluate_coordinates(coordinates), expected)
     if cyclic:
         torch.testing.assert_close(format.rotate(1).evaluate_coordinates(coordinates), expected)
+
+    matrix = format @ format.H
+    assert matrix.in_sites == matrix.out_sites == (0, 2)
+    torch.testing.assert_close(
+        matrix.evaluate_coordinates(coordinates, coordinates),
+        expected.unsqueeze(-1) * expected.unsqueeze(-2))
+
+
+@pytest.mark.parametrize('cyclic', [False, True])
+@pytest.mark.parametrize('n_batches', [0, 1])
+def test_quantics_matrix_output_axes(make_format, device_dtype, assert_close,
+                                     cyclic, n_batches):
+    device, dtype = device_dtype
+    plain = make_format('trm' if cyclic else 'ttm', 3, n_batches=n_batches,
+                        in_dim=(2, 3, 2), out_dim=(5, 2, 7),
+                        dtype=dtype, device=device)
+    in_layout = tk.formats.QuantizedLayout(1, 2, 2)
+    out_layout = tk.formats.QuantizedLayout(1, 2, 1)
+    cls = tk.formats.QTRM if cyclic else tk.formats.QTTM
+    format = cls(plain.cores, 1, 1, n_batches=n_batches,
+                 in_layout=in_layout, out_layout=out_layout,
+                 in_coordinate_map=_coordinate_map(in_layout),
+                 out_coordinate_map=_coordinate_map(out_layout),
+                 in_sites=(2, 0), out_sites=(1,)).to(device)
+    assert format.out_shape == (3, 5, 7)
+
+    in_indices = torch.tensor([[0], [1], [3]], device=device)
+    out_indices = torch.tensor([[0], [1], [0]], device=device)
+    in_digits = in_layout.encode_indices(in_indices)
+    out_digits = out_layout.encode_indices(out_indices)
+    dense = plain.contract_dense()
+    expected = torch.stack([
+        dense[..., inputs[1], :, :, outputs[0], inputs[0], :].transpose(-3, -2)
+        for inputs, outputs in zip(in_digits.tolist(), out_digits.tolist())
+    ], dim=n_batches)
+    in_coordinates = format.in_coordinate_map.from_indices(in_indices)
+    out_coordinates = format.out_coordinate_map.from_indices(out_indices)
+    assert_close(format.evaluate_digits(in_digits, out_digits), expected)
+    assert_close(format.evaluate_indices(in_indices, out_indices), expected)
+    assert_close(format.evaluate_coordinates(in_coordinates, out_coordinates),
+                 expected)
+    assert_close(format.clone().evaluate_digits(in_digits, out_digits), expected)
+
+    grid = dense.permute(*range(n_batches),
+                         *(n_batches + axis for axis in (4, 0, 3, 2, 1, 5)))
+    grid = grid.reshape(*format.batch_shape, 4, 2, 3, 5, 7)
+    assert_close(format.contract_dense_grid_axes(), grid)
+    adjoint = format.H
+    assert adjoint.in_sites == (1,) and adjoint.out_sites == (2, 0)
+    assert_close(adjoint.evaluate_digits(out_digits, in_digits),
+                 expected.movedim(-3, -1).conj())
+
+    product = format @ format.H
+    assert product.in_sites == product.out_sites == (1,)
+    applied = format.apply(torch.zeros(1, 3, dtype=torch.long, device=device))
+    assert applied.in_sites == (1,)
+    assert applied.out_shape == (5, 7)
+
+    with pytest.raises(ValueError, match='all digit sites'):
+        format.in_sites = (0,)
+    with pytest.raises(ValueError, match='out_layout.in_dim'):
+        format.out_sites = (0,)
+    assert format.in_sites == (2, 0) and format.out_sites == (1,)
+
+    if cyclic:
+        rotated = format.rotate(1)
+        assert rotated.in_layout is in_layout
+        assert rotated.out_layout is out_layout
+        assert rotated.in_sites == (1, 2) and rotated.out_sites == (0,)
+        assert_close(rotated.evaluate_digits(in_digits, out_digits),
+                     expected.transpose(-2, -1))
+        assert_close(rotated.contract_dense_grid_axes(), grid.transpose(-2, -1))
+        assert_close(rotated.to_qttm().evaluate_digits(in_digits, out_digits),
+                     expected.transpose(-2, -1))

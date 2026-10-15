@@ -15,8 +15,12 @@ from data with repeated contractions.
 
 
 Evaluation selects ``in_sites`` and, for matrices, ``out_sites``; remaining
-axes form the output tensor. Matrix ``apply`` contracts every input dimension
-and returns an output format. Use ``@`` for products between formats.
+axes form the output tensor. These are ordered sequences: data at position
+``i`` evaluate site ``in_sites[i]`` or ``out_sites[i]`` on the corresponding
+side. Both default to all sites in increasing order. Axes left open are
+returned in chain order, with input-side axes before output-side axes.
+Matrix ``apply`` contracts every input dimension and returns an output
+format. Use ``@`` for products between formats.
 ``contract_dense`` materializes the site axes; Quantics
 ``contract_dense_grid_axes`` groups their digits into original coordinate axes.
 
@@ -106,6 +110,8 @@ Quantics construction and evaluation
 Quantics formats combine cores with a :class:`QuantizedLayout` and a
 :class:`CoordinateMap`. The map defines the domain grid; the layout expands
 its integer indices into digits and orders those digits along the chain.
+The layout orders digit values; ``in_sites`` and ``out_sites`` locate their
+cores. Evaluation supplies every digit, while other axes remain open.
 
 There are three construction options:
 
@@ -121,8 +127,9 @@ There are three construction options:
 
 For :class:`QTTM` and :class:`QTRM`, specify the input and output layouts and
 maps separately through the corresponding ``in_*`` and ``out_*`` arguments.
-Both sides must have the same number of digit sites. In every case, each map's
-``grid_size`` must match its layout's ``grid_size``.
+Each layout describes all digits at its corresponding sites; the sides may
+have different numbers of digits. In every case, each map's ``grid_size``
+must match its layout's ``grid_size``.
 
 .. container:: formats-flow
 

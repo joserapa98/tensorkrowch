@@ -1237,6 +1237,12 @@ class MPS(TensorNetwork):  # MARK: MPS
         dimensions, small batches or large physical dimensions, where fewer
         and larger operations are performed.
         
+        ``zipup_input = True`` differs from ``inline_input = True``, which also
+        contracts input nodes with their ``data`` nodes one at a time, but all
+        of them before the sequence of matrices is contracted: it builds the
+        same matrices as the default (only without stacking), so it keeps the
+        same memory. ``zipup_input = True`` never builds them.
+        
         Parameters
         ----------
         inline_input : bool
@@ -1281,9 +1287,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             Boolean indicating whether input ``data`` nodes should be contracted
             one at a time into the resultant node of each region of input
             nodes, right after their input nodes (see above), instead of with
-            all the input nodes before the regions are contracted. If ``True``,
-            ``inline_input`` and ``inline_mats`` are ignored, since both are
-            implied.
+            all the input nodes before the regions are contracted (as both
+            values of ``inline_input`` do). If ``True``, ``inline_input`` and
+            ``inline_mats`` are ignored, since both are implied.
 
         Returns
         -------

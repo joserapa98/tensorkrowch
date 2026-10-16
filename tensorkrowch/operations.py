@@ -51,7 +51,8 @@ import opt_einsum
 
 from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
-                                list2slice, permute_list, truncated_svd)
+                                list2slice, permute_list, safe_divide,
+                                truncated_svd)
 
 
 def copy_func(f):
@@ -1409,8 +1410,7 @@ def _renormalize_first(
             axis_num.append(node.get_axis_num(axis))
     
     norm = node.tensor.norm(p=p, dim=axis_num, keepdim=True)
-    norm = torch.where(norm == 0., 1., norm)
-    new_tensor = node.tensor / norm
+    new_tensor = safe_divide(node.tensor, norm, zero_value=node.tensor)
     
     if isinstance(node, (StackNode, ParamStackNode)):
         new_node = StackNode._create_resultant(axes_names=node.axes_names,
@@ -1461,8 +1461,7 @@ def _renormalize_next(
     tensor = node._direct_get_tensor(successor.node_ref,
                                      successor.index)
     norm = tensor.norm(p=p, dim=axis_num, keepdim=True)
-    norm = torch.where(norm == 0., 1., norm)
-    new_tensor = tensor / norm
+    new_tensor = safe_divide(tensor, norm, zero_value=tensor)
     
     child = successor.child
     child._direct_set_tensor(new_tensor)

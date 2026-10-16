@@ -26,7 +26,7 @@ from typing import (Any,
 import torch
 
 from tensorkrowch.formats import TT
-from tensorkrowch.utils import random_unitary
+from tensorkrowch.utils import random_unitary, safe_divide
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
@@ -933,12 +933,9 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - selected)
             denominator = torch.linalg.vector_norm(selected)
-            if denominator > 0:
-                relative = absolute / denominator
-            elif absolute == 0:
-                relative = torch.zeros_like(absolute)
-            else:
-                relative = torch.full_like(absolute, torch.inf)
+            relative = safe_divide(
+                absolute, denominator,
+                zero_value=torch.where(absolute == 0, 0, torch.inf))
             context.metrics.errors.append(ErrorRecord(
                 kind='sketch_samples',
                 absolute=absolute,
@@ -1224,7 +1221,7 @@ class TTRS:  # MARK: TTRS
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - target)
             denominator = torch.linalg.vector_norm(target)
-            relative = absolute / denominator if denominator > 0 else absolute
+            relative = safe_divide(absolute, denominator, zero_value=absolute)
             active.metrics.errors.append(ErrorRecord(
                 kind='source_support',
                 absolute=absolute,

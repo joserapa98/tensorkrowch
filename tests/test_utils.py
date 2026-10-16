@@ -3,6 +3,7 @@ This script contains tests for utils:
 
     * TestTruncatedSVD
     * TestAccurateSVD
+    * TestTensorNumerics
 """
 
 import pytest
@@ -674,3 +675,167 @@ class TestAccurateSVD:  # MARK: TestAccurateSVD
         assert vh.device == tensor.device
         assert torch.allclose(_reconstruct_svd(u, s, vh), tensor,
                               rtol=2e-4, atol=1e-12)
+
+
+@pytest.fixture(params=[
+    (device, dtype)
+    for device in ('cpu', 'cuda', 'mps')
+    for dtype in (torch.float32, torch.float64, torch.complex64, torch.complex128)
+    if device != 'mps' or dtype in (torch.float32, torch.complex64)
+])
+def numerical_config(request):
+    device, dtype = request.param
+    if device == 'cuda' and not torch.cuda.is_available():
+        pytest.skip('CUDA is unavailable')
+    if device == 'mps' and not torch.backends.mps.is_available():
+        pytest.skip('MPS is unavailable')
+    return device, dtype
+
+
+class TestTensorNumerics:  # MARK: TestTensorNumerics
+
+    @pytest.mark.parametrize('dim', [None, 0, -1, (-2, -1), [-1], ()])
+    @pytest.mark.parametrize('keepdim', [False, True])
+    def test_norms_and_normalization(self, numerical_config, dim, keepdim):
+        device, dtype = numerical_config
+        tensor = torch.arange(24., device=device).reshape(2, 3, 4).to(dtype)
+        if dtype.is_complex:
+            tensor = tensor * (1 + 2j)
+        tensor[0] = 0
+        original = tensor.clone()
+        expected = torch.linalg.vector_norm(tensor, dim=dim, keepdim=keepdim)
+        torch.testing.assert_close(tk.utils.stable_norm(tensor, dim, keepdim),
+                                   expected)
+        torch.testing.assert_close(tk.utils.log_tensor_norm(tensor, dim, keepdim),
+                                   expected.log())
+
+        scaled, scale = tk.utils.scale_tensor(tensor, dim, keepdim=True)
+        torch.testing.assert_close(scaled * scale, tensor)
+        assert scale.dtype == tensor.real.dtype and torch.all(scale > 0)
+        expected_scale = torch.maximum(tensor.real.abs(), tensor.imag.abs()) \
+            if dtype.is_complex else tensor.abs()
+        expected_scale = expected_scale.amax(dim=dim, keepdim=keepdim)
+        expected_scale = torch.where(expected_scale == 0, 1, expected_scale)
+        _, scale = tk.utils.scale_tensor(tensor, dim, keepdim)
+        torch.testing.assert_close(scale, expected_scale)
+
+        normalized, log_scale = tk.utils.normalize_tensor(tensor, dim)
+        norm = torch.linalg.vector_norm(tensor, dim=dim, keepdim=True)
+        expected_normalized = tensor / torch.where(norm == 0, 1, norm)
+        torch.testing.assert_close(normalized, expected_normalized)
+        expected_log = torch.linalg.vector_norm(tensor, dim=dim).log()
+        expected_log = torch.where(torch.isneginf(expected_log), 0, expected_log)
+        torch.testing.assert_close(log_scale, expected_log)
+        torch.testing.assert_close(tensor, original)
+
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64,
+                                        torch.complex64, torch.complex128])
+    def test_extreme_scales_and_zero_batches(self, dtype):
+        real_dtype = torch.empty((), dtype=dtype).real.dtype
+        large = 1e20 if real_dtype == torch.float32 else 1e200
+        reference = torch.tensor([1., 2., -1., 0.], dtype=dtype)
+        if dtype.is_complex:
+            reference = reference * (1 + 1j)
+        batch = torch.stack((reference * large, reference / large, reference * 0))
+        normalized, log_scale = tk.utils.normalize_tensor(batch, dim=-1)
+        torch.testing.assert_close(normalized[:2],
+                                   (reference / reference.norm()).expand(2, -1))
+        torch.testing.assert_close(normalized[-1], torch.zeros_like(reference))
+        assert log_scale[-1] == 0
+        log_norm = tk.utils.log_tensor_norm(batch, dim=-1)
+        torch.testing.assert_close(log_scale[:2], log_norm[:2])
+        assert torch.isneginf(log_norm[-1])
+        expected = torch.tensor([large, 1 / large, 0.], dtype=real_dtype)
+        torch.testing.assert_close(tk.utils.stable_norm(batch, -1) / reference.norm(),
+                                   expected, atol=0, rtol=1e-5)
+
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64,
+                                        torch.complex64, torch.complex128])
+    def test_normalization_without_representable_norm(self, dtype):
+        maximum = torch.finfo(torch.empty((), dtype=dtype).real.dtype).max
+        tensor = torch.full((4,), maximum * 0.75, dtype=dtype)
+        if dtype.is_complex:
+            tensor = torch.complex(tensor.real, tensor.real)
+        assert torch.isinf(tk.utils.stable_norm(tensor))
+        assert torch.isfinite(tk.utils.log_tensor_norm(tensor))
+        normalized, log_scale = tk.utils.normalize_tensor(tensor)
+        assert torch.isfinite(normalized).all() and torch.isfinite(log_scale)
+        torch.testing.assert_close(normalized.norm(), normalized.real.new_tensor(1))
+
+    @pytest.mark.parametrize('shape,dim', [((0,), None), ((2, 0, 3), 1),
+                                          ((0, 3), -1)])
+    def test_empty_reductions(self, shape, dim):
+        tensor = torch.empty(shape, dtype=torch.float64)
+        expected = torch.linalg.vector_norm(tensor, dim=dim)
+        torch.testing.assert_close(tk.utils.stable_norm(tensor, dim), expected)
+        torch.testing.assert_close(tk.utils.log_tensor_norm(tensor, dim),
+                                   expected.log())
+        normalized, log_scale = tk.utils.normalize_tensor(tensor, dim)
+        assert normalized.shape == tensor.shape
+        torch.testing.assert_close(log_scale, torch.zeros_like(expected))
+
+    def test_normalization_gradients(self):
+        tensor = torch.tensor([3., 4.], dtype=torch.float64, requires_grad=True)
+        normalized, log_scale = tk.utils.normalize_tensor(tensor)
+        gradient, = torch.autograd.grad(log_scale, tensor, retain_graph=True)
+        torch.testing.assert_close(gradient, tensor.detach() / 25)
+        gradient, = torch.autograd.grad(tk.utils.stable_norm(tensor), tensor)
+        torch.testing.assert_close(gradient, normalized.detach())
+        zero = torch.zeros(3, dtype=torch.float64, requires_grad=True)
+        normalized, _ = tk.utils.normalize_tensor(zero)
+        gradient, = torch.autograd.grad(normalized.sum(), zero)
+        torch.testing.assert_close(gradient, torch.ones_like(zero))
+
+    @pytest.mark.parametrize('dim', [3, (0, 0), 1.5])
+    def test_invalid_reduction_axes(self, dim):
+        for function in (tk.utils.scale_tensor, tk.utils.stable_norm,
+                         tk.utils.log_tensor_norm, tk.utils.normalize_tensor):
+            with pytest.raises((IndexError, RuntimeError, TypeError)):
+                function(torch.ones(2, 3), dim=dim)
+
+    def test_safe_division_broadcasting_and_gradients(self):
+        numerator = torch.tensor([[2.], [0.]], dtype=torch.float64, requires_grad=True)
+        denominator = torch.tensor([4., 0., -2.], dtype=torch.float64,
+                                   requires_grad=True)
+        quotient = tk.utils.safe_divide(numerator, denominator)
+        torch.testing.assert_close(quotient, torch.tensor(
+            [[0.5, 0., -1.], [0., 0., 0.]], dtype=torch.float64))
+        numerator_grad, denominator_grad = torch.autograd.grad(
+            quotient.sum(), (numerator, denominator))
+        torch.testing.assert_close(numerator_grad,
+                                   torch.full_like(numerator, -0.25))
+        torch.testing.assert_close(denominator_grad,
+                                   torch.tensor([-0.125, 0., -0.5], dtype=torch.float64))
+        fallback = torch.where(numerator == 0, 0, torch.inf)
+        result = tk.utils.safe_divide(numerator, denominator, zero_value=fallback)
+        assert torch.isinf(result[0, 1]) and result[1, 1] == 0
+        complex_result = tk.utils.safe_divide(numerator.detach() * (1 + 1j),
+                                              denominator.detach())
+        torch.testing.assert_close(complex_result, quotient.detach() * (1 + 1j))
+        zero = torch.zeros(2, dtype=torch.float64, requires_grad=True)
+        result = tk.utils.safe_divide(zero, torch.zeros(2), zero_value=zero)
+        gradient, = torch.autograd.grad(result.sum(), zero)
+        torch.testing.assert_close(gradient, torch.ones_like(zero))
+
+    def test_log_ratio_zero_policies_and_extreme_values(self):
+        numerator = torch.tensor([1000., -1000., -torch.inf, 1., -torch.inf])
+        denominator = torch.tensor([1000., -1000., 0., -torch.inf, -torch.inf])
+        result = tk.utils.ratio_from_log(numerator, denominator)
+        torch.testing.assert_close(result, torch.tensor([1., 1., 0., torch.inf, 0.]))
+        torch.testing.assert_close(
+            tk.utils.ratio_from_log(torch.zeros(2, 1), torch.zeros(3)),
+            torch.ones(2, 3))
+
+    def test_norm_from_log_references_do_not_change_zero_policy(self):
+        values = torch.tensor([2., 0., 3.], dtype=torch.float64)
+        references = torch.tensor([0., 0., 4.], dtype=torch.float64)
+        torch.testing.assert_close(tk.utils.norm_from_log(values.log(), references),
+                                   values)
+        torch.testing.assert_close(tk.utils.norm_from_log(values.log()), values)
+        torch.testing.assert_close(
+            tk.utils.norm_from_log(torch.zeros(2, 1), torch.zeros(3)),
+            torch.ones(2, 3))
+        for dtype in (torch.float32, torch.float64):
+            reference = torch.tensor(torch.finfo(dtype).max, dtype=dtype)
+            torch.testing.assert_close(tk.utils.norm_from_log(reference.log(), reference),
+                                       reference)

@@ -15,6 +15,7 @@ This script contains:
 
     Internal functions:
         * _environment_norm
+        * _normalize_environment
         * _tr_sample_indices
 """
 
@@ -24,6 +25,8 @@ from typing import Mapping, Optional, Protocol, Sequence, Tuple, Union
 
 import torch
 import torch.nn.functional as nnf
+
+from tensorkrowch.utils import stable_norm
 
 from tensorkrowch.decompositions.als.sampling import SampleBatch
 from tensorkrowch.decompositions.sources import ConfigurationBatch
@@ -230,11 +233,17 @@ class TRLocalEnvironment:  # MARK: TRLocalEnvironment
 def _environment_norm(environment: torch.Tensor) -> torch.Tensor:
     """Computes a finite global norm after extracting the largest magnitude."""
     maximum = environment.abs().amax()
-    if maximum == 0:
-        return maximum
-    normalized_norm = torch.linalg.vector_norm(environment / maximum)
-    norm = maximum * normalized_norm
+    norm = stable_norm(environment)
     return torch.where(torch.isfinite(norm), norm, maximum)
+
+
+def _normalize_environment(environment: torch.Tensor,
+                            log_scale: torch.Tensor
+                            ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Extracts one finite environment scale and accumulates its logarithm."""
+    norm = _environment_norm(environment)
+    safe_norm = torch.where(norm == 0, 1, norm)
+    return environment / safe_norm, log_scale + safe_norm.log()
 
 
 class TTEnvironmentCache:  # MARK: TTEnvironmentCache
@@ -339,10 +348,7 @@ class TTEnvironmentCache:  # MARK: TTEnvironmentCache
         """Optionally removes one global norm and accumulates its logarithm."""
         if not self.renormalize:
             return environment, log_scale
-        norm = _environment_norm(environment)
-        if norm == 0:
-            return environment, log_scale
-        return environment / norm, log_scale + norm.log()
+        return _normalize_environment(environment, log_scale)
 
     def _extend_left(self,
                      environment: torch.Tensor,
@@ -825,10 +831,7 @@ class TRSegmentEnvironmentCache:  # MARK: TRSegmentEnvironmentCache
         """Optionally extracts a global matrix-batch norm."""
         if not self.renormalize:
             return environment, log_scale
-        norm = _environment_norm(environment)
-        if norm == 0:
-            return environment, log_scale
-        return environment / norm, log_scale + norm.log()
+        return _normalize_environment(environment, log_scale)
 
     def _selected(self, site: int) -> torch.Tensor:
         """Returns all selected matrix slices for one core."""

@@ -4,7 +4,6 @@ This script contains:
     Internal functions:
         * _restore_cores
         * _from_standard_cores
-        * _normalize_tensor
         * _canonicalize_cores
         * _redistribute
         * _validate_minimal_options
@@ -48,7 +47,8 @@ from typing import (TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple,
 import torch
 
 from tensorkrowch.utils import (_INTEGER_DTYPES, _validate_truncation,
-                                truncated_svd)
+                                normalize_tensor, safe_divide, scale_tensor,
+                                stable_norm, truncated_svd)
 
 from tensorkrowch.formats.base import (_SafeList, RoundingInfo, SplitBlock,
                                        BlockLayout, SampleError, TensorFormat)
@@ -103,18 +103,6 @@ def _from_standard_cores(cores: Sequence[torch.Tensor],
     return cls(cores, n_batches=n_batches)
 
 
-def _normalize_tensor(tensor: torch.Tensor,
-                      dim: Tuple[int, ...]) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Returns a normalized tensor and its logarithmic norm using safe scaling."""
-    scale = tensor.abs().amax(dim=dim, keepdim=True)
-    scale = torch.where(scale > 0, scale, torch.ones_like(scale))
-    tensor = tensor / scale
-
-    norm = torch.linalg.vector_norm(tensor, dim=dim, keepdim=True)
-    norm = torch.where(norm > 0, norm, torch.ones_like(norm))
-    return tensor / norm, (scale.log() + norm.log()).squeeze(dim)
-
-
 def _canonicalize_cores(cores: Sequence[torch.Tensor],
                         orth_center: int,
                         renormalize: bool
@@ -133,7 +121,7 @@ def _canonicalize_cores(cores: Sequence[torch.Tensor],
         matrix = core.reshape(*batch_shape, -1, core.shape[-1])
         q, r = torch.linalg.qr(matrix, mode='reduced')
         if renormalize:
-            r, log_norm = _normalize_tensor(r, dim=(-2, -1))
+            r, log_norm = normalize_tensor(r, dim=(-2, -1))
             log_scale = log_scale + log_norm
         cores[site] = q.reshape(*batch_shape,
                                 core.shape[-3], core.shape[-2], q.shape[-1])
@@ -146,7 +134,7 @@ def _canonicalize_cores(cores: Sequence[torch.Tensor],
         q, r = torch.linalg.qr(matrix.transpose(-2, -1), mode='reduced')
         r, q = r.transpose(-2, -1), q.transpose(-2, -1)
         if renormalize:
-            r, log_norm = _normalize_tensor(r, dim=(-2, -1))
+            r, log_norm = normalize_tensor(r, dim=(-2, -1))
             log_scale = log_scale + log_norm
         cores[site] = q.reshape(*batch_shape,
                                 q.shape[-2], core.shape[-2], core.shape[-1])
@@ -155,7 +143,7 @@ def _canonicalize_cores(cores: Sequence[torch.Tensor],
 
     # Extract the remaining norm from the center.
     if renormalize:
-        cores[orth_center], log_norm = _normalize_tensor(
+        cores[orth_center], log_norm = normalize_tensor(
             cores[orth_center], dim=(-3, -2, -1))
         log_scale = log_scale + log_norm
 
@@ -394,9 +382,7 @@ def split_block(block: torch.Tensor,
         scale = matrix.real.new_ones(batch_shape)
         scaled_cutoff, scaled_atol = cutoff, atol
         if renormalize:
-            scale = matrix.abs().amax(dim=(-2, -1))
-            scale = torch.where(scale > 0, scale, torch.ones_like(scale))
-            matrix = matrix / scale[..., None, None]
+            matrix, scale = scale_tensor(matrix, dim=(-2, -1))
 
             # A common retained rank is selected across structural batches.
             if cutoff is not None:
@@ -1406,9 +1392,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             """Truncates a scaled matrix and collects its discarded mass."""
             cut_log_scale = common_log_scale
             if not renormalize:
-                scale = matrix.abs().amax()
-                scale = torch.where(scale > 0, scale, torch.ones_like(scale))
-                matrix = matrix / scale
+                matrix, scale = scale_tensor(matrix)
                 cut_log_scale = scale.log()
             limit = torch.finfo(matrix.real.dtype).max
 
@@ -1478,10 +1462,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         if collect:
             if discarded_norms:
                 errors = torch.stack(discarded_norms)
-                scale = errors.amax(dim=0)
-                safe = torch.where(scale > 0, scale, torch.ones_like(scale))
-                bound = torch.linalg.vector_norm(
-                    errors / safe, dim=0) * scale * sqrt(closing)
+                bound = stable_norm(errors, dim=0) * sqrt(closing)
             else:
                 bound = self._cores[0].real.new_zeros(batch_shape)
 
@@ -2121,20 +2102,13 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
 
         for self_core, other_core in zip(self_cores, other_cores):
             self_core = self_core.to(dtype=dtype)
-            self_scale = self_core.abs().amax(dim=(-3, -2, -1))
-            self_scale = torch.where(self_scale > 0,
-                                     self_scale,
-                                     torch.ones_like(self_scale))
-            self_core = self_core / self_scale[..., None, None, None]
+            self_core, self_scale = scale_tensor(self_core, dim=(-3, -2, -1))
             if other is self:
                 other_scale, other_core = self_scale, self_core
             else:
                 other_core = other_core.to(dtype=dtype)
-                other_scale = other_core.abs().amax(dim=(-3, -2, -1))
-                other_scale = torch.where(other_scale > 0,
-                                          other_scale,
-                                          torch.ones_like(other_scale))
-                other_core = other_core / other_scale[..., None, None, None]
+                other_core, other_scale = scale_tensor(
+                    other_core, dim=(-3, -2, -1))
             log_scale = log_scale + self_scale.log() + other_scale.log()
 
             environment = torch.einsum('...xyab,...apr->...xybpr',
@@ -2146,7 +2120,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
 
             scale = torch.linalg.vector_norm(
                 environment, dim=(-4, -3, -2, -1))
-            safe_scale = torch.where(scale > 0, scale, torch.ones_like(scale))
+            safe_scale = torch.where(scale > 0, scale, 1)
             environment = environment / safe_scale[..., None, None, None, None]
             log_scale = log_scale + safe_scale.log()
 
@@ -2815,12 +2789,9 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
 
         absolute = torch.linalg.vector_norm(approximation - target)
         denominator = torch.linalg.vector_norm(target)
-        if denominator > 0:
-            relative = absolute / denominator
-        elif absolute == 0:
-            relative = torch.zeros_like(absolute)
-        else:
-            relative = torch.full_like(absolute, torch.inf)
+        relative = safe_divide(
+            absolute, denominator,
+            zero_value=torch.where(absolute == 0, 0, torch.inf))
 
         size = int(torch.Size(data_batch_shape).numel())
         return SampleError(kind='samples',
@@ -3455,10 +3426,7 @@ class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
 
                 if bond:
                     previous = spectra[-1]
-                    safe = torch.where(previous > 0, previous,
-                                       torch.ones_like(previous))
-                    inverse = torch.where(previous > 0, safe.reciprocal(),
-                                          torch.zeros_like(previous))
+                    inverse = safe_divide(torch.ones_like(previous), previous)
                     cores[bond] = inverse[..., :, None, None] * cores[bond]
 
                 spectra.append(s)
@@ -3467,9 +3435,7 @@ class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
                                                cores[bond + 1])
             if n_bonds:
                 last = spectra[-1]
-                safe = torch.where(last > 0, last, torch.ones_like(last))
-                inverse = torch.where(last > 0, safe.reciprocal(),
-                                      torch.zeros_like(last))
+                inverse = safe_divide(torch.ones_like(last), last)
                 cores[-1] = inverse[..., :, None, None] * cores[-1]
             old_powers = [(0, 0)] * n_bonds
 

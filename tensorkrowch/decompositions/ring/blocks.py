@@ -27,6 +27,8 @@ import torch
 
 from tensorkrowch.formats.formats1d import split_block
 
+from tensorkrowch.utils import safe_divide
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -691,8 +693,9 @@ def split_block_ttsvd(block: torch.Tensor,
     cores = [runtime.finalize(core) for core in split.cores]
     effective_rank = tuple(core.shape[-1] for core in cores[:-1])
     if collect_metrics:
-        absolute = torch.stack([record.local_abs_error for record in metrics.truncations]).norm()
-        relative = torch.where(norm > 0, absolute / norm, torch.zeros_like(norm))
+        absolute = torch.stack(
+            [record.local_abs_error for record in metrics.truncations]).norm()
+        relative = safe_divide(absolute, norm)
         metrics.errors.append(ErrorRecord(kind='truncation', absolute=absolute,
                                           relative=relative, denominator=norm,
                                           size=len(metrics.truncations)))

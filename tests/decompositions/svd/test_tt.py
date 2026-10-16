@@ -8,8 +8,7 @@ import torch
 import tensorkrowch as tk
 
 import tensorkrowch.decompositions.svd.tt as tt_module
-from tensorkrowch.decompositions.svd.utils import (_log_tensor_norm,
-                                                   _normalize_tensor)
+from tensorkrowch.utils import log_tensor_norm
 
 
 SVD_METHODS = ['svd', 'qr_svd']
@@ -46,25 +45,6 @@ def _near_exact_tt():
 
 
 class TestTTSVD:  # MARK: TestTTSVD
-
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    def test_stable_norm_helpers_share_components(self, dtype):
-        generator = torch.Generator().manual_seed(69)
-        tensor = torch.randn(
-            3, 4, dtype=dtype, generator=generator) * 1e200
-        tensor[0] = 0
-
-        normalized, normalization_log = _normalize_tensor(tensor, dim=-1)
-        norm_log = _log_tensor_norm(tensor, dim=-1)
-
-        assert torch.equal(normalization_log, norm_log)
-        assert torch.equal(normalized[0], torch.zeros_like(normalized[0]))
-        assert torch.isneginf(norm_log[0])
-        assert torch.allclose(
-            normalized[1:].norm(dim=-1),
-            torch.ones(2, dtype=tensor.real.dtype),
-            rtol=1e-12,
-            atol=1e-12)
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     def test_recovers_exact_tt(self, svd_method):
@@ -299,7 +279,7 @@ class TestTTSVD:  # MARK: TestTTSVD
         def unexpected_event(*args, **kwargs):
             pytest.fail('The fast path should not construct observer events')
 
-        monkeypatch.setattr(tt_module, '_log_tensor_norm', unexpected_log_norm)
+        monkeypatch.setattr(tt_module, 'log_tensor_norm', unexpected_log_norm)
         monkeypatch.setattr(
             tt_module._RuntimePolicy, 'timer', unexpected_timer)
         monkeypatch.setattr(tt_module, 'DecompositionEvent', unexpected_event)
@@ -366,7 +346,7 @@ class TestTTSVD:  # MARK: TestTTSVD
 
         direct_absolute = torch.stack(local_errors).square().sum().sqrt()
         direct_relative = direct_absolute / torch.linalg.vector_norm(tensor)
-        log_input_norm = _log_tensor_norm(tensor)
+        log_input_norm = log_tensor_norm(tensor)
 
         assert log_input_norm.exp() == pytest.approx(
             torch.linalg.vector_norm(tensor).item(), rel=1e-12)

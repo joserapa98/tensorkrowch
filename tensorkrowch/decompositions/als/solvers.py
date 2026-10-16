@@ -7,7 +7,6 @@ This script contains:
         * LeastSquaresSolver
 
     Internal functions:
-        * _stable_norm
         * _column_norms
         * _column_scales
         * _relative_error
@@ -19,6 +18,8 @@ from math import isfinite, sqrt
 from typing import Optional, Tuple, Union
 
 import torch
+
+from tensorkrowch.utils import safe_divide, scale_tensor, stable_norm
 
 from tensorkrowch.decompositions.als.convergence import UpdatePolicy
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
@@ -35,21 +36,10 @@ class NonFiniteSolutionError(RuntimeError):  # MARK: NonFiniteSolutionError
     """Raised when a local least-squares solution contains NaN/Inf."""
 
 
-def _stable_norm(tensor: torch.Tensor) -> torch.Tensor:
-    """Computes a Frobenius norm after removing the largest magnitude."""
-    scale = tensor.abs().amax()
-    if scale == 0:
-        return scale
-    return scale * torch.linalg.vector_norm(tensor / scale)
-
-
 def _column_norms(environment: torch.Tensor) -> torch.Tensor:
     """Computes L2 column norms with a finite maximum-magnitude fallback."""
-    maxima = environment.abs().amax(dim=0)
-    safe_maxima = torch.where(
-        maxima > 0, maxima, torch.ones_like(maxima))
-    normalized = torch.linalg.vector_norm(
-        environment / safe_maxima.to(environment.dtype).unsqueeze(0), dim=0)
+    scaled, maxima = scale_tensor(environment, dim=0)
+    normalized = torch.linalg.vector_norm(scaled, dim=0)
     column_norms = maxima * normalized
     return torch.where(torch.isfinite(column_norms), column_norms, maxima)
 
@@ -163,7 +153,7 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             value = value * regularization_scale
         if (self.l2_reg_mode == 'absolute') or (self.l2_reg == 0):
             return value
-        rms_column_norm = _stable_norm(environment) / sqrt(
+        rms_column_norm = stable_norm(environment) / sqrt(
             environment.shape[1])
         value = value * rms_column_norm.square()
         if not torch.isfinite(value):
@@ -358,16 +348,9 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
         residual = environment @ solution - target_matrix
         abs_residual = torch.linalg.vector_norm(residual)
         target_norm = torch.linalg.vector_norm(target_matrix)
-        safe_target_norm = torch.where(
-            target_norm > 0, target_norm, torch.ones_like(target_norm))
-        rel_residual = abs_residual / safe_target_norm
-        rel_residual = torch.where(
-            target_norm > 0,
-            rel_residual,
-            torch.where(
-                abs_residual == 0,
-                torch.zeros_like(abs_residual),
-                torch.full_like(abs_residual, torch.inf)))
+        rel_residual = safe_divide(
+            abs_residual, target_norm,
+            zero_value=torch.where(abs_residual == 0, 0, torch.inf))
         record = LocalSolveRecord(
             environment_shape=tuple(environment.shape),
             target_shape=tuple(target.shape),

@@ -33,7 +33,7 @@ import warnings
 import torch
 
 from tensorkrowch.formats import TR
-from tensorkrowch.utils import truncated_svd
+from tensorkrowch.utils import safe_divide, truncated_svd
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -1033,12 +1033,9 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - selected)
             denominator = torch.linalg.vector_norm(selected)
-            if denominator > 0:
-                relative = absolute / denominator
-            elif absolute == 0:
-                relative = torch.zeros_like(absolute)
-            else:
-                relative = torch.full_like(absolute, torch.inf)
+            relative = safe_divide(
+                absolute, denominator,
+                zero_value=torch.where(absolute == 0, 0, torch.inf))
             context.metrics.errors.append(ErrorRecord(
                 kind='sketch_samples',
                 absolute=absolute,
@@ -1313,7 +1310,7 @@ class TRRS(TTRS):  # MARK: TRRS
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - target)
             denominator = torch.linalg.vector_norm(target)
-            relative = absolute / denominator if denominator > 0 else absolute
+            relative = safe_divide(absolute, denominator, zero_value=absolute)
             result.metrics.errors.append(ErrorRecord(
                 kind='source_support',
                 absolute=absolute,

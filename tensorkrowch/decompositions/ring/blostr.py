@@ -46,7 +46,7 @@ import torch
 
 from tensorkrowch.decompositions.ring.opening import _source_from_context
 
-from tensorkrowch.utils import truncated_svd
+from tensorkrowch.utils import safe_divide, truncated_svd
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -312,7 +312,7 @@ def _selected_eigenspace(matrix: torch.Tensor,
             torch.linalg.pinv(selected_vectors))
         denominator = torch.linalg.vector_norm(matrix)
         absolute = torch.linalg.vector_norm(reconstruction - matrix)
-        relative = absolute if denominator == 0 else absolute / denominator
+        relative = safe_divide(absolute, denominator, zero_value=absolute)
         error = ErrorRecord(kind='eigenspace', absolute=absolute,
                             relative=relative, denominator=denominator)
     return selected_vectors, selected_values, error
@@ -520,7 +520,7 @@ def _fit_blostr(tensor: torch.Tensor,
                 approximation = candidate.contract_dense()
                 absolute = torch.linalg.vector_norm(approximation - active_tensor)
                 denominator = torch.linalg.vector_norm(active_tensor)
-                relative = absolute if denominator == 0 else absolute / denominator
+                relative = safe_divide(absolute, denominator, zero_value=absolute)
                 score = relative.detach()
                 if best is None or score < best[0]:
                     best = score, candidate, first, records, absolute, denominator

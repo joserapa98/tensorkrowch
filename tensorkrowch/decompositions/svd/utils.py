@@ -6,27 +6,20 @@ This script contains:
 
     Internal SVD source preparation:
         * _prepare_svd_source
-
-    Internal SVD numerical helpers:
-        * _tensor_norm_components
-        * _log_tensor_norm
-        * _normalize_tensor
 """
 
 from dataclasses import dataclass
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional
 
 import torch
+
+from tensorkrowch.utils import safe_divide
 
 from tensorkrowch.decompositions.metrics import TruncationRecord
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver)
-
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.factory import SourceLike
-
-
-_Dimension = Optional[Union[int, Sequence[int]]]
 
 
 @dataclass(frozen=True)
@@ -48,9 +41,7 @@ class _SVDProgress:  # MARK: _SVDProgress
         if abs_error.ndim:
             abs_error = torch.linalg.vector_norm(abs_error)
             local_norm = torch.linalg.vector_norm(record.local_norm)
-            rel_error = torch.where(local_norm > 0,
-                                    abs_error / local_norm,
-                                    torch.zeros_like(abs_error))
+            rel_error = safe_divide(abs_error, local_norm)
         values = {
             'full_rank': record.full_rank,
             'selected_rank': record.selected_rank,
@@ -92,83 +83,7 @@ def _prepare_svd_source(source: SourceLike):
     return source, tensor, batches
 
 
-
-def _tensor_norm_components(tensor: torch.Tensor,
-                            dim: _Dimension = None) -> Tuple[torch.Tensor,
-                                                             torch.Tensor,
-                                                             torch.Tensor]:
-    """Returns stable scale factors and the log-norm of tensors."""
-    absolute = tensor.abs()
-    if dim is None:
-        scale = absolute.amax()
-    else:
-        if not isinstance(dim, int):
-            dim = tuple(dim)
-        scale = absolute.amax(dim=dim, keepdim=True)
-
-    positive = scale > 0
-    safe_scale = torch.where(positive, scale, torch.ones_like(scale))
-    if dim is None:
-        scaled_norm = torch.linalg.vector_norm(absolute / safe_scale)
-    else:
-        scaled_norm = torch.linalg.vector_norm(
-            absolute / safe_scale, dim=dim, keepdim=True)
-
-    safe_scaled_norm = torch.where(
-        positive, scaled_norm, torch.ones_like(scaled_norm))
-    log_norm = torch.where(positive,
-                           safe_scale.log() + safe_scaled_norm.log(),
-                           torch.full_like(safe_scale, -torch.inf))
-    return safe_scale, safe_scaled_norm, log_norm
-
-
-def _log_tensor_norm(tensor: torch.Tensor,
-                     dim: _Dimension = None,
-                     keepdim: bool = False) -> torch.Tensor:
-    """Computes a ``tensor`` log-norm without squaring the original scale."""
-    if dim is None:
-        if not tensor.numel():
-            return tensor.real.new_tensor(-torch.inf)
-        return _tensor_norm_components(tensor)[-1]
-
-    dims = (dim,) if isinstance(dim, int) else dim
-    dims = tuple(axis % tensor.ndim for axis in dims)
-    if any(not tensor.shape[axis] for axis in dims):
-        shape = list(tensor.shape)
-        if keepdim:
-            for axis in dims:
-                shape[axis] = 1
-        else:
-            shape = [size for axis, size in enumerate(shape)
-                     if axis not in dims]
-        return tensor.real.new_full(shape, -torch.inf)
-
-    log_norm = _tensor_norm_components(tensor, dim)[-1]
-    if keepdim:
-        return log_norm
-    for axis in sorted(dims, reverse=True):
-        log_norm = log_norm.squeeze(axis)
-    return log_norm
-
-
-def _normalize_tensor(tensor: torch.Tensor,
-                      dim: _Dimension = None) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Normalizes tensors and returns their log-norms without overflow."""
-    safe_scale, safe_scaled_norm, log_norm = _tensor_norm_components(tensor, dim)
-    scaled = tensor / safe_scale
-    normalized = scaled / safe_scaled_norm
-    if dim is None:
-        return normalized, log_norm
-
-    dims = (dim,) if isinstance(dim, int) else dim
-    dims = tuple(axis % tensor.ndim for axis in dims)
-    for axis in sorted(dims, reverse=True):
-        log_norm = log_norm.squeeze(axis)
-    return normalized, log_norm
-
-
 __all__ = [
     '_SVDProgress',
-    '_log_tensor_norm',
-    '_normalize_tensor',
+    '_prepare_svd_source',
 ]

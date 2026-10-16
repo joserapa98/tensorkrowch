@@ -14,6 +14,8 @@ from typing import Any, Optional, Sequence, Tuple
 
 import torch
 
+from tensorkrowch.utils import safe_divide
+
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource)
 from tensorkrowch.decompositions.sources.base import (_discrete_indices,
@@ -24,14 +26,8 @@ from tensorkrowch.decompositions.sources.base import (_discrete_indices,
 def _zero_safe_relative_error(absolute: torch.Tensor,
                               denominator: torch.Tensor) -> torch.Tensor:
     """Returns a relative error with explicit zero-target semantics."""
-    safe_denominator = torch.where(
-        denominator > 0, denominator, torch.ones_like(denominator))
-    ratio = absolute / safe_denominator
-    zero_target = torch.where(
-        absolute == 0,
-        torch.zeros_like(absolute),
-        torch.full_like(absolute, torch.inf))
-    return torch.where(denominator > 0, ratio, zero_target)
+    return safe_divide(absolute, denominator,
+                        zero_value=torch.where(absolute == 0, 0, torch.inf))
 
 
 @dataclass(frozen=True)

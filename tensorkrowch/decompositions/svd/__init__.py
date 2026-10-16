@@ -88,13 +88,10 @@ with the corresponding format without decomposition metadata.
 
 Shared internal infrastructure:
 
-    svd.utils._prepare_svd_source
-        Materializes finite sources and prepares vector or fused matrix axes.
-
     svd.utils
-        Stable normalization, logarithmic norms and _SVDProgress events.
+        Source preparation and _SVDProgress events.
 
-    _TruncationSpec and tensorkrowch.utils.truncated_svd
+    _TruncationSpec
         Shared rank selection and singular-value truncation criteria.
 
     _RuntimePolicy
@@ -104,10 +101,10 @@ Shared internal infrastructure:
         Constructs the vector/matrix/Quantics result with source information.
 """
 
-from tensorkrowch.decompositions.svd.tr import TRSVD, qtr_svd, tr_svd
-from tensorkrowch.decompositions.svd.trm import TRMSVD, qtrm_svd, trm_svd
-from tensorkrowch.decompositions.svd.tt import TTSVD, qtt_svd, tt_svd
-from tensorkrowch.decompositions.svd.ttm import TTMSVD, qttm_svd, ttm_svd
+from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd, qtt_svd
+from tensorkrowch.decompositions.svd.tr import TRSVD, tr_svd, qtr_svd
+from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd, qttm_svd
+from tensorkrowch.decompositions.svd.trm import TRMSVD, trm_svd, qtrm_svd
 
 
 __all__ = [

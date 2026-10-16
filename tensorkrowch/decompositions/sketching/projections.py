@@ -9,7 +9,6 @@ This script contains:
 
     Functions:
         * _normalize_matrix_axis
-        * _stable_norm
         * _projection_error
         * _validate_optional_rank
 """
@@ -20,6 +19,8 @@ from math import prod
 from typing import Optional, Protocol, Sequence, Tuple, runtime_checkable
 
 import torch
+
+from tensorkrowch.utils import safe_divide, stable_norm
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import RangeProjectionRecord
@@ -48,28 +49,17 @@ def _normalize_matrix_axis(matrix: torch.Tensor,
     return moved.reshape(-1, matrix.shape[axis]), axis
 
 
-def _stable_norm(tensor: torch.Tensor) -> torch.Tensor:
-    """Computes a norm after removing the largest absolute scale."""
-    scale = tensor.abs().amax()
-    if scale == 0:
-        return scale
-    return scale * torch.linalg.vector_norm(tensor / scale)
-
-
 def _projection_error(matrix: torch.Tensor,
                       basis: Optional[torch.Tensor],
                       small_matrix: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Computes absolute and zero-safe relative range-projection errors."""
     approximation = small_matrix if basis is None \
         else basis @ small_matrix
-    absolute = _stable_norm(matrix - approximation)
-    denominator = _stable_norm(matrix)
-    if denominator > 0:
-        relative = absolute / denominator
-    elif absolute == 0:
-        relative = torch.zeros_like(absolute)
-    else:
-        relative = torch.full_like(absolute, torch.inf)
+    absolute = stable_norm(matrix - approximation)
+    denominator = stable_norm(matrix)
+    relative = safe_divide(
+        absolute, denominator,
+        zero_value=torch.where(absolute == 0, 0, torch.inf))
     return absolute, relative
 
 

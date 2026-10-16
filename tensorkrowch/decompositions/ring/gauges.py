@@ -28,6 +28,8 @@ import warnings
 
 import torch
 
+from tensorkrowch.utils import safe_divide
+
 from tensorkrowch.decompositions.metrics import GaugeRecord
 from tensorkrowch.decompositions.observers import DecompositionEvent
 from tensorkrowch.decompositions.ring.opening import LoopOpening
@@ -567,10 +569,8 @@ class TTCoreGaugeRecursion:  # MARK: TTCoreGaugeRecursion
         residual = matrix @ coordinates - basis
         residual_norm = torch.linalg.vector_norm(residual)
         denominator = torch.linalg.vector_norm(basis)
-        if denominator > 0:
-            projection_error = residual_norm / denominator
-        else:
-            projection_error = residual_norm
+        projection_error = safe_divide(
+            residual_norm, denominator, zero_value=residual_norm)
         projective = (
             numerical_rank < matrix.shape[1] or
             bool(projection_error > self.tolerance))

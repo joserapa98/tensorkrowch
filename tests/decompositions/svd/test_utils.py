@@ -1,29 +1,47 @@
-"""Tests for svd/utils."""
+"""Tests for shared SVD source preparation and progress reporting."""
 
-import pytest
 import torch
 
-from tensorkrowch.decompositions.svd.utils import (_log_tensor_norm,
-                                                   _normalize_tensor)
+import tensorkrowch as tk
+from tensorkrowch.decompositions.svd.utils import (_prepare_svd_source,
+                                                   _SVDProgress)
 
 
-@pytest.mark.parametrize('n_axes', [1, 2, 3])
-@pytest.mark.parametrize('keepdim', [False, True])
-def test_stable_norm_extreme_batches(device_dtype, assert_close, n_axes, keepdim):
-    device, dtype = device_dtype
-    real_dtype = torch.empty((), dtype=dtype).real.dtype
-    large = 1e20 if real_dtype == torch.float32 else 1e200
-    reference = torch.tensor([1., 2., -1., 0.], dtype=dtype, device=device)
-    if dtype.is_complex:
-        reference = reference * (1 + 1j)
-    shape = (4,) if n_axes == 1 else (2, 2) if n_axes == 2 else (1, 2, 2)
-    batch = torch.stack((reference * large, reference / large, reference * 0)).reshape(3, *shape)
-    dim = tuple(range(-n_axes, 0))
-    normalized, log_norm = _normalize_tensor(batch, dim)
-    expected_log = torch.tensor([1., -1.], dtype=real_dtype, device=device) * torch.log(torch.tensor(large, dtype=real_dtype, device=device)) + reference.norm().log()
-    assert_close(log_norm[:2], expected_log)
-    assert torch.isneginf(log_norm[-1])
-    assert_close(normalized[:2], (reference / reference.norm()).reshape(1, *shape).expand(2, *shape))
-    assert_close(normalized[-1], torch.zeros(shape, dtype=dtype, device=device))
-    expected = log_norm.reshape(3, *((1,) * n_axes)) if keepdim else log_norm
-    assert_close(_log_tensor_norm(batch, dim, keepdim), expected)
+def test_prepare_matrix_source():
+    tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
+    source = tk.decompositions.DenseTensorSource.matrix(tensor)
+    prepared_source, prepared, n_batches = _prepare_svd_source(source)
+    assert prepared_source is source
+    assert n_batches == 0
+    torch.testing.assert_close(prepared, tensor.reshape(4, 4))
+
+
+def test_prepare_batched_source():
+    tensor = torch.arange(32., dtype=torch.float64).reshape(2, 2, 2, 2, 2)
+    source = tk.decompositions.DenseTensorSource(tensor, n_batches=1)
+    prepared_source, prepared, n_batches = _prepare_svd_source(source)
+    assert prepared_source is source
+    assert n_batches == 1
+    torch.testing.assert_close(prepared, tensor)
+
+
+def test_progress_aggregates_batched_errors():
+    class Observer:
+        def __init__(self):
+            self.events = []
+
+        def emit(self, event):
+            self.events.append(event)
+
+    observer = Observer()
+    record = tk.decompositions.TruncationRecord(
+        site=0, full_rank=2, selected_rank=1,
+        local_abs_error=torch.tensor([3., 4.], dtype=torch.float64),
+        local_rel_error=torch.tensor([0.5, 0.5], dtype=torch.float64),
+        local_norm=torch.tensor([6., 8.], dtype=torch.float64))
+    _SVDProgress(observer, 'TT-SVD').cut_complete(0, record, 0.1)
+    values = observer.events[0].values
+    torch.testing.assert_close(values['absolute_error'],
+                               torch.tensor(5., dtype=torch.float64))
+    torch.testing.assert_close(values['relative_error'],
+                               torch.tensor(0.5, dtype=torch.float64))

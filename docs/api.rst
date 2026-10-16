@@ -11,3 +11,4 @@ API Reference
    embeddings
    decompositions
    formats
+   utils

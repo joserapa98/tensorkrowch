@@ -19,12 +19,13 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 
+from tensorkrowch.utils import log_tensor_norm, ratio_from_log
+
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TimingRecord,
-                                                 TruncationRecord,
-                                                 _ratio_from_log_norms)
+                                                 TruncationRecord)
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
@@ -35,7 +36,6 @@ from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
-                                                   _log_tensor_norm,
                                                    _prepare_svd_source)
 
 
@@ -556,10 +556,10 @@ class TRSVD:  # MARK: TRSVD
             approximation = result.contract_dense()
             target = self._tensor.to(
                 device=approximation.device, dtype=approximation.dtype)
-            abs_log_error = _log_tensor_norm(approximation - target)
-            target_log_norm = _log_tensor_norm(target)
+            abs_log_error = log_tensor_norm(approximation - target)
+            target_log_norm = log_tensor_norm(target)
             abs_error = abs_log_error.exp()
-            rel_error = _ratio_from_log_norms(
+            rel_error = ratio_from_log(
                 abs_log_error, target_log_norm)
             fit_observer.emit(DecompositionEvent(
                 name='summary',

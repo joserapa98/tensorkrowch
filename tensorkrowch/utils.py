@@ -14,6 +14,13 @@ This script contains:
     * stack_unequal_tensors
     * list2slice
     * split_sequence_into_regions
+    * safe_divide
+    * scale_tensor
+    * stable_norm
+    * log_tensor_norm
+    * normalize_tensor
+    * ratio_from_log
+    * norm_from_log
     * random_unitary
     * accurate_svd
     * truncated_svd
@@ -325,6 +332,260 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
 
     regions.append(current_region)
     return regions
+
+
+def safe_divide(numerator: Tensor,
+                denominator: Tensor,
+                zero_value: Union[float, complex, Tensor] = 0) -> Tensor:
+    """
+    Divides tensors, substituting ``zero_value`` wherever the denominator is zero.
+
+    The denominator is made safe before division, including in branches that
+    are later discarded. PyTorch broadcasting, device and dtype rules apply.
+
+    Parameters
+    ----------
+    numerator, denominator : torch.Tensor
+        Tensors to divide elementwise, with broadcastable shapes.
+    zero_value : number or torch.Tensor
+        Result at zero denominators. Defaults to ``0``; a tensor must be
+        broadcastable with the quotient.
+
+    Returns
+    -------
+    torch.Tensor
+        Quotient with the requested values at zero denominators.
+
+    Examples
+    --------
+    >>> tk.utils.safe_divide(torch.tensor([2., 0.]), torch.tensor([4., 0.]))
+    tensor([0.5000, 0.0000])
+    """
+    nonzero = denominator != 0
+    safe_denominator = torch.where(nonzero, denominator, 1)
+    return torch.where(nonzero, numerator / safe_denominator, zero_value)
+
+
+def scale_tensor(tensor: Tensor,
+                 dim: Optional[Union[int, Sequence[int]]] = None,
+                 keepdim: bool = False) -> Tuple[Tensor, Tensor]:
+    """
+    Extracts a maximum-magnitude scale before numerical tensor operations.
+
+    Zero reductions use scale ``1``, leaving their values unchanged. For
+    complex tensors, the maximum absolute real or imaginary component is used
+    so that forming a complex magnitude cannot overflow before scaling.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Real floating or complex tensor. The input is not modified.
+    dim : int or sequence of int, optional
+        Axes over which to extract the scale. Defaults to all axes.
+    keepdim : bool
+        Retains reduced axes of size ``1`` in the returned scale when ``True``.
+        The scaled tensor always retains its original shape.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        Scaled tensor and its real, positive scale. Multiplying by the scale,
+        with reduced axes restored when necessary, reconstructs the input.
+
+    Examples
+    --------
+    >>> scaled, scale = tk.utils.scale_tensor(torch.tensor([3., -6.]))
+    >>> scaled
+    tensor([ 0.5000, -1.0000])
+    >>> scale
+    tensor(6.)
+    """
+    if dim is not None and not isinstance(dim, int):
+        dim = tuple(dim)
+    absolute = torch.maximum(tensor.real.abs(), tensor.imag.abs()) \
+        if tensor.is_complex() else tensor.abs()
+    if tensor.numel():
+        scale = absolute.amax(dim=dim, keepdim=True)
+    else:
+        scale = absolute.sum(dim=dim, keepdim=True)
+    scale = torch.where(scale == 0, 1, scale)
+    scaled = tensor / scale
+    if not keepdim:
+        scale = scale.squeeze() if dim is None or dim == () \
+            else scale.squeeze(dim)
+    return scaled, scale
+
+
+def stable_norm(tensor: Tensor,
+                dim: Optional[Union[int, Sequence[int]]] = None,
+                keepdim: bool = False) -> Tensor:
+    """
+    Computes an L2 norm after extracting the tensor's largest component.
+
+    Scaling avoids overflow or underflow while squaring the input values.
+    A norm outside the dtype's representable range may still overflow; use
+    :func:`log_tensor_norm` when the norm itself need not be materialized.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Real floating or complex tensor.
+    dim : int or sequence of int, optional
+        Reduction axes. Defaults to all axes, giving the Frobenius norm.
+    keepdim : bool
+        Retains reduced axes of size ``1`` when ``True``.
+
+    Returns
+    -------
+    torch.Tensor
+        Real norm, with zero returned for zero or empty reductions.
+
+    Examples
+    --------
+    >>> tk.utils.stable_norm(torch.tensor([3., 4.]))
+    tensor(5.)
+    """
+    scaled, scale = scale_tensor(tensor, dim=dim, keepdim=keepdim)
+    return scale * torch.linalg.vector_norm(scaled, dim=dim, keepdim=keepdim)
+
+
+def log_tensor_norm(tensor: Tensor,
+                    dim: Optional[Union[int, Sequence[int]]] = None,
+                    keepdim: bool = False) -> Tensor:
+    """
+    Computes the natural logarithm of an L2 norm without materializing the norm.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Real floating or complex tensor.
+    dim : int or sequence of int, optional
+        Reduction axes. Defaults to all axes, giving the log Frobenius norm.
+    keepdim : bool
+        Retains reduced axes of size ``1`` when ``True``.
+
+    Returns
+    -------
+    torch.Tensor
+        Real log-norm. Zero or empty reductions have log-norm ``-inf``.
+
+    Examples
+    --------
+    >>> tk.utils.log_tensor_norm(torch.tensor([0., 0.]))
+    tensor(-inf)
+    """
+    scaled, scale = scale_tensor(tensor, dim=dim, keepdim=keepdim)
+    norm = torch.linalg.vector_norm(scaled, dim=dim, keepdim=keepdim)
+    return scale.log() + norm.log()
+
+
+def normalize_tensor(tensor: Tensor,
+                     dim: Optional[Union[int, Sequence[int]]] = None
+                     ) -> Tuple[Tensor, Tensor]:
+    """
+    Normalizes a tensor and returns the logarithmic scale extracted from it.
+
+    Maximum-component scaling precedes the L2 normalization, so the original
+    norm need not be representable. Zero reductions remain zero and contribute
+    log-scale ``0``. Use :func:`log_tensor_norm` for their actual log-norm.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Real floating or complex tensor. The input is not modified.
+    dim : int or sequence of int, optional
+        Axes to normalize jointly. Defaults to all axes.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        Normalized tensor and real log-scale, with reduction axes removed.
+        Autograd is retained through both outputs.
+
+    Examples
+    --------
+    >>> normalized, log_scale = tk.utils.normalize_tensor(torch.tensor([3., 4.]))
+    >>> normalized
+    tensor([0.6000, 0.8000])
+    >>> log_scale.exp()
+    tensor(5.)
+    """
+    if dim is not None and not isinstance(dim, int):
+        dim = tuple(dim)
+    scaled, scale = scale_tensor(tensor, dim=dim, keepdim=True)
+    norm = torch.linalg.vector_norm(scaled, dim=dim, keepdim=True)
+    safe_norm = torch.where(norm == 0, 1, norm)
+    normalized = scaled / safe_norm
+    log_scale = scale.log() + safe_norm.log()
+    log_scale = log_scale.squeeze() if dim is None or dim == () \
+        else log_scale.squeeze(dim)
+    return normalized, log_scale
+
+
+def ratio_from_log(log_numerator: Tensor, log_denominator: Tensor) -> Tensor:
+    """
+    Computes a ratio of non-negative magnitudes from their natural logarithms.
+
+    Subtracts the logarithms before exponentiating, avoiding overflow from
+    materializing the two magnitudes separately. Zero is represented by
+    ``-inf``; ``0 / 0`` is defined as ``0`` and a positive magnitude divided
+    by zero gives ``inf``.
+
+    Parameters
+    ----------
+    log_numerator, log_denominator : torch.Tensor
+        Real logarithms with broadcastable shapes, on the same device.
+
+    Returns
+    -------
+    torch.Tensor
+        Ratio with the documented zero-denominator convention.
+
+    Examples
+    --------
+    >>> tk.utils.ratio_from_log(torch.tensor([1000., -torch.inf]),
+    ...                         torch.tensor([1000., -torch.inf]))
+    tensor([1., 0.])
+    """
+    nonzero = ~torch.isneginf(log_denominator)
+    safe_denominator = torch.where(nonzero, log_denominator, 0)
+    ratio = (log_numerator - safe_denominator).exp()
+    zero_value = torch.where(torch.isneginf(log_numerator), 0, torch.inf)
+    return torch.where(nonzero, ratio, zero_value)
+
+
+def norm_from_log(log_norm: Tensor,
+                  reference_norm: Optional[Tensor] = None) -> Tensor:
+    """
+    Reconstructs a magnitude from its natural logarithm using an optional scale.
+
+    A positive reference expresses the magnitude relative to that scale before
+    multiplying it back. A zero reference uses scale ``1``; it does not change
+    the reconstructed magnitude. Values outside the dtype's representable
+    range can still overflow or underflow.
+
+    Parameters
+    ----------
+    log_norm : torch.Tensor
+        Real logarithm of a non-negative magnitude. ``-inf`` represents zero.
+    reference_norm : torch.Tensor, optional
+        Finite, non-negative reference with a broadcastable shape on the same
+        device. Without a reference, returns ``log_norm.exp()``.
+
+    Returns
+    -------
+    torch.Tensor
+        Reconstructed non-negative magnitude.
+
+    Examples
+    --------
+    >>> tk.utils.norm_from_log(torch.tensor([0., -torch.inf]), torch.zeros(2))
+    tensor([1., 0.])
+    """
+    if reference_norm is None:
+        return log_norm.exp()
+    safe_reference = torch.where(reference_norm > 0, reference_norm, 1)
+    return (log_norm - safe_reference.log()).exp() * safe_reference
 
 
 def random_unitary(n,
@@ -721,12 +982,7 @@ def truncated_svd(tensor: Tensor,
 
     if rtol is not None:
         total_sq_norm = squared_s.sum(-1, keepdim=True)
-        positive_norm = total_sq_norm > 0
-        safe_sq_norm = torch.where(
-            positive_norm,
-            total_sq_norm,
-            torch.ones_like(total_sq_norm))
-        tail_ratios = tail_sq_norm / safe_sq_norm
+        tail_ratios = safe_divide(tail_sq_norm, total_sq_norm)
         rtol_rank = (tail_ratios > rtol).reshape(
             -1, s.shape[-1]).any(dim=0).sum()
         final_rank = min(final_rank, max(1, rtol_rank.item()))

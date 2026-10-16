@@ -21,7 +21,8 @@ import warnings
 
 import torch
 
-from tensorkrowch.utils import truncated_svd
+from tensorkrowch.utils import (log_tensor_norm, normalize_tensor, ratio_from_log,
+                                safe_divide, truncated_svd)
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
@@ -39,8 +40,6 @@ from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
-                                                   _log_tensor_norm,
-                                                   _normalize_tensor,
                                                    _prepare_svd_source)
 
 
@@ -140,11 +139,7 @@ class TTSVD:  # MARK: TTSVD
             previous_rank * context.in_dim[site],
             -1)
         if context.renormalize:
-            residual, log_norm = _normalize_tensor(residual)
-            log_norm = torch.where(
-                torch.isneginf(log_norm),
-                torch.zeros_like(log_norm),
-                log_norm)
+            residual, log_norm = normalize_tensor(residual)
             context.log_scale = context.log_scale + log_norm
 
         cut_log_scale = context.log_scale
@@ -178,21 +173,8 @@ class TTSVD:  # MARK: TTSVD
                 info.discarded_sq_norm.log() / 2
             if context.renormalize:
                 discarded_log_norm = discarded_log_norm + cut_log_scale
-            positive_input = error_state.norm > 0
-            safe_log_norm = torch.where(
-                positive_input,
-                error_state.log_norm,
-                torch.zeros_like(error_state.log_norm))
-            rel_contribution = (
-                discarded_log_norm - safe_log_norm).exp()
-            zero_input_contribution = torch.where(
-                torch.isneginf(discarded_log_norm),
-                torch.zeros_like(discarded_log_norm),
-                torch.full_like(discarded_log_norm, torch.inf))
-            rel_contribution = torch.where(
-                positive_input,
-                rel_contribution,
-                zero_input_contribution)
+            rel_contribution = ratio_from_log(
+                discarded_log_norm, error_state.log_norm)
             if not torch.isfinite(rel_contribution).all():
                 raise ValueError(
                     'The relative TT-SVD truncation error should be finite')
@@ -225,11 +207,7 @@ class TTSVD:  # MARK: TTSVD
             cores[-1] = self._runtime.finalize(cores[-1])
             return cores
 
-        cores[-1], log_norm = _normalize_tensor(cores[-1])
-        log_norm = torch.where(
-            torch.isneginf(log_norm),
-            torch.zeros_like(log_norm),
-            log_norm)
+        cores[-1], log_norm = normalize_tensor(cores[-1])
         context.log_scale = context.log_scale + log_norm
 
         cores[-1] = self._runtime.finalize(cores[-1])
@@ -253,7 +231,7 @@ class TTSVD:  # MARK: TTSVD
         error_state = None
         if collect_metrics:
             input_axes = tuple(range(self._n_batches, tensor.ndim))
-            log_norm = _log_tensor_norm(tensor, dim=input_axes)
+            log_norm = log_tensor_norm(tensor, dim=input_axes)
             norm = log_norm.exp()
             if not torch.isfinite(norm).all():
                 raise ValueError('The input tensor norm should be finite')
@@ -490,10 +468,7 @@ class TTSVD:  # MARK: TTSVD
             if abs_error.ndim:
                 abs_error = torch.linalg.vector_norm(abs_error)
                 global_norm = torch.linalg.vector_norm(error.denominator)
-                rel_error = torch.where(
-                    global_norm > 0,
-                    abs_error / global_norm,
-                    torch.zeros_like(abs_error))
+                rel_error = safe_divide(abs_error, global_norm)
             fit_observer.emit(DecompositionEvent(
                 name='summary',
                 phase=self._phase,

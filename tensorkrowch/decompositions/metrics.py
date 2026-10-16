@@ -23,6 +23,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import torch
 
+from tensorkrowch.utils import norm_from_log, ratio_from_log
+
 
 def _scalar_float(value: Any, name: str) -> float:
     """Converts a real scalar to a Python float."""
@@ -42,36 +44,6 @@ def _cpu_tensor(value: Any, name: str) -> torch.Tensor:
             raise TypeError(f'`{name}` should be torch.Tensor type')
         value = torch.as_tensor(value)
     return value.detach().cpu()
-
-
-def _ratio_from_log_norms(log_numerator: torch.Tensor,
-                          log_denominator: torch.Tensor) -> torch.Tensor:
-    """Computes a norm ratio before exponentiating its log difference."""
-    positive = ~torch.isneginf(log_denominator)
-    safe_log_denominator = torch.where(
-        positive, log_denominator, torch.zeros_like(log_denominator))
-    ratio = (log_numerator - safe_log_denominator).exp()
-    zero_ratio = torch.where(torch.isneginf(log_numerator),
-                             torch.zeros_like(log_numerator),
-                             torch.full_like(log_numerator, torch.inf))
-    return torch.where(positive, ratio, zero_ratio)
-
-
-def _norm_from_log(log_norm: torch.Tensor,
-                   reference_norm: Optional[torch.Tensor] = None
-                   ) -> torch.Tensor:
-    """Materializes a log-norm, relative to a finite reference if possible."""
-    if reference_norm is None:
-        return log_norm.exp()
-
-    positive = reference_norm > 0
-    safe_reference = torch.where(
-        positive, reference_norm, torch.ones_like(reference_norm))
-    value = (log_norm - safe_reference.log()).exp() * safe_reference
-    zero_reference_value = torch.where(torch.isneginf(log_norm),
-                                       torch.zeros_like(log_norm),
-                                       torch.full_like(log_norm, torch.inf))
-    return torch.where(positive, value, zero_reference_value)
 
 
 def _record_as_dict(record: Any) -> Dict[str, Any]:
@@ -244,9 +216,9 @@ class TruncationRecord:  # MARK: TruncationRecord
                 raise ValueError(
                     '`global_norm` should be finite and non-negative')
 
-        local_norm = _norm_from_log(local_log_norm, global_norm)
-        local_abs_error = _norm_from_log(discarded_log_norm, global_norm)
-        local_rel_error = _ratio_from_log_norms(
+        local_norm = norm_from_log(local_log_norm, global_norm)
+        local_abs_error = norm_from_log(discarded_log_norm, global_norm)
+        local_rel_error = ratio_from_log(
             discarded_log_norm, local_log_norm)
 
         if singular_values is not None:
@@ -261,12 +233,12 @@ class TruncationRecord:  # MARK: TruncationRecord
                 singular_values.log() + log_scale_tensor.unsqueeze(-1))
             singular_reference = None if global_norm is None \
                 else global_norm.unsqueeze(-1)
-            singular_values = _norm_from_log(
+            singular_values = norm_from_log(
                 singular_log, singular_reference)
 
         global_rel_contribution = None
         if global_norm is not None:
-            global_rel_contribution = _ratio_from_log_norms(
+            global_rel_contribution = ratio_from_log(
                 discarded_log_norm, global_norm.log())
 
         return cls(

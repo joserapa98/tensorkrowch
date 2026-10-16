@@ -31,7 +31,7 @@ from typing import (Any,
 
 import torch
 
-from tensorkrowch.utils import _INTEGER_DTYPES
+from tensorkrowch.utils import _INTEGER_DTYPES, safe_divide
 
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import InputFitRecord
@@ -626,12 +626,9 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
             prediction = matrix @ solution
             absolute = torch.linalg.vector_norm(prediction - target)
             denominator = torch.linalg.vector_norm(target)
-            if denominator > 0:
-                relative = absolute / denominator
-            elif absolute == 0:
-                relative = torch.zeros_like(absolute)
-            else:
-                relative = torch.full_like(absolute, torch.inf)
+            relative = safe_divide(
+                absolute, denominator,
+                zero_value=torch.where(absolute == 0, 0, torch.inf))
 
             record = None
             model_state = None

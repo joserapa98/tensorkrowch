@@ -37,6 +37,21 @@ The source owns dimensions, structural batches, matrix ordering and evaluation
 runtime. A :class:`~tensorkrowch.decompositions.CallableQuanticsSource` also
 owns its layouts and coordinate maps, and evaluates its full digit grid for
 SVD. Ordinary tensor sources retain their fixed axes without quantization.
+
+Finite sources include
+:class:`~tensorkrowch.decompositions.DenseTensorSource`,
+:class:`~tensorkrowch.decompositions.SparseTensorSource`,
+:class:`~tensorkrowch.decompositions.FormatSource`,
+:class:`~tensorkrowch.decompositions.CallableTensorSource` and
+:class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+
+Tensors and non-Quantics vector formats are accepted directly; wrap an
+:class:`~tensorkrowch.models.MPS` in ``FormatSource``. Matrix interfaces
+require a matrix source: use the dense, sparse or callable source's
+``.matrix(...)`` constructor, or ``FormatSource`` with a matrix format.
+They also accept tensors with interleaved input/output axes directly.
+Continuous callables require Quantics discretization before SVD.
+
 Preparation materializes the source once; the public ``source`` property
 retains the original source, while repeated calls to ``fit`` use the prepared
 dense tensor.
@@ -101,9 +116,9 @@ Shared internal infrastructure:
         Constructs the vector/matrix/Quantics result with source information.
 """
 
-from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd, qtt_svd
+from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd, qtt_svd, vec_to_mps
 from tensorkrowch.decompositions.svd.tr import TRSVD, tr_svd, qtr_svd
-from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd, qttm_svd
+from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd, qttm_svd, mat_to_mpo
 from tensorkrowch.decompositions.svd.trm import TRMSVD, trm_svd, qtrm_svd
 
 
@@ -120,4 +135,6 @@ __all__ = [
     'qttm_svd',
     'trm_svd',
     'qtrm_svd',
+    'vec_to_mps',
+    'mat_to_mpo',
 ]

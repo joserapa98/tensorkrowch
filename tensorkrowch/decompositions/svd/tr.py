@@ -29,11 +29,14 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TensorDecomposition, QTRDecomposition,
+from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TRDecomposition,
+                                                 QTRDecomposition,
                                                  _result_from_source)
+
 from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
+
 from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _prepare_svd_source)
@@ -73,12 +76,29 @@ class TRSVD:  # MARK: TRSVD
     subchains, rather than the one-direction sequence in the original
     algorithm.
 
+    ``source`` defines the input's dimensions, evaluation rules and matrix
+    grouping. Finite sources include
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` and
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    SVD materializes their complete tensor once.
+    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
+    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
+    in ``FormatSource`` first.
+
+    To declare matrix inputs, use
+    :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
+    corresponding ``.matrix(...)`` constructor of ``SparseTensorSource``,
+    ``CallableTensorSource`` or ``CallableQuanticsSource``. ``FormatSource``
+    instead infers matrix grouping from a matrix format. The source selects the
+    result family and retains any Quantics layouts and coordinate maps.
+
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor values with source-owned dimensions and runtime. For
-        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
-        use ``CallableQuanticsSource``.
+    source : TensorSource, TensorFormat1D or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     center : int, optional
         Interior cut between sites ``center - 1`` and ``center``. It should
         satisfy ``1 <= center < tensor.ndim``. The default is the middle cut.
@@ -94,7 +114,10 @@ class TRSVD:  # MARK: TRSVD
     [1, 1, 1]
     """
 
-    def __init__(self, source: 'SourceLike', center: Optional[int] = None, *,
+    def __init__(self,
+                 source: 'SourceLike',
+                 center: Optional[int] = None,
+                 *,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._source, tensor, batches = _prepare_svd_source(source)
         if batches:
@@ -105,7 +128,8 @@ class TRSVD:  # MARK: TRSVD
         self._validate_center(center, tensor.ndim)
         self._center = center
         self._tensor = tensor
-        self._runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
+        self._runtime = _RuntimePolicy.from_tensor(tensor,
+                                                   out_device=out_device)
         self._phase = 'TRM-SVD' if getattr(
             self._source, 'is_matrix', False) else 'TR-SVD'
 
@@ -122,8 +146,6 @@ class TRSVD:  # MARK: TRSVD
         if (center < 1) or (center >= n_sites):
             raise ValueError(
                 '`center` should satisfy 1 <= center < tensor.ndim')
-
-
 
     @property
     def center(self) -> int:
@@ -173,10 +195,9 @@ class TRSVD:  # MARK: TRSVD
                             truncation: _TruncationSpec,
                             renormalize: bool,
                             collect_metrics: bool,
-                            progress: Optional[
-                                _SVDProgress] = None) -> Tuple[
-            List[torch.Tensor],
-            Optional[DecompositionMetrics]]:
+                            progress: Optional[_SVDProgress] = None
+                            ) -> Tuple[List[torch.Tensor],
+                                       Optional[DecompositionMetrics]]:
         """Applies TT-SVD while preserving a ``subchain``'s boundary ranks."""
         left_rank = subchain.shape[0]
         right_rank = subchain.shape[-1]
@@ -239,7 +260,8 @@ class TRSVD:  # MARK: TRSVD
                        truncation: _TruncationSpec,
                        renormalize: bool,
                        collect_metrics: bool,
-                       progress: Optional[_SVDProgress] = None) -> TRDecomposition:
+                       progress: Optional[_SVDProgress] = None
+                       ) -> TRDecomposition:
         """Runs the cyclic SVD kernel from already validated fit options."""
         rank_policy = self._resolve_rank_policy(rank=truncation.rank)
         initial_truncation = (
@@ -434,8 +456,8 @@ class TRSVD:  # MARK: TRSVD
             Interior cut used for this fit. If omitted, the ``center`` fixed at
             construction is used.
         rank : int, optional
-            Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
-            most this many singular values are retained. The initial
+            Maximum ``rank`` allowed at every link. At each subchain SVD cut,
+            at most this many singular values are retained. The initial
             bipartition retains at most ``rank ** 2`` singular values before
             its selected ``rank`` is factorized into two TR ranks.
         cutoff : float, optional
@@ -443,17 +465,17 @@ class TRSVD:  # MARK: TRSVD
             non-negative. Singular values ``<= cutoff`` are removed.
         atol : float, optional
             Absolute tolerance over the tail sum of squared singular values.
-            Starting from the smallest singular value, values are discarded while
-            the accumulated sum of squares is ``<= atol``. It must be finite
-            and non-negative.
+            Starting from the smallest singular value, values are discarded
+            while the accumulated sum of squares is ``<= atol``. It must be
+            finite and non-negative.
         rtol : float, optional
             Relative tolerance over the tail sum of squared singular values.
-            Starting from the smallest singular value, values are discarded while
-            the tail sum of squares divided by the total sum of squares is
-            ``<= rtol``. It must be finite and in ``[0, 1]``.
+            Starting from the smallest singular value, values are discarded
+            while the tail sum of squares divided by the total sum of squares
+            is ``<= rtol``. It must be finite and in ``[0, 1]``.
         cum_percentage : float, optional
-            Minimum fraction of squared singular-value mass to keep. Equivalent to
-            setting ``rtol = 1 - cum_percentage``. It must be finite and in
+            Minimum fraction of squared singular-value mass to keep. Equivalent
+            to setting ``rtol = 1 - cum_percentage``. It must be finite and in
             ``[0, 1]``.
 
             .. math::
@@ -600,24 +622,37 @@ def tr_svd(source: 'SourceLike',
     r"""
     Decomposes a finite source using :class:`TRSVD`.
 
-    The source owns its dimensions, batch axes and matrix ordering. A plain
-    tensor is wrapped as a dense source. The result retains Quantics metadata
-    when the source describes a coordinate discretization.
+    ``source`` defines the input's dimensions, evaluation rules and matrix
+    grouping. Finite sources include
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` and
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    SVD materializes their complete tensor once.
+    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
+    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
+    in ``FormatSource`` first.
+
+    To declare matrix inputs, use
+    :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
+    corresponding ``.matrix(...)`` constructor of ``SparseTensorSource``,
+    ``CallableTensorSource`` or ``CallableQuanticsSource``. ``FormatSource``
+    instead infers matrix grouping from a matrix format. The source selects the
+    result family and retains any Quantics layouts and coordinate maps.
 
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor values with source-owned dimensions and runtime. For
-        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
-        use ``CallableQuanticsSource``.
+    source : TensorSource, TensorFormat1D or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     center : int, optional
         Interior cut satisfying ``1 <= center < tensor.ndim``. The default is
         the middle cut.
     rank : int, optional
-        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
-        this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected ``rank``
-        is factorized into two TR ranks.
+        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
+        most this many singular values are retained. The initial bipartition
+        retains at most ``rank ** 2`` singular values before its selected
+        ``rank`` is factorized into two TR ranks.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -691,8 +726,6 @@ def tr_svd(source: 'SourceLike',
     return result
 
 
-
-
 def qtr_svd(source: CallableQuanticsSource,
             center: Optional[int] = None,
             *,
@@ -711,8 +744,12 @@ def qtr_svd(source: CallableQuanticsSource,
     Materializes the full digit tensor from ``source`` and runs
     :meth:`TRSVD.fit` through :class:`TRSVD`. The result retains
     the source's layouts and coordinate maps for coordinate evaluation.
-    Construct ``source`` first to choose its discretization; this function
-    only controls the decomposition.
+
+    Construct :class:`~tensorkrowch.decompositions.CallableQuanticsSource`
+    first to define the callable, digit ordering and coordinate grid;
+    use :meth:`~tensorkrowch.decompositions.CallableQuanticsSource.matrix`
+    for paired input/output coordinates. The source selects the vector or
+    matrix result; this function only controls its decomposition.
 
     Parameters
     ----------
@@ -722,10 +759,10 @@ def qtr_svd(source: CallableQuanticsSource,
         Interior cut from which the cyclic decomposition starts. If omitted,
         uses the middle of the digit chain.
     rank : int, optional
-        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at most
-        this many singular values are retained. The initial bipartition
-        retains at most ``rank ** 2`` singular values before its selected ``rank``
-        is factorized into two TR ranks.
+        Maximum ``rank`` allowed at every link. At each subchain SVD cut, at
+        most this many singular values are retained. The initial bipartition
+        retains at most ``rank ** 2`` singular values before its selected
+        ``rank`` is factorized into two TR ranks.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -794,12 +831,6 @@ def qtr_svd(source: CallableQuanticsSource,
             collect_metrics=collect_metrics,
             verbose=verbose)
 
-
-__all__ = [
-    'TRSVD',
-    'tr_svd',
-    'qtr_svd',
-]
 
 __all__ = [
     'TRSVD',

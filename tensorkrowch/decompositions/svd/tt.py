@@ -21,8 +21,8 @@ import warnings
 
 import torch
 
-from tensorkrowch.utils import (log_tensor_norm, normalize_tensor, ratio_from_log,
-                                safe_divide, truncated_svd)
+from tensorkrowch.utils import (log_tensor_norm, normalize_tensor,
+                                ratio_from_log, safe_divide, truncated_svd)
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
@@ -33,12 +33,15 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TensorDecomposition, QTTDecomposition,
+from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TTDecomposition,
+                                                 QTTDecomposition,
                                                  _result_from_source)
+
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
+
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
                                                    _prepare_svd_source)
 
@@ -91,12 +94,29 @@ class TTSVD:  # MARK: TTSVD
     I. V. Oseledets in *Tensor-Train Decomposition* (2011), `paper
     <https://doi.org/10.1137/090752286>`_.
 
+    ``source`` defines the input's dimensions, evaluation rules and matrix
+    grouping. Finite sources include
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` and
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    SVD materializes their complete tensor once.
+    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
+    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
+    in ``FormatSource`` first.
+
+    To declare matrix inputs, use
+    :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
+    corresponding ``.matrix(...)`` constructor of ``SparseTensorSource``,
+    ``CallableTensorSource`` or ``CallableQuanticsSource``. ``FormatSource``
+    instead infers matrix grouping from a matrix format. The source selects the
+    result family and retains any Quantics layouts and coordinate maps.
+
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor values with source-owned dimensions and runtime. For
-        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
-        use ``CallableQuanticsSource``.
+    source : TensorSource, TensorFormat1D or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
         If ``None``, cores remain on the tensor's device.
@@ -109,12 +129,15 @@ class TTSVD:  # MARK: TTSVD
     [1, 1]
     """
 
-    def __init__(self, source: 'SourceLike', *,
+    def __init__(self,
+                 source: 'SourceLike',
+                 *,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._source, tensor, batches = _prepare_svd_source(source)
         self._n_batches = batches
         self._tensor = tensor
-        self._runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
+        self._runtime = _RuntimePolicy.from_tensor(tensor,
+                                                   out_device=out_device)
         self._phase = 'TTM-SVD' if getattr(
             self._source, 'is_matrix', False) else 'TT-SVD'
 
@@ -122,9 +145,6 @@ class TTSVD:  # MARK: TTSVD
     def source(self) -> SourceLike:
         """Original source describing the fixed decomposition input."""
         return self._source
-
-
-
 
     def _split_site(self,
                     residual: torch.Tensor,
@@ -221,7 +241,8 @@ class TTSVD:  # MARK: TTSVD
                        truncation: _TruncationSpec,
                        renormalize: bool,
                        collect_metrics: bool,
-                       progress: Optional[_SVDProgress] = None) -> TTDecomposition:
+                       progress: Optional[_SVDProgress] = None
+                       ) -> TTDecomposition:
         """Runs TT-SVD from already validated fit options."""
         tensor = self._runtime.prepare(self._tensor)
         batch_shape = tuple(tensor.shape[:self._n_batches])
@@ -350,24 +371,24 @@ class TTSVD:  # MARK: TTSVD
         Parameters
         ----------
         rank : int, optional
-            Maximum ``rank`` allowed at every link. At each SVD cut, at most this
-            many singular values are retained.
+            Maximum ``rank`` allowed at every link. At each SVD cut, at most
+            this many singular values are retained.
         cutoff : float, optional
             Minimum singular value to keep. It must be finite and
             non-negative. Singular values ``<= cutoff`` are removed.
         atol : float, optional
             Absolute tolerance over the tail sum of squared singular values.
-            Starting from the smallest singular value, values are discarded while
-            the accumulated sum of squares is ``<= atol``. It must be finite
-            and non-negative.
+            Starting from the smallest singular value, values are discarded
+            while the accumulated sum of squares is ``<= atol``. It must be
+            finite and non-negative.
         rtol : float, optional
             Relative tolerance over the tail sum of squared singular values.
-            Starting from the smallest singular value, values are discarded while
-            the tail sum of squares divided by the total sum of squares is
-            ``<= rtol``. It must be finite and in ``[0, 1]``.
+            Starting from the smallest singular value, values are discarded
+            while the tail sum of squares divided by the total sum of squares
+            is ``<= rtol``. It must be finite and in ``[0, 1]``.
         cum_percentage : float, optional
-            Minimum fraction of squared singular-value mass to keep. Equivalent to
-            setting ``rtol = 1 - cum_percentage``. It must be finite and in
+            Minimum fraction of squared singular-value mass to keep. Equivalent
+            to setting ``rtol = 1 - cum_percentage``. It must be finite and in
             ``[0, 1]``.
 
             .. math::
@@ -503,19 +524,32 @@ def tt_svd(source: 'SourceLike',
     r"""
     Decomposes a finite source using :class:`TTSVD`.
 
-    The source owns its dimensions, batch axes and matrix ordering. A plain
-    tensor is wrapped as a dense source. The result retains Quantics metadata
-    when the source describes a coordinate discretization.
+    ``source`` defines the input's dimensions, evaluation rules and matrix
+    grouping. Finite sources include
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` and
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    SVD materializes their complete tensor once.
+    A ``torch.Tensor`` is accepted directly, as is a non-Quantics TT/TR format
+    or its matrix version. Wrap an :class:`~tensorkrowch.models.MPS`
+    in ``FormatSource`` first.
+
+    To declare matrix inputs, use
+    :meth:`~tensorkrowch.decompositions.DenseTensorSource.matrix` or the
+    corresponding ``.matrix(...)`` constructor of ``SparseTensorSource``,
+    ``CallableTensorSource`` or ``CallableQuanticsSource``. ``FormatSource``
+    instead infers matrix grouping from a matrix format. The source selects the
+    result family and retains any Quantics layouts and coordinate maps.
 
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor values with source-owned dimensions and runtime. For
-        matrices, use ``DenseTensorSource.matrix``; for coordinate functions,
-        use ``CallableQuanticsSource``.
+    source : TensorSource, TensorFormat1D or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     rank : int, optional
-        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
-        singular values are retained.
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this
+        many singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -607,16 +641,20 @@ def qtt_svd(source: CallableQuanticsSource,
     Materializes the full digit tensor from ``source`` and runs
     :meth:`TTSVD.fit` through :class:`TTSVD`. The result retains
     the source's layouts and coordinate maps for coordinate evaluation.
-    Construct ``source`` first to choose its discretization; this function
-    only controls the decomposition.
+
+    Construct :class:`~tensorkrowch.decompositions.CallableQuanticsSource`
+    first to define the callable, digit ordering and coordinate grid;
+    use :meth:`~tensorkrowch.decompositions.CallableQuanticsSource.matrix`
+    for paired input/output coordinates. The source selects the vector or
+    matrix result; this function only controls its decomposition.
 
     Parameters
     ----------
     source : CallableQuanticsSource
         Callable with its digit layout and coordinate map.
     rank : int, optional
-        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
-        singular values are retained.
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this
+        many singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.
@@ -716,8 +754,8 @@ def vec_to_mps(vec: torch.Tensor,
     n_batches : int
         Number of leading tensor axes interpreted as batch dimensions.
     rank : int, optional
-        Maximum ``rank`` allowed at every link. At each SVD cut, at most this many
-        singular values are retained.
+        Maximum ``rank`` allowed at every link. At each SVD cut, at most this
+        many singular values are retained.
     cutoff : float, optional
         Minimum singular value to keep. It must be finite and non-negative.
         Singular values ``<= cutoff`` are removed.

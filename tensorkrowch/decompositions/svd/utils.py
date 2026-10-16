@@ -63,23 +63,31 @@ def _prepare_svd_source(source: SourceLike):
     """Obtains canonical dense site axes from a source's materialization."""
     if isinstance(source, torch.Tensor):
         source = DenseTensorSource(source)
+
     if not callable(getattr(source, 'contract_dense', None)):
         raise TypeError('`source` should provide `contract_dense`')
     if not getattr(source, 'is_discrete_tensor', True):
         raise ValueError('`source` should represent a discrete tensor')
+
     tensor = source.contract_dense()
+    batches = getattr(source, 'n_batches', 0)
+
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`contract_dense` should return a torch.Tensor')
-    batches = getattr(source, 'n_batches', 0)
     if isinstance(batches, bool) or not isinstance(batches, int):
         raise TypeError('`n_batches` should be int type')
-    if batches < 0 or batches >= tensor.ndim or any(size < 1 for size in tensor.shape):
-        raise ValueError('The source should have positive finite input dimensions')
+    if (batches < 0) or (batches >= tensor.ndim) or any(
+            size < 1 for size in tensor.shape):
+        raise ValueError(
+            'The source should have positive finite input dimensions')
     if not (tensor.is_floating_point() or tensor.is_complex()):
-        raise TypeError('Decomposition target values should be floating or complex')
+        raise TypeError(
+            'Decomposition target values should be floating or complex')
+
     if getattr(source, 'is_matrix', False):
         dims = tuple(a * b for a, b in zip(source.in_dim, source.out_dim))
         tensor = tensor.reshape(*tensor.shape[:batches], *dims)
+
     return source, tensor, batches
 
 

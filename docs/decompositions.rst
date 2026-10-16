@@ -67,9 +67,120 @@ with logical OR and can include observed numerical zeros.
 SVD decompositions
 ------------------
 
-The functional SVD interfaces return decomposition objects directly. Access
-``result.cores`` for the tensors or ``result.as_info()`` for structured
-information. Set ``collect_metrics=True`` to collect error and timing metrics.
+SVD engines materialize a finite source once at construction and retain its
+prepared tensor for independent calls to ``fit``. Sources own dimensions,
+matrix ordering and evaluation runtime; ``fit`` controls truncation,
+normalization and diagnostics.
+
+Engine hierarchy and algorithms
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 18 44 20
+
+   * - Engine
+     - Inherits from
+     - Numerical workflow
+     - Ordinary result
+   * - :class:`TTSVD`
+     - Independent engine
+     - Successive open-chain SVD cuts through :meth:`TTSVD.fit`.
+     - :class:`TTDecomposition`
+   * - :class:`TTMSVD`
+     - :class:`TTSVD`
+     - Inherited TT-SVD over fused input/output pairs.
+     - :class:`TTMDecomposition`
+   * - :class:`TRSVD`
+     - Independent engine
+     - Interior bipartition followed by two TT-SVD subchains through
+       :meth:`TRSVD.fit`.
+     - :class:`TRDecomposition`
+   * - :class:`TRMSVD`
+     - :class:`TRSVD`
+     - Inherited TR-SVD over fused input/output pairs.
+     - :class:`TRMDecomposition`
+
+:class:`TRSVD` reuses the numerical routines of :class:`TTSVD` through
+composition, rather than inheritance. Its initial SVD splits the tensor at
+``center``; the retained rank is factored into the closing rank and the rank
+crossing that cut. TT-SVD then decomposes each block with those boundary ranks
+preserved. TT-SVD supports leading structural batches; TR-SVD does not.
+
+The matrix engines restrict inputs to matrix sources. The general
+:class:`TTSVD` and :class:`TRSVD` engines also accept those sources and infer
+the matrix result type. Matrix dimensions and ordering belong to the source,
+not to the numerical sweep.
+
+Construction and fitting workflow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. **Describe the input.** Pass a tensor or a finite source. Plain tensors
+   become :class:`DenseTensorSource` objects. For a matrix, use
+   :meth:`DenseTensorSource.matrix` to specify paired dimensions and ordering;
+   the matrix engines also accept tensors with interleaved input/output axes.
+   Coordinate functions use :class:`CallableQuanticsSource`.
+2. **Construct the engine.** ``TTSVD(source)`` or ``TRSVD(source)`` calls the
+   source's ``contract_dense`` method and retains the dense tensor. Matrix
+   input/output pairs are fused into one dimension per site. Quantics sources
+   evaluate their full digit grid; ordinary tensor sources retain their fixed
+   axes without quantization. ``engine.source`` retains the original source.
+3. **Fit the prepared tensor.** :meth:`TTSVD.fit` or :meth:`TRSVD.fit` applies
+   the requested ``rank``, ``cutoff``, ``atol``, ``rtol`` or ``cum_percentage``
+   criteria through :func:`~tensorkrowch.utils.truncated_svd`.
+   ``renormalize`` controls numerical scaling; ``collect_metrics=True``
+   records errors and timings, and ``verbose`` controls progress reporting.
+4. **Restore the representation.** The result reopens paired matrix axes and
+   retains the source's evaluation sites. Quantics inputs also retain their
+   layouts and coordinate maps, producing :class:`QTTDecomposition`,
+   :class:`QTRDecomposition`, :class:`QTTMDecomposition` or
+   :class:`QTRMDecomposition` through the same numerical algorithms.
+
+Repeated fits reuse the prepared tensor with different truncation options:
+
+.. code-block:: python
+
+   source = tk.decompositions.DenseTensorSource(torch.eye(4))
+   engine = tk.decompositions.TTSVD(source)
+   rank_1 = engine.fit(rank=1)
+   rank_2 = engine.fit(rank=2, collect_metrics=True)
+
+Access ``result.cores`` for the tensors or
+:meth:`TensorDecomposition.as_info` for structured information. Use
+:meth:`TensorDecomposition.to_format` to continue with the numerical format
+without fit metadata. The engines share source preparation, stable
+normalization, logarithmic norm calculations, truncation and progress helpers;
+these do not introduce additional public engine classes.
+
+Functional interfaces
+^^^^^^^^^^^^^^^^^^^^^
+
+Each functional interface constructs its engine, performs one ``fit`` and
+returns the decomposition object directly:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 30 40
+
+   * - Function
+     - Engine
+     - Quantics function
+   * - :func:`tt_svd`
+     - :class:`TTSVD`
+     - :func:`qtt_svd`
+   * - :func:`tr_svd`
+     - :class:`TRSVD`
+     - :func:`qtr_svd`
+   * - :func:`ttm_svd`
+     - :class:`TTMSVD`
+     - :func:`qttm_svd`
+   * - :func:`trm_svd`
+     - :class:`TRMSVD`
+     - :func:`qtrm_svd`
+
+The Quantics functions require a :class:`CallableQuanticsSource` of the
+appropriate vector or matrix kind and delegate to the corresponding ordinary
+function. There are no separate Quantics engines or SVD algorithms.
 
 TT-SVD
 ^^^^^^

@@ -33,9 +33,10 @@ from tensorkrowch.decompositions.results import (TensorDecomposition, QTRDecompo
                                                  _result_from_source)
 from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
-from tensorkrowch.decompositions.svd.tt import TTSVD, _prepare_svd_source
+from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
-                                                   _log_tensor_norm)
+                                                   _log_tensor_norm,
+                                                   _prepare_svd_source)
 
 
 _Rank = Optional[int]

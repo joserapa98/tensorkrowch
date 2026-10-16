@@ -109,11 +109,25 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
     independently in every fit, so repeating a fit does not retain mutable
     numerical state.
 
+    ``source`` defines how inputs are evaluated. Accepted finite sources are
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` and
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`; a tensor is wrapped automatically.
+    Wrap a non-Quantics format or :class:`~tensorkrowch.models.MPS` in
+    ``FormatSource``. Continuous functions use :class:`~tensorkrowch.decompositions.CallableSource`
+    or a raw callable and require an ``embedding``. Finite sources use basis
+    embeddings by default. The dense, sparse and callable source classes
+    provide ``.matrix(...)`` constructors for paired input/output dimensions;
+    ``FormatSource`` obtains these from a matrix format. Structural batches
+    are not supported.
+
     Parameters
     ----------
     source : TensorSource, torch.Tensor or callable
-        Function or tensor to approximate. A raw callable is wrapped as
-        ``CallableSource``. Finite sources use basis embeddings by default.
+        Input values and their evaluation rules; continuous inputs also
+        require an embedding.
     embedding : callable, torch.Tensor or sequence, optional
         Shared embedding or one per input site. Required for continuous
         sources. An embedding maps site values to vectors of size ``in_dim``.
@@ -1018,11 +1032,23 @@ class TTRS:  # MARK: TTRS
     :class:`~tensorkrowch.models.MPS` with
     ``tk.models.MPS(tensors=result.cores)``.
 
+    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
+    a non-Quantics TT/TR format or its matrix version, an
+    :class:`~tensorkrowch.models.MPS`, or a finite source:
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    Declare paired dimensions with the ``.matrix(...)`` constructor of the
+    dense, sparse or callable source classes; ``FormatSource`` infers them
+    from the format. Continuous ``CallableSource`` inputs require discretization
+    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor source. Sources with support or structured contraction
-        capabilities use those directly; others use finite-grid evaluations.
+    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     sketch_operator : SketchOperator, optional
         Operator constructing the recursive sketches. Defaults to
         ``MarginalSketch.markov()``.
@@ -1291,6 +1317,10 @@ def tt_rs(source: 'SourceLike',
     and returns only the cores unless ``return_info=True``. The source owns its dimensions and evaluation rules. Use
     ``SparseTensorSource.from_data`` for empirical distributions.
 
+    ``source`` accepts tensors, formats, MPS models and finite sources as
+    described in :class:`~tensorkrowch.decompositions.TTRS`, including
+    their matrix constructors. It supplies dimensions and evaluation rules.
+
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0], [0, 0], [1, 1]])
@@ -1355,6 +1385,13 @@ def qtt_rss(source: CallableQuanticsSource,
     use basis embeddings. ``sample_space="coordinates"`` quantizes domain
     samples; ``sample_space="digits"`` accepts already encoded digit rows.
     Numerical fitting arguments follow :meth:`TTRSS.fit`.
+
+    ``source`` must be a
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`,
+    constructed with its callable, layout and coordinate map. Use
+    :meth:`~tensorkrowch.decompositions.CallableQuanticsSource.matrix`
+    for matrix outputs. These choices belong to the source, independently
+    of the fitting controls accepted here.
 
     Examples
     --------

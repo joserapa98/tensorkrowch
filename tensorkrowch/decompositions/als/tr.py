@@ -679,11 +679,23 @@ class TRALS(TTALS):  # MARK: TRALS
     Gram and samples exact conditional leverage probabilities without forming
     the exponentially tall design.
 
+    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
+    a non-Quantics TT/TR format or its matrix version, an
+    :class:`~tensorkrowch.models.MPS`, or a finite source:
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    Declare paired dimensions with the ``.matrix(...)`` constructor of the
+    dense, sparse or callable source classes; ``FormatSource`` infers them
+    from the format. Continuous ``CallableSource`` inputs require discretization
+    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor values. Callable dimensions belong to an explicit
-        ``CallableTensorSource`` or ``CallableQuanticsSource``.
+    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     mask : TensorSource or torch.Tensor, optional
         Boolean tensor of participating entries. ``True`` participates;
         ``False`` is missing. A sparse mask fixes its stored true entries.
@@ -1145,10 +1157,23 @@ def tr_als(source: 'SourceLike',
     <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik, Vivek Bharadwaj
     and Riley Murray.
 
+    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
+    a non-Quantics TT/TR format or its matrix version, an
+    :class:`~tensorkrowch.models.MPS`, or a finite source:
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    Declare paired dimensions with the ``.matrix(...)`` constructor of the
+    dense, sparse or callable source classes; ``FormatSource`` infers them
+    from the format. Continuous ``CallableSource`` inputs require discretization
+    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+
     Parameters
     ----------
-    source : TensorSource, TTDecomposition, torch.Tensor or callable
-        Scalar discrete tensor or function to approximate.
+    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     rank : int or sequence of int, optional
         Shared ``rank`` or one upper bound for every right link.
     initial_cores : sequence of torch.Tensor or TRDecomposition, optional

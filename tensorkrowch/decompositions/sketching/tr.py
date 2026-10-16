@@ -439,6 +439,11 @@ class TRRSS(TTRSS):  # MARK: TRRSS
     :class:`~tensorkrowch.models.MPS` with
     ``tk.models.MPS(tensors=result.cores)``.
 
+    ``source`` accepts the same inputs as
+    :class:`~tensorkrowch.decompositions.TTRSS`,
+    which describes the supported sources and matrix constructors. Its
+    dimensions and evaluation rules determine the fitted result family.
+
     Examples
     --------
     >>> domain = torch.tensor([0., 1.])
@@ -1124,6 +1129,11 @@ class TRRS(TTRS):  # MARK: TRRS
     Parameters are the same as :class:`TTRS`. Dataset sources are constructed
     separately with ``SparseTensorSource.from_data``.
 
+    ``source`` accepts the same inputs as
+    :class:`~tensorkrowch.decompositions.TTRS`,
+    which describes the supported sources and matrix constructors. Its
+    dimensions and evaluation rules determine the fitted result family.
+
     Examples
     --------
     >>> dataset = torch.tensor([[0, 0, 0], [1, 1, 1]])
@@ -1376,9 +1386,13 @@ def tr_rs(source: 'SourceLike',
     Projects a complete discrete ``source`` into TR cores with TR-RS.
 
     This simple interface constructs :class:`TRRS`, calls :meth:`TRRS.fit`
-    and returns only the cores unless ``return_info=True``. Exactly one of
-    ``source`` and ``dataset`` is required. The method is experimental and
-    warns that open TT-RS guarantees do not transfer automatically.
+    and returns only the cores unless ``return_info=True``. The method is
+    experimental and warns that open TT-RS guarantees do not transfer
+    automatically.
+
+    ``source`` accepts tensors, formats, MPS models and finite sources as
+    described in :class:`~tensorkrowch.decompositions.TRRS`, including
+    their matrix constructors. It supplies dimensions and evaluation rules.
 
     Examples
     --------
@@ -1454,6 +1468,13 @@ def qtr_rss(source: CallableQuanticsSource,
     use basis embeddings. ``sample_space="coordinates"`` quantizes domain
     samples; ``sample_space="digits"`` accepts already encoded digit rows.
     Numerical fitting arguments follow :meth:`TRRSS.fit`.
+
+    ``source`` must be a
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`,
+    constructed with its callable, layout and coordinate map. Use
+    :meth:`~tensorkrowch.decompositions.CallableQuanticsSource.matrix`
+    for matrix outputs. These choices belong to the source, independently
+    of the fitting controls accepted here.
 
     Examples
     --------

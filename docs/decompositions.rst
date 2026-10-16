@@ -15,6 +15,24 @@ algebra returns numerical formats without attaching a fictitious fit history.
 Use ``in_dim`` and ``out_dim`` for dimensions, and ``as_info`` to inspect
 metadata and diagnostics.
 
+Input sources
+-------------
+
+``source`` describes the input independently of the decomposition algorithm:
+its dimensions, evaluation rules, matrix grouping and, when applicable,
+Quantics discretization. Finite tensor sources are :class:`DenseTensorSource`,
+:class:`SparseTensorSource`, :class:`FormatSource`,
+:class:`CallableTensorSource` and :class:`CallableQuanticsSource`.
+Continuous functions use :class:`CallableSource`; they require discretization
+before SVD or ALS, whereas RSS can fit them with an embedding.
+
+Matrix inputs use :meth:`DenseTensorSource.matrix`,
+:meth:`SparseTensorSource.matrix`, :meth:`CallableTensorSource.matrix` or
+:meth:`CallableQuanticsSource.matrix`. Continuous matrix functions can use
+:meth:`CallableSource.matrix` with RSS. :class:`FormatSource` obtains matrix
+grouping directly from a matrix format. These objects carry the input details;
+the algorithm controls how to approximate their values.
+
 Quantics preparation
 --------------------
 
@@ -48,11 +66,9 @@ explicitly. Continuous sources retain user-supplied embeddings.
    coordinates = torch.tensor([[0., -1.], [0.5, 0.]])
    values = fitted.evaluate_coordinates(coordinates)
 
-Matrix grouping is defined with ``DenseTensorSource.matrix``,
-``SparseTensorSource.matrix``, ``CallableTensorSource.matrix`` or
-``CallableQuanticsSource.matrix``. The shared algorithms fuse input/output
-pairs and return the corresponding matrix format. Quantics results retain
-their maps and layouts independently of the source.
+For matrix sources, the shared algorithms fuse input/output pairs and return
+the corresponding matrix format. Quantics results retain their maps and
+layouts independently of the source.
 
 Dataset sources use ``from_data``. Discrete empirical masses belong to
 ``SparseTensorSource``; continuous values belong to ``CallableSource``;
@@ -71,6 +87,14 @@ SVD engines materialize a finite source once at construction and retain its
 prepared tensor for independent calls to ``fit``. Sources own dimensions,
 matrix ordering and evaluation runtime; ``fit`` controls truncation,
 normalization and diagnostics.
+
+SVD accepts the finite sources listed above and tensors directly. The general
+:class:`TTSVD` and :class:`TRSVD` engines also accept non-Quantics TT/TR formats
+and their matrix versions directly. Wrap an :class:`~tensorkrowch.models.MPS`
+in :class:`FormatSource` first. Matrix engines require a source declaring
+paired dimensions, or a tensor with interleaved input/output axes; wrap matrix
+formats in ``FormatSource``. All source representations are materialized for
+the numerical SVD, including sparse and callable tensors.
 
 Engine hierarchy and algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -115,11 +139,11 @@ not to the numerical sweep.
 Construction and fitting workflow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. **Describe the input.** Pass a tensor or a finite source. Plain tensors
-   become :class:`DenseTensorSource` objects. For a matrix, use
-   :meth:`DenseTensorSource.matrix` to specify paired dimensions and ordering;
-   the matrix engines also accept tensors with interleaved input/output axes.
-   Coordinate functions use :class:`CallableQuanticsSource`.
+1. **Describe the input.** Pass a tensor, format or finite source as described
+   above. Plain tensors become :class:`DenseTensorSource` objects. Matrix
+   sources declare paired dimensions through their ``.matrix(...)``
+   constructors or a wrapped matrix format. Coordinate functions use
+   :class:`CallableQuanticsSource`.
 2. **Construct the engine.** ``TTSVD(source)`` or ``TRSVD(source)`` calls the
    source's ``contract_dense`` method and retains the dense tensor. Matrix
    input/output pairs are fused into one dimension per site. Quantics sources
@@ -271,6 +295,14 @@ sketch samples. The functional interfaces construct the corresponding class
 and return a list of cores for direct use in TensorKrowch models. Use the class
 when structured metrics, metadata or repeated fits are needed.
 
+:class:`TTRSS` and :class:`TRRSS` accept the finite sources listed above,
+tensors, :class:`CallableSource` and raw callables. Wrap formats or MPS models
+in :class:`FormatSource`. Continuous inputs require an embedding; finite
+sources use basis embeddings by default. :class:`TTRS` and :class:`TRRS`
+require finite tensor sources and also adapt tensors, non-Quantics formats
+and MPS models directly. These sketching methods do not support structural
+batches.
+
 Maturity
 ^^^^^^^^
 
@@ -363,9 +395,13 @@ original variable coordinates for both layouts.
 Sources and fitting strategies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The source abstraction is shared by ALS and sketching. Specialized sparse and
-format sources evaluate their native representations directly instead of building
-a TensorKrowch graph or densifying the complete tensor.
+The source abstraction is shared by SVD, ALS and sketching.
+:class:`TTALS` and :class:`TRALS` accept finite sources, tensors,
+non-Quantics formats and MPS models, adapting the latter inputs automatically.
+They require ``is_discrete_tensor=True`` and do not support structural batches.
+Specialized sparse and format sources evaluate their native representations
+directly instead of building a TensorKrowch graph; ALS and sketching can query
+these values without materializing the complete tensor.
 
 .. autoclass:: DenseTensorSource
    :members:

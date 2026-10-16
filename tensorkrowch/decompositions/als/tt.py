@@ -697,11 +697,23 @@ class TTALS:  # MARK: TTALS
     Rakhshan, Osman Asif Malik and Guillaume Rabusseau. Frozen leverage and the
     optional uniform mixture are TensorKrowch extensions.
 
+    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
+    a non-Quantics TT/TR format or its matrix version, an
+    :class:`~tensorkrowch.models.MPS`, or a finite source:
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    Declare paired dimensions with the ``.matrix(...)`` constructor of the
+    dense, sparse or callable source classes; ``FormatSource`` infers them
+    from the format. Continuous ``CallableSource`` inputs require discretization
+    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
-        Finite tensor values. Callable dimensions belong to an explicit
-        ``CallableTensorSource`` or ``CallableQuanticsSource``.
+    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     mask : TensorSource or torch.Tensor, optional
         Boolean tensor of participating entries. ``True`` participates;
         ``False`` is missing. A sparse mask fixes its stored true entries.
@@ -1269,11 +1281,8 @@ def tt_als(source: 'SourceLike',
     """
     Approximates a scalar tensor ``source`` with tensor train ALS.
 
-    This is the simple functional interface. ``source`` may be a dense tensor,
-    :class:`TensorSource` or existing :class:`TTDecomposition`. Define callable
-    inputs with ``CallableTensorSource``. Use :class:`TTALS` for repeated fits
-    of the same ``source``
-    or to pass advanced policy objects directly.
+    Use :class:`TTALS` for repeated fits of the same ``source`` or to pass
+    advanced policy objects directly.
 
     With ``sampling="leverage"``, the exact mixed-canonical method follows
     *Efficient Leverage Score Sampling for Tensor Train Decomposition* (2024),
@@ -1281,10 +1290,23 @@ def tt_als(source: 'SourceLike',
     Bharadwaj, Beheshteh T. Rakhshan, Osman Asif Malik and Guillaume Rabusseau.
     See :meth:`TTALS.fit` for the TensorKrowch extensions.
 
+    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
+    a non-Quantics TT/TR format or its matrix version, an
+    :class:`~tensorkrowch.models.MPS`, or a finite source:
+    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
+    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
+    :class:`~tensorkrowch.decompositions.FormatSource`,
+    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
+    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
+    Declare paired dimensions with the ``.matrix(...)`` constructor of the
+    dense, sparse or callable source classes; ``FormatSource`` infers them
+    from the format. Continuous ``CallableSource`` inputs require discretization
+    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D or torch.Tensor
-        Scalar discrete tensor or function to approximate.
+    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+        Finite tensor input, with shape and evaluation defined by the source.
     rank : int, optional
         Shared maximum TT ``rank``. Required without ``initial_cores``.
     initial_cores : sequence of torch.Tensor or TTDecomposition, optional

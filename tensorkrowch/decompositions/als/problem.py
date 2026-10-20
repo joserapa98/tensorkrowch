@@ -16,11 +16,10 @@ import torch
 
 from tensorkrowch.utils import safe_divide
 
+from tensorkrowch.decompositions._utils import _normalize_dims, _ravel_indices
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  TensorSource)
-from tensorkrowch.decompositions.sources.base import (_discrete_indices,
-                                                      _normalize_in_dim,
-                                                      _ravel_indices)
+from tensorkrowch.decompositions.sources.base import _discrete_indices
 
 
 def _zero_safe_relative_error(absolute: torch.Tensor,
@@ -76,7 +75,7 @@ class _ObservedEntries:  # MARK: _ObservedEntries
         if self.indices.shape[0] < 1:
             raise ValueError('At least one observed entry is required')
 
-        in_dim = _normalize_in_dim(self.in_dim)
+        in_dim = _normalize_dims(self.in_dim, 'in_dim')
         indices = _discrete_indices(
             ConfigurationBatch(self.indices, kind='indices'),
             in_dim,

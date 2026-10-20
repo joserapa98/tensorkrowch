@@ -31,6 +31,7 @@ import torch
 from tensorkrowch.formats import TT
 from tensorkrowch.formats.formats1d import _restore_cores
 
+from tensorkrowch.decompositions._utils import _normalize_positive_int
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import (ErrorRecord,
                                                  FidelityRecord,
@@ -94,14 +95,9 @@ def _normalize_rank(rank: int,
                     tr_rank: Optional[int],
                     n_sites: int) -> Tuple[int, ...]:
     """Builds one prescribed right-link ``rank`` per final TR core."""
-    for name, value in (('rank', rank), ('tr_rank', tr_rank)):
-        if value is None and name == 'tr_rank':
-            continue
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise TypeError(f'`{name}` should be int type')
-        if value < 1:
-            raise ValueError(f'`{name}` should be positive')
-    cyclic_rank = rank if tr_rank is None else tr_rank
+    rank = _normalize_positive_int(rank, 'rank')
+    cyclic_rank = rank if tr_rank is None else \
+        _normalize_positive_int(tr_rank, 'tr_rank')
     return (rank,) * (n_sites - 1) + (cyclic_rank,)
 
 

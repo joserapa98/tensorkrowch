@@ -3,7 +3,7 @@
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.decompositions.svd.utils import (_prepare_svd_source,
+from tensorkrowch.decompositions.svd._utils import (_prepare_svd_source,
                                                    _SVDProgress)
 
 

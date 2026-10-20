@@ -6,7 +6,6 @@ This script contains:
 
     Internal classes/functions:
         * _MatrixInput
-        * _normalize_dim
         * _prepare_matrix_input
 """
 
@@ -16,6 +15,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.decompositions._utils import _normalize_dims
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
@@ -23,27 +23,6 @@ from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
 
 
 _Dimension = Optional[Union[int, Sequence[int]]]
-
-
-def _normalize_dim(dim: _Dimension, name: str) -> Tuple[int, ...]:
-    """Normalizes one or several positive site dimensions."""
-    if isinstance(dim, bool):
-        raise TypeError(f'`{name}` should be int or a sequence of ints')
-    if isinstance(dim, int):
-        values = (dim,)
-    elif isinstance(dim, Sequence) and not isinstance(dim, (str, bytes)):
-        values = tuple(dim)
-    else:
-        raise TypeError(f'`{name}` should be int or a sequence of ints')
-
-    if not values:
-        raise ValueError(f'`{name}` should contain at least one dimension')
-    if any(isinstance(value, bool) or not isinstance(value, int)
-           for value in values):
-        raise TypeError(f'`{name}` should contain only ints')
-    if any(value < 1 for value in values):
-        raise ValueError(f'`{name}` should contain only positive dimensions')
-    return values
 
 
 @dataclass(frozen=True)
@@ -93,8 +72,10 @@ def _prepare_matrix_input(tensor: torch.Tensor,
         tensorized = tensor
         tensorized_ordering = ordering
     else:
-        normalized_in_dim = _normalize_dim(in_dim, 'in_dim')
-        normalized_out_dim = _normalize_dim(out_dim, 'out_dim')
+        normalized_in_dim = _normalize_dims(
+            (in_dim,) if isinstance(in_dim, int) else in_dim, 'in_dim')
+        normalized_out_dim = _normalize_dims(
+            (out_dim,) if isinstance(out_dim, int) else out_dim, 'out_dim')
         if len(normalized_in_dim) != len(normalized_out_dim):
             raise ValueError(
                 '`in_dim` and `out_dim` should have the same length')

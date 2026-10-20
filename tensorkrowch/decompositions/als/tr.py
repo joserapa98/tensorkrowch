@@ -10,7 +10,6 @@ This script contains:
 
     Internal functions:
         * _standard_tr_cores
-        * _normalize_tr_rank
         * _contract_standard_tr
         * _evaluate_standard_tr
         * _tr_gauge_core_update
@@ -29,6 +28,8 @@ import torch
 from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.formats.quantics import _QuanticsVector
 
+from tensorkrowch.decompositions._utils import (_normalize_rank,
+                                                _unravel_indices)
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
 from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
@@ -60,7 +61,6 @@ from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  _result_from_source)
 from tensorkrowch.decompositions.sources import (TensorSource, ConfigurationBatch,
                                                  FiberTensorSource)
-from tensorkrowch.decompositions.sources.base import _unravel_indices
 from tensorkrowch.decompositions.svd.tr import TRSVD
 
 
@@ -102,34 +102,6 @@ def _standard_tr_cores(cores: Union[TRDecomposition, Sequence[torch.Tensor]],
             raise ValueError(
                 '`initial_cores` input dimensions should match the source')
     return TRSegmentEnvironmentCache._validate_cores(cores)
-
-
-def _normalize_tr_rank(rank: _Rank, n_sites: int) -> Optional[Tuple[int, ...]]:
-    """Normalizes a shared TR ``rank`` or one right-link ``rank`` per site."""
-    if rank is None:
-        return None
-    if isinstance(rank, bool):
-        raise TypeError('`rank` should be int, a sequence of ints or None')
-    if isinstance(rank, int):
-        ranks = (rank,) * n_sites
-    else:
-        if isinstance(rank, (str, bytes)):
-            raise TypeError('`rank` should be int, a sequence of ints or None')
-        try:
-            ranks = tuple(rank)
-        except TypeError as exc:
-            raise TypeError(
-                '`rank` should be int, a sequence of ints or None') from exc
-        if len(ranks) != n_sites:
-            raise ValueError(
-                'A TR `rank` sequence should contain one right-link rank per '
-                'site')
-    if any(isinstance(value, bool) or not isinstance(value, int)
-           for value in ranks):
-        raise TypeError('TR ranks should be integers')
-    if any(value < 1 for value in ranks):
-        raise ValueError('TR ranks should be positive')
-    return ranks
 
 
 def _contract_standard_tr(cores: Sequence[torch.Tensor]) -> torch.Tensor:
@@ -740,7 +712,8 @@ class TRALS(TTALS):  # MARK: TRALS
         """Builds and validates initialization plus fixed-site semantics."""
         if init not in ('random', 'svd'):
             raise ValueError("`init` should be 'random' or 'svd'")
-        rank_caps = _normalize_tr_rank(rank, len(self.in_dim))
+        rank_caps = None if rank is None else \
+            _normalize_rank(rank, len(self.in_dim))
         if initial_cores is None:
             if rank_caps is None:
                 raise ValueError(

@@ -30,6 +30,7 @@ import torch
 from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.formats.quantics import _QuanticsVector
 
+from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
                                                          UpdatePolicy)
 from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
@@ -62,7 +63,7 @@ from tensorkrowch.decompositions.results import (TTDecomposition,
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  as_tensor_source,
                                                  SparseTensorSource, TensorSource)
-from tensorkrowch.decompositions.sources.base import _unravel_indices, _tensor_view
+from tensorkrowch.decompositions.sources.base import _tensor_view
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.svd.tt import TTSVD
 

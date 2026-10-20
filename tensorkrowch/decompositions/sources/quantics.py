@@ -13,9 +13,9 @@ import torch
 from tensorkrowch.formats.quantics import _resolve_quantization
 from tensorkrowch.formats.quantization import CoordinateMap, Domain, QuantizedLayout
 
+from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _data_weights,
-                                                      _unravel_indices)
+                                                      _data_weights)
 from tensorkrowch.decompositions.sources.callable import (CallableTensorSource,
                                                          _DataEvaluator)
 from tensorkrowch.decompositions.sources.sparse import _SparseLookup

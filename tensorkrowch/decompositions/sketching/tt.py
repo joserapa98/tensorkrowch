@@ -28,6 +28,8 @@ import torch
 from tensorkrowch.formats import TT
 from tensorkrowch.utils import random_unitary, safe_divide
 
+from tensorkrowch.decompositions._utils import (_normalize_dims,
+                                                _normalize_positive_int)
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (ErrorRecord,
@@ -53,7 +55,7 @@ from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
 from tensorkrowch.decompositions.sketching.sketches import (MarginalSketch,
                                                             SketchOperator)
-from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource)
+from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
 from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
                                                          _EmbeddingSpec,
                                                          _OutputSpec,
@@ -227,27 +229,8 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                 raise TypeError(
                     'Every `embedding` entry should be callable or a tensor')
         if in_dim is not None:
-            if isinstance(in_dim, bool):
-                raise TypeError(
-                    '`in_dim` should be int, a sequence of ints or None')
-            if isinstance(in_dim, int):
-                if in_dim < 1:
-                    raise ValueError('`in_dim` should be positive')
-            else:
-                if isinstance(in_dim, (str, bytes)):
-                    raise TypeError(
-                        '`in_dim` should be int, a sequence of ints or None')
-                try:
-                    in_dim = tuple(in_dim)
-                except TypeError as exc:
-                    raise TypeError(
-                        '`in_dim` should be int, a sequence of ints or None') \
-                        from exc
-                if not in_dim or any(
-                        isinstance(dim, bool) or not isinstance(dim, int)
-                        or dim < 1 for dim in in_dim):
-                    raise ValueError(
-                        '`in_dim` should contain positive integers')
+            in_dim = _normalize_positive_int(in_dim, 'in_dim') \
+                if isinstance(in_dim, int) else _normalize_dims(in_dim, 'in_dim')
         if domain is not None and not isinstance(domain, torch.Tensor):
             if isinstance(domain, (str, bytes)):
                 raise TypeError(

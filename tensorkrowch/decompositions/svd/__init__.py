@@ -103,7 +103,7 @@ with the corresponding format without decomposition metadata.
 
 Shared internal infrastructure:
 
-    svd.utils
+    svd._utils
         Source preparation and _SVDProgress events.
 
     _TruncationSpec

@@ -8,7 +8,6 @@ This script contains:
         * BidirectionalRingDriver
 
     Internal functions:
-        * _normalize_context
         * _validate_provider
         * _validate_opening
 """
@@ -26,6 +25,7 @@ from typing import (Any,
 
 import torch
 
+from tensorkrowch.decompositions._utils import _normalize_dims
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  GaugeRecord)
 from tensorkrowch.decompositions.observers import DecompositionEvent
@@ -36,7 +36,8 @@ from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
                                                      GaugeRecursionStep)
 from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
                                                       LoopOpener,
-                                                      LoopOpening)
+                                                      LoopOpening,
+                                                      _normalize_context)
 
 
 @runtime_checkable
@@ -198,28 +199,13 @@ class BidirectionalRingResult:  # MARK: BidirectionalRingResult
         return self.as_decomposition().contract_dense()
 
 
-def _normalize_context(context: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    """Copies the shared driver ``context`` after validation."""
-    if context is None:
-        return {}
-    if not isinstance(context, Mapping):
-        raise TypeError('`context` should be a mapping or None')
-    return dict(context)
-
-
 def _validate_provider(provider: RingTargetProvider) -> Tuple[int, ...]:
     """Validates the intentionally small ``provider`` protocol."""
     if not isinstance(provider, RingTargetProvider):
         raise TypeError('`provider` should implement RingTargetProvider')
-    try:
-        in_dim = tuple(provider.in_dim)
-    except TypeError as exc:
-        raise TypeError('`provider.in_dim` should be a sequence') from exc
+    in_dim = _normalize_dims(provider.in_dim, 'provider.in_dim')
     if len(in_dim) < 3:
         raise ValueError('Bidirectional ring construction requires three sites')
-    if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-           for dim in in_dim):
-        raise ValueError('Provider input dimensions should be positive integers')
     return in_dim
 
 

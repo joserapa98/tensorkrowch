@@ -10,9 +10,6 @@ This script contains:
         * BlockSplit
 
     Internal functions:
-        * _normalize_positive_int
-        * _normalize_in_dim
-        * _normalize_rank_spec
         * _pad_block_cores
 
     Public functions:
@@ -29,6 +26,9 @@ from tensorkrowch.formats.formats1d import split_block
 
 from tensorkrowch.utils import safe_divide
 
+from tensorkrowch.decompositions._utils import (_normalize_dims,
+                                                _normalize_positive_int,
+                                                _normalize_rank)
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -38,56 +38,6 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 
 
 _Rank = Union[int, Sequence[int]]
-
-
-def _normalize_positive_int(value: int, name: str) -> int:
-    """Validates one positive integer without accepting booleans."""
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f'`{name}` should be int type')
-    if value < 1:
-        raise ValueError(f'`{name}` should be positive')
-    return value
-
-
-def _normalize_in_dim(provider: Any) -> Tuple[int, ...]:
-    """Obtains input dimensions from a ``provider`` or a direct sequence."""
-    in_dim = getattr(provider, 'in_dim', provider)
-    if isinstance(in_dim, (str, bytes)):
-        raise TypeError(
-            '`provider` should expose input dimensions or be their sequence')
-    try:
-        in_dim = tuple(in_dim)
-    except TypeError as exc:
-        raise TypeError(
-            '`provider` should expose input dimensions or be their sequence') \
-            from exc
-    if not in_dim:
-        raise ValueError('At least one input dimension is required')
-    for value in in_dim:
-        _normalize_positive_int(value, 'in_dim')
-    return in_dim
-
-
-def _normalize_rank_spec(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
-    """Normalizes one cap per right link of a tensor ring."""
-    if isinstance(rank, bool):
-        raise TypeError('`rank` should be int or a sequence of ints')
-    if isinstance(rank, int):
-        ranks = (rank,) * n_sites
-    else:
-        if isinstance(rank, (str, bytes)):
-            raise TypeError('`rank` should be int or a sequence of ints')
-        try:
-            ranks = tuple(rank)
-        except TypeError as exc:
-            raise TypeError(
-                '`rank` should be int or a sequence of ints') from exc
-        if len(ranks) != n_sites:
-            raise ValueError(
-                '`rank` should contain one right-link cap per site')
-    for value in ranks:
-        _normalize_positive_int(value, 'rank')
-    return ranks
 
 
 @dataclass(frozen=True)
@@ -108,7 +58,7 @@ class BlockSelection:  # MARK: BlockSelection
 
     def __post_init__(self) -> None:
         sites = tuple(self.sites)
-        in_dim = tuple(self.in_dim)
+        in_dim = _normalize_dims(self.in_dim, 'in_dim')
         growth = tuple(tuple(interval) for interval in self.growth)
         if not sites:
             raise ValueError('`sites` should contain at least one site')
@@ -120,8 +70,6 @@ class BlockSelection:  # MARK: BlockSelection
         if len(in_dim) != len(sites):
             raise ValueError(
                 '`in_dim` should contain one dimension per selected site')
-        for value in in_dim:
-            _normalize_positive_int(value, 'in_dim')
         for name in (
                 'left_rank_cap',
                 'right_rank_cap',
@@ -196,9 +144,9 @@ class CentralBlockSelector:  # MARK: CentralBlockSelector
             discard the block already reached. No tensors are contracted during
             selection.
         """
-        in_dim = _normalize_in_dim(provider)
+        in_dim = _normalize_dims(getattr(provider, 'in_dim', provider), 'in_dim')
         n_sites = len(in_dim)
-        rank_spec = _normalize_rank_spec(rank, n_sites)
+        rank_spec = _normalize_rank(rank, n_sites)
 
         if bounds is None:
             lower, upper = 0, n_sites - 1
@@ -301,8 +249,8 @@ class PrescribedCentralBlockSelector(CentralBlockSelector):  # MARK: PrescribedC
         deliberately opens one site, even if its input capacity does not
         satisfy the adaptive selector's strict ``rank``-product test.
         """
-        in_dim = _normalize_in_dim(provider)
-        rank_spec = _normalize_rank_spec(rank, len(in_dim))
+        in_dim = _normalize_dims(getattr(provider, 'in_dim', provider), 'in_dim')
+        rank_spec = _normalize_rank(rank, len(in_dim))
         if center is None:
             center = len(in_dim) // 2
         if isinstance(center, bool) or not isinstance(center, int):
@@ -475,7 +423,7 @@ class BlockSplit:  # MARK: BlockSplit
 
     def __post_init__(self) -> None:
         cores = tuple(self.cores)
-        in_dim = tuple(self.in_dim)
+        in_dim = _normalize_dims(self.in_dim, 'in_dim')
         effective_rank = tuple(self.effective_rank)
         rank = tuple(self.rank)
         padding = tuple(self.padding)
@@ -622,7 +570,7 @@ def split_block_ttsvd(block: torch.Tensor,
     """
     if not isinstance(block, torch.Tensor):
         raise TypeError('`block` should be torch.Tensor type')
-    in_dim = _normalize_in_dim(in_dim)
+    in_dim = _normalize_dims(in_dim, 'in_dim')
     if block.ndim != len(in_dim) + 2:
         raise ValueError(
             '`block` should have two external rank axes around `in_dim`')

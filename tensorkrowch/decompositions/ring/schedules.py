@@ -22,14 +22,14 @@ from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BidirectionalRingResult,
                                                      RingTargetProvider,
-                                                     _normalize_context,
                                                      _validate_provider)
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeMap,
                                                      GaugeRecursion)
 from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
                                                       LoopOpener,
-                                                      LoopOpening)
+                                                      LoopOpening,
+                                                      _normalize_context)
 
 
 def _block_selection(provider: RingTargetProvider,

@@ -12,7 +12,6 @@ This script contains:
         * _phi_shape
         * _normalize_axis
         * _phi_device
-        * _unravel_fixed_ids
         * _collect_phi_target
         * _restore_fitted_axis
 """
@@ -33,6 +32,7 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES, safe_divide
 
+from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import InputFitRecord
 from tensorkrowch.decompositions.sketching.phi import PhiView
@@ -81,17 +81,6 @@ def _phi_device(phi_view: PhiView, domain: torch.Tensor) -> torch.device:
     return domain.device
 
 
-def _unravel_fixed_ids(ids: torch.Tensor,
-                       fixed_shape: Sequence[int]) -> torch.Tensor:
-    """Converts row-major fiber ``ids`` to fixed-axis index tuples."""
-    columns = []
-    remainder = ids
-    for dim in reversed(tuple(fixed_shape)):
-        columns.append(remainder.remainder(dim))
-        remainder = torch.div(remainder, dim, rounding_mode='floor')
-    return torch.stack(tuple(reversed(columns)), dim=1)
-
-
 def _collect_phi_target(phi_view: PhiView,
                         axis: int,
                         domain: torch.Tensor,
@@ -135,7 +124,7 @@ def _collect_phi_target(phi_view: PhiView,
         stop = min(start + fiber_batch_size, n_fibers)
         if fixed_shape:
             ids = torch.arange(start, stop, device=device)
-            fixed_indices = _unravel_fixed_ids(ids, fixed_shape)
+            fixed_indices = _unravel_indices(ids, fixed_shape)
         else:
             fixed_indices = None
         fibers = phi_view.fiber(axis, fixed_indices)

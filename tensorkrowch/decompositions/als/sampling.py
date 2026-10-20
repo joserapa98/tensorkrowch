@@ -32,11 +32,10 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
+from tensorkrowch.decompositions._utils import _ravel_indices, _unravel_indices
 from tensorkrowch.decompositions.als.problem import _ObservedEntries
 from tensorkrowch.decompositions.sources import ConfigurationBatch
-from tensorkrowch.decompositions.sources.base import (_discrete_indices,
-                                                      _ravel_indices,
-                                                      _unravel_indices)
+from tensorkrowch.decompositions.sources.base import _discrete_indices
 
 
 @dataclass(frozen=True)

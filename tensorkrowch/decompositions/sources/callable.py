@@ -14,11 +14,11 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
+from tensorkrowch.decompositions._utils import _normalize_dims
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
                                                       _fiber_configurations,
-                                                      _normalize_in_dim,
                                                       _data_weights)
 from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 
@@ -62,22 +62,8 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
         self._initialize_evaluation_stats()
         if not callable(function):
             raise TypeError('`function` should be callable')
-        if out_shape is None:
-            normalized_out_shape = None
-        else:
-            if isinstance(out_shape, (str, bytes)):
-                raise TypeError(
-                    '`out_shape` should be a sequence of integers or None')
-            try:
-                normalized_out_shape = tuple(out_shape)
-            except TypeError as exc:
-                raise TypeError(
-                    '`out_shape` should be a sequence of integers or None') \
-                    from exc
-            if any((not isinstance(dim, int)) or (dim < 1)
-                   for dim in normalized_out_shape):
-                raise ValueError(
-                    '`out_shape` should contain positive integers')
+        normalized_out_shape = None if out_shape is None else \
+            _normalize_dims(out_shape, 'out_shape', allow_empty=True)
         if (dtype is not None) and (not isinstance(dtype, torch.dtype)):
             raise TypeError('`dtype` should be torch.dtype type or None')
         if batch_size is not None:
@@ -311,7 +297,7 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
         CallableSource or CallableTensorSource
             Source with explicit local matrix grouping.
         """
-        inputs, outputs = _normalize_in_dim(in_dim), _normalize_in_dim(out_dim)
+        inputs, outputs = _normalize_dims(in_dim, 'in_dim'), _normalize_dims(out_dim, 'out_dim')
         if len(inputs) != len(outputs):
             raise ValueError('Matrix dimensions should have equal lengths')
         source = cls(function, inputs if cls.input_kind == 'indices' else len(inputs),
@@ -370,7 +356,7 @@ class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
     input_kind = 'indices'
 
     def __init__(self, function: Callable, in_dim: Sequence[int], **kwargs) -> None:
-        dimensions = _normalize_in_dim(in_dim)
+        dimensions = _normalize_dims(in_dim, 'in_dim')
         super().__init__(function, len(dimensions), **kwargs)
         self._in_dim = dimensions
 

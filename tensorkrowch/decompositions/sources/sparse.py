@@ -16,14 +16,14 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
+from tensorkrowch.decompositions._utils import (_normalize_dims,
+                                                _ravel_indices,
+                                                _unravel_indices)
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
                                                       _SourceEvaluationTracker,
                                                       _discrete_indices,
                                                       _fiber_configurations,
-                                                      _normalize_in_dim,
-                                                      _data_weights,
-                                                      _ravel_indices,
-                                                      _unravel_indices)
+                                                      _data_weights)
 
 
 @dataclass
@@ -99,7 +99,7 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
         if not (values.is_floating_point() or values.is_complex() or values.dtype == torch.bool):
             raise TypeError('`values` should have a floating, complex or boolean dtype')
 
-        self._in_dim = _normalize_in_dim(in_dim)
+        self._in_dim = _normalize_dims(in_dim, 'in_dim')
         if indices.shape[1] != len(self._in_dim):
             raise ValueError('`indices` should contain one column per site')
         indices = _discrete_indices(
@@ -246,7 +246,7 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
         SparseTensorSource
             Source retaining paired axes for matrix decomposition.
         """
-        inputs, outputs = _normalize_in_dim(in_dim), _normalize_in_dim(out_dim)
+        inputs, outputs = _normalize_dims(in_dim, 'in_dim'), _normalize_dims(out_dim, 'out_dim')
         if len(inputs) != len(outputs):
             raise ValueError('`in_dim` and `out_dim` should have equal lengths')
         source = cls(indices, values, tuple(dim for pair in zip(inputs, outputs)

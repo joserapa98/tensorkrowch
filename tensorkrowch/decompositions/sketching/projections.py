@@ -22,6 +22,7 @@ import torch
 
 from tensorkrowch.utils import safe_divide, stable_norm
 
+from tensorkrowch.decompositions._utils import _normalize_dims
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
 from tensorkrowch.decompositions.metrics import RangeProjectionRecord
 
@@ -86,14 +87,8 @@ class ProjectedRange:  # MARK: ProjectedRange
         if not isinstance(self.small_matrix, torch.Tensor) or \
                 self.small_matrix.ndim != 2:
             raise TypeError('`small_matrix` should be a matrix')
-        try:
-            original_shape = tuple(self.original_shape)
-        except TypeError as exc:
-            raise TypeError(
-                '`original_shape` should be a sequence of integers') from exc
-        if len(original_shape) < 2 or any(
-                isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-                for dim in original_shape):
+        original_shape = _normalize_dims(self.original_shape, 'original_shape')
+        if len(original_shape) < 2:
             raise ValueError(
                 '`original_shape` should contain at least two positive sizes')
         axis = self.axis

@@ -11,10 +11,7 @@ This script contains:
         * FiberTensorSource
 
     Internal functions:
-        * _normalize_in_dim
         * _discrete_indices
-        * _ravel_indices
-        * _unravel_indices
         * _fiber_configurations
 """
 
@@ -31,6 +28,7 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
+from tensorkrowch.decompositions._utils import _ravel_indices, _unravel_indices
 from tensorkrowch.decompositions.metrics import EvaluationStats
 
 
@@ -401,22 +399,6 @@ class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
         self._initialize_evaluation_stats()
 
 
-def _normalize_in_dim(in_dim: Sequence[int]) -> Tuple[int, ...]:
-    """Validates and normalizes a discrete input dimension."""
-    if isinstance(in_dim, (str, bytes)):
-        raise TypeError('`in_dim` should be a sequence of integers')
-    try:
-        normalized = tuple(in_dim)
-    except TypeError as exc:
-        raise TypeError(
-            '`in_dim` should be a sequence of integers') from exc
-    if not normalized:
-        raise ValueError('`in_dim` should contain at least one site')
-    if any((not isinstance(dim, int)) or (dim < 1) for dim in normalized):
-        raise ValueError('`in_dim` should contain positive integers')
-    return normalized
-
-
 def _discrete_indices(configurations: ConfigurationBatch,
                       in_dim: Sequence[int],
                       device: torch.device) -> torch.Tensor:
@@ -438,30 +420,6 @@ def _discrete_indices(configurations: ConfigurationBatch,
             raise ValueError(
                 f'Configuration indices at site {site} are out of bounds')
     return indices
-
-
-def _ravel_indices(indices: torch.Tensor,
-                   in_dim: Sequence[int]) -> torch.Tensor:
-    """Converts global multi-``indices`` to flat row ids."""
-    strides = []
-    for site in range(len(in_dim)):
-        strides.append(prod(in_dim[site + 1:]))
-    stride_tensor = indices.new_tensor(strides)
-    return (indices * stride_tensor).sum(dim=1)
-
-
-def _unravel_indices(flat_ids: torch.Tensor,
-                     in_dim: Sequence[int]) -> torch.Tensor:
-    """Converts flat row ids to global multi-indices."""
-    remainder = flat_ids
-    sites = []
-    for site, dim in enumerate(in_dim):
-        stride = prod(in_dim[site + 1:])
-        sites.append(torch.div(remainder, stride, rounding_mode='floor'))
-        remainder = torch.remainder(remainder, stride) if stride > 1 \
-            else torch.zeros_like(remainder)
-        sites[-1] = torch.remainder(sites[-1], dim)
-    return torch.stack(sites, dim=1)
 
 
 def _fiber_configurations(configurations: ConfigurationBatch,

@@ -15,12 +15,9 @@ This script contains:
         * TTStackSketch
 
     Functions:
-        * _normalize_rank
-        * _ravel_subset
         * _one_hot_ids
         * _selected_ids
         * _sample_states
-        * _unravel_ids
         * _structured_capability
         * _validate_structured_batch_size
         * _gaussian
@@ -44,6 +41,9 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES, truncated_svd
 
+from tensorkrowch.decompositions._utils import (_normalize_rank,
+                                                _ravel_indices,
+                                                _unravel_indices)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  TruncationRecord)
@@ -59,41 +59,6 @@ _Rank = Union[int, Sequence[int]]
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.sketching.sources import SketchContractableSource
-
-
-def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
-    """Normalizes one shared ``rank`` cap or one cap per open TT link."""
-    if isinstance(rank, bool):
-        raise TypeError('`rank` should be int or a sequence of ints')
-    if isinstance(rank, int):
-        ranks = (rank,) * (n_sites - 1)
-    else:
-        if isinstance(rank, (str, bytes)):
-            raise TypeError('`rank` should be int or a sequence of ints')
-        try:
-            ranks = tuple(rank)
-        except TypeError as exc:
-            raise TypeError(
-                '`rank` should be int or a sequence of ints') from exc
-        if len(ranks) != n_sites - 1:
-            raise ValueError(
-                '`rank` should contain one value per open TT link')
-    if any(isinstance(value, bool) or not isinstance(value, int)
-           for value in ranks):
-        raise TypeError('TT ranks should be integers')
-    if any(value < 1 for value in ranks):
-        raise ValueError('TT ranks should be positive')
-    return ranks
-
-
-def _ravel_subset(indices: torch.Tensor,
-                  dimensions: Sequence[int]) -> torch.Tensor:
-    """Ravels a non-empty consecutive subset of discrete ``indices``."""
-    strides = indices.new_tensor([
-        prod(dimensions[site + 1:])
-        for site in range(len(dimensions))
-    ])
-    return (indices * strides).sum(dim=1)
 
 
 def _one_hot_ids(ids: torch.Tensor,
@@ -133,20 +98,6 @@ def _sample_states(values: torch.Tensor,
     permutation = torch.randperm(
         states.numel(), generator=generator, device=states.device)[:maximum]
     return states.index_select(0, permutation).sort().values
-
-
-def _unravel_ids(ids: torch.Tensor, dimensions: Sequence[int]) -> torch.Tensor:
-    """Unravels flat consecutive-site indices in row-major order."""
-    if not dimensions:
-        return ids.new_empty((ids.shape[0], 0))
-    result = []
-    remainder = ids
-    for site, dimension in enumerate(dimensions):
-        stride = prod(dimensions[site + 1:])
-        result.append(torch.div(
-            remainder, stride, rounding_mode='floor'))
-        remainder = torch.remainder(remainder, stride)
-    return torch.stack(result, dim=1)
 
 
 def _structured_capability(source: TensorSource,
@@ -283,7 +234,7 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
             raise TypeError('`strict_system` should be bool type')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
-        ranks = _normalize_rank(rank, len(self.in_dim))
+        ranks = _normalize_rank(rank, len(self.in_dim) - 1)
         truncation = {
             'cutoff': cutoff,
             'atol': atol,
@@ -471,9 +422,9 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
                 suffix_ids = torch.arange(
                     prod(dimensions[site + 1:]), device=device)
             else:
-                prefix_ids = _ravel_subset(
+                prefix_ids = _ravel_indices(
                     reference[:, :site + 1], dimensions[:site + 1])
-                suffix_ids = _ravel_subset(
+                suffix_ids = _ravel_indices(
                     reference[:, site + 1:], dimensions[site + 1:])
             states = _sample_states(
                 prefix_ids, self.operator.sketch_size, generator)
@@ -506,12 +457,12 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
         for site in range(len(dimensions)):
             left = torch.ones(
                 1, 1, dtype=self.source.dtype, device=device) if site == 0 \
-                else left_kernel(_unravel_ids(
+                else left_kernel(_unravel_indices(
                     prefix_states[site - 1], dimensions[:site]))
             right = torch.ones(
                 1, 1, dtype=self.source.dtype, device=device) \
                 if site == len(dimensions) - 1 else right_kernel(
-                    _unravel_ids(
+                    _unravel_indices(
                         suffix_states[site], dimensions[site + 1:]))
             phis.append(phi_kernel(site, left, right))
         return CoreDeterminingSystem(
@@ -675,19 +626,19 @@ class SampledSketch:  # MARK: SampledSketch
         blocks = []
         prefix_states = []
         for site in range(len(in_dim) - 1):
-            ref_ids = _ravel_subset(
+            ref_ids = _ravel_indices(
                 reference[:, :site + 1], in_dim[:site + 1])
             states = _sample_states(ref_ids, self.sketch_size, generator)
             prefix_states.append(states)
-            ids = _ravel_subset(indices[:, :site + 1], in_dim[:site + 1])
+            ids = _ravel_indices(indices[:, :site + 1], in_dim[:site + 1])
             left.append(_one_hot_ids(
                 _selected_ids(ids, states), states.numel(), dtype))
 
             suffix_dim = in_dim[site + 1:]
-            ref_suffix = _ravel_subset(reference[:, site + 1:], suffix_dim)
+            ref_suffix = _ravel_indices(reference[:, site + 1:], suffix_dim)
             suffix_states = _sample_states(
                 ref_suffix, self.sketch_size, generator)
-            suffix_ids = _ravel_subset(indices[:, site + 1:], suffix_dim)
+            suffix_ids = _ravel_indices(indices[:, site + 1:], suffix_dim)
             right.append(_one_hot_ids(
                 _selected_ids(suffix_ids, suffix_states),
                 suffix_states.numel(),
@@ -807,13 +758,13 @@ class MarginalSketch:  # MARK: MarginalSketch
         for site in range(len(in_dim) - 1):
             left_start = max(0, site + 1 - self.order)
             left_dim = in_dim[left_start:site + 1]
-            left_ids = _ravel_subset(
+            left_ids = _ravel_indices(
                 indices[:, left_start:site + 1], left_dim)
             left.append(_one_hot_ids(left_ids, prod(left_dim), dtype))
 
             right_stop = min(len(in_dim), site + 1 + self.order)
             right_dim = in_dim[site + 1:right_stop]
-            right_ids = _ravel_subset(
+            right_ids = _ravel_indices(
                 indices[:, site + 1:right_stop], right_dim)
             right.append(_one_hot_ids(right_ids, prod(right_dim), dtype))
 

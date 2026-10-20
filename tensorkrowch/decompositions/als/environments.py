@@ -28,10 +28,10 @@ import torch.nn.functional as nnf
 
 from tensorkrowch.utils import stable_norm
 
+from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.als.sampling import SampleBatch
 from tensorkrowch.decompositions.sources import ConfigurationBatch
-from tensorkrowch.decompositions.sources.base import (_discrete_indices,
-                                                      _unravel_indices)
+from tensorkrowch.decompositions.sources.base import _discrete_indices
 
 
 @dataclass(frozen=True)

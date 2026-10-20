@@ -42,7 +42,7 @@ from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
-from tensorkrowch.decompositions.svd.utils import (_SVDProgress,
+from tensorkrowch.decompositions.svd._utils import (_SVDProgress,
                                                    _prepare_svd_source)
 
 

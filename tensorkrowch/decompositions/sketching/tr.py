@@ -35,6 +35,7 @@ import torch
 from tensorkrowch.formats import TR
 from tensorkrowch.utils import safe_divide, truncated_svd
 
+from tensorkrowch.decompositions._utils import _normalize_rank
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
@@ -48,8 +49,7 @@ from tensorkrowch.decompositions.results import (TTDecomposition, _result_from_s
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
                                                      PrescribedCentralBlockSelector,
-                                                     RingRankEstimator,
-                                                     _normalize_rank_spec)
+                                                     RingRankEstimator)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
@@ -611,7 +611,7 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         samples = self._initialize_fit(samples, generator)
         if self.outputs.n_sites < 3:
             raise ValueError('TR-RSS requires at least three final sites')
-        rank_spec = _normalize_rank_spec(rank, self.outputs.n_sites)
+        rank_spec = _normalize_rank(rank, self.outputs.n_sites)
         if block_selector is None and not adaptive:
             selection = PrescribedCentralBlockSelector().select(
                 self.outputs.site_dim(self.embeddings),

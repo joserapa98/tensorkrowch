@@ -13,7 +13,6 @@ This script contains:
     Internal functions:
         * _normalize_context
         * _normalize_orientation
-        * _normalize_rank
         * _mirror_rank
         * _mirror_cores
         * _source_from_context
@@ -28,6 +27,7 @@ This script contains:
 from dataclasses import dataclass, field
 from typing import (Any,
                     Callable,
+                    Dict,
                     Mapping,
                     Optional,
                     Protocol,
@@ -40,6 +40,7 @@ import torch
 
 from tensorkrowch.formats import TR
 
+from tensorkrowch.decompositions._utils import _normalize_rank
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.als.tr import TRALS
@@ -222,7 +223,7 @@ class LoopOpener(Protocol):  # MARK: LoopOpener
         """
 
 
-def _normalize_context(context: _Context) -> Mapping[str, Any]:
+def _normalize_context(context: _Context) -> Dict[str, Any]:
     """Copies an optional opening ``context`` after validating its type."""
     if context is None:
         return {}
@@ -238,33 +239,6 @@ def _normalize_orientation(orientation: str) -> str:
     if orientation not in ('right', 'left'):
         raise ValueError("`orientation` should be 'right' or 'left'")
     return orientation
-
-
-def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
-    """
-    Normalizes a shared ``rank`` or one right-link ``rank`` per local site.
-    """
-    if isinstance(rank, bool):
-        raise TypeError('`rank` should be int or a sequence of ints')
-    if isinstance(rank, int):
-        ranks = (rank,) * n_sites
-    else:
-        if isinstance(rank, (str, bytes)):
-            raise TypeError('`rank` should be int or a sequence of ints')
-        try:
-            ranks = tuple(rank)
-        except TypeError as exc:
-            raise TypeError(
-                '`rank` should be int or a sequence of ints') from exc
-        if len(ranks) != n_sites:
-            raise ValueError(
-                '`rank` should contain one right-link value per local site')
-    if any(isinstance(value, bool) or not isinstance(value, int)
-           for value in ranks):
-        raise TypeError('Local ranks should be integers')
-    if any(value < 1 for value in ranks):
-        raise ValueError('Local ranks should be positive')
-    return ranks
 
 
 def _mirror_rank(rank: Sequence[int]) -> Tuple[int, ...]:

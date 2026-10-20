@@ -8,8 +8,6 @@ This script contains:
         * BLOSTRLoopOpener
 
     Internal functions:
-        * _normalize_rank
-        * _normalize_positive_int
         * _normalize_non_negative_float
         * _random_permutation
         * _complex_dtype
@@ -24,7 +22,6 @@ This script contains:
         * _fit_blostr
         * _materialize_target
         * _mirror_cores
-        * _mirror_rank
 
     Public functions:
         * tr_blostr
@@ -44,7 +41,15 @@ import warnings
 
 import torch
 
-from tensorkrowch.decompositions.ring.opening import _source_from_context
+from tensorkrowch.decompositions._utils import (_normalize_dims,
+                                                _normalize_positive_int,
+                                                _normalize_rank)
+from tensorkrowch.decompositions.ring.opening import (LoopOpenerCapabilities,
+                                                      LoopOpening,
+                                                      _mirror_rank,
+                                                      _normalize_context,
+                                                      _normalize_orientation,
+                                                      _source_from_context)
 
 from tensorkrowch.utils import safe_divide, truncated_svd
 
@@ -58,8 +63,6 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.ring.gauges import ExperimentalWarning
-from tensorkrowch.decompositions.ring.opening import (LoopOpenerCapabilities,
-                                                      LoopOpening)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -78,44 +81,6 @@ class _FirstCoreFactorization:  # MARK: _FirstCoreFactorization
     # Interior configurations used for spectral slice selection
     slices: Tuple[Tuple[int, ...], ...]
     errors: Tuple[ErrorRecord, ...]  # Optional spectral or reconstruction error records
-
-
-def _normalize_rank(rank: _Rank, n_sites: int) -> Tuple[int, ...]:
-    """Normalizes the common spectral ``rank`` required by current BLOSTR."""
-    if isinstance(rank, bool):
-        raise TypeError('`rank` should be int or a sequence of ints')
-    if isinstance(rank, int):
-        ranks = (rank,) * n_sites
-    else:
-        if isinstance(rank, (str, bytes)):
-            raise TypeError('`rank` should be int or a sequence of ints')
-        try:
-            ranks = tuple(rank)
-        except TypeError as exc:
-            raise TypeError(
-                '`rank` should be int or a sequence of ints') from exc
-        if len(ranks) != n_sites:
-            raise ValueError(
-                'A BLOSTR `rank` sequence should contain one right-link rank '
-                'per site')
-    if any(isinstance(value, bool) or not isinstance(value, int)
-           for value in ranks):
-        raise TypeError('BLOSTR ranks should be integers')
-    if any(value < 1 for value in ranks):
-        raise ValueError('BLOSTR ranks should be positive')
-    if len(set(ranks)) != 1:
-        raise ValueError(
-            'The current BLOSTR implementation requires equal TR ranks')
-    return ranks
-
-
-def _normalize_positive_int(value: int, name: str) -> int:
-    """Validates one positive integer without accepting booleans."""
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f'`{name}` should be int type')
-    if value < 1:
-        raise ValueError(f'`{name}` should be positive')
-    return value
 
 
 def _normalize_non_negative_float(value: float, name: str) -> float:
@@ -476,6 +441,9 @@ def _fit_blostr(tensor: torch.Tensor,
     if not tensor.is_floating_point() and not tensor.is_complex():
         raise TypeError('BLOSTR requires a floating or complex tensor')
     ranks = _normalize_rank(rank, tensor.ndim)
+    if len(set(ranks)) != 1:
+        raise ValueError(
+            'The current BLOSTR implementation requires equal TR ranks')
     spectral_atol = _normalize_non_negative_float(
         spectral_atol, 'spectral_atol')
     n_attempts = _normalize_positive_int(n_attempts, 'n_attempts')
@@ -574,11 +542,6 @@ def _mirror_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
     return tuple(core.permute(2, 1, 0) for core in reversed(cores))
 
 
-def _mirror_rank(rank: Sequence[int]) -> Tuple[int, ...]:
-    """Maps right-link ranks through local reversal."""
-    return (*reversed(rank[:-1]), rank[-1])
-
-
 class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
     """
     Uses unrestricted BLOSTR as a local spectral loop initializer.
@@ -664,20 +627,19 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
             Gauges and cores in original ``target`` order with optional local
             metrics.
         """
-        if orientation not in ('right', 'left'):
-            raise ValueError("`orientation` should be 'right' or 'left'")
-        if context is None:
-            context = {}
-        elif not isinstance(context, Mapping):
-            raise TypeError('`context` should be a mapping or None')
+        orientation = _normalize_orientation(orientation)
+        context = _normalize_context(context)
         in_dim = context.get('in_dim')
         if in_dim is None:
             if not isinstance(target, torch.Tensor):
                 raise ValueError(
                     '`context["in_dim"]` is required for a lazy target')
             in_dim = target.shape
-        in_dim = tuple(in_dim)
+        in_dim = _normalize_dims(in_dim, 'in_dim')
         ranks = _normalize_rank(rank, len(in_dim))
+        if len(set(ranks)) != 1:
+            raise ValueError(
+                'The current BLOSTR implementation requires equal TR ranks')
         self._capabilities.require(
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,

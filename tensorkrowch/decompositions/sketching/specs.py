@@ -8,7 +8,6 @@ This script contains:
         * _SketchingFitSpec
 
     Functions:
-        * _normalize_n_sites
         * _validate_site
         * _split_samples
         * _default_output_positions
@@ -23,6 +22,10 @@ import torch
 from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import _INTEGER_DTYPES
 
+from tensorkrowch.decompositions._utils import (_normalize_dims,
+                                                _normalize_positive_int,
+                                                _ravel_indices,
+                                                _unravel_indices)
 from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions.observers import _normalize_verbosity
 from tensorkrowch.decompositions.sources import ConfigurationBatch
@@ -35,15 +38,6 @@ _Samples = Optional[Union[
     Sequence[torch.Tensor],
     ConfigurationBatch,
 ]]
-
-
-def _normalize_n_sites(n_sites: int) -> int:
-    """Validates a positive number of input sites."""
-    if isinstance(n_sites, bool) or not isinstance(n_sites, int):
-        raise TypeError('`n_sites` should be int type')
-    if n_sites < 1:
-        raise ValueError('`n_sites` should be positive')
-    return n_sites
 
 
 def _validate_site(site: int, n_sites: int) -> int:
@@ -146,7 +140,7 @@ class _DomainSpec:  # MARK: _DomainSpec
         """
         Broadcasts explicit domains or infers them from input ``samples``.
         """
-        n_sites = _normalize_n_sites(n_sites)
+        n_sites = _normalize_positive_int(n_sites, 'n_sites')
         if domain is None:
             sample_values = _split_samples(samples, n_sites)
             values = tuple(
@@ -383,18 +377,8 @@ class _OutputSpec:  # MARK: _OutputSpec
     positions: Sequence[int] = ()
 
     def __post_init__(self) -> None:
-        n_input_sites = _normalize_n_sites(self.n_input_sites)
-        if isinstance(self.out_shape, (str, bytes)):
-            raise TypeError('`out_shape` should be a sequence of integers')
-        try:
-            out_shape = tuple(self.out_shape)
-        except TypeError as exc:
-            raise TypeError(
-                '`out_shape` should be a sequence of integers') from exc
-        if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-               for dim in out_shape):
-            raise ValueError(
-                '`out_shape` should contain positive integers')
+        n_input_sites = _normalize_positive_int(self.n_input_sites, 'n_input_sites')
+        out_shape = _normalize_dims(self.out_shape, 'out_shape', allow_empty=True)
         try:
             positions = tuple(self.positions)
         except TypeError as exc:
@@ -434,7 +418,7 @@ class _OutputSpec:  # MARK: _OutputSpec
             raise TypeError('Function output should be floating or complex')
         if not torch.isfinite(values).all():
             raise ValueError('Function output should be finite')
-        n_input_sites = _normalize_n_sites(n_input_sites)
+        n_input_sites = _normalize_positive_int(n_input_sites, 'n_input_sites')
         out_shape = tuple(values.shape[1:])
         if out_shape == (1,):
             out_shape = ()
@@ -549,23 +533,12 @@ class _OutputSpec:  # MARK: _OutputSpec
                     torch.any(indices[:, axis] >= dim):
                 raise ValueError(
                     f'Output indices at axis {axis} are out of bounds')
-        strides = indices.new_tensor([
-            prod(self.out_shape[axis + 1:])
-            for axis in range(self.n_output_sites)])
-        return (indices * strides).sum(dim=1)
+        return _ravel_indices(indices, self.out_shape)
 
     def unflatten_labels(self, labels: torch.Tensor) -> torch.Tensor:
         """Unflattens row-major ``labels`` to one index per output axis."""
         labels = self._validate_flat_labels(labels)
-        if self.scalar:
-            return labels.new_empty((labels.shape[0], 0))
-        remainder = labels
-        axes = [None] * self.n_output_sites
-        for axis in range(self.n_output_sites - 1, -1, -1):
-            dim = self.out_shape[axis]
-            axes[axis] = torch.remainder(remainder, dim)
-            remainder = torch.div(remainder, dim, rounding_mode='floor')
-        return torch.stack(axes, dim=1)
+        return _unravel_indices(labels, self.out_shape)
 
     def _validate_flat_labels(self, labels: torch.Tensor) -> torch.Tensor:
         """Validates flattened row-major ``labels``."""

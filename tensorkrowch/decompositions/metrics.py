@@ -602,16 +602,15 @@ class TimingRecord:  # MARK: TimingRecord
 class EvaluationStats:  # MARK: EvaluationStats
     """Counts point evaluations performed by a tensor source or session."""
 
-    requested_points: int = 0
-    unique_points: int = 0
-    batches: int = 0
-    cache_hits: int = 0
-    source_calls: int = 0
+    requested_points: int = 0 # Total configurations requested
+    unique_points: int = 0  # Sum of unique configurations per query
+    batches: int = 0  # Batches used to evaluate queries
+    cache_hits: int = 0  # Requested values retrieved from a cache
+    source_calls: int = 0  # Successful source queries recorded
 
     def __post_init__(self) -> None:
-        for name in (
-                'requested_points', 'unique_points', 'batches', 'cache_hits',
-                'source_calls'):
+        for name in ('requested_points', 'unique_points', 'batches',
+                     'cache_hits', 'source_calls'):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f'`{name}` should be int type')
@@ -623,9 +622,8 @@ class EvaluationStats:  # MARK: EvaluationStats
         if not isinstance(previous, EvaluationStats):
             raise TypeError('`previous` should be EvaluationStats type')
         values = {}
-        for name in (
-                'requested_points', 'unique_points', 'batches', 'cache_hits',
-                'source_calls'):
+        for name in ('requested_points', 'unique_points', 'batches',
+                     'cache_hits', 'source_calls'):
             value = getattr(self, name) - getattr(previous, name)
             if value < 0:
                 raise ValueError(

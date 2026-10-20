@@ -2,7 +2,7 @@
 Recursive-sketching decompositions.
 
     Sources and evaluations:
-        * TensorSource -> EvaluationView -> PhiOperator
+        * BaseSource -> EvaluationView -> PhiOperator
     Local construction:
         * SketchOperator -> RangeProjector -> InputFitter
     Algorithms:

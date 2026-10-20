@@ -15,15 +15,14 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 import torch
 
 from tensorkrowch.decompositions._utils import _normalize_dims
-from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _SourceEvaluationTracker,
+from tensorkrowch.decompositions.sources.base import (BaseSource,
+                                                      ConfigurationBatch,
                                                       _discrete_indices,
-                                                      _fiber_configurations,
                                                       _data_weights)
 from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 
 
-class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
+class CallableSource(BaseSource):  # MARK: CallableSource
     """
     Continuous function evaluated by a user callable.
 
@@ -36,9 +35,9 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
     ----------
     function : callable
         Function evaluated on configuration batches.
-    n_sites : int, optional
-        Number of continuous input sites, inferred on first evaluation when
-        omitted. Each site can receive a scalar or an embedded vector.
+    n_sites : int
+        Number of continuous input sites. Each site can receive a scalar or
+        an embedded vector.
     out_shape : sequence of int or None, optional
         Declared response shape. The default ``None`` discovers it on the
         first non-empty evaluation; ``()`` requires scalar responses.
@@ -50,16 +49,16 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
         Maximum number of configurations passed to one callable invocation.
     """
 
-    input_kind = 'features'
+    input_kind: str = 'features'
 
     def __init__(self,
                  function: Callable,
-                 n_sites: Optional[int] = None,
+                 n_sites: int,
                  out_shape: Optional[Sequence[int]] = None,
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
                  batch_size: Optional[int] = None) -> None:
-        self._initialize_evaluation_stats()
+        super().__init__(n_sites)
         if not callable(function):
             raise TypeError('`function` should be callable')
         normalized_out_shape = None if out_shape is None else \
@@ -71,20 +70,11 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
                 raise ValueError('`batch_size` should be a positive integer')
 
         self.function = function
-        if n_sites is not None and (isinstance(n_sites, bool) or
-                                    not isinstance(n_sites, int) or n_sites < 1):
-            raise ValueError('`n_sites` should be a positive integer')
         self._in_dim = None
-        self._n_sites = n_sites
         self._out_shape = normalized_out_shape
         self._dtype = dtype
         self._device = torch.empty(0, device=device).device
         self.batch_size = batch_size
-
-    @property
-    def n_sites(self) -> Optional[int]:
-        """Number of input sites, possibly unknown before first evaluation."""
-        return self._n_sites
 
     @property
     def in_dim(self) -> Optional[Tuple[int, ...]]:
@@ -156,8 +146,6 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
         if not isinstance(configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
-        if self.n_sites is None:
-            self._n_sites = configurations.n_sites
         if configurations.n_sites != self.n_sites:
             raise ValueError(
                 'Configurations should contain one value per input site')
@@ -194,33 +182,6 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
         self._record_evaluation(
             points=configurations.batch_size, batches=len(chunks))
         return result
-
-    def fiber(self,
-              configurations: ConfigurationBatch,
-              site: int,
-              values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Evaluates a callable fiber over explicit or discrete ``site`` ``values``.
-        """
-        if not isinstance(site, int):
-            raise TypeError('`site` should be int type')
-        if self.n_sites is None:
-            self._n_sites = configurations.n_sites
-        if (site < 0) or (site >= self.n_sites):
-            raise ValueError('`site` should identify an input site')
-        if values is None:
-            if configurations.kind != 'indices':
-                raise ValueError(
-                    'Coordinate fibers require explicit `values`')
-            if not self.is_discrete_tensor:
-                raise ValueError('Continuous fibers require explicit `values`')
-            values = torch.arange(
-                self._in_dim[site], device=configurations.device)
-        expanded, n_values = _fiber_configurations(
-            configurations, site, values)
-        result = self.evaluate(expanded)
-        return result.reshape(
-            configurations.batch_size, n_values, *result.shape[1:])
 
     @classmethod
     def from_data(cls, dataset: torch.Tensor,
@@ -297,7 +258,8 @@ class CallableSource(_SourceEvaluationTracker):  # MARK: CallableSource
         CallableSource or CallableTensorSource
             Source with explicit local matrix grouping.
         """
-        inputs, outputs = _normalize_dims(in_dim, 'in_dim'), _normalize_dims(out_dim, 'out_dim')
+        inputs = _normalize_dims(in_dim, 'in_dim')
+        outputs = _normalize_dims(out_dim, 'out_dim')
         if len(inputs) != len(outputs):
             raise ValueError('Matrix dimensions should have equal lengths')
         source = cls(function, inputs if cls.input_kind == 'indices' else len(inputs),
@@ -353,7 +315,7 @@ class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
             [1., 2., 3.]])
     """
 
-    input_kind = 'indices'
+    input_kind: str = 'indices'
 
     def __init__(self, function: Callable, in_dim: Sequence[int], **kwargs) -> None:
         dimensions = _normalize_dims(in_dim, 'in_dim')

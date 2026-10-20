@@ -21,8 +21,7 @@ import torch
 
 from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  TTMDecomposition)
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 TensorSource)
+from tensorkrowch.decompositions.sources import ConfigurationBatch
 
 
 TTStructuredSketch = Union[
@@ -33,7 +32,7 @@ TTStructuredSketch = Union[
 
 
 @runtime_checkable
-class SketchContractableSource(TensorSource, Protocol):  # MARK: SketchContractableSource
+class SketchContractableSource(Protocol):  # MARK: SketchContractableSource
     """Optional source capable of contracting a TT-structured sketch."""
 
     def contract_sketch(self,
@@ -43,7 +42,7 @@ class SketchContractableSource(TensorSource, Protocol):  # MARK: SketchContracta
 
 
 @runtime_checkable
-class SupportTensorSource(TensorSource, Protocol):  # MARK: SupportTensorSource
+class SupportTensorSource(Protocol):  # MARK: SupportTensorSource
     """Optional source exposing its complete finite non-zero support."""
 
     @property

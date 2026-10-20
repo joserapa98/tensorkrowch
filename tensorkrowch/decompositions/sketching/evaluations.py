@@ -25,7 +25,7 @@ from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 TensorSource)
+                                                 BaseSource)
 
 
 if TYPE_CHECKING:
@@ -195,15 +195,15 @@ class EvaluationView:  # MARK: EvaluationView
 class _EvaluationPlan:  # MARK: _EvaluationPlan
     """Frozen unique ``configurations`` and request incidence maps."""
 
-    source: TensorSource
+    source: BaseSource
     configurations: ConfigurationBatch
     incidences: Sequence[_IncidenceMap]
     stats: EvaluationStats
     global_transform_prepared: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.source, TensorSource):
-            raise TypeError('`source` should implement TensorSource')
+        if not isinstance(self.source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
         if not isinstance(self.configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
@@ -231,7 +231,7 @@ class _EvaluationRegistry:  # MARK: _EvaluationRegistry
     """Deduplicates request points and builds their gather incidence maps."""
 
     @staticmethod
-    def build(source: TensorSource,
+    def build(source: BaseSource,
               requests: Sequence[_EvaluationRequest],
               global_transform_prepared: bool = False) -> _EvaluationPlan:
         """
@@ -272,9 +272,9 @@ class _EvaluationRegistry:  # MARK: _EvaluationRegistry
 class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
     """Mutable collect/expand builder whose ``freeze`` result is immutable."""
 
-    def __init__(self, source: TensorSource) -> None:
-        if not isinstance(source, TensorSource):
-            raise TypeError('`source` should implement TensorSource')
+    def __init__(self, source: BaseSource) -> None:
+        if not isinstance(source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
         self.source = source
         self._requests = []
         self._phase = 'collect'

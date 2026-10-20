@@ -1,34 +1,31 @@
 """
 This script contains:
 
-    Internal classes:
-        * _SourceEvaluationTracker
-        * _TensorView
-
     Public classes:
         * ConfigurationBatch
-        * TensorSource
-        * FiberTensorSource
+        * BaseSource
+
+    Internal classes:
+        * _TensorView
 
     Internal functions:
         * _discrete_indices
-        * _fiber_configurations
+        * _data_weights
+        * _tensor_view
 """
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from math import prod
-from typing import (Optional,
-                    Protocol,
-                    Sequence,
-                    Tuple,
-                    Union,
-                    runtime_checkable)
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES
 
-from tensorkrowch.decompositions._utils import _ravel_indices, _unravel_indices
+from tensorkrowch.decompositions._utils import (_normalize_positive_int,
+                                                _ravel_indices,
+                                                _unravel_indices)
 from tensorkrowch.decompositions.metrics import EvaluationStats
 
 
@@ -57,8 +54,8 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
         heterogeneous batch must share its leading batch dimension, device and
         dtype.
     kind : {``"indices"``, ``"features"``}
-        Meaning of the ``values`` at every site. ``"indices"`` is the default and
-        requires scalar integers. ``"features"`` accepts scalar or
+        Meaning of the ``values`` at every site. ``"indices"`` is the default
+        and requires scalar integers. ``"features"`` accepts scalar or
         vector-valued inputs for callables.
     """
 
@@ -114,6 +111,7 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
                 raise TypeError(
                     'Discrete heterogeneous `values` should contain scalar '
                     'integers')
+
         object.__setattr__(self, 'values', site_values)
 
     @property
@@ -174,7 +172,8 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
         if not isinstance(indices, torch.Tensor):
             raise TypeError('`indices` should be torch.Tensor type')
         if (indices.ndim != 1) or (indices.dtype not in _INTEGER_DTYPES):
-            raise TypeError('`indices` should be a one-dimensional integer tensor')
+            raise TypeError(
+                '`indices` should be a one-dimensional integer tensor')
         indices = indices.to(device=self.device, dtype=torch.long)
         if self.packed:
             values = self.values.index_select(0, indices)
@@ -193,121 +192,84 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
         return ConfigurationBatch(values, kind=self.kind)
 
 
-@runtime_checkable
-class TensorSource(Protocol):  # MARK: TensorSource
+class BaseSource(ABC):  # MARK: BaseSource
     """
-    Provides values for a fixed tensor or function without imposing an
-    algorithm.
+    Common interface and shared operations for decomposition input data.
 
-    ``is_discrete_tensor`` identifies finite indexed tensors. Their ``in_dim``
-    bounds each discrete input index. Continuous sources receive feature configurations instead. Their ``in_dim``
-    is normally ``None``; matrix callables can declare paired dimensions
-    without representing a discrete tensor.
-    ``out_shape`` describes the tensor returned after each configuration; it
-    is ``()`` for scalar sources and may be ``None`` until a callable is first
-    evaluated. ``dtype`` can likewise be inferred on first evaluation.
-    ``device`` is the effective evaluation device.
+    Sources let decomposition algorithms query tensors or callables through
+    the same interface, independently of how their values are stored or
+    computed. Concrete sources adapt dense tensors, sparse tensors, formats
+    or functions; the algorithm defines how to approximate those values.
 
-    ALS and sketching consume the same protocol. A source does not define a
-    loss, choose sampled rows or interpret absent observations. Implementations
-    must preserve the configuration order and return deterministic values for a
-    fixed input and fixed source state.
-    """
+    The main operation is :meth:`evaluate`, which receives a
+    :class:`ConfigurationBatch` of discrete indices or continuous features
+    and returns values with shape ``(batch, *out_shape)``, preserving their
+    order. Sources record successful queries with ``_record_evaluation``;
+    :attr:`evaluation_stats` exposes cumulative counters so algorithms can
+    measure their evaluation cost. Recording does not cache values or
+    deduplicate configurations automatically.
 
-    @property
-    def is_discrete_tensor(self) -> bool:
-        """Whether the source defines all entries of a finite indexed tensor."""
+    Properties describe the evaluated data: ``in_dim`` bounds discrete
+    indices, ``out_shape`` describes each returned value, and ``dtype`` and
+    ``device`` specify its numerical representation. ``out_shape`` and
+    ``dtype`` may be inferred on first evaluation. Continuous sources normally
+    have ``in_dim=None``; matrix grouping alone does not discretize a callable.
+    ``is_discrete_tensor`` distinguishes finite indexed tensors.
 
-    @property
-    def in_dim(self) -> Optional[Tuple[int, ...]]:
-        """Discrete dimensions, or ``None`` for continuous inputs."""
+    Two shared operations build on evaluation: :meth:`fiber` varies one input
+    site while fixing the others, and :meth:`contract_dense` evaluates the
+    complete tensor when ``is_discrete_tensor=True``. Subclasses may replace
+    these generic implementations with specialized contractions.
 
-    @property
-    def out_shape(self) -> Optional[Tuple[int, ...]]:
-        """Shape returned after the leading configuration batch."""
+    To implement a source, provide :meth:`evaluate` and the abstract data
+    properties, and call ``super().__init__(n_sites)`` to fix its input-site
+    count and initialize its counters.
+    Sources supply values and evaluation information; they do not define a
+    fitting loss or decide which entries are missing.
 
-    @property
-    def dtype(self) -> Optional[torch.dtype]:
-        """Output dtype, or ``None`` until a callable source is evaluated."""
+    Parameters
+    ----------
+    n_sites : int
+        Number of input sites received by each evaluation configuration.
+    n_batches : int, optional
+        Number of structural batch axes stored in the source. Defaults to ``0``.
 
-    @property
-    def device(self) -> torch.device:
-        """Device on which evaluations are performed."""
-
-    def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """
-        Evaluates ``configurations`` in their original order.
-
-        Parameters
-        ----------
-        configurations : ConfigurationBatch
-            A batch containing one discrete index or feature per source
-            site.
-
-        Returns
-        -------
-        torch.Tensor
-            Values with shape ``(batch, *out_shape)`` on the source device
-            and with its declared or inferred dtype. Evaluation retains the
-            source's autograd behavior; diagnostic counters do not change the
-            returned values.
-        """
-
-
-@runtime_checkable
-class FiberTensorSource(TensorSource, Protocol):  # MARK: FiberTensorSource
-    """
-    Optional source capability for evaluating one varying input site.
-
-    A fiber fixes the input at every site except one. For each configuration
-    in a batch, :meth:`fiber` replaces that site's value with every candidate
-    value and evaluates the source on all resulting configurations.
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(2, 3))
+    >>> source.contract_dense()
+    tensor([[1., 1., 1.],
+            [1., 1., 1.]])
     """
 
-    def fiber(self,
-              configurations: ConfigurationBatch,
-              site: int,
-              values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Evaluates a source while varying one ``site`` of each configuration.
+    input_kind: str = 'indices'
 
-        For example, if a scalar source represents ``f(i, j)`` and a base
-        configuration is ``(i=1, j=0)``, setting ``site=1`` and
-        ``values=[0, 1, 2]`` returns ``[f(1, 0), f(1, 1), f(1, 2)]`` for that
-        configuration. Other ``configurations`` in the batch are expanded in the
-        same way, without changing their order.
+    def __init__(self, n_sites: int, *, n_batches: int = 0) -> None:
+        n_sites = _normalize_positive_int(n_sites, 'n_sites')
+        if isinstance(n_batches, bool) or not isinstance(n_batches, int):
+            raise TypeError('`n_batches` should be int type')
+        if n_batches < 0:
+            raise ValueError('`n_batches` should be non-negative')
 
-        Parameters
-        ----------
-        configurations : ConfigurationBatch
-            Base ``configurations`` in batch order. Their ``values`` at sites other
-            than ``site`` remain fixed; the value at ``site`` is replaced.
-        site : int
-            Zero-based input ``site`` whose value varies.
-        values : torch.Tensor, optional
-            Candidate ``values`` for the selected ``site``. Discrete indices have shape
-            ``(n_values,)``; features have shape
-            ``(n_values, *feature_shape[site])``. If omitted for discrete
-            indices, the source evaluates every index in
-            ``range(in_dim[site])``. Feature fibers require explicit ``values``
-            because there is no finite default grid for a continuous domain.
+        self._n_sites = n_sites
+        self.n_batches = n_batches
+        self._matrix_dims = None
 
-        Returns
-        -------
-        torch.Tensor
-            Values with shape ``(batch, n_values, *out_shape)``. The first
-            axis follows the input ``configurations``; the second follows
-            ``values`` (or increasing discrete indices when omitted). A scalar
-            source has ``out_shape=()`` and returns ``(batch, n_values)``.
-        """
+        self._requested_points = 0  # Total configurations requested
+        self._unique_points = 0  # Sum of unique configurations per query
+        self._evaluation_batches = 0  # Batches used to evaluate queries
+        self._cache_hits = 0  # Requested values retrieved from a cache
+        self._source_calls = 0  # Successful source queries recorded
 
+    @property
+    def n_sites(self) -> int:
+        """Number of input sites fixed on construction."""
+        return self._n_sites
 
-class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
-    """Adds inexpensive cumulative evaluation counters to built-in sources."""
-
-    input_kind = 'indices'
-    n_batches = 0
-    _matrix_dims = None
+    @property
+    def is_matrix(self) -> bool:
+        """Whether local axes are paired as matrix inputs and outputs."""
+        return self._matrix_dims is not None
 
     @property
     def is_discrete_tensor(self) -> bool:
@@ -315,9 +277,9 @@ class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
         return self.input_kind == 'indices' and self.in_dim is not None
 
     @property
-    def is_matrix(self) -> bool:
-        """Whether local axes are paired as matrix inputs and outputs."""
-        return self._matrix_dims is not None
+    @abstractmethod
+    def in_dim(self) -> Optional[Tuple[int, ...]]:
+        """Discrete dimensions, or ``None`` for continuous inputs."""
 
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
@@ -327,39 +289,22 @@ class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
     @property
     def in_sites(self) -> Tuple[int, ...]:
         """Positions of function inputs in the represented vector chain."""
-        return tuple(range(len(self.in_dim))) if self.in_dim is not None else \
-            tuple(range(self.n_sites or 0))
+        return tuple(range(self._n_sites))
 
-    def contract_dense(self) -> torch.Tensor:
-        """
-        Evaluates the complete finite tensor in its represented axis order.
+    @property
+    @abstractmethod
+    def out_shape(self) -> Optional[Tuple[int, ...]]:
+        """Shape returned after the leading configuration batch."""
 
-        Returns
-        -------
-        torch.Tensor
-            Input-site axes followed by response axes for vectors, or paired
-            input/output axes for matrices. Continuous sources need an explicit
-            discretization before this operation is defined.
+    @property
+    @abstractmethod
+    def dtype(self) -> Optional[torch.dtype]:
+        """Output dtype, or ``None`` until a callable source is evaluated."""
 
-        Examples
-        --------
-        >>> source = tk.decompositions.CallableTensorSource(
-        ...     lambda indices: indices.sum(-1).float(), in_dim=(2, 2))
-        >>> source.contract_dense()
-        tensor([[0., 1.],
-                [1., 2.]])
-        """
-        if not self.is_discrete_tensor:
-            raise ValueError('`source` should represent a discrete tensor')
-        indices = _unravel_indices(torch.arange(prod(self.in_dim),
-                                                device=self.device), self.in_dim)
-        values = self.evaluate(ConfigurationBatch(indices))
-        tensor = values.reshape(*self.in_dim, *values.shape[1:])
-        if self.is_matrix and self.out_shape:
-            n = len(self.in_dim)
-            tensor = tensor.permute(*(axis for site in range(n)
-                                      for axis in (site, n + site)))
-        return tensor
+    @property
+    @abstractmethod
+    def device(self) -> torch.device:
+        """Device on which evaluations are performed."""
 
     @property
     def evaluation_stats(self) -> EvaluationStats:
@@ -370,13 +315,6 @@ class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
             batches=self._evaluation_batches,
             cache_hits=self._cache_hits,
             source_calls=self._source_calls)
-
-    def _initialize_evaluation_stats(self) -> None:
-        self._requested_points = 0
-        self._unique_points = 0
-        self._evaluation_batches = 0
-        self._cache_hits = 0
-        self._source_calls = 0
 
     def _record_evaluation(self,
                            points: int,
@@ -394,9 +332,168 @@ class _SourceEvaluationTracker:  # MARK: _SourceEvaluationTracker
         self._cache_hits += cache_hits
         self._source_calls += 1
 
-    def reset_evaluation_stats(self) -> None:
-        """Resets cumulative point-evaluation counters to zero."""
-        self._initialize_evaluation_stats()
+    @abstractmethod
+    def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
+        """
+        Evaluates ``configurations`` in their original order.
+
+        Parameters
+        ----------
+        configurations : ConfigurationBatch
+            A batch containing one discrete index or feature per source site.
+
+        Returns
+        -------
+        torch.Tensor
+            Values with shape ``(batch, *out_shape)`` on the source device
+            and with its declared or inferred dtype. Evaluation retains the
+            source's autograd behavior; diagnostic counters do not change the
+            returned values.
+        """
+
+    def fiber(self,
+              configurations: ConfigurationBatch,
+              site: int,
+              values: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Evaluates a source while varying one ``site`` of each configuration.
+
+        For example, if a scalar source represents ``f(i, j)`` and a base
+        configuration is ``(i=1, j=0)``, setting ``site=1`` and
+        ``values=[0, 1, 2]`` returns ``[f(1, 0), f(1, 1), f(1, 2)]`` for that
+        configuration. Other ``configurations`` in the batch are expanded in
+        the same way, without changing their order.
+
+        Parameters
+        ----------
+        configurations : ConfigurationBatch
+            Base ``configurations`` in batch order, stored as a packed tensor
+            or a tuple of site tensors. Values at sites other than ``site``
+            remain fixed; the value at ``site`` is replaced.
+        site : int
+            Zero-based input ``site`` whose value varies.
+        values : torch.Tensor, optional
+            Candidate ``values`` for the selected ``site``. Discrete indices
+            have shape ``(n_values,)``; features have shape
+            ``(n_values, *feature_shape[site])``. If omitted for discrete
+            indices, the source evaluates every index in
+            ``range(in_dim[site])``. Feature fibers require explicit ``values``
+            because there is no finite default grid for a continuous domain.
+
+        Returns
+        -------
+        torch.Tensor
+            Values with shape ``(batch, n_values, *out_shape)``. The first
+            axis follows the input ``configurations``; the second follows
+            ``values`` (or increasing discrete indices when omitted). A scalar
+            source has ``out_shape=()`` and returns ``(batch, n_values)``.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.CallableTensorSource(
+        ...     lambda indices: indices.sum(-1).float(), in_dim=(2, 3))
+        >>> configurations = tk.decompositions.ConfigurationBatch(
+        ...     torch.tensor([[1, 0]]))
+        >>> source.fiber(configurations, site=1)
+        tensor([[1., 2., 3.]])
+        """
+        if not isinstance(configurations, ConfigurationBatch):
+            raise TypeError(
+                '`configurations` should be ConfigurationBatch type')
+        if configurations.kind != self.input_kind:
+            raise ValueError(
+                f'Configurations should have kind `{self.input_kind}`')
+        if configurations.n_sites != self._n_sites:
+            raise ValueError(
+                'Configurations should contain one value per input site')
+        if not isinstance(site, int):
+            raise TypeError('`site` should be int type')
+        if (site < 0) or (site >= self._n_sites):
+            raise ValueError('`site` should identify an input site')
+
+        if values is None:
+            if not self.is_discrete_tensor:
+                raise ValueError('Continuous fibers require explicit `values`')
+            values = torch.arange(self.in_dim[site],
+                                  device=configurations.device)
+        else:
+            if not isinstance(values, torch.Tensor):
+                raise TypeError('`values` should be torch.Tensor type')
+            if configurations.kind == 'indices':
+                if (values.ndim != 1) or (values.dtype not in _INTEGER_DTYPES):
+                    raise TypeError(
+                        'Discrete fiber `values` should be a one-dimensional '
+                        'integer tensor')
+            else:
+                if values.ndim < 1:
+                    raise ValueError(
+                        '`values` should have a leading grid dimension')
+                feature_shape = configurations.values.shape[2:] \
+                    if configurations.packed else \
+                    configurations.values[site].shape[1:]
+                if values.shape[1:] != feature_shape:
+                    raise ValueError(
+                        '`values` feature shape should match the input site')
+        dtype = torch.promote_types(configurations.dtype, values.dtype)
+        values = values.to(device=configurations.device, dtype=dtype)
+
+        # Expand each configuration over the candidate values at this site.
+        n_values = values.shape[0]
+        if configurations.packed:
+            packed = configurations.values.to(dtype=dtype)
+            expanded = packed.unsqueeze(1).expand(
+                packed.shape[0], n_values, *packed.shape[1:]).clone()
+            expanded[:, :, site] = values.unsqueeze(0)
+            expanded = expanded.flatten(0, 1)
+        else:
+            expanded = []
+            for current_site, site_values in enumerate(configurations.values):
+                if current_site == site:
+                    site_values = values.unsqueeze(0).expand(
+                        configurations.batch_size, n_values, *values.shape[1:])
+                    site_values = site_values.flatten(0, 1)
+                else:
+                    site_values = site_values.to(dtype=dtype)
+                    site_values = site_values.repeat_interleave(n_values, dim=0)
+                expanded.append(site_values)
+            expanded = tuple(expanded)
+
+        result = self.evaluate(
+            ConfigurationBatch(expanded, kind=configurations.kind))
+        return result.reshape(
+            configurations.batch_size, n_values, *result.shape[1:])
+
+    def contract_dense(self) -> torch.Tensor:
+        """
+        Evaluates the complete finite tensor in its represented axis order.
+
+        Returns
+        -------
+        torch.Tensor
+            Input-site axes followed by output axes for vectors, or paired
+            input/output axes for matrices. Continuous sources need an explicit
+            discretization before this operation is defined.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.CallableTensorSource(
+        ...     lambda indices: indices.sum(-1).float(), in_dim=(2, 2))
+        >>> source.contract_dense()
+        tensor([[0., 1.],
+                [1., 2.]])
+        """
+        if not self.is_discrete_tensor:
+            raise ValueError('`source` should represent a discrete tensor')
+
+        indices = _unravel_indices(
+            torch.arange(prod(self.in_dim), device=self.device), self.in_dim)
+        values = self.evaluate(ConfigurationBatch(indices))
+        tensor = values.reshape(*self.in_dim, *values.shape[1:])
+        if self.is_matrix and self.out_shape:
+            n = len(self.in_dim)
+            tensor = tensor.permute(*(axis for site in range(n)
+                                      for axis in (site, n + site)))
+        return tensor
 
 
 def _discrete_indices(configurations: ConfigurationBatch,
@@ -415,50 +512,10 @@ def _discrete_indices(configurations: ConfigurationBatch,
             'Configurations should contain one value per input site')
     indices = configurations.as_tensor().to(device=device, dtype=torch.long)
     for site, dim in enumerate(in_dim):
-        if torch.any(indices[:, site] < 0) or \
-                torch.any(indices[:, site] >= dim):
+        if torch.any(indices[:, site] < 0) or torch.any(indices[:, site] >= dim):
             raise ValueError(
                 f'Configuration indices at site {site} are out of bounds')
     return indices
-
-
-def _fiber_configurations(configurations: ConfigurationBatch,
-                          site: int,
-                          values: torch.Tensor) -> Tuple[ConfigurationBatch, int]:
-    """
-    Expands packed base ``configurations`` over a one-``site`` value grid.
-    """
-    if not isinstance(site, int):
-        raise TypeError('`site` should be int type')
-    if (site < 0) or (site >= configurations.n_sites):
-        raise ValueError('`site` should identify an input site')
-    if not configurations.packed:
-        raise ValueError(
-            'Generic fiber expansion requires packed configurations')
-    if not isinstance(values, torch.Tensor):
-        raise TypeError('`values` should be torch.Tensor type')
-    if values.ndim < 1:
-        raise ValueError('`values` should have a leading grid dimension')
-    if (configurations.kind == 'indices') and (
-            (values.ndim != 1) or (values.dtype not in _INTEGER_DTYPES)):
-        raise TypeError(
-            'Discrete fiber `values` should be a one-dimensional integer '
-            'tensor')
-
-    packed = configurations.as_tensor()
-    if tuple(values.shape[1:]) != tuple(packed.shape[2:]):
-        raise ValueError(
-            '`values` coordinate shape should match the selected site')
-    values = values.to(device=packed.device, dtype=packed.dtype)
-    n_values = values.shape[0]
-    expanded = packed.unsqueeze(1).expand(
-        packed.shape[0], n_values, *packed.shape[1:]).clone()
-    expanded[:, :, site] = values.unsqueeze(0)
-    expanded = expanded.reshape(
-        packed.shape[0] * n_values, *packed.shape[1:])
-    return ConfigurationBatch(expanded, kind=configurations.kind), n_values
-
-
 
 
 def _data_weights(dataset: torch.Tensor,
@@ -467,7 +524,7 @@ def _data_weights(dataset: torch.Tensor,
     """Validates a finite dataset and normalizes non-negative sample weights."""
     if not isinstance(dataset, torch.Tensor):
         raise TypeError('`dataset` should be torch.Tensor type')
-    if dataset.ndim != 2 or not dataset.shape[0] or not dataset.shape[1]:
+    if (dataset.ndim != 2) or not dataset.shape[0] or not dataset.shape[1]:
         raise ValueError('`dataset` should have non-empty sample and site axes')
     if dataset.is_complex() or not torch.isfinite(dataset).all():
         raise ValueError('`dataset` should contain finite real coordinates')
@@ -485,34 +542,46 @@ def _data_weights(dataset: torch.Tensor,
     if not weights.is_floating_point():
         weights = weights.to(dtype)
     total = weights.sum()
-    if not torch.isfinite(total) or total <= 0:
+    if not torch.isfinite(total) or (total <= 0):
         raise ValueError('The total sample weight should be positive')
     return weights / total
 
 
-class _TensorView(_SourceEvaluationTracker):  # MARK: _TensorView
-    """Presents complete scalar entries in the source's final chain layout."""
+class _TensorView(BaseSource):  # MARK: _TensorView
+    """
+    Adapts a finite source so ALS and RS can query individual scalar entries.
 
-    def __init__(self, source: TensorSource) -> None:
-        self._initialize_evaluation_stats()
+    For vector sources, output axes become additional indexed sites. A source
+    with ``in_dim=(2,)`` and ``out_shape=(3,)`` returns a vector for each input
+    index ``i``; this view has ``in_dim=(2, 3)`` and returns one scalar for
+    each pair ``(i, j)``. Site positions follow the source's ``in_sites``.
+
+    For matrix sources, each input/output index pair is instead fused into
+    one site. Evaluation decodes those pairs, queries the original source
+    and selects the requested output entries. Both adaptations expose
+    ``out_shape=()`` without materializing the complete tensor. Evaluation
+    statistics are read directly from the original source.
+    """
+
+    def __init__(self, source: BaseSource) -> None:
         self.source = source
-        self._input_sites = getattr(source, 'in_sites', tuple(range(len(source.in_dim))))
-        if source.out_shape is None:
-            source.evaluate(ConfigurationBatch(torch.zeros(
-                1, len(source.in_dim), device=source.device, dtype=torch.long)))
-        self._matrix_dims = (source.in_dim, source.out_dim) if getattr(
-            source, 'is_matrix', False) else None
-        if self.is_matrix:
-            self._in_dim = tuple(a * b for a, b in zip(*self._matrix_dims))
+        self._in_sites = source.in_sites
+
+        if source.is_matrix:
+            self._in_dim = tuple(a * b for a, b in zip(source.in_dim,
+                                                       source.out_dim))
         else:
-            dimensions = [None] * (len(source.in_dim) + len(source.out_shape))
-            for site, dim in zip(self._input_sites, source.in_dim):
+            n_sites = source.n_sites + len(source.out_shape)
+            self._out_sites = tuple(site for site in range(n_sites)
+                                    if site not in self._in_sites)
+            dimensions = [None] * n_sites
+            for site, dim in zip(self._in_sites, source.in_dim):
                 dimensions[site] = dim
-            free = (site for site in range(len(dimensions)) if site not in self._input_sites)
-            for site, dim in zip(free, source.out_shape):
+            for site, dim in zip(self._out_sites, source.out_shape):
                 dimensions[site] = dim
             self._in_dim = tuple(dimensions)
-        self.n_batches = getattr(source, 'n_batches', 0)
+
+        super().__init__(len(self._in_dim), n_batches=source.n_batches)
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -530,36 +599,41 @@ class _TensorView(_SourceEvaluationTracker):  # MARK: _TensorView
     def device(self) -> torch.device:
         return self.source.device
 
+    @property
+    def evaluation_stats(self) -> EvaluationStats:
+        """Cumulative evaluation counters of the original source."""
+        return self.source.evaluation_stats
+
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Selects response indices or decodes fused input/output pairs."""
+        """Selects output indices or decodes fused input/output pairs."""
         indices = _discrete_indices(configurations, self._in_dim, self.device)
-        if self.is_matrix:
-            sizes = indices.new_tensor(self._matrix_dims[1])
+        if self.source.is_matrix:
+            sizes = indices.new_tensor(self.source.out_dim)
             inputs, outputs = indices // sizes, indices % sizes
         else:
-            inputs = indices[:, self._input_sites]
-            free = [site for site in range(len(self.in_dim))
-                    if site not in self._input_sites]
-            outputs = indices[:, free]
+            inputs = indices[:, self._in_sites]
+            outputs = indices[:, self._out_sites]
         values = self.source.evaluate(ConfigurationBatch(inputs))
         if not self.source.out_shape:
             return values
         labels = _ravel_indices(outputs, self.source.out_shape)
-        return values.reshape(indices.shape[0], -1).gather(1, labels[:, None]).squeeze(1)
+        return values.flatten(start_dim=1).gather(1, labels[:, None]).squeeze(1)
 
 
-def _tensor_view(source: TensorSource) -> TensorSource:
+def _tensor_view(source: BaseSource) -> BaseSource:
     """Prepares a scalar chain view without materializing the source."""
     if not source.is_discrete_tensor:
         raise ValueError('`source` should represent a discrete tensor')
-    if getattr(source, 'is_matrix', False) or source.out_shape != () or tuple(
-            getattr(source, 'in_sites', range(len(source.in_dim)))) != tuple(range(len(source.in_dim))):
+    if source.out_shape is None:
+        source.evaluate(ConfigurationBatch(torch.zeros(
+            1, source.n_sites, device=source.device, dtype=torch.long)))
+    if source.is_matrix or (source.out_shape != ()) or \
+            (source.in_sites != tuple(range(source.n_sites))):
         return _TensorView(source)
     return source
 
 
 __all__ = [
     'ConfigurationBatch',
-    'TensorSource',
-    'FiberTensorSource',
+    'BaseSource',
 ]

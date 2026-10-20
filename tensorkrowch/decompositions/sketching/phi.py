@@ -34,8 +34,7 @@ from tensorkrowch.decompositions.sketching.regions import (RegionSketch,
                                                            SiteRegion)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 FiberTensorSource,
-                                                 TensorSource)
+                                                 BaseSource)
 
 
 AxisComponent = Tuple[int, torch.Tensor]
@@ -227,15 +226,15 @@ class PhiOperator:  # MARK: PhiOperator
     """Lazy Cartesian Phi assembled from regional states and sampled axes."""
 
     def __init__(self,
-                 source: TensorSource,
+                 source: BaseSource,
                  components: Sequence[PhiComponent],
                  output_spec: _OutputSpec,
                  *,
                  input_sites: Optional[Sequence[int]] = None,
                  output_sites: Optional[Sequence[int]] = None,
                  input_kind: Optional[str] = None) -> None:
-        if not isinstance(source, TensorSource):
-            raise TypeError('`source` should implement TensorSource')
+        if not isinstance(source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
         if not isinstance(output_spec, _OutputSpec):
             raise TypeError('`output_spec` should be _OutputSpec type')
         if input_kind not in (None, 'indices', 'features'):
@@ -510,9 +509,7 @@ class PhiOperator:  # MARK: PhiOperator
             self.shape, axis, fixed_indices, self.source.device)
         normalized_axis = axis if axis >= 0 else axis + len(self.shape)
         component = self.components[normalized_axis]
-        if isinstance(component, tuple) and \
-                component[0] in self.input_sites and \
-                isinstance(self.source, FiberTensorSource):
+        if isinstance(component, tuple) and component[0] in self.input_sites:
             base_selection = selection[..., 0, :]
             base_request = self._request(base_selection)
             if base_request.configurations.packed:

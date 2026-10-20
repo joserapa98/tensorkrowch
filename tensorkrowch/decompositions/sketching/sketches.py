@@ -51,7 +51,7 @@ from tensorkrowch.decompositions.results import TTDecomposition
 from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource,
                                                            _iter_support)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 TensorSource)
+                                                 BaseSource)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -100,7 +100,7 @@ def _sample_states(values: torch.Tensor,
     return states.index_select(0, permutation).sort().values
 
 
-def _structured_capability(source: TensorSource,
+def _structured_capability(source: BaseSource,
                            name: str) -> Optional['SketchContractableSource']:
     """Returns one optional structured ``source`` kernel by capability."""
     if not getattr(source, '_structured', True):
@@ -149,7 +149,7 @@ class _SketchWeights:  # MARK: _SketchWeights
 class SketchOperator(Protocol):  # MARK: SketchOperator
     """Protocol for operators that construct a validated TT-RS system."""
 
-    def builder(self, source: TensorSource) -> 'SketchSystemBuilder':
+    def builder(self, source: BaseSource) -> 'SketchSystemBuilder':
         """Returns the ``source``-bound core-determining-system builder."""
 
 
@@ -304,9 +304,9 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
 class _SupportSketchSystemBuilder:  # MARK: _SupportSketchSystemBuilder
     """Contracts finite support, enumerating only non-support sources."""
 
-    def __init__(self, source: TensorSource, operator: SketchOperator) -> None:
-        if not isinstance(source, TensorSource):
-            raise TypeError('`source` should implement TensorSource')
+    def __init__(self, source: BaseSource, operator: SketchOperator) -> None:
+        if not isinstance(source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
         if tuple(source.out_shape) != ():
             raise ValueError('TT-RS currently requires a scalar source')
         if len(source.in_dim) < 2:
@@ -387,7 +387,7 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
     """Builds sampled equations from exact TT prefix/suffix kernels."""
 
     def __init__(self,
-                 source: TensorSource,
+                 source: BaseSource,
                  operator: 'SampledSketch') -> None:
         self.source = source
         self.operator = operator
@@ -487,7 +487,7 @@ class _MarginalStructuredSystemBuilder:  # MARK: _MarginalStructuredSystemBuilde
     """Builds Markov marginal equations from direct TT contractions."""
 
     def __init__(self,
-                 source: TensorSource,
+                 source: BaseSource,
                  operator: 'MarginalSketch') -> None:
         self.source = source
         self.operator = operator
@@ -530,7 +530,7 @@ class _TTStackStructuredSystemBuilder:  # MARK: _TTStackStructuredSystemBuilder
     """Builds Gaussian TT-stack equations by double-layer contraction."""
 
     def __init__(self,
-                 source: TensorSource,
+                 source: BaseSource,
                  operator: 'TTStackSketch') -> None:
         self.source = source
         self.operator = operator
@@ -600,7 +600,7 @@ class SampledSketch:  # MARK: SampledSketch
         self.samples = samples
         self.sketch_size = sketch_size
 
-    def builder(self, source: TensorSource) -> SketchSystemBuilder:
+    def builder(self, source: BaseSource) -> SketchSystemBuilder:
         """Returns a finite-support sampled-system builder."""
         if all(_structured_capability(source, name) is not None for name in (
                 'left_environments', 'right_environments', 'local_phi')):
@@ -698,7 +698,7 @@ class MarginalSketch:  # MARK: MarginalSketch
         """Builds the standard neighbor-preserving Markov marginal sketch."""
         return cls(order=order, factor=factor)
 
-    def builder(self, source: TensorSource) -> SketchSystemBuilder:
+    def builder(self, source: BaseSource) -> SketchSystemBuilder:
         """Returns a finite-support marginal-system builder."""
         if _structured_capability(source, 'marginal_phi') is not None:
             return _MarginalStructuredSystemBuilder(source, self)
@@ -840,7 +840,7 @@ class TTStackSketch:  # MARK: TTStackSketch
         self.n_stacks = n_stacks
         self.orthogonal = orthogonal
 
-    def builder(self, source: TensorSource) -> SketchSystemBuilder:
+    def builder(self, source: BaseSource) -> SketchSystemBuilder:
         """Returns a finite-support Gaussian-TT-system builder."""
         if _structured_capability(source, 'tt_sketch_phis') is not None:
             return _TTStackStructuredSystemBuilder(source, self)

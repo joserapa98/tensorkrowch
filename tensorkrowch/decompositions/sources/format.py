@@ -15,12 +15,12 @@ from tensorkrowch.models.mps import MPS
 from tensorkrowch.utils import _INTEGER_DTYPES
 
 from tensorkrowch.decompositions.results import TTDecomposition
-from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _SourceEvaluationTracker,
+from tensorkrowch.decompositions.sources.base import (BaseSource,
+                                                      ConfigurationBatch,
                                                       _discrete_indices)
 
 
-class FormatSource(_SourceEvaluationTracker):  # MARK: FormatSource
+class FormatSource(BaseSource):  # MARK: FormatSource
     """
     Finite tensor source represented directly by a lightweight format.
 
@@ -39,7 +39,6 @@ class FormatSource(_SourceEvaluationTracker):  # MARK: FormatSource
 
     def __init__(self,
                  tensor: Union[TensorFormat1D, Sequence[torch.Tensor], MPS]) -> None:
-        self._initialize_evaluation_stats()
         if isinstance(tensor, MPS):
             tensor = tensor.to_tr() if tensor.boundary == 'pbc' else tensor.to_tt()
         if not isinstance(tensor, TensorFormat1D):
@@ -56,11 +55,11 @@ class FormatSource(_SourceEvaluationTracker):  # MARK: FormatSource
         self.cores = list(tensor._effective_cores())
         self._in_dim = tensor.in_dim if tensor.out_dim is not None else tuple(
             tensor.in_dim[site] for site in tensor.in_sites)
+        super().__init__(len(self._in_dim), n_batches=tensor.n_batches)
         self._structured = isinstance(tensor, TT) and not tensor._cyclic and \
             not tensor.n_batches and tensor.in_sites == tuple(range(tensor.n_sites))
         if tensor.out_dim is not None:
             self._matrix_dims = tensor.in_dim, tensor.out_dim
-        self.n_batches = tensor.n_batches
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -332,8 +331,10 @@ class FormatSource(_SourceEvaluationTracker):  # MARK: FormatSource
               site: int,
               values: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
-        Contracts both TT environments and leaves one input ``site`` open.
+        Evaluates a fiber using TT environments when the format supports them.
         """
+        if not self._structured:
+            return super().fiber(configurations, site, values)
         if not isinstance(site, int):
             raise TypeError('`site` should be int type')
         if (site < 0) or (site >= len(self._in_dim)):

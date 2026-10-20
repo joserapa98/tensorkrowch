@@ -599,7 +599,7 @@ class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
 
         Parameters
         ----------
-        target : torch.Tensor or TensorSource
+        target : torch.Tensor or BaseSource
             Local scalar tensor with axes ``(left external, *in_dim, right
             external)``, or a source representing that tensor.
         rank : int or sequence[int]

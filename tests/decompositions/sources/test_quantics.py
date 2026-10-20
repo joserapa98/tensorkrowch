@@ -45,7 +45,7 @@ class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
         assert_close(source.contract_dense_grid_axes(), expected.reshape(4, 3))
         assert_close(source.contract_dense()[tuple(digits.T)], expected)
         assert source.dtype == dtype and source.device.type == device
-        assert isinstance(source, tk.decompositions.FiberTensorSource)
+        assert isinstance(source, tk.decompositions.BaseSource)
 
     @pytest.mark.parametrize('path', ['uniform', 'explicit', 'objects'])
     def test_constructor_paths_match_formats(self, path):
@@ -85,8 +85,6 @@ class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
         batch = tk.decompositions.ConfigurationBatch(torch.tensor([[0, 0], [1, 0]]))
         torch.testing.assert_close(source.fiber(batch, 1),
                                    torch.tensor([[0., 0.5], [1., 1.5]]))
-        source.reset_evaluation_stats()
-        assert source.evaluation_stats.requested_points == 0
 
     @pytest.mark.parametrize('kwargs, error', [
         ({}, ValueError),

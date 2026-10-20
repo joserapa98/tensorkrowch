@@ -18,6 +18,12 @@ metadata and diagnostics.
 Input sources
 -------------
 
+Sources inherit :class:`BaseSource`, the common base for finite tensors and
+continuous functions. It provides evaluation statistics and generic
+:meth:`BaseSource.fiber` and :meth:`BaseSource.contract_dense` methods;
+concrete sources implement :meth:`BaseSource.evaluate` and may specialize
+these operations. ``contract_dense`` requires a finite discrete tensor.
+
 ``source`` describes the input independently of the decomposition algorithm:
 its dimensions, evaluation rules, matrix grouping and, when applicable,
 Quantics discretization. Finite tensor sources are :class:`DenseTensorSource`,
@@ -402,6 +408,9 @@ They require ``is_discrete_tensor=True`` and do not support structural batches.
 Specialized sparse and format sources evaluate their native representations
 directly instead of building a TensorKrowch graph; ALS and sketching can query
 these values without materializing the complete tensor.
+
+.. autoclass:: BaseSource
+   :members:
 
 .. autoclass:: DenseTensorSource
    :members:

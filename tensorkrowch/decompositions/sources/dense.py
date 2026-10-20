@@ -16,10 +16,9 @@ from typing import Optional, Sequence, Tuple, Union
 import torch
 
 from tensorkrowch.decompositions._utils import _normalize_dims
-from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _SourceEvaluationTracker,
-                                                      _discrete_indices,
-                                                      _fiber_configurations)
+from tensorkrowch.decompositions.sources.base import (BaseSource,
+                                                      ConfigurationBatch,
+                                                      _discrete_indices)
 
 
 _Dimension = Optional[Union[int, Sequence[int]]]
@@ -129,7 +128,7 @@ def _prepare_matrix_input(tensor: torch.Tensor,
                         matrix_input=matrix_input)
 
 
-class DenseTensorSource(_SourceEvaluationTracker):  # MARK: DenseTensorSource
+class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
     """
     Tensor source backed by an explicitly stored dense tensor.
 
@@ -147,14 +146,12 @@ class DenseTensorSource(_SourceEvaluationTracker):  # MARK: DenseTensorSource
                  tensor: torch.Tensor,
                  in_sites: Optional[Sequence[int]] = None,
                  *, n_batches: int = 0) -> None:
-        self._initialize_evaluation_stats()
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0 or n_batches >= tensor.ndim:
             raise ValueError('`n_batches` should leave input axes')
-        self.n_batches = n_batches
         n_axes = tensor.ndim - n_batches
         if tensor.ndim < 1:
             raise ValueError('`tensor` should contain at least one input site')
@@ -173,6 +170,8 @@ class DenseTensorSource(_SourceEvaluationTracker):  # MARK: DenseTensorSource
             raise ValueError('`in_sites` should not contain duplicate axes')
         if any(tensor.shape[n_batches + axis] < 1 for axis in in_sites):
             raise ValueError('Input dimensions should be positive')
+
+        super().__init__(len(in_sites), n_batches=n_batches)
         out_sites = tuple(axis for axis in range(n_axes)
                              if axis not in in_sites)
         self.tensor = tensor
@@ -222,25 +221,6 @@ class DenseTensorSource(_SourceEvaluationTracker):  # MARK: DenseTensorSource
             indices[:, site] for site in range(indices.shape[1]))]
         self._record_evaluation(points=indices.shape[0])
         return result
-
-    def fiber(self,
-              configurations: ConfigurationBatch,
-              site: int,
-              values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates a discrete ``site`` fiber for every base configuration."""
-        if not isinstance(site, int):
-            raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self._in_dim)):
-            raise ValueError('`site` should identify an input site')
-        if values is None:
-            values = torch.arange(
-                self._in_dim[site], device=configurations.device)
-        expanded, n_values = _fiber_configurations(
-            configurations, site, values)
-        result = self.evaluate(expanded)
-        return result.reshape(
-            configurations.batch_size, n_values, *self._out_shape)
-
 
     def contract_dense(self) -> torch.Tensor:
         """Returns the stored tensor without copying its tensor storage."""

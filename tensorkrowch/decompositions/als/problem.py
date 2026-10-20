@@ -18,7 +18,7 @@ from tensorkrowch.utils import safe_divide
 
 from tensorkrowch.decompositions._utils import _normalize_dims, _ravel_indices
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 TensorSource)
+                                                 BaseSource)
 from tensorkrowch.decompositions.sources.base import _discrete_indices
 
 
@@ -194,21 +194,21 @@ class ALSProblem:  # MARK: ALSProblem
     separately and do not change either meaning.
     """
 
-    source: Optional[TensorSource] = None  # Shared provider of target values
+    source: Optional[BaseSource] = None  # Shared provider of target values
     # Permanent completion observations, when present
     observations: Optional[_ObservedEntries] = None
     selector: Optional[Any] = None  # Row-selection strategy for a known source
     # Multiplicative residual weights in row order
     weights: Optional[torch.Tensor] = None
-    mask: Optional[TensorSource] = None
+    mask: Optional[BaseSource] = None
     loss: str = 'l2'  # Objective loss identifier
 
     def __post_init__(self) -> None:
         if (self.source is None) and (self.observations is None):
             raise ValueError('`source` or `observations` should be provided')
         if (self.source is not None) and \
-                (not isinstance(self.source, TensorSource)):
-            raise TypeError('`source` should implement TensorSource')
+                (not isinstance(self.source, BaseSource)):
+            raise TypeError('`source` should inherit from BaseSource')
         if (self.observations is not None) and \
                 (not isinstance(self.observations, _ObservedEntries)):
             raise TypeError(

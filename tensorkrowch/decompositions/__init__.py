@@ -2,7 +2,7 @@
 Tensor decomposition algorithms and their numerical results.
 
     Sources:
-        * TensorSource, ConfigurationBatch
+        * BaseSource, ConfigurationBatch
         * DenseTensorSource, CallableSource, CallableTensorSource
         * SparseTensorSource, FormatSource
         * CallableQuanticsSource
@@ -138,13 +138,12 @@ from tensorkrowch.decompositions.sketching import (BasisFitter,
                                                    tr_rss,
                                                    tt_rs,
                                                    tt_rss)
-from tensorkrowch.decompositions.sources import (CallableTensorSource,
+from tensorkrowch.decompositions.sources import (BaseSource,
+                                                 CallableTensorSource,
                                                  ConfigurationBatch,
                                                  DenseTensorSource,
                                                  SparseTensorSource,
-                                                 FiberTensorSource,
                                                  FormatSource,
-                                                 TensorSource,
                                                  as_tensor_source)
 from tensorkrowch.decompositions.sources.callable import CallableSource
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
@@ -206,8 +205,7 @@ __all__ = [
     'FidelityRecord',
     'DecompositionMetrics',
     'ConfigurationBatch',
-    'TensorSource',
-    'FiberTensorSource',
+    'BaseSource',
     'CallableSource',
     'CallableTensorSource',
     'DenseTensorSource',

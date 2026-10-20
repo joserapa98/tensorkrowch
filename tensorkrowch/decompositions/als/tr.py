@@ -59,8 +59,8 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  _result_from_source)
-from tensorkrowch.decompositions.sources import (TensorSource, ConfigurationBatch,
-                                                 FiberTensorSource)
+from tensorkrowch.decompositions.sources import (BaseSource,
+                                                 ConfigurationBatch)
 from tensorkrowch.decompositions.svd.tr import TRSVD
 
 
@@ -517,14 +517,9 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
         in_dim = self._cores[site].shape[1]
-        if isinstance(self.problem.source, FiberTensorSource):
-            base_indices = indices[::in_dim].clone()
-            target = self.problem.source.fiber(
-                ConfigurationBatch(base_indices, kind='indices'), site)
-            target = target.reshape(-1)
-        else:
-            target = self.problem.evaluate(
-                ConfigurationBatch(indices, kind='indices'))
+        base_indices = indices[::in_dim].clone()
+        target = self.problem.source.fiber(
+            ConfigurationBatch(base_indices, kind='indices'), site).reshape(-1)
         if target.shape != (batch.ids.numel(),):
             raise ValueError(
                 'TR-ALS currently requires a scalar tensor source')
@@ -666,9 +661,9 @@ class TRALS(TTALS):  # MARK: TRALS
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
-    mask : TensorSource or torch.Tensor, optional
+    mask : BaseSource or torch.Tensor, optional
         Boolean tensor of participating entries. ``True`` participates;
         ``False`` is missing. A sparse mask fixes its stored true entries.
     weights : torch.Tensor, optional
@@ -778,7 +773,7 @@ class TRALS(TTALS):  # MARK: TRALS
 
     def fit(self,
             rank: _Rank = None,
-           mask: Optional['TensorSource'] = None,
+           mask: Optional['BaseSource'] = None,
             initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
             init: str = 'random',
             fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
@@ -1084,7 +1079,7 @@ class TRALS(TTALS):  # MARK: TRALS
 
 def tr_als(source: 'SourceLike',
            rank: _Rank = None,
-           mask: Optional['TensorSource'] = None,
+           mask: Optional['BaseSource'] = None,
            initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
            init: str = 'random',
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
@@ -1145,7 +1140,7 @@ def tr_als(source: 'SourceLike',
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     rank : int or sequence of int, optional
         Shared ``rank`` or one upper bound for every right link.

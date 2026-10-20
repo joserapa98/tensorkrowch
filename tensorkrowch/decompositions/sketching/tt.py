@@ -67,7 +67,7 @@ from tensorkrowch.decompositions.sketching.transforms import (GlobalValueTransfo
                                                               _prepare_global_transform)
 from tensorkrowch.decompositions.sources import (CallableSource,
                                                  ConfigurationBatch,
-                                                 TensorSource, as_tensor_source)
+                                                 BaseSource, as_tensor_source)
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.sources.base import _tensor_view
 
@@ -97,7 +97,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
     """
     Reusable Tensor Train Recursive Sketching from Samples problem.
 
-    The fixed object stores the function (or :class:`TensorSource`), embedding,
+    The fixed object stores the function (or :class:`BaseSource`), embedding,
     domain and output layout. Each :meth:`fit` receives a sample set and its
     truncation options, and returns a lightweight
     :class:`~tensorkrowch.decompositions.TTDecomposition`. The result cores can
@@ -127,7 +127,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
 
     Parameters
     ----------
-    source : TensorSource, torch.Tensor or callable
+    source : BaseSource, torch.Tensor or callable
         Input values and their evaluation rules; continuous inputs also
         require an embedding.
     embedding : callable, torch.Tensor or sequence, optional
@@ -197,15 +197,14 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                  synchronize_timers: bool = True) -> None:
         source_like = as_tensor_source(source) if isinstance(source, torch.Tensor) \
             else source
-        if not isinstance(source_like, TensorSource):
+        if not isinstance(source_like, BaseSource):
             if not callable(source_like):
                 raise TypeError('`source` should be a tensor source or callable')
-            source_like = CallableSource(source_like, out_shape=None,
-                                         dtype=dtype, device=device or 'cpu')
         source = source_like
         if getattr(source, 'n_batches', 0):
             raise ValueError('Batched sources are not supported by RSS')
-        if source.is_discrete_tensor and embedding is None:
+        if isinstance(source, BaseSource) and source.is_discrete_tensor and \
+                embedding is None:
             embedding = tuple(torch.eye(dim, device=source.device)
                               for dim in source.in_dim)
             domain = tuple(torch.arange(dim, device=source.device)
@@ -301,10 +300,8 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             samples = ConfigurationBatch(sketch_samples, kind=kind)
         if samples.batch_size < 1:
             raise ValueError('`sketch_samples` should contain samples')
-        if isinstance(self._source_like, TensorSource) and \
-                samples.n_sites != (len(self._source_like.in_dim)
-                                   if self._source_like.in_dim is not None
-                                   else (self._source_like.n_sites or samples.n_sites)):
+        if isinstance(self._source_like, BaseSource) and \
+                samples.n_sites != self._source_like.n_sites:
             raise ValueError(
                 '`source` and `sketch_samples` should share input sites')
         return samples
@@ -362,9 +359,14 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
 
     def _source_probe(self,
                       samples: ConfigurationBatch,
-                      n_input_sites: int) -> Tuple[torch.Tensor, TensorSource]:
+                      n_input_sites: int) -> Tuple[torch.Tensor, BaseSource]:
         """Evaluates one row using the fixed source's input convention."""
         source = self._source_like
+        if not isinstance(source, BaseSource):
+            source = CallableSource(source, n_input_sites, out_shape=None,
+                                    dtype=self._dtype,
+                                    device=self._device or 'cpu')
+            self._source_like = source
         if source.in_dim is not None and len(source.in_dim) != n_input_sites:
             raise ValueError('`source` and `sketch_samples` should share input sites')
         if self._device is not None and source.device != self._device:
@@ -1030,7 +1032,7 @@ class TTRS:  # MARK: TTRS
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     sketch_operator : SketchOperator, optional
         Operator constructing the recursive sketches. Defaults to
@@ -1075,7 +1077,7 @@ class TTRS:  # MARK: TTRS
         self.synchronize_timers = synchronize_timers
 
     @property
-    def source(self) -> TensorSource:
+    def source(self) -> BaseSource:
         """Discrete source fixed for repeated independent fits."""
         return self._source
 

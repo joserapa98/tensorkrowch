@@ -25,7 +25,7 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sources.base import TensorSource
+    from tensorkrowch.decompositions.sources.base import BaseSource
 
 
 @dataclass(init=False, eq=False)
@@ -718,7 +718,7 @@ class QTRMDecomposition(TensorDecomposition, QTRM):  # MARK: QTRMDecomposition
 
 
 def _result_from_source(result: TensorDecomposition,
-                        source: Optional['TensorSource'] = None
+                        source: Optional['BaseSource'] = None
                         ) -> TensorDecomposition:
     """Restores paired axes and source coordinate/evaluation semantics."""
     if source is None:

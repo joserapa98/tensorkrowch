@@ -4,7 +4,7 @@ Sources shared by tensor decomposition algorithms.
     Input objects:
         * DenseTensorSource, SparseTensorSource, FormatSource
         * CallableSource, CallableTensorSource, CallableQuanticsSource
-        * ConfigurationBatch, TensorSource, FiberTensorSource
+        * BaseSource, ConfigurationBatch
         * gaussian_kernel, as_tensor_source
 
     Evaluation:
@@ -24,9 +24,8 @@ stored indices are zero. In ALS a separate boolean mask determines participating
 entries; ``True`` participates, including entries whose target value is zero.
 """
 
-from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      FiberTensorSource,
-                                                      TensorSource)
+from tensorkrowch.decompositions.sources.base import (BaseSource,
+                                                      ConfigurationBatch)
 from tensorkrowch.decompositions.sources.callable import (CallableSource,
                                                           CallableTensorSource)
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
@@ -38,8 +37,7 @@ from tensorkrowch.decompositions.sources.sparse import SparseTensorSource
 
 __all__ = [
     'ConfigurationBatch',
-    'TensorSource',
-    'FiberTensorSource',
+    'BaseSource',
     'CallableSource',
     'CallableTensorSource',
     'CallableQuanticsSource',

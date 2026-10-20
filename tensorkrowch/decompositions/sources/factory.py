@@ -12,27 +12,27 @@ import torch
 from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.models.mps import MPS
 
-from tensorkrowch.decompositions.sources.base import TensorSource
+from tensorkrowch.decompositions.sources.base import BaseSource
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.sources.format import FormatSource
 
 
-SourceLike = Union[TensorSource, TensorFormat1D, MPS, torch.Tensor, Callable]
+SourceLike = Union[BaseSource, TensorFormat1D, MPS, torch.Tensor, Callable]
 
 
-def as_tensor_source(source: SourceLike) -> TensorSource:
+def as_tensor_source(source: SourceLike) -> BaseSource:
     """
     Wraps a tensor or format, retaining an existing source unchanged.
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
         Fixed values and their dimensions. Construct callable sources explicitly
         to specify discrete dimensions or continuous evaluation semantics.
 
     Returns
     -------
-    TensorSource
+    BaseSource
         Source carrying its own shape, dtype, device and evaluation rules.
 
     Examples
@@ -46,9 +46,9 @@ def as_tensor_source(source: SourceLike) -> TensorSource:
         return DenseTensorSource(source)
     if isinstance(source, (TensorFormat1D, MPS)):
         return FormatSource(source)
-    if isinstance(source, TensorSource):
+    if isinstance(source, BaseSource):
         return source
-    raise TypeError('`source` should be a tensor, format, MPS or TensorSource')
+    raise TypeError('`source` should be a tensor, format, MPS or BaseSource')
 
 
 __all__ = [

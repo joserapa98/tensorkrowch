@@ -50,7 +50,7 @@ from tensorkrowch.decompositions.results import (TRDecomposition,
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.factory import as_tensor_source
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 TensorSource)
+                                                 BaseSource)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -197,7 +197,7 @@ class LoopOpener(Protocol):  # MARK: LoopOpener
 
         Parameters
         ----------
-        target : torch.Tensor or TensorSource
+        target : torch.Tensor or BaseSource
             Local scalar tensor with axes ``(left external, *in_dim, right
             external)``, or a source representing that tensor.
         rank : int or sequence[int]
@@ -254,11 +254,11 @@ def _mirror_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
 
 
 def _source_from_context(target: Any,
-                         context: Mapping[str, Any]) -> TensorSource:
+                         context: Mapping[str, Any]) -> BaseSource:
     """
-    Normalizes a local ``target`` through the shared TensorSource contract.
+    Normalizes a local ``target`` through the shared BaseSource interface.
     """
-    if isinstance(target, (torch.Tensor, TensorSource)):
+    if isinstance(target, (torch.Tensor, BaseSource)):
         return as_tensor_source(target)
     return CallableTensorSource(
         target,
@@ -269,7 +269,7 @@ def _source_from_context(target: Any,
         batch_size=context.get('batch_size'))
 
 
-def _mirror_source(source: TensorSource) -> TensorSource:
+def _mirror_source(source: BaseSource) -> BaseSource:
     """Creates a lazy ``source`` whose variables are in reverse site order."""
     def evaluate(indices: torch.Tensor) -> torch.Tensor:
         configurations = ConfigurationBatch(
@@ -284,7 +284,7 @@ def _mirror_source(source: TensorSource) -> TensorSource:
         device=source.device)
 
 
-def _cast_source(source: TensorSource, dtype: torch.dtype) -> TensorSource:
+def _cast_source(source: BaseSource, dtype: torch.dtype) -> BaseSource:
     """Lazily casts target values to an initializer's numerical ``dtype``."""
     if source.dtype == dtype:
         return source
@@ -368,7 +368,7 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
 
         Parameters
         ----------
-        target : torch.Tensor or TensorSource
+        target : torch.Tensor or BaseSource
             Local scalar tensor with axes ``(left external, *in_dim, right
             external)``, or a source representing that tensor.
         rank : int or sequence[int]
@@ -514,7 +514,7 @@ class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
 
         Parameters
         ----------
-        target : torch.Tensor or TensorSource
+        target : torch.Tensor or BaseSource
             Local scalar tensor with axes ``(left external, *in_dim, right
             external)``, or a source representing that tensor.
         rank : int or sequence[int]
@@ -665,7 +665,7 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
 
         Parameters
         ----------
-        target : torch.Tensor or TensorSource
+        target : torch.Tensor or BaseSource
             Local scalar tensor with axes ``(left external, *in_dim, right
             external)``, or a source representing that tensor.
         rank : int or sequence[int]
@@ -769,7 +769,7 @@ class CompositeLoopOpener:  # MARK: CompositeLoopOpener
 
         Parameters
         ----------
-        target : torch.Tensor or TensorSource
+        target : torch.Tensor or BaseSource
             Local scalar tensor with axes ``(left external, *in_dim, right
             external)``, or a source representing that tensor.
         rank : int or sequence[int]

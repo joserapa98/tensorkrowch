@@ -49,7 +49,7 @@ from tensorkrowch.decompositions.sketching.transforms import (GlobalValueTransfo
                                                               IdentityLocalValueTransform,
                                                               LocalValueTransform,
                                                               _apply_local_transform)
-from tensorkrowch.decompositions.sources import TensorSource
+from tensorkrowch.decompositions.sources import BaseSource
 
 
 _SKETCHING_PHASES = (
@@ -182,7 +182,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
     """
 
     def __init__(self,
-                 source: TensorSource,
+                 source: BaseSource,
                  domains: _DomainSpec,
                  embeddings: _EmbeddingSpec,
                  outputs: _OutputSpec,
@@ -193,8 +193,8 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
                  local_transform: Optional[LocalValueTransform] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu',
                  synchronize_timers: bool = True) -> None:
-        if not isinstance(source, TensorSource):
-            raise TypeError('`source` should implement TensorSource')
+        if not isinstance(source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
         if not isinstance(domains, _DomainSpec):
             raise TypeError('`domains` should be _DomainSpec type')
         if not isinstance(embeddings, _EmbeddingSpec):
@@ -252,7 +252,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
         self.input_fitters = tuple(input_fitters)
 
     @property
-    def source(self) -> TensorSource:
+    def source(self) -> BaseSource:
         """Source supplying the values of the fitted function."""
         return self._source
 

@@ -43,7 +43,7 @@ from tensorkrowch.decompositions.sources.factory import SourceLike
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
 from tensorkrowch.decompositions.svd._utils import (_SVDProgress,
-                                                   _prepare_svd_source)
+                                                    _prepare_svd_source)
 
 
 if TYPE_CHECKING:
@@ -115,7 +115,7 @@ class TTSVD:  # MARK: TTSVD
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D or torch.Tensor
+    source : BaseSource, TensorFormat1D or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``.
@@ -545,7 +545,7 @@ def tt_svd(source: 'SourceLike',
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D or torch.Tensor
+    source : BaseSource, TensorFormat1D or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this

@@ -39,7 +39,7 @@ from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
 from tensorkrowch.decompositions.svd.tt import TTSVD
 from tensorkrowch.decompositions.svd._utils import (_SVDProgress,
-                                                   _prepare_svd_source)
+                                                    _prepare_svd_source)
 
 
 _Rank = Optional[int]
@@ -97,7 +97,7 @@ class TRSVD:  # MARK: TRSVD
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D or torch.Tensor
+    source : BaseSource, TensorFormat1D or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     center : int, optional
         Interior cut between sites ``center - 1`` and ``center``. It should
@@ -643,7 +643,7 @@ def tr_svd(source: 'SourceLike',
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D or torch.Tensor
+    source : BaseSource, TensorFormat1D or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     center : int, optional
         Interior cut satisfying ``1 <= center < tensor.ndim``. The default is

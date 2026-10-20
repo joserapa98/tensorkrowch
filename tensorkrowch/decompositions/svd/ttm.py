@@ -55,7 +55,7 @@ class TTMSVD(TTSVD):  # MARK: TTMSVD
 
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
+    source : BaseSource or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
         interleaved input/output axes. Wrap matrix formats in ``FormatSource``.
     out_device : str or torch.device, optional
@@ -118,7 +118,7 @@ def ttm_svd(source: 'SourceLike',
 
     Parameters
     ----------
-    source : TensorSource or torch.Tensor
+    source : BaseSource or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
         interleaved input/output axes. Wrap matrix formats in ``FormatSource``.
     rank : int, optional

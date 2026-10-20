@@ -75,8 +75,6 @@ class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
             batches=3,
             cache_hits=0,
             source_calls=1)
-        source.reset_evaluation_stats()
-        assert source.evaluation_stats == tk.decompositions.EvaluationStats()
 
     def test_sparse_and_empirical_sources_keep_sparse_lookup_semantics(self):
         distribution = tk.decompositions.SparseTensorSource.from_data(

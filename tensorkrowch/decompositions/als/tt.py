@@ -62,7 +62,7 @@ from tensorkrowch.decompositions.results import (TTDecomposition,
                                                  _result_from_source)
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
                                                  as_tensor_source,
-                                                 SparseTensorSource, TensorSource)
+                                                 SparseTensorSource, BaseSource)
 from tensorkrowch.decompositions.sources.base import _tensor_view
 from tensorkrowch.decompositions.sources.dense import DenseTensorSource
 from tensorkrowch.decompositions.svd.tt import TTSVD
@@ -713,9 +713,9 @@ class TTALS:  # MARK: TTALS
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
-    mask : TensorSource or torch.Tensor, optional
+    mask : BaseSource or torch.Tensor, optional
         Boolean tensor of participating entries. ``True`` participates;
         ``False`` is missing. A sparse mask fixes its stored true entries.
     weights : torch.Tensor, optional
@@ -728,7 +728,7 @@ class TTALS:  # MARK: TTALS
     def __init__(self,
                  source: 'SourceLike',
                  *,
-                 mask: Optional['TensorSource'] = None,
+                 mask: Optional['BaseSource'] = None,
                  weights: Optional[torch.Tensor] = None,
                  out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
         self._source = as_tensor_source(source)
@@ -762,7 +762,7 @@ class TTALS:  # MARK: TTALS
         self._target = None
 
     @property
-    def source(self) -> 'TensorSource':
+    def source(self) -> 'BaseSource':
         """Original source, including its tensor or coordinate metadata."""
         return self._source
 
@@ -1250,7 +1250,7 @@ class TTALS:  # MARK: TTALS
 
 def tt_als(source: 'SourceLike',
            rank: Optional[int] = None,
-           mask: Optional['TensorSource'] = None,
+           mask: Optional['BaseSource'] = None,
            initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
            init: str = 'random',
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
@@ -1306,7 +1306,7 @@ def tt_als(source: 'SourceLike',
 
     Parameters
     ----------
-    source : TensorSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     rank : int, optional
         Shared maximum TT ``rank``. Required without ``initial_cores``.

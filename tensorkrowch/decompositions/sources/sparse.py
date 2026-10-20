@@ -19,10 +19,9 @@ from tensorkrowch.utils import _INTEGER_DTYPES
 from tensorkrowch.decompositions._utils import (_normalize_dims,
                                                 _ravel_indices,
                                                 _unravel_indices)
-from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
-                                                      _SourceEvaluationTracker,
+from tensorkrowch.decompositions.sources.base import (BaseSource,
+                                                      ConfigurationBatch,
                                                       _discrete_indices,
-                                                      _fiber_configurations,
                                                       _data_weights)
 
 
@@ -59,7 +58,7 @@ class _SparseLookup:  # MARK: _SparseLookup
         return result
 
 
-class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
+class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
     """
     Sparse tensor source with declared zeros outside its support.
 
@@ -81,7 +80,6 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
                  indices: torch.Tensor,
                  values: torch.Tensor,
                  in_dim: Sequence[int]) -> None:
-        self._initialize_evaluation_stats()
         if not isinstance(indices, torch.Tensor):
             raise TypeError('`indices` should be torch.Tensor type')
         if not isinstance(values, torch.Tensor):
@@ -100,6 +98,7 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
             raise TypeError('`values` should have a floating, complex or boolean dtype')
 
         self._in_dim = _normalize_dims(in_dim, 'in_dim')
+        super().__init__(len(self._in_dim))
         if indices.shape[1] != len(self._in_dim):
             raise ValueError('`indices` should contain one column per site')
         indices = _discrete_indices(
@@ -158,25 +157,6 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
             result = self._lookup(indices)
         self._record_evaluation(points=indices.shape[0])
         return result
-
-    def fiber(self,
-              configurations: ConfigurationBatch,
-              site: int,
-              values: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Evaluates a sparse discrete fiber without densifying the source."""
-        if not isinstance(site, int):
-            raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= len(self._in_dim)):
-            raise ValueError('`site` should identify an input site')
-        if values is None:
-            values = torch.arange(
-                self._in_dim[site], device=configurations.device)
-        expanded, n_values = _fiber_configurations(
-            configurations, site, values)
-        result = self.evaluate(expanded)
-        return result.reshape(
-            configurations.batch_size, n_values, *self._out_shape)
-
 
     @classmethod
     def from_data(cls,
@@ -246,7 +226,8 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
         SparseTensorSource
             Source retaining paired axes for matrix decomposition.
         """
-        inputs, outputs = _normalize_dims(in_dim, 'in_dim'), _normalize_dims(out_dim, 'out_dim')
+        inputs = _normalize_dims(in_dim, 'in_dim')
+        outputs = _normalize_dims(out_dim, 'out_dim')
         if len(inputs) != len(outputs):
             raise ValueError('`in_dim` and `out_dim` should have equal lengths')
         source = cls(indices, values, tuple(dim for pair in zip(inputs, outputs)
@@ -254,6 +235,7 @@ class SparseTensorSource(_SourceEvaluationTracker):  # MARK: SparseTensorSource
         source._entry_dim = source._in_dim
         source._matrix_dims = inputs, outputs
         source._in_dim, source._out_shape = inputs, outputs
+        source._n_sites = len(inputs)
         return source
 
 

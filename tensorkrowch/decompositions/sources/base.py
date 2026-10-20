@@ -529,12 +529,14 @@ def _data_weights(dataset: torch.Tensor,
     if not isinstance(dtype, torch.dtype):
         raise TypeError('`dtype` should be torch.dtype type')
     if weights is None:
-        weights = torch.ones(dataset.shape[0], dtype=dtype, device=dataset.device)
+        weights = torch.ones(dataset.shape[0],
+                             dtype=dtype, device=dataset.device)
     if not isinstance(weights, torch.Tensor):
         raise TypeError('`weights` should be torch.Tensor type')
     if weights.shape != (dataset.shape[0],) or weights.device != dataset.device:
         raise ValueError('`weights` should match dataset samples and device')
-    if weights.is_complex() or not torch.isfinite(weights).all() or torch.any(weights < 0):
+    if weights.is_complex() or not torch.isfinite(weights).all() or \
+            torch.any(weights < 0):
         raise ValueError('`weights` should be finite, real and non-negative')
     if not weights.is_floating_point():
         weights = weights.to(dtype)

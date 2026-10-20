@@ -239,7 +239,8 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         Parameters
         ----------
         dataset : torch.Tensor
-            Integer samples with shape ``(n_samples, n_sites)``. Repeats accumulate.
+            Integer samples with shape ``(n_samples, n_sites)``. Repeats
+            accumulate.
         in_dim : sequence[int], optional
             Complete dimensions; inferred from observed maxima when omitted.
         weights : torch.Tensor, optional
@@ -318,7 +319,8 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
 
     def contract_dense(self) -> torch.Tensor:
         """Materializes the tensor by placing its stored entries into zeros."""
-        shape = self._entry_dim if self.is_matrix else (*self._in_dim, *self.out_shape)
+        shape = self._entry_dim if self.is_matrix else (*self._in_dim,
+                                                        *self.out_shape)
         tensor = self._values.new_zeros(shape)
         tensor[tuple(self._indices.T)] = self._values
         return tensor

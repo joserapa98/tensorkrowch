@@ -53,6 +53,56 @@ def test_convolutional_mps_inherits_site_count_alias():
     with pytest.warns(DeprecationWarning, match='n_features'):
         assert model.n_features == 4
 
+def _zipup_models():
+    # Each subclass of MPS, with an input batch: (model, data)
+    kwargs = {'dtype': torch.float64}
+    image = torch.randn(4, 2, 3, 3, dtype=torch.float64)
+    return {
+        'umps': (tk.models.UMPS(n_sites=5, phys_dim=3, bond_dim=4, **kwargs),
+                 torch.randn(4, 5, 3, dtype=torch.float64)),
+        'mps_layer': (tk.models.MPSLayer(n_sites=6, in_dim=3, out_dim=2,
+                                         bond_dim=4, out_position=2,
+                                         init_method='randn', std=0.5,
+                                         **kwargs),
+                      torch.randn(4, 5, 3, dtype=torch.float64)),
+        'umps_layer': (tk.models.UMPSLayer(n_sites=6, in_dim=3, out_dim=2,
+                                           bond_dim=4, out_position=2,
+                                           **kwargs),
+                       torch.randn(4, 5, 3, dtype=torch.float64)),
+        'conv_mps': (tk.models.ConvMPS(in_channels=2, bond_dim=3,
+                                       kernel_size=2, **kwargs), image),
+        'conv_umps': (tk.models.ConvUMPS(in_channels=2, bond_dim=3,
+                                         kernel_size=2, **kwargs), image),
+        'conv_mps_layer': (tk.models.ConvMPSLayer(in_channels=2,
+                                                  out_channels=2, bond_dim=3,
+                                                  kernel_size=2, **kwargs),
+                           image),
+        'conv_umps_layer': (tk.models.ConvUMPSLayer(in_channels=2,
+                                                    out_channels=2,
+                                                    bond_dim=3,
+                                                    kernel_size=2, **kwargs),
+                            image),
+    }
+
+
+@pytest.mark.parametrize('name', ['umps', 'mps_layer', 'umps_layer',
+                                  'conv_mps', 'conv_umps', 'conv_mps_layer',
+                                  'conv_umps_layer'])
+@pytest.mark.parametrize('renormalize', [True, False])
+def test_zipup_input_models(name, renormalize):
+    # Uniform models, output nodes, and two batch edges (convolutional models)
+    model, data = _zipup_models()[name]
+    results = []
+    for zipup_input in [False, True]:
+        model.reset()
+        results.append(model(data, inline_mats=True, renormalize=renormalize,
+                             zipup_input=zipup_input))
+    expected, result = results
+    assert result.shape == expected.shape
+    assert torch.allclose(result, expected, rtol=1e-10,
+                          atol=1e-12 * expected.abs().max().item())
+
+
 AUTO_BOOL_CASES = [True, False]
 N_FEATURES_CASES = [1, 2, 3, 4, 10]
 DIFF_N_FEATURES_CASES = [1, 2, 3, 4, 6]
@@ -1429,6 +1479,305 @@ class TestMPS:  # MARK: TestMPS
         for node in mps.mats_env:
             assert node.grad is not None
     
+    # zipup_input: the same tensors as the default contraction (inline, so
+    # that with ``renormalize`` both divide the same resultant nodes), through
+    # ``trace`` and ``forward``
+
+    @staticmethod
+    def _zipup_results(mps, example, data, **kwargs):
+        results = []
+        for zipup_input in [False, True]:
+            mps.reset()
+            mps.trace(example, inline_mats=True, zipup_input=zipup_input,
+                      **kwargs)
+            results.append(mps(data, inline_mats=True,
+                               zipup_input=zipup_input, **kwargs))
+        return results
+
+    @staticmethod
+    def _assert_close(result, expected):
+        # Renormalizing amplifies rounding: in float32, differences reach
+        # ~1e-4 of the largest entry; in float64 both agree to ~1e-13
+        assert result.shape == expected.shape
+        scale = expected.abs().max().item() if expected.numel() else 1.
+        if expected.dtype in [torch.float64, torch.complex128]:
+            rtol, atol = 1e-10, 1e-12 * scale
+        else:
+            rtol, atol = 1e-3, 1e-3 * scale
+        assert torch.allclose(result, expected, rtol=rtol, atol=atol)
+
+    @pytest.mark.parametrize('runtime', RUNTIME_CASES)
+    @pytest.mark.parametrize('n_features', N_FEATURES_CASES)
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('auto_unbind', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('renormalize', AUTO_BOOL_CASES)
+    def test_zipup_input(self, runtime, n_features, boundary, auto_stack,
+                         auto_unbind, renormalize):
+        tensor_kwargs, model_kwargs, is_complex = self._runtime_kwargs(runtime)
+        example, data = self._tensor_inputs(n_features, 5, tensor_kwargs)
+
+        mps = tk.models.MPS(n_sites=n_features,
+                            phys_dim=5,
+                            bond_dim=2,
+                            boundary=boundary,
+                            **model_kwargs)
+        mps.auto_stack = auto_stack
+        mps.auto_unbind = auto_unbind
+
+        expected, result = self._zipup_results(mps, example, data,
+                                               renormalize=renormalize)
+        self._assert_close(result, expected)
+        assert len(mps.edges) == 0
+        assert len(mps.leaf_nodes) == self._leaf_nodes(boundary, n_features)
+        assert len(mps.data_nodes) == n_features
+
+        self._backward(result, is_complex)
+        for node in mps.mats_env:
+            assert node.grad is not None
+
+    @pytest.mark.parametrize('in_features', [[], [0], [5], [2, 3], [0, 1, 4],
+                                             [1, 3, 5], [0, 2, 3, 5]])
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('auto_stack', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('renormalize', AUTO_BOOL_CASES)
+    @pytest.mark.parametrize('marginalize_output', AUTO_BOOL_CASES)
+    def test_zipup_input_output_nodes(self, in_features, boundary, auto_stack,
+                                      renormalize, marginalize_output):
+        # Input regions at either end, between output nodes, or none
+        example, data = self._partial_inputs(len(in_features),
+                                             {'dtype': torch.float64})
+
+        mps = tk.models.MPS(n_sites=6,
+                            phys_dim=5,
+                            bond_dim=3,
+                            boundary=boundary,
+                            in_features=in_features,
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        mps.auto_stack = auto_stack
+
+        expected, result = self._zipup_results(
+            mps, example, data, renormalize=renormalize,
+            marginalize_output=marginalize_output)
+        self._assert_close(result, expected)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('mpo_boundary', BOUNDARY_CASES)
+    def test_zipup_input_marginalize_with_matrices_and_mpo(self, boundary,
+                                                           mpo_boundary):
+        in_features = [1, 2, 4]
+        example, data = self._partial_inputs(len(in_features),
+                                             {'dtype': torch.float64})
+
+        mps = tk.models.MPS(n_sites=6,
+                            phys_dim=5,
+                            bond_dim=3,
+                            boundary=boundary,
+                            in_features=in_features,
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        matrix = torch.randn(5, 5, dtype=torch.float64)
+        expected, result = self._zipup_results(
+            mps, example, data, marginalize_output=True,
+            embedding_matrices=matrix)
+        self._assert_close(result, expected)
+
+        mpo = tk.models.MPO(n_sites=3,
+                            in_dim=5,
+                            out_dim=5,
+                            bond_dim=2,
+                            boundary=mpo_boundary,
+                            dtype=torch.float64)
+        mpo = mpo.parameterize(set_param=False, override=True)
+        expected, result = self._zipup_results(
+            mps, example, data, marginalize_output=True, mpo=mpo)
+        self._assert_close(result, expected)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_zipup_input_diff_dims(self, boundary):
+        phys_dim = [2, 5, 3, 4, 6, 2]
+        bond_dim = [2, 4, 3, 5, 2] + ([3] if boundary == 'pbc' else [])
+        in_features = [0, 1, 3, 4]
+        mps = tk.models.MPS(n_sites=6,
+                            phys_dim=phys_dim,
+                            bond_dim=bond_dim,
+                            boundary=boundary,
+                            in_features=in_features,
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        example = [torch.randn(1, phys_dim[i], dtype=torch.float64)
+                   for i in in_features]
+        data = [torch.randn(100, phys_dim[i], dtype=torch.float64)
+                for i in in_features]
+
+        expected, result = self._zipup_results(mps, example, data)
+        self._assert_close(result, expected)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_zipup_input_gradients(self, boundary):
+        mps = tk.models.MPS(n_sites=7,
+                            phys_dim=3,
+                            bond_dim=4,
+                            boundary=boundary,
+                            in_features=[0, 1, 2, 4, 5, 6],
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        mps.auto_stack = False
+        data = torch.randn(10, 6, 3, dtype=torch.float64)
+
+        grads = []
+        for zipup_input in [False, True]:
+            mps.reset()
+            x = data.clone().requires_grad_(True)
+            result = mps(x, zipup_input=zipup_input)
+            # Parameters by name: reset may reorder them
+            params = [p for _, p in sorted(mps.named_parameters())]
+            grads.append(torch.autograd.grad(result.square().sum(),
+                                             params + [x]))
+        for grad, expected in zip(*grads):
+            assert torch.allclose(grad, expected, rtol=1e-10, atol=1e-12)
+
+    def test_zipup_input_keeps_vectors(self):
+        # From a boundary node, autograd keeps (batch, bond) vectors per site,
+        # not (batch, bond, bond) matrices
+        mps = tk.models.MPS(n_sites=21,
+                            phys_dim=2,
+                            bond_dim=16,
+                            boundary='obc',
+                            in_features=[i for i in range(21) if i != 10],
+                            init_method='randn',
+                            std=0.2)
+        data = torch.randn(32, 20, 2)
+
+        def saved_bytes(zipup_input):
+            mps.reset()
+            saved = []
+
+            def pack(tensor):
+                saved.append(tensor.numel() * tensor.element_size())
+                return tensor
+
+            with torch.autograd.graph.saved_tensors_hooks(pack, lambda t: t):
+                mps(data, inline_mats=True, zipup_input=zipup_input).sum()
+            return sum(saved)
+
+        assert saved_bytes(True) < saved_bytes(False) / 4
+
+    def test_zipup_input_with_inline_input_raises(self):
+        mps = tk.models.MPS(n_sites=4, phys_dim=5, bond_dim=2)
+        data = torch.randn(10, 4, 5)
+        with pytest.raises(ValueError):
+            mps(data, zipup_input=True, inline_input=True)
+
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('renormalize', AUTO_BOOL_CASES)
+    def test_zipup_input_whatever_inline_mats(self, boundary, renormalize):
+        # Input regions are zipped up (an inline contraction) for both values
+        # of ``inline_mats``: the same operations, the same tensor
+        mps = tk.models.MPS(n_sites=6,
+                            phys_dim=5,
+                            bond_dim=3,
+                            boundary=boundary,
+                            in_features=[0, 1, 3, 5],
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        data = torch.randn(10, 4, 5, dtype=torch.float64)
+        results = []
+        for inline_mats in [False, True]:
+            mps.reset()
+            results.append(mps(data, inline_mats=inline_mats,
+                               renormalize=renormalize, zipup_input=True))
+        assert torch.equal(*results)
+
+    @pytest.mark.parametrize('in_features', [[0], [5], [2, 3], [0, 1, 4],
+                                             [1, 3, 5], [0, 2, 3, 5],
+                                             [0, 1, 2, 3, 4, 5]])
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    @pytest.mark.parametrize('marginalize_output', AUTO_BOOL_CASES)
+    def test_zipup_input_resultant_node(self, in_features, boundary,
+                                        marginalize_output):
+        # The same resultant node as the default contraction: axes (names,
+        # order, open edges) and shape, not only the tensor
+        mps = tk.models.MPS(n_sites=6,
+                            phys_dim=5,
+                            bond_dim=3,
+                            boundary=boundary,
+                            in_features=in_features,
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        data = torch.randn(10, len(in_features), 5, dtype=torch.float64)
+        nodes = []
+        for zipup_input in [False, True]:
+            mps.reset()
+            mps.unset_data_nodes()
+            mps.set_data_nodes()
+            mps.add_data(data)
+            node = mps.contract(inline_mats=True,
+                                marginalize_output=marginalize_output,
+                                zipup_input=zipup_input)
+            # Kept before the next reset, which deletes the node
+            nodes.append((node.axes_names,
+                          [edge.is_dangling() for edge in node.edges],
+                          node.tensor.clone()))
+        expected, result = nodes
+        assert result[:2] == expected[:2]
+        self._assert_close(result[2], expected[2])
+
+    @staticmethod
+    def _dense_amplitudes(mps, in_features, data):
+        # psi(x, o), with one column per configuration o of the output sites,
+        # from the dense tensor of the MPS
+        tensors = mps.tensors
+        if mps.boundary == 'obc':
+            tensors = [tensors[0].unsqueeze(0)] + tensors[1:-1] + \
+                [tensors[-1].unsqueeze(-1)]
+        dense = tensors[0]
+        for tensor in tensors[1:]:
+            dense = torch.tensordot(dense, tensor, dims=([-1], [0]))
+        dense = torch.diagonal(dense, dim1=0, dim2=-1).sum(-1)
+
+        out_features = [i for i in range(mps.n_features)
+                        if i not in in_features]
+        dense = dense.permute(in_features + out_features)
+        dense = dense.reshape(5 ** len(in_features), -1)
+
+        product = data[:, 0]
+        for j in range(1, len(in_features)):
+            product = (product[:, :, None] * data[:, j, None, :])
+            product = product.reshape(data.shape[0], -1)
+        return product @ dense
+
+    @pytest.mark.parametrize('in_features', [[0], [5], [2, 3], [0, 1, 4],
+                                             [1, 3, 5], [0, 2, 3, 5]])
+    @pytest.mark.parametrize('boundary', BOUNDARY_CASES)
+    def test_zipup_input_marginalize_output(self, in_features, boundary):
+        # Against the dense tensor: the sum over the output sites of
+        # psi(x, o) psi(x', o), for every pair of batch elements
+        mps = tk.models.MPS(n_sites=6,
+                            phys_dim=5,
+                            bond_dim=3,
+                            boundary=boundary,
+                            in_features=in_features,
+                            init_method='randn',
+                            std=0.5,
+                            dtype=torch.float64)
+        data = torch.randn(10, len(in_features), 5, dtype=torch.float64)
+        mps.trace(data[:1], marginalize_output=True, zipup_input=True)
+        result = mps(data, marginalize_output=True, zipup_input=True)
+
+        amplitudes = self._dense_amplitudes(mps, in_features, data)
+        expected = amplitudes @ amplitudes.T
+        assert result.shape == (10, 10)
+        assert torch.allclose(result, expected, rtol=1e-10,
+                              atol=1e-12 * expected.abs().max().item())
+
     @pytest.mark.parametrize('runtime', RUNTIME_CASES)
     @pytest.mark.parametrize('n_features,boundary', NORM_CASES)
     def test_norm(self, runtime, n_features, boundary):

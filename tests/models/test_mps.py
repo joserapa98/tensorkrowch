@@ -2088,29 +2088,46 @@ class TestMPS:  # MARK: TestMPS
         expected = torch.tensor([0.5, 1.5, 1.]) / 3
         assert torch.allclose(captured[0][0].cpu(), expected)
 
-    def test_sample_unusable_rows_become_uniform_and_are_counted(self):
-        probs = torch.tensor([[0., 0., 0.],
-                              [1., float('nan'), 2.],
-                              [float('inf'), 1., 0.],
-                              [1., 0., 3.]])
-        clean, n_unusable = tk.models.MPS._probabilities_from_amplitudes(probs)
-        assert n_unusable == 3
-        assert torch.allclose(clean[:3], torch.full((3, 3), 1 / 3))
-        assert torch.allclose(clean[3], torch.tensor([0.25, 0., 0.75]))
+    def test_sample_weights_are_divided_by_their_row_maximum(self):
+        # Finite weights only: rows without usable weight are handled by ``sample``
+        probs = torch.tensor([[0., 0., 0.], [1., 0., 3.]])
+        clean = tk.models.MPS._probabilities_from_amplitudes(probs)
+        assert torch.allclose(clean, torch.tensor([[0., 0., 0.], [1 / 3, 0., 1.]]))
+
 
     def test_sample_huge_finite_weights_keep_their_ratios(self):
         # Each weight is finite, but a row sum would overflow float32.
         probs = torch.tensor([[3e38, 3e38, 0.], [1e-40, 3e-40, 0.]])
-        clean, n_unusable = tk.models.MPS._probabilities_from_amplitudes(probs)
-        assert n_unusable == 0
-        assert torch.allclose(clean,
-                              torch.tensor([[0.5, 0.5, 0.], [0.25, 0.75, 0.]]))
+        clean = tk.models.MPS._probabilities_from_amplitudes(probs)
+        assert torch.isfinite(clean).all()
+        assert torch.allclose(clean / clean.sum(dim=1, keepdim=True),
+                                  torch.tensor([[0.5, 0.5, 0.], [0.25, 0.75, 0.]]))
+
 
     def test_sample_complex_weights_use_the_real_part(self):
         probs = torch.tensor([[1 + 0j, 3 + 0j], [0j, 0j]])
-        clean, n_unusable = tk.models.MPS._probabilities_from_amplitudes(probs)
-        assert n_unusable == 1
-        assert torch.allclose(clean, torch.tensor([[0.25, 0.75], [0.5, 0.5]]))
+        clean = tk.models.MPS._probabilities_from_amplitudes(probs)
+        assert torch.allclose(clean, torch.tensor([[1 / 3, 1.], [0., 0.]]))
+
+
+    def test_sample_rows_of_some_samples_without_weight_are_drawn_uniformly(self):
+        # Per-sample domains embedded to zero for the first two samples: their
+        # draws have no usable weight and are drawn uniformly (counted in one
+        # warning); the other samples are drawn as usual.
+        torch.manual_seed(0)
+        mps = tk.models.MPS(n_sites=3, phys_dim=3, bond_dim=2, boundary='obc', init_method='randn', std=0.5)
+
+        def embedding(domain):
+            embedded = tk.embeddings.basis(domain.long(), dim=3).float()
+            embedded[:2] = 0
+            return embedded
+
+        domain = torch.arange(3).expand(4, 3)
+        with pytest.warns(UserWarning, match='6 of 12 draws') as record:
+            samples = mps.sample(n_samples=4, domain=domain, embedding=embedding)
+        assert len([w for w in record if 'usable' in str(w.message)]) == 1
+        assert samples.shape == (4, 3)
+
 
     def test_sample_negative_weights_still_raise(self):
         with pytest.raises(ValueError, match='negative'):

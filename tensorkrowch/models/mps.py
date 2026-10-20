@@ -979,35 +979,14 @@ class MPS(TensorNetwork):  # MARK: MPS
                 return []
 
     @staticmethod
-    def _absorb_data(result_node: AbstractNode,
-                     node: AbstractNode) -> AbstractNode:
-        """
-        Contracts ``result_node`` with the ``data`` node connected to the
-        ``"input"`` edge of ``node``, if there is one. This only happens when
-        contracting with ``zipup_input = True``.
-        """
-        if 'input' in node.axes_names:
-            data_node = node.neighbours('input')
-            if (data_node is not None) and data_node.is_data():
-                # Data first, as in ``_input_contraction``, so that batch
-                # edges come first
-                return data_node @ result_node
-        return result_node
-
-    @staticmethod
     def _inline_contraction(mats_env: List[AbstractNode],
                             renormalize: bool = False,
                             from_left: bool = True) -> Node:
-        """
-        Contracts sequence of MPS nodes (matrices) inline. Nodes still
-        connected to ``data`` nodes (``zipup_input = True``) are followed by
-        their ``data`` nodes.
-        """
+        """Contracts sequence of MPS nodes (matrices) inline."""
         if from_left:
-            result_node = MPS._absorb_data(mats_env[0], mats_env[0])
+            result_node = mats_env[0]
             for node in mats_env[1:]:
                 result_node @= node
-                result_node = MPS._absorb_data(result_node, node)
                 
                 if renormalize:
                     right_axes = []
@@ -1020,10 +999,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             return result_node
         
         else:
-            result_node = MPS._absorb_data(mats_env[-1], mats_env[-1])
+            result_node = mats_env[-1]
             for node in mats_env[-2::-1]:
                 result_node = node @ result_node
-                result_node = MPS._absorb_data(result_node, node)
                 
                 if renormalize:
                     left_axes = []
@@ -1049,6 +1027,67 @@ class MPS(TensorNetwork):  # MARK: MPS
         return self._inline_contraction(mats_env=mats_env,
                                         renormalize=renormalize,
                                         from_left=from_left)
+
+    def _contract_envs_zipup(self,
+                             mats_env: List[AbstractNode],
+                             data_env: List[AbstractNode],
+                             renormalize: bool = False) -> Node:
+        """
+        Contracts nodes environments inline, contracting each ``data`` node
+        right after its MPS input node (zip-up).
+        """
+        left_node = None
+        right_node = None
+        if self._boundary == 'obc':
+            if mats_env[0].neighbours('left') is self._left_node:
+                left_node = self._left_node
+            if mats_env[-1].neighbours('right') is self._right_node:
+                right_node = self._right_node
+        
+        if right_node is None:
+            # From left
+            if left_node is None:
+                result_node = data_env[0] @ mats_env[0]
+                mats_env = mats_env[1:]
+                data_env = data_env[1:]
+            else:
+                result_node = left_node
+            
+            for node, data_node in zip(mats_env, data_env):
+                result_node @= node
+                # Data first, as in ``_input_contraction``, so that batch
+                # edges come first
+                result_node = data_node @ result_node
+                
+                if renormalize:
+                    right_axes = []
+                    for ax_name in result_node.axes_names:
+                        if 'right' in ax_name:
+                            right_axes.append(ax_name)
+                    if right_axes:
+                        result_node = result_node.renormalize(axis=right_axes)
+            
+            return result_node
+        
+        else:
+            # From right
+            result_node = right_node
+            for node, data_node in zip(mats_env[::-1], data_env[::-1]):
+                result_node = node @ result_node
+                result_node = data_node @ result_node
+                
+                if renormalize:
+                    left_axes = []
+                    for ax_name in result_node.axes_names:
+                        if 'left' in ax_name:
+                            left_axes.append(ax_name)
+                    if left_axes:
+                        result_node = result_node.renormalize(axis=left_axes)
+            
+            if left_node is not None:
+                result_node = left_node @ result_node
+            
+            return result_node
 
     def _aux_pairwise(self,
                       mats_env: List[AbstractNode],
@@ -1261,7 +1300,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             logarithmic scale. The renormalization only occurs when multiplying
             sequences of matrices, once the `input` contractions have been
             already performed (with ``zipup_input = True``, after each ``data``
-            node is absorbed), including contracting against embedding matrices
+            node is contracted), including contracting against embedding matrices
             or MPOs when ``marginalize_output = True``.
         marginalize_output : bool
             Boolean indicating whether output nodes should be marginalized. If
@@ -1288,13 +1327,21 @@ class MPS(TensorNetwork):  # MARK: MPS
             one at a time into the resultant node of each region of input
             nodes, right after their input nodes (see above), instead of with
             all the input nodes before the regions are contracted (as both
-            values of ``inline_input`` do). If ``True``, ``inline_input`` and
-            ``inline_mats`` are ignored, since both are implied.
+            values of ``inline_input`` do). If ``True``, ``inline_input``
+            should be ``False`` (an error is raised otherwise), and the input
+            regions are always contracted inline, whatever ``inline_mats``.
 
         Returns
         -------
         Node
         """
+        if zipup_input and inline_input:
+            raise ValueError(
+                '`zipup_input` and `inline_input` cannot be both True: with '
+                '`zipup_input`, input nodes are contracted with their `data` '
+                'nodes one at a time, while each region of input nodes is '
+                'contracted')
+        
         if embedding_matrices is not None:
             if isinstance(embedding_matrices, Sequence):
                 if len(embedding_matrices) != len(self._out_features):
@@ -1333,7 +1380,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         if zipup_input:
             # Input nodes stay connected to their data nodes, which are
-            # absorbed in ``_inline_contraction``
+            # contracted region by region in ``_contract_envs_zipup``
             mats_in_env = self.in_env
         else:
             mats_in_env = self._input_contraction(
@@ -1343,16 +1390,21 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         in_results = []
         for region in in_regions:
-            if inline_mats or zipup_input:
-                result = self._contract_envs_inline(
-                    mats_env=mats_in_env[:len(region)],
-                    renormalize=renormalize)
-            else:
-                result = self._pairwise_contraction(
-                    mats_env=mats_in_env[:len(region)],
-                    renormalize=renormalize)
-            
+            mats_env = mats_in_env[:len(region)]
             mats_in_env = mats_in_env[len(region):]
+            
+            if zipup_input:
+                data_env = [node.neighbours('input') for node in mats_env]
+                result = self._contract_envs_zipup(mats_env=mats_env,
+                                                   data_env=data_env,
+                                                   renormalize=renormalize)
+            elif inline_mats:
+                result = self._contract_envs_inline(mats_env=mats_env,
+                                                    renormalize=renormalize)
+            else:
+                result = self._pairwise_contraction(mats_env=mats_env,
+                                                    renormalize=renormalize)
+            
             in_results.append(result)
         
         if not out_regions:

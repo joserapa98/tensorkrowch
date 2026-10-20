@@ -24,11 +24,17 @@ def as_tensor_source(source: SourceLike) -> BaseSource:
     """
     Wraps a tensor or format, retaining an existing source unchanged.
 
+    A ``torch.Tensor`` is wrapped in :class:`DenseTensorSource`, and a
+    ``TensorFormat1D`` or ``MPS`` in :class:`FormatSource`; these sources obtain
+    dimensions and evaluation rules from the supplied object. An existing
+    :class:`BaseSource` is returned unchanged. Raw callables are not accepted:
+    construct a callable source explicitly to define its sites and whether it
+    takes discrete indices or continuous coordinates.
+
     Parameters
     ----------
     source : BaseSource, TensorFormat1D, MPS or torch.Tensor
-        Fixed values and their dimensions. Construct callable sources explicitly
-        to specify discrete dimensions or continuous evaluation semantics.
+        Object providing the values to decompose.
 
     Returns
     -------

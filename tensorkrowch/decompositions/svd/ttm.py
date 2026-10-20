@@ -53,18 +53,24 @@ class TTMSVD(TTSVD):  # MARK: TTMSVD
     instead infers matrix grouping from a matrix format. The source selects the
     result family and retains any Quantics layouts and coordinate maps.
 
+    Tensors passed directly use grouped axes
+    ``(in_0, in_1, ..., out_0, out_1, ...)``. For interleaved input axes,
+    construct ``DenseTensorSource.matrix(tensor, ordering="interleaved")``
+    explicitly. The source supplies interleaved axes to the numerical algorithm
+    in both cases.
+
     Parameters
     ----------
     source : BaseSource or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        interleaved input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
     out_device : str or torch.device, optional
         Device for finalized cores. ``None`` retains the evaluation device.
 
     Examples
     --------
     >>> source = tk.decompositions.DenseTensorSource.matrix(
-    ...     torch.eye(4), in_dim=(2, 2), out_dim=(2, 2))
+    ...     torch.eye(4).reshape(2, 2, 2, 2))
     >>> result = tk.decompositions.TTMSVD(source).fit(rank=2)
     >>> result.in_dim
     (2, 2)
@@ -116,11 +122,17 @@ def ttm_svd(source: 'SourceLike',
     instead infers matrix grouping from a matrix format. The source selects the
     result family and retains any Quantics layouts and coordinate maps.
 
+    Tensors passed directly use grouped axes
+    ``(in_0, in_1, ..., out_0, out_1, ...)``. For interleaved input axes,
+    construct ``DenseTensorSource.matrix(tensor, ordering="interleaved")``
+    explicitly. The source supplies interleaved axes to the numerical algorithm
+    in both cases.
+
     Parameters
     ----------
     source : BaseSource or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        interleaved input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
     rank : int, optional
         Maximum ``rank`` allowed at every link. At each SVD cut, at most this
         many singular values are retained.
@@ -370,10 +382,13 @@ def mat_to_mpo(mat: torch.Tensor,
 
     Examples
     --------
-    The canonical replacement keeps the historical interleaved ordering:
+    To preserve the historical ordering with the canonical API, construct an
+    interleaved source explicitly:
 
     >>> tensor = torch.arange(16.).reshape(2, 2, 2, 2)
-    >>> cores = tk.decompositions.ttm_svd(tensor, rank=2).cores
+    >>> source = tk.decompositions.DenseTensorSource.matrix(
+    ...     tensor, ordering="interleaved")
+    >>> cores = tk.decompositions.ttm_svd(source, rank=2).cores
     >>> [tuple(core.shape) for core in cores]
     [(2, 2, 2), (2, 2, 2)]
     """
@@ -390,7 +405,7 @@ def mat_to_mpo(mat: torch.Tensor,
         raise TypeError('`return_info` should be bool type')
 
     result = ttm_svd(
-        source=DenseTensorSource.matrix(mat),
+        source=DenseTensorSource.matrix(mat, ordering='interleaved'),
         rank=rank,
         cutoff=cutoff,
         atol=atol,

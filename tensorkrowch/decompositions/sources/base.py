@@ -572,12 +572,12 @@ class _TensorView(BaseSource):  # MARK: _TensorView
                                                        source.out_dim))
         else:
             n_sites = source.n_sites + len(source.out_shape)
-            self._out_sites = tuple(site for site in range(n_sites)
-                                    if site not in self._in_sites)
+            self._out_axes = tuple(site for site in range(n_sites)
+                                   if site not in self._in_sites)
             dimensions = [None] * n_sites
             for site, dim in zip(self._in_sites, source.in_dim):
                 dimensions[site] = dim
-            for site, dim in zip(self._out_sites, source.out_shape):
+            for site, dim in zip(self._out_axes, source.out_shape):
                 dimensions[site] = dim
             self._in_dim = tuple(dimensions)
 
@@ -612,7 +612,7 @@ class _TensorView(BaseSource):  # MARK: _TensorView
             inputs, outputs = indices // sizes, indices % sizes
         else:
             inputs = indices[:, self._in_sites]
-            outputs = indices[:, self._out_sites]
+            outputs = indices[:, self._out_axes]
         values = self.source.evaluate(ConfigurationBatch(inputs))
         if not self.source.out_shape:
             return values

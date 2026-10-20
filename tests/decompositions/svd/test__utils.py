@@ -9,7 +9,7 @@ from tensorkrowch.decompositions.svd._utils import (_prepare_svd_source,
 
 def test_prepare_matrix_source():
     tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
-    source = tk.decompositions.DenseTensorSource.matrix(tensor)
+    source = tk.decompositions.DenseTensorSource.matrix(tensor, ordering='interleaved')
     prepared_source, prepared, n_batches = _prepare_svd_source(source)
     assert prepared_source is source
     assert n_batches == 0

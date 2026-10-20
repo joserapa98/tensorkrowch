@@ -750,9 +750,8 @@ def _result_from_source(result: TensorDecomposition,
         algorithm = kwargs['metadata'].get('algorithm')
         if algorithm in ('tt_svd', 'tr_svd'):
             kwargs['metadata']['algorithm'] = algorithm.replace('_svd', 'm_svd')
-        kwargs['metadata'].update(
-            ordering=getattr(source, '_ordering', 'interleaved'),
-            matrix_input=getattr(source, '_matrix_input', False))
+        kwargs['metadata']['ordering'] = getattr(
+            source, '_ordering', 'interleaved')
 
     else:
         cls = TRDecomposition if cyclic else TTDecomposition

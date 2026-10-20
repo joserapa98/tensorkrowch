@@ -1,11 +1,11 @@
 """
 This script contains:
 
-    Public classes:
-        * SparseTensorSource
-
     Internal classes:
         * _SparseLookup
+
+    Public classes:
+        * SparseTensorSource
 """
 
 from dataclasses import dataclass, field
@@ -36,7 +36,8 @@ class _SparseLookup:  # MARK: _SparseLookup
 
     def __post_init__(self) -> None:
         flat_ids = _ravel_indices(self.indices, self.in_dim)
-        self.flat_ids, inverse = torch.unique(flat_ids, sorted=True,
+        self.flat_ids, inverse = torch.unique(flat_ids,
+                                              sorted=True,
                                               return_inverse=True)
         values = self.values
         if values.dtype == torch.bool:
@@ -49,7 +50,8 @@ class _SparseLookup:  # MARK: _SparseLookup
         """Returns stored values or zero for absent configurations."""
         flat_ids = _ravel_indices(indices, self.in_dim)
         positions = torch.searchsorted(self.flat_ids, flat_ids)
-        result = self.values.new_zeros((flat_ids.numel(), *self.values.shape[1:]))
+        result = self.values.new_zeros((flat_ids.numel(),
+                                        *self.values.shape[1:]))
         if self.flat_ids.numel():
             safe = positions.clamp(max=self.flat_ids.numel() - 1)
             matched = (positions < self.flat_ids.numel()) & (
@@ -62,18 +64,36 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
     """
     Sparse tensor source with declared zeros outside its support.
 
-    Repeated support indices are coalesced by summing their values, matching
-    sparse COO semantics. In contrast with matrix/tensor completion,
-    configurations absent from the support are known to have value zero.
+    The usual constructor stores values at discrete input configurations.
+    Each row of ``indices`` contains one index per input site, bounded by
+    ``in_dim``. The corresponding row of ``values`` can be a scalar or a tensor;
+    its trailing dimensions define ``out_shape``. :meth:`evaluate` returns the
+    stored value for each configuration and zero outside the support.
+
+    Repeated indices are coalesced by summing their values, matching sparse
+    COO semantics; boolean values are combined by logical OR. Absent entries
+    are known zeros, rather than missing observations.
+
+    Use :meth:`matrix` for scalar entries with paired input/output indices,
+    or :meth:`from_data` to construct a vector source representing a normalized
+    empirical distribution. The usual constructor and :meth:`matrix` preserve
+    the supplied values without normalizing them.
 
     Parameters
     ----------
     indices : torch.Tensor
-        Integer tensor of shape ``(nnz, sites)``.
+        Integer tensor of shape ``(n_entries, n_sites)``.
     values : torch.Tensor
-        Non-zero values with shape ``(nnz, *out_shape)``.
+        Entry values with shape ``(n_entries, *out_shape)``.
     in_dim : sequence of int
         Complete discrete input dimension.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.SparseTensorSource(
+    ...     torch.tensor([[0], [2]]), torch.tensor([2., 5.]), in_dim=(3,))
+    >>> source.contract_dense()
+    tensor([2., 0., 5.])
     """
 
     def __init__(self,
@@ -94,8 +114,10 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
                 '`values` and `indices` should have the same leading size')
         if values.device != indices.device:
             raise ValueError('`values` and `indices` should share a device')
-        if not (values.is_floating_point() or values.is_complex() or values.dtype == torch.bool):
-            raise TypeError('`values` should have a floating, complex or boolean dtype')
+        if not (values.is_floating_point() or values.is_complex() or \
+                values.dtype == torch.bool):
+            raise TypeError(
+                '`values` should have a floating, complex or boolean dtype')
 
         self._in_dim = _normalize_dims(in_dim, 'in_dim')
         super().__init__(len(self._in_dim))
@@ -110,6 +132,141 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         self._indices, self._values = self._lookup.indices, self._lookup.values
         self._flat_ids = self._lookup.flat_ids
         self._out_shape = tuple(values.shape[1:])
+
+    @classmethod
+    def matrix(cls,
+               indices: torch.Tensor,
+               values: torch.Tensor,
+               in_dim: Sequence[int],
+               out_dim: Sequence[int],
+               *,
+               ordering: str = 'grouped') -> 'SparseTensorSource':
+        """
+        Constructs a matrix source from paired input/output entry indices.
+
+        Unlike the usual constructor, each row of ``indices`` identifies both
+        sides of a scalar matrix entry. By default, columns are grouped as
+        ``(in_0, in_1, ..., out_0, out_1, ...)``. With
+        ``ordering="interleaved"``, columns alternate as
+        ``(in_0, out_0, in_1, out_1, ...)``. For ``n_sites`` pairs,
+        ``in_dim`` and ``out_dim`` must each contain ``n_sites`` dimensions;
+        they cannot be inferred from the observed entries alone.
+
+        :meth:`evaluate` receives only the input indices, in site order, and
+        returns all output axes with ``out_shape == out_dim``. Unstored entries
+        remain zero. :meth:`contract_dense` returns interleaved input/output
+        axes regardless of input ordering, as in :meth:`DenseTensorSource.matrix`.
+
+        Parameters
+        ----------
+        indices : torch.Tensor
+            Integer indices with shape ``(n_entries, 2 * n_sites)`` in
+            ``ordering``.
+        values : torch.Tensor
+            Scalar entry values with shape ``(n_entries,)``.
+        in_dim, out_dim : sequence[int]
+            Dimensions of each paired matrix site.
+        ordering : {``"grouped"``, ``"interleaved"``}
+            Order of index columns; defaults to ``"grouped"``.
+
+        Returns
+        -------
+        SparseTensorSource
+            Source retaining paired axes for matrix decomposition.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.SparseTensorSource.matrix(
+        ...     torch.tensor([[0, 1], [1, 0]]), torch.tensor([2., 3.]),
+        ...     in_dim=(2,), out_dim=(2,))
+        >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+        ...     torch.tensor([[0]])))
+        tensor([[0., 2.]])
+        >>> source.contract_dense()
+        tensor([[0., 2.],
+                [3., 0.]])
+        """
+        inputs = _normalize_dims(in_dim, 'in_dim')
+        outputs = _normalize_dims(out_dim, 'out_dim')
+        if len(inputs) != len(outputs):
+            raise ValueError(
+                '`in_dim` and `out_dim` should have equal lengths')
+        if not isinstance(ordering, str):
+            raise TypeError('`ordering` should be str type')
+        if ordering not in ('grouped', 'interleaved'):
+            raise ValueError(
+                '`ordering` should be either "grouped" or "interleaved"')
+        if not isinstance(indices, torch.Tensor):
+            raise TypeError('`indices` should be torch.Tensor type')
+        if indices.ndim != 2:
+            raise TypeError(
+                '`indices` should be a two-dimensional integer tensor')
+        n_sites = len(inputs)
+        if indices.shape[1] != 2 * n_sites:
+            raise ValueError('`indices` should contain two columns per site')
+
+        if ordering == 'grouped':
+            axes = tuple(axis for site in range(n_sites)
+                         for axis in (site, n_sites + site))
+            indices = indices[:, axes]
+
+        source = cls(indices, values,
+                     tuple(dim for pair in zip(inputs, outputs)
+                           for dim in pair))
+        source._entry_dim = source._in_dim
+        source._matrix_dims = inputs, outputs
+        source._in_dim, source._out_shape = inputs, outputs
+        source._n_sites = len(inputs)
+        source._ordering = ordering
+        return source
+
+    @classmethod
+    def from_data(cls,
+                  dataset: torch.Tensor,
+                  in_dim: Optional[Sequence[int]] = None,
+                  weights: Optional[torch.Tensor] = None,
+                  dtype: Optional[torch.dtype] = None) -> 'SparseTensorSource':
+        """
+        Constructs a discrete empirical distribution from sample indices.
+
+        Each row of ``dataset`` is one observation, rather than an entry with
+        an explicitly supplied value as in the usual constructor. Samples
+        receive equal weights by default; explicit ``weights`` are normalized
+        to sum to one. Repeated configurations accumulate their weights, and
+        unobserved configurations have zero mass. The result is a scalar
+        vector source with ``out_shape=()``.
+
+        Parameters
+        ----------
+        dataset : torch.Tensor
+            Integer samples with shape ``(n_samples, n_sites)``. Repeats accumulate.
+        in_dim : sequence[int], optional
+            Complete dimensions; inferred from observed maxima when omitted.
+        weights : torch.Tensor, optional
+            Non-negative sample weights, normalized to total mass one.
+        dtype : torch.dtype, optional
+            Dtype for uniform or integral weights.
+
+        Returns
+        -------
+        SparseTensorSource
+            Vector source with known zeros outside the observed support.
+
+        Examples
+        --------
+        >>> source = tk.decompositions.SparseTensorSource.from_data(
+        ...     torch.tensor([[0], [2], [0]]), in_dim=(3,))
+        >>> source.contract_dense()
+        tensor([0.6667, 0.0000, 0.3333])
+        """
+        weights = _data_weights(dataset, weights, dtype)
+        if dataset.dtype not in _INTEGER_DTYPES:
+            raise TypeError('`dataset` should contain integer indices')
+        if torch.any(dataset < 0):
+            raise ValueError('`dataset` indices should be non-negative')
+        if in_dim is None:
+            in_dim = tuple(int(value) + 1 for value in dataset.amax(0))
+        return cls(dataset, weights, in_dim)
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -146,8 +303,9 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         indices = _discrete_indices(
             configurations, self._in_dim, self.device)
         if self.is_matrix:
-            outputs = _unravel_indices(torch.arange(prod(self.out_dim),
-                                                    device=self.device), self.out_dim)
+            outputs = _unravel_indices(
+                torch.arange(prod(self.out_dim), device=self.device),
+                self.out_dim)
             inputs = indices[:, None].expand(-1, outputs.shape[0], -1)
             outputs = outputs[None].expand(indices.shape[0], -1, -1)
             paired = torch.stack((inputs, outputs), -1).flatten(-2)
@@ -158,85 +316,12 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         self._record_evaluation(points=indices.shape[0])
         return result
 
-    @classmethod
-    def from_data(cls,
-                  dataset: torch.Tensor,
-                  in_dim: Optional[Sequence[int]] = None,
-                  weights: Optional[torch.Tensor] = None,
-                  dtype: Optional[torch.dtype] = None) -> 'SparseTensorSource':
-        """
-        Constructs a discrete empirical distribution from sample indices.
-
-        Parameters
-        ----------
-        dataset : torch.Tensor
-            Integer samples with shape ``(samples, sites)``. Repeats accumulate.
-        in_dim : sequence[int], optional
-            Complete dimensions; inferred from observed maxima when omitted.
-        weights : torch.Tensor, optional
-            Non-negative sample weights, normalized to total mass one.
-        dtype : torch.dtype, optional
-            Dtype for uniform or integral weights.
-
-        Returns
-        -------
-        SparseTensorSource
-            Vector source with known zeros outside the observed support.
-
-        Examples
-        --------
-        >>> source = tk.decompositions.SparseTensorSource.from_data(
-        ...     torch.tensor([[0], [2], [0]]), in_dim=(3,))
-        >>> source.contract_dense()
-        tensor([0.6667, 0.0000, 0.3333])
-        """
-        weights = _data_weights(dataset, weights, dtype)
-        if dataset.dtype not in _INTEGER_DTYPES:
-            raise TypeError('`dataset` should contain integer indices')
-        if torch.any(dataset < 0):
-            raise ValueError('`dataset` indices should be non-negative')
-        if in_dim is None:
-            in_dim = tuple(int(value) + 1 for value in dataset.amax(0))
-        return cls(dataset, weights, in_dim)
-
     def contract_dense(self) -> torch.Tensor:
         """Materializes the tensor by placing its stored entries into zeros."""
         shape = self._entry_dim if self.is_matrix else (*self._in_dim, *self.out_shape)
         tensor = self._values.new_zeros(shape)
         tensor[tuple(self._indices.T)] = self._values
         return tensor
-
-    @classmethod
-    def matrix(cls, indices: torch.Tensor, values: torch.Tensor,
-               in_dim: Sequence[int], out_dim: Sequence[int]) -> 'SparseTensorSource':
-        """
-        Constructs a matrix source from interleaved entry indices.
-
-        Parameters
-        ----------
-        indices : torch.Tensor
-            Integer pairs with shape ``(entries, 2 * sites)``.
-        values : torch.Tensor
-            Scalar entry values.
-        in_dim, out_dim : sequence[int]
-            Dimensions of each paired matrix site.
-
-        Returns
-        -------
-        SparseTensorSource
-            Source retaining paired axes for matrix decomposition.
-        """
-        inputs = _normalize_dims(in_dim, 'in_dim')
-        outputs = _normalize_dims(out_dim, 'out_dim')
-        if len(inputs) != len(outputs):
-            raise ValueError('`in_dim` and `out_dim` should have equal lengths')
-        source = cls(indices, values, tuple(dim for pair in zip(inputs, outputs)
-                                            for dim in pair))
-        source._entry_dim = source._in_dim
-        source._matrix_dims = inputs, outputs
-        source._in_dim, source._out_shape = inputs, outputs
-        source._n_sites = len(inputs)
-        return source
 
 
 __all__ = ['SparseTensorSource']

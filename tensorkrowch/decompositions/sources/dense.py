@@ -3,154 +3,73 @@ This script contains:
 
     Public classes:
         * DenseTensorSource
-
-    Internal classes/functions:
-        * _MatrixInput
-        * _prepare_matrix_input
 """
 
-from dataclasses import dataclass
-from math import prod
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple
 
 import torch
 
-from tensorkrowch.decompositions._utils import _normalize_dims
 from tensorkrowch.decompositions.sources.base import (BaseSource,
                                                       ConfigurationBatch,
                                                       _discrete_indices)
-
-
-_Dimension = Optional[Union[int, Sequence[int]]]
-
-
-@dataclass(frozen=True)
-class _MatrixInput:  # MARK: _MatrixInput
-    """Contains a normalized dense matrix input."""
-
-    in_dim: Tuple[int, ...]  # Input dimension of every matrix site
-    out_dim: Tuple[int, ...]  # Output dimension of every matrix site
-    interleaved: torch.Tensor  # Tensor ordered as in_1, out_1, ..., in_n, out_n
-    matrix_input: bool  # Whether the original tensor had two matrix axes
-
-
-def _prepare_matrix_input(tensor: torch.Tensor,
-                          in_dim: _Dimension,
-                          out_dim: _Dimension,
-                          ordering: str,
-                          family: str) -> _MatrixInput:
-    """Validates and normalizes a dense matrix or matrix-like ``tensor``."""
-    if not isinstance(tensor, torch.Tensor):
-        raise TypeError('`tensor` should be torch.Tensor type')
-    if not isinstance(ordering, str):
-        raise TypeError('`ordering` should be str type')
-    if ordering not in ('interleaved', 'grouped'):
-        raise ValueError(
-            '`ordering` should be either "interleaved" or "grouped"')
-    if (in_dim is None) != (out_dim is None):
-        raise ValueError(
-            '`in_dim` and `out_dim` should be provided together')
-
-    matrix_input = False
-    if in_dim is None:
-        if (tensor.ndim < 2) or (tensor.ndim % 2):
-            raise ValueError(
-                f'A tensorized {family} input should have a positive even '
-                'number of dimensions')
-        n_sites = tensor.ndim // 2
-        if ordering == 'interleaved':
-            normalized_in_dim = tuple(tensor.shape[::2])
-            normalized_out_dim = tuple(tensor.shape[1::2])
-        else:
-            normalized_in_dim = tuple(tensor.shape[:n_sites])
-            normalized_out_dim = tuple(tensor.shape[n_sites:])
-        if any(value < 1
-               for value in normalized_in_dim + normalized_out_dim):
-            raise ValueError(
-                f'{family} input and output dimensions should be positive')
-        tensorized = tensor
-        tensorized_ordering = ordering
-    else:
-        normalized_in_dim = _normalize_dims(
-            (in_dim,) if isinstance(in_dim, int) else in_dim, 'in_dim')
-        normalized_out_dim = _normalize_dims(
-            (out_dim,) if isinstance(out_dim, int) else out_dim, 'out_dim')
-        if len(normalized_in_dim) != len(normalized_out_dim):
-            raise ValueError(
-                '`in_dim` and `out_dim` should have the same length')
-        n_sites = len(normalized_in_dim)
-
-        if tensor.ndim == 2:
-            expected_shape = (
-                prod(normalized_in_dim),
-                prod(normalized_out_dim),
-            )
-            if tuple(tensor.shape) != expected_shape:
-                raise ValueError(
-                    'The matrix shape should equal '
-                    '(prod(`in_dim`), prod(`out_dim`))')
-            tensorized = tensor.reshape(
-                *normalized_in_dim, *normalized_out_dim)
-            tensorized_ordering = 'grouped'
-            matrix_input = True
-        else:
-            if tensor.ndim != (2 * n_sites):
-                raise ValueError(
-                    f'A tensorized {family} input should have two '
-                    'dimensions per site')
-            expected_shape = (
-                tuple(value
-                      for pair in zip(normalized_in_dim,
-                                      normalized_out_dim)
-                      for value in pair)
-                if ordering == 'interleaved'
-                else normalized_in_dim + normalized_out_dim
-            )
-            if tuple(tensor.shape) != expected_shape:
-                raise ValueError(
-                    'The tensor shape is incompatible with `in_dim`, '
-                    '`out_dim` and `ordering`')
-            tensorized = tensor
-            tensorized_ordering = ordering
-
-    if (tensorized_ordering == 'interleaved') or (n_sites == 1):
-        interleaved = tensorized
-    else:
-        axes = tuple(
-            axis
-            for site in range(n_sites)
-            for axis in (site, n_sites + site))
-        interleaved = tensorized.permute(axes)
-
-    return _MatrixInput(in_dim=normalized_in_dim,
-                        out_dim=normalized_out_dim,
-                        interleaved=interleaved,
-                        matrix_input=matrix_input)
 
 
 class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
     """
     Tensor source backed by an explicitly stored dense tensor.
 
+    The usual constructor represents a tensor with one axis per vector site.
+    By default, :meth:`evaluate` receives one integer index per axis and returns
+    a scalar for each configuration. Pass ``in_sites`` to evaluate only some
+    axes: configuration columns follow that list, and the remaining axes form
+    ``out_shape`` in their original order. Leading structural batch axes are
+    excluded from the site numbering.
+
+    Use :meth:`matrix` instead to represent a matrix with one input/output
+    axis pair per site. The tensor must already have its input/output axes
+    separated; a two-axis tensor represents a single site. This grouping sets
+    ``is_matrix=True`` and provides ``in_dim`` and ``out_dim`` for matrix
+    decompositions. A matrix source evaluates the input indices and returns
+    all output axes, with ``out_shape == out_dim``.
+
     Parameters
     ----------
     tensor : torch.Tensor
         Dense tensor containing input and optional output axes.
     in_sites : sequence of int, optional
-        Tensor axes used as input sites, in configuration order. If omitted,
-        every axis is an input site and the source is scalar. Remaining axes
-        form the output, in their original order.
+        Distinct non-batch axes, in configuration order. Defaults to all
+        non-batch axes in increasing order.
+    n_batches : int
+        Number of leading structural batch axes. Defaults to ``0``.
+
+    Examples
+    --------
+    >>> tensor = torch.arange(6.).reshape(2, 3)
+    >>> source = tk.decompositions.DenseTensorSource(tensor)
+    >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+    ...     torch.tensor([[1, 2]])))
+    tensor([5.])
+
+    Keeping the second axis as output returns a vector per configuration:
+
+    >>> source = tk.decompositions.DenseTensorSource(tensor, in_sites=(0,))
+    >>> source.out_shape
+    (3,)
+    >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+    ...     torch.tensor([[1]])))
+    tensor([[3., 4., 5.]])
     """
 
     def __init__(self,
                  tensor: torch.Tensor,
                  in_sites: Optional[Sequence[int]] = None,
-                 *, n_batches: int = 0) -> None:
+                 *,
+                 n_batches: int = 0) -> None:
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
-        if n_batches < 0 or n_batches >= tensor.ndim:
+        if (n_batches < 0) or (n_batches >= tensor.ndim):
             raise ValueError('`n_batches` should leave input axes')
         n_axes = tensor.ndim - n_batches
         if tensor.ndim < 1:
@@ -164,7 +83,7 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
         if not in_sites:
             raise ValueError('`in_sites` should contain at least one axis')
         if any(isinstance(axis, bool) or not isinstance(axis, int) or
-               axis < 0 or axis >= n_axes for axis in in_sites):
+               (axis < 0) or (axis >= n_axes) for axis in in_sites):
             raise ValueError('`in_sites` should contain valid tensor axes')
         if len(set(in_sites)) != len(in_sites):
             raise ValueError('`in_sites` should not contain duplicate axes')
@@ -172,26 +91,104 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
             raise ValueError('Input dimensions should be positive')
 
         super().__init__(len(in_sites), n_batches=n_batches)
-        out_sites = tuple(axis for axis in range(n_axes)
-                             if axis not in in_sites)
+
         self.tensor = tensor
         self._in_sites = in_sites
-        self._out_sites = out_sites
+        self._out_axes = tuple(axis for axis in range(n_axes)
+                               if axis not in in_sites)
         self._ordered_tensor = tensor.permute(
             *(n_batches + axis for axis in in_sites),
-            *range(n_batches), *(n_batches + axis for axis in out_sites))
+            *range(n_batches), *(n_batches + axis for axis in self._out_axes))
         self._in_dim = tuple(tensor.shape[n_batches + axis] for axis in in_sites)
-        self._out_shape = tuple(tensor.shape[n_batches + axis] for axis in out_sites)
+        self._out_shape = tuple(tensor.shape[n_batches + axis]
+                                for axis in self._out_axes)
+
+    @classmethod
+    def matrix(cls,
+               tensor: torch.Tensor,
+               *,
+               ordering: str = 'grouped') -> 'DenseTensorSource':
+        """
+        Constructs a paired matrix source from dense matrix or tensor axes.
+
+        Each site has an input dimension ``in_dim[i]`` and an output dimension
+        ``out_dim[i]``. Input indices are evaluated together; the returned
+        tensor contains every output axis in site order.
+
+        The tensor must have an even number of axes, with one input/output
+        pair per site. ``ordering="interleaved"`` means axes
+        ``(in_0, out_0, in_1, out_1, ...)``; ``ordering="grouped"`` means axes
+        ``(in_0, in_1, ..., out_0, out_1, ...)``. Local dimensions are inferred
+        directly from these axes. A two-axis tensor represents one site;
+        separate its axes explicitly with ``reshape`` to represent more sites.
+        Structural batch axes are not supported by this constructor.
+
+        The source exposes paired dimensions and :meth:`contract_dense`
+        returns the tensor with interleaved axes, regardless of input ordering.
+
+        Parameters
+        ----------
+        tensor : torch.Tensor
+            Tensor with explicit input/output axes in the specified ``ordering``.
+        ordering : {``"grouped"``, ``"interleaved"``}
+            Ordering of tensorized axes; defaults to ``"grouped"``.
+
+        Returns
+        -------
+        DenseTensorSource
+            Matrix source with ``out_shape == out_dim``.
+
+        Examples
+        --------
+        Explicitly separate a matrix into two sites before constructing the source:
+
+        >>> source = tk.decompositions.DenseTensorSource.matrix(
+        ...     torch.eye(4).reshape(2, 2, 2, 2))
+        >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+        ...     torch.tensor([[0, 1]])))
+        tensor([[[0., 1.],
+                 [0., 0.]]])
+
+        Infer dimensions from grouped axes, then retrieve interleaved axes:
+
+        >>> source = tk.decompositions.DenseTensorSource.matrix(
+        ...     torch.arange(24.).reshape(2, 3, 2, 2))
+        >>> source.in_dim, source.out_dim
+        ((2, 3), (2, 2))
+        >>> source.contract_dense().shape
+        torch.Size([2, 2, 3, 2])
+        """
+        if not isinstance(tensor, torch.Tensor):
+            raise TypeError('`tensor` should be torch.Tensor type')
+        if not isinstance(ordering, str):
+            raise TypeError('`ordering` should be str type')
+        if ordering not in ('interleaved', 'grouped'):
+            raise ValueError(
+                '`ordering` should be either "interleaved" or "grouped"')
+        if (tensor.ndim < 2) or (tensor.ndim % 2):
+            raise ValueError(
+                'A matrix source should have a positive even number of dimensions')
+        if any(size < 1 for size in tensor.shape):
+            raise ValueError('Input and output dimensions should be positive')
+
+        n_sites = tensor.ndim // 2
+        interleaved = tensor
+        if ordering == 'grouped':
+            axes = tuple(axis for site in range(n_sites)
+                         for axis in (site, n_sites + site))
+            interleaved = tensor.permute(axes)
+
+        source = cls(interleaved, tuple(range(0, tensor.ndim, 2)))
+        source._matrix_dims = source.in_dim, source.out_shape
+        source._matrix_tensor = interleaved
+        source._ordering = ordering
+        source.tensor = tensor
+        return source
 
     @property
     def in_sites(self) -> Tuple[int, ...]:
         """Tensor axes used as input sites, in configuration order."""
         return self._in_sites
-
-    @property
-    def out_sites(self) -> Tuple[int, ...]:
-        """Remaining tensor axes, in their original order."""
-        return self._out_sites
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
@@ -225,37 +222,6 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
     def contract_dense(self) -> torch.Tensor:
         """Returns the stored tensor without copying its tensor storage."""
         return self._matrix_tensor if self.is_matrix else self.tensor
-
-    @classmethod
-    def matrix(cls, tensor: torch.Tensor,
-               in_dim: _Dimension = None, out_dim: _Dimension = None,
-               *, ordering: str = 'interleaved') -> 'DenseTensorSource':
-        """
-        Constructs a paired matrix source from dense matrix or tensor axes.
-
-        Parameters
-        ----------
-        tensor : torch.Tensor
-            Ordinary matrix or tensor with paired input/output site axes.
-        in_dim, out_dim : sequence[int], optional
-            Local matrix dimensions; required for an ordinary two-axis matrix.
-        ordering : {``"interleaved"``, ``"grouped"``}
-            Ordering of tensorized axes; defaults to ``"interleaved"``.
-
-        Returns
-        -------
-        DenseTensorSource
-            Source materializing interleaved pairs for matrix decomposition.
-        """
-        prepared = _prepare_matrix_input(tensor, in_dim, out_dim, ordering, 'matrix')
-        source = cls(prepared.interleaved,
-                     tuple(range(0, prepared.interleaved.ndim, 2)))
-        source._matrix_dims = prepared.in_dim, prepared.out_dim
-        source._matrix_tensor = prepared.interleaved
-        source._matrix_input = prepared.matrix_input
-        source._ordering = ordering
-        source.tensor = tensor
-        return source
 
 
 __all__ = [

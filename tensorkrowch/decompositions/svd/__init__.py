@@ -49,7 +49,10 @@ Tensors and non-Quantics vector formats are accepted directly; wrap an
 :class:`~tensorkrowch.models.MPS` in ``FormatSource``. Matrix interfaces
 require a matrix source: use the dense, sparse or callable source's
 ``.matrix(...)`` constructor, or ``FormatSource`` with a matrix format.
-They also accept tensors with interleaved input/output axes directly.
+They also accept tensors with grouped axes
+``(in_0, in_1, ..., out_0, out_1, ...)`` directly. Interleaved input tensors
+require ``DenseTensorSource.matrix(tensor, ordering="interleaved")``; the
+legacy :func:`mat_to_mpo` retains interleaved inputs by default.
 Continuous callables require Quantics discretization before SVD.
 
 Preparation materializes the source once; the public ``source`` property

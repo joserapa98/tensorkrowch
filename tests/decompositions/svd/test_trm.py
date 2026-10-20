@@ -97,11 +97,11 @@ class TestTRMSVD:  # MARK: TestTRMSVD
             result = tk.decompositions.TRMSVD(
                 tensor, out_device=None).fit(renormalize=renormalize)
 
-        assert result.in_dim == (2, 2, 2)
-        assert result.out_dim == (3, 2, 3)
+        assert result.in_dim == (2, 3, 2)
+        assert result.out_dim == (2, 2, 3)
         assert result.dtype == dtype
         assert torch.allclose(
-            result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
+            result.contract_dense(), _interleave(tensor, 3), rtol=1e-10, atol=1e-10)
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     def test_recovers_structured_trm_with_original_rank(self, svd_method):
@@ -109,7 +109,8 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         with tk.svd_method(svd_method):
             result = tk.decompositions.TRMSVD(
-                tensor, out_device=None).fit(rank=2, cutoff=0)
+                tk.decompositions.DenseTensorSource.matrix(
+                    tensor, ordering='interleaved'), out_device=None).fit(rank=2, cutoff=0)
 
         assert result.rank == [2, 2, 2, 2]
         assert result.in_dim == (2, 2, 2, 2)
@@ -127,7 +128,8 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         with tk.svd_method(svd_method):
             approximation = tk.decompositions.TRMSVD(
-                noisy_tensor, out_device=None).fit(
+                tk.decompositions.DenseTensorSource.matrix(
+                    noisy_tensor, ordering='interleaved'), out_device=None).fit(
                     rank=2, cutoff=1e-3).contract_dense()
 
         noise_norm = torch.linalg.vector_norm(noise)
@@ -154,7 +156,8 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         with tk.svd_method(svd_method):
             result = tk.decompositions.TRMSVD(
-                tensor, center=2, out_device=None).fit(**kwargs)
+                tk.decompositions.DenseTensorSource.matrix(
+                    tensor, ordering='interleaved'), center=2, out_device=None).fit(**kwargs)
 
         if criterion == 'atol':
             initial_error = sqrt(tolerance)
@@ -179,7 +182,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('renormalize', [False, True])
-    def test_interleaved_grouped_and_matrix_routes_are_equivalent(
+    def test_interleaved_and_grouped_routes_are_equivalent(
             self, svd_method, renormalize):
         generator = torch.Generator().manual_seed(93)
         in_dim = (2, 3, 2)
@@ -189,7 +192,6 @@ class TestTRMSVD:  # MARK: TestTRMSVD
             dtype=torch.float64,
             generator=generator) * 1e2
         interleaved = _interleave(grouped, len(in_dim))
-        matrix = grouped.reshape(12, 12)
 
         with tk.svd_method(svd_method):
             grouped_result = tk.decompositions.TRMSVD(
@@ -197,15 +199,11 @@ class TestTRMSVD:  # MARK: TestTRMSVD
                 out_device=None).fit(
                     rank=3, renormalize=renormalize)
             interleaved_result = tk.decompositions.TRMSVD(
-                interleaved,
+                tk.decompositions.DenseTensorSource.matrix(
+                    interleaved, ordering='interleaved'),
                 out_device=None).fit(
                     rank=3, renormalize=renormalize)
-            matrix_result = tk.decompositions.TRMSVD(
-                tk.decompositions.DenseTensorSource.matrix(matrix, in_dim=in_dim, out_dim=out_dim),
-                out_device=None).fit(
-                    rank=3, renormalize=renormalize)
-
-        for result in [grouped_result, interleaved_result, matrix_result]:
+        for result in [grouped_result, interleaved_result]:
             assert result.in_dim == in_dim
             assert result.out_dim == out_dim
             assert result.rank == grouped_result.rank
@@ -232,7 +230,8 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         with tk.svd_method(svd_method):
             trm_result = tk.decompositions.TRMSVD(
-                tensor, out_device=None).fit(**kwargs)
+                tk.decompositions.DenseTensorSource.matrix(
+                    tensor, ordering='interleaved'), out_device=None).fit(**kwargs)
             tr_result = tk.decompositions.TRSVD(
                 fused, out_device=None).fit(**kwargs)
 
@@ -262,9 +261,9 @@ class TestTRMSVD:  # MARK: TestTRMSVD
                 tensor, out_device=None).fit()
 
         assert torch.allclose(
-            ttm_result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
+            ttm_result.contract_dense(), _interleave(tensor, 3), rtol=1e-10, atol=1e-10)
         assert torch.allclose(
-            trm_result.contract_dense(), tensor, rtol=1e-10, atol=1e-10)
+            trm_result.contract_dense(), _interleave(tensor, 3), rtol=1e-10, atol=1e-10)
         assert torch.allclose(
             ttm_result.fidelity(trm_result),
             torch.ones((), dtype=torch.float64),
@@ -282,8 +281,8 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         assert max(rank_three.rank) <= 3
         assert rank_one.metrics is not rank_three.metrics
         assert torch.linalg.vector_norm(
-            tensor - rank_three.contract_dense()) <= torch.linalg.vector_norm(
-                tensor - rank_one.contract_dense())
+            _interleave(tensor, 3) - rank_three.contract_dense()) <= torch.linalg.vector_norm(
+                _interleave(tensor, 3) - rank_one.contract_dense())
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
@@ -300,7 +299,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
 
         assert result.rank == [1, 1, 1]
         assert all(torch.isfinite(core).all() for core in result.cores)
-        assert torch.equal(result.contract_dense(), tensor)
+        assert torch.equal(result.contract_dense(), _interleave(tensor, 3))
         assert result.metrics.errors == []
         assert all(record.local_abs_error == 0
                    for record in result.metrics.truncations)
@@ -318,7 +317,7 @@ class TestTRMSVD:  # MARK: TestTRMSVD
             torch.randn(2, 3, 4, 5, 2, 3),
             out_device=None).fit(rank=2)
 
-        assert calls == [(6, 20, 6)]
+        assert calls == [(10, 6, 12)]
 
     @pytest.mark.parametrize('svd_method', SVD_METHODS)
     @pytest.mark.parametrize('device_name', DEVICE_NAMES)
@@ -368,13 +367,13 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         output = capsys.readouterr().out
         assert 'TRM-SVD\n=======' in output
         assert '\nTR-SVD\n' not in output
-        assert 'input dim: (2, 2, 2)' in output
-        assert 'output dim: (3, 4, 3)' in output
+        assert 'input dim: (2, 3, 2)' in output
+        assert 'output dim: (4, 2, 3)' in output
         assert 'Initial bipartition' in output
         assert 'blocks: [1] | [2, 3]' in output
         assert f'rank: {tuple(result.rank)}' in output
-        assert tuple(result.cores[0].shape) == (2, 2, 2, 3)
-        assert 'shape: (2, 2, 2, 3)' in output
+        assert tuple(result.cores[0].shape) == (2, 2, 2, 4)
+        assert 'shape: (2, 2, 2, 4)' in output
 
     def test_console_events_are_emitted_during_fit(
             self, capsys, monkeypatch):
@@ -400,19 +399,16 @@ class TestTRMSVD:  # MARK: TestTRMSVD
         [
             (([1, 2],), {}, TypeError,
              'should be torch.Tensor type'),
-            ((torch.ones(2, 3),), {}, ValueError,
-             'at least two TR sites'),
             ((torch.ones(2, 3, 4, 5),), {'ordering': 1}, TypeError,
              '`ordering` should be str type'),
             ((torch.ones(2, 3, 4, 5),), {'ordering': 'other'}, ValueError,
              '`ordering` should be either'),
-            ((torch.ones(2, 3, 4, 5),), {'in_dim': (2, 4)}, ValueError,
-             '`in_dim` and `out_dim` should be provided together'),
-            ((torch.ones(6, 19),),
-             {'in_dim': (2, 3), 'out_dim': (4, 5)}, ValueError,
-             'matrix shape should equal'),
             ((torch.ones(2, 3, 4),), {}, ValueError,
              'positive even number of dimensions'),
+            ((torch.ones(2, 0, 3, 4),), {}, ValueError,
+             'dimensions should be positive'),
+            ((torch.ones(2, 3),), {}, ValueError,
+             'at least two TR sites'),
         ],
     )
     def test_constructor_errors(self,
@@ -486,8 +482,8 @@ class TestTRMSVDFunction:  # MARK: TestTRMSVDFunction
         assert collect_metrics_calls == [False, True]
         assert info['topology'] == 'trm'
         assert info['rank'] == [2, 2]
-        assert info['in_dim'] == [2, 4]
-        assert info['out_dim'] == [3, 5]
+        assert info['in_dim'] == [2, 3]
+        assert info['out_dim'] == [4, 5]
         assert info['metadata']['algorithm'] == 'trm_svd'
         assert info['metrics']['errors'] == []
         assert len(info['metrics']['truncations']) == 1
@@ -512,7 +508,8 @@ def test_renormalized_svd_preserves_extreme_input_scale(large, device_dtype,
         reference = reference * (1 + 0.5j)
     data = reference * scale
 
-    result = tk.decompositions.TRMSVD(tk.decompositions.DenseTensorSource.matrix(data, in_dim=(2, 2), out_dim=(2, 2)), out_device=None).fit(
+    result = tk.decompositions.TRMSVD(tk.decompositions.DenseTensorSource.matrix(
+        data.reshape(2, 2, 2, 2), ordering='grouped'), out_device=None).fit(
         rank=16, renormalize=True)
 
     assert all(torch.isfinite(core).all() for core in result.cores)
@@ -526,8 +523,8 @@ def test_renormalized_svd_preserves_extreme_input_scale(large, device_dtype,
 
 
 
-@pytest.mark.parametrize('raw_layout', ['matrix', 'grouped', 'interleaved'])
-def test_matrix_formats_devices_and_application(raw_layout,
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+def test_matrix_formats_devices_and_application(ordering,
                                                 device_dtype,
                                                 assert_close):
     device, dtype = device_dtype
@@ -535,13 +532,11 @@ def test_matrix_formats_devices_and_application(raw_layout,
     if dtype.is_complex:
         matrix = matrix + 1j * matrix.T
     matrix = matrix.to(device)
-    tensor = matrix
-    if raw_layout != 'matrix':
-        tensor = matrix.reshape(2, 2, 2, 2)
-        if raw_layout == 'interleaved':
-            tensor = tensor.permute(0, 2, 1, 3)
+    tensor = matrix.reshape(2, 2, 2, 2)
+    if ordering == 'interleaved':
+        tensor = tensor.permute(0, 2, 1, 3)
     result = tk.decompositions.trm_svd(
-        tk.decompositions.DenseTensorSource.matrix(tensor, in_dim=(2, 2), out_dim=(2, 2), ordering='grouped' if raw_layout != 'interleaved' else 'interleaved'),
+        tk.decompositions.DenseTensorSource.matrix(tensor, ordering=ordering),
         rank=8, out_device=None)
     dense = result.contract_dense().permute(0, 2, 1, 3).reshape(4, 4)
     assert_close(dense, matrix)
@@ -634,3 +629,19 @@ def test_qtrm_svd_function(criteria, renormalize, device_dtype, assert_close):
 def test_qtrm_svd_rejects_dense_input():
     with pytest.raises(TypeError, match='source'):
         tk.decompositions.qtrm_svd(torch.ones(2, 2, 2, 2))
+
+
+@pytest.mark.parametrize('interface', ['engine', 'function'])
+def test_raw_tensor_uses_grouped_axes(interface, device_dtype, assert_close):
+    device, dtype = device_dtype
+    tensor = torch.arange(120., device=device).to(dtype).reshape(2, 3, 4, 5)
+    if dtype.is_complex:
+        tensor = tensor * (1 + 0.5j)
+    if interface == 'engine':
+        result = tk.decompositions.TRMSVD(tensor, out_device=None).fit()
+    else:
+        result = tk.decompositions.trm_svd(tensor, out_device=None)
+    assert result.in_dim == (2, 3)
+    assert result.out_dim == (4, 5)
+    assert result.metadata['ordering'] == 'grouped'
+    assert_close(result.contract_dense(), tensor.permute(0, 2, 1, 3))

@@ -5,7 +5,6 @@ import pytest
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.decompositions.sources.dense import _prepare_matrix_input
 
 
 class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
@@ -42,7 +41,6 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
             torch.tensor([[1, 0], [3, 1]]))
 
         assert source.in_sites == (2, 0)
-        assert source.out_sites == (1, 3)
         assert source.in_dim == (4, 2)
         assert source.out_shape == (3, 5)
         assert torch.equal(source.evaluate(configurations),
@@ -94,11 +92,39 @@ def test_matrix_tensor_view_and_source_ownership(ordering, device_dtype, assert_
 
 
 @pytest.mark.parametrize('axis_layout', ['grouped', 'interleaved'])
-def test_matrix_input_preserves_pairing_and_gradients(axis_layout):
+def test_matrix_source_preserves_pairing_and_gradients(axis_layout):
     matrix = torch.arange(24, dtype=torch.float64).reshape(4, 6).requires_grad_()
     grouped = matrix.reshape(2, 2, 2, 3)
     tensor = grouped if axis_layout == 'grouped' else grouped.permute(0, 2, 1, 3)
-    result = _prepare_matrix_input(tensor, (2, 2), (2, 3), axis_layout, 'TTM')
-    torch.testing.assert_close(result.interleaved, grouped.permute(0, 2, 1, 3))
-    result.interleaved.sum().backward()
+    source = tk.decompositions.DenseTensorSource.matrix(tensor, ordering=axis_layout)
+    assert source.in_dim == (2, 2)
+    assert source.out_dim == (2, 3)
+    torch.testing.assert_close(source.contract_dense(), grouped.permute(0, 2, 1, 3))
+    source.contract_dense().sum().backward()
     torch.testing.assert_close(matrix.grad, torch.ones_like(matrix))
+
+
+@pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
+def test_two_axis_matrix_source_has_one_site(ordering):
+    tensor = torch.arange(24.).reshape(4, 6)
+    source = tk.decompositions.DenseTensorSource.matrix(tensor, ordering=ordering)
+    assert source.n_sites == 1
+    assert source.in_dim == (4,)
+    assert source.out_dim == source.out_shape == (6,)
+    torch.testing.assert_close(source.contract_dense(), tensor)
+    configurations = tk.decompositions.ConfigurationBatch(torch.tensor([[2]]))
+    torch.testing.assert_close(source.evaluate(configurations), tensor[2:3])
+
+
+@pytest.mark.parametrize('name', ['in_dim', 'out_dim'])
+def test_matrix_source_rejects_explicit_dimensions(name):
+    with pytest.raises(TypeError, match='unexpected keyword argument'):
+        tk.decompositions.DenseTensorSource.matrix(torch.ones(4, 6), **{name: (2, 2)})
+
+
+def test_matrix_source_defaults_to_grouped_axes():
+    tensor = torch.arange(120.).reshape(2, 3, 4, 5)
+    source = tk.decompositions.DenseTensorSource.matrix(tensor)
+    assert source.in_dim == (2, 3)
+    assert source.out_dim == (4, 5)
+    torch.testing.assert_close(source.contract_dense(), tensor.permute(0, 2, 1, 3))

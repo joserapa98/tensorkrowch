@@ -137,6 +137,9 @@ class TestSVDPublicAPI:  # MARK: TestSVDPublicAPI
                 return_info=True)
 
         assert result[0][0].shape == (2, 3)
+        assert calls[0]['source'].in_dim == (2, 4)
+        assert calls[0]['source'].out_dim == (3, 5)
+        torch.testing.assert_close(calls[0]['source'].contract_dense(), tensor)
         assert result[1]['topology'] == 'ttm'
         assert calls == [{
             'source': calls[0]['source'],

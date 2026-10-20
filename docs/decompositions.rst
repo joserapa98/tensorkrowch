@@ -39,6 +39,21 @@ Matrix inputs use :meth:`DenseTensorSource.matrix`,
 grouping directly from a matrix format. These objects carry the input details;
 the algorithm controls how to approximate their values.
 
+``DenseTensorSource.matrix`` receives a tensor with explicit input/output axes:
+``ordering="interleaved"`` uses ``(in_0, out_0, in_1, out_1, ...)``, whereas
+the default ``ordering="grouped"`` uses
+``(in_0, in_1, ..., out_0, out_1, ...)``.
+Dimensions are inferred; a two-axis tensor represents one site. To represent
+several sites from an ordinary matrix, reshape its axes before construction.
+Raw tensors passed directly to ``TTMSVD`` or ``TRMSVD``, and to their function
+interfaces, also use grouped ordering. Interleaved input tensors require an
+explicit source with ``ordering="interleaved"``. The legacy
+:func:`mat_to_mpo` retains interleaved inputs.
+
+``SparseTensorSource.matrix`` uses the same ``ordering`` conventions for the
+columns of its entry indices, defaulting to grouped columns. It also requires
+``in_dim`` and ``out_dim``, since sparse entries do not determine full dimensions.
+
 Quantics preparation
 --------------------
 
@@ -98,7 +113,7 @@ SVD accepts the finite sources listed above and tensors directly. The general
 :class:`TTSVD` and :class:`TRSVD` engines also accept non-Quantics TT/TR formats
 and their matrix versions directly. Wrap an :class:`~tensorkrowch.models.MPS`
 in :class:`FormatSource` first. Matrix engines require a source declaring
-paired dimensions, or a tensor with interleaved input/output axes; wrap matrix
+paired dimensions, or a tensor with grouped input/output axes; wrap matrix
 formats in ``FormatSource``. All source representations are materialized for
 the numerical SVD, including sparse and callable tensors.
 

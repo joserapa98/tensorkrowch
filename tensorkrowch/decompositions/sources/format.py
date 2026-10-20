@@ -24,10 +24,21 @@ class FormatSource(BaseSource):  # MARK: FormatSource
     """
     Finite tensor source represented directly by a lightweight format.
 
-    The source uses the format's evaluation and contraction methods. TT/TR
-    vectors and their matrix versions are accepted; Quantics formats instead
-    require an explicit callable Quantics source. Vector ``in_sites`` determines
-    the response axes. Matrix evaluations receive inputs and return all outputs.
+    Construct the source from a :class:`~tensorkrowch.formats.TT`,
+    :class:`~tensorkrowch.formats.TR` or their matrix versions,
+    :class:`~tensorkrowch.formats.TTM` and :class:`~tensorkrowch.formats.TRM`.
+    Evaluation and dense contraction use the backing format without first
+    materializing its complete tensor. For vectors, configuration columns
+    follow the format's ``in_sites``; the remaining axes form ``out_shape``.
+
+    Matrix grouping is inferred from the format, so no separate ``matrix``
+    constructor is needed. Matrix evaluations receive indices for every input
+    site and return all output axes, independently of the format's evaluation
+    defaults, with ``out_shape == out_dim``.
+
+    An :class:`~tensorkrowch.models.MPS` is converted to TT or TR according to
+    its boundaries. A sequence of cores instead constructs an open TT.
+    Quantics formats require an explicit :class:`CallableQuanticsSource`.
     Specialized sketch kernels apply only to unbatched scalar open TT formats.
 
     Parameters
@@ -35,6 +46,22 @@ class FormatSource(BaseSource):  # MARK: FormatSource
     tensor : TensorFormat1D, MPS or sequence of torch.Tensor
         Lightweight vector/matrix format, MPS or raw TT cores. MPS boundaries
         determine TT versus TR.
+
+    Examples
+    --------
+    >>> format = tk.formats.TT([torch.eye(2), torch.eye(2)])
+    >>> source = tk.decompositions.FormatSource(format)
+    >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+    ...     torch.tensor([[0, 0], [0, 1]])))
+    tensor([1., 0.])
+
+    A matrix format already provides the input/output grouping:
+
+    >>> format = tk.formats.TTM([torch.eye(2)])
+    >>> source = tk.decompositions.FormatSource(format)
+    >>> source.evaluate(tk.decompositions.ConfigurationBatch(
+    ...     torch.tensor([[1]])))
+    tensor([[0., 1.]])
     """
 
     def __init__(self,

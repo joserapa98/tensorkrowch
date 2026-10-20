@@ -740,8 +740,7 @@ class TTALS:  # MARK: TTALS
         if isinstance(mask, torch.Tensor) and getattr(self._source, 'is_matrix', False) and \
                 tuple(mask.shape) != tensor_source.in_dim:
             mask = DenseTensorSource.matrix(
-                mask, self._source.in_dim, self._source.out_dim,
-                ordering=getattr(self._source, '_ordering', 'interleaved'))
+                mask, ordering=getattr(self._source, '_ordering', 'grouped'))
         mask_source = None if mask is None else _tensor_view(as_tensor_source(mask))
         self.problem = ALSProblem(source=tensor_source, mask=mask_source,
                                   weights=weights)

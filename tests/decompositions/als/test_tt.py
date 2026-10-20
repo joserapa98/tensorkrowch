@@ -649,14 +649,16 @@ def test_matrix_sources_use_shared_als(source_kind, device_dtype, assert_close):
     if dtype.is_complex:
         tensor = tensor * (1 + 1j)
     if source_kind == 'dense':
-        source = tk.decompositions.DenseTensorSource.matrix(tensor)
+        source = tk.decompositions.DenseTensorSource.matrix(tensor, ordering='interleaved')
     elif source_kind == 'callable':
         source = tk.decompositions.CallableTensorSource.matrix(
             lambda indices: tensor.permute(0, 2, 1, 3)[tuple(indices.T)],
             (2, 2), (2, 2), dtype=dtype, device=device)
     else:
         source = tk.decompositions.FormatSource(
-            tk.decompositions.TTMSVD(tensor, out_device=None).fit().to_format())
+            tk.decompositions.TTMSVD(
+                tk.decompositions.DenseTensorSource.matrix(tensor, ordering='interleaved'),
+                out_device=None).fit().to_format())
     result = tk.decompositions.TTALS(source, out_device=None).fit(
         rank=4, init='svd',
         convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
@@ -690,7 +692,7 @@ def test_quantics_matrix_source_retains_both_layouts():
 
 def test_matrix_mask_and_initial_cores_share_source_grouping():
     tensor = torch.arange(16., dtype=torch.float64).reshape(2, 2, 2, 2)
-    source = tk.decompositions.DenseTensorSource.matrix(tensor)
+    source = tk.decompositions.DenseTensorSource.matrix(tensor, ordering='interleaved')
     initial = tk.decompositions.TTSVD(source).fit()
     engine = tk.decompositions.TTALS(source, mask=torch.ones_like(tensor, dtype=torch.bool))
     result = engine.fit(initial_cores=initial,

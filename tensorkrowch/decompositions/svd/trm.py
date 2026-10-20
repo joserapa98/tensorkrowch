@@ -46,11 +46,17 @@ class TRMSVD(TRSVD):  # MARK: TRMSVD
     instead infers matrix grouping from a matrix format. The source selects the
     result family and retains any Quantics layouts and coordinate maps.
 
+    Tensors passed directly use grouped axes
+    ``(in_0, in_1, ..., out_0, out_1, ...)``. For interleaved input axes,
+    construct ``DenseTensorSource.matrix(tensor, ordering="interleaved")``
+    explicitly. The source supplies interleaved axes to the numerical algorithm
+    in both cases.
+
     Parameters
     ----------
     source : BaseSource or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        interleaved input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
     center : int, optional
         Preferred interior cut, passed to ``TRSVD``.
     out_device : str or torch.device, optional
@@ -59,7 +65,7 @@ class TRMSVD(TRSVD):  # MARK: TRMSVD
     Examples
     --------
     >>> source = tk.decompositions.DenseTensorSource.matrix(
-    ...     torch.eye(4), in_dim=(2, 2), out_dim=(2, 2))
+    ...     torch.eye(4).reshape(2, 2, 2, 2))
     >>> result = tk.decompositions.TRMSVD(source).fit(rank=2)
     >>> result.in_dim
     (2, 2)
@@ -113,11 +119,17 @@ def trm_svd(source: 'SourceLike',
     instead infers matrix grouping from a matrix format. The source selects the
     result family and retains any Quantics layouts and coordinate maps.
 
+    Tensors passed directly use grouped axes
+    ``(in_0, in_1, ..., out_0, out_1, ...)``. For interleaved input axes,
+    construct ``DenseTensorSource.matrix(tensor, ordering="interleaved")``
+    explicitly. The source supplies interleaved axes to the numerical algorithm
+    in both cases.
+
     Parameters
     ----------
     source : BaseSource or torch.Tensor
         Finite matrix source declaring paired dimensions, or a tensor with
-        interleaved input/output axes. Wrap matrix formats in ``FormatSource``.
+        grouped input/output axes. Wrap matrix formats in ``FormatSource``.
     center : int, optional
         Interior cut satisfying ``1 <= center < n_sites``. The default is the
         middle cut.

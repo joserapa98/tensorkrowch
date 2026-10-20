@@ -402,15 +402,11 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
         initial_cores = context.get('initial_cores')
         runtime_dtype = source.dtype
         if initial_cores is not None:
-            if isinstance(initial_cores, torch.Tensor):
+            if isinstance(initial_cores, (str, bytes)) or \
+                    not isinstance(initial_cores, Sequence):
                 raise TypeError(
                     '`initial_cores` should contain torch.Tensor objects')
-            try:
-                initial_cores = tuple(initial_cores)
-            except TypeError as exc:
-                raise TypeError(
-                    '`initial_cores` should contain torch.Tensor objects') \
-                    from exc
+            initial_cores = tuple(initial_cores)
             if not initial_cores or not all(
                     isinstance(core, torch.Tensor) for core in initial_cores):
                 raise TypeError(

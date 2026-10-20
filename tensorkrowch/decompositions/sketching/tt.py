@@ -213,15 +213,11 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         if embedding is None:
             raise TypeError('`embedding` should be provided')
         if not (callable(embedding) or isinstance(embedding, torch.Tensor)):
-            if isinstance(embedding, (str, bytes)):
+            if isinstance(embedding, (str, bytes)) or \
+                    not isinstance(embedding, Sequence):
                 raise TypeError(
                     '`embedding` should be callable, a tensor or a sequence')
-            try:
-                embedding = tuple(embedding)
-            except TypeError as exc:
-                raise TypeError(
-                    '`embedding` should be callable, a tensor or a sequence') \
-                    from exc
+            embedding = tuple(embedding)
             if not embedding or not all(
                     callable(entry) or isinstance(entry, torch.Tensor)
                     for entry in embedding):
@@ -231,15 +227,11 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             in_dim = _normalize_positive_int(in_dim, 'in_dim') \
                 if isinstance(in_dim, int) else _normalize_dims(in_dim, 'in_dim')
         if domain is not None and not isinstance(domain, torch.Tensor):
-            if isinstance(domain, (str, bytes)):
+            if isinstance(domain, (str, bytes)) or \
+                    not isinstance(domain, Sequence):
                 raise TypeError(
                     '`domain` should be a tensor or a sequence of tensors')
-            try:
-                domain = tuple(domain)
-            except TypeError as exc:
-                raise TypeError(
-                    '`domain` should be a tensor or a sequence of tensors') \
-                    from exc
+            domain = tuple(domain)
             if not all(isinstance(value, torch.Tensor) for value in domain):
                 raise TypeError(
                     '`domain` should be a tensor or a sequence of tensors')

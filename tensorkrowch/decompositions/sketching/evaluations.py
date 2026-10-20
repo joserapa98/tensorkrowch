@@ -94,11 +94,10 @@ class _EvaluationRequest:  # MARK: _EvaluationRequest
         if not isinstance(self.configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
-        try:
-            result_shape = tuple(self.result_shape)
-        except TypeError as exc:
-            raise TypeError('`result_shape` should be a sequence of integers') \
-                from exc
+        if isinstance(self.result_shape, (str, bytes)) or \
+                not isinstance(self.result_shape, Sequence):
+            raise TypeError('`result_shape` should be a sequence of integers')
+        result_shape = tuple(self.result_shape)
         if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 0
                for dim in result_shape):
             raise ValueError(

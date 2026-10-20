@@ -340,15 +340,10 @@ class RingRankEstimator:  # MARK: RingRankEstimator
         right_dim = _normalize_positive_int(right_dim, 'right_dim')
         auxiliary_rank = _normalize_positive_int(
             auxiliary_rank, 'auxiliary_rank')
-        try:
-            rank_caps = tuple(rank_caps)
-        except TypeError as exc:
-            raise TypeError('`rank_caps` should be a sequence of ints') from exc
+        rank_caps = _normalize_dims(rank_caps, 'rank_caps')
         if len(rank_caps) != 3:
             raise ValueError(
                 '`rank_caps` should contain left, right and cyclic caps')
-        for value in rank_caps:
-            _normalize_positive_int(value, 'rank_caps')
         left_cap, right_cap, cyclic_cap = rank_caps
 
         cyclic_estimate = sqrt(

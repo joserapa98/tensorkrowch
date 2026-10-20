@@ -128,3 +128,15 @@ def test_matrix_source_defaults_to_grouped_axes():
     assert source.in_dim == (2, 3)
     assert source.out_dim == (4, 5)
     torch.testing.assert_close(source.contract_dense(), tensor.permute(0, 2, 1, 3))
+
+
+def test_dense_input_sites_accept_range():
+    source = tk.decompositions.DenseTensorSource(torch.ones(2, 3), in_sites=range(2))
+    assert source.in_sites == (0, 1)
+    assert source.out_shape == ()
+
+
+@pytest.mark.parametrize('sites', [{0, 1}, iter((0, 1)), '01', b'01'])
+def test_dense_input_sites_require_an_ordered_sequence(sites):
+    with pytest.raises(TypeError, match='sequence of integers'):
+        tk.decompositions.DenseTensorSource(torch.ones(2, 3), in_sites=sites)

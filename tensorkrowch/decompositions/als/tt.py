@@ -82,15 +82,11 @@ def _standard_tt_cores(cores: Union[TTDecomposition, Sequence[torch.Tensor]],
         if cores.n_batches:
             raise ValueError('Batched TT cores are not supported by TT-ALS')
         cores = cores._effective_cores()
-    elif isinstance(cores, torch.Tensor):
+    if isinstance(cores, (str, bytes)) or \
+            not isinstance(cores, Sequence):
         raise TypeError(
             '`initial_cores` should be a TTDecomposition or a core sequence')
-    try:
-        cores = tuple(cores)
-    except TypeError as exc:
-        raise TypeError(
-            '`initial_cores` should be a TTDecomposition or a core sequence') \
-            from exc
+    cores = tuple(cores)
     if len(cores) != len(in_dim):
         raise ValueError('`initial_cores` should contain one core per site')
     if not all(isinstance(core, torch.Tensor) for core in cores):
@@ -903,15 +899,11 @@ class TTALS:  # MARK: TTALS
 
         if fixed_cores is None:
             return tuple(core.clone() for core in cores), ()
-        if isinstance(fixed_cores, torch.Tensor):
+        if isinstance(fixed_cores, (str, bytes)) or \
+                not isinstance(fixed_cores, Sequence):
             raise TypeError(
                 '`fixed_cores` should contain one tensor or None per site')
-        try:
-            fixed_cores = tuple(fixed_cores)
-        except TypeError as exc:
-            raise TypeError(
-                '`fixed_cores` should contain one tensor or None per site') \
-                from exc
+        fixed_cores = tuple(fixed_cores)
         if len(fixed_cores) != len(self.in_dim):
             raise ValueError('`fixed_cores` should contain one entry per site')
 

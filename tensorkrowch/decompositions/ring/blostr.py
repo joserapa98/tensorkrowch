@@ -143,13 +143,12 @@ def _draw_slices(in_dim: Sequence[int],
 def _validate_slices(slices: Sequence[Sequence[int]],
                      in_dim: Sequence[int]) -> Tuple[Tuple[int, ...], ...]:
     """Validates four user-provided interior slice configurations."""
-    if isinstance(slices, (str, bytes)):
-        raise TypeError('`slices` should contain four index sequences')
-    try:
-        slices = tuple(tuple(configuration) for configuration in slices)
-    except TypeError as exc:
+    if isinstance(slices, (str, bytes)) or not isinstance(slices, Sequence) or any(
+            isinstance(configuration, (str, bytes)) or
+            not isinstance(configuration, Sequence) for configuration in slices):
         raise TypeError(
-            '`slices` should contain four index sequences') from exc
+            '`slices` should contain four index sequences')
+    slices = tuple(tuple(configuration) for configuration in slices)
     if len(slices) != 4:
         raise ValueError('`slices` should contain alpha, beta and their primes')
     interior = tuple(in_dim[1:-1])

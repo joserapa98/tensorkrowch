@@ -35,13 +35,11 @@ class SiteRegion:  # MARK: SiteRegion
     _membership: frozenset = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        if isinstance(self.sites, (str, bytes)):
-            raise TypeError('`sites` should be a sequence of site identifiers')
-        try:
-            sites = tuple(self.sites)
-        except TypeError as exc:
+        if isinstance(self.sites, (str, bytes)) or \
+                not isinstance(self.sites, Sequence):
             raise TypeError(
-                '`sites` should be a sequence of site identifiers') from exc
+                '`sites` should be a sequence of site identifiers')
+        sites = tuple(self.sites)
 
         if any(isinstance(site, bool) or not isinstance(site, int)
                for site in sites):
@@ -85,14 +83,14 @@ class SiteRegion:  # MARK: SiteRegion
         """Returns sites absent from ``other`` while preserving local order."""
         if not isinstance(other, SiteRegion):
             raise TypeError('`other` should be SiteRegion type')
-        return SiteRegion(
-            site for site in self.sites if not other.contains(site))
+        return SiteRegion([
+            site for site in self.sites if not other.contains(site)])
 
     def intersection(self, other: 'SiteRegion') -> 'SiteRegion':
         """Returns common sites in this region's order."""
         if not isinstance(other, SiteRegion):
             raise TypeError('`other` should be SiteRegion type')
-        return SiteRegion(site for site in self.sites if other.contains(site))
+        return SiteRegion([site for site in self.sites if other.contains(site)])
 
 
 class _SamplePool:  # MARK: _SamplePool
@@ -116,15 +114,11 @@ class _SamplePool:  # MARK: _SamplePool
             site_values = tuple(
                 samples[:, site] for site in range(samples.shape[1]))
         else:
-            if isinstance(samples, (str, bytes)):
+            if isinstance(samples, (str, bytes)) or \
+                    not isinstance(samples, Sequence):
                 raise TypeError(
                     '`samples` should be a tensor or a sequence of tensors')
-            try:
-                site_values = tuple(samples)
-            except TypeError as exc:
-                raise TypeError(
-                    '`samples` should be a tensor or a sequence of tensors') \
-                    from exc
+            site_values = tuple(samples)
             if not site_values:
                 raise ValueError('`samples` should contain at least one site')
             if not all(isinstance(value, torch.Tensor)
@@ -330,8 +324,8 @@ class RegionSketch:  # MARK: RegionSketch
                 raise ValueError(
                     'Correlated sketches should belong to the same sample pool')
             membership.update(other.region.sites)
-        region = SiteRegion(
-            site for site in self._pool.region if site in membership)
+        region = SiteRegion([
+            site for site in self._pool.region if site in membership])
         return self._pool.restrict(region)
 
     def compare(self,

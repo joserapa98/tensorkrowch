@@ -32,7 +32,7 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES, safe_divide
 
-from tensorkrowch.decompositions._utils import _unravel_indices
+from tensorkrowch.decompositions._utils import _normalize_dims, _unravel_indices
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import InputFitRecord
 from tensorkrowch.decompositions.sketching.phi import PhiView
@@ -46,17 +46,7 @@ def _phi_shape(phi_view: PhiView) -> Tuple[int, ...]:
     shape = getattr(phi_view, 'shape', None)
     if shape is None:
         raise TypeError('`phi_view` should expose its complete `shape`')
-    try:
-        shape = tuple(shape)
-    except TypeError as exc:
-        raise TypeError('`phi_view.shape` should be a sequence of integers') \
-            from exc
-    if not shape or any(
-            isinstance(dim, bool) or not isinstance(dim, int) or dim < 1
-            for dim in shape):
-        raise ValueError(
-            '`phi_view.shape` should contain positive integers')
-    return shape
+    return _normalize_dims(shape, 'phi_view.shape')
 
 
 def _normalize_axis(axis: int, shape: Sequence[int]) -> int:

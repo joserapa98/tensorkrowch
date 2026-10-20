@@ -502,12 +502,9 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         """Validates distinct sites for ``in_sites`` or ``out_sites``."""
         if sites is None:
             return tuple(range(self.n_sites))
-        if isinstance(sites, (str, bytes)):
+        if isinstance(sites, (str, bytes)) or not isinstance(sites, Sequence):
             raise TypeError(f'`{name}` should be a sequence of integers')
-        try:
-            sites = tuple(sites)
-        except TypeError as exc:
-            raise TypeError(f'`{name}` should be a sequence of integers') from exc
+        sites = tuple(sites)
         if any(isinstance(site, bool) or not isinstance(site, int)
                for site in sites):
             raise TypeError(f'`{name}` should contain integers')
@@ -592,7 +589,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
 
     @cores.setter
     def cores(self, cores: Sequence[torch.Tensor]) -> None:
-        if isinstance(cores, torch.Tensor):
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError(
                 '`cores` should be a sequence of torch.Tensor objects')
         previous = self._cores
@@ -672,8 +669,9 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             powers: Optional[Sequence[Tuple[float, float]]] = None
         ) -> None:
         """Replaces cores and bonds together, restoring state on invalid input."""
-        if isinstance(cores, torch.Tensor):
-            raise TypeError('`cores` should be a sequence of torch.Tensor objects')
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
+            raise TypeError(
+                '`cores` should be a sequence of torch.Tensor objects')
 
         cores = list(cores)
         previous = self.__dict__.copy()
@@ -771,9 +769,10 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         """
         if isinstance(first, bool) or not isinstance(first, int):
             raise TypeError('The first replacement site should be an integer')
-        if isinstance(cores, torch.Tensor):
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError('Replacement cores should be a sequence')
-        if isinstance(bonds, torch.Tensor):
+        if bonds is not None and (isinstance(bonds, (str, bytes)) or
+                                  not isinstance(bonds, Sequence)):
             raise TypeError('Replacement bonds should be a sequence or None')
 
         cores = tuple(cores)
@@ -2301,12 +2300,10 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
                 raise ValueError(
                     '`data` has an incompatible number of batch dimensions')
         else:
-            try:
-                site_data = list(data)
-            except TypeError as exc:
+            if isinstance(data, (str, bytes)) or not isinstance(data, Sequence):
                 raise TypeError(
-                    '`data` should be a tensor or a sequence of tensors') \
-                    from exc
+                    '`data` should be a tensor or a sequence of tensors')
+            site_data = list(data)
             if len(site_data) != n_sites:
                 raise ValueError(
                     '`data` should contain one tensor per site')
@@ -2740,15 +2737,11 @@ class _VectorFormat1D(TensorFormat1D):  # MARK: _VectorFormat1D
             samples = samples.to(device=self.device)
             data_batch_shape = tuple(samples.shape[:n_batches])
         else:
-            if isinstance(samples, (str, bytes)):
+            if isinstance(samples, (str, bytes)) or \
+                    not isinstance(samples, Sequence):
                 raise TypeError(
                     '`samples` should be a tensor or a sequence of tensors')
-            try:
-                samples = tuple(samples)
-            except TypeError as exc:
-                raise TypeError(
-                    '`samples` should be a tensor or a sequence of tensors') \
-                        from exc
+            samples = tuple(samples)
             if not samples:
                 raise ValueError('`samples` should contain at least one site')
             if not all(isinstance(item, torch.Tensor) for item in samples):

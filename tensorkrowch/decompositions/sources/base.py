@@ -80,14 +80,11 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
                     'Discrete packed `values` should contain scalar integers')
             return
 
-        if isinstance(self.values, (str, bytes)):
+        if isinstance(self.values, (str, bytes)) or \
+                not isinstance(self.values, Sequence):
             raise TypeError(
                 '`values` should be a tensor or a sequence of tensors')
-        try:
-            site_values = tuple(self.values)
-        except TypeError as exc:
-            raise TypeError(
-                '`values` should be a tensor or a sequence of tensors') from exc
+        site_values = tuple(self.values)
         if not site_values:
             raise ValueError('`values` should contain at least one site')
         if not all(isinstance(value, torch.Tensor) for value in site_values):

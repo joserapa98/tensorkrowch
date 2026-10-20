@@ -55,3 +55,10 @@ class TestConfigurationBatch:  # MARK: TestConfigurationBatch
     def test_invalid_batches(self, values, kind, error):
         with pytest.raises(error):
             tk.decompositions.ConfigurationBatch(values, kind=kind)
+
+
+@pytest.mark.parametrize('make_values', [lambda: iter((torch.ones(2),)),
+                                        lambda: {0: torch.ones(2)}])
+def test_configuration_batch_requires_a_tensor_or_sequence(make_values):
+    with pytest.raises(TypeError, match='tensor or a sequence of tensors'):
+        tk.decompositions.ConfigurationBatch(make_values(), kind='features')

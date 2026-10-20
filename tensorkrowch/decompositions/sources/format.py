@@ -69,6 +69,8 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         if isinstance(tensor, MPS):
             tensor = tensor.to_tr() if tensor.boundary == 'pbc' else tensor.to_tt()
         if not isinstance(tensor, TensorFormat1D):
+            if isinstance(tensor, (str, bytes)) or not isinstance(tensor, Sequence):
+                raise TypeError('`tensor` should be a format, MPS or core sequence')
             cores = tuple(tensor)
             if not cores or not all(isinstance(core, torch.Tensor) for core in cores):
                 raise TypeError('`tensor` should contain torch.Tensor cores')

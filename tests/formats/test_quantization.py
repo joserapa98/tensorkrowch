@@ -665,3 +665,13 @@ def test_layout_and_coordinate_maps_on_device(device_dtype, assert_close, offset
         torch.linspace(5., 11., 9, dtype=real_dtype, device=device)])
     coordinates = explicit.from_indices(indices)
     assert torch.equal(explicit.to_indices(coordinates), indices)
+
+
+@pytest.mark.parametrize('name', ['base', 'level'])
+@pytest.mark.parametrize('make_value', [lambda: {2}, lambda: iter((2,)),
+                                       lambda: '2', lambda: torch.tensor([2])])
+def test_quantized_integer_specs_require_sequences(name, make_value):
+    options = dict(base=2, level=2)
+    options[name] = make_value()
+    with pytest.raises(TypeError, match='sequence of ints'):
+        tk.formats.QuantizedLayout(1, **options)

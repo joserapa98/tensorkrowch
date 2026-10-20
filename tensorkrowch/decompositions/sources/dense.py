@@ -76,8 +76,9 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
             raise ValueError('`tensor` should contain at least one input site')
         if in_sites is None:
             in_sites = tuple(range(n_axes))
-        elif not isinstance(in_sites, (list, tuple)):
-            raise TypeError('`in_sites` should be a list or tuple of ints')
+        elif isinstance(in_sites, (str, bytes)) or \
+                not isinstance(in_sites, Sequence):
+            raise TypeError('`in_sites` should be a sequence of integers')
         else:
             in_sites = tuple(in_sites)
         if not in_sites:

@@ -71,14 +71,11 @@ def _split_samples(samples: _Samples,
         return tuple(samples[:, site] for site in range(n_sites))
     if samples is None:
         raise ValueError('`samples` is required when `domain` is None')
-    if isinstance(samples, (str, bytes)):
+    if isinstance(samples, (str, bytes)) or \
+            not isinstance(samples, Sequence):
         raise TypeError(
             '`samples` should be a tensor or a sequence of tensors')
-    try:
-        site_samples = tuple(samples)
-    except TypeError as exc:
-        raise TypeError(
-            '`samples` should be a tensor or a sequence of tensors') from exc
+    site_samples = tuple(samples)
     if len(site_samples) != n_sites:
         raise ValueError(
             '`samples` should contain one tensor per input site')
@@ -105,14 +102,11 @@ class _DomainSpec:  # MARK: _DomainSpec
     inferred: bool = False
 
     def __post_init__(self) -> None:
-        if isinstance(self.values, torch.Tensor) or \
-                isinstance(self.values, (str, bytes)):
-            raise TypeError('`values` should contain one domain per site')
-        try:
-            values = tuple(self.values)
-        except TypeError as exc:
+        if isinstance(self.values, (str, bytes)) or \
+                not isinstance(self.values, Sequence):
             raise TypeError(
-                '`values` should contain one domain per site') from exc
+                '`values` should contain one domain per site')
+        values = tuple(self.values)
         if not values:
             raise ValueError('`values` should contain at least one domain')
         for site, domain in enumerate(values):
@@ -150,15 +144,11 @@ class _DomainSpec:  # MARK: _DomainSpec
 
         if isinstance(domain, torch.Tensor):
             return cls((domain,) * n_sites)
-        if isinstance(domain, (str, bytes)):
+        if isinstance(domain, (str, bytes)) or \
+                not isinstance(domain, Sequence):
             raise TypeError(
                 '`domain` should be a tensor or a sequence of tensors')
-        try:
-            values = tuple(domain)
-        except TypeError as exc:
-            raise TypeError(
-                '`domain` should be a tensor or a sequence of tensors') \
-                from exc
+        values = tuple(domain)
         if len(values) != n_sites:
             raise ValueError(
                 '`domain` should contain one tensor per input site')
@@ -224,15 +214,11 @@ class _EmbeddingSpec:  # MARK: _EmbeddingSpec
         if callable(embedding) or isinstance(embedding, torch.Tensor):
             embeddings = (embedding,) * domains.n_sites
         else:
-            if isinstance(embedding, (str, bytes)):
+            if isinstance(embedding, (str, bytes)) or \
+                    not isinstance(embedding, Sequence):
                 raise TypeError(
                     '`embedding` should be callable, a tensor or a sequence')
-            try:
-                embeddings = tuple(embedding)
-            except TypeError as exc:
-                raise TypeError(
-                    '`embedding` should be callable, a tensor or a sequence') \
-                    from exc
+            embeddings = tuple(embedding)
             if len(embeddings) != domains.n_sites:
                 raise ValueError(
                     '`embedding` should contain one entry per input site')
@@ -379,11 +365,10 @@ class _OutputSpec:  # MARK: _OutputSpec
     def __post_init__(self) -> None:
         n_input_sites = _normalize_positive_int(self.n_input_sites, 'n_input_sites')
         out_shape = _normalize_dims(self.out_shape, 'out_shape', allow_empty=True)
-        try:
-            positions = tuple(self.positions)
-        except TypeError as exc:
-            raise TypeError('`positions` should be a sequence of integers') \
-                from exc
+        if isinstance(self.positions, (str, bytes)) or \
+                not isinstance(self.positions, Sequence):
+            raise TypeError('`positions` should be a sequence of integers')
+        positions = tuple(self.positions)
         if len(positions) != len(out_shape):
             raise ValueError(
                 '`positions` should contain one site per output axis')
@@ -441,15 +426,11 @@ class _OutputSpec:  # MARK: _OutputSpec
                     'An integer `out_position` requires one output axis')
             positions = (out_position,)
         else:
-            if isinstance(out_position, (str, bytes)):
+            if isinstance(out_position, (str, bytes)) or \
+                    not isinstance(out_position, Sequence):
                 raise TypeError(
                     '`out_position` should be int or a sequence of ints')
-            try:
-                positions = tuple(out_position)
-            except TypeError as exc:
-                raise TypeError(
-                    '`out_position` should be int or a sequence of ints') \
-                    from exc
+            positions = tuple(out_position)
         return cls(out_shape, n_input_sites, positions)
 
     @property

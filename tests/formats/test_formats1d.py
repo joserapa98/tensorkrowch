@@ -2120,3 +2120,14 @@ def test_partial_sample_error_and_gradients():
     format.evaluate([vectors]).square().sum().backward()
     torch.testing.assert_close(vectors.grad, 2 * vectors.detach())
     assert first.grad is not None and second.grad is not None
+
+
+@pytest.mark.parametrize('sites', [{0, 1}, iter((0, 1)), '01', b'01'])
+def test_evaluation_sites_require_an_ordered_sequence(sites):
+    with pytest.raises(TypeError, match='sequence of integers'):
+        tk.formats.TT([torch.eye(2), torch.eye(2)], in_sites=sites)
+
+
+def test_evaluation_sites_accept_range():
+    format = tk.formats.TT([torch.eye(2), torch.eye(2)], in_sites=range(2))
+    assert format.in_sites == (0, 1)

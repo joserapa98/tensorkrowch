@@ -56,13 +56,10 @@ def _integer_spec(value: IntegerSpec,
     if isinstance(value, int):
         values = (value,) * n_coordinates
     else:
-        if isinstance(value, (str, bytes)):
-            raise TypeError(f'`{name}` should be int or a sequence of ints')
-        try:
-            values = tuple(value)
-        except TypeError as exc:
+        if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
             raise TypeError(
-                f'`{name}` should be int or a sequence of ints') from exc
+                f'`{name}` should be int or a sequence of ints')
+        values = tuple(value)
         if len(values) != n_coordinates:
             raise ValueError(
                 f'`{name}` should contain one value per coordinate')
@@ -160,11 +157,11 @@ class QuantizedLayout:  # MARK: QuantizedLayout
         if isinstance(self.digit_order, str):
             digit_order = (self.digit_order,) * self.n_coordinates
         else:
-            try:
-                digit_order = tuple(self.digit_order)
-            except TypeError as exc:
+            if isinstance(self.digit_order, bytes) or \
+                    not isinstance(self.digit_order, Sequence):
                 raise TypeError(
-                    '`digit_order` should be str or a sequence of strings') from exc
+                    '`digit_order` should be str or a sequence of strings')
+            digit_order = tuple(self.digit_order)
             if len(digit_order) != self.n_coordinates:
                 raise ValueError(
                     '`digit_order` should contain one value per coordinate')
@@ -191,12 +188,13 @@ class QuantizedLayout:  # MARK: QuantizedLayout
             if self.permutation is None:
                 raise ValueError(
                     '`permutation` is required for custom ordering')
-            try:
-                permutation = tuple(tuple(site) for site in self.permutation)
-            except TypeError as exc:
+            if isinstance(self.permutation, (str, bytes)) or \
+                    not isinstance(self.permutation, Sequence) or any(
+                        isinstance(site, (str, bytes)) or
+                        not isinstance(site, Sequence) for site in self.permutation):
                 raise TypeError(
-                    '`permutation` should contain `(coordinate, digit)` pairs'
-                    ) from exc
+                    '`permutation` should contain `(coordinate, digit)` pairs')
+            permutation = tuple(tuple(site) for site in self.permutation)
             if any((len(site) != 2) or any(
                     isinstance(item, bool) or not isinstance(item, int)
                     for item in site) for site in permutation):
@@ -456,13 +454,9 @@ def _domain_tensor(domain: Domain,
             raise ValueError(
                 '`domain` should be one interval or one per coordinate')
     else:
-        if isinstance(domain, (str, bytes)):
+        if isinstance(domain, (str, bytes)) or not isinstance(domain, Sequence):
             raise TypeError('`domain` should contain interval tensors')
-        try:
-            domains = tuple(domain)
-        except TypeError as exc:
-            raise TypeError('`domain` should contain interval tensors') \
-                from exc
+        domains = tuple(domain)
         intervals = torch.stack([
             interval if isinstance(interval, torch.Tensor)
             else torch.as_tensor(interval)
@@ -1044,14 +1038,11 @@ class ExplicitGridMap(CoordinateMap):  # MARK: ExplicitGridMap
             grids = ((grid_coordinates,) if grid_coordinates.ndim == 1
                      else tuple(grid_coordinates.unbind(0)))
         else:
-            if isinstance(grid_coordinates, (str, bytes)):
+            if isinstance(grid_coordinates, (str, bytes)) or \
+                    not isinstance(grid_coordinates, Sequence):
                 raise TypeError(
                     '`grid_coordinates` should contain grid tensors')
-            try:
-                grids = tuple(grid_coordinates)
-            except TypeError as exc:
-                raise TypeError(
-                    '`grid_coordinates` should contain grid tensors') from exc
+            grids = tuple(grid_coordinates)
         if not grids or not all(
                 isinstance(grid, torch.Tensor) and (grid.ndim == 1) and
                 (grid.shape[0] >= 2) and grid.is_floating_point() and

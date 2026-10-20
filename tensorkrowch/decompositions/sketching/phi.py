@@ -275,10 +275,10 @@ class PhiOperator:  # MARK: PhiOperator
                 raise ValueError(
                     'The source and output spec should have matching shapes')
 
-        try:
-            components = tuple(components)
-        except TypeError as exc:
-            raise TypeError('`components` should be a sequence') from exc
+        if isinstance(components, (str, bytes)) or \
+                not isinstance(components, Sequence):
+            raise TypeError('`components` should be a sequence')
+        components = tuple(components)
         if not components:
             raise ValueError('`components` should contain at least one Phi axis')
         normalized = []

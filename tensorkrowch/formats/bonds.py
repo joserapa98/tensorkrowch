@@ -36,7 +36,7 @@ class BondFactors1D:
     def __init__(self,
                  factors: Sequence[Optional[torch.Tensor]],
                  on_change: Callable[[], None]) -> None:
-        if isinstance(factors, torch.Tensor):
+        if isinstance(factors, (str, bytes)) or not isinstance(factors, Sequence):
             raise TypeError('`factors` should be a sequence of diagonals')
         self._on_change = on_change
         self._factors = _SafeList(factors, self._on_sequence_changed)
@@ -51,7 +51,7 @@ class BondFactors1D:
 
     @factors.setter
     def factors(self, factors: Sequence[Optional[torch.Tensor]]) -> None:
-        if isinstance(factors, torch.Tensor):
+        if isinstance(factors, (str, bytes)) or not isinstance(factors, Sequence):
             raise TypeError('`factors` should be a sequence of diagonals')
         previous = getattr(self, '_factors', None)
         self._factors = _SafeList(factors, self._on_sequence_changed)

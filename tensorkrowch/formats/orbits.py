@@ -74,6 +74,10 @@ class GaugeOrbit:
     def __init__(self,
                  cores: Sequence[torch.Tensor],
                  bonds: Sequence[Tuple[int, int, int, int]]) -> None:
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
+            raise TypeError('`cores` should be a nonempty tensor sequence')
+        if isinstance(bonds, (str, bytes)) or not isinstance(bonds, Sequence):
+            raise TypeError('`bonds` should be a sequence of axis connections')
         self.cores = tuple(cores)
         self.bonds = tuple(bonds)
 
@@ -132,6 +136,8 @@ class GaugeOrbit:
         >>> torch.allclose(cores[0] @ cores[1], identity)
         True
         """
+        if isinstance(gauges, (str, bytes)) or not isinstance(gauges, Sequence):
+            raise TypeError('`gauges` should be a sequence of tensors')
         gauges = list(gauges)
         if len(gauges) != len(self.bonds):
             raise ValueError('There should be one gauge per virtual bond')

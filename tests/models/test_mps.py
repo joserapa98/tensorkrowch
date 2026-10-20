@@ -212,9 +212,17 @@ def _assert_same_node_type(node, copied_node):
         isinstance(node.tensor, torch.nn.Parameter)
 
 
+def _assert_same_device(actual, expected):
+    # A tensor is always on an indexed device (cuda:0), while torch.device('cuda')
+    # has no index, and the two do not compare equal
+    assert actual.type == expected.type
+    if expected.index is not None:
+        assert actual.index == expected.index
+
+
 def _assert_nodes_device_and_dtype(nodes, device, dtype):
     for node in nodes:
-        assert node.device == device
+        _assert_same_device(node.device, device)
         assert node.dtype == dtype
 
 
@@ -2375,7 +2383,7 @@ class TestUMPS:  # MARK: TestUMPS
         mps.to(device=device, dtype=dtype)
 
         _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
-        assert mps.uniform_memory.device == device
+        _assert_same_device(mps.uniform_memory.device, device)
         assert mps.uniform_memory.dtype == dtype
 
     @pytest.mark.parametrize('n_features', INIT_N_CASES)
@@ -2402,7 +2410,7 @@ class TestUMPS:  # MARK: TestUMPS
 
         _assert_nodes_device_and_dtype(tensor_nodes, device, dtype)
         _assert_nodes_device_and_dtype(mps.mats_env, device, dtype)
-        assert mps.uniform_memory.device == device
+        _assert_same_device(mps.uniform_memory.device, device)
         assert mps.uniform_memory.dtype == dtype
 
     @staticmethod

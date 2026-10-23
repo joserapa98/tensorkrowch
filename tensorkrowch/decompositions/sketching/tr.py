@@ -37,15 +37,15 @@ from tensorkrowch.utils import safe_divide, truncated_svd
 
 from tensorkrowch.decompositions._utils import _normalize_rank
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
-from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
-                                                 ErrorRecord,
-                                                 TruncationRecord)
+from tensorkrowch.decompositions.metrics import DecompositionMetrics, ErrorRecord
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    DecompositionObserver,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
-from tensorkrowch.decompositions.results import (TTDecomposition, _result_from_source, TRDecomposition,
-                                                 TensorDecomposition)
+from tensorkrowch.decompositions.results import (TRDecomposition,
+                                                 TTDecomposition,
+                                                 TensorDecomposition,
+                                                 _result_from_source)
 from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
                                                      CentralBlockSelector,
                                                      PrescribedCentralBlockSelector,
@@ -56,8 +56,8 @@ from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeRecursionStep)
 from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
                                                       LoopOpener,
-                                                      LoopOpenerCapabilities,
                                                       LoopOpening,
+                                                      SVDLoopOpener,
                                                       resolve_loop_opener)
 from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
 from tensorkrowch.decompositions.ring.tt2tr import TT2TR
@@ -68,7 +68,6 @@ from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
                                                        _MaterializedPhi)
 from tensorkrowch.decompositions.sketching.sketches import SketchOperator
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
-from tensorkrowch.decompositions.sources.base import ConfigurationBatch
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sketching.transforms import (_apply_local_transform,
                                                               _collect_local_queries,
@@ -77,6 +76,7 @@ from tensorkrowch.decompositions.sketching.tt import (Device,
                                                       Samples,
                                                       TTRS,
                                                       TTRSS)
+from tensorkrowch.decompositions.sources.base import ConfigurationBatch
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 
 
@@ -117,114 +117,45 @@ class _SketchLocalTarget:  # MARK: _SketchLocalTarget
     collect_metrics: bool
 
 
-class _SketchLoopOpener:  # MARK: _SketchLoopOpener
-    """Trims free sketch axes around one delegated loop-opening strategy."""
+class _SketchLoopOpener(SVDLoopOpener):  # MARK: _SketchLoopOpener
+    """Adapts fitted sketch targets to the shared local SVD opener."""
 
-    def __init__(self, opener: LoopOpener, records: list) -> None:
-        if not isinstance(opener, LoopOpener):
-            raise TypeError('`opener` should implement LoopOpener')
-        self.opener = opener
+    def __init__(self, opener: LoopOpener, records: list,
+                 absorb_singular_values: bool = True,
+                 refinement_sweeps: int = 0,
+                 project_fixed_gauges: bool = False) -> None:
+        super().__init__(
+            opener, absorb_singular_values=absorb_singular_values,
+            refinement_sweeps=refinement_sweeps,
+            project_fixed_gauges=project_fixed_gauges)
         self.records = records
 
-    @property
-    def capabilities(self) -> 'LoopOpenerCapabilities':
-        return self.opener.capabilities
-
-    def _trim(self,
-              matrix: torch.Tensor,
-              rank: int,
-              site: int,
-              target: _SketchLocalTarget) -> Tuple[torch.Tensor, torch.Tensor]:
-        options = dict(target.truncation)
-        options['rank'] = min(rank, min(matrix.shape))
-        if target.collect_metrics:
-            u, s, vh, info = truncated_svd(
-                matrix, return_info=True, **options)
-            self.records.append(TruncationRecord.from_svd_info(
-                info, site=site))
-        else:
-            u, s, vh = truncated_svd(matrix, **options)
-        return u, s.unsqueeze(1) * vh
-
-    def open(self,
-             target: Any,
-             rank: Union[int, Sequence[int]],
-             *,
-             fixed_left: Any = None,
-             fixed_right: Any = None,
-             orientation: Any = 'right',
-             context: Any = None) -> LoopOpening:
+    def open(self, target: Any, rank: Union[int, Sequence[int]], *,
+             fixed_left: Any = None, fixed_right: Any = None,
+             orientation: Any = 'right', context: Any = None) -> LoopOpening:
         if not isinstance(target, _SketchLocalTarget):
             raise TypeError('Sketch loop opening requires a fitted Phi target')
-        ranks = list(rank)
-        tensor = target.tensor
-        left_lift = None
-        right_lift = None
-
-        if fixed_left is not None:
-            ranks[0] = fixed_left.shape[-1]
-            ranks[-1] = fixed_left.shape[0]
-        if fixed_right is not None:
-            ranks[-2] = fixed_right.shape[0]
-            ranks[-1] = fixed_right.shape[-1]
-
-        if fixed_right is None:
-            matrix = tensor.reshape(-1, tensor.shape[-1])
-            u, right_lift = self._trim(
-                matrix,
-                ranks[-2] * ranks[-1],
-                target.sites[-1],
-                target)
-            tensor = u.reshape(*tensor.shape[:-1], u.shape[-1])
-
-        if fixed_left is None:
-            matrix = tensor.reshape(tensor.shape[0], -1)
-            left_lift, remainder = self._trim(
-                matrix,
-                ranks[-1] * ranks[0],
-                target.sites[0],
-                target)
-            tensor = remainder.reshape(
-                remainder.shape[0], *tensor.shape[1:])
-
-        local_context = {} if context is None else dict(context)
-        local_context.update({
-            'in_dim': tuple(tensor.shape),
-            'dtype': tensor.dtype,
-            'device': tensor.device,
+        context = {} if context is None else dict(context)
+        context.update({
+            'sites': target.sites,
+            '_svd_truncation': target.truncation,
+            '_svd_collect_metrics': target.collect_metrics,
         })
-        opening = self.opener.open(
-            tensor,
-            tuple(ranks),
-            fixed_left=fixed_left,
-            fixed_right=fixed_right,
-            orientation=orientation,
-            context=local_context)
-
-        left_gauge = opening.left_gauge
-        if left_lift is not None:
-            left_gauge = torch.einsum(
-                'sa,gar->gsr',
-                left_lift.to(left_gauge.dtype),
-                left_gauge)
-        right_gauge = opening.right_gauge
-        if right_lift is not None:
-            right_gauge = torch.einsum(
-                'rbg,bt->rtg',
-                right_gauge,
-                right_lift.to(right_gauge.dtype))
-        all_cores = (left_gauge, *opening.cores, right_gauge)
+        opening = super().open(
+            target.tensor, rank, fixed_left=fixed_left, fixed_right=fixed_right,
+            orientation=orientation, context=context)
+        self.records.extend(opening.diagnostics['truncations'])
         return LoopOpening(
-            left_gauge=left_gauge,
-            cores=opening.cores,
-            right_gauge=right_gauge,
-            rank=tuple(core.shape[-1] for core in all_cores),
+            left_gauge=opening.left_gauge, cores=opening.cores,
+            right_gauge=opening.right_gauge, rank=opening.rank,
             orientation=opening.orientation,
             local_records=opening.local_records,
             diagnostics={
                 **opening.diagnostics,
-                'sketch_trimmed_left': left_lift is not None,
-                'sketch_trimmed_right': right_lift is not None,
+                'sketch_trimmed_left': opening.diagnostics['svd_trimmed_left'],
+                'sketch_trimmed_right': (
+                    opening.diagnostics['svd_trimmed_right']),
+                'sketch_refinement': opening.diagnostics.get('svd_refinement'),
             })
 
 
@@ -479,7 +410,11 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             warm_start: Optional[TRDecomposition] = None,
             verbose: Union[bool, int] = 0,
             collect_metrics: bool = False,
-            observer: Optional[DecompositionObserver] = None) -> TRDecomposition:
+            observer: Optional[DecompositionObserver] = None,
+            *,
+            absorb_singular_values: bool = True,
+            refinement_sweeps: int = 0,
+            project_fixed_gauges: bool = False) -> TRDecomposition:
         r"""
         Decomposes the fixed function into a sampled Tensor Ring.
 
@@ -563,6 +498,36 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             evaluation counts and absolute/relative sketch-sample error.
         observer : DecompositionObserver, optional
             Additional structured-event consumer.
+        expand_directions : bool
+            Retains zero-target interface constraints during TT2TR transport.
+            Default True; requires the ``"center_out"`` schedule.
+        absorb_singular_values : bool, optional
+            If ``True`` (default), keeps singular values from each free
+            sketch-axis SVD in the local objective and subsequent SVDs;
+            the external lifts are isometries. If ``False``, moves them
+            into the external gauges and passes the unweighted factors to
+            subsequent SVDs and the loop opener. This changes the local
+            least-squares metric. Spectra are restored before recursion;
+            inherited fixed gauges are unchanged.
+        refinement_sweeps : int, optional
+            Additional exact ALS sweeps after restoring the spectra in each
+            retained local sketch objective. Defaults to ``0``. The
+            spectrum-restored opening supplies the initial cores; inherited
+            gauges stay fixed and TR ranks are preserved. An
+            :class:`~tensorkrowch.decompositions.ALSLoopOpener`
+            supplies its numerical fit options, with exact sampling and a
+            separate fixed sweep budget; other openers use default ALS
+            options. A candidate is retained only if its local residual does
+            not increase. This does not guarantee a smaller global TR error.
+            Two-fixed-gauge direct solves are not refined.
+            With ``collect_metrics=True``, ``metadata['local_refinements']``
+            reports errors before/after each attempt in its refinement metric.
+        project_fixed_gauges : bool, optional
+            Also perform the SVD on inherited axes, projecting the fixed
+            gauges for compact ALS. Default ``False`` trims only free axes.
+            Original fixed gauges are restored afterwards. If refinement
+            is enabled, recursive refinements then use the full sample
+            target, including components outside the compact SVD basis.
 
         Returns
         -------
@@ -595,6 +560,15 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                 'TR-RSS does not yet define a warm-start update; pass None')
         if not isinstance(adaptive, bool):
             raise TypeError('`adaptive` should be bool type')
+        if not isinstance(absorb_singular_values, bool):
+            raise TypeError('`absorb_singular_values` should be bool type')
+        if isinstance(refinement_sweeps, bool) or \
+                not isinstance(refinement_sweeps, int):
+            raise TypeError('`refinement_sweeps` should be int type')
+        if refinement_sweeps < 0:
+            raise ValueError('`refinement_sweeps` should be non-negative')
+        if not isinstance(project_fixed_gauges, bool):
+            raise TypeError('`project_fixed_gauges` should be bool type')
         if schedule not in ('center_out', 'alternating'):
             raise ValueError(
                 "`schedule` should be 'center_out' or 'alternating'")
@@ -655,6 +629,9 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             'schedule_block_size': schedule_block_size,
             'adaptive': adaptive,
             'pad_to_rank': pad_to_rank,
+            'absorb_singular_values': absorb_singular_values,
+            'refinement_sweeps': refinement_sweeps,
+            'project_fixed_gauges': project_fixed_gauges,
         })
         return self._execute(context)
 
@@ -953,7 +930,9 @@ class TRRSS(TTRSS):  # MARK: TRRSS
         truncation_records = []
         opener = _SketchLoopOpener(
             resolve_loop_opener(context.state['loop_opener']),
-            truncation_records)
+            truncation_records, context.state['absorb_singular_values'],
+            context.state['refinement_sweeps'],
+            context.state['project_fixed_gauges'])
         with context.phase('core.solve'):
             driver_options = {
                 'provider': provider,
@@ -968,7 +947,8 @@ class TRRSS(TTRSS):  # MARK: TRRSS
                 driver_result = AlternatingRingDriver().fit(
                     **driver_options,
                     fixed_opener=_SketchLoopOpener(
-                        FixedGaugeCoreOpener(), truncation_records),
+                        FixedGaugeCoreOpener(), truncation_records,
+                        context.state['absorb_singular_values']),
                     block_size=context.state['schedule_block_size'])
             else:
                 driver_result = BidirectionalRingDriver().fit(
@@ -1027,7 +1007,24 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             'effective_rank': list(context.state['effective_rank']),
             'adaptive': context.state['adaptive'],
             'pad_to_rank': context.state['pad_to_rank'],
+            'absorb_singular_values': context.state['absorb_singular_values'],
+            'refinement_sweeps': context.state['refinement_sweeps'],
+            'project_fixed_gauges': context.state['project_fixed_gauges'],
         }
+        if context.collect_metrics and context.state['refinement_sweeps']:
+            refinements = []
+            for sites, opening in context.state['driver_result'].openings.items():
+                info = opening.diagnostics.get('sketch_refinement')
+                if info is not None:
+                    refinements.append({
+                        'sites': sites, 'accepted': info['accepted'],
+                        'relative_error_before': float(
+                            info['relative_error_before'].detach().cpu()),
+                        'relative_error_after': float(
+                            info['relative_error_after'].detach().cpu()),
+                        'n_sweeps': info['metadata']['n_sweeps'],
+                    })
+            metadata['local_refinements'] = refinements
         if context.state['adaptive_info'] is not None:
             metadata['rank_estimate'] = dict(context.state['adaptive_info'])
         selected = context.state['selected_values']
@@ -1163,8 +1160,8 @@ class TRRS(TTRS):  # MARK: TRRS
             loop_opener: Union[str, LoopOpener] = 'als',
             schedule: str = 'center_out',
             schedule_block_size: int = 1,
-            gauge_recursion: str = 'pseudoinverse',
-            allow_projective_gauges: bool = False,
+            recursion: str = 'adjoint',
+            allow_projective_gauges: bool = True,
             gauge_tolerance: float = 1e-08,
             inverse_policy: str = 'pinv',
             rank_rtol: Optional[float] = None,
@@ -1178,7 +1175,8 @@ class TRRS(TTRS):  # MARK: TRRS
             warm_start: Optional[TRDecomposition] = None,
             verbose: Union[bool, int] = 0,
             collect_metrics: bool = False,
-            observer: Optional[DecompositionObserver] = None) -> TRDecomposition:
+            observer: Optional[DecompositionObserver] = None,
+            expand_directions: bool = True) -> TRDecomposition:
         """
         Projects the fixed source and opens the result into a TR.
 
@@ -1202,8 +1200,9 @@ class TRRS(TTRS):  # MARK: TRRS
             Serial cyclic construction ``schedule``.
         schedule_block_size : int, optional
             Consecutive sites in each alternating block.
-        gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``}, optional
-            Strategy used to propagate cyclic virtual bases.
+        recursion : {``"adjoint"``, ``"pinv"``, ``"gram"``, ``"orth"``}
+            Virtual-coordinate transport; see :meth:`TT2TR.fit`. Default is
+            adjoint transport with orthogonal interface expansion.
         allow_projective_gauges : bool, optional
             Allows ``rank``-deficient directional gauges to propagate projectors.
         gauge_tolerance : float, optional
@@ -1228,6 +1227,9 @@ class TRRS(TTRS):  # MARK: TRRS
             Collects TT-RS diagnostics and final sparse-support error.
         observer : DecompositionObserver, optional
             Additional structured-event consumer.
+        expand_directions : bool
+            Retains zero-target interface constraints during TT2TR transport.
+            Default True; requires the ``"center_out"`` schedule.
 
         Returns
         -------
@@ -1293,11 +1295,12 @@ class TRRS(TTRS):  # MARK: TRRS
                 loop_opener=loop_opener,
                 schedule=schedule,
                 schedule_block_size=schedule_block_size,
-                gauge_recursion=gauge_recursion,
+                recursion=recursion,
                 allow_projective_gauges=allow_projective_gauges,
                 gauge_tolerance=gauge_tolerance,
                 inverse_policy=inverse_policy,
                 rank_rtol=rank_rtol,
+                expand_directions=expand_directions,
                 verbose=0)
         metrics = _merge_rs_metrics(tt_result.metrics, tr_result.metrics)
         metadata = dict(tr_result.metadata)
@@ -1366,8 +1369,8 @@ def tr_rs(source: 'SourceLike',
           loop_opener: Union[str, LoopOpener] = 'als',
           schedule: str = 'center_out',
           schedule_block_size: int = 1,
-          gauge_recursion: str = 'pseudoinverse',
-          allow_projective_gauges: bool = False,
+          recursion: str = 'adjoint',
+          allow_projective_gauges: bool = True,
           gauge_tolerance: float = 1e-08,
           inverse_policy: str = 'pinv',
           rank_rtol: Optional[float] = None,
@@ -1381,14 +1384,16 @@ def tr_rs(source: 'SourceLike',
           out_device: Device = 'cpu',
           verbose: Union[bool, int] = 0,
           return_info: bool = False,
-          return_result: bool = False) -> '_DecompositionOutput':
+          return_result: bool = False,
+          expand_directions: bool = True) -> '_DecompositionOutput':
     """
     Projects a complete discrete ``source`` into TR cores with TR-RS.
 
     This simple interface constructs :class:`TRRS`, calls :meth:`TRRS.fit`
     and returns only the cores unless ``return_info=True``. The method is
     experimental and warns that open TT-RS guarantees do not transfer
-    automatically.
+    automatically. ``recursion`` and ``expand_directions`` follow
+    :meth:`TT2TR.fit`, defaulting to adjoint transport with expansion.
 
     ``source`` accepts tensors, formats, MPS models and finite sources as
     described in :class:`~tensorkrowch.decompositions.TRRS`, including
@@ -1418,7 +1423,7 @@ def tr_rs(source: 'SourceLike',
             loop_opener=loop_opener,
             schedule=schedule,
             schedule_block_size=schedule_block_size,
-            gauge_recursion=gauge_recursion,
+            recursion=recursion,
             allow_projective_gauges=allow_projective_gauges,
             gauge_tolerance=gauge_tolerance,
             inverse_policy=inverse_policy,
@@ -1431,7 +1436,8 @@ def tr_rs(source: 'SourceLike',
             generator=generator,
             strict_system=strict_system,
             verbose=verbose,
-            collect_metrics=return_info)
+            collect_metrics=return_info,
+            expand_directions=expand_directions)
     if return_result:
         return result
     if return_info:
@@ -1460,7 +1466,10 @@ def qtr_rss(source: CallableQuanticsSource,
             out_device: Device = 'cpu',
             verbose: Union[bool, int] = 0,
             return_info: bool = False,
-            return_result: bool = False) -> '_DecompositionOutput':
+            return_result: bool = False,
+            absorb_singular_values: bool = True,
+            refinement_sweeps: int = 0,
+            project_fixed_gauges: bool = False) -> '_DecompositionOutput':
     """
     Fits QTR cores from a Quantics coordinate source and sketch samples.
 
@@ -1496,8 +1505,7 @@ def qtr_rss(source: CallableQuanticsSource,
         raise ValueError("`sample_space` should be 'coordinates' or 'digits'")
     if sample_space == 'digits':
         sketch_samples = ConfigurationBatch(sketch_samples)
-    decomposer = TRRSS(source=source,
-                                out_device=out_device)
+    decomposer = TRRSS(source=source, out_device=out_device)
     result = decomposer.fit(
         sketch_samples,
         rank=rank,
@@ -1514,7 +1522,10 @@ def qtr_rss(source: CallableQuanticsSource,
         batch_size=batch_size,
         generator=generator,
         verbose=verbose,
-        collect_metrics=return_info)
+        collect_metrics=return_info,
+        absorb_singular_values=absorb_singular_values,
+        refinement_sweeps=refinement_sweeps,
+        project_fixed_gauges=project_fixed_gauges)
     if return_result:
         return result
     if return_info:
@@ -1549,7 +1560,11 @@ def tr_rss(function: Callable,
            out_device: Device = 'cpu',
            verbose: Union[bool, int] = 0,
            return_info: bool = False,
-           return_result: bool = False) -> '_DecompositionOutput':
+           return_result: bool = False,
+           *,
+           absorb_singular_values: bool = True,
+           refinement_sweeps: int = 0,
+           project_fixed_gauges: bool = False) -> '_DecompositionOutput':
     r"""
     Decomposes a sampled ``function`` into Tensor Ring cores.
 
@@ -1592,6 +1607,19 @@ def tr_rss(function: Callable,
         Enables central-block ``rank`` discovery under ``rank`` caps.
     pad_to_rank : bool, optional
         Explicitly pads ``adaptive`` effective ranks back to their caps.
+    absorb_singular_values : bool, optional
+        If ``True`` (default), keeps each free sketch-axis SVD spectrum in
+        subsequent SVDs and the local objective. If ``False``, moves it into
+        the external gauge and fits unweighted factors. See :meth:`TRRSS.fit`
+        for the resulting change of metric and fixed-gauge behavior.
+    refinement_sweeps : int, optional
+        Additional exact ALS sweeps in the retained original local metric,
+        initialized from the spectrum-restored opening. Defaults to ``0``. See
+        :meth:`TRRSS.fit` for numerical options and acceptance behavior.
+    project_fixed_gauges : bool, optional
+        Also trim inherited axes for compact ALS. Defaults to ``False``.
+        Fixed gauges are restored before return, and enabled recursive
+        refinement uses the full sample target. See :meth:`TRRSS.fit`.
     cutoff : float, optional
         Minimum singular value to keep. It must be non-negative. Singular
         values ``<= cutoff`` are removed.
@@ -1683,7 +1711,10 @@ def tr_rss(function: Callable,
             batch_size=batch_size,
             generator=generator,
             verbose=verbose,
-            collect_metrics=return_info)
+            collect_metrics=return_info,
+            absorb_singular_values=absorb_singular_values,
+            refinement_sweeps=refinement_sweeps,
+            project_fixed_gauges=project_fixed_gauges)
     if return_result:
         return result
     if return_info:

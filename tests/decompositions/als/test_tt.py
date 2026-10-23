@@ -423,7 +423,9 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
 class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
 
     @pytest.mark.parametrize('gauge', ['qr', 'svd'])
-    def test_exact_mode_redraws_current_design_at_every_site(self, gauge):
+    @pytest.mark.parametrize('sweep_direction', ['forward', 'alternating'])
+    def test_exact_mode_redraws_current_design_at_every_site(
+            self, gauge, sweep_direction):
         tensor = torch.randn(2, 3, 2, dtype=torch.float64)
         result = tk.decompositions.TTALS(
             tensor, out_device=None).fit(
@@ -431,6 +433,7 @@ class TestTTALSLeverageSampling:  # MARK: TestTTALSLeverageSampling
                 sampling='leverage',
                 n_samples=12,
                 gauge=gauge,
+                sweep_direction=sweep_direction,
                 leverage_uniform_mix=0.1,
                 generator=torch.Generator().manual_seed(55),
                 convergence=tk.decompositions.ConvergencePolicy(

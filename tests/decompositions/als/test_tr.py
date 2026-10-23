@@ -9,7 +9,8 @@ from tensorkrowch.decompositions.observers import HistoryObserver
 
 from tests.decompositions.als._oracles import (contract_tr_dense,
                                                make_tr_cores,
-                                               reference_tr_sweep)
+                                               reference_tr_sweep,
+                                               solve_local_core)
 
 
 def _exact_tr(dtype=torch.float64):
@@ -23,6 +24,31 @@ def _exact_tr(dtype=torch.float64):
 
 
 class TestTRALSExact:  # MARK: TestTRALSExact
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('sweep_direction', ['forward', 'alternating'])
+    def test_two_sweeps_match_direct_dense_oracle(self, dtype, sweep_direction):
+        _, tensor = _exact_tr(dtype)
+        initial = make_tr_cores(
+            in_dim=tensor.shape, rank=(2, 3, 2), dtype=dtype,
+            generator=torch.Generator().manual_seed(101))
+        expected = reference_tr_sweep(initial, tensor)
+        order = range(tensor.ndim)
+        if sweep_direction == 'alternating':
+            order = reversed(order)
+        for site in order:
+            expected[site] = solve_local_core(
+                expected, tensor, site, topology='tr')
+
+        result = tk.decompositions.TRALS(tensor, out_device=None).fit(
+            initial_cores=initial, gauge='none', normalize=False,
+            renormalize=False, sweep_direction=sweep_direction,
+            solver=tk.decompositions.LeastSquaresSolver(
+                column_scaling=False, system_scaling=False),
+            convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2))
+
+        for actual, direct in zip(result.cores, expected):
+            torch.testing.assert_close(actual, direct, rtol=2e-10, atol=2e-10)
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_one_sweep_matches_direct_dense_oracle(self, dtype):
@@ -289,7 +315,7 @@ class TestTRALSValidationAndWrapper:  # MARK: TestTRALSValidationAndWrapper
             rank=(2, 2, 2),
             generator=torch.Generator().manual_seed(105))
 
-        with pytest.raises(ValueError, match='one right-link rank'):
+        with pytest.raises(ValueError, match='one per link'):
             tk.decompositions.TRALS(tensor).fit(rank=(2, 2))
         with pytest.raises(ValueError, match='rank.*caps'):
             tk.decompositions.TRALS(tensor).fit(

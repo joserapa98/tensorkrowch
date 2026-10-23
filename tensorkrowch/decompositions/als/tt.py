@@ -495,7 +495,6 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
         self._targets = {}
         self._generation = None
         self._direction = None
-        self._initialized = False
         self.sample_exact_flags = []
 
     @property
@@ -513,8 +512,8 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
         """Current cores in original site order."""
         return self._cores
 
-    def _canonicalize_initial(self, direction: str) -> None:
-        """Places the initial TT in mixed-canonical form at the first site."""
+    def _canonicalize_start(self, direction: str) -> None:
+        """Places the TT in mixed-canonical form at the first active site."""
         cores = list(self._cores)
         versions = list(self._versions)
         gauge = self.gauge
@@ -578,10 +577,11 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
         Prepares directional environments and the current sampling
         generation.
         """
-        self._direction = 'forward' if order[0] == 0 else 'reverse'
-        if not self._initialized:
-            self._canonicalize_initial(self._direction)
-            self._initialized = True
+        direction = 'forward' if order[0] == 0 else 'reverse'
+        if self._direction is None or direction == self._direction:
+            # Repeated directions must move the center back before sampling.
+            self._canonicalize_start(direction)
+        self._direction = direction
 
         generation = sweep if self.mode == 'exact' \
             else self.refresh_policy.generation(sweep)
@@ -959,7 +959,9 @@ class TTALS:  # MARK: TTALS
             renormalize: bool = True,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0) -> TTDecomposition:
+            verbose: Union[bool, int] = 0,
+            *,
+            sweep_direction: str = 'forward') -> TTDecomposition:
         """
         Fits a TT by alternating one-site least-squares solves.
 
@@ -1028,6 +1030,11 @@ class TTALS:  # MARK: TTALS
             driver skips those reductions and synchronization points.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (most detailed).
+        sweep_direction : {``"forward"``, ``"alternating"``}
+            Site order within each ALS sweep. The default ``"forward"``
+            visits sites in increasing order on every sweep.
+            ``"alternating"`` reverses that order on odd sweeps. Each
+            directional pass counts once toward the sweep budget.
 
         Returns
         -------
@@ -1192,6 +1199,7 @@ class TTALS:  # MARK: TTALS
                     'sampling': sampling,
                     'gauge': getattr(gauge_policy, 'name', type(gauge_policy).__name__),
                     'max_sweeps': convergence.max_sweeps,
+                    'sweep_direction': sweep_direction,
                 }))
         driver_result = ALSSweepDriver().fit(
             problem=problem,
@@ -1200,7 +1208,8 @@ class TTALS:  # MARK: TTALS
             update_policy=update_policy,
             observer=fit_observer,
             collect_metrics=collect_metrics,
-            phase='TT-ALS')
+            phase='TT-ALS',
+            sweep_direction=sweep_direction)
 
         result_cores = _result_tt_cores(driver_result.cores)
         if self.out_device is not None:
@@ -1218,6 +1227,7 @@ class TTALS:  # MARK: TTALS
                 'keep_best': convergence.keep_best,
                 'stop_reason': driver_result.stop_reason,
                 'n_sweeps': driver_result.n_sweeps,
+                'sweep_direction': sweep_direction,
                 'fixed_sites': list(fixed_sites),
                 'sampling': sampling,
                 'n_samples': n_samples,
@@ -1269,7 +1279,9 @@ def tt_als(source: 'SourceLike',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
            return_info: bool = False,
-           return_result: bool = False) -> '_DecompositionOutput':
+           return_result: bool = False,
+           *,
+           sweep_direction: str = 'forward') -> '_DecompositionOutput':
     """
     Approximates a scalar tensor ``source`` with tensor train ALS.
 
@@ -1322,7 +1334,7 @@ def tt_als(source: 'SourceLike',
     leverage_uniform_mix : float
         Uniform mixture component added to leverage probabilities.
     max_sweeps : int
-        Maximum number of complete alternating sweeps.
+        Maximum number of complete directional sweeps.
     error_atol, error_rtol, change_rtol : float, optional
         Absolute error, relative error and complete-sweep stability criteria.
     patience : int, optional
@@ -1357,6 +1369,11 @@ def tt_als(source: 'SourceLike',
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
         present. It does not enable metrics and is incompatible with ``return_info``.
+    sweep_direction : {``"forward"``, ``"alternating"``}
+        Site order within each ALS sweep. The default ``"forward"``
+        visits sites in increasing order on every sweep.
+        ``"alternating"`` reverses that order on odd sweeps. Each
+        directional pass counts once toward the sweep budget.
 
     Returns
     -------
@@ -1410,7 +1427,8 @@ def tt_als(source: 'SourceLike',
             renormalize=renormalize,
             generator=generator,
             collect_metrics=return_info,
-            verbose=verbose)
+            verbose=verbose,
+            sweep_direction=sweep_direction)
     if return_result:
         return result
     if return_info:

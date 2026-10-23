@@ -110,7 +110,7 @@ def _relative_objective_change(previous: SweepRecord,
 
 class ALSSweepDriver:  # MARK: ALSSweepDriver
     """
-    Run alternating sweeps without topology-specific contractions.
+    Runs directional sweeps without topology-specific contractions.
 
     The backend owns environment construction and local solves. This driver
     chooses sweep directions, commits atomic updates, measures only complete
@@ -124,8 +124,21 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             update_policy: Optional[UpdatePolicy] = None,
             observer: Optional[DecompositionObserver] = None,
             collect_metrics: bool = False,
-            phase: str = 'ALS') -> _ALSDriverResult:
-        """Runs ALS until a normalized stopping reason is reached."""
+            phase: str = 'ALS',
+            *,
+            sweep_direction: str = 'forward') -> _ALSDriverResult:
+        """
+        Runs ALS until a normalized stopping reason is reached.
+
+        ``sweep_direction="forward"`` visits sites in increasing order on
+        every sweep. ``"alternating"`` reverses that order on odd sweeps.
+        Each directional pass counts once toward ``max_sweeps``.
+        """
+        if not isinstance(sweep_direction, str):
+            raise TypeError('`sweep_direction` should be str type')
+        if sweep_direction not in ('forward', 'alternating'):
+            raise ValueError(
+                "`sweep_direction` should be 'forward' or 'alternating'")
         if not isinstance(problem, ALSProblem):
             raise TypeError('`problem` should be ALSProblem type')
         if convergence is None:
@@ -186,7 +199,8 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
 
         for sweep in range(convergence.max_sweeps):
             order = tuple(range(backend.n_sites))
-            if sweep % 2:
+            reverse = sweep_direction == 'alternating' and sweep % 2 == 1
+            if reverse:
                 order = tuple(reversed(order))
             start = perf_counter() if need_sweep_record else None
             generation, refreshed = backend.prepare_sweep(order, sweep)
@@ -196,7 +210,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                     phase=phase,
                     sweep=sweep,
                     values={
-                        'direction': 'forward' if not sweep % 2 else 'reverse',
+                        'direction': 'reverse' if reverse else 'forward',
                         'sample_generation': generation,
                     }))
                 if refreshed:

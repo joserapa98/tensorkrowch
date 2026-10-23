@@ -282,6 +282,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 context=context,
                 metrics=metrics,
                 diagnostics=recursion_diagnostics)
+            # Residual enrichment can replace the destination TT coordinates.
+            target = provider.local_target(sites, context)
             opening = self._open(
                 provider=provider,
                 rank=rank,
@@ -329,6 +331,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 context=context,
                 metrics=metrics,
                 diagnostics=recursion_diagnostics)
+            target = provider.local_target(sites, context)
             opening = self._open(
                 provider=provider,
                 rank=rank,
@@ -397,10 +400,12 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                           metrics: DecompositionMetrics,
                           diagnostics: list) -> Mapping[str, Any]:
         """
-        Lets a ``recursion`` prepare an optional boundary-absorption gauge.
+        Lets the provider or recursion prepare a boundary-absorption gauge.
         """
         boundary_context = dict(context)
-        prepare_boundary = getattr(recursion, 'prepare_boundary', None)
+        prepare_boundary = getattr(provider, 'prepare_boundary', None)
+        if not callable(prepare_boundary):
+            prepare_boundary = getattr(recursion, 'prepare_boundary', None)
         if not callable(prepare_boundary):
             return boundary_context
 
@@ -503,7 +508,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
               fixed_right: Optional[torch.Tensor],
               context: Mapping[str, Any]) -> LoopOpening:
         """Builds and validates one constrained local opening."""
-        local_context = {**context, **provider.local_context(sites, context)}
+        local_context = {**context, **provider.local_context(sites, context),
+                         'sites': sites}
         local_rank = provider.local_rank(sites, rank, context)
         opening = opener.open(
             target,
@@ -542,6 +548,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
         order.append(sites)
         directions.append(direction)
         metrics.local_solves.extend(opening.local_records)
+        metrics.truncations.extend(opening.diagnostics.get('truncations', ()))
         metrics.errors.extend(opening.diagnostics.get('errors', ()))
         metrics.warnings.extend(opening.diagnostics.get('warnings', ()))
 

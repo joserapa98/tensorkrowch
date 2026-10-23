@@ -3,14 +3,17 @@ This script contains:
 
     Internal classes:
         * _TTCoreProvider
+        * _GramTTCoreProvider
+        * _CanonicalTTCoreProvider
+        * _VidalCoreProvider
 
     Public classes:
         * TT2TR
 
     Internal functions:
-        * _as_tt_decomposition
+        * _as_tt
         * _normalize_rank
-        * _resolve_gauge_recursion
+        * _resolve_recursion
         * _fidelity_error
 
     Public functions:
@@ -29,10 +32,12 @@ from typing import (Any,
 import torch
 
 from tensorkrowch.formats import TT
+from tensorkrowch.formats.bonds import VidalGauge
 from tensorkrowch.formats.formats1d import _restore_cores
+from tensorkrowch.models.mps import MPS
 
-from tensorkrowch.decompositions._utils import _normalize_positive_int
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
+from tensorkrowch.decompositions._utils import _normalize_positive_int
 from tensorkrowch.decompositions.metrics import (ErrorRecord,
                                                  FidelityRecord,
                                                  TimingRecord)
@@ -40,15 +45,19 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _normalize_verbosity,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
-                                                 TTDecomposition,
-                                                 QTTDecomposition,
-                                                 TensorDecomposition)
-from tensorkrowch.decompositions.ring.blocks import (PrescribedCentralBlockSelector)
+                                                 TTDecomposition)
+from tensorkrowch.decompositions.ring.blocks import (CentralBlockSelector,
+                                                    PrescribedCentralBlockSelector)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
-from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
-                                                     PseudoinverseGaugeRecursion,
-                                                     TTCoreGaugeRecursion)
+from tensorkrowch.decompositions.ring.gauges import (AdjointGaugeRecursion,
+                                                     GaugeRecursion,
+                                                     GaugeRecursionStep,
+                                                     GramGaugeRecursion,
+                                                     OrthGaugeRecursion,
+                                                     PinvGaugeRecursion,
+                                                     _ExpandedGaugeRecursion,
+                                                     _schmidt_power)
 from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
                                                       LoopOpener,
                                                       resolve_loop_opener)
@@ -61,23 +70,23 @@ _Device = Optional[Union[str, torch.device]]
 
 if TYPE_CHECKING:
     from tensorkrowch.decompositions.results import _DecompositionOutput
-    from tensorkrowch.models import MPS
 
 
-def _as_tt_decomposition(
+def _as_tt(
     tt: Union['TT', Sequence[torch.Tensor], 'MPS']
-) -> Union[TTDecomposition, QTTDecomposition]:
+) -> TT:
     """Normalizes TT results, raw cores and open-boundary MPS adapters."""
-    if isinstance(tt, TensorDecomposition) and isinstance(tt, TT):
+    if isinstance(tt, MPS):
+        if tt.boundary != 'obc':
+            raise ValueError('`tt` should have open boundaries')
+        tt = tt.to_tt()
+    if isinstance(tt, TT):
         if tt.n_batches:
-            raise ValueError('TT-to-TR does not support decomposition batches')
+            raise ValueError('TT-to-TR does not support structural batches')
         result = tt
-        if tt.bonds is not None:
-            cores = _restore_cores(tt._effective_cores(), tt.in_dim,
-                                   None, 0, False)
-            result = TTDecomposition(cores, metrics=tt.metrics,
-                                     metadata=tt.metadata)
     else:
+        if isinstance(tt, (str, bytes)) or not isinstance(tt, Sequence):
+            raise TypeError('`tt` should be a TT, open MPS or core sequence')
         source = FormatSource(tt)
         compact_cores = list(source.cores)
         if len(compact_cores) == 1:
@@ -105,14 +114,14 @@ def _normalize_rank(rank: int,
 class _TTCoreProvider:  # MARK: _TTCoreProvider
     """Exposes TT supercores and open-edge absorptions to the ring driver."""
 
-    tt: TTDecomposition  # Original open-boundary TT used to supply local targets
+    tt: TT  # Original open-boundary format supplying local targets
 
     boundary_mode = 'open'
 
     def __post_init__(self) -> None:
         source = FormatSource(self.tt.to_tt() if self.tt._quantized else self.tt)
         self.cores = tuple(source.cores)
-        self.in_dim = source.in_dim
+        self.in_dim = tuple(core.shape[1] for core in self.cores)
 
     def local_target(self,
                      sites: Sequence[int],
@@ -129,6 +138,28 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
             tensor = torch.tensordot(
                 tensor, self.cores[site], dims=([-1], [0]))
         return tensor
+
+    def expand_coordinates(self,
+                           site: int,
+                           count: int,
+                           direction: str) -> None:
+        """Adds zero reference rows and unit-metric auxiliary coordinates."""
+        if not count:
+            return
+        self.cores = list(self.cores)
+        core = self.cores[site]
+        axis = 0 if direction == 'right' else 2
+        shape = list(core.shape)
+        shape[axis] = count
+        self.cores[site] = torch.cat((core, core.new_zeros(shape)), dim=axis)
+        name = 'left_factors' if direction == 'right' else 'right_factors'
+        factors = getattr(self, name, None)
+        if factors is not None:
+            factors = list(factors)
+            index = site if direction == 'right' else site + 1
+            unit = torch.eye(count, dtype=core.dtype, device=core.device)
+            factors[index] = torch.block_diag(factors[index], unit)
+            setattr(self, name, factors)
 
     def local_rank(self,
                    sites: Sequence[int],
@@ -185,35 +216,146 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
             core=core,
             diagnostics={'algorithm': 'tt_boundary_absorption'})
 
-
-def _resolve_gauge_recursion(gauge_recursion: Any,
-                             *,
-                             inverse_policy: str,
-                             allow_projective: bool,
-                             tolerance: float,
-                             rank_rtol: Optional[float]) -> GaugeRecursion:
-    """Normalizes stable and experimental gauge-recursion strategies."""
-    options = {
-        'inverse_policy': inverse_policy,
-        'allow_projective': allow_projective,
-        'tolerance': tolerance,
-        'rank_rtol': rank_rtol,
-    }
-    if isinstance(gauge_recursion, str):
-        if gauge_recursion == 'pseudoinverse':
-            return PseudoinverseGaugeRecursion(**options)
-        if gauge_recursion == 'tt_core':
-            return TTCoreGaugeRecursion(**options)
-        raise ValueError(
-            "`gauge_recursion` should be 'pseudoinverse', 'tt_core' or a "
-            'GaugeRecursion object')
-    if isinstance(gauge_recursion, GaugeRecursion):
-        return gauge_recursion
-    raise TypeError(
-        '`gauge_recursion` should be str type or implement GaugeRecursion')
+    def prepare_boundary(self,
+                         opening: Any,
+                         local_target: Any,
+                         recursion_context: Mapping[str, Any],
+                         direction: str) -> GaugeRecursionStep:
+        """Keeps the learned outgoing gauge for direct TT-edge absorption."""
+        if direction == 'right':
+            gauge = opening.right_gauge
+        elif direction == 'left':
+            gauge = opening.left_gauge
+        else:
+            raise ValueError("`direction` should be 'left' or 'right'")
+        return GaugeRecursionStep(
+            gauge=gauge,
+            diagnostics={'boundary': True,
+                         'algorithm': 'absorb_learned_gauge'})
 
 
-def _fidelity_error(tt: TTDecomposition,
+class _CanonicalTTCoreProvider(_TTCoreProvider):  # MARK: _CanonicalTTCoreProvider
+    """Moves independent canonical centers without changing solved targets."""
+
+    def __init__(self, tt: TT, center: int) -> None:
+        self.center = center
+        super().__init__(tt)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        canonical = TT(_restore_cores(
+            self.cores, self.in_dim, None, 0, False)).canonicalize(
+                orth_center=self.center)
+        self.cores = [core.clone() for core in FormatSource(canonical).cores]
+
+    def shift_center(self,
+                     site: int,
+                     factor: torch.Tensor,
+                     direction: str) -> None:
+        """Absorbs a zero-padded QR factor into the next unsolved core."""
+        if direction == 'right':
+            self.cores[site] = torch.einsum(
+                'xa,apb->xpb', factor, self.cores[site])
+        else:
+            self.cores[site] = torch.einsum(
+                'apb,xb->apx', self.cores[site], factor)
+
+
+class _GramTTCoreProvider(_TTCoreProvider):  # MARK: _GramTTCoreProvider
+    """Caches QR square roots of all prefix and transposed-suffix Grams."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        left = [self.cores[0].new_ones(1, 1)]
+        for core in self.cores:
+            extended = torch.einsum('xa,apb->xpb', left[-1], core)
+            left.append(torch.linalg.qr(
+                extended.reshape(-1, core.shape[-1]), mode='r').R)
+        right = [self.cores[0].new_ones(1, 1)]
+        for core in reversed(self.cores):
+            extended = torch.einsum('xb,apb->pxa', right[-1], core)
+            right.append(torch.linalg.qr(
+                extended.reshape(-1, core.shape[0]), mode='r').R)
+        self.left_factors = tuple(left)
+        self.right_factors = tuple(reversed(right))
+
+
+class _VidalCoreProvider(_TTCoreProvider):  # MARK: _VidalCoreProvider
+    """Supplies canonical Vidal cores and their remaining bond factors."""
+
+    def __post_init__(self) -> None:
+        tt = self.tt.to_tt() if self.tt._quantized else self.tt
+        bonds = tt.bonds
+        if not isinstance(bonds, VidalGauge) or not bonds._valid:
+            raise ValueError('Adjoint Vidal transport requires valid Vidal data')
+        self.in_dim = tuple(tt.in_dim)
+        self.cores = list(tt._standard_cores())
+        self.spectra = tuple(bonds.spectra)
+        self.powers = tuple(bonds.powers)
+        self.bond_factors = tuple(_schmidt_power(s, 1 - left - right)
+                                  for s, (left, right) in
+                                  zip(self.spectra, self.powers))
+        # Auxiliary expansion coordinates carry unit metric, not Schmidt data.
+        unit = self.cores[0].new_ones(1, 1)
+        self.left_factors = (unit, *(torch.diag(_schmidt_power(s, 1 - right)).to(
+            self.cores[0].dtype) for s, (_, right) in
+            zip(self.spectra, self.powers)), unit)
+        self.right_factors = (unit, *(torch.diag(_schmidt_power(s, 1 - left)).to(
+            self.cores[0].dtype) for s, (left, _) in
+            zip(self.spectra, self.powers)), unit)
+
+    def local_target(self,
+                     sites: Sequence[int],
+                     context: Mapping[str, Any]) -> torch.Tensor:
+        """Contracts Vidal cores with each remaining internal factor once."""
+        sites = tuple(sites)
+        if not sites or sites != tuple(range(sites[0], sites[-1] + 1)):
+            raise ValueError('TT local sites should form a contiguous interval')
+        tensor = self.cores[sites[0]]
+        for site in sites[1:]:
+            tensor = tensor * self.bond_factors[site - 1]
+            tensor = torch.tensordot(
+                tensor, self.cores[site], dims=([-1], [0]))
+        return tensor
+
+    def prepare_boundary(self,
+                         opening: Any,
+                         local_target: Any,
+                         recursion_context: Mapping[str, Any],
+                         direction: str) -> GaugeRecursionStep:
+        """Includes the one remaining Vidal bond factor in the learned gauge."""
+        step = super().prepare_boundary(
+            opening, local_target, recursion_context, direction)
+        sites = recursion_context['from_sites']
+        bond = sites[-1] if direction == 'right' else sites[0] - 1
+        gauge = step.gauge * self.bond_factors[bond][None, :, None]
+        return GaugeRecursionStep(gauge=gauge, diagnostics=step.diagnostics)
+
+
+def _resolve_recursion(recursion: Any,
+                       *,
+                       inverse_policy: str,
+                       allow_projective: bool,
+                       tolerance: float,
+                       rank_rtol: Optional[float]) -> GaugeRecursion:
+    """Resolves one of four transport families or a custom strategy."""
+    if isinstance(recursion, str):
+        strategies = {'adjoint': AdjointGaugeRecursion,
+                      'pinv': PinvGaugeRecursion,
+                      'gram': GramGaugeRecursion,
+                      'orth': OrthGaugeRecursion}
+        if recursion not in strategies:
+            raise ValueError(
+                "`recursion` should be 'adjoint', 'pinv', 'gram' or 'orth'")
+        return strategies[recursion](
+            inverse_policy=inverse_policy, allow_projective=allow_projective,
+            tolerance=tolerance, rank_rtol=rank_rtol)
+    if isinstance(recursion, GaugeRecursion):
+        return recursion
+    raise TypeError('`recursion` should be str type or implement GaugeRecursion')
+
+
+def _fidelity_error(tt: TT,
                     tr: TRDecomposition) -> FidelityRecord:
     """
     Computes phase-aware fidelity and relative L2 error without densifying.
@@ -255,10 +397,16 @@ class TT2TR:  # MARK: TT2TR
     :class:`~tensorkrowch.models.MPS` through
     ``tk.models.MPS(tensors=result.cores)``.
 
+    The two TT edge cores absorb their adjacent learned outgoing gauges
+    directly. Vidal representations include the remaining explicit or inverse
+    bond factor once. No recursive-coordinate pseudoinverse is used to close
+    an edge.
+
     Parameters
     ----------
-    tt : TTDecomposition, sequence of torch.Tensor or MPS
+    tt : TT, sequence of torch.Tensor or MPS
         Open-boundary TT to convert. At least three sites are required.
+        Valid Vidal metadata are retained for adjoint transport.
     out_device : str or torch.device, optional
         Device where finalized TR cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the input device.
@@ -268,12 +416,12 @@ class TT2TR:  # MARK: TT2TR
                  tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
                  *,
                  out_device: _Device = 'cpu') -> None:
-        self._tt = _as_tt_decomposition(tt)
+        self._tt = _as_tt(tt)
         self._runtime = _RuntimePolicy.from_tensor(
             self._tt.cores[0], out_device=out_device)
 
     @property
-    def tt(self) -> Union[TTDecomposition, QTTDecomposition]:
+    def tt(self) -> TT:
         """Open-boundary TT fixed for repeated conversions."""
         return self._tt
 
@@ -284,14 +432,19 @@ class TT2TR:  # MARK: TT2TR
             loop_opener: Union[str, LoopOpener] = 'als',
             schedule: str = 'center_out',
             schedule_block_size: int = 1,
-            gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
-            allow_projective_gauges: bool = False,
+            recursion: Union[str, GaugeRecursion] = 'adjoint',
+            allow_projective_gauges: bool = True,
             gauge_tolerance: float = 1e-08,
             inverse_policy: str = 'pinv',
             rank_rtol: Optional[float] = None,
             verbose: Union[bool, int] = 0,
             *,
-            collect_metrics: bool = False) -> TRDecomposition:
+            collect_metrics: bool = False,
+            expand_directions: bool = True,
+            max_extra_rank: Optional[int] = None,
+            residual_rtol: float = 1e-12,
+            block_selector: Optional[CentralBlockSelector] = None
+        ) -> TRDecomposition:
         """
         Converts the TT with prescribed non-cyclic and cyclic TR ranks.
 
@@ -300,17 +453,15 @@ class TT2TR:  # MARK: TT2TR
         ranks: they are never silently reduced. A future adaptive mode will be
         explicit and separate.
 
-        The ``center`` is opened without fixed gauges. Two independent sweeps then
-        propagate directional pseudoinverses toward the TT boundaries, whose
-        unit ranks are absorbed into the first and last TR cores. Fidelity,
+        The ``center`` is opened without fixed gauges. Two independent sweeps
+        then propagate the selected virtual-basis maps toward the TT boundaries,
+        whose unit ranks are absorbed into the first and last TR cores. Fidelity,
         normalized overlap and absolute/relative reconstruction error are
         always measured by scaled TT/TR contractions without densifying.
 
-        .. warning::
-           ``gauge_recursion="tt_core"`` is experimental. It emits
-           :class:`~tensorkrowch.decompositions.ExperimentalWarning` and may
-           accept projected local transports only when
-           ``allow_projective_gauges=True``.
+        Adjoint transport and orthogonal expansion are enabled by default.
+        These strategies remain experimental; a small local residual does not
+        certify a small final TR reconstruction error.
 
         Parameters
         ----------
@@ -320,10 +471,17 @@ class TT2TR:  # MARK: TT2TR
             Positive cyclic ``rank``. Defaults to ``rank``.
         center : int, optional
             Internal TT site opened first. Defaults to the middle site.
+        block_selector : CentralBlockSelector, optional
+            Initial internal block policy. By default opens one site. Passing
+            :class:`CentralBlockSelector` grows an initial block under the
+            prescribed ranks; subsequent recursive openings remain one-site.
+            Internal Vidal factors appear exactly once in a block target.
         loop_opener : {``"als"``, ``"blostr+als"``}, LoopOpener or callable
             Local loop-opening strategy. The simple preset uses exact TR-ALS;
             advanced ALS options should be encapsulated in an
             :class:`~tensorkrowch.decompositions.ALSLoopOpener`.
+            :class:`~tensorkrowch.decompositions.SVDLoopOpener` optionally balances each free external
+            axis and refines after restoring its singular values.
             ``"blostr+als"`` tries an experimental spectral initialization and
             falls back cleanly to the same ALS path if BLOSTR assumptions are
             not satisfied.
@@ -336,22 +494,42 @@ class TT2TR:  # MARK: TT2TR
             Consecutive sites per alternating block. Open-boundary TT targets
             currently support the exact checkerboard with size one; other
             layouts use the documented fallback.
-        gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
-            Strategy used to propagate virtual bases. ``"pseudoinverse"`` is
-            the stable characterized default. ``"tt_core"`` uses the original
-            TT cores as recursive projectors and is experimental.
+        recursion : str or GaugeRecursion
+            Strategy for propagating virtual coordinates. ``"adjoint"`` uses
+            QR and moves the center for ordinary TT inputs; valid Vidal inputs
+            use their stored Schmidt powers and directional adjoints directly.
+            ``"pinv"`` pseudoinverts the current TT core or contracted initial
+            block. ``"gram"`` includes cached complete-subchain Gram metrics.
+            ``"orth"`` uses the Moore-Penrose dual of the learned outgoing
+            gauge. Strategy objects implement :class:`GaugeRecursion`.
+            Adjoint and Gram require ``"center_out"``. Local ALS metrics are
+            unchanged by Gram transport; Vidal targets retain their input gauge.
         allow_projective_gauges : bool
-            Whether ``rank``-deficient directional pseudoinverses may propagate a
-            projector instead of cancelling exactly.
+            Accept projected transport when a basis cannot be cancelled
+            exactly. Default True supports approximate fixed-rank inputs.
+            False enforces ``gauge_tolerance`` for inverse-based transport.
         gauge_tolerance : float
             Maximum relative error accepted for gauge cancellation.
         inverse_policy : {``"auto"``, ``"solve"``, ``"inverse"``, ``"pinv"``}
             Linear algebra used to construct directional gauge duals.
         rank_rtol : float, optional
             Relative singular-value threshold for pseudoinverses and numerical
-            gauge ranks.
+            gauge ranks. Expansion uses the separate ``residual_rtol``.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (final cores included).
+        expand_directions : bool
+            Append orthogonal opened-factor residual coordinates and zero
+            target rows to the next local problem. Default True retains these
+            compatibility constraints for all four built-in recursions.
+            Requires ``"center_out"``; prescribed TR ranks and the input
+            tensor are preserved. False disables expansion.
+        max_extra_rank : int, optional
+            Maximum auxiliary coordinates added per transition. None retains
+            all numerically significant directions; zero is a matched control.
+        residual_rtol : float
+            Auxiliary residual singular-value cutoff relative to the weighted
+            opened-factor Frobenius norm. Default 1e-12. Reference support
+            uses only a machine-precision cutoff, not this truncation.
         collect_metrics : bool
             Whether to retain local ALS solve diagnostics. Fidelity, final
             reconstruction error and gauge-cancellation checks remain enabled.
@@ -376,6 +554,8 @@ class TT2TR:  # MARK: TT2TR
         >>> bool(result.metrics.fidelities[0].fidelity > 0.999)
         True
         """
+        if not isinstance(expand_directions, bool):
+            raise TypeError('`expand_directions` should be bool type')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
         if not isinstance(allow_projective_gauges, bool):
@@ -388,6 +568,12 @@ class TT2TR:  # MARK: TT2TR
             raise TypeError('`schedule_block_size` should be int type')
         if schedule_block_size < 1:
             raise ValueError('`schedule_block_size` should be positive')
+        if block_selector is not None and not isinstance(
+                block_selector, CentralBlockSelector):
+            raise TypeError('`block_selector` should be CentralBlockSelector type')
+        if block_selector is not None and schedule != 'center_out':
+            raise ValueError(
+                '`block_selector` requires the `center_out` schedule')
         rank_spec = _normalize_rank(rank, tr_rank, len(self._tt.cores))
         if center is None:
             center = len(self._tt.cores) // 2
@@ -395,13 +581,35 @@ class TT2TR:  # MARK: TT2TR
         fit_observer = _resolve_observer(verbosity, None) \
             if verbosity else None
         opener = resolve_loop_opener(loop_opener)
-        recursion = _resolve_gauge_recursion(
-            gauge_recursion,
-            inverse_policy=inverse_policy,
+        requested_recursion = recursion
+        recursion = _resolve_recursion(
+            recursion, inverse_policy=inverse_policy,
             allow_projective=allow_projective_gauges,
-            tolerance=gauge_tolerance,
-            rank_rtol=rank_rtol)
-        provider = _TTCoreProvider(self._tt)
+            tolerance=gauge_tolerance, rank_rtol=rank_rtol)
+        if isinstance(recursion, (GramGaugeRecursion, AdjointGaugeRecursion)):
+            if schedule != 'center_out' or schedule_block_size != 1:
+                raise ValueError(
+                    'Adjoint and Gram recursion require `center_out` '
+                    'with `schedule_block_size=1`')
+        if isinstance(recursion, AdjointGaugeRecursion):
+            bonds = self._tt.bonds
+            if isinstance(bonds, VidalGauge) and bonds._valid:
+                provider = _VidalCoreProvider(self._tt)
+            else:
+                provider = _CanonicalTTCoreProvider(self._tt, center)
+        elif isinstance(recursion, GramGaugeRecursion):
+            provider = _GramTTCoreProvider(self._tt)
+        else:
+            provider = _TTCoreProvider(self._tt)
+
+        if expand_directions:
+            if schedule != 'center_out' or schedule_block_size != 1:
+                raise ValueError('`expand_directions` requires `center_out`')
+            if not isinstance(recursion, (OrthGaugeRecursion,
+                                          PinvGaugeRecursion)):
+                raise TypeError('Expansion requires a built-in recursion')
+            recursion = _ExpandedGaugeRecursion(
+                recursion, max_extra_rank, residual_rtol)
 
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
@@ -420,11 +628,13 @@ class TT2TR:  # MARK: TT2TR
                 'rank': rank_spec,
                 'opener': opener,
                 'recursion': recursion,
-                'block_selector': PrescribedCentralBlockSelector(),
+                'block_selector': (PrescribedCentralBlockSelector()
+                                   if block_selector is None else block_selector),
                 'center': center,
                 'context': {
                     '_observer': fit_observer,
                     'collect_metrics': collect_metrics or bool(verbosity),
+                    'block_bounds': (1, len(provider.in_dim) - 2),
                 },
             }
             if schedule == 'alternating':
@@ -450,6 +660,7 @@ class TT2TR:  # MARK: TT2TR
         metadata.update({
             'algorithm': 'tt2tr',
             'center': center,
+            'center_block': driver_result.central_block.sites,
             'schedule': driver_result.diagnostics.get(
                 'schedule', 'center_out'),
             'requested_schedule': schedule,
@@ -457,10 +668,18 @@ class TT2TR:  # MARK: TT2TR
             'requested_rank': list(rank_spec),
             'adaptive': False,
             'inverse_policy': inverse_policy,
-            'gauge_recursion': (
-                gauge_recursion if isinstance(gauge_recursion, str)
-                else type(gauge_recursion).__name__),
+            'recursion': (
+                requested_recursion if isinstance(requested_recursion, str)
+                else type(requested_recursion).__name__),
             'allow_projective_gauges': allow_projective_gauges,
+            'boundary_closure': 'learned_gauge_absorption',
+            'expand_directions': expand_directions,
+            **({'vidal_powers': provider.powers}
+               if isinstance(provider, _VidalCoreProvider) else {}),
+            **({'max_extra_rank': recursion.max_extra_rank,
+                'residual_rtol': recursion.residual_rtol,
+                'enrichment': driver_result.diagnostics.get('recursions', [])}
+               if isinstance(recursion, _ExpandedGaugeRecursion) else {}),
         })
         result = TRDecomposition(
             cores=[self._runtime.finalize(core)
@@ -497,14 +716,19 @@ def tt2tr(tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
           loop_opener: Union[str, LoopOpener] = 'als',
           schedule: str = 'center_out',
           schedule_block_size: int = 1,
-          gauge_recursion: Union[str, GaugeRecursion] = 'pseudoinverse',
-          allow_projective_gauges: bool = False,
+          recursion: Union[str, GaugeRecursion] = 'adjoint',
+          allow_projective_gauges: bool = True,
           gauge_tolerance: float = 1e-08,
           inverse_policy: str = 'pinv',
           rank_rtol: Optional[float] = None,
           out_device: _Device = 'cpu',
           verbose: Union[bool, int] = 0,
-          return_info: bool = False) -> '_DecompositionOutput':
+          return_info: bool = False,
+          *,
+          block_selector: Optional[CentralBlockSelector] = None,
+          expand_directions: bool = True,
+          max_extra_rank: Optional[int] = None,
+          residual_rtol: float = 1e-12) -> '_DecompositionOutput':
     """
     Converts open-boundary TT cores into prescribed tensor ring cores.
 
@@ -516,18 +740,26 @@ def tt2tr(tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
 
     Parameters
     ----------
-    tt : TTDecomposition, sequence of torch.Tensor or MPS
+    tt : TT, sequence of torch.Tensor or MPS
         Open-boundary TT to convert. At least three sites are required.
+        Valid Vidal metadata are retained for adjoint transport.
     rank : int
         Positive ``rank`` prescribed on every non-cyclic TR link.
     tr_rank : int, optional
         Positive cyclic ``rank``. Defaults to ``rank``.
     center : int, optional
         Internal TT site opened first. Defaults to the middle site.
+    block_selector : CentralBlockSelector, optional
+        Initial block policy for ``"center_out"``. Defaults to one site;
+        :class:`CentralBlockSelector` grows a block under the prescribed ranks.
+        Subsequent recursive openings remain one-site.
     loop_opener : {``"als"``, ``"blostr+als"``}, LoopOpener or callable
         Local loop-opening strategy. The simple preset uses exact TR-ALS;
         advanced ALS options should be encapsulated in an
-        :class:`~tensorkrowch.decompositions.ALSLoopOpener`. ``"blostr+als"``
+        :class:`~tensorkrowch.decompositions.ALSLoopOpener`.
+        :class:`~tensorkrowch.decompositions.SVDLoopOpener` adds local SVD balancing
+        and optional refinement.
+        ``"blostr+als"``
         tries an experimental spectral initialization and falls back cleanly to
         the same ALS path if BLOSTR assumptions are not satisfied.
     schedule : {``"center_out"``, ``"alternating"``}
@@ -539,13 +771,20 @@ def tt2tr(tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
         Consecutive sites per alternating block. Open-boundary TT targets
         currently support the exact checkerboard with size one; other layouts
         use the documented fallback.
-    gauge_recursion : {``"pseudoinverse"``, ``"tt_core"``} or GaugeRecursion
-        Strategy used to propagate virtual bases. ``"pseudoinverse"`` is the
-        stable characterized default. ``"tt_core"`` uses the original TT cores
-        as recursive projectors and is experimental.
+    recursion : str or GaugeRecursion
+        Strategy for propagating virtual coordinates. ``"adjoint"`` uses
+        QR and moves the center for ordinary TT inputs; valid Vidal inputs
+        use their stored Schmidt powers and directional adjoints directly.
+        ``"pinv"`` pseudoinverts the current TT core or contracted initial
+        block. ``"gram"`` includes cached complete-subchain Gram metrics.
+        ``"orth"`` uses the Moore-Penrose dual of the learned outgoing
+        gauge. Strategy objects implement :class:`GaugeRecursion`.
+        Adjoint and Gram require ``"center_out"``. Local ALS metrics are
+        unchanged by Gram transport; Vidal targets retain their input gauge.
     allow_projective_gauges : bool
-        Whether ``rank``-deficient directional pseudoinverses may propagate a
-        projector instead of cancelling exactly.
+        Accept projected transport when a basis cannot be cancelled
+        exactly. Default True supports approximate fixed-rank inputs.
+        False enforces ``gauge_tolerance`` for inverse-based transport.
     gauge_tolerance : float
         Maximum relative error accepted for gauge cancellation.
     inverse_policy : {``"auto"``, ``"solve"``, ``"inverse"``, ``"pinv"``}
@@ -558,6 +797,19 @@ def tt2tr(tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
         ``None`` keeps them on the input device.
     verbose : bool or int
         Console verbosity from 0 (silent) to 3 (final cores included).
+    expand_directions : bool
+        Append orthogonal opened-factor residual coordinates and zero
+        target rows to the next local problem. Default True retains these
+        compatibility constraints for all four built-in recursions.
+        Requires ``"center_out"``; prescribed TR ranks and the input
+        tensor are preserved. False disables expansion.
+    max_extra_rank : int, optional
+        Maximum auxiliary coordinates added per transition. None retains
+        all numerically significant directions; zero is a matched control.
+    residual_rtol : float
+        Auxiliary residual singular-value cutoff relative to the weighted
+        opened-factor Frobenius norm. Default 1e-12. Reference support
+        uses only a machine-precision cutoff, not this truncation.
     return_info : bool
         If ``True``, also returns metadata and structured ALS metrics.
 
@@ -585,13 +837,17 @@ def tt2tr(tt: Union['TT', Sequence[torch.Tensor], 'MPS'],
         loop_opener=loop_opener,
         schedule=schedule,
         schedule_block_size=schedule_block_size,
-        gauge_recursion=gauge_recursion,
+        recursion=recursion,
         allow_projective_gauges=allow_projective_gauges,
         gauge_tolerance=gauge_tolerance,
         inverse_policy=inverse_policy,
         rank_rtol=rank_rtol,
         verbose=verbose,
-        collect_metrics=return_info)
+        block_selector=block_selector,
+        collect_metrics=return_info,
+        expand_directions=expand_directions,
+        max_extra_rank=max_extra_rank,
+        residual_rtol=residual_rtol)
     if return_info:
         return result.cores, result.as_info()
     return result.cores

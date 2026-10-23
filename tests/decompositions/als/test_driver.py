@@ -105,6 +105,40 @@ def _fixed_problem():
 
 class TestALSSweepDriver:  # MARK: TestALSSweepDriver
 
+    @pytest.mark.parametrize('sweep_direction', [None, 'forward', 'alternating'])
+    def test_sweep_order_and_observer_direction(self, sweep_direction):
+        backend = _FakeALSBackend([1., 0.5, 0.25])
+        history = HistoryObserver()
+        options = {} if sweep_direction is None else {
+            'sweep_direction': sweep_direction}
+
+        result = tk.decompositions.ALSSweepDriver().fit(
+            _fixed_problem(), backend,
+            tk.decompositions.ConvergencePolicy(max_sweeps=3),
+            observer=history, collect_metrics=True, **options)
+
+        forward = [0, 1, 2]
+        middle = [2, 1, 0] if sweep_direction == 'alternating' else forward
+        assert [event.site for event in history.events
+                if event.name == 'site_complete'] == forward + middle + forward
+        assert [event.values['direction'] for event in history.events
+                if event.name == 'sweep_start'] == [
+                    'forward',
+                    'reverse' if sweep_direction == 'alternating' else 'forward',
+                    'forward']
+        assert result.n_sweeps == 3
+
+    @pytest.mark.parametrize('value, error', [
+        (None, TypeError), (True, TypeError), ('reverse', ValueError)])
+    def test_invalid_sweep_direction(self, value, error):
+        backend = _FakeALSBackend([1.])
+
+        with pytest.raises(error, match='sweep_direction'):
+            tk.decompositions.ALSSweepDriver().fit(
+                _fixed_problem(), backend, sweep_direction=value)
+
+        assert backend.current_sweep is None
+
     def test_fast_path_skips_objective_records_and_observers(self):
         backend = _FakeALSBackend([1., 0.5])
 
@@ -134,13 +168,15 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
         assert result.stop_reason == 'all_cores_fixed'
         assert result.n_sweeps == 0
 
-    def test_fixed_sites_are_skipped_in_both_directions(self):
+    @pytest.mark.parametrize('sweep_direction', ['forward', 'alternating'])
+    def test_fixed_sites_are_skipped_in_both_directions(self, sweep_direction):
         backend = _FakeALSBackend([1., 0.5], trainable_sites=(0, 2))
 
         tk.decompositions.ALSSweepDriver().fit(
             _fixed_problem(),
             backend,
-            tk.decompositions.ConvergencePolicy(max_sweeps=2))
+            tk.decompositions.ConvergencePolicy(max_sweeps=2),
+            sweep_direction=sweep_direction)
 
         assert backend.skipped == [(0, 1), (1, 1)]
 

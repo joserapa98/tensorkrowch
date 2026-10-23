@@ -501,9 +501,10 @@ class GaugeRecord:  # MARK: GaugeRecord
         object.__setattr__(self, 'tolerance', tolerance)
         if not isinstance(self.projective, bool):
             raise TypeError('`projective` should be bool type')
-        if self.inverse_method not in ('solve', 'inverse', 'pinv'):
+        if self.inverse_method not in ('solve', 'inverse', 'pinv', 'adjoint'):
             raise ValueError(
-                "`inverse_method` should be 'solve', 'inverse' or 'pinv'")
+                "`inverse_method` should be 'solve', 'inverse', 'pinv' or "
+                "'adjoint'")
         if self.site is not None:
             if isinstance(self.site, bool) or not isinstance(self.site, int):
                 raise TypeError('`site` should be int type or None')

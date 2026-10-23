@@ -51,6 +51,79 @@ class TestLoopOpeningContracts:  # MARK: TestLoopOpeningContracts
                 fixed_left=False, fixed_right=False, block_size=2)
 
 
+class TestSVDLoopOpener:  # MARK: TestSVDLoopOpener
+
+    @pytest.mark.parametrize('absorb_singular_values', [False, True])
+    @pytest.mark.parametrize('refinement_sweeps', [0, 1])
+    def test_exact_rank_one_opening(
+            self, absorb_singular_values, refinement_sweeps):
+        factors = (
+            torch.tensor([1., 2.]),
+            torch.tensor([1., -2., 3.]),
+            torch.tensor([2., 1., -1., 3.]),
+        )
+        target = torch.einsum('i,j,k->ijk', *factors).to(torch.complex128)
+        result = tk.decompositions.SVDLoopOpener(
+            absorb_singular_values=absorb_singular_values,
+            refinement_sweeps=refinement_sweeps).open(
+                target, rank=1,
+                context={'generator': torch.Generator().manual_seed(121)})
+
+        assert result.rank == (1, 1, 1)
+        torch.testing.assert_close(result.contract_dense(), target)
+
+    @pytest.mark.parametrize('fixed_side', ['left', 'right'])
+    @pytest.mark.parametrize('absorb_singular_values', [False, True])
+    def test_fixed_gauge_projection_promotes_complex_dtype(
+            self, fixed_side, absorb_singular_values):
+        left = torch.tensor([1., 2.], dtype=torch.float64)
+        center = torch.tensor([1., -2., 3.], dtype=torch.float64)
+        right = torch.tensor([2., 1., -1., 3.], dtype=torch.float64)
+        target = torch.einsum('i,j,k->ijk', left, center, right)
+        gauge = 1j * (left if fixed_side == 'left' else right)[None, :, None]
+        fixed = {f'fixed_{fixed_side}': gauge}
+        result = tk.decompositions.SVDLoopOpener(
+            absorb_singular_values=absorb_singular_values,
+            project_fixed_gauges=True).open(
+                target, rank=1, **fixed,
+                context={'generator': torch.Generator().manual_seed(121)})
+
+        assert all(core.dtype == torch.complex128 for core in result.all_cores)
+        torch.testing.assert_close(
+            result.contract_dense(), target.to(gauge.dtype))
+        assert torch.equal(getattr(result, f'{fixed_side}_gauge'), gauge)
+
+    def test_invalid_target_is_rejected_before_projection(self):
+        opener = tk.decompositions.SVDLoopOpener()
+        with pytest.raises(TypeError, match='target'):
+            opener.open([1, 2, 3], rank=1)
+        with pytest.raises(ValueError, match='target'):
+            opener.open(torch.ones(2, 3), rank=1)
+
+    @pytest.mark.parametrize('invalid', [True, None, 1.5, '1', -1])
+    def test_invalid_refinement_budget(self, invalid):
+        error = ValueError if invalid == -1 else TypeError
+        with pytest.raises(error, match='refinement_sweeps'):
+            tk.decompositions.SVDLoopOpener(refinement_sweeps=invalid)
+
+    def test_invalid_spectrum_policy(self):
+        with pytest.raises(TypeError, match='absorb_singular_values'):
+            tk.decompositions.SVDLoopOpener(absorb_singular_values='outside')
+
+    def test_two_fixed_gauges_use_the_direct_solver(self):
+        cores, tensor = _local_problem(torch.complex128)
+        opener = tk.decompositions.SVDLoopOpener(
+            tk.decompositions.FixedGaugeCoreOpener(), refinement_sweeps=1)
+        result = opener.open(
+            tensor, (2, 3, 2), fixed_left=cores[0], fixed_right=cores[2])
+        assert torch.equal(result.left_gauge, cores[0])
+        assert torch.equal(result.right_gauge, cores[2])
+        assert not result.diagnostics['svd_trimmed_left']
+        assert not result.diagnostics['svd_trimmed_right']
+        assert 'svd_refinement' not in result.diagnostics
+        torch.testing.assert_close(result.contract_dense(), tensor)
+
+
 class TestALSLoopOpener:  # MARK: TestALSLoopOpener
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])

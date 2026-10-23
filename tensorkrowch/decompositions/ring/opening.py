@@ -6,6 +6,7 @@ This script contains:
         * LoopOpening
         * LoopOpener
         * ALSLoopOpener
+        * SVDLoopOpener
         * FixedGaugeCoreOpener
         * CallableLoopOpener
         * CompositeLoopOpener
@@ -39,18 +40,20 @@ from typing import (Any,
 import torch
 
 from tensorkrowch.formats import TR
+from tensorkrowch.utils import safe_divide, truncated_svd
 
+from tensorkrowch.decompositions._truncation import _TruncationSpec
 from tensorkrowch.decompositions._utils import _normalize_rank
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.als.tr import TRALS
-from tensorkrowch.decompositions.metrics import LocalSolveRecord
+from tensorkrowch.decompositions.metrics import (LocalSolveRecord,
+                                                 TruncationRecord)
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TensorDecomposition)
+from tensorkrowch.decompositions.sources import BaseSource, ConfigurationBatch
 from tensorkrowch.decompositions.sources.callable import CallableTensorSource
 from tensorkrowch.decompositions.sources.factory import as_tensor_source
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 BaseSource)
 
 
 _Rank = Union[int, Sequence[int]]
@@ -329,6 +332,9 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
     fit_options : mapping, optional
         Options forwarded to :meth:`TRALS.fit`. Target, rank, fixed cores,
         output device and orientation remain controlled by :meth:`open`.
+        ALS sweeps run forward by default. Set
+        ``sweep_direction="alternating"`` to reverse the site order on odd
+        sweeps.
     """
 
     _capabilities = LoopOpenerCapabilities(
@@ -462,6 +468,336 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
             collect_metrics=context.get('collect_metrics', True),
             **fit_options)
         return _opening_from_result(result, orientation)
+
+
+class SVDLoopOpener:  # MARK: SVDLoopOpener
+    """
+    Balances free external axes before opening a local tensor ring.
+
+    SVDs run right then left, by default skipping inherited fixed gauges.
+    With spectra outside, each SVD passes its unweighted factor to the next
+    SVD and the wrapped solver. Optional exact ALS refinement restores the
+    spectra in the retained objective and warm-start gauges before lifting
+    the result.
+    Refinement preserves fixed gauges and rejects a larger local residual.
+    It does not guarantee a smaller global tensor ring error.
+    With both gauges fixed, the wrapped solver runs without extra refinement.
+
+    Parameters
+    ----------
+    opener : str or LoopOpener, optional
+        Wrapped strategy, default ``"als"``. Numerical ALS fit options are
+        reused when it is an :class:`ALSLoopOpener`; other strategies use
+        default ALS options for refinement.
+    absorb_singular_values : bool, optional
+        Keep spectra in the initial objective if ``True``. Default ``False``
+        moves spectra outside until lifting or refinement.
+    refinement_sweeps : int, optional
+        Additional exact ALS sweeps in the restored retained metric.
+        Default ``0`` disables refinement. The best candidate is compared
+        with the initializer, and inherited gauges stay fixed.
+    project_fixed_gauges : bool, optional
+        Also trim inherited axes and project their fixed gauges into the
+        compact SVD bases. Default ``False`` trims only free axes. With
+        ``True``, original fixed gauges are restored on return; refinement
+        runs after lifting in the full original target, so it also sees
+        components omitted by the compact fixed-gauge projection.
+    cutoff, atol, rtol, cum_percentage : float, optional
+        Criteria passed to :func:`~tensorkrowch.utils.truncated_svd`. Each
+        free axis is also capped by its adjacent TR-rank product. These
+        criteria change external sketch dimensions, never prescribed TR ranks.
+
+    Notes
+    -----
+    ``open`` accepts a dense tensor with axes ``(left external, *physical,
+    right external)``. It returns gauges in the original external coordinates.
+    This works with arbitrary TT core gauges and initial multi-site blocks;
+    no Vidal representation is required. Initial ALS residuals use the
+    balanced metric; ``diagnostics['svd_refinement']`` records refinement
+    errors in the restored refinement metric.
+    """
+
+    def __init__(self,
+                 opener: Union[str, LoopOpener] = 'als',
+                 *,
+                 absorb_singular_values: bool = False,
+                 refinement_sweeps: int = 0,
+                 project_fixed_gauges: bool = False,
+                 cutoff: Optional[float] = None,
+                 atol: Optional[float] = None,
+                 rtol: Optional[float] = None,
+                 cum_percentage: Optional[float] = None) -> None:
+        self.opener = resolve_loop_opener(opener)
+        if not isinstance(absorb_singular_values, bool):
+            raise TypeError('`absorb_singular_values` should be bool type')
+        if isinstance(refinement_sweeps, bool) or \
+                not isinstance(refinement_sweeps, int):
+            raise TypeError('`refinement_sweeps` should be int type')
+        if refinement_sweeps < 0:
+            raise ValueError('`refinement_sweeps` should be non-negative')
+        self.absorb_singular_values = absorb_singular_values
+        if not isinstance(project_fixed_gauges, bool):
+            raise TypeError('`project_fixed_gauges` should be bool type')
+        self.project_fixed_gauges = project_fixed_gauges
+        self.truncation = _TruncationSpec(
+            cutoff=cutoff, atol=atol, rtol=rtol, cum_percentage=cum_percentage)
+        self.refiner = None
+        if refinement_sweeps:
+            options = dict(self.opener.fit_options) \
+                if isinstance(self.opener, ALSLoopOpener) else {}
+            options.update({
+                'sampling': 'exact', 'mask': None, 'n_samples': None,
+                'convergence': ConvergencePolicy(
+                    max_sweeps=refinement_sweeps, keep_best=True),
+            })
+            self.refiner = ALSLoopOpener(options)
+
+    @property
+    def capabilities(self) -> 'LoopOpenerCapabilities':
+        """Returns the wrapped solver's gauge and block constraints."""
+        return self.opener.capabilities
+
+    def _trim(self,
+              matrix: torch.Tensor,
+              rank: int,
+              site: int,
+              context: Mapping[str, Any],
+              records: list
+              ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        options = dict(context.get(
+            '_svd_truncation', self.truncation.as_kwargs()))
+        options['rank'] = min(rank, min(matrix.shape))
+        collect_metrics = context.get(
+            '_svd_collect_metrics', context.get('collect_metrics', True))
+        if collect_metrics:
+            u, s, vh, info = truncated_svd(
+                matrix, return_info=True, **options)
+            records.append(TruncationRecord.from_svd_info(
+                info, site=site))
+        else:
+            u, s, vh = truncated_svd(matrix, **options)
+        return u, s, vh
+
+    def _refine(self,
+                tensor: torch.Tensor,
+                initial: LoopOpening,
+                fixed_left: Optional[torch.Tensor],
+                fixed_right: Optional[torch.Tensor],
+                context: Dict[str, Any]) -> LoopOpening:
+        """Refines the restored metric and rejects a larger residual."""
+        before = torch.linalg.vector_norm(tensor - initial.contract_dense())
+        context['initial_cores'] = initial.all_cores
+        refined = self.refiner.open(
+            tensor, initial.rank, fixed_left=fixed_left,
+            fixed_right=fixed_right, orientation=initial.orientation,
+            context=context)
+        candidate = torch.linalg.vector_norm(tensor - refined.contract_dense())
+        accepted = bool(torch.isfinite(candidate) & (candidate <= before))
+        after = candidate if accepted else before
+        denominator = torch.linalg.vector_norm(tensor)
+        refinement = {
+            'accepted': accepted,
+            'relative_error_before': safe_divide(
+                before, denominator,
+                zero_value=torch.where(before == 0, 0, torch.inf)),
+            'relative_error_after': safe_divide(
+                after, denominator,
+                zero_value=torch.where(after == 0, 0, torch.inf)),
+            'metadata': refined.diagnostics['metadata'],
+        }
+        selected = refined if accepted else initial
+        return LoopOpening(
+            left_gauge=selected.left_gauge, cores=selected.cores,
+            right_gauge=selected.right_gauge, rank=initial.rank,
+            orientation=initial.orientation,
+            local_records=initial.local_records + refined.local_records,
+            diagnostics={**initial.diagnostics, 'svd_refinement': refinement})
+
+    def open(self,
+             target: Any,
+             rank: _Rank,
+             *,
+             fixed_left: Optional[torch.Tensor] = None,
+             fixed_right: Optional[torch.Tensor] = None,
+             orientation: str = 'right',
+             context: _Context = None) -> LoopOpening:
+        """
+        Opens a dense local target after balancing its external axes.
+
+        Arguments follow :meth:`ALSLoopOpener.open`. ``target`` must be a
+        tensor with at least one physical axis between its two external
+        axes. Returned gauges use the original external coordinates. The
+        target and fixed gauges are promoted to their common dtype before
+        projecting inherited gauges.
+        """
+        if not isinstance(target, torch.Tensor):
+            raise TypeError(
+                '`target` should be a tensor with two external axes')
+        if target.ndim < 3:
+            raise ValueError(
+                '`target` should contain two external axes and at least '
+                'one physical axis')
+        context = _normalize_context(context)
+        orientation = _normalize_orientation(orientation)
+        self.capabilities.require(
+            fixed_left=fixed_left is not None,
+            fixed_right=fixed_right is not None,
+            block_size=target.ndim - 2)
+        ranks = list(_normalize_rank(rank, target.ndim))
+        runtime_dtype = target.dtype
+        for name, gauge in (('fixed_left', fixed_left),
+                            ('fixed_right', fixed_right)):
+            if gauge is not None:
+                if not isinstance(gauge, torch.Tensor):
+                    raise TypeError(f'`{name}` should be torch.Tensor or None')
+                external_axis = 0 if name == 'fixed_left' else -1
+                if gauge.ndim != 3 or \
+                        gauge.shape[1] != target.shape[external_axis]:
+                    raise ValueError(
+                        f'`{name}` should have three axes and match the '
+                        'corresponding external target dimension')
+                runtime_dtype = torch.promote_types(runtime_dtype, gauge.dtype)
+        tensor = target.to(dtype=runtime_dtype)
+        if fixed_left is not None:
+            fixed_left = fixed_left.to(dtype=runtime_dtype)
+        if fixed_right is not None:
+            fixed_right = fixed_right.to(dtype=runtime_dtype)
+        sites = context.get('sites', tuple(range(1, target.ndim - 1)))
+        records = []
+        left_lift = None
+        right_lift = None
+        left_spectrum = None
+        right_spectrum = None
+        local_fixed_left, local_fixed_right = fixed_left, fixed_right
+        full_refinement = self.project_fixed_gauges and (
+            fixed_left is not None or fixed_right is not None)
+
+        if fixed_left is not None:
+            ranks[0] = fixed_left.shape[-1]
+            ranks[-1] = fixed_left.shape[0]
+        if fixed_right is not None:
+            ranks[-2] = fixed_right.shape[0]
+            ranks[-1] = fixed_right.shape[-1]
+
+        if fixed_right is None or self.project_fixed_gauges:
+            matrix = tensor.reshape(-1, tensor.shape[-1])
+            u, s, right_lift = self._trim(
+                matrix,
+                ranks[-2] * ranks[-1],
+                sites[-1], context, records)
+            if fixed_right is not None:
+                local_fixed_right = torch.einsum(
+                    'rmg,bm->rbg', fixed_right, right_lift.conj())
+                if not self.absorb_singular_values:
+                    local_fixed_right = local_fixed_right * safe_divide(
+                        torch.ones_like(s), s)[None, :, None]
+            if self.absorb_singular_values:
+                u = u * s.unsqueeze(0)
+            elif self.refiner is not None:
+                right_spectrum = s
+            else:
+                right_lift = s.unsqueeze(1) * right_lift
+            tensor = u.reshape(*tensor.shape[:-1], u.shape[-1])
+
+        if fixed_left is None or self.project_fixed_gauges:
+            matrix = tensor.reshape(tensor.shape[0], -1)
+            left_lift, s, vh = self._trim(
+                matrix,
+                ranks[-1] * ranks[0],
+                sites[0], context, records)
+            if fixed_left is not None:
+                local_fixed_left = torch.einsum(
+                    'sa,gsr->gar', left_lift.conj(), fixed_left)
+                if not self.absorb_singular_values:
+                    local_fixed_left = local_fixed_left * safe_divide(
+                        torch.ones_like(s), s)[None, :, None]
+            if self.absorb_singular_values:
+                vh = s.unsqueeze(1) * vh
+            elif self.refiner is not None:
+                left_spectrum = s
+            else:
+                left_lift = left_lift * s.unsqueeze(0)
+            tensor = vh.reshape(s.shape[0], *tensor.shape[1:])
+
+        local_context = dict(context)
+        local_context.update({
+            'in_dim': tuple(tensor.shape),
+            'dtype': tensor.dtype,
+            'device': tensor.device,
+        })
+        opening = self.opener.open(
+            tensor,
+            tuple(ranks),
+            fixed_left=local_fixed_left,
+            fixed_right=local_fixed_right,
+            orientation=orientation,
+            context=local_context)
+
+        refine = self.refiner is not None and (
+            fixed_left is None or fixed_right is None)
+        if refine:
+            left_gauge, right_gauge = opening.left_gauge, opening.right_gauge
+            if left_spectrum is not None:
+                tensor = tensor * left_spectrum.reshape(
+                    -1, *((1,) * (tensor.ndim - 1)))
+                left_gauge = left_gauge * left_spectrum[None, :, None]
+            if right_spectrum is not None:
+                tensor = tensor * right_spectrum
+                right_gauge = right_gauge * right_spectrum[None, :, None]
+            initial = LoopOpening(
+                left_gauge=left_gauge, cores=opening.cores,
+                right_gauge=right_gauge, rank=opening.rank,
+                orientation=opening.orientation,
+                local_records=opening.local_records,
+                diagnostics=opening.diagnostics)
+            opening = initial if full_refinement else self._refine(
+                tensor, initial, fixed_left, fixed_right, local_context)
+
+        left_gauge = opening.left_gauge
+        if left_lift is not None:
+            left_gauge = torch.einsum(
+                'sa,gar->gsr',
+                left_lift.to(left_gauge.dtype),
+                left_gauge)
+        right_gauge = opening.right_gauge
+        if right_lift is not None:
+            right_gauge = torch.einsum(
+                'rbg,bt->rtg',
+                right_gauge,
+                right_lift.to(right_gauge.dtype))
+        if full_refinement:
+            if fixed_left is not None:
+                left_gauge = fixed_left
+            if fixed_right is not None:
+                right_gauge = fixed_right
+            opening = LoopOpening(
+                left_gauge=left_gauge, cores=opening.cores,
+                right_gauge=right_gauge, rank=opening.rank,
+                orientation=opening.orientation,
+                local_records=opening.local_records,
+                diagnostics=opening.diagnostics)
+            if refine:
+                local_context['in_dim'] = tuple(target.shape)
+                opening = self._refine(
+                    target, opening, fixed_left, fixed_right, local_context)
+            left_gauge, right_gauge = opening.left_gauge, opening.right_gauge
+        all_cores = (left_gauge, *opening.cores, right_gauge)
+        return LoopOpening(
+            left_gauge=left_gauge,
+            cores=opening.cores,
+            right_gauge=right_gauge,
+            rank=tuple(core.shape[-1] for core in all_cores),
+            orientation=opening.orientation,
+            local_records=opening.local_records,
+            diagnostics={
+                **opening.diagnostics,
+                'svd_trimmed_left': left_lift is not None,
+                'svd_trimmed_right': right_lift is not None,
+                'absorb_singular_values': self.absorb_singular_values,
+                'project_fixed_gauges': self.project_fixed_gauges,
+                'refinement_space': 'full' if full_refinement else 'retained',
+                'truncations': tuple(records),
+            })
 
 
 class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
@@ -889,6 +1225,7 @@ __all__ = [
     'LoopOpenerCapabilities',
     'LoopOpener',
     'ALSLoopOpener',
+    'SVDLoopOpener',
     'FixedGaugeCoreOpener',
     'CallableLoopOpener',
     'CompositeLoopOpener',

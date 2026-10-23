@@ -783,7 +783,9 @@ class TRALS(TTALS):  # MARK: TRALS
             renormalize: bool = True,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0) -> TRDecomposition:
+            verbose: Union[bool, int] = 0,
+            *,
+            sweep_direction: str = 'forward') -> TRDecomposition:
         """
         Fits a TR by alternating cyclic one-site least-squares solves.
 
@@ -855,6 +857,11 @@ class TRALS(TTALS):  # MARK: TRALS
             Whether to retain local solves, sweep errors and timings.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (most detailed).
+        sweep_direction : {``"forward"``, ``"alternating"``}
+            Site order within each ALS sweep. The default ``"forward"``
+            visits sites in increasing order on every sweep.
+            ``"alternating"`` reverses that order on odd sweeps. Each
+            directional pass counts once toward the sweep budget.
 
         Returns
         -------
@@ -1015,6 +1022,7 @@ class TRALS(TTALS):  # MARK: TRALS
                     'sampling': sampling,
                     'gauge': getattr(gauge_policy, 'name', type(gauge_policy).__name__),
                     'max_sweeps': convergence.max_sweeps,
+                    'sweep_direction': sweep_direction,
                 }))
         driver_result = ALSSweepDriver().fit(
             problem=problem,
@@ -1023,7 +1031,8 @@ class TRALS(TTALS):  # MARK: TRALS
             update_policy=update_policy,
             observer=fit_observer,
             collect_metrics=collect_metrics,
-            phase='TR-ALS')
+            phase='TR-ALS',
+            sweep_direction=sweep_direction)
 
         result_cores = tuple(driver_result.cores)
         if self.out_device is not None:
@@ -1041,6 +1050,7 @@ class TRALS(TTALS):  # MARK: TRALS
                 'keep_best': convergence.keep_best,
                 'stop_reason': driver_result.stop_reason,
                 'n_sweeps': driver_result.n_sweeps,
+                'sweep_direction': sweep_direction,
                 'fixed_sites': list(fixed_sites),
                 'sampling': sampling,
                 'n_samples': n_samples,
@@ -1101,7 +1111,9 @@ def tr_als(source: 'SourceLike',
            generator: Optional[torch.Generator] = None,
            verbose: Union[bool, int] = 0,
            return_info: bool = False,
-           return_result: bool = False) -> '_DecompositionOutput':
+           return_result: bool = False,
+           *,
+           sweep_direction: str = 'forward') -> '_DecompositionOutput':
     """
     Approximates a scalar tensor ``source`` with cyclic TR-ALS.
 
@@ -1166,7 +1178,7 @@ def tr_als(source: 'SourceLike',
         Number of balanced environment-cache segments. Defaults to at most
         three and already defines future worker partitions.
     max_sweeps : int
-        Maximum number of complete alternating sweeps.
+        Maximum number of complete directional sweeps.
     error_atol : float, optional
         Absolute error, relative error and complete-sweep stability criteria.
     error_rtol : float, optional
@@ -1209,6 +1221,11 @@ def tr_als(source: 'SourceLike',
     return_result : bool
         Returns the numerical result object, preserving Quantics layouts when
         present. It does not enable metrics and is incompatible with ``return_info``.
+    sweep_direction : {``"forward"``, ``"alternating"``}
+        Site order within each ALS sweep. The default ``"forward"``
+        visits sites in increasing order on every sweep.
+        ``"alternating"`` reverses that order on odd sweeps. Each
+        directional pass counts once toward the sweep budget.
 
     Returns
     -------
@@ -1257,7 +1274,8 @@ def tr_als(source: 'SourceLike',
             renormalize=renormalize,
             generator=generator,
             collect_metrics=return_info,
-            verbose=verbose)
+            verbose=verbose,
+            sweep_direction=sweep_direction)
     if return_result:
         return result
     if return_info:

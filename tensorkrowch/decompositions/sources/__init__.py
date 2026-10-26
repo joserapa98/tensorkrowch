@@ -19,6 +19,10 @@ Sources shared by tensor decomposition algorithms.
         Continuous or finite sources + samples -> RSS
         Source matrix/Quantics metadata -> corresponding result format
 
+Evaluation configurations contain ``len(source.in_sites)`` inputs in that
+order; ``source.n_sites`` counts all represented variables. Matrix sources
+evaluate one input per paired site and return every paired output axis.
+
 Dataset constructors reuse the same evaluation methods. Sparse values outside
 stored indices are zero. In ALS a separate boolean mask determines participating
 entries; ``True`` participates, including entries whose target value is zero.

@@ -26,12 +26,14 @@ class CallableSource(BaseSource):  # MARK: CallableSource
     """
     Continuous function evaluated by a user callable.
 
-    Packed configurations are passed to ``function`` as a tensor. A
-    heterogeneous configuration batch is passed as a tuple containing one
-    tensor per site. The callable must preserve the leading configuration batch
-    and return shape ``(batch, *out_shape)``.
+    Packed configurations are passed to ``function`` with shape
+    ``(batch, len(in_sites), *feature_shape)``; scalar inputs have no trailing
+    feature axes. Heterogeneous inputs are passed as a tuple of
+    ``len(in_sites)`` tensors. Both forms follow ``in_sites`` order. The
+    callable preserves the leading batch and returns ``(batch, *out_shape)``.
 
-    Construct the source with ``function`` and its number of input sites.
+    Construct the source with ``function`` and its total variable count.
+    ``in_sites`` selects the inputs; all remaining variables are output axes.
     Output shape and dtype can be declared or discovered on first evaluation.
     This source accepts continuous features and has no finite grid to
     materialize. Use :class:`CallableTensorSource` for discrete indices, or
@@ -45,19 +47,24 @@ class CallableSource(BaseSource):  # MARK: CallableSource
     Parameters
     ----------
     function : callable
-        Function evaluated on configuration batches.
+        Receives the inputs selected by ``in_sites``, in that order, and
+        returns shape ``(batch, *out_shape)``.
     n_sites : int
-        Number of continuous input sites. Each site can receive a scalar or
-        an embedded vector.
+        Total number of input and output variables. An input variable receives
+        a scalar or embedded vector; each remaining variable is an output axis.
     out_shape : sequence of int or None, optional
         Declared response shape. The default ``None`` discovers it on the
-        first non-empty evaluation; ``()`` requires scalar responses.
+        first non-empty evaluation; its rank must equal
+        ``n_sites - len(in_sites)``. ``()`` requires scalar responses.
     dtype : torch.dtype or None, optional
         Declared output dtype. ``None`` infers it from the first evaluation.
     device : str or torch.device, optional
         Device on which configurations and returned values must live.
     batch_size : int or None, optional
         Maximum number of configurations passed to one callable invocation.
+    in_sites : sequence of int, optional
+        Ordered input variables. Defaults to all variables; output axes follow
+        the complement in increasing variable order.
 
     Examples
     --------
@@ -76,8 +83,10 @@ class CallableSource(BaseSource):  # MARK: CallableSource
                  out_shape: Optional[Sequence[int]] = None,
                  dtype: Optional[torch.dtype] = None,
                  device: Union[str, torch.device] = 'cpu',
-                 batch_size: Optional[int] = None) -> None:
-        super().__init__(n_sites)
+                 batch_size: Optional[int] = None,
+                 *,
+                 in_sites: Optional[Sequence[int]] = None) -> None:
+        super().__init__(n_sites, in_sites=in_sites)
         if not callable(function):
             raise TypeError('`function` should be callable')
         normalized_out_shape = None if out_shape is None else \
@@ -88,6 +97,9 @@ class CallableSource(BaseSource):  # MARK: CallableSource
             if (not isinstance(batch_size, int)) or (batch_size < 1):
                 raise ValueError('`batch_size` should be a positive integer')
 
+        if normalized_out_shape is not None and len(normalized_out_shape) != (
+                self.n_sites - len(self.in_sites)):
+            raise ValueError('`out_shape` should have one axis per output variable')
         self.function = function
         self._in_dim = None
         self._out_shape = normalized_out_shape
@@ -102,9 +114,10 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         Constructs a callable with one paired output dimension per input.
 
         ``in_dim`` and ``out_dim`` must have equal lengths, with one pair per
-        site. The callable receives input configurations in site order and
-        returns shape ``(batch, *out_dim)``; output indices are not passed to
-        it separately. This sets ``is_matrix=True`` and ``out_shape=out_dim``.
+        site. Every paired site receives an input, so
+        ``len(in_sites) == n_sites``. The callable receives configurations in
+        ``in_sites`` order and returns shape ``(batch, *out_dim)``. Output
+        indices are not passed separately. This sets ``is_matrix=True`` and ``out_shape=out_dim``.
 
         For :class:`CallableTensorSource`, configurations contain bounded
         integer indices, and :meth:`contract_dense` returns interleaved axes
@@ -140,10 +153,13 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         outputs = _normalize_dims(out_dim, 'out_dim')
         if len(inputs) != len(outputs):
             raise ValueError('Matrix dimensions should have equal lengths')
-        source = cls(function, inputs if cls.input_kind == 'indices' else len(inputs),
-                     out_shape=outputs, **kwargs)
+        dimensions = (*inputs, *outputs) if cls.input_kind == 'indices' \
+            else 2 * len(inputs)
+        source = cls(function, dimensions,
+                     in_sites=tuple(range(len(inputs))), out_shape=outputs, **kwargs)
         source._matrix_dims = inputs, outputs
         source._in_dim = inputs
+        source._set_sites(len(inputs))
         return source
 
     @classmethod
@@ -165,7 +181,8 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         density estimate; no kernel is selected automatically.
 
         Called on :class:`CallableSource`, this constructs a continuous source
-        and infers ``n_sites`` from the dataset columns. Called on
+        with all dataset columns as inputs, so
+        ``len(in_sites) == n_sites == dataset.shape[1]``. Called on
         :class:`CallableTensorSource`, it uses discrete indices: without a
         kernel it returns :meth:`SparseTensorSource.from_data`, which can infer
         ``in_dim``; with a kernel, ``in_dim`` is required and the result remains
@@ -175,8 +192,9 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         Parameters
         ----------
         dataset : torch.Tensor
-            Samples with shape ``(samples, n_sites)``: real coordinates for a
-            continuous source, or integer indices for a discrete source.
+            Samples with shape ``(n_samples, len(in_sites))``: real coordinates
+            for a continuous source, or integer indices for a discrete source.
+            These constructors use all columns as inputs in their given order.
         weights : torch.Tensor, optional
             Non-negative weights normalized to total mass one.
         kernel : callable, optional
@@ -239,13 +257,13 @@ class CallableSource(BaseSource):  # MARK: CallableSource
 
     @property
     def in_dim(self) -> Optional[Tuple[int, ...]]:
-        """Discrete dimensions, or ``None`` for continuous features."""
+        """Dimensions of all vector variables or paired matrix input axes."""
         return self._in_dim
 
     @property
     def out_shape(self) -> Optional[Tuple[int, ...]]:
         """Declared or inferred function output shape."""
-        return self._out_shape
+        return super().out_shape if self.in_dim is not None else self._out_shape
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
@@ -264,6 +282,12 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         result = self.function(argument)
         return self._validate_result(result, configurations.batch_size)
 
+    def _set_output_shape(self, out_shape: Tuple[int, ...]) -> None:
+        """Resolves response dimensions for the declared output variables."""
+        if not self.is_matrix and len(out_shape) != self.n_sites - len(self.in_sites):
+            raise ValueError('`function` should return one axis per output variable')
+        self._out_shape = out_shape
+
     def _validate_result(self, result: torch.Tensor, batch_size: int) -> torch.Tensor:
         """Checks batch shape and stable result runtime metadata."""
         if not isinstance(result, torch.Tensor):
@@ -277,9 +301,10 @@ class CallableSource(BaseSource):  # MARK: CallableSource
                 '`function` should preserve the configuration batch dimension')
 
         out_shape = tuple(result.shape[1:])
-        if self._out_shape is None:
-            self._out_shape = out_shape
-        elif out_shape != self._out_shape:
+        expected = self.out_shape
+        if expected is None:
+            self._set_output_shape(out_shape)
+        elif out_shape != expected:
             raise ValueError(
                 '`function` output shape does not match `out_shape`')
         if self._dtype is None:
@@ -295,8 +320,11 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         Parameters
         ----------
         configurations : ConfigurationBatch
-            Continuous features for ``CallableSource``; discrete indices for
-            ``CallableTensorSource`` and its Quantics subclass.
+            Inputs in ``in_sites`` order: continuous features with shape
+            ``(batch, len(in_sites), *feature_shape)`` for ``CallableSource``,
+            or integer indices with shape ``(batch, len(in_sites))`` for
+            ``CallableTensorSource`` and its Quantics subclass. Heterogeneous
+            continuous inputs may instead use ``len(in_sites)`` tensors.
 
         Returns
         -------
@@ -307,7 +335,7 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         if not isinstance(configurations, ConfigurationBatch):
             raise TypeError(
                 '`configurations` should be ConfigurationBatch type')
-        if configurations.n_sites != self.n_sites:
+        if configurations.n_inputs != len(self.in_sites):
             raise ValueError(
                 'Configurations should contain one value per input site')
         configurations = configurations.to(self._device)
@@ -315,14 +343,15 @@ class CallableSource(BaseSource):  # MARK: CallableSource
             raise ValueError(f'Configurations should have kind `{self.input_kind}`')
         if self.input_kind == 'indices':
             _discrete_indices(
-                configurations, self._in_dim, self._device)
+                configurations, self._in_sites_dims,
+                self._device)
 
         if configurations.batch_size == 0:
-            if (self._out_shape is None) or (self._dtype is None):
+            if (self.out_shape is None) or (self._dtype is None):
                 raise ValueError(
                     'An empty first evaluation requires output shape and dtype')
             result = torch.empty(
-                (0, *self._out_shape),
+                (0, *self.out_shape),
                 device=self._device,
                 dtype=self._dtype)
             self._record_evaluation(points=0, batches=0)
@@ -372,12 +401,17 @@ class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
     """
     Callable-backed finite tensor evaluated on discrete indices.
 
-    Construct the source with ``function`` and one dimension per input site
-    in ``in_dim``. :meth:`evaluate` passes integer configurations to the
-    callable, which returns a scalar or tensor per configuration with shape
+    Construct the source with ``function`` and all vector-axis dimensions in
+    ``in_dim``. ``in_sites`` selects which variables receive input indices.
+    :meth:`evaluate` passes integer configurations with shape
+    ``(batch, len(in_sites))`` in ``in_sites`` order to the callable, which
+    returns a scalar or tensor per configuration with shape
     ``(batch, *out_shape)``. Values are computed on demand; :meth:`contract_dense`
     evaluates all configurations when the full tensor is needed. Output shape,
-    dtype and callable batching follow :class:`CallableSource`.
+    dtype and callable batching follow :class:`CallableSource`. ``n_sites``
+    equals ``len(in_dim)``; ``out_shape`` is determined by the dimensions of
+    the variables outside ``in_sites``. Output dimensions are known before
+    evaluation; dtype can still be inferred on the first call.
 
     Use :meth:`matrix` to pair each input site with an output dimension, or
     :meth:`from_data` to construct a scalar vector source from discrete
@@ -387,9 +421,13 @@ class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
     Parameters
     ----------
     function : callable
-        Receives integer configurations and preserves their leading batch axis.
+        Receives integer indices with shape ``(batch, len(in_sites))``, in
+        ``in_sites`` order, and returns shape ``(batch, *out_shape)``.
     in_dim : sequence[int]
-        Positive finite dimensions of the indexed input sites.
+        Dimensions of all represented vector axes.
+    in_sites : sequence of int, optional
+        Ordered input variables. Defaults to every axis. The callable returns
+        the complementary axes in their represented order.
     **kwargs
         Output shape, dtype, device and batching options of ``CallableSource``.
 
@@ -408,6 +446,8 @@ class CallableTensorSource(CallableSource):  # MARK: CallableTensorSource
         dimensions = _normalize_dims(in_dim, 'in_dim')
         super().__init__(function, len(dimensions), **kwargs)
         self._in_dim = dimensions
+        if self._out_shape is not None and self._out_shape != self.out_shape:
+            raise ValueError('`out_shape` should match the unselected `in_dim` axes')
 
 
 __all__ = [

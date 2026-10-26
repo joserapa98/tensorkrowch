@@ -6,7 +6,7 @@ This script contains:
 """
 
 from math import prod
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -25,12 +25,15 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
     """
     Coordinate callable evaluated through a finite Quantics discretization.
 
-    :meth:`evaluate` receives digit configurations in :class:`QuantizedLayout`
-    order. The layout decodes grid indices, and the :class:`CoordinateMap`
-    converts them to domain coordinates for ``function``. The callable returns
+    :meth:`evaluate` receives digit configurations of shape
+    ``(batch, len(in_sites))`` in :class:`QuantizedLayout` order. Here
+    ``len(in_sites) == layout.n_sites``, including only input digits. The layout
+    decodes grid indices, and the :class:`CoordinateMap` converts them to domain coordinates for ``function``. The callable returns
     one scalar or fixed-shape tensor per configuration. Values are sampled
     without interpolation; validation and batching follow
-    :class:`CallableTensorSource`.
+    :class:`CallableTensorSource`. ``n_sites`` includes digit input variables
+    and any response axes discovered during evaluation. Matrix sources instead
+    count paired input/output digit sites.
 
     The usual constructor accepts three ways to define the discretization:
     pass ``base``, ``level`` and ``domain`` for a uniform grid with left grid
@@ -97,8 +100,10 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
             grid_coordinates=grid_coordinates, layout=layout,
             coordinate_map=coordinate_map)
         self.n_coordinates = n_coordinates
-        kwargs.setdefault('out_shape', None)
-        super().__init__(function, self.layout.in_dim, **kwargs)
+        out_shape = kwargs.pop('out_shape', None)
+        dimensions = (*self.layout.in_dim, *(out_shape or ()))
+        super().__init__(function, dimensions, out_shape=out_shape,
+                         in_sites=tuple(range(self.layout.n_sites)), **kwargs)
 
     @classmethod
     def matrix(cls, function: Callable, in_n_coordinates: int,
@@ -115,9 +120,10 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
 
         Both layouts must have the same number of digit sites, although their
         coordinate counts and local dimensions can differ. :meth:`evaluate`
-        receives only input digits and evaluates the callable at every output
-        grid configuration. It returns ``(batch, *out_dim)``, with one output
-        digit axis per site. :meth:`contract_dense` interleaves input and output
+        receives input digits of shape ``(batch, len(in_sites))`` and evaluates
+        the callable at every output grid configuration. Matrices have
+        ``len(in_sites) == n_sites == in_layout.n_sites``. The returned shape
+        is ``(batch, *out_dim)``, with one output digit axis per site. :meth:`contract_dense` interleaves input and output
         digit axes; :meth:`contract_dense_grid_axes` groups input coordinate
         axes before output coordinate axes.
 
@@ -165,7 +171,7 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         source.in_n_coordinates = in_n_coordinates
         source.out_n_coordinates = out_n_coordinates
         source._matrix_dims = source.in_dim, output_layout.in_dim
-        source._out_shape = output_layout.in_dim
+        source._set_sites(source.layout.n_sites)
         return source
 
     @classmethod
@@ -248,6 +254,19 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         return cls(function, n_coordinates, layout=layout,
                    coordinate_map=coordinate_map, out_shape=(),
                    dtype=mass.dtype if kernel is None else None, device=dataset.device)
+
+    @property
+    def out_shape(self) -> Optional[Tuple[int, ...]]:
+        """Response dimensions, or ``None`` until the first grid evaluation."""
+        if self._out_shape is None and not self.is_matrix:
+            return None
+        return super().out_shape
+
+    def _set_output_shape(self, out_shape: Tuple[int, ...]) -> None:
+        """Includes inferred response dimensions after the input digit axes."""
+        self._in_dim = (*self.layout.in_dim, *out_shape)
+        self._set_sites(len(self._in_dim), tuple(range(self.layout.n_sites)))
+        super()._set_output_shape(out_shape)
 
     def _evaluate_batch(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """Decodes digit inputs before using the shared result validation."""

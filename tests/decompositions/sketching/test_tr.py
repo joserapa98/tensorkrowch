@@ -478,22 +478,26 @@ class TestQTRRSS:  # MARK: TestQTRRSS
         assert info['metadata']['quantization']['n_coordinates'] == 1
 
 
-def _rank_one_sparse(dtype=torch.float64):
+def _rank_one_sparse(dtype=torch.float64, in_sites=(0, 1, 2)):
     factors = [
         torch.tensor([1., 2.], dtype=dtype),
         torch.tensor([1., 3.], dtype=dtype),
         torch.tensor([2., 1.], dtype=dtype),
     ]
     dense = torch.einsum('i,j,k->ijk', *factors)
+    out_sites = tuple(site for site in range(3) if site not in in_sites)
     indices = torch.cartesian_prod(*(
-        torch.arange(dim) for dim in dense.shape))
+        torch.arange(dense.shape[site]) for site in in_sites))
+    values = dense.permute(*in_sites, *out_sites).reshape(
+        indices.shape[0], *(dense.shape[site] for site in out_sites))
     source = tk.decompositions.SparseTensorSource(
-        indices, dense.reshape(-1), dense.shape)
+        indices, values, dense.shape, in_sites=in_sites)
     return source, dense
 
 
 class TestTRRS:  # MARK: TestTRRS
 
+    @pytest.mark.parametrize('in_sites', [(0, 1, 2), (2, 0)])
     @pytest.mark.parametrize('recursion', ['adjoint', 'pinv', 'gram', 'orth'])
     @pytest.mark.parametrize('expanded', [False, True])
     @pytest.mark.parametrize('operator', [
@@ -502,8 +506,8 @@ class TestTRRS:  # MARK: TestTRRS
         tk.decompositions.TTStackSketch(tt_rank=2, n_stacks=2),
     ])
     def test_sparse_rank_one_source_is_recovered(
-            self, operator, recursion, expanded):
-        source, dense = _rank_one_sparse()
+            self, operator, recursion, expanded, in_sites):
+        source, dense = _rank_one_sparse(in_sites=in_sites)
         with pytest.warns(tk.decompositions.ExperimentalWarning):
             result = tk.decompositions.TRRS(
                 source,

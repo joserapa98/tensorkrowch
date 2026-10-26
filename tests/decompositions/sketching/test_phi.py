@@ -182,7 +182,9 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         assert not phi.configuration_batch().packed
 
     def test_legacy_singleton_scalar_output_needs_no_output_site(self):
-        source = tk.decompositions.CallableSource(lambda indices: indices.sum(dim=1, keepdim=True).to(torch.float64), n_sites=2, out_shape=(1,), dtype=torch.float64)
+        source = tk.decompositions.CallableSource(
+            lambda indices: indices.sum(dim=1, keepdim=True).to(torch.float64),
+            n_sites=3, in_sites=(0, 1), out_shape=(1,), dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
             torch.ones(1, 1), n_input_sites=2)
         phi = PhiOperator(
@@ -198,7 +200,9 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             base = (indices[:, 0] + 10 * indices[:, 1]).to(torch.float64)
             return base[:, None, None] + torch.arange(6).reshape(1, 2, 3)
 
-        source = tk.decompositions.CallableSource(function, n_sites=2, out_shape=(2, 3), dtype=torch.float64)
+        source = tk.decompositions.CallableSource(
+            function, n_sites=4, in_sites=(0, 2), out_shape=(2, 3),
+            dtype=torch.float64)
         output_spec = _OutputSpec.normalize(
             torch.ones(1, 2, 3),
             n_input_sites=2,
@@ -222,7 +226,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
                 x + 10 * y + 3 * out_0 + out_1
         assert torch.equal(result, expected)
         configurations = phi.configuration_batch()
-        assert configurations.n_sites == 2
+        assert configurations.n_inputs == 2
         assert configurations.batch_size == 24
         assert phi.last_stats == tk.decompositions.EvaluationStats(
             requested_points=24,

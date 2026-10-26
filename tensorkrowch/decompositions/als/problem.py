@@ -248,7 +248,10 @@ class ALSProblem:  # MARK: ALSProblem
             if out_shape is None:
                 raise ValueError(
                     'Source output shape is required for global weights')
-            expected_shape = (*self.source.in_dim, *out_shape)
+            expected_shape = self.source.in_dim
+            if self.source.is_matrix:
+                expected_shape = tuple(dim for pair in zip(
+                    self.source.in_dim, self.source.out_dim) for dim in pair)
             if self.weights.shape != expected_shape:
                 raise ValueError(
                     '`weights` should match the complete source tensor shape')

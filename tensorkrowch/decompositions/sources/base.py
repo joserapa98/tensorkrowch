@@ -37,26 +37,28 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
     """
     Batch of discrete indices or possibly continuous features.
 
-    ``values`` can be a packed tensor whose first two dimensions are ``(batch,
-    n_sites)``, or a sequence containing one tensor per site. For discrete
-    ``kind="indices"``, each site holds one integer that selects a slice of a
-    tensor or an input to a discrete function. For ``kind="features"``, each
-    site holds a scalar or vector-valued feature passed to a callable, such as
-    a continuous input or a latent feature from another model layer. A packed
-    batch then has shape ``(batch, n_sites, *feature_shape)``, while the
-    sequence form permits different feature shapes at different sites.
-    ``kind`` applies to the entire batch; it does not mix indices and features.
+    ``values`` can be a packed tensor with shape ``(batch, n_inputs)``, or a
+    sequence of ``n_inputs`` tensors. For source evaluation,
+    ``n_inputs = len(source.in_sites)`` and columns follow ``source.in_sites``.
+    The batch's :attr:`n_inputs` returns this column count, which can be smaller
+    than ``source.n_sites``.
+
+    For ``kind="indices"``, each column holds one integer index. For
+    ``kind="features"``, each column holds a scalar or tensor-valued feature
+    passed to a callable. A packed feature batch has shape
+    ``(batch, n_inputs, *feature_shape)``; the sequence form permits different
+    feature shapes for each input. ``kind`` applies to the entire batch.
 
     Parameters
     ----------
     values : torch.Tensor or sequence of torch.Tensor
-        Packed configurations or one tensor per site. Every site tensor in a
-        heterogeneous batch must share its leading batch dimension, device and
-        dtype.
+        Packed configurations or one tensor per evaluated input, in
+        ``in_sites`` order. All tensors in a heterogeneous batch share their
+        leading batch dimension, device and dtype.
     kind : {``"indices"``, ``"features"``}
-        Meaning of the ``values`` at every site. ``"indices"`` is the default
+        Meaning of the ``values`` at every input. ``"indices"`` is the default
         and requires scalar integers. ``"features"`` accepts scalar or
-        vector-valued inputs for callables.
+        tensor-valued inputs for callables.
     """
 
     values: ConfigurationValues  # Values in original configuration or observation order
@@ -70,9 +72,9 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
         if isinstance(self.values, torch.Tensor):
             if self.values.ndim < 2:
                 raise ValueError(
-                    'Packed `values` should have batch and site dimensions')
+                    'Packed `values` should have batch and input dimensions')
             if self.values.shape[1] < 1:
-                raise ValueError('`values` should contain at least one site')
+                raise ValueError('`values` should contain at least one input')
             if (self.kind == 'indices') and (
                     (self.values.ndim != 2) or
                     (self.values.dtype not in _INTEGER_DTYPES)):
@@ -84,24 +86,24 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
                 not isinstance(self.values, Sequence):
             raise TypeError(
                 '`values` should be a tensor or a sequence of tensors')
-        site_values = tuple(self.values)
-        if not site_values:
-            raise ValueError('`values` should contain at least one site')
-        if not all(isinstance(value, torch.Tensor) for value in site_values):
-            raise TypeError('Every site value should be a torch.Tensor')
+        input_values = tuple(self.values)
+        if not input_values:
+            raise ValueError('`values` should contain at least one input')
+        if not all(isinstance(value, torch.Tensor) for value in input_values):
+            raise TypeError('Every input value should be a torch.Tensor')
 
-        first = site_values[0]
-        for value in site_values:
+        first = input_values[0]
+        for value in input_values:
             if value.ndim < 1:
                 raise ValueError(
-                    'Every site value should have a batch dimension')
+                    'Every input value should have a batch dimension')
             if value.shape[0] != first.shape[0]:
                 raise ValueError(
-                    'All site values should have the same batch size')
+                    'All input values should have the same batch size')
             if value.device != first.device:
-                raise ValueError('All site values should be on the same device')
+                raise ValueError('All input values should be on the same device')
             if value.dtype != first.dtype:
-                raise ValueError('All site values should have the same dtype')
+                raise ValueError('All input values should have the same dtype')
             if (self.kind == 'indices') and (
                     (value.ndim != 1) or
                     (value.dtype not in _INTEGER_DTYPES)):
@@ -109,11 +111,11 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
                     'Discrete heterogeneous `values` should contain scalar '
                     'integers')
 
-        object.__setattr__(self, 'values', site_values)
+        object.__setattr__(self, 'values', input_values)
 
     @property
     def packed(self) -> bool:
-        """Whether all sites are stored in one tensor."""
+        """Whether all inputs are stored in one tensor."""
         return isinstance(self.values, torch.Tensor)
 
     @property
@@ -124,8 +126,8 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
         return self.values[0].shape[0]
 
     @property
-    def n_sites(self) -> int:
-        """Number of sites represented by each configuration."""
+    def n_inputs(self) -> int:
+        """Input column count; equals ``len(source.in_sites)`` for source queries."""
         if self.packed:
             return self.values.shape[1]
         return len(self.values)
@@ -146,16 +148,16 @@ class ConfigurationBatch:  # MARK: ConfigurationBatch
 
     @property
     def feature_shape(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
-        """Feature shape at each site, or ``None`` for discrete indices."""
+        """Feature shape per input column, or ``None`` for discrete indices."""
         if self.kind == 'indices':
             return None
         if self.packed:
             shape = tuple(self.values.shape[2:])
-            return (shape,) * self.n_sites
+            return (shape,) * self.n_inputs
         return tuple(tuple(value.shape[1:]) for value in self.values)
 
     def as_tensor(self) -> torch.Tensor:
-        """Returns a packed tensor when all site shapes are compatible."""
+        """Returns a packed tensor when all input shapes are compatible."""
         if self.packed:
             return self.values
         shapes = tuple(tuple(value.shape[1:]) for value in self.values)
@@ -199,9 +201,13 @@ class BaseSource(ABC):  # MARK: BaseSource
     or functions; the algorithm defines how to approximate those values.
 
     The main operation is :meth:`evaluate`, which receives a
-    :class:`ConfigurationBatch` of discrete indices or continuous features
-    and returns values with shape ``(batch, *out_shape)``, preserving their
-    order. Sources record successful queries with ``_record_evaluation``;
+    :class:`ConfigurationBatch` with one column per entry of ``in_sites``
+    containing discrete indices or continuous features, and returns values with
+    shape ``(batch, *core_batch, *out_shape)``, preserving their order.
+    ``core_batch`` denotes optional structural batch dimensions, independent
+    of the queried configurations and represented variables.
+
+    Sources record successful queries with ``_record_evaluation``;
     :attr:`evaluation_stats` exposes cumulative counters so algorithms can
     measure their evaluation cost. Recording does not cache values or
     deduplicate configurations automatically.
@@ -211,7 +217,10 @@ class BaseSource(ABC):  # MARK: BaseSource
     ``device`` specify its numerical representation. ``out_shape`` and
     ``dtype`` may be inferred on first evaluation. Continuous sources normally
     have ``in_dim=None``; matrix grouping alone does not discretize a callable.
-    ``is_discrete_tensor`` distinguishes finite indexed tensors.
+    Vector ``in_dim`` contains every variable dimension, and ``in_sites``
+    selects the evaluated subset. Matrix dimensions describe one input/output
+    pair per variable; every pair receives an input. ``is_discrete_tensor``
+    distinguishes finite indexed tensors.
 
     Two shared operations build on evaluation: :meth:`fiber` varies one input
     site while fixing the others, and :meth:`contract_dense` evaluates the
@@ -219,17 +228,23 @@ class BaseSource(ABC):  # MARK: BaseSource
     these generic implementations with specialized contractions.
 
     To implement a source, provide :meth:`evaluate` and the abstract data
-    properties, and call ``super().__init__(n_sites)`` to fix its input-site
-    count and initialize its counters.
+    properties, and call ``super().__init__(n_sites, in_sites=...)`` to
+    declare all represented variables and the ordered evaluated inputs.
     Sources supply values and evaluation information; they do not define a
     fitting loss or decide which entries are missing.
 
     Parameters
     ----------
     n_sites : int
-        Number of input sites received by each evaluation configuration.
+        Total number of represented variables. A matrix variable has one
+        input axis and one output axis.
+    in_sites : sequence of int, optional
+        Ordered variables received by evaluation configurations. The complement
+        supplies the output axes. Defaults to all variables; matrices always
+        evaluate every variable and return their paired output axes.
     n_batches : int, optional
-        Number of structural batch axes stored in the source. Defaults to ``0``.
+        Number of structural batch axes, whose sizes form ``core_batch``.
+        Defaults to ``0``.
 
     Examples
     --------
@@ -241,14 +256,17 @@ class BaseSource(ABC):  # MARK: BaseSource
 
     input_kind: str = 'indices'
 
-    def __init__(self, n_sites: int, *, n_batches: int = 0) -> None:
-        n_sites = _normalize_positive_int(n_sites, 'n_sites')
+    def __init__(self,
+                 n_sites: int,
+                 *,
+                 in_sites: Optional[Sequence[int]] = None,
+                 n_batches: int = 0) -> None:
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:
             raise ValueError('`n_batches` should be non-negative')
 
-        self._n_sites = n_sites
+        self._set_sites(n_sites, in_sites)
         self.n_batches = n_batches
         self._matrix_dims = None
 
@@ -258,9 +276,33 @@ class BaseSource(ABC):  # MARK: BaseSource
         self._cache_hits = 0  # Requested values retrieved from a cache
         self._source_calls = 0  # Successful source queries recorded
 
+    def _set_sites(self,
+                   n_sites: int,
+                   in_sites: Optional[Sequence[int]] = None) -> None:
+        """Sets the total variable count and its ordered input selection."""
+        n_sites = _normalize_positive_int(n_sites, 'n_sites')
+        if in_sites is None:
+            in_sites = tuple(range(n_sites))
+        elif isinstance(in_sites, (str, bytes)) or not \
+                isinstance(in_sites, Sequence):
+            raise TypeError('`in_sites` should be a sequence of integers')
+        else:
+            in_sites = tuple(in_sites)
+        if not in_sites:
+            raise ValueError('`in_sites` should contain at least one input')
+        if any(isinstance(site, bool) or not \
+                isinstance(site, int) for site in in_sites):
+            raise TypeError('`in_sites` should be a sequence of integers')
+        if (len(set(in_sites)) != len(in_sites)) or any(
+                (site < 0) or (site >= n_sites) for site in in_sites):
+            raise ValueError(
+                '`in_sites` should contain distinct valid variables')
+        self._n_sites = n_sites
+        self._in_sites = in_sites
+
     @property
     def n_sites(self) -> int:
-        """Number of input sites fixed on construction."""
+        """Total number of represented variables, including output variables."""
         return self._n_sites
 
     @property
@@ -276,22 +318,45 @@ class BaseSource(ABC):  # MARK: BaseSource
     @property
     @abstractmethod
     def in_dim(self) -> Optional[Tuple[int, ...]]:
-        """Discrete dimensions, or ``None`` for continuous inputs."""
+        """
+        Dimensions of all vector variables or each matrix pair's input axis.
+
+        ``None`` when no finite index grid is defined.
+        """
 
     @property
     def out_dim(self) -> Optional[Tuple[int, ...]]:
-        """Local output dimensions when the source has matrix grouping."""
+        """Output dimension of each matrix pair, or ``None`` for vectors."""
         return self._matrix_dims[1] if self.is_matrix else None
 
     @property
     def in_sites(self) -> Tuple[int, ...]:
-        """Positions of function inputs in the represented vector chain."""
-        return tuple(range(self._n_sites))
+        """Ordered variables evaluated by the configuration columns."""
+        return self._in_sites
 
     @property
-    @abstractmethod
+    def _in_sites_dims(self) -> Optional[Tuple[int, ...]]:
+        """Dimensions in input order, or ``None`` without a finite index grid."""
+        dimensions = self.in_dim
+        if dimensions is None:
+            return None
+        return tuple(dimensions[site] for site in self.in_sites)
+
+    @property
     def out_shape(self) -> Optional[Tuple[int, ...]]:
-        """Shape returned after the leading configuration batch."""
+        """
+        Response dimensions, excluding query and structural batch axes.
+
+        Vectors retain the dimensions outside ``in_sites`` in their original
+        variable order. Matrices return all ``out_dim`` axes. Callable sources
+        may return ``None`` until the response shape is known.
+        """
+        if self.is_matrix:
+            return self.out_dim
+        if self.in_dim is None:
+            return None
+        return tuple(dim for site, dim in enumerate(self.in_dim)
+                     if site not in self.in_sites)
 
     @property
     @abstractmethod
@@ -337,15 +402,18 @@ class BaseSource(ABC):  # MARK: BaseSource
         Parameters
         ----------
         configurations : ConfigurationBatch
-            A batch containing one discrete index or feature per source site.
+            Discrete indices of shape ``(batch, len(in_sites))``, or continuous
+            features of shape ``(batch, len(in_sites), *feature_shape)``.
+            A heterogeneous batch contains ``len(in_sites)`` tensors. Columns
+            and sequence entries follow ``in_sites`` order.
 
         Returns
         -------
         torch.Tensor
-            Values with shape ``(batch, *out_shape)`` on the source device
-            and with its declared or inferred dtype. Evaluation retains the
-            source's autograd behavior; diagnostic counters do not change the
-            returned values.
+            Values with shape ``(batch, *core_batch, *out_shape)`` on the
+            source device and with its declared or inferred dtype.
+            Evaluation retains the source's autograd behavior; diagnostic
+            counters do not change the returned values.
         """
 
     def fiber(self,
@@ -364,26 +432,28 @@ class BaseSource(ABC):  # MARK: BaseSource
         Parameters
         ----------
         configurations : ConfigurationBatch
-            Base ``configurations`` in batch order, stored as a packed tensor
-            or a tuple of site tensors. Values at sites other than ``site``
-            remain fixed; the value at ``site`` is replaced.
+            Base configurations with ``len(in_sites)`` inputs per row, ordered
+            by ``in_sites``. Packed indices have shape
+            ``(batch, len(in_sites))``; features may add trailing feature axes
+            or use a tuple with one tensor per input. Only the column
+            ``in_sites.index(site)`` is varied; all other inputs remain fixed.
         site : int
-            Zero-based input ``site`` whose value varies.
+            Represented variable whose value varies; it must belong to
+            ``in_sites``.
         values : torch.Tensor, optional
             Candidate ``values`` for the selected ``site``. Discrete indices
             have shape ``(n_values,)``; features have shape
-            ``(n_values, *feature_shape[site])``. If omitted for discrete
-            indices, the source evaluates every index in
-            ``range(in_dim[site])``. Feature fibers require explicit ``values``
-            because there is no finite default grid for a continuous domain.
+            ``(n_values, *feature_shape[in_sites.index(site)])``. If omitted
+            for discrete indices, every index in ``range(in_dim[site])`` is
+            evaluated. Feature fibers require explicit ``values``.
 
         Returns
         -------
         torch.Tensor
-            Values with shape ``(batch, n_values, *out_shape)``. The first
-            axis follows the input ``configurations``; the second follows
-            ``values`` (or increasing discrete indices when omitted). A scalar
-            source has ``out_shape=()`` and returns ``(batch, n_values)``.
+            Values with shape
+            ``(batch, n_values, *core_batch, *out_shape)``. The first axis
+            follows the input ``configurations``; the second follows
+            ``values`` (or increasing discrete indices when omitted).
 
         Examples
         --------
@@ -400,13 +470,14 @@ class BaseSource(ABC):  # MARK: BaseSource
         if configurations.kind != self.input_kind:
             raise ValueError(
                 f'Configurations should have kind `{self.input_kind}`')
-        if configurations.n_sites != self._n_sites:
+        if configurations.n_inputs != len(self.in_sites):
             raise ValueError(
                 'Configurations should contain one value per input site')
-        if not isinstance(site, int):
+        if isinstance(site, bool) or not isinstance(site, int):
             raise TypeError('`site` should be int type')
-        if (site < 0) or (site >= self._n_sites):
+        if site not in self.in_sites:
             raise ValueError('`site` should identify an input site')
+        column = self.in_sites.index(site)
 
         if values is None:
             if not self.is_discrete_tensor:
@@ -427,7 +498,7 @@ class BaseSource(ABC):  # MARK: BaseSource
                         '`values` should have a leading grid dimension')
                 feature_shape = configurations.values.shape[2:] \
                     if configurations.packed else \
-                    configurations.values[site].shape[1:]
+                    configurations.values[column].shape[1:]
                 if values.shape[1:] != feature_shape:
                     raise ValueError(
                         '`values` feature shape should match the input site')
@@ -440,12 +511,12 @@ class BaseSource(ABC):  # MARK: BaseSource
             packed = configurations.values.to(dtype=dtype)
             expanded = packed.unsqueeze(1).expand(
                 packed.shape[0], n_values, *packed.shape[1:]).clone()
-            expanded[:, :, site] = values.unsqueeze(0)
+            expanded[:, :, column] = values.unsqueeze(0)
             expanded = expanded.flatten(0, 1)
         else:
             expanded = []
             for current_site, site_values in enumerate(configurations.values):
-                if current_site == site:
+                if current_site == column:
                     site_values = values.unsqueeze(0).expand(
                         configurations.batch_size, n_values, *values.shape[1:])
                     site_values = site_values.flatten(0, 1)
@@ -467,9 +538,11 @@ class BaseSource(ABC):  # MARK: BaseSource
         Returns
         -------
         torch.Tensor
-            Input-site axes followed by output axes for vectors, or paired
-            input/output axes for matrices. Continuous sources need an explicit
-            discretization before this operation is defined.
+            Shape ``(*core_batch, *in_dim)`` for vectors, with variables in
+            their original order regardless of ``in_sites``. Matrices return
+            shape ``(*core_batch, in_0, out_0, in_1, out_1, ...)``, pairing
+            input and output axes in site order. Continuous sources require
+            an explicit finite discretization.
 
         Examples
         --------
@@ -482,15 +555,25 @@ class BaseSource(ABC):  # MARK: BaseSource
         if not self.is_discrete_tensor:
             raise ValueError('`source` should represent a discrete tensor')
 
+        dimensions = self._in_sites_dims
         indices = _unravel_indices(
-            torch.arange(prod(self.in_dim), device=self.device), self.in_dim)
+            torch.arange(prod(dimensions), device=self.device), dimensions)
         values = self.evaluate(ConfigurationBatch(indices))
-        tensor = values.reshape(*self.in_dim, *values.shape[1:])
-        if self.is_matrix and self.out_shape:
-            n = len(self.in_dim)
-            tensor = tensor.permute(*(axis for site in range(n)
-                                      for axis in (site, n + site)))
-        return tensor
+        tensor = values.reshape(*dimensions, *values.shape[1:])
+        n_inputs = len(self.in_sites)
+        batches = tuple(range(n_inputs, n_inputs + self.n_batches))
+        if self.is_matrix:
+            axes = tuple(axis for site in range(n_inputs)
+                         for axis in (site, n_inputs + self.n_batches + site))
+        else:
+            outputs = tuple(site for site in range(self.n_sites)
+                            if site not in self.in_sites)
+            order = (*self.in_sites, *outputs)
+            positions = (*range(n_inputs),
+                         *range(n_inputs + self.n_batches, tensor.ndim))
+            axes = tuple(positions[order.index(site)]
+                         for site in range(self.n_sites))
+        return tensor.permute(*batches, *axes)
 
 
 def _discrete_indices(configurations: ConfigurationBatch,
@@ -504,7 +587,7 @@ def _discrete_indices(configurations: ConfigurationBatch,
             '`configurations` should be ConfigurationBatch type')
     if configurations.kind != 'indices':
         raise ValueError('This source requires discrete index configurations')
-    if configurations.n_sites != len(in_dim):
+    if configurations.n_inputs != len(in_dim):
         raise ValueError(
             'Configurations should contain one value per input site')
     indices = configurations.as_tensor().to(device=device, dtype=torch.long)
@@ -550,45 +633,41 @@ class _TensorView(BaseSource):  # MARK: _TensorView
     """
     Adapts a finite source so ALS and RS can query individual scalar entries.
 
-    For vector sources, output axes become additional indexed sites. A source
-    with ``in_dim=(2,)`` and ``out_shape=(3,)`` returns a vector for each input
-    index ``i``; this view has ``in_dim=(2, 3)`` and returns one scalar for
-    each pair ``(i, j)``. Site positions follow the source's ``in_sites``.
+    For vector sources, all existing variables become inputs in their original
+    order. Their dimensions and total count are preserved. For example, a source
+    with ``in_dim=(2, 3, 4)`` and ``in_sites=(2, 0)`` receives ``(k, i)`` and
+    returns ``T[i, :, k]``. The view receives ``(i, j, k)`` and selects
+    ``T[i, j, k]`` from that response.
 
     For matrix sources, each input/output index pair is instead fused into
     one site. Evaluation decodes those pairs, queries the original source
-    and selects the requested output entries. Both adaptations expose
-    ``out_shape=()`` without materializing the complete tensor. Evaluation
-    statistics are read directly from the original source.
+    and selects the requested output entries. The fused index is
+    ``p = i * out_dim[site] + j``, with dimension
+    ``in_dim[site] * out_dim[site]``. The view represents a vector tensor,
+    so ``is_matrix=False`` and ``out_dim=None``.
+
+    In both cases, ``in_sites=tuple(range(n_sites))`` and ``out_shape=()``.
+    Queries have shape ``(batch, n_sites)`` and return values with shape
+    ``(batch, *core_batch)`` without materializing the complete tensor.
+    Evaluation statistics are read directly from the original source.
     """
 
     def __init__(self, source: BaseSource) -> None:
         self.source = source
-        self._in_sites = source.in_sites
 
         if source.is_matrix:
-            self._in_dim = tuple(a * b for a, b in zip(source.in_dim,
-                                                       source.out_dim))
+            self._in_dim = tuple(
+                a * b for a, b in zip(source.in_dim, source.out_dim))
         else:
-            n_sites = source.n_sites + len(source.out_shape)
-            self._out_axes = tuple(site for site in range(n_sites)
-                                   if site not in self._in_sites)
-            dimensions = [None] * n_sites
-            for site, dim in zip(self._in_sites, source.in_dim):
-                dimensions[site] = dim
-            for site, dim in zip(self._out_axes, source.out_shape):
-                dimensions[site] = dim
-            self._in_dim = tuple(dimensions)
+            self._out_axes = tuple(site for site in range(source.n_sites)
+                                   if site not in self.source.in_sites)
+            self._in_dim = source.in_dim
 
         super().__init__(len(self._in_dim), n_batches=source.n_batches)
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
         return self._in_dim
-
-    @property
-    def out_shape(self) -> Tuple[int, ...]:
-        return ()
 
     @property
     def dtype(self) -> Optional[torch.dtype]:
@@ -610,13 +689,16 @@ class _TensorView(BaseSource):  # MARK: _TensorView
             sizes = indices.new_tensor(self.source.out_dim)
             inputs, outputs = indices // sizes, indices % sizes
         else:
-            inputs = indices[:, self._in_sites]
+            inputs = indices[:, self.source.in_sites]
             outputs = indices[:, self._out_axes]
         values = self.source.evaluate(ConfigurationBatch(inputs))
         if not self.source.out_shape:
             return values
         labels = _ravel_indices(outputs, self.source.out_shape)
-        return values.flatten(start_dim=1).gather(1, labels[:, None]).squeeze(1)
+        values = values.flatten(start_dim=1 + self.n_batches)
+        labels = labels.reshape(-1, *((1,) * (self.n_batches + 1)))
+        labels = labels.expand(*values.shape[:-1], 1)
+        return values.gather(-1, labels).squeeze(-1)
 
 
 def _tensor_view(source: BaseSource) -> BaseSource:
@@ -625,7 +707,7 @@ def _tensor_view(source: BaseSource) -> BaseSource:
         raise ValueError('`source` should represent a discrete tensor')
     if source.out_shape is None:
         source.evaluate(ConfigurationBatch(torch.zeros(
-            1, source.n_sites, device=source.device, dtype=torch.long)))
+            1, len(source.in_sites), device=source.device, dtype=torch.long)))
     if source.is_matrix or (source.out_shape != ()) or \
             (source.in_sites != tuple(range(source.n_sites))):
         return _TensorView(source)

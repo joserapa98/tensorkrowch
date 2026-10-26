@@ -55,7 +55,7 @@ def _split_samples(samples: _Samples,
     Normalizes packed or heterogeneous ``samples`` to one tensor per site.
     """
     if isinstance(samples, ConfigurationBatch):
-        if samples.n_sites != n_sites:
+        if samples.n_inputs != n_sites:
             raise ValueError(
                 '`samples` should contain one value per input site')
         if samples.packed:

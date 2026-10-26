@@ -11,7 +11,7 @@ This script contains:
         * _EvaluationSession
 
     Functions:
-        * _site_values
+        * _input_values
         * _concatenate_configurations
 """
 
@@ -32,14 +32,14 @@ if TYPE_CHECKING:
     from tensorkrowch.decompositions.sketching.transforms import GlobalValueTransform
 
 
-def _site_values(
+def _input_values(
     configurations: ConfigurationBatch
 ) -> Tuple[torch.Tensor, ...]:
-    """Returns one tensor per configuration site."""
+    """Returns one tensor per configuration input."""
     if configurations.packed:
         return tuple(
             configurations.values[:, site]
-            for site in range(configurations.n_sites))
+            for site in range(configurations.n_inputs))
     return tuple(configurations.values)
 
 
@@ -57,9 +57,9 @@ def _concatenate_configurations(
         if not isinstance(batch, ConfigurationBatch):
             raise TypeError(
                 '`batches` should contain ConfigurationBatch objects')
-        if batch.n_sites != first.n_sites:
+        if batch.n_inputs != first.n_inputs:
             raise ValueError(
-                'Configuration batches should contain the same number of sites')
+                'Configuration batches should contain the same number of inputs')
         if batch.kind != first.kind:
             raise ValueError(
                 'Configuration batches should use the same value kind')
@@ -74,10 +74,10 @@ def _concatenate_configurations(
     if all(batch.packed for batch in batches):
         values = torch.cat([batch.values for batch in batches], dim=0)
     else:
-        split = [_site_values(batch) for batch in batches]
+        split = [_input_values(batch) for batch in batches]
         values = tuple(torch.cat(
             [batch_values[site] for batch_values in split], dim=0)
-            for site in range(first.n_sites))
+            for site in range(first.n_inputs))
     return ConfigurationBatch(values, kind=first.kind)
 
 
@@ -240,7 +240,7 @@ class _EvaluationRegistry:  # MARK: _EvaluationRegistry
         configurations = _concatenate_configurations(
             [request.configurations for request in requests])
         pool = _SamplePool(configurations)
-        unique = pool.restrict(SiteRegion(range(configurations.n_sites)))
+        unique = pool.restrict(SiteRegion(range(configurations.n_inputs)))
         unique_configurations = configurations.index_select(
             unique.representative_row_ids)
 
@@ -290,8 +290,7 @@ class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
         """
         if not isinstance(request, _EvaluationRequest):
             raise TypeError('`request` should be _EvaluationRequest type')
-        if request.configurations.n_sites != (len(self.source.in_dim) if self.source.in_dim is not None
-                                                    else (self.source.n_sites or request.configurations.n_sites)):
+        if request.configurations.n_inputs != len(self.source.in_sites):
             raise ValueError(
                 'Configurations should contain one value per source input site')
 

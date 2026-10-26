@@ -104,7 +104,7 @@ class _SamplePool:  # MARK: _SamplePool
             if samples.packed:
                 site_values = tuple(
                     samples.values[:, site]
-                    for site in range(samples.n_sites))
+                    for site in range(samples.n_inputs))
             else:
                 site_values = tuple(samples.values)
         elif isinstance(samples, torch.Tensor):

@@ -9,12 +9,13 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.formats import TT, TTM
-from tensorkrowch.formats.formats1d import TensorFormat1D
-from tensorkrowch.models.mps import MPS
 from tensorkrowch.utils import _INTEGER_DTYPES
 
+from tensorkrowch.models.mps import MPS
+from tensorkrowch.formats import TT, TTM
+from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.decompositions.results import TTDecomposition
+
 from tensorkrowch.decompositions.sources.base import (BaseSource,
                                                       ConfigurationBatch,
                                                       _discrete_indices)
@@ -29,12 +30,13 @@ class FormatSource(BaseSource):  # MARK: FormatSource
     :class:`~tensorkrowch.formats.TTM` and :class:`~tensorkrowch.formats.TRM`.
     Evaluation and dense contraction use the backing format without first
     materializing its complete tensor. For vectors, configuration columns
-    follow the format's ``in_sites``; the remaining axes form ``out_shape``.
+    have shape ``(batch, len(in_sites))`` in the format's ``in_sites`` order;
+    the remaining axes form ``out_shape``.
 
     Matrix grouping is inferred from the format, so no separate ``matrix``
     constructor is needed. Matrix evaluations receive indices for every input
     site and return all output axes, independently of the format's evaluation
-    defaults, with ``out_shape == out_dim``.
+    defaults, with ``out_shape == out_dim`` and ``len(in_sites) == n_sites``.
 
     An :class:`~tensorkrowch.models.MPS` is converted to TT or TR according to
     its boundaries. A sequence of cores instead constructs an open TT.
@@ -82,9 +84,10 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             raise TypeError('Quantics formats require an explicit Quantics source')
         self.format = tensor
         self.cores = list(tensor._effective_cores())
-        self._in_dim = tensor.in_dim if tensor.out_dim is not None else tuple(
-            tensor.in_dim[site] for site in tensor.in_sites)
-        super().__init__(len(self._in_dim), n_batches=tensor.n_batches)
+        self._in_dim = tensor.in_dim
+        super().__init__(tensor.n_sites, n_batches=tensor.n_batches,
+                         in_sites=(None if tensor.out_dim is not None
+                                   else tensor.in_sites))
         self._structured = isinstance(tensor, TT) and not tensor._cyclic and \
             not tensor.n_batches and tensor.in_sites == tuple(range(tensor.n_sites))
         if tensor.out_dim is not None:
@@ -92,18 +95,8 @@ class FormatSource(BaseSource):  # MARK: FormatSource
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
-        """Dimension at every evaluated input site."""
+        """Dimensions of all vector variables or matrix input axes."""
         return self._in_dim
-
-    @property
-    def in_sites(self) -> Tuple[int, ...]:
-        """Input positions in the represented vector format."""
-        return self.format.in_sites
-
-    @property
-    def out_shape(self) -> Tuple[int, ...]:
-        """Response dimensions left open by input evaluation."""
-        return self.format.out_dim if self.is_matrix else self.format.out_shape
 
     @property
     def dtype(self) -> torch.dtype:
@@ -332,7 +325,8 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         Parameters
         ----------
         configurations : ConfigurationBatch
-            One integer index per selected vector input or matrix input site.
+            Integer indices with shape ``(batch, len(in_sites))`` and columns
+            ordered by ``in_sites``. Matrix sources evaluate every paired site.
 
         Returns
         -------
@@ -340,7 +334,9 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             Values with shape ``(batch, *core_batch, *out_shape)``. Matrix
             output axes remain open; vectors retain their selected inputs.
         """
-        indices = _discrete_indices(configurations, self._in_dim, self.device)
+        indices = _discrete_indices(
+            configurations, self._in_sites_dims,
+            self.device)
         if self.is_matrix:
             result = self.format.evaluate(indices, in_sites=range(self.format.n_sites),
                                           out_sites=())
@@ -364,7 +360,7 @@ class FormatSource(BaseSource):  # MARK: FormatSource
         """
         if not self._structured:
             return super().fiber(configurations, site, values)
-        if not isinstance(site, int):
+        if isinstance(site, bool) or not isinstance(site, int):
             raise TypeError('`site` should be int type')
         if (site < 0) or (site >= len(self._in_dim)):
             raise ValueError('`site` should identify an input site')

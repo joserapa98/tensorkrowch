@@ -246,8 +246,7 @@ class PhiOperator:  # MARK: PhiOperator
             input_sites = output_spec.input_positions
         input_region = SiteRegion(input_sites)
         if len(input_region) != output_spec.n_input_sites or \
-                len(input_region) != (len(source.in_dim) if source.in_dim is not None
-                                      else (source.n_sites or len(input_region))):
+                len(input_region) != len(source.in_sites):
             raise ValueError(
                 '`input_sites` should contain one site per source input')
         if output_sites is None:
@@ -514,7 +513,7 @@ class PhiOperator:  # MARK: PhiOperator
             base_request = self._request(base_selection)
             if base_request.configurations.packed:
                 site, values = component
-                source_axis = self.input_sites.index(site)
+                source_axis = self.source.in_sites[self.input_sites.index(site)]
                 before = getattr(self.source, 'evaluation_stats', None)
                 fiber = self.source.fiber(
                     base_request.configurations,

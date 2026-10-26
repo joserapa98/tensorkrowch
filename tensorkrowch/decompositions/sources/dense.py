@@ -21,9 +21,11 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
     The usual constructor represents a tensor with one axis per vector site.
     By default, :meth:`evaluate` receives one integer index per axis and returns
     a scalar for each configuration. Pass ``in_sites`` to evaluate only some
-    axes: configuration columns follow that list, and the remaining axes form
-    ``out_shape`` in their original order. Leading structural batch axes are
-    excluded from the site numbering.
+    axes: configurations have shape ``(batch, len(in_sites))`` in that
+    selection's order, and the remaining axes form ``out_shape`` in their
+    original order. Leading structural batch axes are excluded from the
+    variable numbering. ``n_sites`` counts all non-batch axes, including those
+    returned as outputs.
 
     Use :meth:`matrix` instead to represent a matrix with one input/output
     axis pair per site. The tensor must already have its input/output axes
@@ -74,35 +76,18 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
         n_axes = tensor.ndim - n_batches
         if tensor.ndim < 1:
             raise ValueError('`tensor` should contain at least one input site')
-        if in_sites is None:
-            in_sites = tuple(range(n_axes))
-        elif isinstance(in_sites, (str, bytes)) or \
-                not isinstance(in_sites, Sequence):
-            raise TypeError('`in_sites` should be a sequence of integers')
-        else:
-            in_sites = tuple(in_sites)
-        if not in_sites:
-            raise ValueError('`in_sites` should contain at least one axis')
-        if any(isinstance(axis, bool) or not isinstance(axis, int) or
-               (axis < 0) or (axis >= n_axes) for axis in in_sites):
-            raise ValueError('`in_sites` should contain valid tensor axes')
-        if len(set(in_sites)) != len(in_sites):
-            raise ValueError('`in_sites` should not contain duplicate axes')
+        super().__init__(n_axes, in_sites=in_sites, n_batches=n_batches)
+        in_sites = self.in_sites
         if any(tensor.shape[n_batches + axis] < 1 for axis in in_sites):
             raise ValueError('Input dimensions should be positive')
 
-        super().__init__(len(in_sites), n_batches=n_batches)
-
         self.tensor = tensor
         self._in_sites = in_sites
-        self._out_axes = tuple(axis for axis in range(n_axes)
-                               if axis not in in_sites)
+        out_axes = tuple(axis for axis in range(n_axes) if axis not in in_sites)
         self._ordered_tensor = tensor.permute(
             *(n_batches + axis for axis in in_sites),
-            *range(n_batches), *(n_batches + axis for axis in self._out_axes))
-        self._in_dim = tuple(tensor.shape[n_batches + axis] for axis in in_sites)
-        self._out_shape = tuple(tensor.shape[n_batches + axis]
-                                for axis in self._out_axes)
+            *range(n_batches), *(n_batches + axis for axis in out_axes))
+        self._in_dim = tuple(tensor.shape[n_batches:])
 
     @classmethod
     def matrix(cls,
@@ -114,7 +99,9 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
 
         Each site has an input dimension ``in_dim[i]`` and an output dimension
         ``out_dim[i]``. Input indices are evaluated together; the returned
-        tensor contains every output axis in site order.
+        tensor contains every output axis in site order. Evaluation receives
+        shape ``(batch, len(in_sites))``; matrices use every paired site as an
+        input, so ``len(in_sites) == n_sites``.
 
         The tensor must have an even number of axes, with one input/output
         pair per site. ``ordering="interleaved"`` means axes
@@ -180,26 +167,19 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
             interleaved = tensor.permute(axes)
 
         source = cls(interleaved, tuple(range(0, tensor.ndim, 2)))
-        source._matrix_dims = source.in_dim, source.out_shape
+        source._matrix_dims = (tuple(interleaved.shape[::2]),
+                               tuple(interleaved.shape[1::2]))
+        source._in_dim = source._matrix_dims[0]
+        source._set_sites(n_sites)
         source._matrix_tensor = interleaved
         source._ordering = ordering
         source.tensor = tensor
         return source
 
     @property
-    def in_sites(self) -> Tuple[int, ...]:
-        """Tensor axes used as input sites, in configuration order."""
-        return self._in_sites
-
-    @property
     def in_dim(self) -> Tuple[int, ...]:
-        """Discrete input dimension at every site."""
+        """Dimensions of all vector variables or matrix input axes."""
         return self._in_dim
-
-    @property
-    def out_shape(self) -> Tuple[int, ...]:
-        """Shape returned after the configuration batch."""
-        return self._out_shape
 
     @property
     def dtype(self) -> torch.dtype:
@@ -212,9 +192,12 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
         return self.tensor.device
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Gathers dense values at discrete global ``configurations``."""
+        """
+        Gathers values for integer configurations of shape
+        ``(batch, len(in_sites))``, with columns ordered by ``in_sites``.
+        """
         indices = _discrete_indices(
-            configurations, self._in_dim, self.device)
+            configurations, self._in_sites_dims, self.device)
         result = self._ordered_tensor[tuple(
             indices[:, site] for site in range(indices.shape[1]))]
         self._record_evaluation(points=indices.shape[0])

@@ -41,14 +41,14 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
             torch.tensor([[1, 0], [3, 1]]))
 
         assert source.in_sites == (2, 0)
-        assert source.in_dim == (4, 2)
+        assert source.in_dim == (2, 3, 4, 5)
         assert source.out_shape == (3, 5)
         assert torch.equal(source.evaluate(configurations),
                            torch.stack((tensor[0, :, 1, :],
                                         tensor[1, :, 3, :])))
-        assert source.fiber(configurations, site=0).shape == (2, 4, 3, 5)
+        assert source.fiber(configurations, site=2).shape == (2, 4, 3, 5)
 
-    @pytest.mark.parametrize('features', [(), (0, 0), (2,), (-1,), (True,)])
+    @pytest.mark.parametrize('features', [(), (0, 0), (2,), (-1,)])
     def test_dense_rejects_invalid_input_axes(self, features):
         with pytest.raises(ValueError):
             tk.decompositions.DenseTensorSource(
@@ -140,3 +140,35 @@ def test_dense_input_sites_accept_range():
 def test_dense_input_sites_require_an_ordered_sequence(sites):
     with pytest.raises(TypeError, match='sequence of integers'):
         tk.decompositions.DenseTensorSource(torch.ones(2, 3), in_sites=sites)
+
+
+@pytest.mark.parametrize('sites', [(2, 0), (3, 1), (1,)])
+def test_total_variables_and_global_fiber_positions(sites):
+    from tensorkrowch.decompositions.sources.base import _tensor_view
+
+    tensor = torch.arange(120., dtype=torch.float64).reshape(2, 3, 4, 5)
+    source = tk.decompositions.DenseTensorSource(tensor, in_sites=sites)
+    assert source.n_sites == 4
+    assert source.in_sites == sites
+    assert len(source.out_shape) == source.n_sites - len(sites)
+    batch = tk.decompositions.ConfigurationBatch(
+        torch.zeros(2, len(sites), dtype=torch.long))
+    site = sites[0]
+    expected = []
+    for value in range(tensor.shape[site]):
+        query = batch.values.clone()
+        query[:, 0] = value
+        expected.append(source.evaluate(tk.decompositions.ConfigurationBatch(query)))
+    torch.testing.assert_close(source.fiber(batch, site), torch.stack(expected, 1))
+    with pytest.raises(ValueError, match='input site'):
+        source.fiber(batch, next(i for i in range(4) if i not in sites))
+    scalar = _tensor_view(source)
+    assert scalar.n_sites == 4
+    assert scalar.in_sites == tuple(range(4))
+    torch.testing.assert_close(scalar.contract_dense(), tensor)
+
+
+@pytest.mark.parametrize('site', [True, 1.5])
+def test_input_site_types_are_validated_in_base(site):
+    with pytest.raises(TypeError, match='in_sites'):
+        tk.decompositions.DenseTensorSource(torch.ones(2, 3), in_sites=(site,))

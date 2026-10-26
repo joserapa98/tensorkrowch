@@ -89,7 +89,7 @@ class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
 
         assert torch.allclose(
             values, torch.tensor([0., 0.5, 0.5, 0.], dtype=torch.float64))
-        assert distribution.support.n_sites == 2
+        assert distribution.support.n_inputs == 2
         assert distribution.evaluation_stats.requested_points == 4
 
 

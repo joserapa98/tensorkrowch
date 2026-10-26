@@ -205,11 +205,9 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             raise ValueError('Batched sources are not supported by RSS')
         if isinstance(source, BaseSource) and source.is_discrete_tensor and \
                 embedding is None:
-            embedding = tuple(torch.eye(dim, device=source.device)
-                              for dim in source.in_dim)
-            domain = tuple(torch.arange(dim, device=source.device)
-                           for dim in source.in_dim)
-            in_dim = source.in_dim
+            in_dim = source._in_sites_dims
+            embedding = tuple(torch.eye(dim, device=source.device) for dim in in_dim)
+            domain = tuple(torch.arange(dim, device=source.device) for dim in in_dim)
         if embedding is None:
             raise TypeError('`embedding` should be provided')
         if not (callable(embedding) or isinstance(embedding, torch.Tensor)):
@@ -293,7 +291,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         if samples.batch_size < 1:
             raise ValueError('`sketch_samples` should contain samples')
         if isinstance(self._source_like, BaseSource) and \
-                samples.n_sites != self._source_like.n_sites:
+                samples.n_inputs != len(self._source_like.in_sites):
             raise ValueError(
                 '`source` and `sketch_samples` should share input sites')
         return samples
@@ -354,18 +352,31 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                       n_input_sites: int) -> Tuple[torch.Tensor, BaseSource]:
         """Evaluates one row using the fixed source's input convention."""
         source = self._source_like
+        ids = torch.zeros(1, dtype=torch.long, device=samples.device)
+        probe_batch = samples.index_select(ids)
+        probe = None
         if not isinstance(source, BaseSource):
-            source = CallableSource(source, n_input_sites, out_shape=None,
-                                    dtype=self._dtype,
-                                    device=self._device or 'cpu')
+            probe_batch = probe_batch.to(self._device or 'cpu')
+            probe = source(probe_batch.values)
+            if not isinstance(probe, torch.Tensor):
+                raise TypeError('`function` should return a torch.Tensor')
+            if probe.ndim < 1 or probe.shape[0] != 1:
+                raise ValueError(
+                    '`function` should preserve the leading batch dimension')
+            source = CallableSource(
+                source, n_input_sites + probe.ndim - 1,
+                in_sites=tuple(range(n_input_sites)), out_shape=probe.shape[1:],
+                dtype=self._dtype, device=self._device or 'cpu')
+            probe = source._validate_result(probe, 1)
+            source._record_evaluation(points=1)
             self._source_like = source
-        if source.in_dim is not None and len(source.in_dim) != n_input_sites:
+        if len(source.in_sites) != n_input_sites:
             raise ValueError('`source` and `sketch_samples` should share input sites')
         if self._device is not None and source.device != self._device:
             raise ValueError('`source` and `device` should match')
         self._input_kind = getattr(source, 'input_kind', 'indices')
-        ids = torch.zeros(1, dtype=torch.long, device=samples.device)
-        probe = source.evaluate(samples.index_select(ids).to(source.device))
+        if probe is None:
+            probe = source.evaluate(probe_batch.to(source.device))
         if self._dtype is not None and probe.dtype != self._dtype:
             raise ValueError('`source` and `dtype` should match')
         return probe, source
@@ -375,7 +386,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
                         generator: Optional[torch.Generator]) -> ConfigurationBatch:
         """Normalizes all sample-dependent fixed objects for one fit."""
         sample_batch = self._normalize_samples(sketch_samples)
-        n_input_sites = sample_batch.n_sites
+        n_input_sites = sample_batch.n_inputs
         probe, source = self._source_probe(sample_batch, n_input_sites)
         if probe.ndim < 1 or probe.shape[0] != 1:
             raise ValueError(
@@ -1219,7 +1230,10 @@ class TTRS:  # MARK: TTRS
             metadata=metadata)
         if collect_metrics and isinstance(self._source, SupportTensorSource):
             samples = self._source.support.as_tensor()
-            approximation = active.evaluate(samples)
+            if self._source.is_matrix:
+                samples = samples[:, ::2] * samples.new_tensor(
+                    self._source.out_dim) + samples[:, 1::2]
+            approximation = active.evaluate(samples, in_sites=self._source.in_sites)
             target = self._source.support_values.to(
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - target)

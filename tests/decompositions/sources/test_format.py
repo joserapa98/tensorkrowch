@@ -136,3 +136,38 @@ def test_batched_partial_format_source_orders_configuration_axis_first():
     expected = torch.stack([tensor[:, i, j] for i, j in indices])
     torch.testing.assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(indices)),
                                expected)
+
+
+@pytest.mark.parametrize('batched', [False, True])
+def test_partial_format_retains_total_count_and_source_fibers(batched):
+    from tensorkrowch.decompositions.sources.base import _tensor_view
+
+    shape = (2, 2, 3, 4) if batched else (2, 3, 4)
+    tensor = torch.arange(torch.tensor(shape).prod(), dtype=torch.float64).reshape(shape)
+    format = tk.decompositions.TTSVD(tk.decompositions.DenseTensorSource(
+        tensor, n_batches=int(batched))).fit().to_format()
+    format.in_sites = (2, 0)
+    source = tk.decompositions.FormatSource(format)
+    assert source.n_sites == 3
+    assert source.in_sites == (2, 0)
+    assert source.out_shape == (3,)
+    dense = tk.decompositions.DenseTensorSource(
+        tensor, in_sites=(2, 0), n_batches=int(batched))
+    batch = tk.decompositions.ConfigurationBatch(torch.tensor([[1, 0], [3, 1]]))
+    torch.testing.assert_close(source.evaluate(batch), dense.evaluate(batch))
+    torch.testing.assert_close(source.fiber(batch, 2), dense.fiber(batch, 2))
+    torch.testing.assert_close(_tensor_view(source).contract_dense(), tensor)
+
+
+def test_matrix_format_source_evaluates_every_pair():
+    tensor = torch.arange(36., dtype=torch.float64).reshape(2, 3, 2, 3)
+    format = tk.decompositions.TTMSVD(tk.decompositions.DenseTensorSource.matrix(
+        tensor, ordering='interleaved')).fit().to_format()
+    format.in_sites = (1,)
+    source = tk.decompositions.FormatSource(format)
+    assert source.n_sites == len(source.in_sites) == 2
+    assert source.in_sites == (0, 1)
+    assert source.out_dim == source.out_shape == (3, 3)
+    result = source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.tensor([[1, 0]])))
+    torch.testing.assert_close(result, tensor[1, :, 0, :].unsqueeze(0))

@@ -1318,7 +1318,10 @@ class TRRS(TTRS):  # MARK: TRRS
 
         if collect_metrics and isinstance(self._source, SupportTensorSource):
             samples = self._source.support.as_tensor()
-            approximation = result.evaluate(samples)
+            if self._source.is_matrix:
+                samples = samples[:, ::2] * samples.new_tensor(
+                    self._source.out_dim) + samples[:, 1::2]
+            approximation = result.evaluate(samples, in_sites=self._source.in_sites)
             target = self._source.support_values.to(
                 device=approximation.device, dtype=approximation.dtype)
             absolute = torch.linalg.vector_norm(approximation - target)

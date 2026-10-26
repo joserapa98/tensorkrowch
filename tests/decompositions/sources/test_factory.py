@@ -17,7 +17,7 @@ def test_as_tensor_source_normalizes_supported_inputs():
     assert dense_with_ignored_dim.in_dim == (2, 3)
     assert dense_with_ignored_dim.out_shape == ()
     dense_with_selected_axis = tk.decompositions.DenseTensorSource(tensor, in_sites=(1,))
-    assert dense_with_selected_axis.in_dim == (3,)
+    assert dense_with_selected_axis.in_dim == (2, 3)
     assert dense_with_selected_axis.out_shape == (2,)
     callable_source = tk.decompositions.CallableTensorSource(lambda x: x.sum(dim=1).float(), in_dim=(2, 3))
 
@@ -27,8 +27,10 @@ def test_as_tensor_source_normalizes_supported_inputs():
     assert tk.decompositions.as_tensor_source(dense) is dense
     with pytest.raises(TypeError, match='source'):
         tk.decompositions.as_tensor_source(lambda x: x)
-    with pytest.raises(TypeError, match='in_sites|torch.Tensor'):
-        tk.decompositions.CallableTensorSource(lambda x: x, in_dim=(2,), in_sites=(0,))
+    selected = tk.decompositions.CallableTensorSource(
+        lambda x: x[:, 0].float(), in_dim=(2,), in_sites=(0,))
+    assert selected.in_sites == (0,)
+    assert selected.n_sites == 1
 
 
 def test_tt_decomposition_normalizes_to_tt_source():
@@ -55,3 +57,21 @@ def test_factory_accepts_formats_and_preserves_sources():
     assert torch.equal(source.evaluate(tk.decompositions.ConfigurationBatch(torch.arange(2).reshape(-1, 1))), format.contract_dense())
     with pytest.raises(TypeError, match='in_sites|torch.Tensor'):
         tk.decompositions.DenseTensorSource(format, in_sites=(0,))
+
+
+@pytest.mark.parametrize('kind', ['dense', 'sparse'])
+def test_selected_inputs_keep_all_variables_in_svd(kind):
+    tensor = torch.arange(120., dtype=torch.float64).reshape(2, 3, 4, 5)
+    if kind == 'dense':
+        source = tk.decompositions.DenseTensorSource(tensor, in_sites=(2, 0))
+    else:
+        indices = torch.cartesian_prod(torch.arange(4), torch.arange(2))
+        source = tk.decompositions.SparseTensorSource(
+            indices, tensor.permute(2, 0, 1, 3).reshape(8, 3, 5),
+            tensor.shape, in_sites=(2, 0))
+    assert source.n_sites == 4
+    assert source.in_sites == (2, 0)
+    result = tk.decompositions.TTSVD(source).fit()
+    assert result.n_sites == 4
+    assert result.in_dim == tensor.shape
+    torch.testing.assert_close(result.contract_dense(), tensor)

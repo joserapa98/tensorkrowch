@@ -50,11 +50,11 @@ def test_callable_batches_are_contiguous_and_deterministic():
         [0., 1., 3., 6., 3.], dtype=torch.float64))
 
 
-def test_callable_infers_tensor_output_and_dtype():
+def test_callable_declares_response_axes_and_infers_dtype():
     source = tk.decompositions.CallableTensorSource(
         lambda x: torch.stack((x[:, 0], x[:, 1]), dim=1).to(
             torch.complex128),
-        in_dim=(2, 3),
+        in_dim=(2, 3, 2), in_sites=(0, 1),
         out_shape=None,
         dtype=None)
     configurations = tk.decompositions.ConfigurationBatch(
@@ -112,7 +112,7 @@ def test_callable_source_inference_chunking_and_changes(device_dtype, assert_clo
             values = values * (1 + 2j)
         return values.unsqueeze(-1)
     source = tk.decompositions.CallableTensorSource(
-        function, (2, 3), out_shape=None, device=device, batch_size=2)
+        function, (2, 3, 1), in_sites=(0, 1), device=device, batch_size=2)
     indices = torch.tensor([[0, 0], [0, 2], [1, 1]], device=device)
     values = source.evaluate(tk.decompositions.ConfigurationBatch(indices))
     assert calls == [2, 1]
@@ -182,3 +182,47 @@ def test_custom_kernel_preserves_complex_values_and_receives_dataset():
         torch.tensor([[0.5]]), kind='features'))
     torch.testing.assert_close(values, torch.tensor([1 + 2j]))
     assert seen[0] is data
+
+
+def test_callable_total_count_and_nonleading_inputs():
+    def function(inputs):
+        return (1000 * inputs[:, 1, None, None] +
+                100 * torch.arange(3)[None, :, None] +
+                10 * inputs[:, 0, None, None] + torch.arange(5)[None, None, :])
+
+    source = tk.decompositions.CallableTensorSource(
+        function, (2, 3, 4, 5), in_sites=(2, 0))
+    continuous = tk.decompositions.CallableSource(
+        function, 4, in_sites=(2, 0), out_shape=(3, 5))
+    assert source.n_sites == continuous.n_sites == 4
+    assert source.in_sites == continuous.in_sites == (2, 0)
+    i, j, k, last = torch.meshgrid(
+        *(torch.arange(n) for n in (2, 3, 4, 5)), indexing='ij')
+    torch.testing.assert_close(
+        source.contract_dense(), 1000 * i + 100 * j + 10 * k + last)
+    indices = torch.tensor([[1, 0], [3, 1]])
+    torch.testing.assert_close(
+        continuous.evaluate(tk.decompositions.ConfigurationBatch(
+            indices.float(), kind='features')),
+        function(indices.float()))
+    batch = tk.decompositions.ConfigurationBatch(indices)
+    assert source.fiber(batch, 2).shape == (2, 4, 3, 5)
+    with pytest.raises(ValueError, match='per output variable'):
+        tk.decompositions.CallableSource(function, 4, in_sites=(2, 0), out_shape=())
+
+
+def test_declared_output_axes_are_counted_before_evaluation():
+    source = tk.decompositions.CallableTensorSource(
+        lambda x: x[:, :1].float().expand(-1, 3), (2, 3), in_sites=(0,))
+    source.evaluate(tk.decompositions.ConfigurationBatch(torch.tensor([[0]])))
+    assert source.n_sites == 2
+    assert source.in_sites == (0,)
+    assert source.out_shape == (3,)
+    assert source.contract_dense().shape == (2, 3)
+
+
+def test_matrix_callable_has_no_separate_output_sites():
+    source = tk.decompositions.CallableTensorSource.matrix(
+        lambda x: (x[:, :1] + torch.arange(3)).float(), (2,), (3,))
+    assert source.n_sites == len(source.in_sites) == 1
+    assert source.out_dim == source.out_shape == (3,)

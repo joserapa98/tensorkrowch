@@ -64,11 +64,15 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
     """
     Sparse tensor source with declared zeros outside its support.
 
-    The usual constructor stores values at discrete input configurations.
-    Each row of ``indices`` contains one index per input site, bounded by
-    ``in_dim``. The corresponding row of ``values`` can be a scalar or a tensor;
-    its trailing dimensions define ``out_shape``. :meth:`evaluate` returns the
-    stored value for each configuration and zero outside the support.
+    The usual constructor represents a tensor with one axis per vector site.
+    The source's ``in_dim`` contains every site's dimension. ``n_sites`` counts
+    all sites, including those returned as outputs. ``in_sites`` selects the
+    evaluated sites, in configuration order; the remaining axes form
+    ``out_shape`` in their original order, as in :class:`DenseTensorSource`.
+
+    Columns of ``indices`` and evaluation configurations follow ``in_sites``
+    order. Trailing axes of ``values`` are output axes, in the original order
+    of the remaining sites. By default, inputs occupy the first sites.
 
     Repeated indices are coalesced by summing their values, matching sparse
     COO semantics; boolean values are combined by logical OR. Absent entries
@@ -82,11 +86,18 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
     Parameters
     ----------
     indices : torch.Tensor
-        Integer tensor of shape ``(n_entries, n_sites)``.
+        Integer indices of shape ``(n_entries, len(in_sites))``, with columns
+        ordered by ``in_sites``.
     values : torch.Tensor
-        Entry values with shape ``(n_entries, *out_shape)``.
+        Stored values of shape ``(n_entries, *out_shape)``, with output axes
+        in the original order of sites outside ``in_sites``.
     in_dim : sequence of int
-        Complete discrete input dimension.
+        Dimensions of all sites in chain order, or only input dimensions in
+        ``in_sites`` order when output sites are present. Omitted output
+        dimensions are inferred from the trailing axes of ``values``.
+    in_sites : sequence of int, optional
+        Distinct input sites, in configuration order. Defaults to the first
+        ``indices.shape[1]`` sites, in increasing order.
 
     Examples
     --------
@@ -94,12 +105,25 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
     ...     torch.tensor([[0], [2]]), torch.tensor([2., 5.]), in_dim=(3,))
     >>> source.contract_dense()
     tensor([2., 0., 5.])
+
+    Select only the first variable while retaining the full tensor dimensions:
+
+    >>> source = tk.decompositions.SparseTensorSource(
+    ...     torch.tensor([[0], [1]]),
+    ...     torch.tensor([[0., 2., 0.], [0., 0., 5.]]),
+    ...     in_dim=(2, 3), in_sites=(0,))
+    >>> source.n_sites, source.in_dim, source.out_shape
+    (2, (2, 3), (3,))
+    >>> source.evaluate(tk.decompositions.ConfigurationBatch(torch.tensor([[1]])))
+    tensor([[0., 0., 5.]])
     """
 
     def __init__(self,
                  indices: torch.Tensor,
                  values: torch.Tensor,
-                 in_dim: Sequence[int]) -> None:
+                 in_dim: Sequence[int],
+                 *,
+                 in_sites: Optional[Sequence[int]] = None) -> None:
         if not isinstance(indices, torch.Tensor):
             raise TypeError('`indices` should be torch.Tensor type')
         if not isinstance(values, torch.Tensor):
@@ -119,19 +143,29 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
             raise TypeError(
                 '`values` should have a floating, complex or boolean dtype')
 
+        n_inputs = indices.shape[1]
+        super().__init__(n_inputs + values.ndim - 1, in_sites=(
+            tuple(range(n_inputs)) if in_sites is None else in_sites))
+        if len(self.in_sites) != n_inputs:
+            raise ValueError('`indices` should contain one column per input site')
+
         self._in_dim = _normalize_dims(in_dim, 'in_dim')
-        super().__init__(len(self._in_dim))
-        if indices.shape[1] != len(self._in_dim):
-            raise ValueError('`indices` should contain one column per site')
+        if len(self._in_dim) == n_inputs and values.ndim > 1:
+            outputs = iter(values.shape[1:])
+            self._in_dim = _normalize_dims(
+                tuple(self._in_dim[self.in_sites.index(site)]
+                      if site in self.in_sites else next(outputs)
+                      for site in range(self.n_sites)), 'in_dim')
+        if len(self._in_dim) != self.n_sites or \
+                tuple(values.shape[1:]) != self.out_shape:
+            raise ValueError(
+                '`indices`, `values` and `in_dim` should describe all axes')
         indices = _discrete_indices(
             ConfigurationBatch(indices, kind='indices'),
-            self._in_dim,
-            values.device)
-
-        self._lookup = _SparseLookup(indices, values, self._in_dim)
+            self._in_sites_dims, values.device)
+        self._lookup = _SparseLookup(indices, values, self._in_sites_dims)
         self._indices, self._values = self._lookup.indices, self._lookup.values
         self._flat_ids = self._lookup.flat_ids
-        self._out_shape = tuple(values.shape[1:])
 
     @classmethod
     def matrix(cls,
@@ -150,11 +184,12 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         ``ordering="interleaved"``, columns alternate as
         ``(in_0, out_0, in_1, out_1, ...)``. For ``n_sites`` pairs,
         ``in_dim`` and ``out_dim`` must each contain ``n_sites`` dimensions;
-        they cannot be inferred from the observed entries alone.
+        they cannot be inferred from the stored entries alone.
 
-        :meth:`evaluate` receives only the input indices, in site order, and
-        returns all output axes with ``out_shape == out_dim``. Unstored entries
-        remain zero. :meth:`contract_dense` returns interleaved input/output
+        :meth:`evaluate` receives only input indices, with shape
+        ``(batch, n_sites)`` in site order, and returns all output axes with
+        ``out_shape == out_dim``. Unstored entries remain zero.
+        :meth:`contract_dense` returns interleaved input/output
         axes regardless of input ordering, as in :meth:`DenseTensorSource.matrix`.
 
         Parameters
@@ -164,8 +199,8 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
             ``ordering``.
         values : torch.Tensor
             Scalar entry values with shape ``(n_entries,)``.
-        in_dim, out_dim : sequence[int]
-            Dimensions of each paired matrix site.
+        in_dim, out_dim : sequence of int
+            Input and output dimensions, respectively, for each matrix site.
         ordering : {``"grouped"``, ``"interleaved"``}
             Order of index columns; defaults to ``"grouped"``.
 
@@ -201,6 +236,9 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         if indices.ndim != 2:
             raise TypeError(
                 '`indices` should be a two-dimensional integer tensor')
+        if isinstance(values, torch.Tensor) and (values.ndim != 1):
+            raise ValueError(
+                '`values` should contain one scalar per matrix entry')
         n_sites = len(inputs)
         if indices.shape[1] != 2 * n_sites:
             raise ValueError('`indices` should contain two columns per site')
@@ -213,10 +251,9 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         source = cls(indices, values,
                      tuple(dim for pair in zip(inputs, outputs)
                            for dim in pair))
-        source._entry_dim = source._in_dim
         source._matrix_dims = inputs, outputs
-        source._in_dim, source._out_shape = inputs, outputs
-        source._n_sites = len(inputs)
+        source._in_dim = inputs
+        source._set_sites(n_sites)
         source._ordering = ordering
         return source
 
@@ -239,10 +276,12 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
         Parameters
         ----------
         dataset : torch.Tensor
-            Integer samples with shape ``(n_samples, n_sites)``. Repeats
-            accumulate.
-        in_dim : sequence[int], optional
-            Complete dimensions; inferred from observed maxima when omitted.
+            Integer samples with shape ``(n_samples, len(in_sites))``. All
+            columns are inputs in their given order, so this constructor has
+            ``len(in_sites) == n_sites``. Repeats accumulate.
+        in_dim : sequence of int, optional
+            Dimensions of all vector sites; inferred from sample maxima when
+            omitted.
         weights : torch.Tensor, optional
             Non-negative sample weights, normalized to total mass one.
         dtype : torch.dtype, optional
@@ -271,13 +310,8 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
 
     @property
     def in_dim(self) -> Tuple[int, ...]:
-        """Discrete input dimension at every site."""
+        """Dimensions of all vector variables or matrix input axes."""
         return self._in_dim
-
-    @property
-    def out_shape(self) -> Tuple[int, ...]:
-        """Shape stored at every sparse support entry."""
-        return self._out_shape
 
     @property
     def dtype(self) -> torch.dtype:
@@ -291,38 +325,55 @@ class SparseTensorSource(BaseSource):  # MARK: SparseTensorSource
 
     @property
     def support(self) -> ConfigurationBatch:
-        """Unique coalesced support configurations."""
+        """
+        Coalesced stored indices in ``in_sites`` order for vectors.
+
+        Matrices return interleaved input/output indices in site order.
+        """
         return ConfigurationBatch(self._indices, kind='indices')
 
     @property
     def support_values(self) -> torch.Tensor:
-        """Values associated with the unique support configurations."""
+        """Stored values corresponding to :attr:`support`."""
         return self._values
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
-        """Evaluates sparse values, returning zero outside the support."""
+        """
+        Evaluates integer configurations of shape ``(batch, len(in_sites))``
+        in ``in_sites`` order. Returns shape ``(batch, *out_shape)``, with
+        zeros outside the support.
+        """
         indices = _discrete_indices(
-            configurations, self._in_dim, self.device)
+            configurations, self._in_sites_dims, self.device)
         if self.is_matrix:
-            outputs = _unravel_indices(
-                torch.arange(prod(self.out_dim), device=self.device),
-                self.out_dim)
-            inputs = indices[:, None].expand(-1, outputs.shape[0], -1)
-            outputs = outputs[None].expand(indices.shape[0], -1, -1)
-            paired = torch.stack((inputs, outputs), -1).flatten(-2)
-            result = self._lookup(paired.reshape(-1, paired.shape[-1]))
-            result = result.reshape(indices.shape[0], *self.out_dim)
+            outputs = _unravel_indices(torch.arange(
+                prod(self.out_dim), device=self.device), self.out_dim)
+            full = indices.new_empty(indices.shape[0],
+                                     outputs.shape[0],
+                                     2 * self.n_sites)
+            full[:, :, ::2] = indices[:, None, :]
+            full[:, :, 1::2] = outputs[None, :, :]
+            result = self._lookup(full.reshape(-1, 2 * self.n_sites)).reshape(
+                indices.shape[0], *self.out_dim)
         else:
             result = self._lookup(indices)
         self._record_evaluation(points=indices.shape[0])
         return result
 
     def contract_dense(self) -> torch.Tensor:
-        """Materializes the tensor by placing its stored entries into zeros."""
-        shape = self._entry_dim if self.is_matrix else (*self._in_dim,
-                                                        *self.out_shape)
+        """
+        Materializes all sites in their original order, with zeros outside
+        the support. Matrix input/output axes are interleaved in site order.
+        """
+        shape = (tuple(dim for pair in zip(self.in_dim, self.out_dim)
+                       for dim in pair) if self.is_matrix else self.in_dim)
         tensor = self._values.new_zeros(shape)
-        tensor[tuple(self._indices.T)] = self._values
+        ordered = tensor
+        if not self.is_matrix:
+            out_sites = tuple(site for site in range(self.n_sites)
+                              if site not in self.in_sites)
+            ordered = tensor.permute(*self.in_sites, *out_sites)
+        ordered[tuple(self._indices.T)] = self._values
         return tensor
 
 

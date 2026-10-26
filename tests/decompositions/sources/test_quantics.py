@@ -125,7 +125,7 @@ class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
     def test_response_axes_are_selected_by_the_numerical_view(self):
         source = tk.decompositions.CallableQuanticsSource(
             lambda x: torch.stack((x[:, 0], x[:, 0] + 1), -1),
-            1, base=2, level=2, domain=(0., 1.))
+            1, base=2, level=2, domain=(0., 1.), out_shape=(2,))
         view = _tensor_view(source)
         assert view.in_dim == (2, 2, 2)
         result = tk.decompositions.TTSVD(source).fit()
@@ -210,3 +210,16 @@ def test_data_kernel_uses_quantized_dataset_positions():
     expected = tk.decompositions.gaussian_kernel(
         coordinates, quantized_data, bandwidth=0.2).mean(-1)
     torch.testing.assert_close(source.contract_dense_grid_axes(), expected)
+
+
+def test_quantics_total_count_includes_declared_response_axes():
+    source = tk.decompositions.CallableQuanticsSource(
+        lambda x: x[:, :1].expand(-1, 3), 1,
+        base=2, level=2, domain=(0., 1.), out_shape=(3,))
+    source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.zeros(1, 2, dtype=torch.long)))
+    assert source.n_sites == 3
+    assert source.in_sites == (0, 1)
+    assert source.out_shape == (3,)
+    assert source.contract_dense().shape == (2, 2, 3)
+    assert source.contract_dense_grid_axes().shape == (4, 3)

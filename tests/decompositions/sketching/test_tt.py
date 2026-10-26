@@ -110,7 +110,8 @@ class TestTTRSS:
         function, embedding, samples, domain = _problem()
         source = tk.decompositions.CallableSource(
             function,
-            n_sites=3,
+            n_sites=4,
+            in_sites=(0, 1, 2),
             out_shape=(1,),
             dtype=torch.float64)
         result = tk.decompositions.TTRSS(
@@ -378,27 +379,31 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             decomposer.fit(torch.tensor([[0.], [1.]]), rank=2)
 
 
-def _rank_one_sparse(dtype=torch.float64):
+def _rank_one_sparse(dtype=torch.float64, in_sites=(0, 1, 2)):
     left = torch.tensor([1., 2.], dtype=dtype)
     middle = torch.tensor([1., 3., 2.], dtype=dtype)
     right = torch.tensor([2., 1.], dtype=dtype)
     dense = torch.einsum('i,j,k->ijk', left, middle, right)
-    indices = torch.cartesian_prod(
-        torch.arange(2), torch.arange(3), torch.arange(2))
+    out_sites = tuple(site for site in range(3) if site not in in_sites)
+    indices = torch.cartesian_prod(*(
+        torch.arange(dense.shape[site]) for site in in_sites))
+    values = dense.permute(*in_sites, *out_sites).reshape(
+        indices.shape[0], *(dense.shape[site] for site in out_sites))
     source = tk.decompositions.SparseTensorSource(
-        indices, dense.reshape(-1), dense.shape)
+        indices, values, dense.shape, in_sites=in_sites)
     return source, dense
 
 
 class TestTTRS:  # MARK: TestTTRS
 
+    @pytest.mark.parametrize('in_sites', [(0, 1, 2), (2, 0)])
     @pytest.mark.parametrize('operator', [
         tk.decompositions.SampledSketch(),
         tk.decompositions.MarginalSketch.markov(),
         tk.decompositions.TTStackSketch(tt_rank=2, n_stacks=2),
     ])
-    def test_sparse_rank_one_source_is_recovered(self, operator):
-        source, dense = _rank_one_sparse()
+    def test_sparse_rank_one_source_is_recovered(self, operator, in_sites):
+        source, dense = _rank_one_sparse(in_sites=in_sites)
         result = tk.decompositions.TTRS(
             source,
             sketch_operator=operator,
@@ -414,7 +419,8 @@ class TestTTRS:  # MARK: TestTTRS
         assert result.metrics.errors[0].kind == 'source_support'
         assert result.metrics.errors[0].relative < 1e-10
         assert result.metadata['source_type'] == 'SparseTensorSource'
-        assert result.metadata['system']['source_path'] == 'support'
+        expected_path = 'support' if in_sites == (0, 1, 2) else 'enumerated_grid'
+        assert result.metadata['system']['source_path'] == expected_path
 
     def test_dataset_and_functional_api_are_distinct_from_rss_samples(self):
         dataset = torch.tensor([

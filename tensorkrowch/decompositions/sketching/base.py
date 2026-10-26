@@ -201,7 +201,7 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
             raise TypeError('`embeddings` should be _EmbeddingSpec type')
         if not isinstance(outputs, _OutputSpec):
             raise TypeError('`outputs` should be _OutputSpec type')
-        if domains.n_sites != (len(source.in_dim) if source.in_dim is not None else source.n_sites) or \
+        if domains.n_sites != len(source.in_sites) or \
                 embeddings.n_sites != domains.n_sites or \
                 outputs.n_input_sites != domains.n_sites:
             raise ValueError(

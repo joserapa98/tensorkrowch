@@ -28,11 +28,11 @@ This script contains:
 from dataclasses import dataclass, field
 from math import prod, sqrt
 from typing import (Any,
+                    Callable,
                     Mapping,
                     Optional,
                     Protocol,
                     Sequence,
-                    TYPE_CHECKING,
                     Tuple,
                     Union,
                     runtime_checkable)
@@ -55,10 +55,6 @@ from tensorkrowch.decompositions.sources import (ConfigurationBatch,
 
 
 _Rank = Union[int, Sequence[int]]
-
-
-if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sketching.sources import SketchContractableSource
 
 
 def _one_hot_ids(ids: torch.Tensor,
@@ -101,9 +97,9 @@ def _sample_states(values: torch.Tensor,
 
 
 def _structured_capability(source: BaseSource,
-                           name: str) -> Optional['SketchContractableSource']:
+                           name: str) -> Optional[Callable[..., Any]]:
     """Returns one optional structured ``source`` kernel by capability."""
-    if not getattr(source, '_structured', True):
+    if not getattr(source, '_supports_tt_contractions', True):
         return None
     capability = getattr(source, name, None)
     return capability if callable(capability) else None
@@ -449,9 +445,9 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
             blocks.append(block)
 
         left_kernel = _structured_capability(
-            self.source, 'left_environments')
+            self.source, 'left_envs')
         right_kernel = _structured_capability(
-            self.source, 'right_environments')
+            self.source, 'right_envs')
         phi_kernel = _structured_capability(self.source, 'local_phi')
         phis = []
         for site in range(len(dimensions)):
@@ -548,8 +544,8 @@ class _TTStackStructuredSystemBuilder:  # MARK: _TTStackStructuredSystemBuilder
         phi_kernel = _structured_capability(self.source, 'tt_sketch_phis')
         phis = phi_kernel(
             left_cores, right_cores,
-            boundary_scale=1 / sqrt(self.operator.n_stacks))
-        feature_dim = self.operator.tt_rank * self.operator.n_stacks
+            boundary_scale=1 / sqrt(self.operator.stack_size))
+        feature_dim = self.operator.tt_rank * self.operator.stack_size
         return CoreDeterminingSystem(
             phi=phis,
             left_blocks=blocks,
@@ -560,7 +556,7 @@ class _TTStackStructuredSystemBuilder:  # MARK: _TTStackStructuredSystemBuilder
                 'structured_kernel': 'tt_stack_double_layer',
                 'support_size': None,
                 'tt_rank': self.operator.tt_rank,
-                'n_stacks': self.operator.n_stacks,
+                'stack_size': self.operator.stack_size,
                 'sketch_dimension': feature_dim,
                 'orthogonal': self.operator.orthogonal,
                 'distribution': (
@@ -603,7 +599,7 @@ class SampledSketch:  # MARK: SampledSketch
     def builder(self, source: BaseSource) -> SketchSystemBuilder:
         """Returns a finite-support sampled-system builder."""
         if all(_structured_capability(source, name) is not None for name in (
-                'left_environments', 'right_environments', 'local_phi')):
+                'left_envs', 'right_envs', 'local_phi')):
             return _SampledStructuredSystemBuilder(source, self)
         return _SupportSketchSystemBuilder(source, self)
 
@@ -808,11 +804,13 @@ def _right_orthogonal(core: torch.Tensor) -> torch.Tensor:
 
 class TTStackSketch:  # MARK: TTStackSketch
     """
-    Stacked Gaussian TT sketch with distinct stack and internal ranks.
+    Stack of Gaussian TT sketches with configurable size and internal rank.
 
-    ``tt_rank=1`` is the separable Khatri-Rao limit. ``n_stacks=1`` is one
+    ``stack_size`` is the number of TT sketches in each left or right stack.
+
+    ``tt_rank=1`` is the separable Khatri-Rao limit. ``stack_size=1`` is one
     Gaussian TT projection with ``tt_rank`` output rows at every partial cut.
-    The full partial-sketch dimension is ``n_stacks * tt_rank``. Setting
+    The full partial-sketch dimension is ``stack_size * tt_rank``. Setting
     ``orthogonal=True`` selects a separately labelled orthogonalized variant;
     it does not claim the iid-Gaussian guarantees of the default construction.
 
@@ -827,9 +825,9 @@ class TTStackSketch:  # MARK: TTStackSketch
 
     def __init__(self,
                  tt_rank: int = 1,
-                 n_stacks: int = 1,
+                 stack_size: int = 1,
                  orthogonal: bool = False) -> None:
-        for name, value in (('tt_rank', tt_rank), ('n_stacks', n_stacks)):
+        for name, value in (('tt_rank', tt_rank), ('stack_size', stack_size)):
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f'`{name}` should be int type')
             if value < 1:
@@ -837,7 +835,7 @@ class TTStackSketch:  # MARK: TTStackSketch
         if not isinstance(orthogonal, bool):
             raise TypeError('`orthogonal` should be bool type')
         self.tt_rank = tt_rank
-        self.n_stacks = n_stacks
+        self.stack_size = stack_size
         self.orthogonal = orthogonal
 
     def builder(self, source: BaseSource) -> SketchSystemBuilder:
@@ -851,16 +849,16 @@ class TTStackSketch:  # MARK: TTStackSketch
                     dtype: Optional[torch.dtype],
                     device: Optional[Union[str, torch.device]],
                     generator: Optional[torch.Generator]) -> Any:
-        """Draws TT stacks and constructs their recursive left blocks."""
-        feature_dim = self.tt_rank * self.n_stacks
+        """Draws TT sketches for both stacks and their recursive left blocks."""
+        feature_dim = self.tt_rank * self.stack_size
         scale = 1 / sqrt(self.tt_rank)
-        stack_scale = 1 / sqrt(self.n_stacks)
+        stack_scale = 1 / sqrt(self.stack_size)
 
         left_cores = []
         right_cores = []
-        for stack in range(self.n_stacks):
-            stack_left = []
-            stack_right = []
+        for _ in range(self.stack_size):
+            left_sketch_cores = []
+            right_sketch_cores = []
             for site, dimension in enumerate(in_dim):
                 left_rank = 1 if site == 0 else self.tt_rank
                 right_rank = 1 if site == len(in_dim) - 1 \
@@ -874,10 +872,10 @@ class TTStackSketch:  # MARK: TTStackSketch
                 if self.orthogonal:
                     left_core = _left_orthogonal(left_core)
                     right_core = _right_orthogonal(right_core)
-                stack_left.append(left_core)
-                stack_right.append(right_core)
-            left_cores.append(tuple(stack_left))
-            right_cores.append(tuple(stack_right))
+                left_sketch_cores.append(left_core)
+                right_sketch_cores.append(right_core)
+            left_cores.append(tuple(left_sketch_cores))
+            right_cores.append(tuple(right_sketch_cores))
 
         blocks = []
         for site in range(len(in_dim) - 1):
@@ -885,9 +883,9 @@ class TTStackSketch:  # MARK: TTStackSketch
                 feature_dim, in_dim[site],
                 1 if site == 0 else feature_dim,
                 dtype=dtype, device=device)
-            for stack in range(self.n_stacks):
-                core = left_cores[stack][site]
-                start = stack * self.tt_rank
+            for stack_idx in range(self.stack_size):
+                core = left_cores[stack_idx][site]
+                start = stack_idx * self.tt_rank
                 if site == 0:
                     block[start:start + self.tt_rank, :, 0] = \
                         core[0].T * stack_scale
@@ -902,23 +900,23 @@ class TTStackSketch:  # MARK: TTStackSketch
                  in_dim: Optional[Sequence[int]],
                  dtype: Optional[torch.dtype],
                  generator: Optional[torch.Generator]) -> torch.Tensor:
-        feature_dim = self.tt_rank * self.n_stacks
+        feature_dim = self.tt_rank * self.stack_size
         device = indices.device
-        stack_scale = 1 / sqrt(self.n_stacks)
+        stack_scale = 1 / sqrt(self.stack_size)
         left_cores, right_cores, blocks = self._components(
             in_dim, dtype, device, generator)
 
         left = []
         state = torch.ones(
-            indices.shape[0], self.n_stacks, 1,
+            indices.shape[0], self.stack_size, 1,
             dtype=dtype, device=device)
         for site in range(len(in_dim) - 1):
             next_state = []
-            for stack in range(self.n_stacks):
-                core = left_cores[stack][site]
+            for stack_idx in range(self.stack_size):
+                core = left_cores[stack_idx][site]
                 selected = core[:, indices[:, site], :].permute(1, 0, 2)
                 value = torch.einsum(
-                    'nba,nb->na', selected, state[:, stack])
+                    'nba,nb->na', selected, state[:, stack_idx])
                 if site == 0:
                     value = value * stack_scale
                 next_state.append(value)
@@ -927,15 +925,15 @@ class TTStackSketch:  # MARK: TTStackSketch
 
         right = [None] * (len(in_dim) - 1)
         state = torch.ones(
-            indices.shape[0], self.n_stacks, 1,
+            indices.shape[0], self.stack_size, 1,
             dtype=dtype, device=device)
         for site in range(len(in_dim) - 1, 0, -1):
             next_state = []
-            for stack in range(self.n_stacks):
-                core = right_cores[stack][site]
+            for stack_idx in range(self.stack_size):
+                core = right_cores[stack_idx][site]
                 selected = core[:, indices[:, site], :].permute(1, 0, 2)
                 value = torch.einsum(
-                    'nba,na->nb', selected, state[:, stack])
+                    'nba,na->nb', selected, state[:, stack_idx])
                 if site == len(in_dim) - 1:
                     value = value * stack_scale
                 next_state.append(value)
@@ -947,7 +945,7 @@ class TTStackSketch:  # MARK: TTStackSketch
             torch.ones(indices.shape[0], dtype=dtype, device=device),
             diagnostics={
                 'tt_rank': self.tt_rank,
-                'n_stacks': self.n_stacks,
+                'stack_size': self.stack_size,
                 'sketch_dimension': feature_dim,
                 'orthogonal': self.orthogonal,
                 'distribution': (

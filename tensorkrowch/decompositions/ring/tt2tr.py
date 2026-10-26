@@ -88,7 +88,7 @@ def _as_tt(
         if isinstance(tt, (str, bytes)) or not isinstance(tt, Sequence):
             raise TypeError('`tt` should be a TT, open MPS or core sequence')
         source = FormatSource(tt)
-        compact_cores = list(source.cores)
+        compact_cores = source.format._effective_cores()
         if len(compact_cores) == 1:
             compact_cores[0] = compact_cores[0].reshape(-1)
         else:
@@ -120,7 +120,7 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
 
     def __post_init__(self) -> None:
         source = FormatSource(self.tt.to_tt() if self.tt._quantized else self.tt)
-        self.cores = tuple(source.cores)
+        self.cores = tuple(source.format._effective_cores())
         self.in_dim = tuple(core.shape[1] for core in self.cores)
 
     def local_target(self,
@@ -246,7 +246,7 @@ class _CanonicalTTCoreProvider(_TTCoreProvider):  # MARK: _CanonicalTTCoreProvid
         canonical = TT(_restore_cores(
             self.cores, self.in_dim, None, 0, False)).canonicalize(
                 orth_center=self.center)
-        self.cores = [core.clone() for core in FormatSource(canonical).cores]
+        self.cores = [core.clone() for core in canonical._effective_cores()]
 
     def shift_center(self,
                      site: int,

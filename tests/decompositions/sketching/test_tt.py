@@ -400,7 +400,7 @@ class TestTTRS:  # MARK: TestTTRS
     @pytest.mark.parametrize('operator', [
         tk.decompositions.SampledSketch(),
         tk.decompositions.MarginalSketch.markov(),
-        tk.decompositions.TTStackSketch(tt_rank=2, n_stacks=2),
+        tk.decompositions.TTStackSketch(tt_rank=2, stack_size=2),
     ])
     def test_sparse_rank_one_source_is_recovered(self, operator, in_sites):
         source, dense = _rank_one_sparse(in_sites=in_sites)
@@ -455,7 +455,7 @@ class TestTTRS:  # MARK: TestTTRS
         decomposer = tk.decompositions.TTRS(
             source,
             sketch_operator=tk.decompositions.TTStackSketch(
-                tt_rank=2, n_stacks=2),
+                tt_rank=2, stack_size=2),
             out_device=None)
         first = decomposer.fit(
             rank=1, generator=torch.Generator().manual_seed(302))

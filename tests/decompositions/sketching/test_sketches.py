@@ -77,15 +77,15 @@ class TestSampledSketch:  # MARK: TestSampledSketch
 class TestTTStackSketch:  # MARK: TestTTStackSketch
 
     @pytest.mark.parametrize(
-        ('tt_rank', 'n_stacks'), [(1, 3), (3, 1), (2, 2)])
+        ('tt_rank', 'stack_size'), [(1, 3), (3, 1), (2, 2)])
     def test_partial_sketch_dimension_is_stack_times_tt_rank(
-            self, tt_rank, n_stacks):
+            self, tt_rank, stack_size):
         source, _ = _rank_one_sparse()
         system = tk.decompositions.TTStackSketch(
             tt_rank=tt_rank,
-            n_stacks=n_stacks).builder(source).build(
+            stack_size=stack_size).builder(source).build(
                 generator=torch.Generator().manual_seed(202))
-        expected = tt_rank * n_stacks
+        expected = tt_rank * stack_size
 
         assert system.diagnostics['sketch_dimension'] == expected
         assert system.diagnostics['left_dimensions'] == (expected, expected)
@@ -97,7 +97,7 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
         source, dense = _rank_one_sparse()
         system = tk.decompositions.TTStackSketch(
             tt_rank=2,
-            n_stacks=2).builder(source).build(
+            stack_size=2).builder(source).build(
                 generator=torch.Generator().manual_seed(203))
         result = system.solve(rank=1, strict_system=True)
 
@@ -109,7 +109,7 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
         source, _ = _rank_one_sparse(in_dim=(3, 3, 3))
         system = tk.decompositions.TTStackSketch(
             tt_rank=2,
-            n_stacks=1,
+            stack_size=1,
             orthogonal=True).builder(source).build(
                 generator=torch.Generator().manual_seed(204))
 
@@ -153,7 +153,7 @@ class TestStructuredTTBackend:  # MARK: TestStructuredTTBackend
         tk.decompositions.SampledSketch(
             samples=torch.tensor([[0, 0, 0], [1, 1, 1]])),
         tk.decompositions.MarginalSketch.markov(),
-        tk.decompositions.TTStackSketch(tt_rank=2, n_stacks=2),
+        tk.decompositions.TTStackSketch(tt_rank=2, stack_size=2),
     ])
     def test_structured_system_matches_sparse_dense_oracle(
             self, dtype, operator):

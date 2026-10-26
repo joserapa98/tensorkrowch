@@ -2,7 +2,6 @@
 This script contains:
 
     Classes:
-        * SketchContractableSource
         * SupportTensorSource
 
     Functions:
@@ -12,33 +11,12 @@ This script contains:
 from typing import (Iterator,
                     Optional,
                     Protocol,
-                    Sequence,
                     Tuple,
-                    Union,
                     runtime_checkable)
 
 import torch
 
-from tensorkrowch.decompositions.results import (TTDecomposition,
-                                                 TTMDecomposition)
 from tensorkrowch.decompositions.sources import ConfigurationBatch
-
-
-TTStructuredSketch = Union[
-    TTDecomposition,
-    TTMDecomposition,
-    Sequence[torch.Tensor],
-]
-
-
-@runtime_checkable
-class SketchContractableSource(Protocol):  # MARK: SketchContractableSource
-    """Optional source capable of contracting a TT-structured sketch."""
-
-    def contract_sketch(self,
-                        sketch: TTStructuredSketch,
-                        conjugate_sketch: bool = True) -> Union[torch.Tensor, TTDecomposition]:
-        """Contracts all source input axes with ``sketch`` without a graph."""
 
 
 @runtime_checkable
@@ -80,7 +58,5 @@ def _iter_support(source: SupportTensorSource,
 
 
 __all__ = [
-    'SketchContractableSource',
     'SupportTensorSource',
-    'TTStructuredSketch',
 ]

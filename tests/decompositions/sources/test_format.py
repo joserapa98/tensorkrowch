@@ -48,8 +48,8 @@ def test_tt_structured_prefix_suffix_and_phi_match_dense(dtype):
     prefixes = torch.arange(dense.shape[0]).reshape(-1, 1)
     suffixes = torch.arange(dense.shape[2]).reshape(-1, 1)
 
-    left = source.left_environments(prefixes)
-    right = source.right_environments(suffixes)
+    left = source.left_envs(prefixes)
+    right = source.right_envs(suffixes)
     phi = source.local_phi(1, left, right)
 
     assert torch.allclose(phi, dense)

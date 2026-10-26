@@ -5,8 +5,7 @@ import torch
 
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.sources import (SketchContractableSource,
-                                                           SupportTensorSource,
+from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource,
                                                            _iter_support)
 
 from tests.decompositions.als._oracles import contract_tt_dense, make_tt_cores
@@ -17,27 +16,6 @@ def _compact_tt(cores):
     if len(cores) == 1:
         return [cores[0].reshape(-1)]
     return [cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1)]
-
-
-def _random_ttm(in_dim, out_dim, rank, dtype, generator):
-    """Creates a deterministic TTM decomposition for contraction tests."""
-    ranks = (1, *rank, 1)
-    standard = [
-        torch.randn(
-            ranks[site], input_value, output_value, ranks[site + 1],
-            dtype=dtype,
-            generator=generator)
-        for site, (input_value, output_value) in enumerate(
-            zip(in_dim, out_dim))
-    ]
-    if len(standard) == 1:
-        compact = [standard[0].reshape(in_dim[0], out_dim[0])]
-    else:
-        compact = [standard[0].squeeze(0).permute(0, 2, 1)]
-        compact.extend(core.permute(0, 1, 3, 2)
-                       for core in standard[1:-1])
-        compact.append(standard[-1].squeeze(-1))
-    return tk.decompositions.TTMDecomposition(compact)
 
 
 class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
@@ -93,82 +71,6 @@ class TestSourceEvaluationStats:  # MARK: TestSourceEvaluationStats
         assert distribution.evaluation_stats.requested_points == 4
 
 
-class TestStructuredSketchContraction:  # MARK: TestStructuredSketchContraction
-
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    def test_scalar_tt_sketch_matches_dense_inner_product(self, dtype):
-        source_cores = make_tt_cores(
-            dtype=dtype,
-            generator=torch.Generator().manual_seed(31))
-        sketch_cores = make_tt_cores(
-            dtype=dtype,
-            generator=torch.Generator().manual_seed(32))
-        source = tk.decompositions.FormatSource(source_cores)
-        sketch = tk.decompositions.TTDecomposition(_compact_tt(sketch_cores))
-
-        result = source.contract_sketch(sketch)
-        expected = (
-            contract_tt_dense(source_cores) *
-            contract_tt_dense(sketch_cores).conj()).sum()
-
-        assert isinstance(source, SketchContractableSource)
-        assert torch.allclose(result, expected)
-        assert source.evaluation_stats == tk.decompositions.EvaluationStats(
-            source_calls=1)
-
-    def test_conjugation_can_be_disabled_explicitly(self):
-        source_cores = make_tt_cores(
-            dtype=torch.complex128,
-            generator=torch.Generator().manual_seed(33))
-        sketch_cores = make_tt_cores(
-            dtype=torch.complex128,
-            generator=torch.Generator().manual_seed(34))
-        source = tk.decompositions.FormatSource(source_cores)
-
-        result = source.contract_sketch(
-            _compact_tt(sketch_cores), conjugate_sketch=False)
-
-        expected = (
-            contract_tt_dense(source_cores) *
-            contract_tt_dense(sketch_cores)).sum()
-        assert torch.allclose(result, expected)
-
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    def test_ttm_sketch_returns_output_tt_without_dense_source(self, dtype):
-        in_dim = (2, 3, 2)
-        out_dim = (2, 2, 3)
-        source_cores = make_tt_cores(
-            in_dim=in_dim,
-            dtype=dtype,
-            generator=torch.Generator().manual_seed(35))
-        source = tk.decompositions.FormatSource(source_cores)
-        sketch = _random_ttm(
-            in_dim,
-            out_dim,
-            rank=(2, 2),
-            dtype=dtype,
-            generator=torch.Generator().manual_seed(36))
-
-        result = source.contract_sketch(sketch)
-
-        dense_source = contract_tt_dense(source_cores)
-        dense_sketch = sketch.contract_dense()
-        expected = torch.einsum(
-            'abc,apbqcr->pqr', dense_source, dense_sketch.conj())
-        assert isinstance(result, tk.decompositions.TTDecomposition)
-        assert result.in_dim == out_dim
-        assert torch.allclose(result.contract_dense(), expected)
-
-    def test_structured_sketch_validates_in_dimensions(self):
-        source = tk.decompositions.FormatSource(
-            make_tt_cores(in_dim=(2, 3), rank=(2,)))
-        sketch = tk.decompositions.TTDecomposition(
-            _compact_tt(make_tt_cores(in_dim=(2, 4), rank=(2,))))
-
-        with pytest.raises(ValueError, match='input dimensions'):
-            source.contract_sketch(sketch)
-
-
 class TestMPSAdapter:  # MARK: TestMPSAdapter
 
     def test_open_boundary_model_is_reduced_to_raw_tt_cores(self):
@@ -202,11 +104,19 @@ class TestMPSAdapter:  # MARK: TestMPSAdapter
         torch.testing.assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(indices)),
                                    source.format.evaluate(indices))
 
-    def test_mpo_is_not_treated_as_an_mps(self):
-        model = tk.models.MPO(n_features=2, in_dim=2, out_dim=2, bond_dim=2)
-
-        with pytest.raises(TypeError, match='cores'):
-            tk.decompositions.FormatSource(model)
+    @pytest.mark.parametrize('boundary', ['obc', 'pbc'])
+    def test_mpo_is_adapted_as_a_matrix(self, boundary):
+        model = tk.models.MPO(
+            n_features=2, in_dim=2, out_dim=2, bond_dim=2, boundary=boundary)
+        source = tk.decompositions.FormatSource(model)
+        expected_type = tk.formats.TTM if boundary == 'obc' else tk.formats.TRM
+        assert isinstance(source.format, expected_type)
+        assert source.is_matrix
+        indices = torch.tensor([[0, 1], [1, 0]])
+        dense = source.contract_dense()
+        torch.testing.assert_close(source.evaluate(
+            tk.decompositions.ConfigurationBatch(indices)),
+            torch.stack((dense[0, :, 1, :], dense[1, :, 0, :])))
 
 
 class TestRSInputSources:  # MARK: TestRSInputSources

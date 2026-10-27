@@ -48,7 +48,7 @@ class _SparseLookup:  # MARK: _SparseLookup
 
     def __call__(self, indices: torch.Tensor) -> torch.Tensor:
         """Returns stored values or zero for absent configurations."""
-        flat_ids = _ravel_indices(indices, self.in_dim)
+        flat_ids = _ravel_indices(indices.to(torch.long), self.in_dim)
         positions = torch.searchsorted(self.flat_ids, flat_ids)
         result = self.values.new_zeros((flat_ids.numel(),
                                         *self.values.shape[1:]))

@@ -932,13 +932,15 @@ def test_finite_quantics_source_is_inferred_by_rs():
     torch.testing.assert_close(result.contract_dense_grid_axes(), source.contract_dense_grid_axes())
 
 
-def test_continuous_matrix_rss_uses_output_basis_sites():
+@pytest.mark.parametrize('out_shape', [None, (2, 2)])
+def test_continuous_matrix_rss_uses_output_basis_sites(out_shape):
     def function(coordinates):
         left = 1 + coordinates[:, 0]
         right = 1 + coordinates[:, 1]
         return torch.einsum('b,b,i,j->bij', left, right,
                             torch.tensor([1., 2.]), torch.tensor([3., 4.]))
-    source = tk.decompositions.CallableSource.matrix(function, (2, 2), (2, 2))
+    source = tk.decompositions.CallableSource.matrix(
+        function, n_sites=2, out_shape=out_shape)
     coordinates = torch.cartesian_prod(torch.tensor([0., 1.]), torch.tensor([0., 1.]))
     samples = coordinates.repeat_interleave(4, 0)
     result = tk.decompositions.TTRSS(source, embedding=lambda x: torch.stack(

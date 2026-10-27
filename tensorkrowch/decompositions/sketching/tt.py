@@ -253,7 +253,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         self._in_dim_option = in_dim
         self._domain = domain
         self._domain_multiplier = domain_multiplier
-        self._out_position = tuple(2 * site + 1 for site in range(len(source.out_dim))) \
+        self._out_position = tuple(2 * site + 1 for site in range(source.n_sites)) \
             if getattr(source, 'is_matrix', False) else out_position
         self._device = None if device is None else \
             torch.empty(0, device=device).device

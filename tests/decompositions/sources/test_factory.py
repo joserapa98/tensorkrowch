@@ -59,6 +59,19 @@ def test_factory_accepts_formats_and_preserves_sources():
         tk.decompositions.DenseTensorSource(format, in_sites=(0,))
 
 
+@pytest.mark.parametrize('boundary', ['obc', 'pbc'])
+def test_factory_accepts_mpo(boundary):
+    mpo = tk.models.MPO(n_features=2, in_dim=2, out_dim=3,
+                        bond_dim=2, boundary=boundary)
+    source = tk.decompositions.as_tensor_source(mpo)
+    expected = mpo.to_ttm() if boundary == 'obc' else mpo.to_trm()
+    assert isinstance(source, tk.decompositions.FormatSource)
+    assert source.is_matrix
+    assert source.in_dim == (2, 2)
+    assert source.out_dim == (3, 3)
+    torch.testing.assert_close(source.contract_dense(), expected.contract_dense())
+
+
 @pytest.mark.parametrize('kind', ['dense', 'sparse'])
 def test_selected_inputs_keep_all_variables_in_svd(kind):
     tensor = torch.arange(120., dtype=torch.float64).reshape(2, 3, 4, 5)

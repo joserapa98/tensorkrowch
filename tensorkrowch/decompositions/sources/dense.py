@@ -38,11 +38,11 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
     ----------
     tensor : torch.Tensor
         Dense tensor containing input and optional output axes.
+    n_batches : int
+        Number of leading structural batch axes. Defaults to ``0``.
     in_sites : sequence of int, optional
         Distinct non-batch axes, in configuration order. Defaults to all
         non-batch axes in increasing order.
-    n_batches : int
-        Number of leading structural batch axes. Defaults to ``0``.
 
     Examples
     --------
@@ -64,9 +64,9 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
 
     def __init__(self,
                  tensor: torch.Tensor,
-                 in_sites: Optional[Sequence[int]] = None,
+                 n_batches: int = 0,
                  *,
-                 n_batches: int = 0) -> None:
+                 in_sites: Optional[Sequence[int]] = None) -> None:
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
@@ -99,9 +99,9 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
 
         Each site has an input dimension ``in_dim[i]`` and an output dimension
         ``out_dim[i]``. Input indices are evaluated together; the returned
-        tensor contains every output axis in site order. Evaluation receives
-        shape ``(batch, len(in_sites))``; matrices use every paired site as an
-        input, so ``len(in_sites) == n_sites``.
+        tensor contains every output axis in site order. :meth:`evaluate`
+        receives shape ``(batch, n_sites)`` in site order and returns all
+        output axes, with ``out_shape == out_dim``.
 
         The tensor must have an even number of axes, with one input/output
         pair per site. ``ordering="interleaved"`` means axes
@@ -166,7 +166,7 @@ class DenseTensorSource(BaseSource):  # MARK: DenseTensorSource
                          for axis in (site, n_sites + site))
             interleaved = tensor.permute(axes)
 
-        source = cls(interleaved, tuple(range(0, tensor.ndim, 2)))
+        source = cls(interleaved, in_sites=tuple(range(0, tensor.ndim, 2)))
         source._matrix_dims = (tuple(interleaved.shape[::2]),
                                tuple(interleaved.shape[1::2]))
         source._in_dim = source._matrix_dims[0]

@@ -11,7 +11,9 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 import torch
 
 from tensorkrowch.formats.quantics import _resolve_quantization
-from tensorkrowch.formats.quantization import CoordinateMap, Domain, QuantizedLayout
+from tensorkrowch.formats.quantization import (Domain,
+                                               CoordinateMap,
+                                               QuantizedLayout)
 
 from tensorkrowch.decompositions._utils import _unravel_indices
 from tensorkrowch.decompositions.sources.base import (ConfigurationBatch,
@@ -25,15 +27,16 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
     """
     Coordinate callable evaluated through a finite Quantics discretization.
 
-    :meth:`evaluate` receives digit configurations of shape
-    ``(batch, len(in_sites))`` in :class:`QuantizedLayout` order. Here
-    ``len(in_sites) == layout.n_sites``, including only input digits. The layout
-    decodes grid indices, and the :class:`CoordinateMap` converts them to domain coordinates for ``function``. The callable returns
-    one scalar or fixed-shape tensor per configuration. Values are sampled
-    without interpolation; validation and batching follow
-    :class:`CallableTensorSource`. ``n_sites`` includes digit input variables
-    and any response axes discovered during evaluation. Matrix sources instead
-    count paired input/output digit sites.
+    :meth:`evaluate` receives integer digits with shape
+    ``(batch, len(in_sites))`` in :class:`QuantizedLayout` order. The layout
+    decodes each row into grid indices, and :class:`CoordinateMap` converts
+    these indices to domain coordinates for ``function``.
+
+    The callable returns shape ``(batch, *out_shape)``. Each input digit is a
+    site; any response axes are additional output sites. ``out_shape`` can be
+    declared or inferred on first evaluation. The function is evaluated
+    directly at grid coordinates, without interpolation. Dtype, device and
+    batching follow :class:`CallableTensorSource`.
 
     The usual constructor accepts three ways to define the discretization:
     pass ``base``, ``level`` and ``domain`` for a uniform grid with left grid
@@ -56,18 +59,27 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         returns one scalar or fixed-shape tensor per configuration.
     n_coordinates : int
         Number of domain coordinates.
-    base, level : int or sequence[int], optional
-        Digit bases and levels. Required with the domain/grid shorthand.
-    domain : pair or sequence of pairs, optional
-        Domain intervals for an affine map with left grid points.
+    base, level : int or sequence of int, optional
+        Digit base and level for each coordinate. An integer applies to all
+        coordinates; a sequence has ``n_coordinates`` entries and allows
+        different values per coordinate. Required with the domain/grid shorthand.
+    domain : pair, sequence of pairs or torch.Tensor, optional
+        Domain intervals for an affine map with left grid points. One pair
+        applies to all coordinates; a sequence of ``n_coordinates`` pairs
+        specifies a different interval for each coordinate. A tensor has shape
+        ``(2,)`` or ``(n_coordinates, 2)``, respectively.
     grid_coordinates : torch.Tensor or sequence of torch.Tensor, optional
-        Explicit grid positions instead of ``domain``.
+        Explicit grid positions instead of ``domain``, with one vector per
+        coordinate. A sequence of ``n_coordinates`` vectors allows different
+        grid sizes; a matrix stores one coordinate per row. A single vector
+        defines a one-coordinate grid.
     layout : QuantizedLayout, optional
         Digit schedule, supplied together with ``coordinate_map``.
     coordinate_map : CoordinateMap, optional
         Grid mapping, supplied together with ``layout``.
     **kwargs
-        Callable output shape, dtype, device and batching options.
+        ``out_shape``, ``dtype``, ``device`` and ``batch_size`` options of
+        :class:`CallableSource`. Response axes are appended after input digits.
 
     Examples
     --------
@@ -89,16 +101,16 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
                  domain: Domain = None,
                  grid_coordinates: Optional[Union[
                      torch.Tensor, Sequence[torch.Tensor]]] = None,
-                 *, layout: Optional[QuantizedLayout] = None,
+                 *,
+                 layout: Optional[QuantizedLayout] = None,
                  coordinate_map: Optional[CoordinateMap] = None,
                  **kwargs) -> None:
-        if not callable(function) or isinstance(function, torch.Tensor) or \
-                hasattr(function, '_cores'):
+        if not callable(function):
             raise TypeError('`function` should be a coordinate callable')
         self.layout, self.coordinate_map = _resolve_quantization(
-            n_coordinates, base=base, level=level, domain=domain,
-            grid_coordinates=grid_coordinates, layout=layout,
-            coordinate_map=coordinate_map)
+            n_coordinates, base=base, level=level,
+            domain=domain, grid_coordinates=grid_coordinates,
+            layout=layout, coordinate_map=coordinate_map)
         self.n_coordinates = n_coordinates
         out_shape = kwargs.pop('out_shape', None)
         dimensions = (*self.layout.in_dim, *(out_shape or ()))
@@ -106,10 +118,13 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
                          in_sites=tuple(range(self.layout.n_sites)), **kwargs)
 
     @classmethod
-    def matrix(cls, function: Callable, in_n_coordinates: int,
-               out_n_coordinates: int, **kwargs) -> 'CallableQuanticsSource':
+    def matrix(cls,
+               function: Callable,
+               in_n_coordinates: int,
+               out_n_coordinates: int,
+               **kwargs) -> 'CallableQuanticsSource':
         """
-        Constructs a kernel source with independent input/output discretizations.
+        Constructs a matrix source with independent input/output grids.
 
         Unlike the usual constructor, ``function`` receives two coordinate
         tensors, one for each side, and returns a scalar for each paired row.
@@ -120,18 +135,19 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
 
         Both layouts must have the same number of digit sites, although their
         coordinate counts and local dimensions can differ. :meth:`evaluate`
-        receives input digits of shape ``(batch, len(in_sites))`` and evaluates
-        the callable at every output grid configuration. Matrices have
-        ``len(in_sites) == n_sites == in_layout.n_sites``. The returned shape
-        is ``(batch, *out_dim)``, with one output digit axis per site. :meth:`contract_dense` interleaves input and output
-        digit axes; :meth:`contract_dense_grid_axes` groups input coordinate
-        axes before output coordinate axes.
+        receives input digits of shape ``(batch, n_sites)`` in input layout
+        order and evaluates the callable at every output grid configuration.
+        Each site pairs an input digit with an output digit. The returned
+        shape is ``(batch, *out_dim)``, with ``out_shape == out_dim``.
+        :meth:`contract_dense` interleaves input and output digit axes;
+        :meth:`contract_dense_grid_axes` groups input coordinate axes before
+        output coordinate axes.
 
         Parameters
         ----------
         function : callable
-            Receives ``(in_coordinates, out_coordinates)`` and returns scalar
-            entries with their shared leading batch shape.
+            Receives two tensors of shape ``(batch, in_n_coordinates)`` and
+            ``(batch, out_n_coordinates)``, and returns shape ``(batch,)``.
         in_n_coordinates, out_n_coordinates : int
             Coordinate counts on each side.
         **kwargs
@@ -157,16 +173,22 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         tensor([[0.0000, 0.5000],
                 [0.5000, 1.0000]])
         """
-        options = ('base', 'level', 'domain', 'grid_coordinates',
+        options = ('base', 'level',
+                   'domain', 'grid_coordinates',
                    'layout', 'coordinate_map')
         inputs = {name: kwargs.pop('in_' + name) for name in options
                   if 'in_' + name in kwargs}
         outputs = {name: kwargs.pop('out_' + name, None) for name in options}
-        output_layout, output_map = _resolve_quantization(out_n_coordinates, **outputs)
+        output_layout, output_map = _resolve_quantization(
+            out_n_coordinates, **outputs)
+
         source = cls(function, in_n_coordinates, **inputs, **kwargs)
         if source.layout.n_sites != output_layout.n_sites:
-            raise ValueError('Matrix layouts should have equal numbers of sites')
-        source.in_layout, source.in_coordinate_map = source.layout, source.coordinate_map
+            raise ValueError(
+                'Matrix layouts should have equal numbers of sites')
+
+        source.in_layout = source.layout
+        source.in_coordinate_map = source.coordinate_map
         source.out_layout, source.out_coordinate_map = output_layout, output_map
         source.in_n_coordinates = in_n_coordinates
         source.out_n_coordinates = out_n_coordinates
@@ -175,9 +197,12 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         return source
 
     @classmethod
-    def from_data(cls, dataset: torch.Tensor, n_coordinates: int,
+    def from_data(cls,
+                  dataset: torch.Tensor,
+                  n_coordinates: int,
                   weights: Optional[torch.Tensor] = None,
-                  *, kernel: Optional[Callable] = None,
+                  *,
+                  kernel: Optional[Callable] = None,
                   **kwargs) -> 'CallableQuanticsSource':
         """
         Discretizes samples before constructing their empirical vector tensor.
@@ -188,24 +213,26 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         point contribute to the same mass. Without a kernel, evaluation
         returns that mass or zero at unobserved grid points.
 
-        With ``kernel``, the weighted kernel is centered at the occupied grid
-        points, rather than the original sample coordinates. Its values are
-        sampled on the grid without renormalizing their sum. Additional keyword
-        arguments, such as ``bandwidth``, are passed to the kernel. Both cases
-        construct vector sources with ``out_shape=()``; this constructor does
-        not create matrix sources.
+        With ``kernel``, each dataset row is replaced by its grid coordinates,
+        preserving row order, duplicates and normalized weights. The kernel
+        is evaluated against these coordinates without renormalizing its
+        values over the grid. Additional keyword arguments, such as
+        ``bandwidth``, are passed to the kernel. Both cases construct vector
+        sources with ``out_shape=()``; this constructor does not create matrix
+        sources.
 
         Parameters
         ----------
         dataset : torch.Tensor
-            Domain coordinates of shape ``(samples, n_coordinates)``.
+            Domain coordinates of shape ``(n_samples, n_coordinates)``.
         n_coordinates : int
             Coordinate count, consistent with the dataset.
         weights : torch.Tensor, optional
             Non-negative sample weights, normalized to total mass one.
         kernel : callable, optional
-            Evaluates query coordinates against the dataset after discretizing
-            its coordinates. ``None`` returns exact empirical masses.
+            Receives query coordinates and the discretized dataset, and
+            returns shape ``(batch, n_samples)``. ``None`` returns exact
+            empirical masses.
         **kwargs
             Quantization arguments as in the constructor, and kernel parameters
             such as ``bandwidth`` for :func:`gaussian_kernel`.
@@ -234,30 +261,37 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         """
         if kernel is not None and not callable(kernel):
             raise TypeError('`kernel` should be callable')
-        mass = _data_weights(dataset, weights,
-                             dataset.dtype if dataset.is_floating_point() else None)
+        weights = _data_weights(dataset, weights,
+                                dataset.dtype if dataset.is_floating_point()
+                                else None)
         options = {name: kwargs.pop(name, None) for name in
-                   ('base', 'level', 'domain', 'grid_coordinates',
+                   ('base', 'level',
+                    'domain', 'grid_coordinates',
                     'layout', 'coordinate_map')}
         if kernel is None and kwargs:
             raise TypeError('Kernel arguments require `kernel`')
-        layout, coordinate_map = _resolve_quantization(n_coordinates, **options)
+
+        layout, coordinate_map = _resolve_quantization(n_coordinates,
+                                                       **options)
         indices = coordinate_map.to_indices(dataset)
-        lookup = _SparseLookup(indices, mass, layout.grid_size)
+        if kernel is None:
+            lookup = _SparseLookup(indices, weights, layout.grid_size)
 
-        def empirical(coordinates: torch.Tensor) -> torch.Tensor:
-            return lookup(coordinate_map.to_indices(coordinates))
+            def empirical(coordinates: torch.Tensor) -> torch.Tensor:
+                return lookup(coordinate_map.to_indices(coordinates))
 
-        function = empirical if kernel is None else _DataEvaluator(
-            coordinate_map.from_indices(lookup.indices), lookup.values,
-            kernel, kwargs)
+            function = empirical
+        else:
+            function = _DataEvaluator(coordinate_map.from_indices(indices),
+                                      weights, kernel, kwargs)
         return cls(function, n_coordinates, layout=layout,
                    coordinate_map=coordinate_map, out_shape=(),
-                   dtype=mass.dtype if kernel is None else None, device=dataset.device)
+                   dtype=weights.dtype if kernel is None else None,
+                   device=dataset.device)
 
     @property
     def out_shape(self) -> Optional[Tuple[int, ...]]:
-        """Response dimensions, or ``None`` until the first grid evaluation."""
+        """Declared or inferred function output shape."""
         if self._out_shape is None and not self.is_matrix:
             return None
         return super().out_shape
@@ -268,23 +302,29 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         self._set_sites(len(self._in_dim), tuple(range(self.layout.n_sites)))
         super()._set_output_shape(out_shape)
 
-    def _evaluate_batch(self, configurations: ConfigurationBatch) -> torch.Tensor:
+    def _evaluate_batch(self,
+                        configurations: ConfigurationBatch) -> torch.Tensor:
         """Decodes digit inputs before using the shared result validation."""
         indices = self.layout.decode_digits(configurations.as_tensor())
         coordinates = self.coordinate_map.from_indices(indices).to(self.device)
         if not self.is_matrix:
             result = self.function(coordinates)
         else:
-            outputs = _unravel_indices(torch.arange(prod(self.out_shape),
-                                                    device=self.device), self.out_shape)
+            outputs = _unravel_indices(
+                torch.arange(prod(self.out_shape), device=self.device),
+                self.out_shape)
             output_indices = self.out_layout.decode_digits(outputs)
             output_coordinates = self.out_coordinate_map.from_indices(
                 output_indices).to(self.device)
             n_outputs = outputs.shape[0]
             result = self.function(coordinates.repeat_interleave(n_outputs, 0),
-                                   output_coordinates.repeat(coordinates.shape[0], 1))
+                                   output_coordinates.repeat(
+                                       coordinates.shape[0], 1))
             if not isinstance(result, torch.Tensor):
                 raise TypeError('`function` should return a torch.Tensor')
+            if result.shape != (coordinates.shape[0] * n_outputs,):
+                raise ValueError(
+                    '`function` should return one scalar per coordinate pair')
             result = result.reshape(coordinates.shape[0], *self.out_shape)
         return self._validate_result(result, configurations.batch_size)
 
@@ -306,8 +346,10 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
                              key=self.out_layout.sites().__getitem__)
             dense = dense.permute(*(2 * site for site in inputs),
                                   *(2 * site + 1 for site in outputs))
-            return dense.reshape(*self.layout.grid_size, *self.out_layout.grid_size)
-        order = sorted(range(self.layout.n_sites), key=self.layout.sites().__getitem__)
+            return dense.reshape(*self.layout.grid_size,
+                                 *self.out_layout.grid_size)
+        order = sorted(range(self.layout.n_sites),
+                       key=self.layout.sites().__getitem__)
         dense = dense.permute(*order, *range(len(order), dense.ndim))
         return dense.reshape(*self.layout.grid_size, *self.out_shape)
 

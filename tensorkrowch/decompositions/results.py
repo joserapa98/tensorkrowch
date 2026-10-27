@@ -732,13 +732,15 @@ def _result_from_source(result: TensorDecomposition,
 
     if getattr(source, 'is_matrix', False):
         inputs, outputs = source.in_dim, source.out_dim
-        if result.n_sites == 2 * len(inputs):
+        if result.n_sites == 2 * source.n_sites:
             # RSS creates adjacent input/output sites before assembling a matrix.
+            if inputs is None:
+                inputs = result.in_dim[::2]
             standard = result._effective_cores()
             paired = [torch.einsum('aib,boc->aioc',
                                    standard[2 * site],
                                    standard[2 * site + 1]).flatten(1, 2)
-                      for site in range(len(inputs))]
+                      for site in range(source.n_sites)]
             cores = _restore_cores(paired, inputs, outputs,
                                    result.n_batches, cyclic)
         elif result.out_dim is None:

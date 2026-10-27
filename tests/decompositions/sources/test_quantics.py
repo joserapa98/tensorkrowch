@@ -103,9 +103,8 @@ class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
             tk.decompositions.CallableQuanticsSource(lambda x: x[:, 0], 1, **kwargs)
 
     @pytest.mark.parametrize('function', [torch.ones(4),
-        tk.decompositions.DenseTensorSource(torch.ones(4)),
-        tk.formats.TT([torch.ones(4)])])
-    def test_tensor_sources_are_not_quantized(self, function):
+        tk.decompositions.DenseTensorSource(torch.ones(4))])
+    def test_non_callable_functions_are_rejected(self, function):
         with pytest.raises(TypeError, match='coordinate callable'):
             tk.decompositions.CallableQuanticsSource(
                 function, 1, base=2, level=2, domain=(0., 1.))
@@ -199,6 +198,15 @@ class TestCallableQuanticsMatrixSource:  # MARK: TestCallableQuanticsMatrixSourc
                 lambda x, y: x[:, 0], 1, 1, in_base=2, out_base=2,
                 in_level=2, out_level=3, in_domain=(0., 1.), out_domain=(0., 1.))
 
+    def test_function_returns_one_scalar_per_coordinate_pair(self):
+        source = tk.decompositions.CallableQuanticsSource.matrix(
+            lambda x, y: (x + y).sum(-1, keepdim=True), 1, 1,
+            in_base=2, out_base=2, in_level=1, out_level=1,
+            in_domain=(0., 1.), out_domain=(0., 1.))
+        with pytest.raises(ValueError, match='one scalar per coordinate pair'):
+            source.evaluate(tk.decompositions.ConfigurationBatch(
+                torch.tensor([[0]])))
+
 
 def test_data_kernel_uses_quantized_dataset_positions():
     dataset = torch.tensor([[0.1], [0.2], [0.8]], dtype=torch.float64)
@@ -210,6 +218,31 @@ def test_data_kernel_uses_quantized_dataset_positions():
     expected = tk.decompositions.gaussian_kernel(
         coordinates, quantized_data, bandwidth=0.2).mean(-1)
     torch.testing.assert_close(source.contract_dense_grid_axes(), expected)
+
+
+def test_data_kernel_preserves_discretized_rows_and_weights():
+    dataset = torch.tensor([[0.8], [0.1], [0.2]], dtype=torch.float64)
+    weights = torch.tensor([1., 2., 1.], dtype=torch.float64)
+    seen = []
+
+    def kernel(query, centers, scale):
+        seen.append(centers)
+        columns = torch.arange(centers.shape[0], dtype=query.dtype)
+        return (query[:, None, 0] + centers[None, :, 0]) * scale + columns
+
+    source = tk.decompositions.CallableQuanticsSource.from_data(
+        dataset, 1, weights=weights, base=2, level=1,
+        domain=torch.tensor([0., 1.], dtype=torch.float64),
+        kernel=kernel, scale=1 + 2j)
+    values = source.contract_dense_grid_axes()
+    quantized_data = torch.tensor([[0.5], [0.], [0.]], dtype=torch.float64)
+    queries = torch.tensor([0., 0.5], dtype=torch.float64)
+    expected_kernel = ((queries[:, None] + quantized_data[None, :, 0]) *
+                       (1 + 2j) + torch.arange(3))
+    expected = expected_kernel @ (weights / weights.sum()).to(torch.complex128)
+    torch.testing.assert_close(values, expected)
+    assert len(seen) == 1
+    torch.testing.assert_close(seen[0], quantized_data)
 
 
 def test_quantics_total_count_includes_declared_response_axes():

@@ -238,13 +238,13 @@ class BaseSource(ABC):  # MARK: BaseSource
     n_sites : int
         Total number of represented variables. A matrix variable has one
         input axis and one output axis.
+    n_batches : int, optional
+        Number of structural batch axes, whose sizes form ``core_batch``.
+        Defaults to ``0``.
     in_sites : sequence of int, optional
         Ordered variables received by evaluation configurations. The complement
         supplies the output axes. Defaults to all variables; matrices always
         evaluate every variable and return their paired output axes.
-    n_batches : int, optional
-        Number of structural batch axes, whose sizes form ``core_batch``.
-        Defaults to ``0``.
 
     Examples
     --------
@@ -258,9 +258,9 @@ class BaseSource(ABC):  # MARK: BaseSource
 
     def __init__(self,
                  n_sites: int,
+                 n_batches: int = 0,
                  *,
-                 in_sites: Optional[Sequence[int]] = None,
-                 n_batches: int = 0) -> None:
+                 in_sites: Optional[Sequence[int]] = None) -> None:
         if isinstance(n_batches, bool) or not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         if n_batches < 0:

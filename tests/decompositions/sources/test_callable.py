@@ -144,6 +144,10 @@ def test_dataset_sources_reuse_evaluation_and_kernels(kind, kernel, device_dtype
     weights = torch.tensor([1., 2., 1.], dtype=real_dtype, device=device)
     source = cls.from_data(dataset, weights=weights, kernel=kernel, **options,
                            **({'bandwidth': 0.5} if kernel is not None else {}))
+    assert isinstance(source, cls)
+    assert source.n_sites == 2
+    assert source.in_dim == (None if kind == 'continuous' else (2, 2))
+    assert source.out_shape == ()
     query = torch.tensor([[0, 0], [1, 1], [0, 1]], device=device)
     if kind == 'continuous':
         query = query.to(real_dtype)
@@ -182,6 +186,54 @@ def test_custom_kernel_preserves_complex_values_and_receives_dataset():
         torch.tensor([[0.5]]), kind='features'))
     torch.testing.assert_close(values, torch.tensor([1 + 2j]))
     assert seen[0] is data
+
+
+def test_discrete_data_infers_dimensions_only_without_kernel():
+    dataset = torch.tensor([[0, 1], [2, 0], [0, 1]])
+    source = tk.decompositions.CallableTensorSource.from_data(dataset)
+    assert isinstance(source, tk.decompositions.CallableTensorSource)
+    assert source.in_dim == (3, 2)
+    torch.testing.assert_close(source.contract_dense(), torch.tensor(
+        [[0., 2 / 3], [0., 0.], [1 / 3, 0.]]))
+    with pytest.raises(ValueError, match='require `in_dim`'):
+        tk.decompositions.CallableTensorSource.from_data(
+            dataset, kernel=tk.decompositions.gaussian_kernel, bandwidth=1.)
+
+
+def test_discrete_empirical_masses_preserve_weight_gradients():
+    weights = torch.tensor([1., 2., 1.], dtype=torch.float64,
+                           requires_grad=True)
+    source = tk.decompositions.CallableTensorSource.from_data(
+        torch.tensor([[0], [0], [2]]), weights=weights)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.tensor([[0], [1], [2], [0]])))
+    expected = (2 * (weights[0] + weights[1]) + weights[2]) / weights.sum()
+    torch.testing.assert_close(values.sum(), expected)
+    actual_gradient, = torch.autograd.grad(values.sum(), weights,
+                                          retain_graph=True)
+    expected_gradient, = torch.autograd.grad(expected, weights)
+    torch.testing.assert_close(actual_gradient, expected_gradient)
+
+
+@pytest.mark.parametrize('dtype', [torch.int32, torch.int64])
+def test_discrete_empirical_lookup_handles_large_flat_indices(dtype):
+    dataset = torch.tensor([[0, 0], [50000, 50000], [0, 0]], dtype=dtype)
+    source = tk.decompositions.CallableTensorSource.from_data(dataset)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(torch.tensor(
+        [[50000, 50000], [0, 50000], [0, 0]], dtype=dtype)))
+    torch.testing.assert_close(values, torch.tensor([1 / 3, 0., 2 / 3]))
+
+
+@pytest.mark.parametrize('kernel', [None, tk.decompositions.gaussian_kernel])
+@pytest.mark.parametrize('dataset, error', [
+    (torch.tensor([[0.5]]), TypeError),
+    (torch.tensor([[-1]]), ValueError),
+    (torch.tensor([[2]]), ValueError),
+])
+def test_discrete_data_validates_sample_indices(kernel, dataset, error):
+    with pytest.raises(error):
+        tk.decompositions.CallableTensorSource.from_data(
+            dataset, in_dim=(2,), kernel=kernel)
 
 
 def test_callable_total_count_and_nonleading_inputs():
@@ -226,3 +278,44 @@ def test_matrix_callable_has_no_separate_output_sites():
         lambda x: (x[:, :1] + torch.arange(3)).float(), (2,), (3,))
     assert source.n_sites == len(source.in_sites) == 1
     assert source.out_dim == source.out_shape == (3,)
+
+
+@pytest.mark.parametrize('out_shape', [None, (2, 3)])
+def test_continuous_matrix_declares_or_infers_output_axes(out_shape):
+    def function(x):
+        return (x[:, 0, None, None] * torch.arange(2)[None, :, None] +
+                x[:, 1, None, None] * torch.arange(3)[None, None, :])
+
+    source = tk.decompositions.CallableSource.matrix(
+        function, n_sites=2, out_shape=out_shape, batch_size=1)
+    assert source.is_matrix
+    assert source.n_sites == 2
+    assert source.in_sites == (0, 1)
+    assert source.in_dim is None
+    assert source.out_dim == source.out_shape == out_shape
+    coordinates = torch.tensor([[0.25, 0.5], [0.75, 1.]],
+                               dtype=torch.float64, requires_grad=True)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(
+        coordinates, kind='features'))
+    torch.testing.assert_close(values, function(coordinates))
+    assert source.out_dim == source.out_shape == (2, 3)
+    assert source.dtype == torch.float64
+    gradient, = torch.autograd.grad(values.sum(), coordinates)
+    torch.testing.assert_close(gradient, torch.tensor(
+        [[3., 6.], [3., 6.]], dtype=torch.float64))
+    with pytest.raises(ValueError, match='discrete tensor'):
+        source.contract_dense()
+
+
+@pytest.mark.parametrize('out_shape', [(), (2,), (2, 3, 4)])
+def test_continuous_matrix_requires_one_output_axis_per_input(out_shape):
+    def function(x):
+        return x.new_zeros((x.shape[0], *out_shape))
+
+    with pytest.raises(ValueError):
+        tk.decompositions.CallableSource.matrix(
+            function, n_sites=2, out_shape=out_shape)
+    source = tk.decompositions.CallableSource.matrix(function, n_sites=2)
+    with pytest.raises(ValueError, match='one axis per output variable'):
+        source.evaluate(tk.decompositions.ConfigurationBatch(
+            torch.ones(1, 2), kind='features'))

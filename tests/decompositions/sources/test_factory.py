@@ -59,15 +59,22 @@ def test_factory_accepts_formats_and_preserves_sources():
 
 
 @pytest.mark.parametrize('boundary', ['obc', 'pbc'])
-def test_factory_accepts_mpo(boundary):
-    mpo = tk.models.MPO(n_features=2, in_dim=2, out_dim=3,
-                        bond_dim=2, boundary=boundary)
-    source = tk.decompositions.as_tensor_source(mpo)
-    expected = mpo.to_ttm() if boundary == 'obc' else mpo.to_trm()
+@pytest.mark.parametrize('n_sites', [1, 5])
+@pytest.mark.parametrize('matrix', [False, True])
+def test_factory_accepts_models(boundary, n_sites, matrix):
+    if matrix:
+        model = tk.models.MPO(n_features=n_sites, in_dim=2, out_dim=3,
+                              bond_dim=2, boundary=boundary)
+        expected = model.to_ttm() if boundary == 'obc' else model.to_trm()
+    else:
+        model = tk.models.MPS(n_features=n_sites, phys_dim=2, bond_dim=2,
+                              boundary=boundary)
+        expected = model.to_tt() if boundary == 'obc' else model.to_tr()
+    source = tk.decompositions.as_tensor_source(model)
     assert isinstance(source, tk.decompositions.FormatSource)
-    assert source.is_matrix
-    assert source.in_dim == (2, 2)
-    assert source.out_dim == (3, 3)
+    assert source.is_matrix == matrix
+    assert source.in_dim == (2,) * n_sites
+    assert source.out_dim == ((3,) * n_sites if matrix else None)
     torch.testing.assert_close(source.contract_dense(), expected.contract_dense())
 
 

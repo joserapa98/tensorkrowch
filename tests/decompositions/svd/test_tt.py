@@ -779,3 +779,96 @@ def test_dense_contraction_capability_does_not_require_a_builtin_source(capsys):
     assert engine.source is source
     torch.testing.assert_close(result.contract_dense(), torch.ones(2, 2))
     assert 'TT-SVD' in capsys.readouterr().out
+
+
+def test_source_families_reconstruct_and_evaluate(vector_source_case):
+    source, tensor = vector_source_case
+    indices = torch.stack((torch.zeros(source.n_sites, dtype=torch.long),
+                            torch.tensor(source.in_dim) - 1))
+    for result in (tk.decompositions.TTSVD(source).fit(collect_metrics=True),
+                   tk.decompositions.tt_svd(source)):
+        assert isinstance(result, tk.decompositions.TTDecomposition)
+        assert result.dtype == tensor.dtype
+        assert result.n_sites == source.n_sites
+        torch.testing.assert_close(result.contract_dense(), tensor)
+        torch.testing.assert_close(result.evaluate(indices), tensor[tuple(indices.T)])
+
+
+def test_source_families_share_rank_truncation(vector_source_case):
+    source, tensor = vector_source_case
+    if source.n_sites == 1:
+        result = tk.decompositions.TTSVD(source).fit(rank=1)
+        torch.testing.assert_close(result.contract_dense(), tensor)
+        assert result.rank == []
+        return
+    result = tk.decompositions.TTSVD(source).fit(rank=1, collect_metrics=True)
+    expected = tk.decompositions.TTSVD(tensor).fit(rank=1)
+    actual_error = torch.linalg.vector_norm(result.contract_dense() - tensor)
+    torch.testing.assert_close(result.contract_dense(), expected.contract_dense())
+    assert max(result.rank) == 1
+    assert actual_error > 1e-6 * torch.linalg.vector_norm(tensor)
+    assert actual_error <= result.metrics.errors[0].absolute * (1 + 1e-8)
+
+
+@pytest.mark.parametrize('kind', ['dense', 'sparse', 'callable'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_svd_gradients_through_sources(kind, dtype):
+    tensor = torch.randn(2, 3, 2, dtype=dtype, requires_grad=True)
+    if kind == 'dense':
+        source = tk.decompositions.DenseTensorSource(tensor)
+    elif kind == 'sparse':
+        indices = torch.cartesian_prod(*(torch.arange(dim) for dim in tensor.shape))
+        source = tk.decompositions.SparseTensorSource(
+            indices, tensor.reshape(-1), tensor.shape)
+    else:
+        source = tk.decompositions.CallableTensorSource(
+            lambda indices: tensor[tuple(indices.T)], tensor.shape)
+    result = tk.decompositions.TTSVD(source).fit()
+    weights = torch.randn_like(tensor)
+    loss = (result.contract_dense().conj() * weights).real.sum()
+    gradient, = torch.autograd.grad(loss, tensor)
+    torch.testing.assert_close(gradient, weights)
+
+
+@pytest.mark.parametrize('kind', ['sparse', 'discrete', 'quantics'])
+@pytest.mark.parametrize('n_sites', [1, 5])
+def test_empirical_sources_reconstruct_the_same_distribution(kind, n_sites):
+    weights = torch.tensor([1., 2., 3.], dtype=torch.float64)
+    indices = torch.tensor([[0] * n_sites, [1] * n_sites, [0] * n_sites])
+    if kind == 'quantics':
+        size = 2 ** n_sites
+        coordinates = torch.tensor([[0.], [(size - 1) / size], [0.]],
+                                    dtype=torch.float64)
+        source = tk.decompositions.CallableQuanticsSource.from_data(
+            coordinates, 1, weights=weights,
+            base=2, level=n_sites, domain=(0., 1.))
+    else:
+        cls = tk.decompositions.SparseTensorSource if kind == 'sparse' else \
+            tk.decompositions.CallableTensorSource
+        source = cls.from_data(indices, in_dim=(2,) * n_sites, weights=weights)
+    expected = torch.zeros((2,) * n_sites, dtype=torch.float64)
+    expected[(0,) * n_sites] = 2 / 3
+    expected[(1,) * n_sites] = 1 / 3
+    result = tk.decompositions.TTSVD(source).fit()
+    torch.testing.assert_close(result.contract_dense(), expected)
+    if kind == 'quantics':
+        assert isinstance(result, tk.decompositions.QTTDecomposition)
+        torch.testing.assert_close(result.contract_dense_grid_axes(), expected.reshape(-1))
+
+
+@pytest.mark.parametrize('n_sites', [1, 5])
+def test_callable_source_is_materialized_once_for_repeated_fits(n_sites):
+    calls = []
+
+    def function(indices):
+        calls.append(indices.shape[0])
+        return torch.exp(indices.to(torch.float64).sum(-1))
+
+    source = tk.decompositions.CallableTensorSource(
+        function, (2,) * n_sites, batch_size=3)
+    engine = tk.decompositions.TTSVD(source)
+    assert sum(calls) == 2 ** n_sites
+    evaluations = source.evaluation_stats
+    engine.fit(rank=1)
+    engine.fit(rank=2, collect_metrics=True)
+    assert source.evaluation_stats == evaluations

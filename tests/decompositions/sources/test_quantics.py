@@ -48,19 +48,22 @@ class TestCallableQuanticsSource:  # MARK: TestCallableQuanticsSource
         assert isinstance(source, tk.decompositions.BaseSource)
 
     @pytest.mark.parametrize('path', ['uniform', 'explicit', 'objects'])
-    def test_constructor_paths_match_formats(self, path):
+    @pytest.mark.parametrize('level', [1, 5])
+    def test_constructor_paths_match_formats(self, path, level):
+        size = 2 ** level
         if path == 'uniform':
-            kwargs = dict(base=2, level=2, domain=(0., 1.))
+            kwargs = dict(base=2, level=level, domain=(0., 1.))
         elif path == 'explicit':
-            kwargs = dict(base=2, level=2,
-                          grid_coordinates=(torch.tensor([-2., 0., 1., 3.]),))
+            kwargs = dict(base=2, level=level,
+                          grid_coordinates=(5 * torch.linspace(0., 1., size)
+                                             .square() - 2,))
         else:
-            layout = tk.formats.QuantizedLayout(1, 2, 2)
+            layout = tk.formats.QuantizedLayout(1, 2, level)
             kwargs = dict(layout=layout, coordinate_map=tk.formats.AffineCoordinateMap(
                 (0., 1.), layout.grid_size))
         source = tk.decompositions.CallableQuanticsSource(
             lambda coordinates: coordinates.sum(-1), 1, **kwargs)
-        expected = source.coordinate_map.from_indices(torch.arange(4)[:, None]).sum(-1)
+        expected = source.coordinate_map.from_indices(torch.arange(size)[:, None]).sum(-1)
         torch.testing.assert_close(source.contract_dense_grid_axes(), expected)
         assert source.layout.ordering == 'interleaved'
         assert source.layout.digit_order == ('coarse_to_fine',)
@@ -263,3 +266,32 @@ def test_quantics_total_count_includes_declared_response_axes():
     assert source.out_shape == (3,)
     assert source.contract_dense().shape == (2, 2, 3)
     assert source.contract_dense_grid_axes().shape == (4, 3)
+
+
+@pytest.mark.parametrize('level', [1, 5])
+def test_matrix_minimal_and_long_grids(level):
+    def function(inputs, outputs):
+        return torch.sin(inputs[:, 0] + outputs[:, 0]) + inputs[:, 0] * outputs[:, 0]
+
+    source = tk.decompositions.CallableQuanticsSource.matrix(
+        function, 1, 1, in_base=2, out_base=2, in_level=level, out_level=level,
+        in_domain=(0., 1.), out_domain=(-1., 1.), batch_size=3)
+    size = 2 ** level
+    indices = torch.cartesian_prod(torch.arange(size), torch.arange(size))
+    expected = function(source.in_coordinate_map.from_indices(indices[:, :1]),
+                         source.out_coordinate_map.from_indices(indices[:, 1:]))
+    torch.testing.assert_close(source.contract_dense_grid_axes(),
+                               expected.reshape(size, size))
+    digits = source.layout.encode_indices(torch.tensor([[0], [size - 1]]))
+    batch = tk.decompositions.ConfigurationBatch(digits)
+    values = source.evaluate(batch)
+    site = level // 2
+    expected_fiber = []
+    for value in range(2):
+        query = digits.clone()
+        query[:, site] = value
+        expected_fiber.append(source.evaluate(
+            tk.decompositions.ConfigurationBatch(query)))
+    torch.testing.assert_close(source.fiber(batch, site),
+                               torch.stack(expected_fiber, dim=1))
+    assert values.shape == (2, *((2,) * level))

@@ -41,3 +41,28 @@ def test_observer_resolution_and_empty_history():
     observer = _resolve_observer(0, history)
     observer.emit(DecompositionEvent('start', 'tt_svd'))
     assert len(history.events) == 1
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'name': 1}, TypeError), ({'phase': None}, TypeError),
+    ({'level': 0}, ValueError), ({'site': -1}, ValueError),
+    ({'elapsed': -1.}, ValueError), ({'values': []}, TypeError),
+])
+def test_invalid_event_metadata(kwargs, error):
+    options = dict(name='cut_complete', phase='TT-SVD')
+    options.update(kwargs)
+    with pytest.raises(error):
+        DecompositionEvent(**options)
+
+
+def test_composite_observer_preserves_history_and_metrics(capsys):
+    history = HistoryObserver()
+    observer = _resolve_observer(2, history)
+    event = DecompositionEvent('cut_complete', 'TT-SVD', site=3,
+                               elapsed=0.01, values={'selected_rank': 2})
+    metrics = tk.decompositions.DecompositionMetrics()
+    observer.emit(event)
+    observer.close(metrics)
+    assert history.events == [event]
+    assert history.metrics is metrics
+    assert 'Cut 4-5' in capsys.readouterr().out

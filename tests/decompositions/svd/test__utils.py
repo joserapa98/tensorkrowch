@@ -1,5 +1,6 @@
 """Tests for shared SVD source preparation and progress reporting."""
 
+import pytest
 import torch
 
 import tensorkrowch as tk
@@ -45,3 +46,53 @@ def test_progress_aggregates_batched_errors():
                                torch.tensor(5., dtype=torch.float64))
     torch.testing.assert_close(values['relative_error'],
                                torch.tensor(0.5, dtype=torch.float64))
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('cyclic', [False, True])
+def test_svd_rejects_continuous_and_integral_sources(matrix, cyclic):
+    engine = (tk.decompositions.TRMSVD if cyclic else tk.decompositions.TTMSVD) \
+        if matrix else (tk.decompositions.TRSVD if cyclic else tk.decompositions.TTSVD)
+    continuous = tk.decompositions.CallableSource.matrix(
+        lambda x: x, 2, out_shape=(2, 2)) if matrix else \
+        tk.decompositions.CallableSource(lambda x: x.sum(-1), 2)
+    with pytest.raises(ValueError, match='discrete tensor'):
+        engine(continuous)
+    assert continuous.evaluation_stats.source_calls == 0
+    source = tk.decompositions.DenseTensorSource.matrix(
+        torch.ones(2, 2, 2, 2, dtype=torch.long)) if matrix else \
+        tk.decompositions.DenseTensorSource(torch.ones(2, 3, dtype=torch.long))
+    with pytest.raises(TypeError, match='floating or complex'):
+        engine(source)
+
+
+@pytest.mark.parametrize('returned, batches, error', [
+    ([1., 2.], 0, TypeError),
+    (torch.ones(2, 3), True, TypeError),
+    (torch.ones(2, 3), -1, ValueError),
+    (torch.ones(2, 3), 2, ValueError),
+    (torch.empty(2, 0), 0, ValueError),
+])
+def test_invalid_dense_contraction_capabilities(returned, batches, error):
+    class Source:
+        n_batches = batches
+
+        def contract_dense(self):
+            return returned
+
+    with pytest.raises(error):
+        _prepare_svd_source(Source())
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+def test_ring_svd_rejects_batched_sources(matrix):
+    if matrix:
+        format = tk.formats.TTM([torch.randn(2, 2, 1, 3),
+                                 torch.randn(2, 1, 2, 3)], n_batches=1)
+        source = tk.decompositions.FormatSource(format)
+        engine = tk.decompositions.TRMSVD
+    else:
+        source = tk.decompositions.DenseTensorSource(torch.ones(2, 3, 4), 1)
+        engine = tk.decompositions.TRSVD
+    with pytest.raises(ValueError, match='n_batches'):
+        engine(source)

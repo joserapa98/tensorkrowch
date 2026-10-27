@@ -1,6 +1,7 @@
 """Tests for structured decomposition metrics."""
 
 import math
+from dataclasses import replace
 
 import pytest
 import torch
@@ -205,3 +206,94 @@ class TestDecompositionMetrics:  # MARK: TestDecompositionMetrics
     def test_metrics_validation(self):
         with pytest.raises(TypeError):
             tk.decompositions.DecompositionMetrics(errors=['invalid'])
+
+
+@pytest.fixture
+def local_solve_record():
+    return tk.decompositions.LocalSolveRecord(
+        environment_shape=(8, 3), target_shape=(8, 2), driver='gelsd',
+        abs_residual=torch.tensor(0.1, requires_grad=True),
+        rel_residual=0.05, target_norm=2., l2_reg=torch.tensor(0.01),
+        effective_l2_reg=0.02, l2_reg_mode='relative', column_scaling=True,
+        system_scaling=True, system_scale=3., site=(1, 2), sweep=3,
+        sampling_exact=False, sample_generation=2)
+
+
+def test_nested_records_keep_diagnostics_and_serialize(local_solve_record):
+    input_fit = tk.decompositions.InputFitRecord(
+        method='least_squares', axis=1, domain_size=8, in_dim=3,
+        abs_residual=0.1, rel_residual=0.05, condition_number=2.,
+        used_fibers=True, local_solve=local_solve_record)
+    projection = tk.decompositions.RangeProjectionRecord(
+        method='randomized', input_shape=(8, 6), axis=1, requested_dim=3,
+        projection_dim=5, range_dim=3, oversampling=2, n_power_iter=1,
+        error_absolute=0.1, error_relative=0.05, elapsed=torch.tensor(0.01))
+    sweep = tk.decompositions.SweepRecord(
+        sweep=3, abs_error=0.2, rel_error=0.1, rel_change=0.01,
+        elapsed=0.5, sample_generation=2, stop_reason='tolerance')
+    timing = tk.decompositions.TimingRecord(
+        'fit', 0.5, children=[tk.decompositions.TimingRecord('svd', 0.1, site=2)])
+    metrics = tk.decompositions.DecompositionMetrics(
+        local_solves=(local_solve_record,), input_fits=(input_fit,),
+        range_projections=(projection,), sweeps=(sweep,), timings=(timing,))
+    info = metrics.as_info()
+    assert not local_solve_record.abs_residual.requires_grad
+    assert local_solve_record.abs_residual.device.type == 'cpu'
+    assert info['input_fits'][0]['local_solve']['target_shape'] == [8, 2]
+    assert info['range_projections'][0]['n_power_iter'] == 1
+    assert info['sweeps'][0]['stop_reason'] == 'tolerance'
+    assert info['timings'][0]['children'][0]['site'] == 2
+    torch.testing.assert_close(info['local_solves'][0]['abs_residual'],
+                               torch.tensor(0.1))
+    info['warnings'].append('outside')
+    assert metrics.warnings == []
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'environment_shape': (2,)}, ValueError),
+    ({'target_shape': ()}, ValueError), ({'driver': 1}, TypeError),
+    ({'abs_residual': torch.ones(2)}, ValueError),
+    ({'rel_residual': float('nan')}, ValueError),
+    ({'target_norm': float('inf')}, ValueError),
+    ({'l2_reg': -1.}, ValueError), ({'l2_reg_mode': 'unknown'}, ValueError),
+    ({'site': -1}, ValueError), ({'sampling_exact': 1}, TypeError),
+])
+def test_invalid_local_solve_records(local_solve_record, kwargs, error):
+    with pytest.raises(error):
+        replace(local_solve_record, **kwargs)
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'method': ''}, TypeError), ({'axis': True}, TypeError),
+    ({'in_dim': 0}, ValueError), ({'abs_residual': float('inf')}, ValueError),
+    ({'used_fibers': 1}, TypeError), ({'local_solve': {}}, TypeError),
+])
+def test_invalid_input_fit_records(kwargs, error):
+    record = tk.decompositions.InputFitRecord(
+        method='least_squares', axis=0, domain_size=8, in_dim=3,
+        abs_residual=0.1, rel_residual=0.05, condition_number=2.)
+    with pytest.raises(error):
+        replace(record, **kwargs)
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'method': 'unknown'}, ValueError), ({'input_shape': (0, 2)}, ValueError),
+    ({'projection_dim': 0}, ValueError), ({'requested_dim': True}, TypeError),
+    ({'elapsed': float('nan')}, ValueError),
+])
+def test_invalid_range_projection_records(kwargs, error):
+    record = tk.decompositions.RangeProjectionRecord(
+        method='identity', input_shape=(8, 3), axis=0, requested_dim=None,
+        projection_dim=3, range_dim=3)
+    with pytest.raises(error):
+        replace(record, **kwargs)
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'sweep': True}, ValueError), ({'abs_error': torch.ones(2)}, ValueError),
+    ({'rel_change': float('inf')}, ValueError), ({'elapsed': -1.}, ValueError),
+    ({'stop_reason': 1}, TypeError),
+])
+def test_invalid_sweep_records(kwargs, error):
+    with pytest.raises(error):
+        replace(tk.decompositions.SweepRecord(0), **kwargs)

@@ -370,3 +370,115 @@ def test_continuous_matrix_requires_one_output_axis_per_input(out_shape):
     with pytest.raises(ValueError, match='one axis per output variable'):
         source.evaluate(tk.decompositions.ConfigurationBatch(
             torch.ones(1, 2), kind='features'))
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'function': None, 'n_sites': 1}, TypeError),
+    ({'function': lambda x: x, 'n_sites': 0}, ValueError),
+    ({'function': lambda x: x, 'n_sites': True}, TypeError),
+    ({'function': lambda x: x, 'n_sites': 1, 'dtype': 'float64'}, TypeError),
+    ({'function': lambda x: x, 'n_sites': 1, 'batch_size': 0}, ValueError),
+])
+def test_invalid_continuous_constructor(kwargs, error):
+    with pytest.raises(error):
+        tk.decompositions.CallableSource(**kwargs)
+
+
+@pytest.mark.parametrize('dimensions, error', [
+    (2, TypeError), ((), ValueError), ((2, True), TypeError), ((2, 0), ValueError),
+])
+def test_invalid_discrete_dimensions(dimensions, error):
+    with pytest.raises(error):
+        tk.decompositions.CallableTensorSource(lambda x: x.sum(-1), dimensions)
+
+
+@pytest.mark.parametrize('value, error', [
+    ([1.], TypeError),
+    (torch.ones(2), ValueError),
+    (torch.ones(1, 2), ValueError),
+    (torch.ones(1, device='meta'), ValueError),
+])
+def test_invalid_callable_output(value, error):
+    source = tk.decompositions.CallableSource(lambda x: value, 1, out_shape=())
+    with pytest.raises(error):
+        source.evaluate(tk.decompositions.ConfigurationBatch(
+            torch.zeros(1, 1), kind='features'))
+    assert source.evaluation_stats.source_calls == 0
+
+
+def test_discrete_matrix_rejects_unpaired_dimensions():
+    with pytest.raises(ValueError, match='equal lengths'):
+        tk.decompositions.CallableTensorSource.matrix(
+            lambda x: x, (2, 3), (4,))
+
+
+@pytest.mark.parametrize('n_sites', [1, 5])
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('embedded', [False, True])
+def test_continuous_scalar_and_embedded_inputs(n_sites, matrix, embedded):
+    def function(inputs):
+        value = inputs.sum(tuple(range(1, inputs.ndim)))
+        if matrix:
+            coefficients = torch.arange(1, 2 ** n_sites + 1,
+                                         dtype=inputs.dtype).reshape((2,) * n_sites)
+            return value.reshape(-1, *((1,) * n_sites)) * coefficients
+        return value
+
+    source = tk.decompositions.CallableSource.matrix(
+        function, n_sites, batch_size=2) if matrix else \
+        tk.decompositions.CallableSource(function, n_sites, batch_size=2)
+    feature_shape = (2,) if embedded else ()
+    inputs = torch.arange(3 * n_sites * (2 if embedded else 1),
+                           dtype=torch.float64).reshape(
+        3, n_sites, *feature_shape).requires_grad_()
+    actual = source.evaluate(tk.decompositions.ConfigurationBatch(
+        inputs, kind='features'))
+    torch.testing.assert_close(actual, function(inputs))
+    assert source.in_dim is None
+    assert source.out_shape == ((2,) * n_sites if matrix else ())
+    candidates = torch.tensor([[0., 1.], [2., 3.]] if embedded else [0., 2.],
+                               dtype=torch.float64)
+    fiber = source.fiber(tk.decompositions.ConfigurationBatch(
+        inputs, kind='features'), n_sites - 1, candidates)
+    expected = []
+    for candidate in candidates:
+        query = inputs.clone()
+        query[:, -1] = candidate
+        expected.append(function(query))
+    torch.testing.assert_close(fiber, torch.stack(expected, dim=1))
+    actual.sum().backward()
+    scale = sum(range(1, 2 ** n_sites + 1)) if matrix else 1
+    torch.testing.assert_close(inputs.grad, torch.full_like(inputs, scale))
+
+
+@pytest.mark.parametrize('n_sites', [1, 5])
+@pytest.mark.parametrize('discrete', [False, True])
+@pytest.mark.parametrize('kernel', [None, tk.decompositions.gaussian_kernel])
+def test_data_constructors_minimal_and_long_inputs(n_sites, discrete, kernel):
+    dataset = torch.tensor([[0] * n_sites, [1] * n_sites, [0] * n_sites])
+    queries = torch.tensor([[0] * n_sites, [1] * n_sites, [2] * n_sites])
+    weights = torch.tensor([1., 2., 3.], dtype=torch.float64)
+    options = {'in_dim': (3,) * n_sites} if discrete else {}
+    cls = tk.decompositions.CallableTensorSource if discrete else \
+        tk.decompositions.CallableSource
+    if not discrete:
+        dataset = dataset.to(torch.float64)
+        queries = queries.to(torch.float64)
+    if kernel is not None:
+        options['bandwidth'] = 0.5
+        values = kernel(queries, dataset, bandwidth=0.5).to(weights.dtype)
+        expected = values @ (weights / weights.sum())
+    else:
+        expected = torch.tensor([2 / 3, 1 / 3, 0.], dtype=torch.float64)
+    source = cls.from_data(dataset, weights=weights, kernel=kernel, **options)
+    configurations = tk.decompositions.ConfigurationBatch(
+        queries, kind='indices' if discrete else 'features')
+    torch.testing.assert_close(source.evaluate(configurations), expected)
+    torch.testing.assert_close(source.fiber(configurations, n_sites - 1,
+                                           values=queries[:, -1]),
+                               torch.stack([
+                                   source.evaluate(tk.decompositions.ConfigurationBatch(
+                                       torch.cat((queries[:, :-1],
+                                                   value.expand(3, 1)), dim=1),
+                                       kind=configurations.kind))
+                                   for value in queries[:, -1]], dim=1))

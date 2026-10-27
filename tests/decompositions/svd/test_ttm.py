@@ -601,7 +601,7 @@ def test_qttm_svd_rejects_dense_input():
 @pytest.mark.parametrize('interface', ['engine', 'function'])
 def test_raw_tensor_uses_grouped_axes(interface, device_dtype, assert_close):
     device, dtype = device_dtype
-    tensor = torch.arange(120., device=device).to(dtype).reshape(2, 3, 4, 5)
+    tensor = torch.arange(120., device=device).to(dtype).reshape(2, 3, 4, 5) / 120
     if dtype.is_complex:
         tensor = tensor * (1 + 0.5j)
     if interface == 'engine':
@@ -612,3 +612,50 @@ def test_raw_tensor_uses_grouped_axes(interface, device_dtype, assert_close):
     assert result.out_dim == (4, 5)
     assert result.metadata['ordering'] == 'grouped'
     assert_close(result.contract_dense(), tensor.permute(0, 2, 1, 3))
+
+
+def test_source_families_reconstruct_evaluate_and_apply(matrix_source_case):
+    source, tensor = matrix_source_case
+    indices = torch.stack((torch.zeros(source.n_sites, dtype=torch.long),
+                            torch.tensor(source.in_dim) - 1))
+    grouped = tensor.permute(*range(0, tensor.ndim, 2),
+                             *range(1, tensor.ndim, 2))
+    vectors = [torch.arange(1, dim + 1, dtype=torch.float64).to(tensor.dtype)
+               for dim in source.in_dim]
+    product = vectors[0]
+    for vector in vectors[1:]:
+        product = torch.tensordot(product, vector, dims=0)
+    expected_application = torch.tensordot(
+        product, grouped, dims=(tuple(range(source.n_sites)),
+                                tuple(range(source.n_sites))))
+    for result in (tk.decompositions.TTMSVD(source).fit(collect_metrics=True),
+                   tk.decompositions.ttm_svd(source)):
+        assert isinstance(result, tk.decompositions.TTMDecomposition)
+        assert result.in_dim == source.in_dim
+        assert result.out_dim == source.out_dim
+        torch.testing.assert_close(result.contract_dense(), tensor)
+        torch.testing.assert_close(result.evaluate(indices, out_sites=()),
+                                   grouped[tuple(indices.T)])
+        torch.testing.assert_close(result.apply(vectors, n_batches=0)
+                                   .contract_dense(), expected_application)
+
+
+@pytest.mark.parametrize('n_sites', [1, 5])
+@pytest.mark.parametrize('n_batches', [1, 2])
+def test_batched_matrix_format_sources(n_sites, n_batches):
+    batch_shape = (2, 3)[:n_batches]
+    ranks = (1, *((2,) * (n_sites - 1)), 1)
+    cores = [torch.randn(*batch_shape, ranks[k], 2, ranks[k + 1], 3,
+                          dtype=torch.complex128) for k in range(n_sites)]
+    cores[0] = cores[0].squeeze(n_batches)
+    cores[-1] = cores[-1].squeeze(-2)
+    format = tk.formats.TTM(cores, n_batches=n_batches)
+    source = tk.decompositions.FormatSource(format)
+    result = tk.decompositions.TTMSVD(source).fit(rtol=1e-12)
+    assert result.batch_shape == batch_shape
+    assert result.n_batches == n_batches
+    torch.testing.assert_close(result.contract_dense(), format.contract_dense())
+    indices = torch.tensor([[0] * n_sites, [1] * n_sites])
+    expected = source.evaluate(tk.decompositions.ConfigurationBatch(indices))
+    torch.testing.assert_close(result.evaluate(indices, out_sites=()),
+                               expected.movedim(0, n_batches))

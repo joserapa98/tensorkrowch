@@ -199,3 +199,42 @@ def test_sparse_matrix_counts_pairs_and_evaluates_all_inputs(ordering):
         torch.tensor([[1, 2]])))
     assert values[0, 3, 4] == 7
     assert source.contract_dense().shape == (2, 4, 3, 5)
+
+
+@pytest.mark.parametrize('n_sites', [1, 5])
+def test_empty_support_defines_a_zero_tensor(n_sites):
+    dimensions = (2,) * n_sites
+    source = tk.decompositions.SparseTensorSource(
+        torch.empty(0, n_sites, dtype=torch.long), torch.empty(0), dimensions)
+    batch = tk.decompositions.ConfigurationBatch(
+        torch.tensor([[0] * n_sites, [1] * n_sites]))
+    torch.testing.assert_close(source.evaluate(batch), torch.zeros(2))
+    torch.testing.assert_close(source.fiber(batch, n_sites // 2), torch.zeros(2, 2))
+    torch.testing.assert_close(source.contract_dense(), torch.zeros(dimensions))
+    assert source.support.batch_size == 0
+
+
+@pytest.mark.parametrize('indices, values, dimensions, error', [
+    ([[0]], torch.ones(1), (2,), TypeError),
+    (torch.tensor([[0.]]), torch.ones(1), (2,), TypeError),
+    (torch.tensor([[0]]), [1.], (2,), TypeError),
+    (torch.tensor([[0]]), torch.tensor(1.), (2,), ValueError),
+    (torch.tensor([[0]]), torch.ones(2), (2,), ValueError),
+    (torch.tensor([[0]]), torch.ones(1, dtype=torch.long), (2,), TypeError),
+    (torch.tensor([[-1]]), torch.ones(1), (2,), ValueError),
+    (torch.tensor([[2]]), torch.ones(1), (2,), ValueError),
+    (torch.tensor([[0]]), torch.ones(1), (True,), TypeError),
+])
+def test_invalid_constructor_inputs(indices, values, dimensions, error):
+    with pytest.raises(error):
+        tk.decompositions.SparseTensorSource(indices, values, dimensions)
+
+
+@pytest.mark.parametrize('dataset, error', [
+    (torch.tensor([[0.5]]), TypeError),
+    (torch.tensor([[-1]]), ValueError),
+    (torch.empty(0, 1, dtype=torch.long), ValueError),
+])
+def test_invalid_empirical_dataset(dataset, error):
+    with pytest.raises(error):
+        tk.decompositions.SparseTensorSource.from_data(dataset)

@@ -187,3 +187,28 @@ def test_total_variables_and_global_fiber_positions(sites):
 def test_input_site_types_are_validated_in_base(site):
     with pytest.raises(TypeError, match='in_sites'):
         tk.decompositions.DenseTensorSource(torch.ones(2, 3), in_sites=(site,))
+
+
+@pytest.mark.parametrize('tensor, kwargs, error', [
+    ([1., 2.], {}, TypeError),
+    (torch.tensor(1.), {}, ValueError),
+    (torch.empty(0, 2), {}, ValueError),
+    (torch.ones(2, 3), {'n_batches': True}, TypeError),
+    (torch.ones(2, 3), {'n_batches': -1}, ValueError),
+    (torch.ones(2, 3), {'n_batches': 2}, ValueError),
+])
+def test_invalid_constructor_inputs(tensor, kwargs, error):
+    with pytest.raises(error):
+        tk.decompositions.DenseTensorSource(tensor, **kwargs)
+
+
+@pytest.mark.parametrize('tensor, ordering, error', [
+    ([1., 2.], 'grouped', TypeError),
+    (torch.ones(2, 3), None, TypeError),
+    (torch.ones(2, 3), 'unknown', ValueError),
+    (torch.ones(2, 3, 2), 'grouped', ValueError),
+    (torch.empty(2, 0), 'grouped', ValueError),
+])
+def test_invalid_matrix_constructor_inputs(tensor, ordering, error):
+    with pytest.raises(error):
+        tk.decompositions.DenseTensorSource.matrix(tensor, ordering=ordering)

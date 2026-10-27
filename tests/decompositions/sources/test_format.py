@@ -259,16 +259,30 @@ def test_contractions_use_updated_format_cores_and_bonds():
 
 @pytest.mark.parametrize('matrix', [False, True])
 @pytest.mark.parametrize('boundary', ['obc', 'pbc'])
-def test_models_are_adapted_with_their_boundaries(matrix, boundary):
+@pytest.mark.parametrize('n_sites', [1, 5])
+def test_models_are_adapted_with_their_boundaries(matrix, boundary, n_sites):
     if matrix:
-        model = tk.models.MPO(n_features=2, in_dim=2, out_dim=3,
+        model = tk.models.MPO(n_features=n_sites, in_dim=2, out_dim=3,
                               bond_dim=2, boundary=boundary)
         expected = model.to_ttm() if boundary == 'obc' else model.to_trm()
     else:
-        model = tk.models.MPS(n_features=2, phys_dim=2, bond_dim=2,
+        model = tk.models.MPS(n_features=n_sites, phys_dim=2, bond_dim=2,
                               boundary=boundary)
         expected = model.to_tt() if boundary == 'obc' else model.to_tr()
     source = tk.decompositions.FormatSource(format=model)
     assert source.is_matrix == matrix
-    assert source.n_sites == 2
+    assert source.n_sites == n_sites
     torch.testing.assert_close(source.contract_dense(), expected.contract_dense())
+
+
+@pytest.mark.parametrize('value', [None, 1, 'cores', [], [torch.ones(2), 1]])
+def test_invalid_backing_objects(value):
+    with pytest.raises(TypeError, match='format'):
+        tk.decompositions.FormatSource(value)
+
+
+def test_quantics_formats_require_an_explicit_source():
+    format = tk.formats.QTT([torch.ones(2)], n_coordinates=1,
+                             base=2, level=1, domain=(0., 1.))
+    with pytest.raises(TypeError, match='Quantics'):
+        tk.decompositions.FormatSource(format)

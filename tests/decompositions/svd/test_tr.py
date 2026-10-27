@@ -717,3 +717,21 @@ def test_qtr_svd_function(criteria, renormalize, device_dtype, assert_close):
 def test_qtr_svd_rejects_dense_input():
     with pytest.raises(TypeError, match='source'):
         tk.decompositions.qtr_svd(torch.ones(2, 2, 2, 2))
+
+
+def test_source_families_reconstruct_and_evaluate(vector_source_case):
+    source, tensor = vector_source_case
+    if source.n_sites == 1:
+        with pytest.raises(ValueError, match='at least two TR sites'):
+            tk.decompositions.TRSVD(source)
+        with pytest.raises(ValueError, match='at least two TR sites'):
+            tk.decompositions.tr_svd(source)
+        return
+    indices = torch.stack((torch.zeros(source.n_sites, dtype=torch.long),
+                            torch.tensor(source.in_dim) - 1))
+    for result in (tk.decompositions.TRSVD(source).fit(collect_metrics=True),
+                   tk.decompositions.tr_svd(source)):
+        assert isinstance(result, tk.decompositions.TRDecomposition)
+        assert result.dtype == tensor.dtype
+        torch.testing.assert_close(result.contract_dense(), tensor)
+        torch.testing.assert_close(result.evaluate(indices), tensor[tuple(indices.T)])

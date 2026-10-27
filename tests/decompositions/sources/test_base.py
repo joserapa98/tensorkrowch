@@ -60,6 +60,32 @@ class TestConfigurationBatch:  # MARK: TestConfigurationBatch
         with pytest.raises(error):
             tk.decompositions.ConfigurationBatch(values, kind=kind)
 
+    @pytest.mark.parametrize('values, error', [
+        (torch.empty(2, 0), ValueError),
+        ([], ValueError),
+        ([torch.ones(2), 1], TypeError),
+        ([torch.tensor(1.)], ValueError),
+        ([torch.ones(2), torch.ones(3)], ValueError),
+        ([torch.ones(2), torch.ones(2, dtype=torch.float64)], ValueError),
+        ([torch.ones(2), torch.empty(2, device='meta')], ValueError),
+    ])
+    def test_invalid_feature_columns(self, values, error):
+        with pytest.raises(error):
+            tk.decompositions.ConfigurationBatch(values, kind='features')
+
+    def test_column_metadata_packing_selection_and_device(self):
+        columns = [torch.tensor([1, 2, 3]), torch.tensor([3, 2, 1])]
+        batch = tk.decompositions.ConfigurationBatch(columns)
+        assert batch.batch_size == 3
+        assert batch.n_inputs == 2
+        assert batch.dtype == torch.long
+        assert batch.device == columns[0].device
+        torch.testing.assert_close(batch.as_tensor(), torch.stack(columns, 1))
+        selected = batch.index_select(torch.tensor([2, 0, 2], dtype=torch.int32))
+        torch.testing.assert_close(selected.to('cpu').as_tensor(),
+                                   batch.as_tensor()[[2, 0, 2]])
+        assert batch.index_select(torch.empty(0, dtype=torch.long)).batch_size == 0
+
 
 @pytest.mark.parametrize('make_values', [lambda: iter((torch.ones(2),)),
                                         lambda: {0: torch.ones(2)}])

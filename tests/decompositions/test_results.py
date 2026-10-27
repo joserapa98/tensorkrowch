@@ -788,6 +788,19 @@ def test_results_inherit_formats_and_keep_historical_metrics():
     assert QuantizedLayout is tk.formats.QuantizedLayout
 
 
+def test_results_can_be_reused_as_sources_across_svd_algorithms(vector_source_case):
+    source, expected = vector_source_case
+    engines = (tk.decompositions.TTSVD, tk.decompositions.TTSVD) \
+        if source.n_sites == 1 else \
+        (tk.decompositions.TTSVD, tk.decompositions.TRSVD, tk.decompositions.TTSVD)
+    for engine in engines:
+        result = engine(source).fit(rtol=1e-12, collect_metrics=True)
+        torch.testing.assert_close(result.contract_dense(), expected)
+        source = tk.decompositions.as_tensor_source(result)
+        assert source.format is result
+        assert source.n_sites == expected.ndim
+
+
 def _make_result(name, device, dtype, n_batches=0, construction='objects'):
     batch_shape = (2,) if n_batches else ()
     cyclic = name in ('TR', 'TRM', 'QTR', 'QTRM')

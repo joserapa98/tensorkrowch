@@ -634,7 +634,7 @@ def test_qtrm_svd_rejects_dense_input():
 @pytest.mark.parametrize('interface', ['engine', 'function'])
 def test_raw_tensor_uses_grouped_axes(interface, device_dtype, assert_close):
     device, dtype = device_dtype
-    tensor = torch.arange(120., device=device).to(dtype).reshape(2, 3, 4, 5)
+    tensor = torch.arange(120., device=device).to(dtype).reshape(2, 3, 4, 5) / 120
     if dtype.is_complex:
         tensor = tensor * (1 + 0.5j)
     if interface == 'engine':
@@ -645,3 +645,25 @@ def test_raw_tensor_uses_grouped_axes(interface, device_dtype, assert_close):
     assert result.out_dim == (4, 5)
     assert result.metadata['ordering'] == 'grouped'
     assert_close(result.contract_dense(), tensor.permute(0, 2, 1, 3))
+
+
+def test_source_families_reconstruct_and_evaluate(matrix_source_case):
+    source, tensor = matrix_source_case
+    if source.n_sites == 1:
+        with pytest.raises(ValueError, match='at least two TR sites'):
+            tk.decompositions.TRMSVD(source)
+        with pytest.raises(ValueError, match='at least two TR sites'):
+            tk.decompositions.trm_svd(source)
+        return
+    indices = torch.stack((torch.zeros(source.n_sites, dtype=torch.long),
+                            torch.tensor(source.in_dim) - 1))
+    grouped = tensor.permute(*range(0, tensor.ndim, 2),
+                             *range(1, tensor.ndim, 2))
+    for result in (tk.decompositions.TRMSVD(source).fit(collect_metrics=True),
+                   tk.decompositions.trm_svd(source)):
+        assert isinstance(result, tk.decompositions.TRMDecomposition)
+        assert result.in_dim == source.in_dim
+        assert result.out_dim == source.out_dim
+        torch.testing.assert_close(result.contract_dense(), tensor)
+        torch.testing.assert_close(result.evaluate(indices, out_sites=()),
+                                   grouped[tuple(indices.T)])

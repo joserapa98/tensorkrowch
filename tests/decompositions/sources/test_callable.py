@@ -1,4 +1,4 @@
-"""Tests for sources/test_callable.py."""
+"""Tests for callable tensor sources."""
 
 
 import pytest
@@ -102,6 +102,50 @@ def test_callable_discrete_fiber():
                      dtype=torch.float64))
 
 
+@pytest.mark.parametrize('from_data', [False, True])
+def test_discrete_callable_accepts_column_configurations(from_data):
+    if from_data:
+        source = tk.decompositions.CallableTensorSource.from_data(
+            torch.tensor([[0, 1], [0, 1], [1, 0]]), in_dim=(2, 2))
+        expected = torch.tensor([2 / 3, 1 / 3, 0.])
+    else:
+        source = tk.decompositions.CallableTensorSource(
+            lambda indices: (2 * indices[:, 0] + indices[:, 1]).float(),
+            in_dim=(2, 2), batch_size=2)
+        expected = torch.tensor([1., 2., 3.])
+    columns = (torch.tensor([0, 1, 1]), torch.tensor([1, 0, 1]))
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(columns))
+    torch.testing.assert_close(values, expected)
+
+
+@pytest.mark.parametrize('dataset', [None, [[0.]], 'data'])
+def test_continuous_data_requires_a_tensor(dataset):
+    with pytest.raises(TypeError, match='`dataset`'):
+        tk.decompositions.CallableSource.from_data(dataset)
+
+
+def test_callable_empty_batches_and_successful_query_counts():
+    source = tk.decompositions.CallableSource(
+        lambda x: x.sum(-1), 2, out_shape=(), dtype=torch.float64,
+        batch_size=2)
+    empty = source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.empty(0, 2, dtype=torch.float64), kind='features'))
+    assert empty.shape == (0,)
+    assert empty.dtype == torch.float64
+    assert source.evaluation_stats.batches == 0
+    source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.ones(5, 2, dtype=torch.float64), kind='features'))
+    stats = source.evaluation_stats
+    assert stats.requested_points == 5
+    assert stats.batches == 3
+    assert stats.source_calls == 2
+    source.function = lambda x: x[:, :1]
+    with pytest.raises(ValueError, match='out_shape'):
+        source.evaluate(tk.decompositions.ConfigurationBatch(
+            torch.ones(1, 2, dtype=torch.float64), kind='features'))
+    assert source.evaluation_stats == stats
+
+
 def test_callable_source_inference_chunking_and_changes(device_dtype, assert_close):
     device, dtype = device_dtype
     calls = []
@@ -198,6 +242,13 @@ def test_discrete_data_infers_dimensions_only_without_kernel():
     with pytest.raises(ValueError, match='require `in_dim`'):
         tk.decompositions.CallableTensorSource.from_data(
             dataset, kernel=tk.decompositions.gaussian_kernel, bandwidth=1.)
+
+
+def test_discrete_data_accepts_positional_dimensions_and_weights():
+    source = tk.decompositions.CallableTensorSource.from_data(
+        torch.tensor([[0], [0], [2]]), (3,), torch.tensor([1., 2., 1.]))
+    torch.testing.assert_close(source.contract_dense(),
+                               torch.tensor([0.75, 0., 0.25]))
 
 
 def test_discrete_empirical_masses_preserve_weight_gradients():

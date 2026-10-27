@@ -220,6 +220,13 @@ def test_data_kernel_uses_quantized_dataset_positions():
     torch.testing.assert_close(source.contract_dense_grid_axes(), expected)
 
 
+@pytest.mark.parametrize('dataset', [None, [[0.]], 'data'])
+def test_data_constructor_requires_a_tensor(dataset):
+    with pytest.raises(TypeError, match='`dataset`'):
+        tk.decompositions.CallableQuanticsSource.from_data(
+            dataset, 1, base=2, level=1, domain=(0., 1.))
+
+
 def test_data_kernel_preserves_discretized_rows_and_weights():
     dataset = torch.tensor([[0.8], [0.1], [0.2]], dtype=torch.float64)
     weights = torch.tensor([1., 2., 1.], dtype=torch.float64)

@@ -244,9 +244,9 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         ...     torch.tensor([[0.], [1.]]), kind='features'))
         tensor([0.3989, 0.2420])
         """
-        weights = _data_weights(dataset, weights,
-                                dataset.dtype if dataset.is_floating_point()
-                                else None)
+        dtype = dataset.dtype if isinstance(dataset, torch.Tensor) and \
+            dataset.is_floating_point() else None
+        weights = _data_weights(dataset, weights, dtype)
 
         if kernel is not None and not callable(kernel):
             raise TypeError('`kernel` should be callable')
@@ -350,7 +350,9 @@ class CallableSource(BaseSource):  # MARK: CallableSource
             raise ValueError(
                 f'Configurations should have kind `{self.input_kind}`')
         if self.input_kind == 'indices':
-            _discrete_indices(configurations, self._in_sites_dims, self._device)
+            indices = _discrete_indices(
+                configurations, self._in_sites_dims, self._device)
+            configurations = ConfigurationBatch(indices)
 
         if configurations.batch_size == 0:
             if self.out_shape is None or self._dtype is None:

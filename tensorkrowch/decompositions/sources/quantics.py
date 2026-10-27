@@ -261,9 +261,9 @@ class CallableQuanticsSource(CallableTensorSource):  # MARK: CallableQuanticsSou
         """
         if kernel is not None and not callable(kernel):
             raise TypeError('`kernel` should be callable')
-        weights = _data_weights(dataset, weights,
-                                dataset.dtype if dataset.is_floating_point()
-                                else None)
+        dtype = dataset.dtype if isinstance(dataset, torch.Tensor) and \
+            dataset.is_floating_point() else None
+        weights = _data_weights(dataset, weights, dtype)
         options = {name: kwargs.pop(name, None) for name in
                    ('base', 'level',
                     'domain', 'grid_coordinates',

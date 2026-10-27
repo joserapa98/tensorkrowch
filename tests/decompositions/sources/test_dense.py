@@ -7,7 +7,7 @@ import torch
 import tensorkrowch as tk
 
 
-class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
+class TestDenseTensorSource:  # MARK: TestDenseTensorSource
 
     def test_dense_scalar_evaluation_and_fiber(self):
         tensor = torch.arange(24, dtype=torch.float64).reshape(2, 3, 4)
@@ -48,11 +48,26 @@ class TestDenseAndCallableSources:  # MARK: TestDenseAndCallableSources
                                         tensor[1, :, 3, :])))
         assert source.fiber(configurations, site=2).shape == (2, 4, 3, 5)
 
-    @pytest.mark.parametrize('features', [(), (0, 0), (2,), (-1,)])
-    def test_dense_rejects_invalid_input_axes(self, features):
+    @pytest.mark.parametrize('sites', [(), (0, 0), (2,), (-1,)])
+    def test_dense_rejects_invalid_input_axes(self, sites):
         with pytest.raises(ValueError):
             tk.decompositions.DenseTensorSource(
-                torch.ones(2, 3), in_sites=features)
+                torch.ones(2, 3), in_sites=sites)
+
+
+def test_positional_batch_count_and_keyword_input_sites():
+    tensor = torch.arange(24.).reshape(2, 3, 4)
+    source = tk.decompositions.DenseTensorSource(tensor, 1, in_sites=(1,))
+    assert source.n_batches == 1
+    assert source.n_sites == 2
+    assert source.in_dim == (3, 4)
+    assert source.out_shape == (3,)
+    values = source.evaluate(tk.decompositions.ConfigurationBatch(
+        torch.tensor([[3], [0]])))
+    torch.testing.assert_close(values, torch.stack((tensor[:, :, 3],
+                                                   tensor[:, :, 0])))
+    with pytest.raises(TypeError):
+        tk.decompositions.DenseTensorSource(tensor, 1, (1,))
 
 
 def test_dense_source_device_fibers_and_values(device_dtype, assert_close):

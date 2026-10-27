@@ -1,4 +1,4 @@
-"""Tests for sources/test_factory.py."""
+"""Tests for tensor source adaptation."""
 
 
 import pytest
@@ -12,10 +12,9 @@ from tests.decompositions.als._oracles import make_tt_cores
 def test_as_tensor_source_normalizes_supported_inputs():
     tensor = torch.randn(2, 3)
     dense = tk.decompositions.as_tensor_source(tensor)
-    dense_with_ignored_dim = tk.decompositions.as_tensor_source(tensor)
-    assert dense_with_ignored_dim.in_sites == (0, 1)
-    assert dense_with_ignored_dim.in_dim == (2, 3)
-    assert dense_with_ignored_dim.out_shape == ()
+    assert dense.in_sites == (0, 1)
+    assert dense.in_dim == (2, 3)
+    assert dense.out_shape == ()
     dense_with_selected_axis = tk.decompositions.DenseTensorSource(tensor, in_sites=(1,))
     assert dense_with_selected_axis.in_dim == (2, 3)
     assert dense_with_selected_axis.out_shape == (2,)

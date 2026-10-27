@@ -7,7 +7,7 @@ import torch
 import tensorkrowch as tk
 
 
-class TestSparseAndTTSources:  # MARK: TestSparseAndTTSources
+class TestSparseTensorSource:  # MARK: TestSparseTensorSource
 
     def test_sparse_source_coalesces_and_declares_missing_zeros(self):
         source = tk.decompositions.SparseTensorSource(

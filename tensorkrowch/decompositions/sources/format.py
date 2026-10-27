@@ -227,12 +227,14 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             raise ValueError('`right` does not match the source right rank')
         dtype = torch.promote_types(
             core.dtype, torch.promote_types(left.dtype, right.dtype))
-        core = core.to(dtype=dtype)
         if factor is not None:
             if not isinstance(factor, torch.Tensor) or (
                     factor.shape != (core.shape[1],)):
                 raise ValueError(
                     '`factor` should match the site input dimension')
+            dtype = torch.promote_types(dtype, factor.dtype)
+        core = core.to(dtype=dtype)
+        if factor is not None:
             core = core * factor.to(device=core.device,
                                     dtype=dtype)[None, :, None]
         return torch.einsum('la,aib,rb->lir',
@@ -318,14 +320,17 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             factors = list(factor)
             if len(factors) != self.format.n_sites:
                 raise ValueError('`factor` should contain one vector per site')
+            dtype = self.dtype
             for position, (value, dimension) in enumerate(zip(factors,
                                                               self.in_dim)):
                 if not isinstance(value, torch.Tensor) or (
                         value.shape != (dimension,)):
                     raise ValueError(
                         f'`factor` at site {position} has an invalid shape')
-                factors[position] = value.to(
-                    device=self.device, dtype=self.dtype)
+                dtype = torch.promote_types(dtype, value.dtype)
+            cores = [core.to(dtype=dtype) for core in cores]
+            factors = [value.to(device=self.device, dtype=dtype)
+                       for value in factors]
 
         left_start = max(0, site - order)
         left = cores[0].new_ones((1, 1))
@@ -390,12 +395,20 @@ class FormatSource(BaseSource):  # MARK: FormatSource
             raise ValueError(
                 'Every TT sketch should contain one core per site')
 
-        stack_size = len(left_cores)
-        left_cores = tuple(torch.stack(site_cores).to(self.dtype)
-                           for site_cores in zip(*left_cores))
-        right_cores = tuple(torch.stack(site_cores).to(self.dtype)
-                            for site_cores in zip(*right_cores))
         source_cores = self.format._effective_cores()
+        dtype = source_cores[0].dtype
+        for sketch_cores in (*left_cores, *right_cores):
+            for core in sketch_cores:
+                dtype = torch.promote_types(dtype, core.dtype)
+
+        stack_size = len(left_cores)
+        left_cores = tuple(torch.stack(site_cores).to(device=self.device,
+                                                      dtype=dtype)
+                           for site_cores in zip(*left_cores))
+        right_cores = tuple(torch.stack(site_cores).to(device=self.device,
+                                                       dtype=dtype)
+                            for site_cores in zip(*right_cores))
+        source_cores = tuple(core.to(dtype=dtype) for core in source_cores)
 
         left = [source_cores[0].new_ones((1, 1))]
         left_envs = source_cores[0].new_ones((stack_size, 1, 1))

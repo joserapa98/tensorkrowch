@@ -1,4 +1,4 @@
-"""Tests for sources/tt."""
+"""Tests for format-backed tensor sources."""
 
 
 from itertools import product
@@ -171,3 +171,104 @@ def test_matrix_format_source_evaluates_every_pair():
     result = source.evaluate(tk.decompositions.ConfigurationBatch(
         torch.tensor([[1, 0]])))
     torch.testing.assert_close(result, tensor[1, :, 0, :].unsqueeze(0))
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+def test_phi_weights_preserve_dtype_and_values(dtype):
+    cores = make_tt_cores(dtype=torch.float32,
+                          generator=torch.Generator().manual_seed(23))
+    source = tk.decompositions.FormatSource(format=cores)
+    dense = contract_tt_dense(cores).to(dtype)
+    factors = [torch.arange(1, dim + 1, dtype=torch.float64).to(dtype)
+               for dim in dense.shape]
+    if dtype.is_complex:
+        factors = [factor * (1 + 1j) for factor in factors]
+    left = source.left_envs(torch.tensor([[0], [1]]))
+    right = source.right_envs(torch.tensor([[0], [1]]))
+    expected = dense * factors[1][None, :, None]
+    torch.testing.assert_close(source.local_phi(1, left, right, factors[1]),
+                               expected, rtol=5e-6, atol=5e-6)
+    weighted = torch.einsum('ijk,i,j,k->ijk', dense, *factors)
+    for site in range(3):
+        expected = (weighted.sum(2).unsqueeze(0) if site == 0 else
+                    weighted if site == 1 else weighted.sum(0).unsqueeze(-1))
+        torch.testing.assert_close(source.marginal_phi(site, factor=factors),
+                                   expected, rtol=5e-6, atol=5e-6)
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('stack_size', [1, 2])
+def test_tt_sketch_phis_match_dense_projections(dtype, stack_size):
+    generator = torch.Generator().manual_seed(24)
+    cores = make_tt_cores(dtype=torch.float32, generator=generator)
+    source = tk.decompositions.FormatSource(cores)
+    dense = contract_tt_dense(cores).to(dtype)
+    shapes = ((1, 2, 2), (2, 3, 2), (2, 2, 1))
+    left = [tuple(torch.randn(shape, dtype=dtype, generator=generator,
+                               requires_grad=True) for shape in shapes)
+            for _ in range(stack_size)]
+    right = [tuple(torch.randn(shape, dtype=dtype, generator=generator)
+                    for shape in shapes) for _ in range(stack_size)]
+    scale = 0.5
+    actual = source.tt_sketch_phis(left, right, boundary_scale=scale)
+    left_projections = (
+        dense.new_ones(1, 1),
+        torch.cat([sketch[0].squeeze(0).T for sketch in left]) * scale,
+        torch.cat([torch.einsum('aib,bjc->aijc', *sketch[:2])
+                   .reshape(6, 2).T for sketch in left]) * scale,
+    )
+    right_projections = (
+        torch.cat([torch.einsum('aib,bjc->aijc', *sketch[1:])
+                   .reshape(2, 6) for sketch in right]) * scale,
+        torch.cat([sketch[2].squeeze(-1) for sketch in right]) * scale,
+        dense.new_ones(1, 1),
+    )
+    expected = []
+    for site, (left_phi, right_phi) in enumerate(zip(
+            left_projections, right_projections)):
+        block = dense.reshape(left_phi.shape[1], dense.shape[site],
+                               right_phi.shape[1])
+        expected.append(torch.einsum('al,lir,br->aib',
+                                      left_phi, block, right_phi))
+        torch.testing.assert_close(actual[site], expected[-1],
+                                   rtol=5e-6, atol=5e-6)
+    actual_loss = sum(phi.abs().square().sum() for phi in actual)
+    expected_loss = sum(phi.abs().square().sum() for phi in expected)
+    actual_grad, = torch.autograd.grad(actual_loss, left[0][0],
+                                      retain_graph=True)
+    expected_grad, = torch.autograd.grad(expected_loss, left[0][0])
+    torch.testing.assert_close(actual_grad, expected_grad,
+                               rtol=1e-5, atol=1e-5)
+
+
+def test_contractions_use_updated_format_cores_and_bonds():
+    format = tk.formats.TT([torch.eye(2), torch.eye(2)])
+    source = tk.decompositions.FormatSource(format=format)
+    indices = tk.decompositions.ConfigurationBatch(torch.tensor([[0, 0], [1, 1]]))
+    torch.testing.assert_close(source.evaluate(indices), torch.ones(2))
+    format.cores = [2 * torch.eye(2), torch.eye(2)]
+    format.bonds = [torch.tensor([3., 4.])]
+    dense = torch.diag(torch.tensor([6., 8.]))
+    torch.testing.assert_close(source.evaluate(indices), dense.diag())
+    torch.testing.assert_close(source.fiber(indices, 1), dense)
+    torch.testing.assert_close(source.contract_dense(), dense)
+    torch.testing.assert_close(source.local_phi(
+        0, source.left_envs(torch.empty(1, 0, dtype=torch.long)),
+        source.right_envs(torch.arange(2).reshape(-1, 1))), dense.unsqueeze(0))
+
+
+@pytest.mark.parametrize('matrix', [False, True])
+@pytest.mark.parametrize('boundary', ['obc', 'pbc'])
+def test_models_are_adapted_with_their_boundaries(matrix, boundary):
+    if matrix:
+        model = tk.models.MPO(n_features=2, in_dim=2, out_dim=3,
+                              bond_dim=2, boundary=boundary)
+        expected = model.to_ttm() if boundary == 'obc' else model.to_trm()
+    else:
+        model = tk.models.MPS(n_features=2, phys_dim=2, bond_dim=2,
+                              boundary=boundary)
+        expected = model.to_tt() if boundary == 'obc' else model.to_tr()
+    source = tk.decompositions.FormatSource(format=model)
+    assert source.is_matrix == matrix
+    assert source.n_sites == 2
+    torch.testing.assert_close(source.contract_dense(), expected.contract_dense())

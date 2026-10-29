@@ -6,7 +6,6 @@ import pytest
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.decompositions.als.problem import _ObservedEntries
 
 from tensorkrowch.decompositions.als.sampling import _RowSamplingState
 
@@ -20,12 +19,61 @@ def _mixed_canonical_cores(tensor, site, rank=2):
     cores = [result.cores[0].unsqueeze(0),
              *result.cores[1:-1],
              result.cores[-1].unsqueeze(-1)]
-    gauge = tk.decompositions.QRGauge()
     for current in reversed(range(site + 1, len(cores))):
-        cores[current], factor = gauge.factor(cores[current], 'reverse')
-        cores[current - 1] = gauge.absorb(
-            factor, cores[current - 1], 'reverse')
+        core = cores[current]
+        q, r = torch.linalg.qr(core.reshape(core.shape[0], -1).mH,
+                               mode='reduced')
+        cores[current] = q.mH.reshape_as(core)
+        cores[current - 1] = torch.einsum(
+            'apb,bc->apc', cores[current - 1], r.mH)
     return cores
+
+
+class TestSamplingPolicy:  # MARK: TestSamplingPolicy
+    @pytest.mark.parametrize(
+        'method', ['uniform', 'leverage', 'exact_leverage']
+    )
+    def test_policy_selects_supported_topologies(self, method):
+        policy = tk.decompositions.SamplingPolicy(12, method=method)
+        policy.validate('tr')
+        if method == 'exact_leverage':
+            with pytest.raises(ValueError, match='TR topology'):
+                policy.validate('tt')
+        else:
+            policy.validate('tt')
+        assert policy.n_samples == 12
+        assert policy.reuse_sweeps == 1
+        assert policy.uniform_mix == 0
+
+    @pytest.mark.parametrize('kwargs,error', [
+        ({'n_samples': True}, TypeError),
+        ({'n_samples': 2.5}, TypeError),
+        ({'n_samples': 0}, ValueError),
+        ({'reuse_sweeps': False}, TypeError),
+        ({'reuse_sweeps': 0}, ValueError),
+        ({'method': None}, TypeError),
+        ({'method': 'frozen'}, ValueError),
+        ({'uniform_mix': True}, TypeError),
+        ({'uniform_mix': float('nan')}, ValueError),
+        ({'uniform_mix': float('inf')}, ValueError),
+        ({'uniform_mix': -0.1}, ValueError),
+        ({'uniform_mix': 1.1}, ValueError),
+        ({'uniform_mix': 0.1}, ValueError),
+        ({'method': 'leverage', 'reuse_sweeps': 2}, ValueError),
+        ({'method': 'exact_leverage', 'reuse_sweeps': 2}, ValueError),
+    ])
+    def test_invalid_policy_arguments(self, kwargs, error):
+        with pytest.raises(error):
+            tk.decompositions.SamplingPolicy(**{'n_samples': 4, **kwargs})
+
+    def test_reuse_and_mixture_belong_to_the_appropriate_methods(self):
+        uniform = tk.decompositions.SamplingPolicy(20, reuse_sweeps=3)
+        leverage = tk.decompositions.SamplingPolicy(
+            20, method='leverage', uniform_mix=1)
+        assert uniform.reuse_sweeps == 3
+        assert leverage.uniform_mix == 1
+        with pytest.raises(ValueError, match='topology'):
+            uniform.validate('peps')
 
 
 class TestSampleBatch:  # MARK: TestSampleBatch
@@ -74,6 +122,39 @@ class TestSampleBatch:  # MARK: TestSampleBatch
         assert batch.is_exact_for((1, 4, 2))
         assert not batch.is_exact_for((1, 5, 2))
         assert not approximate.is_exact_for((1, 4, 2))
+
+    @pytest.mark.parametrize('field,value,error', [
+        ('ids', [0, 1], TypeError),
+        ('ids', torch.tensor([0., 1.]), TypeError),
+        ('ids', torch.tensor([-1, 1]), ValueError),
+        ('probabilities', torch.tensor([0., 1.]), ValueError),
+        ('probabilities', torch.tensor([float('nan'), 0.5]), ValueError),
+        ('weights', torch.ones(3), ValueError),
+        ('generation', True, ValueError),
+        ('proposal_core_versions', (-1,), ValueError),
+        ('proposal_exact', 1, TypeError),
+        ('site', True, ValueError),
+    ])
+    def test_invalid_batch_metadata(self, field, value, error):
+        kwargs = dict(ids=torch.tensor([0, 1]),
+                      probabilities=torch.full((2,), 0.5),
+                      weights=torch.ones(2), generation=0)
+        kwargs[field] = value
+        with pytest.raises(error):
+            tk.decompositions.SampleBatch(**kwargs)
+
+    def test_duplicate_rows_and_vector_targets_keep_the_original_order(self):
+        batch = tk.decompositions.SampleBatch(
+            ids=torch.tensor([2, 0, 2]),
+            probabilities=torch.full((3,), 1 / 3),
+            weights=torch.ones(3), generation=0)
+        matrix = torch.arange(6.).reshape(3, 2)
+        target = torch.tensor([4., 5., 6.])
+        actual_matrix, actual_target = batch.gather_and_weight(matrix, target)
+        assert torch.equal(actual_matrix, matrix[[2, 0, 2]])
+        assert torch.equal(actual_target, target[[2, 0, 2]])
+        with pytest.raises(ValueError, match='matching rows'):
+            batch.gather_and_weight(matrix, target[:2])
 
 
 class TestRowSamplers:  # MARK: TestRowSamplers
@@ -126,7 +207,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
             atol=2e-2)
 
     def test_observed_rows_are_fixed_and_unit_weighted(self):
-        observations = _ObservedEntries(
+        observations = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 1], [1, 0], [1, 2]]),
             values=torch.tensor([2., 3., 4.]),
             in_dim=(2, 3))
@@ -136,7 +217,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
         batch = sampler.draw(
             state, site=0, n_samples=None, generator=None)
 
-        assert torch.equal(batch.ids, observations.flat_ids)
+        assert torch.equal(batch.ids, torch.tensor([1, 3, 5]))
         assert torch.equal(batch.weights, torch.ones(3))
         assert not sampler.refreshable
 
@@ -219,7 +300,7 @@ class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
         assert invalidations == [(None, 0), (0, 1)]
 
     def test_completion_never_refreshes_observed_rows(self):
-        observations = _ObservedEntries(
+        observations = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
             in_dim=(2, 2))
@@ -594,3 +675,118 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
                 site=1,
                 n_samples=4,
                 generator=torch.Generator().manual_seed(79))
+
+
+class TestLeverageContracts:  # MARK: TestLeverageContracts
+
+    @pytest.mark.parametrize('sampler_type', [
+        tk.decompositions.TTLeverageRows,
+        tk.decompositions.TRProductLeverageRows,
+        tk.decompositions.TRExactLeverageRows,
+    ])
+    @pytest.mark.parametrize(
+        'mixture', [True, float('nan'), float('inf'), -0.1]
+    )
+    def test_invalid_mixtures(self, sampler_type, mixture):
+        with pytest.raises((TypeError, ValueError), match='uniform_mix'):
+            sampler_type(lambda: (), uniform_mix=mixture)
+
+    @pytest.mark.parametrize('sampler_type', [
+        tk.decompositions.TTLeverageRows,
+        tk.decompositions.TRProductLeverageRows,
+        tk.decompositions.TRExactLeverageRows,
+    ])
+    def test_constructor_and_core_validation(self, sampler_type):
+        with pytest.raises(TypeError, match='callable'):
+            sampler_type([])
+        with pytest.raises(ValueError, match='at least one'):
+            sampler_type(lambda: ()).probabilities(
+                0,
+                tk.decompositions.ConfigurationBatch(torch.zeros(1, 1).long()),
+            )
+        with pytest.raises(TypeError, match='Tensor'):
+            sampler_type(lambda: [None]).probabilities(
+                0,
+                tk.decompositions.ConfigurationBatch(torch.zeros(1, 1).long()),
+            )
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('method', ['tt', 'product', 'exact'])
+    @pytest.mark.parametrize('n_sites', [1, 5])
+    def test_minimal_and_longer_chains_have_consistent_probabilities(
+            self, dtype, method, n_sites):
+        dimensions = (3,) if n_sites == 1 else (2, 3, 2, 2, 2)
+        site = n_sites // 2
+        generator = torch.Generator().manual_seed(120)
+        if method == 'tt':
+            if n_sites == 1:
+                cores = [torch.randn(1, 3, 1, dtype=dtype,
+                                     generator=generator)]
+            else:
+                tensor = torch.randn(
+                    dimensions, dtype=dtype, generator=generator)
+                cores = _mixed_canonical_cores(tensor, site)
+            sampler = tk.decompositions.TTLeverageRows(lambda: cores)
+        else:
+            cores = make_tr_cores(dimensions, (2,) * n_sites,
+                                  dtype=dtype, generator=generator)
+            sampler_type = (
+                tk.decompositions.TRProductLeverageRows
+                if method == 'product'
+                else tk.decompositions.TRExactLeverageRows
+            )
+            sampler = sampler_type(lambda: cores)
+        ids = torch.arange(prod(dimensions))
+        indices = torch.stack(torch.unravel_index(ids, dimensions), dim=1)
+        probabilities = sampler.probabilities(
+            site, tk.decompositions.ConfigurationBatch(indices))
+        assert torch.isfinite(probabilities).all()
+        assert probabilities.sum().item() == pytest.approx(1., abs=1e-10)
+        if method != 'product':
+            design = dense_local_design(
+                cores, site, 'tt' if method == 'tt' else 'tr')
+            u, singular_values, _ = torch.linalg.svd(
+                design, full_matrices=False)
+            active = singular_values > max(design.shape) * \
+                torch.finfo(design.real.dtype).eps * singular_values.max()
+            expected = u[:, active].abs().square().sum(1) / active.sum()
+            assert torch.allclose(probabilities, expected,
+                                  atol=1e-10, rtol=1e-10)
+
+        empty = tk.decompositions.ConfigurationBatch(indices[:0])
+        assert sampler.probabilities(site, empty).shape == (0,)
+        state = _RowSamplingState(prod(dimensions), (0,) * n_sites)
+        batch = sampler.draw(state, site, 8, generator=generator)
+        drawn = torch.stack(torch.unravel_index(batch.ids, dimensions), dim=1)
+        expected = sampler.probabilities(
+            site, tk.decompositions.ConfigurationBatch(drawn))
+        assert torch.allclose(batch.probabilities, expected)
+        assert batch.ids.numel() == (
+            8 if method == 'tt' else 8 * dimensions[site])
+        with pytest.raises(ValueError, match='n_rows'):
+            sampler.draw(_RowSamplingState(1, (0,) * n_sites), site, 8)
+
+    @pytest.mark.parametrize('n_sites', [1, 5])
+    def test_observations_include_stored_zeros(self, n_sites):
+        indices = torch.tensor([[0] * n_sites, [1] * n_sites])
+        observations = tk.decompositions.SparseTensorSource(
+            indices, torch.tensor([0., 2.]), (2,) * n_sites)
+        sampler = tk.decompositions.ObservedRows(observations)
+        state = _RowSamplingState(2 ** n_sites, (0,) * n_sites)
+        batch = sampler.draw(state, 0)
+        assert torch.equal(batch.ids, torch.tensor([0, 2 ** n_sites - 1]))
+        assert torch.equal(batch.weights, torch.ones(2))
+        with pytest.raises(ValueError, match='all observations'):
+            sampler.draw(state, 0, n_samples=1)
+
+    def test_observation_constructor_rejects_incompatible_sources(self):
+        with pytest.raises(TypeError, match='SparseTensorSource'):
+            tk.decompositions.ObservedRows(torch.ones(2))
+        empty = tk.decompositions.SparseTensorSource(
+            torch.empty(0, 1, dtype=torch.long), torch.empty(0), (2,))
+        with pytest.raises(ValueError, match='at least one'):
+            tk.decompositions.ObservedRows(empty)
+        block = tk.decompositions.SparseTensorSource(
+            torch.tensor([[0]]), torch.ones(1, 2), (2, 2))
+        with pytest.raises(ValueError, match='all vector sites'):
+            tk.decompositions.ObservedRows(block)

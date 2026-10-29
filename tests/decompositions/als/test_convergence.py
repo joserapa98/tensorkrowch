@@ -4,7 +4,6 @@ import pytest
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.decompositions.als.problem import _ObservedEntries
 
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
                                                      NonFiniteSolutionError)
@@ -51,13 +50,12 @@ class _FakeALSBackend:
         self.previous_generation = generation
         return generation, refreshed
 
-    def solve_site(self, site, sweep, update_policy, return_record):
+    def solve_site(self, site, sweep, return_record):
         if self.fail == ('system', sweep, site):
             raise NonFiniteLocalSystemError('forced system failure')
         if self.fail == ('solution', sweep, site):
             raise NonFiniteSolutionError('forced solution failure')
         proposal = self._cores[site] + 1
-        proposal = update_policy.apply(self._cores[site], proposal)
         version = self.versions[site] + 1
         update = tk.decompositions.CoreUpdateSet(
             sites=(site,), cores=(proposal,), versions=(version,))
@@ -68,7 +66,6 @@ class _FakeALSBackend:
                 driver='fake',
                 abs_residual=100,
                 rel_residual=100,
-                target_norm=1,
                 site=site,
                 sweep=sweep)
         else:
@@ -109,12 +106,12 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         backend = _FakeALSBackend([1., 0.2, 0.01])
         driver = tk.decompositions.ALSSweepDriver()
         policy = tk.decompositions.ConvergencePolicy(
-            max_sweeps=10, error_rtol=0.05)
+            max_sweeps=10, rtol=0.05)
 
         result = driver.fit(
             _fixed_problem(), backend, policy, collect_metrics=True)
 
-        assert result.stop_reason == 'error_rtol'
+        assert result.stop_reason == 'rtol'
         assert result.converged
         assert result.n_sweeps == 3
         assert [record.rel_error for record in result.metrics.sweeps] == [
@@ -140,7 +137,7 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
     def test_renewable_sampling_rejects_incomparable_error_criteria(self):
         problem = tk.decompositions.ALSProblem(
             source=tk.decompositions.DenseTensorSource(torch.ones(2, 2)),
-            selector=object())
+            sampled=True)
         backend = _FakeALSBackend([1., 0.5])
 
         with pytest.raises(ValueError, match='fixed global objective'):
@@ -148,7 +145,7 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
                 problem,
                 backend,
                 tk.decompositions.ConvergencePolicy(
-                    max_sweeps=2, error_rtol=0.1))
+                    max_sweeps=2, rtol=0.1))
 
         result = tk.decompositions.ALSSweepDriver().fit(
             problem,
@@ -158,7 +155,7 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         assert backend.measure_count == 0
 
     def test_completion_is_a_fixed_objective(self):
-        observations = _ObservedEntries(
+        observations = tk.decompositions.SparseTensorSource(
             indices=torch.tensor([[0, 0], [1, 1]]),
             values=torch.tensor([1., 2.]),
             in_dim=(2, 2))
@@ -169,10 +166,10 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
             problem,
             backend,
             tk.decompositions.ConvergencePolicy(
-                max_sweeps=5, error_atol=0.05),
+                max_sweeps=5, atol=0.05),
             collect_metrics=True)
 
-        assert result.stop_reason == 'error_atol'
+        assert result.stop_reason == 'atol'
         assert result.n_sweeps == 2
 
     def test_best_state_is_restored_only_for_fixed_objectives(self):
@@ -189,41 +186,80 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
                    for site, core in enumerate(result.cores))
 
 
-class TestUpdatePolicy:  # MARK: TestUpdatePolicy
-
-    def test_damping_and_acceptance(self):
-        policy = tk.decompositions.UpdatePolicy(
-            damping=0.25, acceptance='non_increasing')
-        current = torch.tensor([0., 2.])
-        proposal = torch.tensor([4., -2.])
-
-        assert torch.equal(
-            policy.apply(current, proposal), torch.tensor([1., 1.]))
-        assert policy.accepts(2., 1.)
-        assert not policy.accepts(1., 2.)
-
-    def test_non_increasing_acceptance_requires_local_errors(self):
-        policy = tk.decompositions.UpdatePolicy(
-            acceptance='non_increasing')
-
-        with pytest.raises(ValueError, match='local errors'):
-            policy.accepts(None, 1.)
+@pytest.mark.parametrize('kwargs, error', [
+    ({'max_sweeps': 0}, ValueError), ({'max_sweeps': True}, ValueError),
+    ({'max_sweeps': 2.5}, ValueError),
+    ({'atol': -1.}, ValueError), ({'atol': float('inf')}, ValueError),
+    ({'atol': True}, TypeError), ({'rtol': 'small'}, TypeError),
+    ({'rtol': float('nan')}, ValueError),
+    ({'change_rtol': -0.1}, ValueError),
+    ({'patience': 0}, ValueError), ({'patience': 2}, ValueError),
+    ({'patience': True, 'change_rtol': 0.1}, ValueError),
+    ({'keep_best': 1}, TypeError), ({'callback': 1}, TypeError),
+])
+def test_policy_rejects_invalid_configuration(kwargs, error):
+    with pytest.raises(error):
+        tk.decompositions.ConvergencePolicy(**kwargs)
 
 
-@pytest.mark.parametrize('damping', [0.25, 1.0])
-def test_update_policy_preserves_complex_values_and_device(damping, device_dtype,
-                                                          assert_close):
-    device, dtype = device_dtype
-    current = torch.ones(2, 2, dtype=dtype, device=device)
-    proposal = 2 * current
-    if dtype.is_complex:
-        proposal = proposal * 1j
-    policy = tk.decompositions.UpdatePolicy(damping=damping)
-    updated = policy.apply(current, proposal)
-    assert_close(updated, current + damping * (proposal - current))
-    assert_close(current, torch.ones_like(current))
+@pytest.mark.parametrize('kwargs', [
+    {'atol': 0.}, {'rtol': 0.}, {'change_rtol': 0.}, {'keep_best': True},
+])
+def test_fixed_objective_requirement(kwargs):
+    policy = tk.decompositions.ConvergencePolicy(**kwargs)
+    assert policy.requires_fixed_objective
+    policy.validate_objective(True)
+    with pytest.raises(ValueError, match='fixed'):
+        policy.validate_objective(False)
+    with pytest.raises(TypeError, match='has_fixed_objective'):
+        policy.validate_objective(1)
 
-    other_dtype = torch.float32 if dtype.is_complex else torch.complex64
-    incompatible = torch.zeros_like(proposal, dtype=other_dtype)
-    with pytest.raises(ValueError):
-        policy.apply(current, incompatible)
+
+def test_default_policy_and_explicit_budget():
+    policy = tk.decompositions.ConvergencePolicy()
+    assert policy.max_sweeps == 10
+    assert not policy.requires_fixed_objective
+    policy.validate_objective(False)
+    record = tk.decompositions.SweepRecord(sweep=9)
+    assert policy.stopping_reason(record, 0) == ('max_sweeps', 0)
+
+
+def test_stability_restarts_after_large_change():
+    policy = tk.decompositions.ConvergencePolicy(
+        max_sweeps=10, change_rtol=0.01, patience=2)
+    records = [tk.decompositions.SweepRecord(sweep=site, rel_change=value)
+               for site, value in enumerate([None, 0.001, 0.2, 0.001, 0.001])]
+    stable = 0
+    observed = []
+    for record in records:
+        reason, stable = policy.stopping_reason(record, stable)
+        observed.append((reason, stable))
+    assert observed == [(None, 0), (None, 1), (None, 0), (None, 1),
+                        ('relative_stability', 2)]
+
+
+def test_stability_defaults_to_one_sweep():
+    policy = tk.decompositions.ConvergencePolicy(change_rtol=0.)
+    record = tk.decompositions.SweepRecord(sweep=1, rel_change=0.)
+    assert policy.stopping_reason(record, 0) == ('relative_stability', 1)
+
+
+def test_callback_stops_sampled_objective_without_measuring_global_error():
+    seen = []
+
+    def callback(record, cores):
+        seen.append((record.sweep, tuple(core.clone() for core in cores)))
+        return record.sweep == 1
+
+    problem = tk.decompositions.ALSProblem(
+        tk.decompositions.DenseTensorSource(torch.ones(2)), sampled=True)
+    backend = _FakeALSBackend([1.])
+    result = tk.decompositions.ALSSweepDriver().fit(
+        problem, backend,
+        tk.decompositions.ConvergencePolicy(max_sweeps=8, callback=callback),
+        collect_metrics=True)
+    assert result.stop_reason == 'callback'
+    assert result.n_sweeps == 2
+    assert backend.measure_count == 0
+    assert [sweep for sweep, _ in seen] == [0, 1]
+    assert all(record.abs_error is None for record in result.metrics.sweeps)

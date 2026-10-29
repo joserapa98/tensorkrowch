@@ -21,7 +21,6 @@ import torch
 
 from tensorkrowch.utils import safe_divide, scale_tensor, stable_norm
 
-from tensorkrowch.decompositions.als.convergence import UpdatePolicy
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
 
 
@@ -59,10 +58,10 @@ def _column_scales(environment: torch.Tensor) -> torch.Tensor:
 
 
 class LeastSquaresSolver:  # MARK: LeastSquaresSolver
-    """
-    Solve stable local least-squares systems with optional Tikhonov terms.
+    r"""
+    Solves local least-squares systems with optional Tikhonov regularization.
 
-    The solver minimizes ``||A x - b||^2 + lambda ||x||^2``. Tikhonov
+    The solver minimizes :math:`\|A x - b\|_2^2 + \lambda \|x\|_2^2`. Tikhonov
     regularization is represented by augmented rows, never by normal equations.
     Column scaling is then applied as a change of variables to the complete
     augmented matrix, followed by one global scaling of both matrix and
@@ -88,6 +87,15 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
         Preferred :func:`torch.linalg.lstsq` driver. CPU failures are retried
         with the remaining supported drivers and the effective driver is stored
         in :class:`LocalSolveRecord`.
+
+    Examples
+    --------
+    >>> matrix = torch.eye(2)
+    >>> target = torch.tensor([1., 2.])
+    >>> solver = tk.decompositions.LeastSquaresSolver()
+    >>> solution, record = solver.solve(matrix, target)
+    >>> torch.allclose(solution, target)
+    True
     """
 
     _DRIVERS = ('gelsy', 'gelsd', 'gelss', 'gels')
@@ -108,11 +116,12 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
                 "`l2_reg_mode` should be 'absolute' or 'relative'")
         if rcond is not None:
             if isinstance(rcond, bool) or not isinstance(rcond, (int, float)):
-                raise TypeError('`rcond` should be a non-negative number or None')
+                raise TypeError(
+                    '`rcond` should be a non-negative number or None')
             if (rcond < 0) or (not isfinite(rcond)):
                 raise ValueError('`rcond` should be a non-negative number')
         if not (isinstance(column_scaling, bool) or
-                column_scaling == 'auto'):
+                (column_scaling == 'auto')):
             raise ValueError(
                 '`column_scaling` should be bool or "auto"')
         if not isinstance(system_scaling, bool):
@@ -140,6 +149,8 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
                     '`regularization_scale` should be a scalar tensor or None')
             if regularization_scale.numel() != 1:
                 raise ValueError('`regularization_scale` should be a scalar')
+            if regularization_scale.is_complex():
+                raise TypeError('`regularization_scale` should be real')
             if regularization_scale.device != environment.device:
                 raise ValueError(
                     '`regularization_scale` and environment should share a '
@@ -151,6 +162,8 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
                 raise ValueError(
                     '`regularization_scale` should be finite and non-negative')
             value = value * regularization_scale
+        if not torch.isfinite(value):
+            raise ValueError('Effective `l2_reg` should be finite')
         if (self.l2_reg_mode == 'absolute') or (self.l2_reg == 0):
             return value
         rms_column_norm = stable_norm(environment) / sqrt(
@@ -164,7 +177,8 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
     def _augment(self,
                  environment: torch.Tensor,
                  target: torch.Tensor,
-                 effective_l2_reg: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+                 effective_l2_reg: torch.Tensor) -> Tuple[
+            torch.Tensor, torch.Tensor]:
         """Appends Tikhonov rows to the original system."""
         if effective_l2_reg == 0:
             return environment, target
@@ -230,7 +244,7 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
     def solve(self,
               environment: torch.Tensor,
               target: torch.Tensor,
-              site: Optional[int] = None,
+              site: Optional[Union[int, Tuple[int, ...]]] = None,
               sweep: Optional[int] = None,
               return_record: bool = True,
               regularization_scale: Optional[
@@ -240,7 +254,8 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
         """
         Solves one local system and optionally records its diagnostics.
 
-        A vector ``target`` produces a vector solution. Multiple right-hand sides
+        A vector ``target`` produces a vector solution. Multiple right-hand
+        sides
         share the same factorization. Diagnostics describe the original local
         system before column and system scaling; records are detached, while
         the solution retains its PyTorch autograd graph. No device fallback is
@@ -257,10 +272,10 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
         site : int or tuple[int], optional
             Site or block identifier attached to the local record.
         sweep : int, optional
-            Zero-based ``sweep`` identifier attached to the local record.
+            Directional sweep identifier attached to the local record.
         return_record : bool
-            Whether to calculate residuals and create a LocalSolveRecord. With
-            False, these diagnostic calculations are skipped. Default is True.
+            Whether to calculate residuals and create a ``LocalSolveRecord``.
+            Defaults to ``True``. ``False`` skips diagnostic calculations.
         regularization_scale : torch.Tensor, optional
             Non-negative scalar factor for the regularization coefficient when
             a caller has normalized both the design and ``target``. Environment
@@ -288,9 +303,11 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             raise ValueError(
                 '`target` and `environment` should have matching rows')
         if (target.ndim == 2) and (target.shape[1] < 1):
-            raise ValueError('`target` should contain at least one right-hand side')
+            raise ValueError(
+                '`target` should contain at least one right-hand side')
         if target.device != environment.device:
-            raise ValueError('`target` and `environment` should share a device')
+            raise ValueError(
+                '`target` and `environment` should share a device')
         if target.dtype != environment.dtype:
             raise ValueError('`target` and `environment` should share a dtype')
         if not (environment.is_floating_point() or environment.is_complex()):
@@ -328,7 +345,8 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
                 transformed_environment.abs().amax(),
                 transformed_target.abs().amax())
             if system_scale > 0:
-                transformed_environment = transformed_environment / system_scale
+                transformed_environment = (
+                    transformed_environment / system_scale)
                 transformed_target = transformed_target / system_scale
             else:
                 system_scale = system_scale.new_tensor(1.)
@@ -357,13 +375,8 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
             driver=effective_driver,
             abs_residual=abs_residual,
             rel_residual=rel_residual,
-            target_norm=target_norm,
-            l2_reg=self.l2_reg,
             effective_l2_reg=effective_l2_reg,
-            l2_reg_mode=self.l2_reg_mode,
             column_scaling=apply_column_scaling,
-            system_scaling=self.system_scaling,
-            system_scale=system_scale,
             site=site,
             sweep=sweep)
         return returned_solution, record
@@ -385,15 +398,13 @@ def _solve_local_proposal(solver: LeastSquaresSolver,
                           current: torch.Tensor,
                           site: int,
                           sweep: int,
-                          update_policy: UpdatePolicy,
                           return_record: bool,
                           regularization_scale: Optional[torch.Tensor] = None,
                           sampling_exact: Optional[bool] = None,
                           sample_generation: Optional[
                               int] = None) -> Tuple[
-        torch.Tensor,
-        Optional[LocalSolveRecord]]:
-    """Solves, damps and optionally accepts one local ALS proposal."""
+        torch.Tensor, Optional[LocalSolveRecord]]:
+    """Solves a local system and restores the current core shape."""
     solution, record = solver.solve(
         environment,
         target,
@@ -401,34 +412,10 @@ def _solve_local_proposal(solver: LeastSquaresSolver,
         sweep=sweep,
         return_record=return_record,
         regularization_scale=regularization_scale)
-    proposal = update_policy.apply(current, solution.reshape(current.shape))
-    record_needs_update = return_record and (update_policy.damping != 1)
-    if update_policy.acceptance == 'non_increasing':
-        current_error = torch.linalg.vector_norm(
-            environment @ current.reshape(-1) - target)
-        proposal_error = torch.linalg.vector_norm(
-            environment @ proposal.reshape(-1) - target)
-        if not update_policy.accepts(
-                current_error,
-                proposal_error):
-            proposal = current
-        record_needs_update = return_record
-    if record_needs_update:
-        residual = environment @ proposal.reshape(-1) - target
-        abs_residual = torch.linalg.vector_norm(residual)
-        target_norm = torch.linalg.vector_norm(target)
-        record = replace(
-            record,
-            abs_residual=abs_residual,
-            rel_residual=_relative_error(
-                abs_residual, target_norm),
-            target_norm=target_norm)
-    if record is not None and sampling_exact is not None:
-        record = replace(
-            record,
-            sampling_exact=sampling_exact,
-            sample_generation=sample_generation)
-    return proposal, record
+    if (record is not None) and (sampling_exact is not None):
+        record = replace(record, sampling_exact=sampling_exact,
+                         sample_generation=sample_generation)
+    return solution.reshape(current.shape), record
 
 
 __all__ = [

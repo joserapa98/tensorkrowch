@@ -25,7 +25,6 @@ def _rank_one_tt(dtype=torch.float64, phase=1):
 def _short_als():
     return tk.decompositions.ALSLoopOpener({
         'gauge': 'none',
-        'normalize': False,
         'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=3),
     })
 
@@ -311,7 +310,7 @@ class TestTT2TR:  # MARK: TestTT2TR
                 self.opening = super().open(*args, **kwargs)
                 return self.opening
 
-        opener = RecordingALS({'gauge': 'none', 'normalize': False,
+        opener = RecordingALS({'gauge': 'none',
                                'convergence': tk.decompositions.ConvergencePolicy(
                                    max_sweeps=2)})
         result = tk.decompositions.TT2TR(tt).fit(
@@ -366,9 +365,8 @@ class TestTT2TR:  # MARK: TestTT2TR
         opener = tk.decompositions.SVDLoopOpener(
             tk.decompositions.ALSLoopOpener({
                 'gauge': 'none',
-                'normalize': False,
-                'convergence': tk.decompositions.ConvergencePolicy(
-                    max_sweeps=1000, error_rtol=1e-11),
+                    'convergence': tk.decompositions.ConvergencePolicy(
+                    max_sweeps=1000, rtol=1e-11),
             }), rtol=1e-13, refinement_sweeps=1)
         with torch.random.fork_rng():
             torch.manual_seed(221)

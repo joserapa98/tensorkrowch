@@ -20,8 +20,7 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
             l2_reg=0.1).solve(environment, target)
 
         for value in (record.abs_residual, record.rel_residual,
-                      record.target_norm, record.effective_l2_reg,
-                      record.system_scale):
+                      record.effective_l2_reg):
             assert value.shape == ()
             assert value.dtype == torch.float64
             assert value.device.type == 'cpu'
@@ -75,7 +74,6 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
         assert torch.allclose(solution, expected, rtol=1e-10, atol=1e-10)
         assert record.effective_l2_reg == pytest.approx(regularization)
         assert record.column_scaling
-        assert record.system_scaling
 
     def test_relative_regularization_uses_original_rms_column_scale(self):
         environment = torch.tensor([
@@ -180,7 +178,7 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
         assert torch.allclose(
             solution, torch.tensor([2., -3.], dtype=torch.float64),
             rtol=1e-12, atol=1e-12)
-        assert record.system_scale == pytest.approx(6e150)
+        assert torch.isfinite(record.abs_residual)
 
     def test_rank_deficient_regularized_system_is_finite(self):
         environment = torch.tensor([
@@ -267,17 +265,160 @@ class TestLeastSquaresSolver:  # MARK: TestLeastSquaresSolver
 
 
 @pytest.mark.parametrize('column_scaling', [False, True, 'auto'])
-def test_solver_devices_complex_values_and_residuals(column_scaling,
-                                                     device_dtype, assert_close):
+def test_solver_devices_complex_values_and_residuals(
+    column_scaling, device_dtype, assert_close
+):
     device, dtype = device_dtype
-    matrix = torch.tensor([[1., 0.], [0., 2.], [1., 1.]], dtype=dtype, device=device)
+    matrix = torch.tensor([[1., 0.], [0., 2.], [1., 1.]],
+                          dtype=dtype, device=device)
     solution = torch.tensor([2., -1.], dtype=dtype, device=device)
     if dtype.is_complex:
         solution = solution + 1j * solution.flip(0)
     target = matrix @ solution
-    solver = tk.decompositions.LeastSquaresSolver(column_scaling=column_scaling)
+    solver = tk.decompositions.LeastSquaresSolver(
+        column_scaling=column_scaling)
     actual, info = solver.solve(matrix, target, return_record=True)
     assert_close(actual, solution)
     assert info.abs_residual.device.type == 'cpu'
     assert info.abs_residual < 5e-5 * target.norm()
-    assert torch.isfinite(info.system_scale)
+    assert torch.isfinite(info.abs_residual)
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('shape', [(1, 1), (1, 3), (6, 1), (3, 5)])
+def test_minimal_and_underdetermined_systems(dtype, shape):
+    generator = torch.Generator().manual_seed(71)
+    matrix = torch.randn(*shape, dtype=dtype, generator=generator)
+    target = torch.randn(shape[0], dtype=dtype, generator=generator)
+    solver = tk.decompositions.LeastSquaresSolver(column_scaling=False)
+    actual, record = solver.solve(matrix, target)
+    expected = torch.linalg.lstsq(matrix, target, driver='gelsd').solution
+    torch.testing.assert_close(actual, expected, atol=1e-11, rtol=1e-11)
+    torch.testing.assert_close(
+        record.abs_residual, (matrix @ actual - target).norm())
+
+
+@pytest.mark.parametrize('kwargs, error', [
+    ({'l2_reg': True}, TypeError), ({'l2_reg': '0'}, TypeError),
+    ({'l2_reg': float('nan')}, ValueError),
+    ({'rcond': True}, TypeError), ({'rcond': -1.}, ValueError),
+    ({'rcond': float('inf')}, ValueError),
+    ({'system_scaling': 1}, TypeError),
+    ({'column_scaling': 1}, ValueError),
+])
+def test_solver_constructor_rejects_invalid_types_and_values(kwargs, error):
+    with pytest.raises(error):
+        tk.decompositions.LeastSquaresSolver(**kwargs)
+
+
+@pytest.mark.parametrize(
+    'matrix, target, error',
+    [
+        ([1.0], torch.ones(1), TypeError),
+        (torch.ones(1, 1), [1.0], TypeError),
+        (torch.ones(2), torch.ones(2), ValueError),
+        (torch.ones(1, 1), torch.tensor(1.0), ValueError),
+        (torch.ones(0, 2), torch.ones(0), ValueError),
+        (torch.ones(2, 0), torch.ones(2), ValueError),
+        (torch.ones(2, 2), torch.ones(3), ValueError),
+        (torch.ones(2, 2), torch.ones(2, 0), ValueError),
+        (torch.ones(2, 2), torch.ones(2, dtype=torch.float64), ValueError),
+        (torch.ones(2, 2), torch.ones(2, device='meta'), ValueError),
+        (
+            torch.ones(2, 2, dtype=torch.long),
+            torch.ones(2, dtype=torch.long),
+            TypeError,
+        ),
+    ],
+)
+def test_solver_rejects_invalid_local_systems(matrix, target, error):
+    with pytest.raises(error):
+        tk.decompositions.LeastSquaresSolver().solve(matrix, target)
+
+
+@pytest.mark.parametrize('scale, error', [
+    (1., TypeError), (torch.ones(2), ValueError),
+    (torch.tensor(-1.), ValueError), (torch.tensor(float('inf')), ValueError),
+    (torch.ones((), device='meta'), ValueError),
+    (torch.tensor(1 + 2j), TypeError),
+])
+def test_regularization_scale_validation(scale, error):
+    with pytest.raises(error):
+        tk.decompositions.LeastSquaresSolver(l2_reg=0.1).solve(
+            torch.eye(2), torch.ones(2), regularization_scale=scale)
+
+
+def test_regularization_coefficient_overflow_is_rejected():
+    with pytest.raises(ValueError, match='l2_reg'):
+        tk.decompositions.LeastSquaresSolver(l2_reg=1e100).solve(
+            torch.eye(2), torch.ones(2))
+
+
+def test_return_record_requires_boolean():
+    with pytest.raises(TypeError, match='return_record'):
+        tk.decompositions.LeastSquaresSolver().solve(
+            torch.eye(2), torch.ones(2), return_record=1)
+
+
+def test_all_cpu_drivers_failing_propagates(monkeypatch):
+    attempted = []
+
+    def fail(*args, **kwargs):
+        attempted.append(kwargs['driver'])
+        raise RuntimeError('forced failure')
+
+    monkeypatch.setattr(torch.linalg, 'lstsq', fail)
+    with pytest.raises(RuntimeError, match='All CPU'):
+        tk.decompositions.LeastSquaresSolver(driver='gelsd').solve(
+            torch.eye(2), torch.ones(2))
+    assert attempted == ['gelsd', 'gelsy', 'gelss', 'gels']
+
+
+def test_nonfinite_solution_has_specific_exception(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        torch.linalg,
+        'lstsq',
+        lambda *args, **kwargs: SimpleNamespace(
+            solution=torch.full((2, 1), torch.inf)
+        ),
+    )
+    with pytest.raises(solver_module.NonFiniteSolutionError):
+        tk.decompositions.LeastSquaresSolver().solve(
+            torch.eye(2), torch.ones(2)
+        )
+
+
+@pytest.mark.parametrize('zero_matrix', [False, True])
+def test_zero_target_and_zero_system(zero_matrix):
+    matrix = torch.zeros(3, 2) if zero_matrix else torch.tensor(
+        [[1., 0.], [0., 1.], [1., 1.]])
+    solution, record = tk.decompositions.LeastSquaresSolver().solve(
+        matrix, torch.zeros(3))
+    torch.testing.assert_close(solution, torch.zeros(2))
+    assert record.abs_residual == 0
+    assert record.rel_residual == 0
+
+
+def test_local_proposal_restores_core_shape_and_sampling_metadata():
+    core = torch.zeros(1, 2, 1, dtype=torch.complex128)
+    target = torch.tensor([1 + 2j, 3 - 1j], dtype=core.dtype)
+    actual, record = solver_module._solve_local_proposal(
+        tk.decompositions.LeastSquaresSolver(),
+        torch.eye(2, dtype=core.dtype), target, core,
+        site=0, sweep=2, return_record=True,
+        sampling_exact=False, sample_generation=3)
+    torch.testing.assert_close(actual, target.reshape(core.shape))
+    torch.testing.assert_close(core, torch.zeros_like(core))
+    assert record.sampling_exact is False
+    assert record.sample_generation == 3
+
+
+@pytest.mark.parametrize('absolute, target_norm, expected', [
+    (0., 0., 0.), (1., 0., float('inf')), (2., 4., 0.5),
+])
+def test_relative_error_zero_target_policy(absolute, target_norm, expected):
+    actual = solver_module._relative_error(torch.tensor(absolute),
+                                           torch.tensor(target_norm))
+    assert actual.item() == expected

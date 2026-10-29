@@ -19,7 +19,7 @@ This script contains:
 
 from dataclasses import dataclass, field, fields, is_dataclass
 from math import isfinite
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -257,97 +257,107 @@ class TruncationRecord:  # MARK: TruncationRecord
 
 @dataclass(frozen=True)
 class LocalSolveRecord:  # MARK: LocalSolveRecord
-    """Stores diagnostics for one local least-squares solve."""
+    """
+    Stores the outcome of one local least-squares solve.
 
-    environment_shape: Tuple[int, int]  # Shape of the original local design matrix
-    target_shape: Tuple[int, ...]  # Shape of the original right-hand side
-    driver: str  # Effective least-squares driver
-    abs_residual: torch.Tensor  # Norm of the local residual
-    rel_residual: torch.Tensor  # Residual norm divided by the target norm
-    target_norm: torch.Tensor  # Norm used to normalize the local residual
-    l2_reg: float = 0.0  # Configured regularization coefficient
-    # Regularization after relative or environment rescaling
+    Residuals describe the original local data equations, before numerical
+    scaling and without the regularization penalty. Scalar tensors are
+    detached and stored on CPU. Fixed solver configuration belongs to the
+    solver; this record retains effective choices that can vary between solves.
+
+    Parameters
+    ----------
+    environment_shape : tuple[int, int]
+        Shape ``(n_rows, n_parameters)`` of the local design matrix.
+    target_shape : tuple[int, ...]
+        Right-hand-side shape ``(n_rows,)`` or ``(n_rows, n_targets)``.
+    driver : str
+        Effective least-squares driver, including any CPU retry.
+    abs_residual : torch.Tensor
+        Norm of the local residual.
+    rel_residual : torch.Tensor
+        Residual norm divided by the target norm. A zero target gives zero
+        for an exact fit and infinity otherwise.
+    effective_l2_reg : torch.Tensor
+        Regularization coefficient after relative or environment rescaling.
+        Defaults to zero.
+    column_scaling : bool
+        Whether this solve balanced its columns. Defaults to ``False``.
+    site : int or tuple[int, ...], optional
+        Site or block identifier.
+    sweep : int, optional
+        Directional sweep identifier.
+    sampling_exact : bool, optional
+        Whether the sampling proposal matches the current local design.
+    sample_generation : int, optional
+        Generation of the sampled rows.
+    """
+
+    environment_shape: Tuple[int, int]
+    target_shape: Tuple[int, ...]
+    driver: str
+    abs_residual: torch.Tensor
+    rel_residual: torch.Tensor
     effective_l2_reg: torch.Tensor = 0.0
-    # Absolute or relative interpretation of regularization
-    l2_reg_mode: str = 'absolute'
-    column_scaling: bool = False  # Whether columns were balanced
-    system_scaling: bool = False  # Whether the augmented system was scaled
-    system_scale: torch.Tensor = 1.0  # Global divisor applied to the augmented system
-    site: Optional[Any] = None  # Optional zero-based active site
-    sweep: Optional[int] = None  # Zero-based directional sweep index
-    # Whether the recorded proposal matches the current design
+    column_scaling: bool = False
+    site: Optional[Union[int, Tuple[int, ...]]] = None
+    sweep: Optional[int] = None
     sampling_exact: Optional[bool] = None
-    sample_generation: Optional[int] = None  # Generation of the sampled rows
+    sample_generation: Optional[int] = None
 
     def __post_init__(self) -> None:
         environment_shape = tuple(self.environment_shape)
         target_shape = tuple(self.target_shape)
-        if (len(environment_shape) != 2) or \
-                any((not isinstance(dim, int)) or (dim < 1)
-                    for dim in environment_shape):
+        if (len(environment_shape) != 2) or any(
+                isinstance(dim, bool) or not isinstance(dim, int) or (dim < 1)
+                for dim in environment_shape):
             raise ValueError(
                 '`environment_shape` should contain two positive integers')
-        if (not target_shape) or \
-                any((not isinstance(dim, int)) or (dim < 1)
-                    for dim in target_shape):
+        if (len(target_shape) not in (1, 2)) or any(
+                isinstance(dim, bool) or not isinstance(dim, int) or (dim < 1)
+                for dim in target_shape):
             raise ValueError(
-                '`target_shape` should contain positive integers')
+                '`target_shape` should describe a vector or matrix')
+        if target_shape[0] != environment_shape[0]:
+            raise ValueError(
+                '`target_shape` and `environment_shape` should share rows')
         object.__setattr__(self, 'environment_shape', environment_shape)
         object.__setattr__(self, 'target_shape', target_shape)
 
         if not isinstance(self.driver, str):
             raise TypeError('`driver` should be str type')
-        for name in (
-                'abs_residual',
-                'rel_residual',
-                'target_norm',
-                'effective_l2_reg',
-                'system_scale'):
+        for name in ('abs_residual', 'rel_residual', 'effective_l2_reg'):
             value = _cpu_tensor(getattr(self, name), name)
             if value.ndim or value.is_complex():
                 raise ValueError(f'`{name}` should be a real scalar tensor')
-            if value < 0:
-                raise ValueError(f'`{name}` should be non-negative')
-            if (name == 'rel_residual') and (value != value):
-                raise ValueError('`rel_residual` should not be NaN')
-            if (name != 'rel_residual') and (not torch.isfinite(value)):
+            if (value < 0) or torch.isnan(value):
+                raise ValueError(
+                    f'`{name}` should be non-negative and not NaN')
+            if (name != 'rel_residual') and not torch.isfinite(value):
                 raise ValueError(f'`{name}` should be finite')
             object.__setattr__(self, name, value)
-        l2_reg = _scalar_float(self.l2_reg, 'l2_reg')
-        if l2_reg < 0 or not isfinite(l2_reg):
-            raise ValueError('`l2_reg` should be finite and non-negative')
-        object.__setattr__(self, 'l2_reg', l2_reg)
-        if self.l2_reg_mode not in ('absolute', 'relative'):
-            raise ValueError(
-                "`l2_reg_mode` should be 'absolute' or 'relative'")
         if not isinstance(self.column_scaling, bool):
             raise TypeError('`column_scaling` should be bool type')
-        if not isinstance(self.system_scaling, bool):
-            raise TypeError('`system_scaling` should be bool type')
         if self.site is not None:
-            if isinstance(self.site, int) and not isinstance(self.site, bool):
-                valid_site = self.site >= 0
-            elif isinstance(self.site, tuple):
-                valid_site = bool(self.site) and all(
-                    isinstance(item, int) and item >= 0 for item in self.site)
-            else:
-                valid_site = False
-            if not valid_site:
+            sites = self.site if isinstance(self.site, tuple) else (self.site,)
+            if not sites or any(
+                    isinstance(site, bool) or not isinstance(
+                        site, int) or (site < 0)
+                    for site in sites):
                 raise ValueError(
                     '`site` should be a non-negative int or tuple of ints')
-        if self.sweep is not None:
-            if isinstance(self.sweep, bool) or \
-                    (not isinstance(self.sweep, int)) or (self.sweep < 0):
-                raise ValueError('`sweep` should be a non-negative integer')
-        if (self.sampling_exact is not None) and \
-                (not isinstance(self.sampling_exact, bool)):
+        if (self.sweep is not None) and (
+                isinstance(self.sweep, bool) or not isinstance(self.sweep, int)
+                or (self.sweep < 0)):
+            raise ValueError('`sweep` should be a non-negative integer')
+        if (self.sampling_exact is not None) and not isinstance(
+                self.sampling_exact, bool):
             raise TypeError('`sampling_exact` should be bool type or None')
-        if self.sample_generation is not None:
-            if isinstance(self.sample_generation, bool) or \
-                    (not isinstance(self.sample_generation, int)) or \
-                    (self.sample_generation < 0):
-                raise ValueError(
-                    '`sample_generation` should be a non-negative integer')
+        if (self.sample_generation is not None) and (
+                isinstance(self.sample_generation, bool) or
+                not isinstance(self.sample_generation, int) or
+                (self.sample_generation < 0)):
+            raise ValueError('`sample_generation` should be non-negative')
 
 
 @dataclass(frozen=True)

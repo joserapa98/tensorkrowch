@@ -1,4 +1,4 @@
-"""Tests retained for redistribution."""
+"""Tests for generic ALS sweep coordination."""
 
 import pytest
 import torch
@@ -7,6 +7,7 @@ import tensorkrowch as tk
 
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
                                                      NonFiniteSolutionError)
+from tensorkrowch.decompositions.als.driver import _relative_objective_change
 from tensorkrowch.decompositions.observers import HistoryObserver
 
 
@@ -51,13 +52,12 @@ class _FakeALSBackend:
         self.previous_generation = generation
         return generation, refreshed
 
-    def solve_site(self, site, sweep, update_policy, return_record):
+    def solve_site(self, site, sweep, return_record):
         if self.fail == ('system', sweep, site):
             raise NonFiniteLocalSystemError('forced system failure')
         if self.fail == ('solution', sweep, site):
             raise NonFiniteSolutionError('forced solution failure')
         proposal = self._cores[site] + 1
-        proposal = update_policy.apply(self._cores[site], proposal)
         version = self.versions[site] + 1
         update = tk.decompositions.CoreUpdateSet(
             sites=(site,), cores=(proposal,), versions=(version,))
@@ -68,7 +68,6 @@ class _FakeALSBackend:
                 driver='fake',
                 abs_residual=100,
                 rel_residual=100,
-                target_norm=1,
                 site=site,
                 sweep=sweep)
         else:
@@ -104,8 +103,9 @@ def _fixed_problem():
 
 
 class TestALSSweepDriver:  # MARK: TestALSSweepDriver
-
-    @pytest.mark.parametrize('sweep_direction', [None, 'forward', 'alternating'])
+    @pytest.mark.parametrize(
+        'sweep_direction', [None, 'forward', 'alternating']
+    )
     def test_sweep_order_and_observer_direction(self, sweep_direction):
         backend = _FakeALSBackend([1., 0.5, 0.25])
         history = HistoryObserver()
@@ -121,11 +121,15 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
         middle = [2, 1, 0] if sweep_direction == 'alternating' else forward
         assert [event.site for event in history.events
                 if event.name == 'site_complete'] == forward + middle + forward
-        assert [event.values['direction'] for event in history.events
-                if event.name == 'sweep_start'] == [
-                    'forward',
-                    'reverse' if sweep_direction == 'alternating' else 'forward',
-                    'forward']
+        assert [
+            event.values['direction']
+            for event in history.events
+            if event.name == 'sweep_start'
+        ] == [
+            'forward',
+            'reverse' if sweep_direction == 'alternating' else 'forward',
+            'forward',
+        ]
         assert result.n_sweeps == 3
 
     @pytest.mark.parametrize('value, error', [
@@ -215,7 +219,7 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
     def test_callback_can_stop_without_a_fixed_objective(self):
         problem = tk.decompositions.ALSProblem(
             source=tk.decompositions.DenseTensorSource(torch.ones(2, 2)),
-            selector=object())
+            sampled=True)
         backend = _FakeALSBackend([1., 0.5])
         policy = tk.decompositions.ConvergencePolicy(
             max_sweeps=5,
@@ -226,3 +230,91 @@ class TestALSSweepDriver:  # MARK: TestALSSweepDriver
 
         assert result.stop_reason == 'callback'
         assert result.n_sweeps == 2
+
+    def test_keep_best_restores_complete_sweep_snapshot(self):
+        backend = _FakeALSBackend([0.5, 0.1, 0.3])
+
+        result = tk.decompositions.ALSSweepDriver().fit(
+            _fixed_problem(), backend,
+            tk.decompositions.ConvergencePolicy(max_sweeps=3, keep_best=True),
+            collect_metrics=True)
+
+        assert result.n_sweeps == 3
+        assert backend.restored is not None
+        for site, core in enumerate(result.cores):
+            torch.testing.assert_close(core, torch.tensor([site + 2.]))
+        assert result.metrics.sweeps[-1].abs_error == pytest.approx(0.3)
+
+    def test_infinite_relative_error_for_zero_target_is_not_solver_failure(
+        self,
+    ):
+        backend = _FakeALSBackend([2., 1.])
+
+        def measure_objective(problem):
+            value = backend.objective[backend.current_sweep]
+            return torch.tensor(value), torch.tensor(torch.inf)
+
+        backend.measure_objective = measure_objective
+        result = tk.decompositions.ALSSweepDriver().fit(
+            _fixed_problem(), backend,
+            tk.decompositions.ConvergencePolicy(max_sweeps=2, keep_best=True),
+            collect_metrics=True)
+
+        assert result.stop_reason == 'max_sweeps'
+        assert result.n_sweeps == 2
+        assert result.metrics.sweeps[-1].rel_change == 0.5
+        assert torch.isinf(result.metrics.sweeps[-1].rel_error)
+        for site, core in enumerate(result.cores):
+            torch.testing.assert_close(core, torch.tensor([site + 2.]))
+
+    @pytest.mark.parametrize('option, value, error', [
+        ('problem', None, TypeError),
+        ('convergence', object(), TypeError),
+        ('observer', object(), TypeError),
+        ('collect_metrics', 1, TypeError),
+    ])
+    def test_invalid_driver_options_fail_before_a_sweep(
+        self, option, value, error
+    ):
+        backend = _FakeALSBackend([1.])
+        options = {'problem': _fixed_problem(), 'backend': backend}
+        options[option] = value
+
+        with pytest.raises(error):
+            tk.decompositions.ALSSweepDriver().fit(**options)
+
+        assert backend.current_sweep is None
+
+    @pytest.mark.parametrize('sites', [(0, 0), (-1,), (3,), (True,)])
+    def test_invalid_backend_trainable_sites(self, sites):
+        backend = _FakeALSBackend([1.], trainable_sites=sites)
+
+        with pytest.raises(ValueError, match='trainable sites'):
+            tk.decompositions.ALSSweepDriver().fit(_fixed_problem(), backend)
+
+    def test_callback_exception_is_not_swallowed(self):
+        backend = _FakeALSBackend([1.])
+
+        def callback(record, cores):
+            raise RuntimeError('callback failed')
+
+        with pytest.raises(RuntimeError, match='callback failed'):
+            tk.decompositions.ALSSweepDriver().fit(
+                _fixed_problem(), backend,
+                tk.decompositions.ConvergencePolicy(callback=callback))
+
+
+@pytest.mark.parametrize('previous,current,expected', [
+    (0., 0., 0.),
+    (1e-30, 5e-31, 0.5),
+    (1e30, 5e29, 0.5),
+])
+def test_relative_change_does_not_depend_on_absolute_scale(
+        previous, current, expected):
+    record = tk.decompositions.SweepRecord(
+        sweep=0, abs_error=torch.tensor(previous, dtype=torch.float64))
+
+    change = _relative_objective_change(
+        record, torch.tensor(current, dtype=torch.float64), None)
+
+    assert change == pytest.approx(expected)

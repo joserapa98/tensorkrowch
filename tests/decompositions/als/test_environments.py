@@ -658,3 +658,132 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
             cores, n_segments=3)
 
         assert cache.segments == ((0, 3), (3, 5), (5, 7))
+
+    @pytest.mark.parametrize('direction', ['forward', 'reverse'])
+    @pytest.mark.parametrize('n_segments', [1, 2, 3, 6])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_nonadjacent_normalization_rebuilds_remaining_products(
+            self, direction, n_segments, dtype):
+        cores = make_tr_cores(
+            in_dim=(2,) * 6, rank=(2, 3, 2, 3, 2, 2), dtype=dtype,
+            generator=torch.Generator().manual_seed(130))
+        order = tuple(range(6)) if direction == 'forward' else tuple(
+            reversed(range(6)))
+        active = 1 if direction == 'forward' else 4
+        receiver = 4 if direction == 'forward' else 1
+        cache = tk.decompositions.TRSegmentEnvironmentCache(
+            cores, n_segments=n_segments, renormalize=True)
+        cache.prepare_sweep(order)
+        updated = list(cores)
+        for site in order:
+            local = cache.local_environment(site)
+            expected = tk.decompositions.DirectTREnvironment(
+                updated).local_environment(site)
+            assert torch.allclose(
+                local.design() * local.log_scale.exp(), expected.design(),
+                rtol=1e-11, atol=1e-11)
+            if site == active:
+                updated[active] = updated[active] / 3
+                updated[receiver] = updated[receiver] * 3
+                cache.commit(tk.decompositions.CoreUpdateSet(
+                    (active, receiver), (updated[active], updated[receiver]),
+                    (1, 1), reason='skip_fixed_receiver'))
+            else:
+                cache.commit(_empty_update())
+        assert torch.allclose(contract_tr_dense(
+            updated), contract_tr_dense(cores))
+
+
+class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
+
+    @pytest.mark.parametrize('topology', ['tt', 'tr'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_one_site_design_and_scale_methods(self, topology, dtype):
+        rank = 1 if topology == 'tt' else 2
+        core = torch.randn(rank, 3, rank, dtype=dtype)
+        cache_type = tk.decompositions.TTEnvironmentCache if topology == 'tt' \
+            else tk.decompositions.TRSegmentEnvironmentCache
+        cache = cache_type([core], renormalize=True)
+        assert cache.in_dim == (3,)
+        assert cache.core_versions == (0,)
+        cache.prepare_sweep((0,))
+        local = cache.local_environment(0)
+        expected = dense_local_design([core], 0, topology)
+        assert torch.allclose(local.design() * local.log_scale.exp(), expected)
+        target = expected @ core.reshape(-1)
+        assert torch.allclose(local.scale_target(
+            target) * local.log_scale.exp(), target)
+        assert local.scale_l2_reg(0.5) == pytest.approx(
+            0.5 * torch.exp(-2 * local.log_scale).item())
+        with pytest.raises(ValueError, match='row dimension'):
+            local.scale_target(torch.tensor(1.))
+        with pytest.raises(ValueError, match='non-negative'):
+            local.scale_l2_reg(-1)
+        cache.commit(_empty_update())
+        with pytest.raises(RuntimeError, match='complete'):
+            cache.local_environment(0)
+
+    @pytest.mark.parametrize('cache_type', [
+        tk.decompositions.TTEnvironmentCache,
+        tk.decompositions.TRSegmentEnvironmentCache,
+    ])
+    def test_cache_state_and_invalid_arguments(self, cache_type):
+        cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
+        with pytest.raises(TypeError, match='sequence'):
+            cache_type(iter(cores))
+        with pytest.raises(ValueError, match='at least one'):
+            cache_type([])
+        with pytest.raises(ValueError, match='version'):
+            cache_type(cores, core_versions=(0,))
+        with pytest.raises(TypeError, match='renormalize'):
+            cache_type(cores, renormalize=1)
+        cache = cache_type(cores)
+        with pytest.raises(RuntimeError, match='not prepared'):
+            cache.local_environment(0)
+        with pytest.raises(ValueError, match='order'):
+            cache.prepare_sweep((0,))
+        with pytest.raises(TypeError, match='integers'):
+            cache.prepare_sweep((False, True))
+        cache.prepare_sweep((0, 1))
+        with pytest.raises(TypeError, match='int type'):
+            cache.local_environment(False)
+        with pytest.raises(ValueError, match='next site'):
+            cache.local_environment(1)
+        cache.local_environment(0)
+        with pytest.raises(RuntimeError, match='committed first'):
+            cache.prepare_sweep((0, 1))
+        cache.invalidate('new samples')
+        with pytest.raises(RuntimeError, match='new samples'):
+            cache.local_environment(0)
+
+    @pytest.mark.parametrize('cache_type', [
+        tk.decompositions.TTEnvironmentCache,
+        tk.decompositions.TRSegmentEnvironmentCache,
+    ])
+    @pytest.mark.parametrize('change', ['dimension', 'dtype', 'version'])
+    def test_invalid_commits_preserve_state(self, cache_type, change):
+        cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
+        cache = cache_type(cores)
+        cache.prepare_sweep((0, 1))
+        cache.local_environment(0)
+        core = torch.ones(1, 3, 1) if change == 'dimension' else cores[0]
+        if change == 'dtype':
+            core = core.double()
+        version = 0 if change == 'version' else 1
+        with pytest.raises(ValueError):
+            cache.commit(tk.decompositions.CoreUpdateSet(
+                (0,), (core,), (version,)))
+        assert cache.core_versions == (0, 0)
+        assert all(original is current for original,
+                   current in zip(cores, cache.cores))
+        cache.commit(_empty_update())
+
+    @pytest.mark.parametrize('kwargs', [
+        {'sites': (0, 0), 'cores': (torch.ones(1),) * 2, 'versions': (1, 1)},
+        {'sites': (True,), 'cores': (torch.ones(1),), 'versions': (1,)},
+        {'sites': (0,), 'cores': (None,), 'versions': (1,)},
+        {'sites': (0,), 'cores': (torch.ones(1),), 'versions': (-1,)},
+    ])
+    def test_invalid_core_update_metadata(self, kwargs):
+        with pytest.raises((TypeError, ValueError)):
+            tk.decompositions.CoreUpdateSet(**kwargs)

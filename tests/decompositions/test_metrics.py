@@ -213,9 +213,8 @@ def local_solve_record():
     return tk.decompositions.LocalSolveRecord(
         environment_shape=(8, 3), target_shape=(8, 2), driver='gelsd',
         abs_residual=torch.tensor(0.1, requires_grad=True),
-        rel_residual=0.05, target_norm=2., l2_reg=torch.tensor(0.01),
-        effective_l2_reg=0.02, l2_reg_mode='relative', column_scaling=True,
-        system_scaling=True, system_scale=3., site=(1, 2), sweep=3,
+        rel_residual=0.05, effective_l2_reg=0.02, column_scaling=True,
+        site=(1, 2), sweep=3,
         sampling_exact=False, sample_generation=2)
 
 
@@ -254,8 +253,15 @@ def test_nested_records_keep_diagnostics_and_serialize(local_solve_record):
     ({'target_shape': ()}, ValueError), ({'driver': 1}, TypeError),
     ({'abs_residual': torch.ones(2)}, ValueError),
     ({'rel_residual': float('nan')}, ValueError),
-    ({'target_norm': float('inf')}, ValueError),
-    ({'l2_reg': -1.}, ValueError), ({'l2_reg_mode': 'unknown'}, ValueError),
+    ({'effective_l2_reg': float('inf')}, ValueError),
+    ({'effective_l2_reg': -1.}, ValueError),
+    ({'environment_shape': (True, 2)}, ValueError),
+    ({'target_shape': (7, 2)}, ValueError),
+    ({'target_shape': (8, 2, 3)}, ValueError),
+    ({'column_scaling': 1}, TypeError),
+    ({'site': (True,)}, ValueError),
+    ({'sweep': -1}, ValueError),
+    ({'sample_generation': -1}, ValueError),
     ({'site': -1}, ValueError), ({'sampling_exact': 1}, TypeError),
 ])
 def test_invalid_local_solve_records(local_solve_record, kwargs, error):

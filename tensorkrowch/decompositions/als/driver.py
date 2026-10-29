@@ -15,12 +15,11 @@ This script contains:
 
 from dataclasses import dataclass, replace
 from time import perf_counter
-from typing import Optional, Protocol, Sequence, TYPE_CHECKING, Tuple
+from typing import Optional, Protocol, Sequence, Tuple, TYPE_CHECKING
 
 import torch
 
-from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
-                                                         UpdatePolicy)
+from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.environments import CoreUpdateSet
 from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
@@ -59,8 +58,8 @@ class ALSBackend(Protocol):  # MARK: ALSBackend
     def solve_site(self,
                    site: int,
                    sweep: int,
-                   update_policy: UpdatePolicy,
-                   return_record: bool) -> Tuple[CoreUpdateSet, Optional[LocalSolveRecord]]:
+                   return_record: bool) -> Tuple[
+            CoreUpdateSet, Optional[LocalSolveRecord]]:
         """Builds one atomic local update without committing it."""
 
     def skip_site(self, site: int) -> None:
@@ -70,7 +69,8 @@ class ALSBackend(Protocol):  # MARK: ALSBackend
         """Commits a topology-specific update atomically."""
 
     def measure_objective(self,
-                          problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+                          problem: ALSProblem) -> Tuple[
+            torch.Tensor, torch.Tensor]:
         """Measures one fixed/global objective after a complete sweep."""
 
     def snapshot(self) -> Sequence[torch.Tensor]:
@@ -85,7 +85,7 @@ class _ALSDriverResult:  # MARK: _ALSDriverResult
     """Internal result returned from the generic ALS sweep driver."""
 
     cores: Tuple[torch.Tensor, ...]  # Raw cores in site order
-    metrics: DecompositionMetrics  # Structured measurements collected during execution
+    metrics: DecompositionMetrics  # Collected solve and sweep measurements
     converged: bool  # Whether the normalized stop reason denotes convergence
     stop_reason: str  # Normalized reason for stopping
     n_sweeps: int  # Number of completed directional sweeps
@@ -93,19 +93,22 @@ class _ALSDriverResult:  # MARK: _ALSDriverResult
 
 def _relative_objective_change(previous: SweepRecord,
                                current_absolute: torch.Tensor,
-                               current_relative: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
+                               current_relative: Optional[
+                                   torch.Tensor]) -> Optional[torch.Tensor]:
     """Computes relative change between complete comparable objectives."""
-    if (previous.rel_error is not None) and \
-            (current_relative is not None):
-        old = previous.rel_error
-        new = current_relative
-    elif previous.abs_error is not None:
+    if previous.abs_error is not None:
         old = previous.abs_error
         new = current_absolute
+    elif (previous.rel_error is not None) and \
+            (current_relative is not None) and \
+            torch.isfinite(previous.rel_error) and \
+            torch.isfinite(current_relative):
+        old = previous.rel_error
+        new = current_relative
     else:
         return None
-    scale = torch.maximum(old.abs(), new.abs()).clamp_min(1e-16)
-    return abs(old - new) / scale
+    scale = torch.maximum(old.abs(), new.abs())
+    return abs(old - new) / torch.where(scale > 0, scale, 1)
 
 
 class ALSSweepDriver:  # MARK: ALSSweepDriver
@@ -121,7 +124,6 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             problem: ALSProblem,
             backend: ALSBackend,
             convergence: Optional[ConvergencePolicy] = None,
-            update_policy: Optional[UpdatePolicy] = None,
             observer: Optional[DecompositionObserver] = None,
             collect_metrics: bool = False,
             phase: str = 'ALS',
@@ -133,6 +135,32 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
         ``sweep_direction="forward"`` visits sites in increasing order on
         every sweep. ``"alternating"`` reverses that order on odd sweeps.
         Each directional pass counts once toward ``max_sweeps``.
+
+        Parameters
+        ----------
+        problem : ALSProblem
+            Target values, residual weights and fixed-objective semantics.
+        backend : ALSBackend
+            Owns the cores, local solves and environment updates. Each local
+            solution replaces the active core before moving its gauge.
+        convergence : ConvergencePolicy, optional
+            Complete-sweep stopping criteria. Defaults to ten sweeps.
+        observer : DecompositionObserver, optional
+            Receives structured progress events. Its lifecycle belongs to the
+            calling decomposition, which closes it after finalizing results.
+        collect_metrics : bool
+            Whether to retain local solve and sweep records. Defaults to False.
+        phase : str
+            Label attached to progress events. Defaults to ``"ALS"``.
+        sweep_direction : {``"forward"``, ``"alternating"``}
+            Internal traversal selected by the decomposition: alternating
+            directions for TT and forward passes for TR.
+
+        Returns
+        -------
+        _ALSDriverResult
+            Final cores, optional metrics, completed sweep count and stopping
+            reason. Stagnation alone does not certify a small residual.
         """
         if not isinstance(sweep_direction, str):
             raise TypeError('`sweep_direction` should be str type')
@@ -145,14 +173,11 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             convergence = ConvergencePolicy()
         elif not isinstance(convergence, ConvergencePolicy):
             raise TypeError('`convergence` should be ConvergencePolicy type')
-        if update_policy is None:
-            update_policy = UpdatePolicy()
-        elif not isinstance(update_policy, UpdatePolicy):
-            raise TypeError('`update_policy` should be UpdatePolicy type')
         if observer is not None:
             if not callable(getattr(observer, 'emit', None)) or \
                     not callable(getattr(observer, 'close', None)):
-                raise TypeError('`observer` should implement `emit` and `close`')
+                raise TypeError(
+                    '`observer` should implement `emit` and `close`')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
         if isinstance(backend.n_sites, bool) or \
@@ -199,7 +224,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
 
         for sweep in range(convergence.max_sweeps):
             order = tuple(range(backend.n_sites))
-            reverse = sweep_direction == 'alternating' and sweep % 2 == 1
+            reverse = (sweep_direction == 'alternating') and (sweep % 2 == 1)
             if reverse:
                 order = tuple(reversed(order))
             start = perf_counter() if need_sweep_record else None
@@ -228,7 +253,6 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                     update_set, local_record = backend.solve_site(
                         site=site,
                         sweep=sweep,
-                        update_policy=update_policy,
                         return_record=need_local_records)
                     backend.commit(update_set)
                 except NonFiniteLocalSystemError:
@@ -280,19 +304,18 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                 absolute_tensor, relative_tensor = backend.measure_objective(
                     problem)
                 if not isinstance(absolute_tensor, torch.Tensor) or \
-                        absolute_tensor.numel() != 1:
+                        (absolute_tensor.numel() != 1):
                     raise TypeError(
                         'Backend objective absolute error should be a scalar '
                         'tensor')
                 if not isinstance(relative_tensor, torch.Tensor) or \
-                        relative_tensor.numel() != 1:
+                        (relative_tensor.numel() != 1):
                     raise TypeError(
                         'Backend objective relative error should be a scalar '
                         'tensor')
                 abs_error = absolute_tensor.detach().cpu()
                 rel_error = relative_tensor.detach().cpu()
-                if (not torch.isfinite(abs_error)) or \
-                        (not torch.isfinite(rel_error)):
+                if (not torch.isfinite(abs_error)) or torch.isnan(rel_error):
                     stop_reason = 'nonfinite_solution'
 
             rel_change = None
@@ -319,11 +342,11 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                 record = replace(record, stop_reason=stop_reason)
 
             if convergence.keep_best and (abs_error is not None):
-                score = rel_error if rel_error is not None \
-                    else abs_error
+                score = abs_error
                 if (best_score is None) or (score < best_score):
                     best_score = score
-                    best_cores = tuple(core.clone() for core in backend.snapshot())
+                    best_cores = tuple(
+                        core.clone() for core in backend.snapshot())
 
             if collect_metrics:
                 metrics.sweeps.append(record)

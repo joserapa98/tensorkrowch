@@ -332,9 +332,7 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
     fit_options : mapping, optional
         Options forwarded to :meth:`TRALS.fit`. Target, rank, fixed cores,
         output device and orientation remain controlled by :meth:`open`.
-        ALS sweeps run forward by default. Set
-        ``sweep_direction="alternating"`` to reverse the site order on odd
-        sweeps.
+        ALS sweeps visit sites in increasing order on every pass.
     """
 
     _capabilities = LoopOpenerCapabilities(
@@ -546,7 +544,7 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
             options = dict(self.opener.fit_options) \
                 if isinstance(self.opener, ALSLoopOpener) else {}
             options.update({
-                'sampling': 'exact', 'mask': None, 'n_samples': None,
+                'sampler': None,
                 'convergence': ConvergencePolicy(
                     max_sweeps=refinement_sweeps, keep_best=True),
             })
@@ -1185,10 +1183,9 @@ def resolve_loop_opener(loop_opener: Any) -> LoopOpener:
     def als_opener() -> ALSLoopOpener:
         return ALSLoopOpener({
             'gauge': 'none',
-            'normalize': False,
             'convergence': ConvergencePolicy(
                 max_sweeps=100,
-                error_rtol=1e-10,
+                rtol=1e-10,
                 keep_best=True),
         })
 

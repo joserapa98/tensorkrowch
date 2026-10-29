@@ -399,7 +399,6 @@ class TestPinvGaugeRecursionIntegration:  # MARK: Integration
             dense, out_device=None).fit()
         opener = tk.decompositions.ALSLoopOpener({
             'gauge': 'none',
-            'normalize': False,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=3),
         })
 

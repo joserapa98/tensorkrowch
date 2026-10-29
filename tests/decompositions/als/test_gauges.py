@@ -1,9 +1,10 @@
-"""Tests for ALS gauge factorization and absorption policies."""
+"""Tests for private ALS QR factorization and absorption operations."""
 
 import pytest
 import torch
 
-import tensorkrowch as tk
+from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
+                                                    _factor_core)
 
 
 def _pair_contraction(left, right):
@@ -11,74 +12,84 @@ def _pair_contraction(left, right):
     return torch.einsum('apb,bqc->apqc', left, right)
 
 
-@pytest.mark.parametrize('gauge_name', ['qr', 'svd'])
+@pytest.mark.parametrize('direction', ['forward', 'reverse'])
 @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-def test_forward_gauge_preserves_neighboring_tensor(gauge_name, dtype):
+@pytest.mark.parametrize('shapes', [
+    ((1, 1, 1), (1, 1, 1)),
+    ((1, 3, 2), (2, 4, 1)),
+    ((2, 3, 4), (4, 5, 2)),
+])
+def test_qr_preserves_pair_and_produces_isometry(direction, dtype, shapes):
     generator = torch.Generator().manual_seed(1)
-    left = torch.randn(2, 3, 4, dtype=dtype, generator=generator)
-    right = torch.randn(4, 5, 2, dtype=dtype, generator=generator)
-    gauge = tk.decompositions.QRGauge() if gauge_name == 'qr' \
-        else tk.decompositions.SVDGauge()
+    left = torch.randn(*shapes[0], dtype=dtype, generator=generator)
+    right = torch.randn(*shapes[1], dtype=dtype, generator=generator)
+    core, neighbor = (left, right) if direction == 'forward' else (right, left)
 
-    gauged, factor = gauge.factor(left, 'forward')
-    absorbed = gauge.absorb(factor, right, 'forward')
+    gauged, factor = _factor_core(core, direction)
+    absorbed = _absorb_factor(factor, neighbor, direction)
+    pair = (gauged, absorbed) if direction == 'forward' else (absorbed, gauged)
 
-    assert gauged.shape == left.shape
-    assert absorbed.shape == right.shape
-    assert torch.allclose(
-        _pair_contraction(gauged, absorbed),
-        _pair_contraction(left, right),
-        atol=1e-11,
-        rtol=1e-11)
-
-
-@pytest.mark.parametrize('gauge_name', ['qr', 'svd'])
-@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-def test_reverse_gauge_preserves_neighboring_tensor(gauge_name, dtype):
-    generator = torch.Generator().manual_seed(2)
-    left = torch.randn(2, 3, 4, dtype=dtype, generator=generator)
-    right = torch.randn(4, 5, 2, dtype=dtype, generator=generator)
-    gauge = tk.decompositions.QRGauge() if gauge_name == 'qr' \
-        else tk.decompositions.SVDGauge()
-
-    gauged, factor = gauge.factor(right, 'reverse')
-    absorbed = gauge.absorb(factor, left, 'reverse')
-
-    assert gauged.shape == right.shape
-    assert absorbed.shape == left.shape
-    assert torch.allclose(
-        _pair_contraction(absorbed, gauged),
-        _pair_contraction(left, right),
-        atol=1e-11,
-        rtol=1e-11)
+    assert gauged.shape == core.shape
+    assert absorbed.shape == neighbor.shape
+    torch.testing.assert_close(
+        _pair_contraction(*pair), _pair_contraction(left, right))
+    if direction == 'forward':
+        matrix = gauged.reshape(-1, core.shape[-1])
+        gram = matrix.mH @ matrix
+    else:
+        matrix = gauged.reshape(core.shape[0], -1)
+        gram = matrix @ matrix.mH
+    torch.testing.assert_close(gram, torch.eye(gram.shape[0], dtype=dtype))
 
 
-def test_no_gauge_never_produces_a_factor():
-    core = torch.randn(1, 3, 2)
-    gauge = tk.decompositions.NoGauge()
+@pytest.mark.parametrize('direction, shape', [
+    ('forward', (1, 2, 3)), ('reverse', (3, 2, 1))])
+def test_infeasible_qr_fails_without_mutation(direction, shape):
+    core = torch.randn(shape)
+    original = core.clone()
 
-    unchanged, factor = gauge.factor(core, 'forward')
+    with pytest.raises(ValueError, match='feasible'):
+        _factor_core(core, direction)
 
-    assert unchanged is core
-    assert factor is None
-    with pytest.raises(RuntimeError, match='does not produce'):
-        gauge.absorb(torch.eye(2), torch.randn(2, 4, 1), 'forward')
-
-
-def test_infeasible_factorization_fails_before_changing_rank():
-    core = torch.randn(1, 2, 3)
-
-    with pytest.raises(ValueError, match='not algebraically feasible'):
-        tk.decompositions.QRGauge().factor(core, 'forward')
-    with pytest.raises(ValueError, match='not algebraically feasible'):
-        tk.decompositions.SVDGauge().factor(core, 'forward')
+    assert torch.equal(core, original)
 
 
-def test_gauge_invalidated_regions_include_receiver_only_when_present():
-    gauge = tk.decompositions.QRGauge()
+@pytest.mark.parametrize('core, direction, error', [
+    (None, 'forward', TypeError),
+    (torch.ones(2, 2), 'forward', ValueError),
+    (torch.ones(1, 2, 1), 'sideways', ValueError),
+])
+def test_invalid_factorization_arguments(core, direction, error):
+    with pytest.raises(error):
+        _factor_core(core, direction)
 
-    assert gauge.invalidated_regions(1, 'forward', 4) == (1, 2)
-    assert gauge.invalidated_regions(3, 'forward', 4) == (3,)
-    assert gauge.invalidated_regions(2, 'reverse', 4) == (2, 1)
-    assert tk.decompositions.NoGauge().invalidated_regions(
-        2, 'reverse', 4) == (2,)
+
+@pytest.mark.parametrize('factor, neighbor, direction, error', [
+    (None, torch.ones(1, 2, 1), 'forward', TypeError),
+    (torch.ones(1, 1), None, 'forward', TypeError),
+    (torch.ones(1), torch.ones(1, 2, 1), 'forward', ValueError),
+    (torch.ones(1, 1), torch.ones(2, 1), 'forward', ValueError),
+    (torch.ones(1, 1), torch.ones(1, 2, 1), 'sideways', ValueError),
+    (torch.ones(1, 1), torch.ones(1, 2, 1).double(), 'forward', ValueError),
+    (torch.ones(2, 2), torch.ones(3, 2, 1), 'forward', ValueError),
+    (torch.ones(2, 2), torch.ones(1, 2, 3), 'reverse', ValueError),
+])
+def test_invalid_absorption_arguments(factor, neighbor, direction, error):
+    with pytest.raises(error):
+        _absorb_factor(factor, neighbor, direction)
+
+
+@pytest.mark.parametrize('direction', ['forward', 'reverse'])
+def test_qr_pair_retains_gradients(direction):
+    left = torch.randn(2, 3, 4, dtype=torch.complex128, requires_grad=True)
+    right = torch.randn(4, 5, 2, dtype=torch.complex128, requires_grad=True)
+    active, neighbor = (
+        left, right) if direction == 'forward' else (right, left)
+    gauged, factor = _factor_core(active, direction)
+    absorbed = _absorb_factor(factor, neighbor, direction)
+    pair = (gauged, absorbed) if direction == 'forward' else (absorbed, gauged)
+
+    _pair_contraction(*pair).abs().square().sum().backward()
+
+    assert (left.grad is not None) and torch.isfinite(left.grad).all()
+    assert (right.grad is not None) and torch.isfinite(right.grad).all()

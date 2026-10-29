@@ -133,7 +133,6 @@ class TestALSLoopOpener:  # MARK: TestALSLoopOpener
         cores, tensor = _local_problem(dtype)
         opener = tk.decompositions.ALSLoopOpener({
             'gauge': 'none',
-            'normalize': False,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=1),
         })
         opening = opener.open(
@@ -173,7 +172,6 @@ class TestALSLoopOpener:  # MARK: TestALSLoopOpener
 
         opener = tk.decompositions.ALSLoopOpener({
             'gauge': 'none',
-            'normalize': False,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=1),
         })
         opening = opener.open(
@@ -294,7 +292,6 @@ class TestOpeningAdapters:  # MARK: TestOpeningAdapters
                 supports_blocks=True))
         refiner = tk.decompositions.ALSLoopOpener({
             'gauge': 'none',
-            'normalize': False,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=1),
         })
         opening = tk.decompositions.CompositeLoopOpener(
@@ -375,7 +372,6 @@ class TestOpeningAdapters:  # MARK: TestOpeningAdapters
                 supports_blocks=True))
         refiner = tk.decompositions.ALSLoopOpener({
             'gauge': 'none',
-            'normalize': False,
             'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=1),
         })
         opening = tk.decompositions.CompositeLoopOpener(

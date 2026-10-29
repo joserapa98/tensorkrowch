@@ -19,32 +19,32 @@ This script contains:
         * tr_als
 """
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 from math import prod
 from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
 from tensorkrowch.formats.formats1d import TensorFormat1D
-from tensorkrowch.formats.quantics import _QuanticsVector
 
 from tensorkrowch.decompositions._utils import (_normalize_rank,
                                                 _unravel_indices)
-from tensorkrowch.decompositions.als.convergence import (ConvergencePolicy,
-                                                         UpdatePolicy)
+from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
                                                     _report_als_result)
-from tensorkrowch.decompositions.als.environments import (CoreUpdateSet,
-                                                          DirectTREnvironment,
-                                                          TRSegmentEnvironmentCache,
-                                                          _environment_norm)
-from tensorkrowch.decompositions.als.gauges import (GaugePolicy,
-                                                    NoGauge,
-                                                    resolve_gauge_policy)
+from tensorkrowch.decompositions.als.environments import (
+    CoreUpdateSet,
+    DirectTREnvironment,
+    TRSegmentEnvironmentCache,
+    _environment_norm,
+)
+from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
+                                                    _factor_core)
 from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.sampling import (ObservedRows,
                                                       RowSampler,
                                                       SampleRefreshPolicy,
+                                                      SamplingPolicy,
                                                       TRExactLeverageRows,
                                                       TRProductLeverageRows,
                                                       UniformRows,
@@ -61,14 +61,12 @@ from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  _result_from_source)
 from tensorkrowch.decompositions.sources import (BaseSource,
                                                  ConfigurationBatch)
-from tensorkrowch.decompositions.svd.tr import TRSVD
 
 
 _Rank = Optional[Union[int, Sequence[int]]]
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.results import _DecompositionOutput
     from tensorkrowch.decompositions.sources.factory import SourceLike
 
 
@@ -93,7 +91,8 @@ def _standard_tr_cores(cores: Union[TRDecomposition, Sequence[torch.Tensor]],
     for core, site_in_dim in zip(cores, in_dim):
         if core.ndim != 3:
             raise ValueError(
-                'TR cores should have left rank, input and right rank dimensions')
+                'TR cores should have left rank, input and right rank '
+                'dimensions')
         if core.shape[1] != site_in_dim:
             raise ValueError(
                 '`initial_cores` input dimensions should match the source')
@@ -124,7 +123,7 @@ def _evaluate_standard_tr(cores: Sequence[torch.Tensor],
 def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
                           versions: Sequence[int],
                           fixed_sites: Sequence[int],
-                          gauge: GaugePolicy,
+                          gauge: str,
                           direction: str,
                           site: int,
                           proposal: torch.Tensor) -> CoreUpdateSet:
@@ -137,14 +136,16 @@ def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
         feasible = proposal.shape[0] * proposal.shape[1] >= proposal.shape[2]
     else:
         feasible = proposal.shape[1] * proposal.shape[2] >= proposal.shape[0]
-    effective_gauge = gauge if legal_receiver and feasible else NoGauge()
-    gauged_core, factor = effective_gauge.factor(proposal, direction)
+    if (gauge == 'qr') and legal_receiver and feasible:
+        gauged_core, factor = _factor_core(proposal, direction)
+    else:
+        gauged_core, factor = proposal, None
 
     sites = [site]
     updated_cores = [gauged_core]
     updated_versions = [versions[site] + 1]
     if factor is not None:
-        neighbor = effective_gauge.absorb(
+        neighbor = _absorb_factor(
             factor, cores[receiver], direction)
         sites.append(receiver)
         updated_cores.append(neighbor)
@@ -202,7 +203,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                  cores: Sequence[torch.Tensor],
                  target: Optional[torch.Tensor],
                  solver: LeastSquaresSolver,
-                 gauge: GaugePolicy,
+                 gauge: str,
                  fixed_sites: Sequence[int],
                  normalize: bool,
                  renormalize: bool,
@@ -276,17 +277,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         self._sampling_state = state
         if refreshed:
             if self.problem.observations is not None:
-                observations = self.problem.observations
-                positions = torch.searchsorted(
-                    observations.flat_ids.to(batch.ids.device), batch.ids)
-                if torch.any(positions >= observations.flat_ids.numel()) or \
-                        not torch.equal(
-                            observations.flat_ids.to(batch.ids.device)
-                            .index_select(0, positions), batch.ids):
-                    raise ValueError(
-                        'Observed sample ids should match fixed observations')
-                self.current_target = observations.values.index_select(
-                    0, positions.to(observations.values.device))
+                self.current_target = self.problem.observations.support_values
             else:
                 indices = _unravel_indices(batch.ids, self.cache.in_dim)
                 evaluated = self.problem.evaluate(
@@ -305,8 +296,8 @@ class _TRALSBackend:  # MARK: _TRALSBackend
     def solve_site(self,
                    site: int,
                    sweep: int,
-                   update_policy: UpdatePolicy,
-                   return_record: bool) -> Tuple[CoreUpdateSet, Optional['LocalSolveRecord']]:
+                   return_record: bool) -> Tuple[
+            CoreUpdateSet, Optional[LocalSolveRecord]]:
         """Builds one local proposal and its atomic gauge update."""
         local = self.cache.local_environment(site)
         environment = local.design()
@@ -315,18 +306,11 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             sample_weights = self.sample_batch.weights.to(environment.dtype)
             environment = environment * sample_weights.unsqueeze(1)
             target = target * sample_weights
-        if self.problem.observations is not None and \
-                (self.problem.observations.weights is not None):
-            observation_weights = self.problem.observations.weights
-            positions = torch.searchsorted(
-                self.problem.observations.flat_ids.to(
-                    self.sample_batch.ids.device),
-                self.sample_batch.ids)
-            observation_weights = observation_weights.index_select(
-                0, positions.to(observation_weights.device))
-            observation_weights = observation_weights.to(environment.dtype)
-            environment = environment * observation_weights.unsqueeze(1)
-            target = target * observation_weights
+        if (self.problem.observations is not None) and \
+                (self.problem.weights is not None):
+            weights = self.problem.weights.to(environment.dtype)
+            environment = environment * weights.unsqueeze(1)
+            target = target * weights
         if self.problem.observations is None:
             ids = self.sample_batch.ids if self.sample_batch is not None else \
                 torch.arange(prod(self.problem.in_dim), device=target.device)
@@ -336,7 +320,6 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                 weights = weights.to(environment.dtype)
                 environment = environment * weights.unsqueeze(1)
                 target = target * weights
-
         regularization_scale = None
         if (self.solver.l2_reg_mode == 'absolute') and \
                 (self.solver.l2_reg > 0):
@@ -350,7 +333,6 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             current=self.cache.cores[site],
             site=site,
             sweep=sweep,
-            update_policy=update_policy,
             return_record=return_record,
             regularization_scale=regularization_scale,
             sampling_exact=sampling_exact,
@@ -392,13 +374,14 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                     self._sampling_state, site)
 
     def measure_objective(self,
-                          problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+                          problem: ALSProblem) -> Tuple[
+            torch.Tensor, torch.Tensor]:
         """Measures the fixed complete-sweep objective when one exists."""
         if problem.observations is not None:
-            indices = problem.observations.indices.to(
+            indices = problem.observations.support.values.to(
                 self.cache.cores[0].device)
             approximation = _evaluate_standard_tr(self.cache.cores, indices)
-            return problem.observations.error(approximation)
+            return problem.objective_error(approximation)
 
         approximation = _contract_standard_tr(self.cache.cores).reshape(-1)
         residual = approximation - self.full_target
@@ -433,7 +416,7 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
                  problem: ALSProblem,
                  cores: Sequence[torch.Tensor],
                  solver: LeastSquaresSolver,
-                 gauge: GaugePolicy,
+                 gauge: str,
                  fixed_sites: Sequence[int],
                  n_samples: int,
                  leverage_method: str,
@@ -498,8 +481,8 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
     def solve_site(self,
                    site: int,
                    sweep: int,
-                   update_policy: UpdatePolicy,
-                   return_record: bool) -> Tuple[CoreUpdateSet, Optional['LocalSolveRecord']]:
+                   return_record: bool) -> Tuple[
+            CoreUpdateSet, Optional[LocalSolveRecord]]:
         """Builds one local proposal and its atomic gauge update."""
         state = replace(
             self._sampling_state,
@@ -542,7 +525,6 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
             environment = environment * weights.unsqueeze(1)
             target = target * weights
 
-
         regularization_scale = None
         if (self.solver.l2_reg_mode == 'absolute') and \
                 (self.solver.l2_reg > 0):
@@ -555,7 +537,6 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
             current=self._cores[site],
             site=site,
             sweep=sweep,
-            update_policy=update_policy,
             return_record=return_record,
             regularization_scale=regularization_scale,
             sampling_exact=sampling_exact,
@@ -600,7 +581,8 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
             self._sampling_state, core_versions=self._versions)
 
     def measure_objective(self,
-                          problem: ALSProblem) -> Tuple[torch.Tensor, torch.Tensor]:
+                          problem: ALSProblem) -> Tuple[
+            torch.Tensor, torch.Tensor]:
         """Measures the fixed complete-sweep objective when one exists."""
         raise RuntimeError(
             'Renewable leverage batches do not define a global objective')
@@ -616,64 +598,48 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
 
 class TRALS(TTALS):  # MARK: TRALS
     """
-    Approximates a fixed scalar tensor problem by cyclic TR-ALS.
+    Approximates a fixed finite tensor by one-site TR-ALS.
 
-    The source and input dimensions are fixed on construction. Repeated
-    :meth:`fit` calls may compare cyclic ranks, initialization, gauges, segment
-    partitions, sampling and convergence policies. Use a boolean ``mask`` to
-    fix one permanent observed objective.
+    Construction fixes the source, its dimensions and the weighted objective.
+    Repeated :meth:`fit` calls can use different ranks, initial cores, samplers
+    and solvers. Exact fits cache all target values on first use; sampled fits
+    query only their selected configurations. A sparse boolean mask defines
+    permanent observations, including observed values that are zero.
 
-    Each fit returns a :class:`~tensorkrowch.decompositions.TRDecomposition`
-    with cyclic cores of shape ``(left rank, input, right rank)``.
-
-    ``sampling="leverage"`` with the product method implements Algorithm 2 of
-    *A Sampling-Based Method for Tensor Ring Decomposition* (2021), available
-    in this `paper <https://arxiv.org/abs/2010.08581>`_ by Osman Asif Malik and
-    Stephen Becker. It uses their approximate product-leverage proposal and
-    evaluates complete active input fibers. The optional uniform mixture and
-    the common TensorKrowch solver, gauge and convergence policies are library
-    extensions.
-
-    With ``sampling="leverage", leverage_method="exact"``, sampling instead
-    specializes Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
-    Decomposition Algorithms for Arbitrary Tensor Networks* (2022), available
-    in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik,
-    Vivek Bharadwaj and Riley Murray. This contracts the cyclic double-layer
-    Gram and samples exact conditional leverage probabilities without forming
-    the exponentially tall design.
-
-    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
-    a non-Quantics TT/TR format or its matrix version, an
-    :class:`~tensorkrowch.models.MPS`, or a finite source:
-    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
-    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
-    :class:`~tensorkrowch.decompositions.FormatSource`,
-    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
-    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
-    Declare paired dimensions with the ``.matrix(...)`` constructor of the
-    dense, sparse or callable source classes; ``FormatSource`` infers them
-    from the format. Continuous ``CallableSource`` inputs require discretization
-    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+    Vector, matrix and Quantics sources use the same scalar local solves;
+    the result restores the source's paired dimensions and coordinate metadata.
+    Continuous inputs need discretization before ALS. Structural batches are
+    not supported. Sweeps visit sites in increasing order around the ring;
+    each complete pass counts once toward ``max_sweeps``.
 
     Parameters
     ----------
-    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     mask : BaseSource or torch.Tensor, optional
         Boolean tensor of participating entries. ``True`` participates;
         ``False`` is missing. A sparse mask fixes its stored true entries.
     weights : torch.Tensor, optional
-        Non-negative multiplicative residual weights in scalar tensor order.
+        Non-negative multiplicative residual weights with shape ``in_dim``
+        of the scalar problem; matrix input/output pairs are fused.
     out_device : str or torch.device, optional
         Device where finalized cores are stored. The default is ``"cpu"``;
         ``None`` keeps them on the computation device.
+
+    Examples
+    --------
+    >>> engine = tk.decompositions.TRALS(torch.ones(2, 3))
+    >>> result = engine.fit(rank=1)
+    >>> tuple(result.contract_dense().shape)
+    (2, 3)
     """
 
     def _random_cores(self,
                       ranks: Sequence[int],
                       dtype: torch.dtype,
                       device: torch.device,
-                      generator: Optional[torch.Generator]) -> Tuple[torch.Tensor, ...]:
+                      generator: Optional[torch.Generator]) -> Tuple[
+            torch.Tensor, ...]:
         """
         Initializes random cyclic cores with prescribed right-link ``ranks``.
         """
@@ -692,46 +658,41 @@ class TRALS(TTALS):  # MARK: TRALS
 
     def _initial_tr_cores(self,
                           target: torch.Tensor,
-                          initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]],
+                          initial_cores: Optional[Union[
+                           TensorFormat1D, Sequence[torch.Tensor]]],
                           rank: _Rank,
-                          init: str,
-                          fixed_cores: Optional[Sequence[Optional[torch.Tensor]]],
+                          fixed_cores: Optional[
+                              Sequence[Optional[torch.Tensor]]],
                           generator: Optional[
                               torch.Generator]) -> Tuple[
             Tuple[torch.Tensor, ...],
             Tuple[int, ...]]:
         """Builds and validates initialization plus fixed-site semantics."""
-        if init not in ('random', 'svd'):
-            raise ValueError("`init` should be 'random' or 'svd'")
-        rank_caps = None if rank is None else \
-            _normalize_rank(rank, len(self.in_dim))
+        rank_caps = None if rank is None else _normalize_rank(
+            rank, len(self.in_dim))
         if initial_cores is None:
             if rank_caps is None:
-                raise ValueError(
-                    '`rank` is required when `initial_cores` is not provided')
-            if init == 'random':
-                cores = self._random_cores(
-                    rank_caps, target.dtype, target.device, generator)
-            else:
-                decomposition = TRSVD(
-                    target, out_device=None).fit(
-                        rank=max(rank_caps),
-                        collect_metrics=False)
-                cores = _standard_tr_cores(decomposition, self.in_dim)
+                raise ValueError('`rank` is required without `initial_cores`')
+            cores = self._random_cores(
+                rank_caps, target.dtype, target.device, generator)
         else:
             cores = _standard_tr_cores(initial_cores, self.in_dim)
 
         if any((core.device != target.device) or (core.dtype != target.dtype)
                for core in cores):
             raise ValueError(
-                'Initial cores and source values should share dtype and device')
+                'Initial cores and source values should share dtype and '
+                'device')
         current_ranks = tuple(core.shape[-1] for core in cores)
-        if rank_caps is not None and any(
+        if (rank_caps is not None) and any(
                 current > cap
                 for current, cap in zip(current_ranks, rank_caps)):
             raise ValueError(
                 'Initial TR ranks should not exceed the requested `rank` caps')
 
+        if any(not torch.isfinite(core).all() for core in cores):
+            raise ValueError(
+                '`initial_cores` should contain only finite values')
         if fixed_cores is None:
             return tuple(core.clone() for core in cores), ()
         if isinstance(fixed_cores, (str, bytes)) or \
@@ -749,7 +710,8 @@ class TRALS(TTALS):  # MARK: TRALS
                 continue
             if not isinstance(fixed_core, torch.Tensor):
                 raise TypeError(
-                    '`fixed_cores` should contain torch.Tensor objects or None')
+                    '`fixed_cores` should contain torch.Tensor objects '
+                    'or None')
             if fixed_core.shape != cores[site].shape:
                 raise ValueError(
                     'Every fixed core should match its initialized core shape')
@@ -757,143 +719,95 @@ class TRALS(TTALS):  # MARK: TRALS
                     (fixed_core.dtype != target.dtype):
                 raise ValueError(
                     'Fixed cores and source values should share runtime')
+            if not torch.isfinite(fixed_core).all():
+                raise ValueError(
+                    '`fixed_cores` should contain only finite values')
             final_cores[site] = fixed_core
             fixed_sites.append(site)
         final_cores = TRSegmentEnvironmentCache._validate_cores(final_cores)
         return final_cores, tuple(fixed_sites)
 
-
     def fit(self,
-            rank: _Rank = None,
-           mask: Optional['BaseSource'] = None,
-            initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
-            init: str = 'random',
+            rank: Optional[Union[int, Sequence[int]]] = None,
+            initial_cores: Optional[Union[TensorFormat1D,
+                Sequence[torch.Tensor]]] = None,
             fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
-            gauge: Union[str, GaugePolicy] = 'qr',
-            sampling: Optional[str] = None,
-            n_samples: Optional[int] = None,
-            sample_reuse_sweeps: int = 1,
-            leverage_method: str = 'product',
-            leverage_uniform_mix: float = 0.0,
-            n_segments: Optional[int] = None,
+            gauge: str = 'qr',
+            renormalize: bool = True,
+            sampler: Optional[SamplingPolicy] = None,
             solver: Optional[LeastSquaresSolver] = None,
             convergence: Optional[ConvergencePolicy] = None,
-            update_policy: Optional[UpdatePolicy] = None,
-            normalize: bool = True,
-            renormalize: bool = True,
             generator: Optional[torch.Generator] = None,
             collect_metrics: bool = False,
-            verbose: Union[bool, int] = 0,
-            *,
-            sweep_direction: str = 'forward') -> TRDecomposition:
+            verbose: Union[bool, int] = 0) -> 'TRDecomposition':
         """
-        Fits a TR by alternating cyclic one-site least-squares solves.
+        Fits a TR by alternating one-site least-squares solves.
 
-        A scalar ``rank`` is used on every link. A sequence contains one right
-        ``rank`` per core, so ``rank[-1]`` is the cyclic closing link. With
-        supplied cores, these values are upper bounds and no core is silently
-        truncated.
-
-        ``sampling`` may be ``"exact"``, ``"uniform"``, ``"leverage"`` or
-        ``"observed"``. For leverage, ``leverage_method="product"`` implements
-        Algorithm 2 of *A Sampling-Based Method for Tensor Ring Decomposition*
-        (2021), available in this `paper <https://arxiv.org/abs/2010.08581>`_
-        by Osman Asif Malik and Stephen Becker. ``leverage_method="exact"``
-        implements Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
-        Decomposition Algorithms for Arbitrary Tensor Networks* (2022),
-        available in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman
-        Asif Malik, Vivek Bharadwaj and Riley Murray. Exact and observed
-        objectives record comparable complete-sweep errors; renewable sampled
-        batches deliberately do not.
+        Sweeps visit sites in increasing order around the ring. Each complete
+        pass counts once toward ``max_sweeps``.
+        Without ``initial_cores``, initializes random cores at the requested
+        ranks. To start from an SVD approximation, compute it separately and
+        pass its result as ``initial_cores``. Supplied cores are copied.
 
         Parameters
         ----------
         rank : int or sequence of int, optional
-            Shared ``rank`` or one upper bound for every right link.
-        initial_cores : sequence of torch.Tensor or TRDecomposition, optional
-            Initial cyclic approximation in standard core shapes.
-        init : {``"random"``, ``"svd"``}
-            Initialization used when cores are not supplied. SVD requires an
-            exact known source.
+            One upper bound per right link, or a shared bound. The last link
+            closes the ring. Required without ``initial_cores``.
+        initial_cores : TensorFormat1D or sequence of torch.Tensor, optional
+            Initial approximation with matching topology, physical dimensions,
+            dtype and device. Its ranks must respect ``rank`` when provided.
         fixed_cores : sequence of torch.Tensor or None, optional
-            Tensor entries remain bitwise unchanged throughout all sweeps.
-        gauge : {``"none"``, ``"qr"``, ``"svd"``} or GaugePolicy
-            Gauge moved to the immediate cyclic receiver only when that core is
-            trainable and the prescribed ranks make the factorization legal.
-        sampling : {``"exact"``, ``"uniform"``, ``"leverage"``,
-            ``"observed"``}, optional Row strategy. Completion always uses its
-            permanent observations.
-        n_samples : int, optional
-            Rows per uniform generation. With leverage, number of sampled
-            environments; every active input fiber is retained.
-        sample_reuse_sweeps : int
-            Sweeps reusing sampled ids, probabilities and source values. TR
-            leverage redraws after every design change and requires 1.
-        leverage_method : {``"product"``, ``"exact"``}
-            Product mode uses independent core-unfolding leverage bounds. Exact
-            mode contracts the cyclic Gram and samples conditional leverage.
-        leverage_uniform_mix : float
-            Uniform component mixed with the selected leverage proposal, in
-            ``[0, 1]``. Only zero is the pure distribution analyzed in the
-            corresponding paper.
-        n_segments : int, optional
-            Number of balanced environment-cache segments. Defaults to at most
-            three and already defines future worker partitions.
-        solver : LeastSquaresSolver, optional
-            Stable local least-squares ``solver``.
-        convergence : ConvergencePolicy, optional
-            Complete-sweep stopping criteria.
-        update_policy : UpdatePolicy, optional
-            Optional damping and local non-increasing acceptance.
-        normalize : bool
-            Whether to extract the square root of each solved core norm and
-            absorb it into the next trainable cyclic site. Fixed cores are
-            skipped and never rescaled.
+            One entry per site. Tensor entries replace the corresponding
+            initial core and remain bitwise unchanged throughout ALS.
+        gauge : {``"none"``, ``"qr"``}
+            QR moves a factor into the immediate trainable neighbor after each
+            local solve. No factor is discarded if that receiver is
+            unavailable.
         renormalize : bool
-            Whether environments remove global norms and retain log-scales.
+            Whether cached environments remove global norms and retain their
+            logarithmic scales. The local least-squares objective is preserved.
+        sampler : SamplingPolicy, optional
+            Row-sampling configuration. ``None`` uses the full tensor or the
+            permanent observations selected by a sparse boolean mask.
+        solver : LeastSquaresSolver, optional
+            Local solver and its scaling and regularization settings. Defaults
+            to an unregularized solver with automatic column scaling.
+        convergence : ConvergencePolicy, optional
+            Complete-sweep stopping criteria. Defaults to ten sweeps.
         generator : torch.Generator, optional
-            Generator used by initialization and randomized ``sampling``.
+            Generator used by random initialization and row sampling.
+            Its device
+            must match the source values.
         collect_metrics : bool
-            Whether to retain local solves, sweep errors and timings.
+            Whether to record local solves, complete-sweep errors and timings.
         verbose : bool or int
             Console verbosity from 0 (silent) to 3 (most detailed).
-        sweep_direction : {``"forward"``, ``"alternating"``}
-            Site order within each ALS sweep. The default ``"forward"``
-            visits sites in increasing order on every sweep.
-            ``"alternating"`` reverses that order on odd sweeps. Each
-            directional pass counts once toward the sweep budget.
 
         Returns
         -------
         TRDecomposition
-            Lightweight cyclic result whose cores can initialize an
-            :class:`~tensorkrowch.models.MPS` directly.
+            Approximation with cores, metadata and optional metrics. Matrix and
+            Quantics sources select the corresponding result family.
 
         Examples
         --------
-        >>> tensor = torch.randn(2, 3, 2)
-        >>> result = tk.decompositions.TRALS(tensor).fit(
-        ...     rank=(2, 2, 2),
-        ...     convergence=tk.decompositions.ConvergencePolicy(max_sweeps=2))
-        >>> [tuple(core.shape) for core in result.cores]
-        [(2, 2, 2), (2, 3, 2), (2, 2, 2)]
-        >>> import tensorkrowch as tk
-        >>> model = tk.models.MPS(tensors=result.cores)
-        >>> model.boundary
-        'pbc'
+        >>> tensor = torch.ones(2, 3, 2, dtype=torch.float64)
+        >>> result = tk.decompositions.TRALS(tensor).fit(rank=1)
+        >>> torch.allclose(result.contract_dense(), tensor)
+        True
         """
-        if isinstance(initial_cores, _QuanticsVector) and \
-                self._source is not None:
-            if initial_cores.layout != self._source.layout:
-                raise ValueError('Quantics initial cores should match the fixed digit layout')
+        self._validate_initial_format(initial_cores)
+        if not isinstance(gauge, str):
+            raise TypeError('`gauge` should be str type')
+        if gauge not in ('none', 'qr'):
+            raise ValueError("`gauge` should be 'none' or 'qr'")
         if not isinstance(renormalize, bool):
             raise TypeError('`renormalize` should be bool type')
-        if not isinstance(normalize, bool):
-            raise TypeError('`normalize` should be bool type')
         if not isinstance(collect_metrics, bool):
             raise TypeError('`collect_metrics` should be bool type')
         if (generator is not None) and \
-                (not isinstance(generator, torch.Generator)):
+                not isinstance(generator, torch.Generator):
             raise TypeError('`generator` should be torch.Generator or None')
         if solver is None:
             solver = LeastSquaresSolver()
@@ -903,384 +817,187 @@ class TRALS(TTALS):  # MARK: TRALS
             convergence = ConvergencePolicy()
         elif not isinstance(convergence, ConvergencePolicy):
             raise TypeError('`convergence` should be ConvergencePolicy type')
-        if update_policy is None:
-            update_policy = UpdatePolicy()
-        elif not isinstance(update_policy, UpdatePolicy):
-            raise TypeError('`update_policy` should be UpdatePolicy type')
-        gauge_policy = resolve_gauge_policy(gauge)
-        if sampling is None:
-            sampling = 'observed' if self.problem.observations is not None \
-                else 'exact'
-        if sampling not in ('exact', 'uniform', 'leverage', 'observed'):
-            raise ValueError(
-                "`sampling` should be 'exact', 'uniform', 'leverage' or "
-                "'observed'")
-        if self.problem.observations is not None:
-            if sampling != 'observed':
+        if sampler is not None:
+            if not isinstance(sampler, SamplingPolicy):
+                raise TypeError('`sampler` should be SamplingPolicy or None')
+            sampler.validate('tr')
+            if self._problem.observations is not None:
                 raise ValueError(
-                    'Completion should use its permanently observed rows')
-        elif sampling == 'observed':
-            raise ValueError(
-                '`sampling="observed"` requires a sparse boolean `mask`')
-        if sampling in ('uniform', 'leverage'):
-            if isinstance(n_samples, bool) or \
-                    (not isinstance(n_samples, int)) or (n_samples < 1):
-                raise ValueError(
-                    '`n_samples` should be positive for sampled ALS')
-        elif n_samples is not None:
-            raise ValueError(
-                '`n_samples` is only used with sampled ALS')
-        refresh_policy = SampleRefreshPolicy(
-            reuse_sweeps=sample_reuse_sweeps)
-        if leverage_method not in ('product', 'exact'):
-            raise ValueError(
-                "`leverage_method` should be 'product' or 'exact'")
-        if isinstance(leverage_uniform_mix, bool) or \
-                (not isinstance(leverage_uniform_mix, (int, float))) or \
-                (leverage_uniform_mix < 0) or (leverage_uniform_mix > 1):
-            raise ValueError(
-                '`leverage_uniform_mix` should be in [0, 1]')
-        if sampling == 'leverage' and sample_reuse_sweeps != 1:
-            raise ValueError(
-                'TR leverage sampling redraws per site and requires '
-                '`sample_reuse_sweeps=1`')
-        verbosity = _normalize_verbosity(verbose)
-        emit_events = bool(verbosity)
-        collect_metrics = collect_metrics or emit_events
-        fit_observer = _resolve_observer(verbosity, None) \
-            if emit_events else None
+                    '`sampler` cannot replace permanent observations')
+        convergence.validate_objective(sampler is None)
 
+        verbosity = _normalize_verbosity(verbose)
+        collect_metrics = collect_metrics or bool(verbosity)
+        fit_observer = _resolve_observer(
+            verbosity, None) if verbosity else None
         configurations = None
         target = None
-        sampler = None
-        problem = self.problem
-        if sampling == 'exact':
+        problem = self._problem
+        row_sampler = None
+        n_samples = None if sampler is None else sampler.n_samples
+        refresh_policy = SampleRefreshPolicy(
+            reuse_sweeps=1 if sampler is None else sampler.reuse_sweeps)
+        if problem.observations is not None:
+            sampling = 'observed'
+            row_sampler = ObservedRows(problem.observations)
+            runtime_reference = problem.observations.support_values
+        elif sampler is None:
+            sampling = 'exact'
             configurations, target = self._exact_target()
             runtime_reference = target
-        elif sampling in ('uniform', 'leverage'):
-            sampler = UniformRows()
-            problem = replace(self.problem, selector=sampler)
-            runtime_reference = self._runtime_reference()
         else:
-            sampler = ObservedRows(self.problem.observations)
-            runtime_reference = self.problem.observations.values
+            sampling = sampler.method
+            problem = replace(problem, sampled=True)
+            runtime_reference = self._runtime_reference()
+            if sampling == 'uniform':
+                row_sampler = UniformRows()
         if not (runtime_reference.is_floating_point() or
                 runtime_reference.is_complex()):
-            raise TypeError(
-                'The tensor source should return floating or complex values')
-        if (sampling != 'exact') and (init == 'svd') and \
-                (initial_cores is None):
+            raise TypeError('`source` should have floating or complex values')
+        if (generator is not None) and \
+                (torch.device(generator.device) != runtime_reference.device):
             raise ValueError(
-                '`init="svd"` requires an exact known tensor source')
-        if generator is not None and generator.device != \
-                runtime_reference.device:
-            raise ValueError(
-                '`generator` and source values should use the same device')
+                '`generator` and source values should share a device')
         cores, fixed_sites = self._initial_tr_cores(
-            target=runtime_reference,
-            initial_cores=initial_cores,
-            rank=rank,
-            init=init,
-            fixed_cores=fixed_cores,
-            generator=generator)
-        if sampling == 'leverage':
+            target=runtime_reference, initial_cores=initial_cores, rank=rank,
+            fixed_cores=fixed_cores, generator=generator)
+        if sampling in ('leverage', 'exact_leverage'):
             backend = _TRLeverageALSBackend(
-                problem=problem,
-                cores=cores,
-                solver=solver,
-                gauge=gauge_policy,
-                fixed_sites=fixed_sites,
-                n_samples=n_samples,
-                leverage_method=leverage_method,
-                uniform_mix=leverage_uniform_mix,
-                generator=generator,
-                normalize=normalize,
-                renormalize=renormalize)
+                problem, cores, solver, gauge, fixed_sites, n_samples,
+                'product' if sampling == 'leverage' else 'exact',
+                sampler.uniform_mix, generator, True, renormalize)
         else:
             backend = _TRALSBackend(
-                problem=problem,
-                cores=cores,
-                target=target,
-                solver=solver,
-                gauge=gauge_policy,
-                fixed_sites=fixed_sites,
-                normalize=normalize,
-                renormalize=renormalize,
-                n_segments=n_segments,
-                sampler=sampler,
-                n_samples=n_samples,
-                refresh_policy=refresh_policy,
-                generator=generator)
+                problem, cores, target, solver, gauge, fixed_sites,
+                True, renormalize, None, row_sampler, n_samples,
+                refresh_policy, generator)
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
-                name='start',
-                phase='TR-ALS',
-                values={
-                    'sites': len(cores),
-                    'in_dim': self.in_dim,
-                    'rank': tuple(core.shape[-1] for core in cores),
-                    'sampling': sampling,
-                    'gauge': getattr(gauge_policy, 'name', type(gauge_policy).__name__),
+                name='start', phase='TR-ALS', values={
+                    'sites': len(cores), 'in_dim': self.in_dim,
+                    'sampling': sampling, 'gauge': gauge,
                     'max_sweeps': convergence.max_sweeps,
-                    'sweep_direction': sweep_direction,
+                    'sweep_direction': 'forward',
                 }))
-        driver_result = ALSSweepDriver().fit(
-            problem=problem,
-            backend=backend,
-            convergence=convergence,
-            update_policy=update_policy,
-            observer=fit_observer,
-            collect_metrics=collect_metrics,
-            phase='TR-ALS',
-            sweep_direction=sweep_direction)
-
-        result_cores = tuple(driver_result.cores)
-        if self.out_device is not None:
-            result_cores = tuple(
-                core.to(device=self.out_device) for core in result_cores)
+        fitted = ALSSweepDriver().fit(
+            problem, backend, convergence, observer=fit_observer,
+            collect_metrics=collect_metrics, phase='TR-ALS',
+            sweep_direction='forward')
+        result_cores = tuple(fitted.cores)
+        if self._out_device is not None:
+            result_cores = tuple(core.to(self._out_device)
+                                 for core in result_cores)
         result = TRDecomposition(
-            cores=result_cores,
-            metrics=driver_result.metrics,
-            metadata={
+            cores=result_cores, metrics=fitted.metrics, metadata={
                 'algorithm': 'tr_als',
-                'initialization': init if initial_cores is None else 'cores',
-                'gauge': getattr(gauge_policy, 'name',
-                                 type(gauge_policy).__name__),
-                'converged': driver_result.converged,
+                'initialization': (
+                    'random' if initial_cores is None else 'cores'),
+                'gauge': gauge, 'converged': fitted.converged,
                 'keep_best': convergence.keep_best,
-                'stop_reason': driver_result.stop_reason,
-                'n_sweeps': driver_result.n_sweeps,
-                'sweep_direction': sweep_direction,
-                'fixed_sites': list(fixed_sites),
-                'sampling': sampling,
-                'n_samples': n_samples,
-                'sample_reuse_sweeps': sample_reuse_sweeps,
-                'n_segments': (
-                    None if sampling == 'leverage'
-                    else len(backend.cache.segments)),
-                'normalize': normalize,
-                'sampling_exact': (
-                    backend.sampler.proposal_exact
-                    if sampling == 'leverage' else
-                    (None if backend.sample_batch is None else
-                     backend.sample_batch.is_exact_for(
-                         backend.cache.core_versions))),
-                'leverage_method': (
-                    leverage_method if sampling == 'leverage' else None),
-                'leverage_uniform_mix': (
-                    leverage_uniform_mix
-                    if sampling == 'leverage' else None),
-                'exact_configurations': (
-                    None if configurations is None else
-                    configurations.batch_size),
+                'stop_reason': fitted.stop_reason, 'n_sweeps': fitted.n_sweeps,
+                'sweep_direction': 'forward', 'fixed_sites': list(fixed_sites),
+                'sampling': sampling, 'n_samples': n_samples,
+                'sampler': None if sampler is None else asdict(sampler),
+                'solver': {'l2_reg': solver.l2_reg,
+                           'l2_reg_mode': solver.l2_reg_mode,
+                           'rcond': solver.rcond,
+                           'column_scaling': solver.column_scaling,
+                           'system_scaling': solver.system_scaling},
+                'exact_configurations': None if configurations is None
+                else configurations.batch_size,
             })
+        result = _result_from_source(result, self._source)
         if fit_observer is not None:
             _report_als_result(result, fit_observer, 'TR-ALS')
-        return _result_from_source(result, self._source)
+        return result
 
 
 def tr_als(source: 'SourceLike',
-           rank: _Rank = None,
-           mask: Optional['BaseSource'] = None,
-           initial_cores: Optional[Union['TensorFormat1D', Sequence[torch.Tensor]]] = None,
-           init: str = 'random',
+           rank: Optional[Union[int, Sequence[int]]] = None,
+           initial_cores: Optional[Union[TensorFormat1D,
+               Sequence[torch.Tensor]]] = None,
            fixed_cores: Optional[Sequence[Optional[torch.Tensor]]] = None,
-           gauge: Union[str, GaugePolicy] = 'qr',
-           sampling: str = 'exact',
-           n_samples: Optional[int] = None,
-           sample_reuse_sweeps: int = 1,
-           leverage_method: str = 'product',
-           leverage_uniform_mix: float = 0.0,
-           n_segments: Optional[int] = None,
-           max_sweeps: int = 10,
-           error_atol: Optional[float] = None,
-           error_rtol: Optional[float] = None,
-           change_rtol: Optional[float] = None,
-           patience: Optional[int] = None,
-           keep_best: bool = False,
-           l2_reg: float = 0.0,
-           l2_reg_mode: str = 'absolute',
-           rcond: Optional[float] = None,
-           column_scaling: Union[bool, str] = 'auto',
-           system_scaling: bool = True,
-           damping: float = 1.0,
-           acceptance: str = 'always',
-           normalize: bool = True,
+           gauge: str = 'qr',
            renormalize: bool = True,
+           max_sweeps: int = 10,
+           atol: Optional[float] = None,
+           rtol: Optional[float] = None,
            out_device: Optional[Union[str, torch.device]] = 'cpu',
            generator: Optional[torch.Generator] = None,
+           collect_metrics: bool = False,
            verbose: Union[bool, int] = 0,
-           return_info: bool = False,
-           return_result: bool = False,
            *,
-           sweep_direction: str = 'forward') -> '_DecompositionOutput':
+           mask: Optional[Union[BaseSource, torch.Tensor]] = None,
+           weights: Optional[torch.Tensor] = None) -> 'TRDecomposition':
     """
-    Approximates a scalar tensor ``source`` with cyclic TR-ALS.
+    Approximates a finite tensor with one-site TR-ALS.
 
-    This functional interface returns a core list. Use :class:`TRALS` for
-    repeated fits, completion or advanced policy objects. ``rank`` is either a
-    shared value or one right-link value per site; the last value is the cyclic
-    closing ``rank``. With ``sampling="leverage"``, the product method implements
-    Algorithm 2 of *A Sampling-Based Method for Tensor Ring Decomposition*
-    (2021), available in this `paper <https://arxiv.org/abs/2010.08581>`_ by
-    Osman Asif Malik and Stephen Becker. The exact method implements Sections
-    4.1--4.2 and Appendix B.2 of *Sampling-Based Decomposition Algorithms for
-    Arbitrary Tensor Networks* (2022), available in this `paper
-    <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik, Vivek Bharadwaj
-    and Riley Murray.
-
-    ``source`` supplies dimensions and evaluation rules. It may be a tensor,
-    a non-Quantics TT/TR format or its matrix version, an
-    :class:`~tensorkrowch.models.MPS`, or a finite source:
-    :class:`~tensorkrowch.decompositions.DenseTensorSource`,
-    :class:`~tensorkrowch.decompositions.SparseTensorSource`,
-    :class:`~tensorkrowch.decompositions.FormatSource`,
-    :class:`~tensorkrowch.decompositions.CallableTensorSource` or
-    :class:`~tensorkrowch.decompositions.CallableQuanticsSource`.
-    Declare paired dimensions with the ``.matrix(...)`` constructor of the
-    dense, sparse or callable source classes; ``FormatSource`` infers them
-    from the format. Continuous ``CallableSource`` inputs require discretization
-    with ``CallableQuanticsSource`` first. Structural batches are not supported.
+    Returns a decomposition object. Use :class:`TRALS` and its :meth:`fit
+    <TRALS.fit>` method for sampled fits, customized local solvers or advanced
+    convergence criteria. Sweeps visit sites in increasing order around the
+    ring; each complete pass counts once toward ``max_sweeps``.
 
     Parameters
     ----------
-    source : BaseSource, TensorFormat1D, MPS or torch.Tensor
+    source : BaseSource, TensorFormat1D, MPS, MPO or torch.Tensor
         Finite tensor input, with shape and evaluation defined by the source.
     rank : int or sequence of int, optional
-        Shared ``rank`` or one upper bound for every right link.
-    initial_cores : sequence of torch.Tensor or TRDecomposition, optional
-        Initial cyclic approximation in standard core shapes.
-    init : {``"random"``, ``"svd"``}
-        Initialization used when cores are not supplied. SVD requires an exact
-        known ``source``.
+        One upper bound per right link, or a shared bound. The last link
+        closes the ring. Required without ``initial_cores``.
+    initial_cores : TensorFormat1D or sequence of torch.Tensor, optional
+        Initial approximation with matching topology, physical dimensions,
+        dtype and device. Its ranks must respect ``rank`` when provided.
     fixed_cores : sequence of torch.Tensor or None, optional
-        Tensor entries remain bitwise unchanged throughout all sweeps.
-    gauge : {``"none"``, ``"qr"``, ``"svd"``} or GaugePolicy
-        Gauge moved to the immediate cyclic receiver only when that core is
-        trainable and the prescribed ranks make the factorization legal.
-    sampling : {``"exact"``, ``"uniform"``, ``"leverage"``,
-        ``"observed"``}, optional Row strategy. Completion always uses its
-        permanent observations.
-    n_samples : int, optional
-        Rows per uniform generation. With leverage, number of sampled
-        environments; every active input fiber is retained.
-    sample_reuse_sweeps : int
-        Sweeps reusing sampled ids, probabilities and ``source`` values. TR
-        leverage redraws after every design change and requires 1.
-    leverage_method : {``"product"``, ``"exact"``}
-        Product mode uses independent core-unfolding leverage bounds. Exact
-        mode contracts the cyclic Gram and samples conditional leverage.
-    leverage_uniform_mix : float
-        Uniform component mixed with the selected leverage proposal, in ``[0,
-        1]``. Only zero is the pure distribution analyzed in the corresponding
-        paper.
-    n_segments : int, optional
-        Number of balanced environment-cache segments. Defaults to at most
-        three and already defines future worker partitions.
-    max_sweeps : int
-        Maximum number of complete directional sweeps.
-    error_atol : float, optional
-        Absolute error, relative error and complete-sweep stability criteria.
-    error_rtol : float, optional
-        Absolute error, relative error and complete-sweep stability criteria.
-    change_rtol : float, optional
-        Absolute error, relative error and complete-sweep stability criteria.
-    patience : int, optional
-        Consecutive stable sweeps required by ``change_rtol``.
-    keep_best : bool
-        Whether to restore the best complete-sweep state.
-    l2_reg : float
-        Local Tikhonov regularization coefficient.
-    l2_reg_mode : {``"absolute"``, ``"relative"``}
-        Interpretation of ``l2_reg`` before numerical scaling.
-    rcond : float, optional
-        Cutoff forwarded to :func:`torch.linalg.lstsq`.
-    column_scaling : bool or ``"auto"``
-        Local least-squares column balancing policy.
-    system_scaling : bool
-        Whether to scale each complete local system globally.
-    damping : float
-        Fraction of each local proposal committed, in ``(0, 1]``.
-    acceptance : {``"always"``, ``"non_increasing"``}
-        Optional local ``acceptance`` rule.
-    normalize : bool
-        Whether to extract the square root of each solved core norm and absorb
-        it into the next trainable cyclic site. Fixed cores are skipped and
-        never rescaled.
+        One entry per site. Tensor entries replace the corresponding
+        initial core and remain bitwise unchanged throughout ALS.
+    gauge : {``"none"``, ``"qr"``}
+        QR moves a factor into the immediate trainable neighbor after each
+        local solve. No factor is discarded if that receiver is unavailable.
     renormalize : bool
-        Whether environments remove global norms and retain log-scales.
+        Whether cached environments remove global norms and retain their
+        logarithmic scales. The local least-squares objective is preserved.
+    max_sweeps : int
+        Positive maximum number of directional sweeps. Default is ``10``.
+    atol : float, optional
+        Stop when the absolute objective error is at most this value.
+    rtol : float, optional
+        Stop when the relative objective error is at most this value.
     out_device : str or torch.device, optional
-        Device where finalized cores are stored. The default is ``"cpu"``.
+        Device where finalized cores are stored. The default is ``"cpu"``;
+        ``None`` keeps them on the computation device.
     generator : torch.Generator, optional
-        Generator used by initialization and randomized ``sampling``.
+        Generator used by random initialization and row sampling. Its device
+        must match the source values.
+    collect_metrics : bool
+        Whether to record local solves, complete-sweep errors and timings.
     verbose : bool or int
         Console verbosity from 0 (silent) to 3 (most detailed).
-    return_info : bool
-        If ``True``, also returns metadata and structured ALS metrics.
-
-    return_result : bool
-        Returns the numerical result object, preserving Quantics layouts when
-        present. It does not enable metrics and is incompatible with ``return_info``.
-    sweep_direction : {``"forward"``, ``"alternating"``}
-        Site order within each ALS sweep. The default ``"forward"``
-        visits sites in increasing order on every sweep.
-        ``"alternating"`` reverses that order on odd sweeps. Each
-        directional pass counts once toward the sweep budget.
+    mask : BaseSource or torch.Tensor, optional
+        Boolean tensor of participating entries. ``True`` participates;
+        ``False`` is missing. A sparse mask fixes its stored true entries.
+    weights : torch.Tensor, optional
+        Non-negative multiplicative residual weights with shape ``in_dim``
+        of the scalar problem; matrix input/output pairs are fused.
 
     Returns
     -------
-    list[torch.Tensor] or tuple
-        Cores in original site order, or ``(cores, info)`` with
-        ``return_info=True``.
+    TRDecomposition
+        Approximation with cores, metadata and optional metrics. Matrix and
+        Quantics sources select the corresponding result family.
+
+    Examples
+    --------
+    >>> tensor = torch.ones(2, 3, 2, dtype=torch.float64)
+    >>> result = tk.decompositions.tr_als(tensor, rank=1)
+    >>> torch.allclose(result.contract_dense(), tensor)
+    True
     """
-    if not isinstance(return_result, bool):
-        raise TypeError('`return_result` should be bool type')
-    if return_info and return_result:
-        raise ValueError('`return_info` and `return_result` are incompatible')
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
-    solver = LeastSquaresSolver(
-        l2_reg=l2_reg,
-        l2_reg_mode=l2_reg_mode,
-        rcond=rcond,
-        column_scaling=column_scaling,
-        system_scaling=system_scaling)
-    convergence = ConvergencePolicy(
-        max_sweeps=max_sweeps,
-        error_atol=error_atol,
-        error_rtol=error_rtol,
-        change_rtol=change_rtol,
-        patience=patience,
-        keep_best=keep_best)
-    update_policy = UpdatePolicy(
-        damping=damping,
-        acceptance=acceptance)
-    result = TRALS(source, mask=mask, out_device=out_device).fit(
-            rank=rank,
-            initial_cores=initial_cores,
-            init=init,
-            fixed_cores=fixed_cores,
-            gauge=gauge,
-            sampling=sampling,
-            n_samples=n_samples,
-            sample_reuse_sweeps=sample_reuse_sweeps,
-            leverage_method=leverage_method,
-            leverage_uniform_mix=leverage_uniform_mix,
-            n_segments=n_segments,
-            solver=solver,
-            convergence=convergence,
-            update_policy=update_policy,
-            normalize=normalize,
-            renormalize=renormalize,
-            generator=generator,
-            collect_metrics=return_info,
-            verbose=verbose,
-            sweep_direction=sweep_direction)
-    if return_result:
-        return result
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
+    return TRALS(source, mask=mask, weights=weights, out_device=out_device
+    ).fit(
+        rank, initial_cores, fixed_cores, gauge, renormalize,
+        convergence=ConvergencePolicy(
+            max_sweeps=max_sweeps, atol=atol, rtol=rtol),
+        generator=generator, collect_metrics=collect_metrics, verbose=verbose)
 
 
 __all__ = [

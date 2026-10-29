@@ -29,7 +29,7 @@ Arithmetic returns ordinary formats; ``to_format`` removes fit diagnostics
 while preserving the numerical representation. Model construction remains
 explicit.
 
-SVD functions return decomposition objects. The other direct functions
+SVD and ALS functions return decomposition objects. Other direct functions
 retain their documented core-return controls. Where supported,
 ``return_result=True`` returns
 the numerical result object, while ``return_info=True`` returns cores and
@@ -43,15 +43,12 @@ from tensorkrowch.decompositions.als import (ALSProblem,
                                              DirectTREnvironment,
                                              EnvironmentCache,
                                              ExactRows,
-                                             GaugePolicy,
                                              LeastSquaresSolver,
-                                             NoGauge,
                                              ObservedRows,
-                                             QRGauge,
                                              RowSampler,
-                                             SVDGauge,
                                              SampleBatch,
                                              SampleRefreshPolicy,
+                                             SamplingPolicy,
                                              TRALS,
                                              TRExactLeverageRows,
                                              TRLocalEnvironment,
@@ -62,7 +59,6 @@ from tensorkrowch.decompositions.als import (ALSProblem,
                                              TTLeverageRows,
                                              TTLocalEnvironment,
                                              UniformRows,
-                                             UpdatePolicy,
                                              tr_als,
                                              tt_als)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
@@ -230,6 +226,7 @@ __all__ = [
     'TRProductLeverageRows',
     'TRExactLeverageRows',
     'SampleRefreshPolicy',
+    'SamplingPolicy',
     'EnvironmentCache',
     'CoreUpdateSet',
     'TTLocalEnvironment',
@@ -238,12 +235,7 @@ __all__ = [
     'DirectTREnvironment',
     'TRSegmentEnvironmentCache',
     'ConvergencePolicy',
-    'UpdatePolicy',
     'ALSSweepDriver',
-    'GaugePolicy',
-    'NoGauge',
-    'QRGauge',
-    'SVDGauge',
     'TTALS',
     'tt_als',
     'TRALS',

@@ -155,7 +155,7 @@ class TestSketchLoopOpener:  # MARK: TestSketchLoopOpener
         results = []
         for sweeps in (0, 1):
             opener = tk.decompositions.ALSLoopOpener({
-                'gauge': 'none', 'normalize': False,
+                'gauge': 'none',
                 'generator': torch.Generator().manual_seed(91),
                 'convergence': tk.decompositions.ConvergencePolicy(
                     max_sweeps=2)})
@@ -190,7 +190,7 @@ class TestSketchLoopOpener:  # MARK: TestSketchLoopOpener
                              generator=torch.Generator().manual_seed(18))
         opener = _SketchLoopOpener(
             tk.decompositions.ALSLoopOpener({
-                'gauge': 'none', 'normalize': False,
+                'gauge': 'none',
                 'convergence': tk.decompositions.ConvergencePolicy(
                     max_sweeps=1)}),
             [], False, 1)
@@ -235,7 +235,7 @@ class TestSketchLoopOpener:  # MARK: TestSketchLoopOpener
         results = []
         for sweeps in (0, 1):
             opener = tk.decompositions.ALSLoopOpener({
-                'gauge': 'none', 'normalize': False,
+                'gauge': 'none',
                 'generator': torch.Generator().manual_seed(27),
                 'convergence': tk.decompositions.ConvergencePolicy(
                     max_sweeps=1)})

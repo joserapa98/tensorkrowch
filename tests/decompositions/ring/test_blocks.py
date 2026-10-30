@@ -5,22 +5,21 @@ import torch
 
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
-                                                     CentralBlockSelector,
-                                                     PrescribedCentralBlockSelector,
-                                                     RingRankEstimator,
-                                                     split_block_ttsvd)
+from tensorkrowch.decompositions.ring.blocks import (
+    _BlockSelection, _CentralBlockSelector, _PrescribedCentralBlockSelector,
+    _RingRankEstimator,
+)
 
 
 class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
 
     def test_grows_bilaterally_from_center(self):
-        selection = CentralBlockSelector().select(
+        selection = _CentralBlockSelector().select(
             in_dim := (2, 2, 2, 2, 2),
             rank=2,
             center=2)
 
-        assert isinstance(selection, BlockSelection)
+        assert isinstance(selection, _BlockSelection)
         assert selection.sites == (1, 2, 3)
         assert selection.in_dim == in_dim[1:4]
         assert selection.growth == ((2, 2), (2, 3), (1, 3))
@@ -33,7 +32,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
         ('center', 'sites', 'boundary'),
         [(0, (0, 1, 2), 'left'), (4, (2, 3, 4), 'right')])
     def test_selects_blocks_at_both_boundaries(self, center, sites, boundary):
-        selection = CentralBlockSelector().select(
+        selection = _CentralBlockSelector().select(
             (2, 2, 2, 2, 2), rank=2, center=center)
 
         assert selection.sites == sites
@@ -44,7 +43,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
         class Provider:
             in_dim = (2, 3, 2, 4)
 
-        selection = CentralBlockSelector().select(
+        selection = _CentralBlockSelector().select(
             Provider(), rank=(2, 3, 4, 5), center=1)
 
         assert selection.sites == (1, 2, 3)
@@ -53,7 +52,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
         assert selection.boundary == 'right'
 
     def test_insufficient_input_capacity_is_a_result_not_an_exception(self):
-        selection = CentralBlockSelector().select(
+        selection = _CentralBlockSelector().select(
             (2, 2, 2), rank=10, center=1)
 
         assert selection.sites == (0, 1, 2)
@@ -64,7 +63,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
         assert selection.boundary == 'both'
 
     def test_bounds_limit_growth_and_preserve_global_boundary_semantics(self):
-        selection = CentralBlockSelector().select(
+        selection = _CentralBlockSelector().select(
             (2, 2, 2, 2, 2), rank=3, center=1, bounds=(1, 3))
 
         assert selection.sites == (1, 2, 3)
@@ -72,7 +71,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
         assert selection.boundary is None
 
     def test_prescribed_selector_is_shared_by_fixed_ring_workflows(self):
-        selection = PrescribedCentralBlockSelector().select(
+        selection = _PrescribedCentralBlockSelector().select(
             (2, 3, 4, 5), rank=(2, 3, 4, 5), center=2)
 
         assert selection.sites == (2,)
@@ -84,7 +83,7 @@ class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
 class TestRingRankEstimator:  # MARK: TestRingRankEstimator
 
     def test_reproduces_balanced_uncapped_estimate(self):
-        estimate = RingRankEstimator().estimate(
+        estimate = _RingRankEstimator().estimate(
             left_dim=12,
             right_dim=18,
             auxiliary_rank=6,
@@ -96,7 +95,7 @@ class TestRingRankEstimator:  # MARK: TestRingRankEstimator
         assert estimate.limitations == ()
 
     def test_adapts_adjacent_ranks_to_a_low_cyclic_cap(self):
-        estimate = RingRankEstimator().estimate(
+        estimate = _RingRankEstimator().estimate(
             left_dim=12,
             right_dim=18,
             auxiliary_rank=6,
@@ -106,7 +105,7 @@ class TestRingRankEstimator:  # MARK: TestRingRankEstimator
         assert estimate.feasible
 
     def test_reports_each_capacity_blocked_by_caps(self):
-        estimate = RingRankEstimator().estimate(
+        estimate = _RingRankEstimator().estimate(
             left_dim=20,
             right_dim=24,
             auxiliary_rank=20,
@@ -121,106 +120,104 @@ class TestRingRankEstimator:  # MARK: TestRingRankEstimator
         )
 
 
-class TestBlockTTSVD:  # MARK: TestBlockTTSVD
+def _contract_cores(cores):
+    tensor = cores[0]
+    for core in cores[1:]:
+        tensor = torch.tensordot(tensor, core, dims=([-1], [0]))
+    return tensor
 
-    @pytest.mark.parametrize('svd_method', ['svd', 'qr_svd'])
+
+class TestSplitBlock:
+
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    def test_exact_split_reconstructs_supercore(self, svd_method, dtype):
+    @pytest.mark.parametrize('in_dim', [(1,), (2,), (2, 3), (2, 3, 4, 2)])
+    def test_unbounded_split_preserves_dense_block_and_external_dimensions(
+            self, dtype, in_dim):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
+
         block = torch.randn(
-            2, 3, 4, 5, 2,
-            dtype=dtype,
-            generator=torch.Generator().manual_seed(130))
+            2, *in_dim, 3, dtype=dtype,
+            generator=torch.Generator().manual_seed(906))
+        cores = _split_block(block, in_dim)
+        assert len(cores) == len(in_dim)
+        assert cores[0].shape[0] == 2
+        assert cores[-1].shape[-1] == 3
+        assert all(core.ndim == 3 for core in cores)
+        torch.testing.assert_close(_contract_cores(cores), block)
 
-        with tk.svd_method(svd_method):
-            split = split_block_ttsvd(block, in_dim=(3, 4, 5))
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_per_cut_rank_profile_recovers_nonuniform_ring_block(self, dtype):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
 
-        assert split.effective_rank == (6, 10)
-        assert split.rank == (6, 10)
-        assert not split.padded
-        assert torch.allclose(
-            split.contract_dense(), block, rtol=2e-10, atol=2e-10)
+        generator = torch.Generator().manual_seed(907)
+        reference = [torch.randn(*shape, dtype=dtype, generator=generator)
+                     for shape in ((2, 3, 2), (2, 4, 1),
+                                   (1, 3, 3), (3, 4, 2))]
+        block = _contract_cores(reference)
+        metrics = tk.decompositions.DecompositionMetrics()
+        cores = _split_block(
+            block, (3, 4, 3, 4), rank=[2, 1, 3], metrics=metrics)
+        assert [core.shape[-1] for core in cores[:-1]] == [2, 1, 3]
+        assert [r.site for r in metrics.truncations] == [0, 1, 2]
+        torch.testing.assert_close(_contract_cores(cores), block)
 
-    def test_shared_rank_truncates_all_internal_cuts(self):
+    @pytest.mark.parametrize('rank', [5, [5, 6]])
+    def test_large_rank_caps_do_not_pad_unavailable_directions(self, rank):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
+
         block = torch.randn(
-            2, 3, 4, 5, 2,
-            dtype=torch.float64,
-            generator=torch.Generator().manual_seed(131))
-        split = split_block_ttsvd(block, in_dim=(3, 4, 5), rank=2)
-        fused = block.reshape(6, 4, 10)
-        reference = tk.decompositions.TTSVD(
-            fused, out_device=None).fit(rank=2).contract_dense()
+            1, 2, 2, 2, 1, dtype=torch.complex128,
+            generator=torch.Generator().manual_seed(908))
+        cores = _split_block(block, (2, 2, 2), rank=rank)
+        assert [core.shape[-1] for core in cores[:-1]] == [2, 2]
+        torch.testing.assert_close(_contract_cores(cores), block)
 
-        assert split.rank == (2, 2)
-        assert torch.allclose(
-            split.contract_dense().reshape_as(reference),
-            reference,
-            rtol=1e-12,
-            atol=1e-12)
+    def test_rank_one_profile_introduces_measurable_truncation(self):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
 
-    def test_padding_is_opt_in_and_preserves_the_split(self):
-        block = torch.randn(
-            1, 2, 2, 1,
-            dtype=torch.float64,
-            generator=torch.Generator().manual_seed(132))
-        compact = split_block_ttsvd(block, in_dim=(2, 2), rank=5)
-        padded = split_block_ttsvd(
-            block, in_dim=(2, 2), rank=5, pad_rank=True)
+        block = torch.eye(4, dtype=torch.float64).reshape(1, 2, 2, 2, 2, 1)
+        metrics = tk.decompositions.DecompositionMetrics()
+        cores = _split_block(
+            block, (2, 2, 2, 2), rank=[1, 1, 1], metrics=metrics)
+        assert all(core.shape[-1] == 1 for core in cores[:-1])
+        assert (_contract_cores(cores) - block).norm() > 0.1
+        assert len(metrics.truncations) == 3
+        assert any(record.local_abs_error > 0
+                   for record in metrics.truncations)
 
-        assert compact.effective_rank == (2,)
-        assert compact.rank == (2,)
-        assert compact.padding == (0,)
-        assert padded.effective_rank == (2,)
-        assert padded.rank == (5,)
-        assert padded.padding == (3,)
-        assert padded.padded
-        assert padded.metadata['pad_rank'] is True
-        assert torch.allclose(padded.contract_dense(), compact.contract_dense())
+    def test_empty_profile_is_valid_for_one_site(self):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
 
-    def test_one_site_preserves_both_external_ranks(self):
-        block = torch.randn(3, 4, 2)
-        split = split_block_ttsvd(block, in_dim=(4,), rank=5)
+        block = torch.ones(2, 1, 3)
+        cores = _split_block(block, (1,), rank=[])
+        assert len(cores) == 1
+        torch.testing.assert_close(cores[0], block)
 
-        assert split.cores[0].shape == (3, 4, 2)
-        assert split.rank == ()
-        assert split.padding == ()
-        assert torch.equal(split.contract_dense(), block)
-
-    def test_metrics_are_collected_only_when_requested(self):
-        block = torch.randn(2, 3, 4, 2)
-        fast = split_block_ttsvd(block, in_dim=(3, 4), rank=2)
-        measured = split_block_ttsvd(
-            block,
-            in_dim=(3, 4),
-            rank=2,
-            collect_metrics=True)
-
-        assert fast.metrics.truncations == []
-        assert len(measured.metrics.truncations) == 1
-        assert measured.metrics.errors[0].kind == 'truncation'
-
-    def test_padding_requires_an_explicit_rank(self):
-        with pytest.raises(ValueError, match='required'):
-            split_block_ttsvd(
-                torch.randn(1, 2, 2, 1),
-                in_dim=(2, 2),
-                pad_rank=True)
-
-    @pytest.mark.parametrize('in_dim', [(2,), (2, 2)])
     @pytest.mark.parametrize('options, error', [
-        ({'cutoff': -1.0}, ValueError),
-        ({'atol': float('nan')}, ValueError),
-        ({'rtol': 1.1}, ValueError),
-        ({'cum_percentage': -0.1}, ValueError),
+        ({'rank': [2]}, ValueError),
+        ({'rank': [2, 0]}, ValueError),
+        ({'rank': [2, True]}, TypeError),
+        ({'rank': '2'}, TypeError),
         ({'rank': True}, TypeError),
+        ({'rtol': -1}, ValueError),
+        ({'metrics': {}}, TypeError),
         ({'renormalize': 1}, TypeError),
     ])
-    def test_split_validates_options_even_without_internal_cuts(
-            self, in_dim, options, error):
-        block = torch.ones(1, *in_dim, 1)
-        with pytest.raises(error):
-            split_block_ttsvd(block, in_dim=in_dim, **options)
+    def test_invalid_profile_and_options(self, options, error):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
 
-    @pytest.mark.parametrize('in_dim', [(2,), (2, 2)])
-    def test_split_rejects_empty_external_ranks(self, in_dim):
-        with pytest.raises(ValueError, match='external ranks'):
-            split_block_ttsvd(torch.empty(0, *in_dim, 1), in_dim=in_dim)
+        with pytest.raises(error):
+            _split_block(torch.ones(1, 2, 2, 2, 1), (2, 2, 2), **options)
+
+    @pytest.mark.parametrize('block, dimensions, error', [
+        (None, (2,), TypeError),
+        (torch.ones(2, 2), (2,), ValueError),
+        (torch.ones(1, 2, 2, 1), (2, 3), ValueError),
+        (torch.ones(0, 2, 1), (2,), ValueError),
+        (torch.ones(1, 2, 1), (), ValueError),
+    ])
+    def test_invalid_block_layout(self, block, dimensions, error):
+        from tensorkrowch.decompositions.ring.blocks import _split_block
+
+        with pytest.raises(error):
+            _split_block(block, dimensions)

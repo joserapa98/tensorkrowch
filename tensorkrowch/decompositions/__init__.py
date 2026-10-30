@@ -12,7 +12,7 @@ Tensor decomposition algorithms and their numerical results.
         * tt_svd, tr_svd, ttm_svd, trm_svd
         * qtt_svd, qtr_svd, qttm_svd, qtrm_svd
         * TTALS, TRALS
-        * TT2TR
+        * TT2TR, tt2tr, tr_blostr, tr_blostr_svd
         * TTRSS, TRRSS, TTRS, TRRS
 
     Results:
@@ -29,7 +29,7 @@ Arithmetic returns ordinary formats; ``to_format`` removes fit diagnostics
 while preserving the numerical representation. Model construction remains
 explicit.
 
-SVD and ALS functions return decomposition objects. Other direct functions
+SVD, ALS and ring functions return decomposition objects. Other functions
 retain their documented core-return controls. Where supported,
 ``return_result=True`` returns
 the numerical result object, while ``return_info=True`` returns cores and
@@ -83,24 +83,22 @@ from tensorkrowch.decompositions.results import (QTRDecomposition,
                                                  TensorDecomposition)
 from tensorkrowch.decompositions.ring import (ALSLoopOpener,
                                               AdjointGaugeRecursion,
-                                              AlternatingRingDriver,
                                               BLOSTRLoopOpener,
+                                              BLOSTRSVDLoopOpener,
                                               CallableLoopOpener,
-                                              CompositeLoopOpener,
                                               ExperimentalWarning,
-                                              FixedGaugeCoreOpener,
                                               GaugeMap,
                                               GaugeRecursion,
                                               GaugeRecursionStep,
-                                              GramGaugeRecursion,
                                               LoopOpener,
                                               LoopOpenerCapabilities,
                                               LoopOpening,
                                               OrthGaugeRecursion,
                                               PinvGaugeRecursion,
-                                              SVDLoopOpener,
+                                              QRLoopOpener,
                                               TT2TR,
                                               tr_blostr,
+                                              tr_blostr_svd,
                                               tt2tr)
 from tensorkrowch.decompositions.sketching import (BasisFitter,
                                                    CallableGlobalValueTransform,
@@ -177,22 +175,20 @@ __all__ = [
     'GaugeMap',
     'ExperimentalWarning',
     'BLOSTRLoopOpener',
+    'BLOSTRSVDLoopOpener',
     'tr_blostr',
+    'tr_blostr_svd',
     'GaugeRecursion',
     'GaugeRecursionStep',
     'OrthGaugeRecursion',
     'PinvGaugeRecursion',
-    'GramGaugeRecursion',
     'AdjointGaugeRecursion',
     'LoopOpening',
     'LoopOpenerCapabilities',
     'LoopOpener',
     'ALSLoopOpener',
-    'SVDLoopOpener',
-    'AlternatingRingDriver',
-    'FixedGaugeCoreOpener',
+    'QRLoopOpener',
     'CallableLoopOpener',
-    'CompositeLoopOpener',
     'TT2TR',
     'tt2tr',
     'ErrorRecord',

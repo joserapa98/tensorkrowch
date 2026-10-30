@@ -1,4 +1,6 @@
 """
+Private compatibility schedules for not-yet-reviewed recursive sketching.
+
 This script contains:
 
     Classes:
@@ -17,8 +19,8 @@ import warnings
 import torch
 
 from tensorkrowch.decompositions.metrics import DecompositionMetrics
-from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
-                                                     CentralBlockSelector)
+from tensorkrowch.decompositions.ring.blocks import (_BlockSelection,
+                                                     _CentralBlockSelector)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BidirectionalRingResult,
                                                      RingTargetProvider,
@@ -26,7 +28,7 @@ from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeMap,
                                                      GaugeRecursion)
-from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
+from tensorkrowch.decompositions.ring.opening import (_FixedGaugeCoreOpener,
                                                       LoopOpener,
                                                       LoopOpening,
                                                       _normalize_context)
@@ -35,11 +37,11 @@ from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
 def _block_selection(provider: RingTargetProvider,
                      rank: Union[int, Sequence[int]],
                      sites: Tuple[int, ...],
-                     context: Mapping[str, Any]) -> BlockSelection:
+                     context: Mapping[str, Any]) -> _BlockSelection:
     """Builds the result descriptor for the first independent anchor."""
     local_rank = tuple(provider.local_rank(sites, rank, context))
     in_dim = tuple(provider.in_dim[site] for site in sites)
-    return BlockSelection(
+    return _BlockSelection(
         sites=sites,
         in_dim=in_dim,
         left_rank_cap=local_rank[0],
@@ -110,9 +112,10 @@ class AlternatingRingDriver:  # MARK: AlternatingRingDriver
             stability_diagnostics: bool = True,
             fallback: bool = True,
             fallback_driver: Optional[BidirectionalRingDriver] = None,
-            block_selector: Optional[CentralBlockSelector] = None,
+            block_selector: Optional[_CentralBlockSelector] = None,
             center: Optional[int] = None,
-            context: Optional[Mapping[str, Any]] = None) -> BidirectionalRingResult:
+            context: Optional[Mapping[str, Any]] = None
+            ) -> BidirectionalRingResult:
         """Executes the experimental alternating schedule serially."""
         in_dim = _validate_provider(provider)
         if not isinstance(opener, LoopOpener):
@@ -120,14 +123,15 @@ class AlternatingRingDriver:  # MARK: AlternatingRingDriver
         if not isinstance(recursion, GaugeRecursion):
             raise TypeError('`recursion` should implement GaugeRecursion')
         if fixed_opener is None:
-            fixed_opener = FixedGaugeCoreOpener()
+            fixed_opener = _FixedGaugeCoreOpener()
         elif not isinstance(fixed_opener, LoopOpener):
             raise TypeError('`fixed_opener` should implement LoopOpener')
         if isinstance(block_size, bool) or not isinstance(block_size, int):
             raise TypeError('`block_size` should be int type')
         if block_size < 1:
             raise ValueError('`block_size` should be positive')
-        if isinstance(anchor_offset, bool) or not isinstance(anchor_offset, int):
+        if isinstance(anchor_offset, bool) or not isinstance(
+                anchor_offset, int):
             raise TypeError('`anchor_offset` should be int type')
         if not isinstance(stability_diagnostics, bool):
             raise TypeError('`stability_diagnostics` should be bool type')
@@ -139,6 +143,8 @@ class AlternatingRingDriver:  # MARK: AlternatingRingDriver
             raise TypeError(
                 '`fallback_driver` should be BidirectionalRingDriver type')
         context = _normalize_context(context)
+
+        # Retain the existing sketching schedule until that module is reviewed.
         boundary_mode = getattr(provider, 'boundary_mode', 'cyclic')
         if boundary_mode not in ('cyclic', 'open'):
             raise ValueError(
@@ -195,7 +201,8 @@ class AlternatingRingDriver:  # MARK: AlternatingRingDriver
             return 'anchor_offset should be zero or one'
         if boundary_mode == 'open':
             if block_size != 1:
-                return 'open-boundary alternating blocks currently have size one'
+                return ('open-boundary alternating blocks currently '
+                        'have size one')
             if n_sites % 2 == 0:
                 return 'open-boundary checkerboard requires an odd site count'
             return None
@@ -416,7 +423,7 @@ class AlternatingRingDriver:  # MARK: AlternatingRingDriver
                 (0, 'left', anchors[0])):
             opening = openings[anchor]
             closure = close_boundary(
-                site=site,
+                sites=(site,),
                 direction=direction,
                 opening=opening,
                 context=BidirectionalRingDriver._boundary_context(

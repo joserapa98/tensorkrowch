@@ -46,21 +46,23 @@ from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition,
                                                  TensorDecomposition,
                                                  _result_from_source)
-from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
-                                                     CentralBlockSelector,
-                                                     PrescribedCentralBlockSelector,
-                                                     RingRankEstimator)
+from tensorkrowch.decompositions.ring._schedules import AlternatingRingDriver
+from tensorkrowch.decompositions.ring.blocks import (
+    _BlockSelection as BlockSelection,
+    _CentralBlockSelector as CentralBlockSelector,
+    _PrescribedCentralBlockSelector as PrescribedCentralBlockSelector,
+    _RingRankEstimator as RingRankEstimator)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      BoundaryClosure)
 from tensorkrowch.decompositions.ring.gauges import (ExperimentalWarning,
                                                      GaugeRecursionStep)
-from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
-                                                      LoopOpener,
-                                                      LoopOpening,
-                                                      SVDLoopOpener,
-                                                      resolve_loop_opener)
-from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
-from tensorkrowch.decompositions.ring.tt2tr import TT2TR
+from tensorkrowch.decompositions.ring.opening import (
+    LoopOpener,
+    LoopOpening,
+    _FixedGaugeCoreOpener as FixedGaugeCoreOpener,
+    _SVDLoopOpener as SVDLoopOpener,
+    resolve_loop_opener)
+from tensorkrowch.decompositions.ring.tt2tr import TT2TR, _resolve_recursion
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder,
                                                                _EvaluationSession)
@@ -303,11 +305,12 @@ class _SketchTargetProvider:  # MARK: _SketchTargetProvider
         return gauge
 
     def close_boundary(self,
-                       site: int,
+                       sites: Sequence[int],
                        direction: str,
                        opening: LoopOpening,
                        context: Mapping[str, Any]) -> BoundaryClosure:
         """Solves the first or last core against the propagated environment."""
+        site, = sites
         gauge = context.get('boundary_gauge')
         if not isinstance(gauge, torch.Tensor):
             raise ValueError('A propagated boundary gauge is required')
@@ -345,9 +348,9 @@ class _SketchTargetProvider:  # MARK: _SketchTargetProvider
             raise ValueError("`direction` should be 'left' or 'right'")
         self.boundary_records.append(record)
         return BoundaryClosure(
-            site=site,
+            sites=(site,),
             direction=direction,
-            core=core,
+            cores=(core,),
             diagnostics={
                 'algorithm': 'sketch_boundary_solve',
                 'rel_residual': record.rel_residual,
@@ -1286,21 +1289,23 @@ class TRRS(TTRS):  # MARK: TRRS
             tt_result = TTDecomposition(
                 (cores[0].squeeze(0), *cores[1:-1], cores[-1].squeeze(-1)),
                 metrics=tt_result.metrics, metadata=tt_result.metadata)
+        if (schedule != 'center_out') or (schedule_block_size != 1):
+            raise ValueError('TR-RS conversion uses the center-out schedule')
+        if inverse_policy != 'pinv':
+            raise ValueError('TR-RS conversion uses pseudoinverse transport')
+        if not allow_projective_gauges:
+            raise ValueError('TR-RS conversion permits projective transport')
+        transport = _resolve_recursion(recursion)
+        if rank_rtol is not None:
+            transport = type(transport)(rtol=rank_rtol)
         tr_result = TT2TR(
             tt_result,
             out_device=self._tr_out_device).fit(
                 rank=rank,
-                tr_rank=rank,
                 center=center,
                 loop_opener=loop_opener,
-                schedule=schedule,
-                schedule_block_size=schedule_block_size,
-                recursion=recursion,
-                allow_projective_gauges=allow_projective_gauges,
-                gauge_tolerance=gauge_tolerance,
-                inverse_policy=inverse_policy,
-                rank_rtol=rank_rtol,
-                expand_directions=expand_directions,
+                recursion=transport,
+                enrich=expand_directions,
                 verbose=0)
         metrics = _merge_rs_metrics(tt_result.metrics, tr_result.metrics)
         metadata = dict(tr_result.metadata)
@@ -1309,6 +1314,8 @@ class TRRS(TTRS):  # MARK: TRRS
             'source_type': type(self._source).__name__,
             'sketch_operator': type(self.sketch_operator).__name__,
             'tt_rank': list(tt_result.rank),
+            'expand_directions': expand_directions,
+            'recursion': recursion,
             'experimental': True,
         })
         result = TRDecomposition(

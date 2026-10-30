@@ -6,10 +6,14 @@ This script contains:
         * LoopOpening
         * LoopOpener
         * ALSLoopOpener
-        * SVDLoopOpener
-        * FixedGaugeCoreOpener
+        * QRLoopOpener
+        * BLOSTRLoopOpener
+        * BLOSTRSVDLoopOpener
         * CallableLoopOpener
-        * CompositeLoopOpener
+
+    Private compatibility classes:
+        * _SVDLoopOpener
+        * _FixedGaugeCoreOpener
 
     Internal functions:
         * _normalize_context
@@ -62,13 +66,26 @@ _Context = Optional[Mapping[str, Any]]
 
 @dataclass(frozen=True)
 class LoopOpenerCapabilities:  # MARK: LoopOpenerCapabilities
-    """Declares the constraints accepted by a loop-opening strategy."""
+    """
+    Declares the constraints accepted by a loop-opening strategy.
 
-    supports_fixed_left: bool = False  # Whether the opener can preserve a left gauge
-    supports_fixed_right: bool = False  # Whether the opener can preserve a right gauge
+    Parameters
+    ----------
+    supports_fixed_left, supports_fixed_right : bool
+        Whether the corresponding external gauge may be fixed.
+    supports_two_fixed_gauges : bool
+        Whether both external gauges may be fixed simultaneously.
+    supports_blocks : bool
+        Whether a target may contain more than one physical site.
+    """
+
+    # Whether the opener can preserve a left gauge
+    supports_fixed_left: bool = False
+    # Whether the opener can preserve a right gauge
+    supports_fixed_right: bool = False
     # Whether both gauges can be fixed simultaneously
     supports_two_fixed_gauges: bool = False
-    supports_blocks: bool = False  # Whether more than one input core can be opened
+    supports_blocks: bool = False  # Whether input blocks are supported
 
     def __post_init__(self) -> None:
         for name in (
@@ -85,37 +102,61 @@ class LoopOpenerCapabilities:  # MARK: LoopOpenerCapabilities
                 fixed_right: bool,
                 block_size: int) -> None:
         """
-        Raises before execution when requested constraints are
-        unsupported.
+        Rejects unsupported constraints before executing a local solver.
+
+        Parameters
+        ----------
+        fixed_left, fixed_right : bool
+            Whether the corresponding external gauge is fixed.
+        block_size : int
+            Number of physical sites in the local target.
         """
         if fixed_left and not self.supports_fixed_left:
-            raise ValueError('The loop opener does not support a fixed left gauge')
+            raise ValueError(
+                'The loop opener does not support a fixed left gauge')
         if fixed_right and not self.supports_fixed_right:
-            raise ValueError('The loop opener does not support a fixed right gauge')
+            raise ValueError(
+                'The loop opener does not support a fixed right gauge')
         if fixed_left and fixed_right and \
                 not self.supports_two_fixed_gauges:
             raise ValueError(
                 'The loop opener does not support two fixed gauges')
-        if block_size > 1 and not self.supports_blocks:
+        if (block_size > 1) and not self.supports_blocks:
             raise ValueError('The loop opener does not support input blocks')
 
 
 @dataclass(frozen=True)
 class LoopOpening:  # MARK: LoopOpening
     """
-    Stores gauges, local TR ``cores`` and ``diagnostics`` from one loop opening.
+    Stores gauges, local TR cores and diagnostics from one loop opening.
 
-    ``left_gauge`` and ``right_gauge`` are the environment ``cores`` surrounding
-    the local input ``cores``. When both are present, ``all_cores`` follows
+    ``left_gauge`` and ``right_gauge`` surround the local physical cores.
+    When both are present, ``all_cores`` follows
     standard TR order and contracts to the local target. ``rank[k]`` is the
     right-link ``rank`` of ``all_cores[k]``.
+
+    Parameters
+    ----------
+    left_gauge, right_gauge : torch.Tensor or None
+        Three-axis external gauge cores. ``None`` omits that gauge.
+    cores : sequence[torch.Tensor]
+        Physical TR cores in target order, with shape
+        ``(left rank, input dimension, right rank)``.
+    rank : sequence[int]
+        Actual right-link rank of every core in ``all_cores``.
+    orientation : {"right", "left"}
+        Direction used to solve the local target. Default is ``"right"``.
+    local_records : sequence[LocalSolveRecord]
+        Optional local least-squares measurements.
+    diagnostics : mapping
+        Optional algorithm metadata and preparation measurements.
     """
 
     left_gauge: Optional[torch.Tensor]  # Left external gauge core
     cores: Sequence[torch.Tensor]  # Raw cores in site order
     right_gauge: Optional[torch.Tensor]  # Right external gauge core
     rank: Sequence[int]  # Right-link ranks in core order
-    orientation: str = 'right'  # Left or right interpretation of the gauge axes
+    orientation: str = 'right'  # Construction direction
     # Optional least-squares measurements for this opening
     local_records: Sequence[LocalSolveRecord] = ()
     # Local strategy diagnostics and construction state
@@ -127,15 +168,16 @@ class LoopOpening:  # MARK: LoopOpening
         cores = tuple(self.cores)
         if not cores:
             raise ValueError('`cores` should contain at least one input core')
-        if not all(isinstance(core, torch.Tensor) and core.ndim == 3
+        if not all(isinstance(core, torch.Tensor) and (core.ndim == 3)
                    for core in cores):
             raise ValueError(
                 '`cores` should contain standard three-dimensional TR cores')
         for name in ('left_gauge', 'right_gauge'):
             gauge = getattr(self, name)
-            if gauge is not None and \
-                    (not isinstance(gauge, torch.Tensor) or gauge.ndim != 3):
-                raise ValueError(f'`{name}` should be a three-dimensional core')
+            if (gauge is not None) and \
+                    (not isinstance(gauge, torch.Tensor) or (gauge.ndim != 3)):
+                raise ValueError(
+                    f'`{name}` should be a three-dimensional core')
         all_cores = tuple(
             core for core in (self.left_gauge, *cores, self.right_gauge)
             if core is not None)
@@ -144,7 +186,7 @@ class LoopOpening:  # MARK: LoopOpening
         actual_rank = tuple(core.shape[-1] for core in all_cores)
         if rank != actual_rank:
             raise ValueError(
-                '`rank` should contain the actual right-link rank of every core')
+                '`rank` should contain one actual right-link rank per core')
         records = tuple(self.local_records)
         if not all(isinstance(record, LocalSolveRecord) for record in records):
             raise TypeError(
@@ -212,8 +254,7 @@ class LoopOpener(Protocol):  # MARK: LoopOpener
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            ``target`` order, including when the algorithm uses a mirrored local
-            problem.
+            target order, including when solving a mirrored local problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
             initialization, generator and whether to collect local metrics.
@@ -306,7 +347,7 @@ def _cast_source(source: BaseSource, dtype: torch.dtype) -> BaseSource:
 
 def _opening_from_result(result: TensorDecomposition,
                          orientation: str) -> LoopOpening:
-    """Converts an ALS ``result`` back from the requested ``orientation``."""
+    """Restores a local factorization to the original target orientation."""
     result_cores = tuple(result.cores)
     if orientation == 'left':
         result_cores = _mirror_cores(result_cores)
@@ -318,8 +359,11 @@ def _opening_from_result(result: TensorDecomposition,
         orientation=orientation,
         local_records=tuple(result.metrics.local_solves),
         diagnostics={
-            'algorithm': 'als',
+            'algorithm': result.metadata.get('algorithm', 'als'),
             'metadata': dict(result.metadata),
+            'errors': tuple(result.metrics.errors),
+            'truncations': tuple(result.metrics.truncations),
+            'warnings': tuple(result.metrics.warnings),
         })
 
 
@@ -332,7 +376,17 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
     fit_options : mapping, optional
         Options forwarded to :meth:`TRALS.fit`. Target, rank, fixed cores,
         output device and orientation remain controlled by :meth:`open`.
-        ALS sweeps visit sites in increasing order on every pass.
+        ALS sweeps visit sites in increasing order on every pass. Defaults
+        use ``gauge="none"``, ``max_sweeps=100``, ``rtol=1e-10`` and
+        ``keep_best=True``.
+
+    Examples
+    --------
+    >>> opener = tk.decompositions.ALSLoopOpener({
+    ...     'convergence': tk.decompositions.ConvergencePolicy(max_sweeps=20),
+    ... })
+    >>> opener.capabilities.supports_blocks
+    True
     """
 
     _capabilities = LoopOpenerCapabilities(
@@ -353,6 +407,10 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
             raise ValueError(
                 f'`fit_options` should not override {sorted(overlap)}')
         self.fit_options = dict(fit_options)
+        self.fit_options.setdefault('gauge', 'none')
+        self.fit_options.setdefault(
+            'convergence', ConvergencePolicy(
+                max_sweeps=100, rtol=1e-10, keep_best=True))
 
     @property
     def capabilities(self) -> LoopOpenerCapabilities:
@@ -388,8 +446,7 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            ``target`` order, including when the algorithm uses a mirrored local
-            problem.
+            target order, including when solving a mirrored local problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
             initialization, generator and whether to collect local metrics.
@@ -404,6 +461,8 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
         context = _normalize_context(context)
         source = _source_from_context(target, context)
         initial_cores = context.get('initial_cores')
+
+        # Promote the target, initializer and fixed gauges to one common dtype.
         runtime_dtype = source.dtype
         if initial_cores is not None:
             if isinstance(initial_cores, (str, bytes)) or \
@@ -441,6 +500,8 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
             fixed_right=fixed_right is not None,
             block_size=len(source.in_dim) - 2)
 
+        # Reflect leftward problems so forward ALS follows the outward
+        # direction.
         if orientation == 'left':
             source = _mirror_source(source)
             ranks = _mirror_rank(ranks)
@@ -450,13 +511,13 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
             )
             if initial_cores is not None:
                 initial_cores = _mirror_cores(tuple(initial_cores))
+
+        # Environment gauges stay frozen while physical factors are optimized.
         fixed_cores = [None] * len(source.in_dim)
         fixed_cores[0] = fixed_left
         fixed_cores[-1] = fixed_right
 
         fit_options = dict(self.fit_options)
-        fit_options.setdefault(
-            'convergence', ConvergencePolicy(max_sweeps=10))
         if context.get('generator') is not None:
             fit_options.setdefault('generator', context['generator'])
         result = TRALS(source, out_device=None).fit(
@@ -468,8 +529,381 @@ class ALSLoopOpener:  # MARK: ALSLoopOpener
         return _opening_from_result(result, orientation)
 
 
-class SVDLoopOpener:  # MARK: SVDLoopOpener
+class QRLoopOpener:  # MARK: QRLoopOpener
     """
+    Balances free external axes with QR before opening a local tensor ring.
+
+    The right axis is factorized first, followed by the left axis using QR
+    of its adjoint. Both factorizations retain their complete reduced bases:
+    there is no singular-value threshold or TR-rank cap. Triangular factors
+    are kept outside the initial objective and restored in the returned
+    gauges. Inherited fixed gauges and their external axes are unchanged.
+
+    Parameters
+    ----------
+    opener : str or LoopOpener, optional
+        Local strategy applied to the balanced target. Default is ``"als"``.
+    refinement_sweeps : int, optional
+        Additional ALS sweeps on the original target after restoring the
+        factors. Default is one. Zero disables refinement. A candidate that
+        increases the local residual is rejected. This does not guarantee
+        a smaller global reconstruction error.
+
+    Examples
+    --------
+    >>> opener = tk.decompositions.QRLoopOpener(refinement_sweeps=1)
+    >>> opener.capabilities.supports_blocks
+    True
+    """
+
+    def __init__(self,
+                 opener: Union[str, LoopOpener] = 'als',
+                 refinement_sweeps: int = 1) -> None:
+        self.opener = resolve_loop_opener(opener)
+        if isinstance(refinement_sweeps, bool) or \
+                not isinstance(refinement_sweeps, int):
+            raise TypeError('`refinement_sweeps` should be int type')
+        if refinement_sweeps < 0:
+            raise ValueError('`refinement_sweeps` should be non-negative')
+        self.refiner = None
+        if refinement_sweeps:
+            options = dict(self.opener.fit_options) \
+                if isinstance(self.opener, ALSLoopOpener) else {}
+            options.update({
+                'sampler': None,
+                'convergence': ConvergencePolicy(
+                    max_sweeps=refinement_sweeps, keep_best=True),
+            })
+            self.refiner = ALSLoopOpener(options)
+
+    @property
+    def capabilities(self) -> LoopOpenerCapabilities:
+        """Returns the wrapped solver's gauge and block constraints."""
+        return self.opener.capabilities
+
+    def open(self,
+             target: torch.Tensor,
+             rank: _Rank,
+             *,
+             fixed_left: Optional[torch.Tensor] = None,
+             fixed_right: Optional[torch.Tensor] = None,
+             orientation: str = 'right',
+             context: _Context = None) -> LoopOpening:
+        """
+        Opens a dense target and restores its original external coordinates.
+
+        Parameters
+        ----------
+        target : torch.Tensor
+            Local tensor with left and right external axes surrounding its
+            physical axes, with shape ``(left, *in_dim, right)``.
+        rank : int or sequence[int]
+            Prescribed right-link ranks of the complete local ring, including
+            the two external gauge cores. The last link closes the ring.
+        fixed_left, fixed_right : torch.Tensor, optional
+            Gauges retained exactly. Only free external axes are balanced.
+        orientation : {"right", "left"}
+            Construction direction. ALS mirrors leftward problems so its
+            forward sweeps follow that direction. Returned cores always follow
+            the original target order.
+        context : mapping, optional
+            Provider metadata, initialization, generator and metric controls.
+
+        Returns
+        -------
+        LoopOpening
+            Gauges and cores in the original external coordinates, with
+            optional full-target refinement diagnostics.
+        """
+        if not isinstance(target, torch.Tensor):
+            raise TypeError('`target` should be torch.Tensor type')
+        if target.ndim < 3:
+            raise ValueError('`target` should have at least three axes')
+        context = _normalize_context(context)
+        orientation = _normalize_orientation(orientation)
+        self.capabilities.require(
+            fixed_left=fixed_left is not None,
+            fixed_right=fixed_right is not None,
+            block_size=target.ndim - 2)
+        runtime_dtype = target.dtype
+        initial = context.get('initial_cores')
+        if initial is not None:
+            if isinstance(initial, (str, bytes)) or \
+                    not isinstance(initial, Sequence):
+                raise TypeError('`initial_cores` should be a tensor sequence')
+            if len(initial) != target.ndim:
+                raise ValueError(
+                    '`initial_cores` should match the target axes')
+            for core in initial:
+                if not isinstance(core, torch.Tensor):
+                    raise TypeError('`initial_cores` should contain tensors')
+                runtime_dtype = torch.promote_types(runtime_dtype, core.dtype)
+        for name, gauge in (('fixed_left', fixed_left),
+                            ('fixed_right', fixed_right)):
+            if gauge is not None:
+                if not isinstance(gauge, torch.Tensor):
+                    raise TypeError(f'`{name}` should be torch.Tensor type')
+                axis = 0 if name == 'fixed_left' else -1
+                if (gauge.ndim != 3) or \
+                        (gauge.shape[1] != target.shape[axis]):
+                    raise ValueError(
+                        f'`{name}` should match its external target axis')
+                if gauge.device != target.device:
+                    raise ValueError(
+                        f'`{name}` and `target` should share a device')
+                runtime_dtype = torch.promote_types(runtime_dtype, gauge.dtype)
+        target = target.to(dtype=runtime_dtype)
+        fixed_left = None if fixed_left is None else fixed_left.to(
+            dtype=runtime_dtype)
+        fixed_right = None if fixed_right is None else fixed_right.to(
+            dtype=runtime_dtype)
+        tensor = target
+        left_factor = right_factor = None
+
+        if fixed_right is None:
+            matrix = tensor.reshape(-1, tensor.shape[-1])
+            q, right_factor = torch.linalg.qr(matrix, mode='reduced')
+            tensor = q.reshape(*tensor.shape[:-1], q.shape[-1])
+        if fixed_left is None:
+            matrix = tensor.reshape(tensor.shape[0], -1)
+            q, factor = torch.linalg.qr(matrix.mH, mode='reduced')
+            left_factor = factor.mH
+            tensor = q.mH.reshape(q.shape[-1], *tensor.shape[1:])
+
+        local_context = {**context, 'in_dim': tuple(tensor.shape),
+                         'dtype': tensor.dtype, 'device': tensor.device}
+        if context.get('initial_cores') is not None:
+            initial = [core.to(dtype=runtime_dtype) for core in initial]
+            if left_factor is not None:
+                initial[0] = torch.einsum(
+                    'as,gsr->gar', torch.linalg.pinv(left_factor), initial[0])
+            if right_factor is not None:
+                initial[-1] = torch.einsum(
+                    'rtg,tb->rbg', initial[-1],
+                    torch.linalg.pinv(right_factor))
+            local_context['initial_cores'] = tuple(initial)
+        opening = self.opener.open(
+            tensor, rank, fixed_left=fixed_left, fixed_right=fixed_right,
+            orientation=orientation, context=local_context)
+        left_gauge, right_gauge = opening.left_gauge, opening.right_gauge
+        if left_factor is not None:
+            left_gauge = torch.einsum(
+                'sa,gar->gsr', left_factor.to(left_gauge.dtype), left_gauge)
+        if right_factor is not None:
+            right_gauge = torch.einsum(
+                'rbg,bt->rtg', right_gauge,
+                right_factor.to(right_gauge.dtype))
+        initial = LoopOpening(
+            left_gauge=left_gauge, cores=opening.cores,
+            right_gauge=right_gauge, rank=opening.rank,
+            orientation=orientation, local_records=opening.local_records,
+            diagnostics={**opening.diagnostics,
+                         'qr_left': left_factor is not None,
+                         'qr_right': right_factor is not None})
+        if (self.refiner is None) or (
+                (fixed_left is not None) and (fixed_right is not None)):
+            return initial
+
+        before = torch.linalg.vector_norm(target - initial.contract_dense())
+        refined = self.refiner.open(
+            target, initial.rank, fixed_left=fixed_left,
+            fixed_right=fixed_right, orientation=orientation,
+            context={**context, 'in_dim': tuple(target.shape),
+                     'initial_cores': initial.all_cores})
+        candidate = torch.linalg.vector_norm(target - refined.contract_dense())
+        accepted = bool(torch.isfinite(candidate) & (candidate <= before))
+        selected = refined if accepted else initial
+        after = candidate if accepted else before
+        denominator = torch.linalg.vector_norm(target)
+        return LoopOpening(
+            left_gauge=selected.left_gauge, cores=selected.cores,
+            right_gauge=selected.right_gauge, rank=selected.rank,
+            orientation=orientation,
+            local_records=initial.local_records + refined.local_records,
+            diagnostics={**initial.diagnostics, 'qr_refinement': {
+                'accepted': accepted,
+                'relative_error_before': safe_divide(before, denominator),
+                'relative_error_after': safe_divide(after, denominator),
+                'metadata': refined.diagnostics['metadata'],
+            }})
+
+
+class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
+    """
+    Opens exact local tensor rings with the complete BLOSTR algorithm.
+
+    Parameters
+    ----------
+    fit_options : mapping, optional
+        Spectral projection and clustering options forwarded to
+        :func:`tr_blostr`. Target, rank, output device and metric collection
+        are controlled by :meth:`open`. Fixed gauges are unsupported.
+
+    Examples
+    --------
+    >>> opener = tk.decompositions.BLOSTRLoopOpener({'n_attempts': 4})
+    >>> opener.capabilities.supports_fixed_left
+    False
+    """
+
+    exact = True
+    _capabilities = LoopOpenerCapabilities(supports_blocks=True)
+
+    def __init__(self,
+                 fit_options: Optional[Mapping[str, Any]] = None) -> None:
+        if fit_options is None:
+            fit_options = {}
+        if not isinstance(fit_options, Mapping):
+            raise TypeError('`fit_options` should be a mapping or None')
+        reserved = {'tensor', 'rank', 'out_device',
+                    'collect_metrics', 'verbose'}
+        overlap = reserved.intersection(fit_options)
+        if overlap:
+            raise ValueError(
+                f'`fit_options` should not override {sorted(overlap)}')
+        self.fit_options = dict(fit_options)
+
+    @property
+    def capabilities(self) -> LoopOpenerCapabilities:
+        """Returns unrestricted block support without fixed gauges."""
+        return self._capabilities
+
+    def _options(self, context: Mapping[str, Any]) -> Dict[str, Any]:
+        """Combines constructor options with the active local orientation."""
+        options = dict(self.fit_options)
+        if context.get('generator') is not None:
+            options.setdefault('generator', context['generator'])
+        if context.get('_spectral_orientation') == 'left':
+            if options.get('slices') is not None:
+                options['slices'] = tuple(
+                    tuple(reversed(configuration))
+                    for configuration in options['slices'])
+        return options
+
+    def _decompose(self,
+                   tensor: torch.Tensor,
+                   rank: Optional[_Rank],
+                   context: Mapping[str, Any]) -> TRDecomposition:
+        """Runs the complete spectral factorization."""
+        from tensorkrowch.decompositions.ring.blostr import tr_blostr
+        return tr_blostr(
+            tensor, rank=rank, out_device=None,
+            collect_metrics=context.get('collect_metrics', False),
+            **self._options(context))
+
+    def decompose(self,
+                  target: Any,
+                  rank: Optional[_Rank] = None,
+                  *,
+                  context: _Context = None) -> TRDecomposition:
+        """
+        Decomposes a complete target without adding external gauge cores.
+
+        Parameters
+        ----------
+        target : torch.Tensor or BaseSource
+            Tensor with one physical axis per resulting TR core. Sources
+            are materialized before applying the spectral construction.
+        rank : int or sequence[int], optional
+            Right-link TR ranks. The last entry is the cyclic link. ``None``
+            discovers ranks from spectral multiplicities.
+        context : mapping, optional
+            Provider metadata, generator and metric controls.
+
+        Returns
+        -------
+        TRDecomposition
+            Spectral factorization in the original physical-axis order.
+        """
+        context = _normalize_context(context)
+        tensor = _source_from_context(target, context).contract_dense()
+        return self._decompose(tensor, rank, context)
+
+    def open(self,
+             target: Any,
+             rank: Optional[_Rank] = None,
+             *,
+             fixed_left: Optional[torch.Tensor] = None,
+             fixed_right: Optional[torch.Tensor] = None,
+             orientation: str = 'right',
+             context: _Context = None) -> LoopOpening:
+        """
+        Opens an unrestricted exact local target, discovering omitted ranks.
+
+        Parameters
+        ----------
+        target : torch.Tensor or BaseSource
+            Local tensor with left and right external axes surrounding its
+            physical axes, with shape ``(left, *in_dim, right)``.
+            Sources are materialized before the spectral construction.
+        rank : int or sequence[int], optional
+            Right-link TR ranks, including both gauges. ``None`` discovers
+            ranks from spectral multiplicities.
+        fixed_left, fixed_right : torch.Tensor, optional
+            Unsupported constraints. Passing either gauge raises an error.
+        orientation : {"right", "left"}
+            Construction direction. Leftward targets are reflected internally;
+            returned cores follow the original target order.
+        context : mapping, optional
+            Provider metadata, generator and metric controls.
+
+        Returns
+        -------
+        LoopOpening
+            Spectrally recovered gauges and physical cores.
+        """
+        context = _normalize_context(context)
+        orientation = _normalize_orientation(orientation)
+        tensor = _source_from_context(target, context).contract_dense()
+        self.capabilities.require(
+            fixed_left=fixed_left is not None,
+            fixed_right=fixed_right is not None,
+            block_size=tensor.ndim - 2)
+        if orientation == 'left':
+            tensor = tensor.permute(*reversed(range(tensor.ndim)))
+            if rank is not None:
+                rank = _mirror_rank(_normalize_rank(rank, tensor.ndim))
+        context['_spectral_orientation'] = orientation
+        result = self.decompose(tensor, rank, context=context)
+        return _opening_from_result(result, orientation)
+
+
+class BLOSTRSVDLoopOpener(BLOSTRLoopOpener):  # MARK: BLOSTRSVDLoopOpener
+    """
+    Recovers the first local gauge with BLOSTR and splits the tail by SVD.
+
+    Parameters
+    ----------
+    fit_options : mapping, optional
+        Options forwarded to :func:`tr_blostr_svd`, including spectral
+        projections, clustering and tail truncation. Target, rank, output
+        device and metric collection are controlled by :meth:`open`.
+
+    Examples
+    --------
+    >>> opener = tk.decompositions.BLOSTRSVDLoopOpener({
+    ...     'projection': 'gaussian',
+    ... })
+    >>> opener.exact
+    True
+    """
+
+    def _decompose(self,
+                   tensor: torch.Tensor,
+                   rank: Optional[_Rank],
+                   context: Mapping[str, Any]) -> TRDecomposition:
+        """Runs first-core spectral recovery followed by TT-SVD."""
+        from tensorkrowch.decompositions.ring.blostr import tr_blostr_svd
+        return tr_blostr_svd(
+            tensor, rank=rank, out_device=None,
+            collect_metrics=context.get('collect_metrics', False),
+            **self._options(context))
+
+
+class _SVDLoopOpener:  # MARK: _SVDLoopOpener
+    """
+    Keeps the existing sketching SVD policy pending its separate review.
+
     Balances free external axes before opening a local tensor ring.
 
     SVDs run right then left, by default skipping inherited fixed gauges.
@@ -649,8 +1083,8 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
                 if not isinstance(gauge, torch.Tensor):
                     raise TypeError(f'`{name}` should be torch.Tensor or None')
                 external_axis = 0 if name == 'fixed_left' else -1
-                if gauge.ndim != 3 or \
-                        gauge.shape[1] != target.shape[external_axis]:
+                if (gauge.ndim != 3) or \
+                        (gauge.shape[1] != target.shape[external_axis]):
                     raise ValueError(
                         f'`{name}` should have three axes and match the '
                         'corresponding external target dimension')
@@ -662,13 +1096,16 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
             fixed_right = fixed_right.to(dtype=runtime_dtype)
         sites = context.get('sites', tuple(range(1, target.ndim - 1)))
         records = []
+
+        # Only free external axes are balanced; inherited gauges stay
+        # unchanged.
         left_lift = None
         right_lift = None
         left_spectrum = None
         right_spectrum = None
         local_fixed_left, local_fixed_right = fixed_left, fixed_right
         full_refinement = self.project_fixed_gauges and (
-            fixed_left is not None or fixed_right is not None)
+            (fixed_left is not None) or (fixed_right is not None))
 
         if fixed_left is not None:
             ranks[0] = fixed_left.shape[-1]
@@ -677,7 +1114,7 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
             ranks[-2] = fixed_right.shape[0]
             ranks[-1] = fixed_right.shape[-1]
 
-        if fixed_right is None or self.project_fixed_gauges:
+        if (fixed_right is None) or self.project_fixed_gauges:
             matrix = tensor.reshape(-1, tensor.shape[-1])
             u, s, right_lift = self._trim(
                 matrix,
@@ -697,7 +1134,7 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
                 right_lift = s.unsqueeze(1) * right_lift
             tensor = u.reshape(*tensor.shape[:-1], u.shape[-1])
 
-        if fixed_left is None or self.project_fixed_gauges:
+        if (fixed_left is None) or self.project_fixed_gauges:
             matrix = tensor.reshape(tensor.shape[0], -1)
             left_lift, s, vh = self._trim(
                 matrix,
@@ -732,7 +1169,7 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
             context=local_context)
 
         refine = self.refiner is not None and (
-            fixed_left is None or fixed_right is None)
+            (fixed_left is None) or (fixed_right is None))
         if refine:
             left_gauge, right_gauge = opening.left_gauge, opening.right_gauge
             if left_spectrum is not None:
@@ -763,6 +1200,9 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
                 'rbg,bt->rtg',
                 right_gauge,
                 right_lift.to(right_gauge.dtype))
+
+        # A projected inherited gauge must be restored before full-target
+        # fitting.
         if full_refinement:
             if fixed_left is not None:
                 left_gauge = fixed_left
@@ -798,8 +1238,10 @@ class SVDLoopOpener:  # MARK: SVDLoopOpener
             })
 
 
-class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
+class _FixedGaugeCoreOpener:  # MARK: _FixedGaugeCoreOpener
     """
+    Keeps fixed-gauge sketching closures pending their separate review.
+
     Solves the single remaining input core with both gauges fixed.
 
     The full effective local design is solved once using LeastSquaresSolver.
@@ -860,8 +1302,7 @@ class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            ``target`` order, including when the algorithm uses a mirrored local
-            problem.
+            target order, including when solving a mirrored local problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
             initialization, generator and whether to collect local metrics.
@@ -882,8 +1323,9 @@ class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
             fixed_left=fixed_left is not None,
             fixed_right=fixed_right is not None,
             block_size=1)
-        if fixed_left is None or fixed_right is None:
-            raise ValueError('Both fixed gauges are required for a direct solve')
+        if (fixed_left is None) or (fixed_right is None):
+            raise ValueError(
+                'Both fixed gauges are required for a direct solve')
         ranks = _normalize_rank(rank, 3)
 
         if orientation == 'left':
@@ -895,12 +1337,14 @@ class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
             )
         if fixed_left.shape != (
                 ranks[-1], source.in_dim[0], ranks[0]):
-            raise ValueError('`fixed_left` shape should match target and ranks')
+            raise ValueError(
+                '`fixed_left` shape should match target and ranks')
         if fixed_right.shape != (
                 ranks[1], source.in_dim[-1], ranks[-1]):
-            raise ValueError('`fixed_right` shape should match target and ranks')
-        if fixed_left.device != fixed_right.device or \
-                fixed_left.dtype != fixed_right.dtype:
+            raise ValueError(
+                '`fixed_right` shape should match target and ranks')
+        if (fixed_left.device != fixed_right.device) or \
+                (fixed_left.dtype != fixed_right.dtype):
             raise ValueError('Fixed gauges should share dtype and device')
 
         configurations = ConfigurationBatch(
@@ -911,9 +1355,13 @@ class FixedGaugeCoreOpener:  # MARK: FixedGaugeCoreOpener
         values = source.evaluate(configurations)
         if values.shape != (configurations.batch_size,):
             raise ValueError('The local target should be scalar-valued')
-        if values.device != fixed_left.device or values.dtype != fixed_left.dtype:
-            raise ValueError('Target values and fixed gauges should share runtime')
+        if (values.device != fixed_left.device) or \
+                (values.dtype != fixed_left.dtype):
+            raise ValueError(
+                'Target values and fixed gauges should share dtype and device')
 
+        # Solve the complete two-sided design rather than inverting gauges
+        # separately; this preserves the actual least-squares objective.
         left_environment = fixed_left.permute(1, 0, 2)
         right_environment = fixed_right.permute(1, 0, 2)
         environment = torch.einsum(
@@ -966,7 +1414,8 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
 
     def __init__(self,
                  opener: Callable[..., Any],
-                 capabilities: Optional[LoopOpenerCapabilities] = None) -> None:
+                 capabilities: Optional[LoopOpenerCapabilities] = None
+                 ) -> None:
         if not callable(opener):
             raise TypeError('`opener` should be callable')
         if capabilities is None:
@@ -1011,8 +1460,7 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
             cores.
         orientation : {"right", "left"}
             Construction direction. Returned cores always follow the original
-            ``target`` order, including when the algorithm uses a mirrored local
-            problem.
+            target order, including when solving a mirrored local problem.
         context : mapping, optional
             Provider metadata and internal execution options, such as
             initialization, generator and whether to collect local metrics.
@@ -1026,6 +1474,10 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
         orientation = _normalize_orientation(orientation)
         context = _normalize_context(context)
         in_dim = context.get('in_dim')
+        if (in_dim is None) and isinstance(target, torch.Tensor):
+            in_dim = target.shape
+        elif (in_dim is None) and isinstance(target, BaseSource):
+            in_dim = target.in_dim
         block_size = 1 if in_dim is None else len(tuple(in_dim)) - 2
         self._capabilities.require(
             fixed_left=fixed_left is not None,
@@ -1045,163 +1497,30 @@ class CallableLoopOpener:  # MARK: CallableLoopOpener
         raise TypeError('The adapted callable should return a LoopOpening')
 
 
-class CompositeLoopOpener:  # MARK: CompositeLoopOpener
+def resolve_loop_opener(loop_opener: Any) -> LoopOpener:
     """
-    Initializes an opening and refines it under the requested gauge
-    constraints.
-
-    The initializer opens the target without fixed gauges. Its cores initialize
-    the refiner, which imposes the final constraints. A fallback can preserve
-    an initializer failure as a diagnostic and let the refiner choose its own
-    init.
+    Resolves ALS, exact spectral strategies and custom local solvers.
 
     Parameters
     ----------
-    initializer : LoopOpener
-        Unrestricted initializer, for example BLOSTRLoopOpener.
-    refiner : LoopOpener
-        Strategy supporting the final gauge constraints, normally
-        ALSLoopOpener.
-    fallback_on_error : bool
-        Whether an initializer failure should allow refinement without its
-        cores. The default is False. Refiner failures always propagate.
+    loop_opener : {"als", "blostr", "blostr_svd"}, LoopOpener or callable
+        Local strategy. Callables receive the arguments of
+        :meth:`LoopOpener.open` and return a :class:`LoopOpening`.
+
+    Returns
+    -------
+    LoopOpener
+        Strategy implementing local loop opening.
     """
-
-    def __init__(self,
-                 initializer: LoopOpener,
-                 refiner: LoopOpener,
-                 fallback_on_error: bool = False) -> None:
-        if not isinstance(initializer, LoopOpener):
-            raise TypeError('`initializer` should implement LoopOpener')
-        if not isinstance(refiner, LoopOpener):
-            raise TypeError('`refiner` should implement LoopOpener')
-        if not isinstance(fallback_on_error, bool):
-            raise TypeError('`fallback_on_error` should be bool type')
-        self.initializer = initializer
-        self.refiner = refiner
-        self.fallback_on_error = fallback_on_error
-
-    @property
-    def capabilities(self) -> LoopOpenerCapabilities:
-        """Returns constraints accepted by the refinement stage."""
-        return self.refiner.capabilities
-
-    def open(self,
-             target: Any,
-             rank: _Rank,
-             *,
-             fixed_left: Optional[torch.Tensor] = None,
-             fixed_right: Optional[torch.Tensor] = None,
-             orientation: str = 'right',
-             context: _Context = None) -> LoopOpening:
-        """
-        Initializes without constraints and refines with requested gauges.
-
-        Parameters
-        ----------
-        target : torch.Tensor or BaseSource
-            Local scalar tensor with axes ``(left external, *in_dim, right
-            external)``, or a source representing that tensor.
-        rank : int or sequence[int]
-            Prescribed right-link ranks of the complete local ring, including
-            the two external gauge cores. The last link closes the ring.
-        fixed_left : torch.Tensor, optional
-            Gauges to retain exactly. The selected strategy must support the
-            supplied constraints. Their shapes follow ordinary three-axis TR
-            cores.
-        fixed_right : torch.Tensor, optional
-            Gauges to retain exactly. The selected strategy must support the
-            supplied constraints. Their shapes follow ordinary three-axis TR
-            cores.
-        orientation : {"right", "left"}
-            Construction direction. Returned cores always follow the original
-            ``target`` order, including when the algorithm uses a mirrored local
-            problem.
-        context : mapping, optional
-            Provider metadata and internal execution options, such as
-            initialization, generator and whether to collect local metrics.
-
-        Returns
-        -------
-        LoopOpening
-            Gauges and cores in original ``target`` order with optional local
-            metrics.
-        """
-        orientation = _normalize_orientation(orientation)
-        context = _normalize_context(context)
-        self.capabilities.require(
-            fixed_left=fixed_left is not None,
-            fixed_right=fixed_right is not None,
-            block_size=(
-                1 if context.get('in_dim') is None
-                else len(tuple(context['in_dim'])) - 2))
-        initialization_error = None
-        try:
-            initial = self.initializer.open(
-                target,
-                rank,
-                orientation=orientation,
-                context=context)
-        except (RuntimeError, ValueError) as exc:
-            if not self.fallback_on_error:
-                raise
-            initial = None
-            initialization_error = str(exc)
-        refine_context = dict(context)
-        if initial is not None:
-            refine_context['initial_cores'] = initial.all_cores
-        result = self.refiner.open(
-            target,
-            rank,
-            fixed_left=fixed_left,
-            fixed_right=fixed_right,
-            orientation=orientation,
-            context=refine_context)
-        diagnostics = dict(result.diagnostics)
-        if initial is None:
-            diagnostics['initializer'] = {
-                'used': False,
-                'error': initialization_error,
-            }
-        else:
-            diagnostics['initializer'] = {
-                'used': True,
-                **dict(initial.diagnostics),
-            }
-        return LoopOpening(
-            left_gauge=result.left_gauge,
-            cores=result.cores,
-            right_gauge=result.right_gauge,
-            rank=result.rank,
-            orientation=result.orientation,
-            local_records=result.local_records,
-            diagnostics=diagnostics)
-
-
-def resolve_loop_opener(loop_opener: Any) -> LoopOpener:
-    """Normalizes simple ALS presets, advanced strategies and callables."""
-    def als_opener() -> ALSLoopOpener:
-        return ALSLoopOpener({
-            'gauge': 'none',
-            'convergence': ConvergencePolicy(
-                max_sweeps=100,
-                rtol=1e-10,
-                keep_best=True),
-        })
-
     if isinstance(loop_opener, str):
         if loop_opener == 'als':
-            return als_opener()
-        if loop_opener == 'blostr+als':
-            from tensorkrowch.decompositions.ring.blostr import (
-                BLOSTRLoopOpener,
-            )
-            return CompositeLoopOpener(
-                BLOSTRLoopOpener(),
-                als_opener(),
-                fallback_on_error=True)
+            return ALSLoopOpener()
+        if loop_opener == 'blostr':
+            return BLOSTRLoopOpener()
+        if loop_opener == 'blostr_svd':
+            return BLOSTRSVDLoopOpener()
         raise ValueError(
-            "`loop_opener` should be 'als', 'blostr+als' or an advanced "
+            "`loop_opener` should be 'als', 'blostr', 'blostr_svd' or "
             'opening strategy')
     if isinstance(loop_opener, LoopOpener):
         return loop_opener
@@ -1222,9 +1541,9 @@ __all__ = [
     'LoopOpenerCapabilities',
     'LoopOpener',
     'ALSLoopOpener',
-    'SVDLoopOpener',
-    'FixedGaugeCoreOpener',
+    'QRLoopOpener',
+    'BLOSTRLoopOpener',
+    'BLOSTRSVDLoopOpener',
     'CallableLoopOpener',
-    'CompositeLoopOpener',
     'resolve_loop_opener',
 ]

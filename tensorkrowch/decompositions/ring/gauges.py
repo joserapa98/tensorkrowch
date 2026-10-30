@@ -8,10 +8,11 @@ This script contains:
         * GaugeRecursion
         * OrthGaugeRecursion
         * PinvGaugeRecursion
-        * GramGaugeRecursion
         * AdjointGaugeRecursion
 
     Internal functions:
+        * _pinv_options
+        * _rank_statistics
         * _validate_non_negative_float
         * _matrix_from_core
         * _core_from_matrix
@@ -26,8 +27,6 @@ from typing import (Any,
                     Sequence,
                     Tuple,
                     runtime_checkable)
-import warnings
-
 import torch
 
 from tensorkrowch.utils import safe_divide
@@ -49,7 +48,7 @@ def _validate_non_negative_float(value: Optional[float],
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TypeError(f'`{name}` should be a real scalar or None')
     value = float(value)
-    if value < 0 or not isfinite(value):
+    if (value < 0) or (not isfinite(value)):
         raise ValueError(f'`{name}` should be finite and non-negative')
     return value
 
@@ -79,7 +78,7 @@ def _weight_rows(matrix: torch.Tensor,
                  basis: torch.Tensor,
                  factor: torch.Tensor,
                  direction: str) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Applies a Gram square root to the incoming virtual row index."""
+    """Weights the incoming virtual rows by a Schmidt factor."""
     physical_dim = matrix.shape[0] // factor.shape[1]
     if direction == 'right':
         matrix = torch.einsum('xa,apb->xpb', factor, matrix.reshape(
@@ -95,34 +94,91 @@ def _weight_rows(matrix: torch.Tensor,
             basis.reshape(-1, basis.shape[-1]))
 
 
+def _pinv_options(options: Mapping[str, Any]) -> dict:
+    """Validates scalar pseudoinverse options for an unbatched gauge."""
+    unknown = set(options).difference(('atol', 'rtol', 'hermitian'))
+    if unknown:
+        raise TypeError(
+            f'Unsupported pseudoinverse options: {sorted(unknown)}')
+    result = dict(options)
+    for name in ('atol', 'rtol'):
+        value = result.get(name)
+        if value is None:
+            continue
+        if isinstance(value, torch.Tensor):
+            if (value.ndim != 0) or value.is_complex():
+                raise ValueError(f'`{name}` should be a real scalar tensor')
+            valid = torch.isfinite(value) & (value >= 0)
+        else:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f'`{name}` should be a non-negative scalar')
+            valid = isfinite(value) and (value >= 0)
+        if not bool(valid):
+            raise ValueError(f'`{name}` should be finite and non-negative')
+    if ('hermitian' in result) and not isinstance(result['hermitian'], bool):
+        raise TypeError('`hermitian` should be bool type')
+    return result
+
+
+def _rank_statistics(matrix: torch.Tensor,
+                     options: Mapping[str, Any]
+                     ) -> Tuple[int, torch.Tensor, torch.Tensor]:
+    """Measures rank using the same cutoff as the scalar pseudoinverse."""
+    if options.get('hermitian', False):
+        values = torch.linalg.eigvalsh(matrix).abs()
+        values = values.sort(descending=True).values
+    else:
+        values = torch.linalg.svdvals(matrix)
+    atol = options.get('atol')
+    atol = values.new_zeros(()) if atol is None else torch.as_tensor(
+        atol, dtype=values.dtype, device=values.device)
+    rtol = options.get('rtol')
+    if rtol is None:
+        rtol = 0.0 if bool(atol > 0) else (
+            max(matrix.shape) * torch.finfo(values.dtype).eps)
+    rtol = torch.as_tensor(rtol, dtype=values.dtype, device=values.device)
+    cutoff = torch.maximum(atol, rtol * values[0])
+    rank = int((values > cutoff).sum().detach().cpu().item())
+    condition = (values.new_tensor(torch.inf) if rank < min(matrix.shape)
+                 else values[0] / values[-1])
+    return rank, cutoff, condition
+
+
 @dataclass(frozen=True)
 class GaugeMap:  # MARK: GaugeMap
-    """
-    Represents an oriented map between external and cyclic virtual bases.
+    r"""
+    Represents a map between a TT bond and two TR bonds.
 
     A left gauge has shape ``(cyclic_rank, external_dim, local_rank)`` and a
     right gauge has shape ``(local_rank, external_dim, cyclic_rank)``. Both
-    orientations are matricized as ``external_dim x (cyclic_rank *
-    local_rank)``. Mirroring a gauge therefore changes its ``core`` ``orientation``
-    while preserving the represented matrix.
+    orientations expose the same matrix layout through :attr:`matrix`.
+    :meth:`pinv` returns its directional dual. The transpose in that dual
+    is not conjugated because tensor network bonds contract bilinearly.
 
-    Calling :meth:`inverse_or_pinv` returns the directional dual ``F`` that
-    aims to satisfy ``G.T @ F = I``. Tensor network links use a bilinear index
-    contraction, so this directional transpose deliberately does not conjugate
-    complex gauges.
+    Parameters
+    ----------
+    core : torch.Tensor
+        Three-dimensional floating or complex gauge tensor.
+    orientation : {"left", "right"}
+        Which external gauge is represented by ``core``.
+    site : int, optional
+        Destination site used in diagnostics.
+
+    Examples
+    --------
+    >>> gauge = tk.decompositions.GaugeMap(
+    ...     torch.eye(2).reshape(1, 2, 2), 'left')
+    >>> gauge.pinv().matrix.shape
+    torch.Size([2, 2])
     """
 
-    core: torch.Tensor  # Raw local tensor with standard rank axes
-    orientation: str  # Left or right interpretation of the gauge axes
-    site: Optional[int] = None  # Optional zero-based active site
-    # Effective method used to construct the directional dual
-    inverse_method: Optional[str] = None
-    # Original gauge matrix whose dual is represented
+    core: torch.Tensor  # Raw tensor with standard TR axes
+    orientation: str  # Left or right interpretation of the TR axes
+    site: Optional[int] = None  # Destination site used in diagnostics
     _reference_matrix: Optional[torch.Tensor] = field(
         default=None, repr=False, compare=False)
-    # Relative singular-value cutoff used for the dual
-    _rank_rtol: Optional[float] = field(
-        default=None, repr=False, compare=False)
+    _pinv_kwargs: Mapping[str, Any] = field(
+        default_factory=dict, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.core, torch.Tensor):
@@ -130,7 +186,9 @@ class GaugeMap:  # MARK: GaugeMap
         if self.core.ndim != 3:
             raise ValueError('`core` should be a three-dimensional gauge')
         if not self.core.is_floating_point() and not self.core.is_complex():
-            raise TypeError('Gauge cores should have a floating or complex dtype')
+            raise TypeError('`core` should have a floating or complex dtype')
+        if any(dim < 1 for dim in self.core.shape):
+            raise ValueError('`core` axes should have positive dimensions')
         if self.orientation not in ('left', 'right'):
             raise ValueError("`orientation` should be 'left' or 'right'")
         if self.site is not None:
@@ -138,28 +196,21 @@ class GaugeMap:  # MARK: GaugeMap
                 raise TypeError('`site` should be int type or None')
             if self.site < 0:
                 raise ValueError('`site` should be non-negative')
-        if self.inverse_method is not None and \
-                self.inverse_method not in ('solve', 'inverse', 'pinv'):
-            raise ValueError(
-                "`inverse_method` should be 'solve', 'inverse', 'pinv' or None")
-        rank_rtol = _validate_non_negative_float(
-            self._rank_rtol, 'rank_rtol')
-        object.__setattr__(self, '_rank_rtol', rank_rtol)
+        object.__setattr__(
+            self, '_pinv_kwargs', _pinv_options(self._pinv_kwargs))
         if self._reference_matrix is not None:
             reference = self._reference_matrix
-            if not isinstance(reference, torch.Tensor) or reference.ndim != 2:
-                raise ValueError('`_reference_matrix` should be a matrix')
+            if not isinstance(reference, torch.Tensor):
+                raise TypeError('`_reference_matrix` should be torch.Tensor')
             if reference.shape != self.matrix.shape:
-                raise ValueError(
-                    'The reference and dual gauge matrices should match')
-            if reference.device != self.core.device or \
-                    reference.dtype != self.core.dtype:
-                raise ValueError(
-                    'The reference and dual gauge should share runtime')
+                raise ValueError('Reference and dual matrices should match')
+            if (reference.device != self.core.device) or \
+                    (reference.dtype != self.core.dtype):
+                raise ValueError('Reference and dual should share runtime')
 
     @property
     def matrix(self) -> torch.Tensor:
-        """Returns shape ``external_dim x (cyclic_rank * local_rank)``."""
+        """Returns shape ``(external_dim, cyclic_rank * local_rank)``."""
         return _matrix_from_core(self.core, self.orientation)
 
     @property
@@ -170,181 +221,87 @@ class GaugeMap:  # MARK: GaugeMap
 
     @property
     def local_rank(self) -> int:
-        """Non-cyclic local rank encoded by this orientation."""
+        """Adjacent TR rank encoded by this orientation."""
         return self.core.shape[-1] if self.orientation == 'left' \
             else self.core.shape[0]
 
     @property
     def is_dual(self) -> bool:
-        """Whether this map was created as the dual of another gauge."""
+        """Whether this map was constructed as a directional dual."""
         return self._reference_matrix is not None
 
     def mirror(self) -> 'GaugeMap':
-        """Returns the equivalent gauge in the opposite orientation."""
-        orientation = 'right' if self.orientation == 'left' else 'left'
+        """Swaps the two TR axes while preserving the matrix representation."""
         return GaugeMap(
-            core=self.core.permute(2, 1, 0),
-            orientation=orientation,
-            site=self.site,
-            inverse_method=self.inverse_method,
-            _reference_matrix=self._reference_matrix,
-            _rank_rtol=self._rank_rtol)
+            self.core.permute(2, 1, 0),
+            'right' if self.orientation == 'left' else 'left',
+            self.site, self._reference_matrix, self._pinv_kwargs)
 
-    def inverse_or_pinv(self,
-                        policy: str = 'auto',
-                        *,
-                        rank_rtol: Optional[float] = None) -> 'GaugeMap':
+    def pinv(self, **pinv_kwargs: Any) -> 'GaugeMap':
         """
-        Builds a dual with solve, inverse or Moore--Penrose pseudoinverse.
+        Constructs the directional dual with a Moore-Penrose pseudoinverse.
 
-        ``policy='auto'`` uses a linear solve for square gauges and falls back
-        to a pseudoinverse if the solve fails. Rectangular gauges always use a
-        pseudoinverse. ``rank_rtol`` controls both the pseudoinverse cutoff and
-        the later numerical-rank diagnostic.
+        Parameters
+        ----------
+        **pinv_kwargs
+            ``atol``, ``rtol`` and ``hermitian`` forwarded to
+            :func:`torch.linalg.pinv`. Tolerances must be numbers or real
+            scalar tensors; batched gauge maps are not supported.
+
+        Returns
+        -------
+        GaugeMap
+            Dual with the same external and TR dimensions. Rank-deficient
+            maps retain their support projector; no cancellation is enforced.
         """
-        if not isinstance(policy, str):
-            raise TypeError('`policy` should be str type')
-        if policy not in ('auto', 'solve', 'inverse', 'pinv'):
-            raise ValueError(
-                "`policy` should be 'auto', 'solve', 'inverse' or 'pinv'")
-        rank_rtol = _validate_non_negative_float(rank_rtol, 'rank_rtol')
+        options = _pinv_options(pinv_kwargs)
         matrix = self.matrix
-        square = matrix.shape[0] == matrix.shape[1]
-
-        method = policy
-        if policy == 'auto':
-            method = 'solve' if square else 'pinv'
-        if method in ('solve', 'inverse') and not square:
-            raise ValueError(
-                f"Gauge policy '{method}' requires a square matrix")
-
-        if method == 'solve':
-            identity = torch.eye(
-                matrix.shape[1], dtype=matrix.dtype, device=matrix.device)
-            try:
-                dual_matrix = torch.linalg.solve(matrix.T, identity)
-            except RuntimeError:
-                if policy != 'auto':
-                    raise
-                method = 'pinv'
-        if method == 'inverse':
-            dual_matrix = torch.linalg.inv(matrix).T
-        elif method == 'pinv':
-            if rank_rtol is None:
-                dual_matrix = torch.linalg.pinv(matrix).T
-            else:
-                dual_matrix = torch.linalg.pinv(
-                    matrix, rcond=rank_rtol).T
-
-        dual_core = _core_from_matrix(
-            dual_matrix,
-            self.orientation,
-            self.cyclic_rank,
-            self.local_rank)
+        dual = torch.linalg.pinv(matrix, **options).T
         return GaugeMap(
-            core=dual_core,
-            orientation=self.orientation,
-            site=self.site,
-            inverse_method=method,
-            _reference_matrix=matrix,
-            _rank_rtol=rank_rtol)
+            _core_from_matrix(dual, self.orientation,
+                              self.cyclic_rank, self.local_rank),
+            self.orientation, self.site, matrix, options)
 
-    def diagnostics(self,
-                    tolerance: float = 1e-08,
-                    *,
-                    rank_rtol: Optional[float] = None) -> GaugeRecord:
-        """Measures numerical rank, condition and dual cancellation error."""
-        tolerance = _validate_non_negative_float(tolerance, 'tolerance')
-        rank_rtol = _validate_non_negative_float(rank_rtol, 'rank_rtol')
+    def diagnostics(self) -> GaugeRecord:
+        """Measures rank, condition and identity-cancellation error."""
         if not self.is_dual:
-            dual = self.inverse_or_pinv('pinv', rank_rtol=rank_rtol)
-            return dual.diagnostics(
-                tolerance=tolerance, rank_rtol=rank_rtol)
-
-        reference = self._reference_matrix
-        singular_values = torch.linalg.svdvals(reference)
-        if rank_rtol is None:
-            rank_rtol = self._rank_rtol
-        if rank_rtol is None:
-            rank_rtol = (
-                torch.finfo(singular_values.dtype).eps * max(reference.shape))
-        rank_tolerance = singular_values[0] * rank_rtol
-        numerical_rank = int(
-            (singular_values > rank_tolerance).sum().detach().cpu().item())
-        if numerical_rank < min(reference.shape):
-            condition_number = singular_values.new_tensor(torch.inf)
-        else:
-            condition_number = singular_values[0] / singular_values[-1]
-
-        product = reference.T @ self.matrix
+            return self.pinv().diagnostics()
+        matrix = self._reference_matrix
+        rank, cutoff, condition = _rank_statistics(matrix, self._pinv_kwargs)
+        product = matrix.T @ self.matrix
         identity = torch.eye(
             product.shape[0], dtype=product.dtype, device=product.device)
-        cancellation_error = (
-            torch.linalg.vector_norm(product - identity) /
-            torch.linalg.vector_norm(identity))
-
+        error = (product - identity).norm() / identity.norm()
+        tolerance = torch.finfo(matrix.real.dtype).eps * max(matrix.shape)
         return GaugeRecord(
-            orientation=self.orientation,
-            shape=tuple(reference.shape),
-            numerical_rank=numerical_rank,
-            cancellable_rank=reference.shape[1],
-            condition_number=condition_number,
-            cancellation_error=cancellation_error,
-            projective=numerical_rank < reference.shape[1],
-            inverse_method=self.inverse_method,
-            tolerance=tolerance,
-            rank_tolerance=rank_tolerance,
-            site=self.site)
+            orientation=self.orientation, shape=tuple(matrix.shape),
+            numerical_rank=rank, cancellable_rank=matrix.shape[1],
+            condition_number=condition, cancellation_error=error,
+            projective=rank < matrix.shape[1], inverse_method='pinv',
+            tolerance=tolerance, rank_tolerance=cutoff, site=self.site)
 
-    def require_cancellable(self,
-                            tolerance: float = 1e-08,
-                            allow_projective: bool = False,
-                            *,
-                            rank_rtol: Optional[float] = None) -> GaugeRecord:
+    def as_event(self, phase: str, level: int = 2) -> DecompositionEvent:
         """
-        Returns diagnostics or rejects a non-cancellable propagated
-        gauge.
-        """
-        if not isinstance(allow_projective, bool):
-            raise TypeError('`allow_projective` should be bool type')
-        record = self.diagnostics(
-            tolerance=tolerance, rank_rtol=rank_rtol)
-        if not allow_projective and not record.cancellable:
-            location = '' if record.site is None else f' at site {record.site}'
-            raise ValueError(
-                f'Cannot cancel {record.orientation} propagated gauge'
-                f'{location}: shape={record.shape}, '
-                f'rank={record.numerical_rank}/{record.cancellable_rank}, '
-                f'cancellation_error={record.cancellation_error:.2e}. '
-                'Increase the relevant source rank or pass '
-                'allow_projective=True to accept the projected map.')
-        return record
+        Creates an observer event from the measured gauge diagnostics.
 
-    def as_event(self,
-                 phase: str,
-                 tolerance: float = 1e-08,
-                 *,
-                 rank_rtol: Optional[float] = None,
-                 level: int = 2) -> DecompositionEvent:
-        """Returns a structured observer event with gauge diagnostics."""
+        Parameters
+        ----------
+        phase : str
+            Algorithm phase reported by the observer.
+        level : int
+            Verbosity level associated with the event.
+        """
         if not isinstance(phase, str):
             raise TypeError('`phase` should be str type')
-        record = self.diagnostics(
-            tolerance=tolerance, rank_rtol=rank_rtol)
+        record = self.diagnostics()
         return DecompositionEvent(
-            name='gauge',
-            phase=phase,
-            level=level,
-            site=record.site,
+            name='gauge', phase=phase, level=level, site=record.site,
             values={
-                'orientation': record.orientation,
-                'shape': record.shape,
-                'rank': (
-                    f'{record.numerical_rank}/{record.cancellable_rank}'),
+                'orientation': record.orientation, 'shape': record.shape,
+                'rank': (record.numerical_rank, record.cancellable_rank),
                 'condition_number': record.condition_number,
                 'cancellation_error': record.cancellation_error,
-                'projective': record.projective,
-                'inverse_method': record.inverse_method,
+                'projective': record.projective, 'inverse_method': 'pinv',
             })
 
 
@@ -376,66 +333,85 @@ class GaugeRecursionStep:  # MARK: GaugeRecursionStep
 
 @runtime_checkable
 class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
-    """Protocol for advancing an opened gauge to either neighboring site."""
+    """
+    Defines directional gauge transport between neighboring local problems.
+
+    Each method receives a completed ``opening``, the destination
+    ``local_target`` and a ``recursion_context`` with the provider and source
+    and destination sites. It returns the gauge fixed in the next opening.
+    """
 
     def advance_left(self,
                      opening: LoopOpening,
                      local_target: Any,
-                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
-        """Builds the fixed right gauge for the next site to the left."""
+                     recursion_context: Mapping[str, Any]
+                     ) -> GaugeRecursionStep:
+        """
+        Builds the fixed right gauge for the next site to the left.
+
+        Parameters
+        ----------
+        opening : LoopOpening
+            Completed source opening with its learned cores and gauges.
+        local_target : object
+            Destination objective supplied by the target provider.
+        recursion_context : mapping
+            Provider and source ``from_sites`` and destination ``to_sites``.
+
+        Returns
+        -------
+        GaugeRecursionStep
+            Gauge fixed on the right of the destination and its diagnostics.
+        """
 
     def advance_right(self,
                       opening: LoopOpening,
                       local_target: Any,
-                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
-        """Builds the fixed left gauge for the next site to the right."""
+                      recursion_context: Mapping[str, Any]
+                      ) -> GaugeRecursionStep:
+        """
+        Builds the fixed left gauge for the next site to the right.
+
+        Parameters
+        ----------
+        opening : LoopOpening
+            Completed source opening with its learned cores and gauges.
+        local_target : object
+            Destination objective supplied by the target provider.
+        recursion_context : mapping
+            Provider and source ``from_sites`` and destination ``to_sites``.
+
+        Returns
+        -------
+        GaugeRecursionStep
+            Gauge fixed on the left of the destination and its diagnostics.
+        """
 
 
 class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
-    """
-    Transports using the directional dual of the learned outgoing gauge.
+    r"""
+    Transports using the pseudoinverse of the learned outgoing gauge.
 
-    The Moore-Penrose dual constructs an orthogonal support projector. An
-    outgoing right gauge is dualized and mirrored into the fixed left gauge of
-    the next site; the leftward operation is its exact mirror.
+    The outgoing right gauge is dualized and mirrored into the next fixed
+    left gauge. The leftward operation is its mirror. The induced support
+    projector is orthogonal; deficient rank is allowed.
 
     Parameters
     ----------
-    inverse_policy : {"auto", "solve", "inverse", "pinv"}
-        Method used for the directional map. Default is ``"pinv"``. ``"auto"``
-        uses a solve for square systems and a pseudoinverse otherwise.
-    allow_projective : bool
-        Whether a rank-deficient map or a projection residual above tolerance
-        is allowed. Default is False; incompatible cancellation then raises an
-        error.
-    tolerance : float
-        Maximum accepted relative cancellation/projection error. Default is
-        1e-8.
-    rank_rtol : float, optional
-        Relative singular-value cutoff for pseudoinverses and numerical ranks.
-        If omitted, the dtype and matrix dimensions determine the cutoff.
+    **pinv_kwargs
+        ``atol``, ``rtol`` and ``hermitian`` forwarded to
+        :func:`torch.linalg.pinv`. Tolerances must be numbers or real scalar
+        tensors; batched gauge maps are not supported.
+
+    Examples
+    --------
+    >>> recursion = tk.decompositions.OrthGaugeRecursion(rtol=1e-12)
+    >>> isinstance(recursion, tk.decompositions.GaugeRecursion)
+    True
     """
 
-    def __init__(self,
-                 inverse_policy: str = 'pinv',
-                 allow_projective: bool = False,
-                 tolerance: float = 1e-08,
-                 rank_rtol: Optional[float] = None) -> None:
-        if not isinstance(inverse_policy, str):
-            raise TypeError('`inverse_policy` should be str type')
-        if inverse_policy not in ('auto', 'solve', 'inverse', 'pinv'):
-            raise ValueError(
-                "`inverse_policy` should be 'auto', 'solve', 'inverse' or "
-                "'pinv'")
-        if not isinstance(allow_projective, bool):
-            raise TypeError('`allow_projective` should be bool type')
-        self.inverse_policy = inverse_policy
-        self.allow_projective = allow_projective
-        self.tolerance = _validate_non_negative_float(tolerance, 'tolerance')
-        if self.tolerance is None:
-            raise TypeError('`tolerance` should be a non-negative float')
-        self.rank_rtol = _validate_non_negative_float(
-            rank_rtol, 'rank_rtol')
+    def __init__(self, **pinv_kwargs: Any) -> None:
+        self._pinv_kwargs = _pinv_options(pinv_kwargs)
 
     def _advance(self,
                  opening: LoopOpening,
@@ -447,7 +423,7 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
         if not isinstance(recursion_context, Mapping):
             raise TypeError('`recursion_context` should be a mapping')
         to_sites = recursion_context.get('to_sites')
-        if not isinstance(to_sites, tuple) or len(to_sites) != 1:
+        if not isinstance(to_sites, tuple) or (len(to_sites) != 1):
             raise ValueError(
                 '`recursion_context` should identify one destination site')
         if direction == 'right':
@@ -460,16 +436,11 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
             raise ValueError(
                 f'The opening has no outgoing {orientation} gauge')
 
+        # This transport dualizes the learned gauge, not a TT-core unfolding.
         fixed_map = GaugeMap(
-            outgoing,
-            orientation=orientation,
-            site=to_sites[0]).inverse_or_pinv(
-                self.inverse_policy,
-                rank_rtol=self.rank_rtol).mirror()
-        record = fixed_map.require_cancellable(
-            tolerance=self.tolerance,
-            allow_projective=self.allow_projective,
-            rank_rtol=self.rank_rtol)
+            outgoing, orientation, to_sites[0]).pinv(
+                **self._pinv_kwargs).mirror()
+        record = fixed_map.diagnostics()
         return GaugeRecursionStep(
             gauge=fixed_map.core,
             records=(record,),
@@ -482,62 +453,40 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
     def advance_left(self,
                      opening: LoopOpening,
                      local_target: Any,
-                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+                     recursion_context: Mapping[str, Any]
+                     ) -> GaugeRecursionStep:
         """Builds the fixed right gauge for the next site to the left."""
         return self._advance(opening, recursion_context, 'left')
 
     def advance_right(self,
                       opening: LoopOpening,
                       local_target: Any,
-                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+                      recursion_context: Mapping[str, Any]
+                      ) -> GaugeRecursionStep:
         """Builds the fixed left gauge for the next site to the right."""
         return self._advance(opening, recursion_context, 'right')
 
 
 class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
-    """
-    Transports opened TR bases through local TT-core pseudoinverses.
+    r"""
+    Transports learned TR factors through the local TT-core pseudoinverse.
 
-    The incoming gauge and retained TR core define a prefix or suffix basis.
-    This strategy expresses that basis in the next TT virtual basis by solving
-    a local coordinate problem against the original TT core. Thus the recursion
-    mirrors the environment extension used by recursive sketching, with a TT
-    unfolding acting as the recursive coordinate map. An initial
-    multi-site block is contracted and pseudoinverted as a whole; this is
-    not a product of its individual core pseudoinverses.
-
-    This strategy is experimental. The provider exposes standardized TT cores
-    or initial contiguous blocks. TT2TR boundary providers absorb the outgoing
-    learned gauges directly, without constructing a second directional dual.
+    For the directional TT unfolding :math:`M` and the factor :math:`X`
+    formed by the incoming gauge and recovered TR core, the next gauge is
+    :math:`E=M^+X`. An initial multi-site block is contracted and inverted
+    as a whole. Components outside the column space of :math:`M` are allowed.
 
     Parameters
     ----------
-    inverse_policy : {"auto", "solve", "inverse", "pinv"}
-        Method used for the directional map. Default is ``"auto"``. ``"auto"``
-        uses a solve for square systems and a pseudoinverse otherwise.
-    allow_projective : bool
-        Whether a rank-deficient map or a projection residual above tolerance
-        is allowed. Default is False; incompatible cancellation then raises an
-        error.
-    tolerance : float
-        Maximum accepted relative cancellation/projection error. Default is
-        1e-8.
-    rank_rtol : float, optional
-        Relative singular-value cutoff for pseudoinverses and numerical ranks.
-        If omitted, the dtype and matrix dimensions determine the cutoff.
-    """
+    **pinv_kwargs
+        ``atol``, ``rtol`` and ``hermitian`` forwarded to
+        :func:`torch.linalg.pinv`. Tolerances must be numbers or real scalar
+        tensors; batched gauge maps are not supported.
 
-    def __init__(self,
-                 inverse_policy: str = 'auto',
-                 allow_projective: bool = False,
-                 tolerance: float = 1e-08,
-                 rank_rtol: Optional[float] = None) -> None:
-        super().__init__(inverse_policy, allow_projective, tolerance, rank_rtol)
-        warnings.warn(
-            f'{type(self).__name__} is experimental and its numerical '
-            'behavior may change.',
-            ExperimentalWarning,
-            stacklevel=2)
+    Examples
+    --------
+    >>> recursion = tk.decompositions.PinvGaugeRecursion(rtol=1e-12)
+    """
 
     def _solve_coordinates(self,
                            matrix: torch.Tensor,
@@ -545,32 +494,9 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
                            orientation: str,
                            site: int) -> Tuple[torch.Tensor, GaugeRecord]:
         """Expresses ``basis`` in the columns of one TT-core unfolding."""
-        square = matrix.shape[0] == matrix.shape[1]
-        method = self.inverse_policy
-        if method == 'auto':
-            method = 'solve' if square else 'pinv'
-        if method in ('solve', 'inverse') and not square:
-            raise ValueError(
-                f"TT-core policy '{method}' requires a square unfolding")
-
-        if method == 'solve':
-            try:
-                coordinates = torch.linalg.solve(matrix, basis)
-            except RuntimeError:
-                if self.inverse_policy != 'auto':
-                    raise
-                method = 'pinv'
-        if method == 'inverse':
-            coordinates = torch.linalg.inv(matrix) @ basis
-        elif method == 'pinv':
-            if self.rank_rtol is None:
-                coordinates = torch.linalg.pinv(matrix) @ basis
-            else:
-                coordinates = torch.linalg.pinv(
-                    matrix, rcond=self.rank_rtol) @ basis
-
+        coordinates = torch.linalg.pinv(matrix, **self._pinv_kwargs) @ basis
         return coordinates, self._coordinate_record(
-            matrix, basis, coordinates, method, orientation, site)
+            matrix, basis, coordinates, 'pinv', orientation, site)
 
     def _coordinate_record(self,
                            matrix: torch.Tensor,
@@ -579,50 +505,19 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
                            method: str,
                            orientation: str,
                            site: int) -> GaugeRecord:
-        """Measures the residual in the coordinates used by the transport."""
-        singular_values = torch.linalg.svdvals(matrix)
-        if self.rank_rtol is None:
-            rank_rtol = (
-                torch.finfo(singular_values.dtype).eps * max(matrix.shape))
-        else:
-            rank_rtol = self.rank_rtol
-        rank_tolerance = singular_values[0] * rank_rtol
-        numerical_rank = int(
-            (singular_values > rank_tolerance).sum().detach().cpu().item())
-        if numerical_rank < min(matrix.shape):
-            condition_number = singular_values.new_tensor(torch.inf)
-        else:
-            condition_number = singular_values[0] / singular_values[-1]
-
-        residual = matrix @ coordinates - basis
-        residual_norm = torch.linalg.vector_norm(residual)
-        denominator = torch.linalg.vector_norm(basis)
-        projection_error = safe_divide(
-            residual_norm, denominator, zero_value=residual_norm)
-        projective = (
-            numerical_rank < matrix.shape[1] or
-            bool(projection_error > self.tolerance))
-        record = GaugeRecord(
-            orientation=orientation,
-            shape=tuple(matrix.shape),
-            numerical_rank=numerical_rank,
-            cancellable_rank=matrix.shape[1],
-            condition_number=condition_number,
-            cancellation_error=projection_error,
-            projective=projective,
-            inverse_method=method,
-            tolerance=self.tolerance,
-            rank_tolerance=rank_tolerance,
-            site=site)
-        if not self.allow_projective and (
-                record.projective or not record.cancellable):
-            raise ValueError(
-                f'Cannot transport the opened {orientation} basis through TT '
-                f'core at site {site}: shape={record.shape}, '
-                f'rank={record.numerical_rank}/{record.cancellable_rank}, '
-                f'projection_error={record.cancellation_error:.2e}. Pass '
-                'allow_projective=True to accept the projected recursion.')
-        return record
+        """Measures projection error without rejecting rank deficiency."""
+        options = self._pinv_kwargs if method == 'pinv' else {}
+        rank, cutoff, condition = _rank_statistics(matrix, options)
+        residual = (matrix @ coordinates - basis).norm()
+        error = safe_divide(residual, basis.norm(), zero_value=residual)
+        tolerance = torch.finfo(matrix.real.dtype).eps * max(matrix.shape)
+        return GaugeRecord(
+            orientation=orientation, shape=tuple(matrix.shape),
+            numerical_rank=rank, cancellable_rank=matrix.shape[1],
+            condition_number=condition, cancellation_error=error,
+            projective=(rank < matrix.shape[1]) or bool(error > tolerance),
+            inverse_method=method, tolerance=tolerance,
+            rank_tolerance=cutoff, site=site)
 
     def _transport_coordinates(self,
                                matrix: torch.Tensor,
@@ -649,13 +544,13 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
         cores = getattr(provider, 'cores', None)
         if cores is None:
             raise TypeError(
-                'TT-core recursion requires a provider with standardized cores')
+                'TT-core recursion requires standardized provider cores')
         site = from_sites[0]
         core = (cores[site] if len(from_sites) == 1 else
                 provider.local_target(from_sites, recursion_context))
-        if isinstance(core, torch.Tensor) and core.ndim > 3:
+        if isinstance(core, torch.Tensor) and (core.ndim > 3):
             core = core.reshape(core.shape[0], -1, core.shape[-1])
-        if not isinstance(core, torch.Tensor) or core.ndim != 3:
+        if not isinstance(core, torch.Tensor) or (core.ndim != 3):
             raise ValueError('The source TT core should be three-dimensional')
         return core, site
 
@@ -675,10 +570,13 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
         for core in opening.cores[1:]:
             tr_core = torch.tensordot(tr_core, core, dims=([-1], [0]))
         tr_core = tr_core.reshape(tr_core.shape[0], -1, tr_core.shape[-1])
-        if tt_core.device != tr_core.device or tt_core.dtype != tr_core.dtype:
+        if (tt_core.device != tr_core.device) or \
+                (tt_core.dtype != tr_core.dtype):
             raise ValueError(
                 'TT and opened TR cores should share dtype and device')
 
+        # Use identical row coordinates for the TT reference and learned
+        # factor.
         if direction == 'right':
             if opening.left_gauge is None:
                 raise ValueError('The opening has no incoming left gauge')
@@ -721,51 +619,6 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
                 'source_site': site,
             })
 
-class GramGaugeRecursion(PinvGaugeRecursion):  # MARK: GramGaugeRecursion
-    r"""
-    Transports gauges using the pseudoinverse of each complete TT subchain.
-
-    For a left prefix :math:`L_k=(L_{k-1}\otimes I)B_k`, cache QR factors
-    :math:`F_k` with :math:`H_k=L_k^\dagger L_k=F_k^\dagger F_k`. The
-    rightward coordinate map is
-
-    .. math::
-
-        D_k=[(F_{k-1}\otimes I)B_k]^+(F_{k-1}\otimes I)
-           =H_k^+B_k^\dagger(H_{k-1}\otimes I).
-
-    Suffixes use the mirrored construction, including complex conjugation
-    through the matrix adjoint. QR factors avoid squaring the condition
-    number in the numerical solve; ``rank_rtol`` applies to subchain singular
-    values, not their squares. The provider caches both families once per fit.
-
-    Local ALS targets keep their original coordinates and Euclidean norm.
-    This strategy changes transport, not the ALS objective. TT2TR edge closure
-    directly absorbs the learned outgoing gauge. This strategy does not
-    optimize the global TR error.
-    Initial multi-site blocks are supported with the ``center_out`` schedule.
-
-    Parameters are those of :class:`PinvGaugeRecursion`. With
-    ``inverse_policy="pinv"`` the coordinate map is Moore-Penrose on its
-    retained support. ``"solve"`` and ``"inverse"`` require square systems.
-    """
-
-    def _transport_coordinates(self,
-                               matrix: torch.Tensor,
-                               basis: torch.Tensor,
-                               direction: str,
-                               site: int,
-                               context: Mapping[str, Any]
-                               ) -> Tuple[torch.Tensor, GaugeRecord]:
-        """Weights local rows by a cached square root of the subchain Gram."""
-        provider = context['provider']
-        factor = (provider.left_factors[context['from_sites'][0]]
-                  if direction == 'right' else
-                  provider.right_factors[context['from_sites'][-1] + 1])
-        matrix, basis = _weight_rows(matrix, basis, factor, direction)
-        return self._solve_coordinates(matrix, basis, direction, site)
-
-
 def _schmidt_power(spectrum: torch.Tensor, power: float) -> torch.Tensor:
     """Applies a spectral power on positive support, zeroing inverse zeros."""
     if power == 0:
@@ -795,18 +648,25 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
     The input's local targets and their ALS metric are retained. Explicit,
     implicit and inverse Vidal therefore share the same transport strategy.
 
-    Parameters are those of :class:`PinvGaugeRecursion`; the adjoint replaces
-    its coordinate solve. Optional TT2TR expansion adds orthogonal residual
-    coordinates and zero reference rows without increasing the TR ranks.
-    The schedule must be ``"center_out"``. This strategy is experimental.
+    Parameters
+    ----------
+    **pinv_kwargs
+        Accepted for the common recursion interface. The directional adjoint
+        and its numerical-rank diagnostics do not use these options. Optional
+        TT2TR expansion adds orthogonal residual coordinates and zero reference
+        rows without changing TR ranks.
+
+    Examples
+    --------
+    >>> recursion = tk.decompositions.AdjointGaugeRecursion()
     """
 
     def _advance_qr(self,
                     opening: LoopOpening,
                     recursion_context: Mapping[str, Any],
                     direction: str,
-                    max_extra_rank: Optional[int] = 0,
-                    residual_rtol: float = 1e-12) -> GaugeRecursionStep:
+                    enrich_rank: Optional[int] = 0,
+                    enrich_rtol: float = 1e-12) -> GaugeRecursionStep:
         """Moves the canonical center while retaining residual coordinates."""
         provider = recursion_context['provider']
         shift_center = getattr(provider, 'shift_center', None)
@@ -815,15 +675,20 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                 'Adjoint QR transport requires a canonical TT target provider')
         matrix, basis, block = self._local_matrices(
             opening, recursion_context, direction)
+
+        # Move the triangular factor into the unsolved reference core; the
+        # isometry supplies the adjoint transport.
         q, factor = torch.linalg.qr(matrix, mode='reduced')
+
+        # A second projection suppresses roundoff in nearly-null residual rows.
         residual = basis - q @ (q.mH @ basis)
         residual = residual - q @ (q.mH @ residual)
         u, singular, _ = torch.linalg.svd(residual, full_matrices=False)
         capacity = max(0, matrix.shape[0] - q.shape[1])
-        if max_extra_rank is not None:
-            capacity = min(capacity, max_extra_rank)
+        if enrich_rank is not None:
+            capacity = min(capacity, enrich_rank)
         selected = min(capacity, int((
-            singular > basis.norm() * residual_rtol).sum()))
+            singular > basis.norm() * enrich_rtol).sum()))
         old_dimension = q.shape[1]
         if selected:
             extra = u[:, :selected] - q @ (q.mH @ u[:, :selected])
@@ -859,7 +724,8 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                  recursion_context: Mapping[str, Any],
                  direction: str) -> GaugeRecursionStep:
         """Uses QR for ordinary targets and Schmidt adjoints for Vidal."""
-        if callable(getattr(recursion_context['provider'], 'shift_center', None)):
+        provider = recursion_context['provider']
+        if callable(getattr(provider, 'shift_center', None)):
             return self._advance_qr(opening, recursion_context, direction)
         return super()._advance(opening, recursion_context, direction)
 
@@ -871,6 +737,8 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Weights incoming rows and removes outgoing absorbed powers."""
         provider = context['provider']
+
+        # Undo the stored Vidal absorption powers to recover an isometry.
         first, last = context['from_sites'][0], context['from_sites'][-1]
         if direction == 'right':
             factor = provider.left_factors[first]
@@ -890,7 +758,7 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                                site: int,
                                context: Mapping[str, Any]
                                ) -> Tuple[torch.Tensor, GaugeRecord]:
-        """Projects isometrically, then converts to the next target's powers."""
+        """Projects and converts to the next target's Schmidt powers."""
         isometry, weighted = self._isometric_coordinates(
             matrix, basis, direction, context)
         center_coordinates = isometry.mH @ weighted
@@ -917,20 +785,20 @@ class _ExpandedGaugeRecursion:
 
     def __init__(self,
                  recursion: GaugeRecursion,
-                 max_extra_rank: Optional[int],
-                 residual_rtol: float) -> None:
-        if max_extra_rank is not None:
-            if isinstance(max_extra_rank, bool) or not isinstance(
-                    max_extra_rank, int):
-                raise TypeError('`max_extra_rank` should be int type or None')
-            if max_extra_rank < 0:
-                raise ValueError('`max_extra_rank` should be non-negative')
+                 enrich_rank: Optional[int],
+                 enrich_rtol: float) -> None:
+        if enrich_rank is not None:
+            if isinstance(enrich_rank, bool) or not isinstance(
+                    enrich_rank, int):
+                raise TypeError('`enrich_rank` should be int type or None')
+            if enrich_rank < 0:
+                raise ValueError('`enrich_rank` should be non-negative')
         self.recursion = recursion
-        self.max_extra_rank = max_extra_rank
-        self.residual_rtol = _validate_non_negative_float(
-            residual_rtol, 'residual_rtol')
-        if self.residual_rtol is None:
-            raise TypeError('`residual_rtol` should be a non-negative float')
+        self.enrich_rank = enrich_rank
+        self.enrich_rtol = _validate_non_negative_float(
+            enrich_rtol, 'enrich_rtol')
+        if self.enrich_rtol is None:
+            raise TypeError('`enrich_rtol` should be a non-negative float')
 
     def _advance(self,
                  opening: LoopOpening,
@@ -941,8 +809,8 @@ class _ExpandedGaugeRecursion:
         if isinstance(self.recursion, AdjointGaugeRecursion) and callable(
                 getattr(context['provider'], 'shift_center', None)):
             return self.recursion._advance_qr(
-                opening, context, direction, self.max_extra_rank,
-                self.residual_rtol)
+                opening, context, direction, self.enrich_rank,
+                self.enrich_rtol)
         advance = (self.recursion.advance_right if direction == 'right'
                    else self.recursion.advance_left)
         step = advance(opening, local_target, context)
@@ -951,12 +819,6 @@ class _ExpandedGaugeRecursion:
         if isinstance(self.recursion, AdjointGaugeRecursion):
             matrix, basis = self.recursion._isometric_coordinates(
                 matrix, basis, direction, context)
-        elif isinstance(self.recursion, GramGaugeRecursion):
-            provider = context['provider']
-            first, last = context['from_sites'][0], context['from_sites'][-1]
-            factor = (provider.left_factors[first] if direction == 'right'
-                      else provider.right_factors[last + 1])
-            matrix, basis = _weight_rows(matrix, basis, factor, direction)
         # An SVD identifies support without assigning arbitrary bases to null
         # reference columns. Its cutoff is numerical, not a TT truncation.
         q, values, _ = torch.linalg.svd(matrix, full_matrices=False)
@@ -966,10 +828,10 @@ class _ExpandedGaugeRecursion:
         residual = residual - q @ (q.mH @ residual)
         u, values, _ = torch.linalg.svd(residual, full_matrices=False)
         capacity = matrix.shape[0] - q.shape[1]
-        if self.max_extra_rank is not None:
-            capacity = min(capacity, self.max_extra_rank)
+        if self.enrich_rank is not None:
+            capacity = min(capacity, self.enrich_rank)
         selected = min(capacity, int((
-            values > basis.norm() * self.residual_rtol).sum()))
+            values > basis.norm() * self.enrich_rtol).sum()))
         extra = u[:, :selected]
         if selected:
             extra = extra - q @ (q.mH @ extra)
@@ -986,16 +848,20 @@ class _ExpandedGaugeRecursion:
         provider = context['provider']
         destination = context['to_sites'][0]
         before = provider.cores[destination]
+
+        # Added equations have zero target rows, preserving the reference
+        # tensor.
         provider.expand_coordinates(destination, selected, direction)
         after = provider.cores[destination]
         axis = 0 if direction == 'right' else 2
         original = after.narrow(axis, 0, before.shape[axis])
         zeros = after.narrow(axis, before.shape[axis], selected)
         preservation_error = safe_divide(
-            ((original - before).norm().square() + zeros.norm().square()).sqrt(),
+            torch.hypot((original - before).norm(), zeros.norm()),
             before.norm())
         identity = torch.eye(selected, dtype=extra.dtype, device=extra.device)
-        diagnostics = {**step.diagnostics,
+        diagnostics = {
+            **step.diagnostics,
             'algorithm': 'orthogonal_residual_enrichment',
             'base_recursion': type(self.recursion).__name__,
             'old_dimension': old_dimension,
@@ -1012,14 +878,16 @@ class _ExpandedGaugeRecursion:
     def advance_right(self,
                       opening: LoopOpening,
                       local_target: Any,
-                      recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+                      recursion_context: Mapping[str, Any]
+                      ) -> GaugeRecursionStep:
         """Expands the next left gauge in rightward transport."""
         return self._advance(opening, local_target, recursion_context, 'right')
 
     def advance_left(self,
                      opening: LoopOpening,
                      local_target: Any,
-                     recursion_context: Mapping[str, Any]) -> GaugeRecursionStep:
+                     recursion_context: Mapping[str, Any]
+                     ) -> GaugeRecursionStep:
         """Expands the next right gauge in leftward transport."""
         return self._advance(opening, local_target, recursion_context, 'left')
 
@@ -1030,7 +898,6 @@ __all__ = [
     'GaugeRecursion',
     'OrthGaugeRecursion',
     'PinvGaugeRecursion',
-    'GramGaugeRecursion',
     'AdjointGaugeRecursion',
     'ExperimentalWarning',
 ]

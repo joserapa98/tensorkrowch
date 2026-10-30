@@ -1,6 +1,7 @@
-"""Tests retained for redistribution."""
+"""Tests for center-out ring construction and boundary block assembly."""
 
 from dataclasses import dataclass
+from math import factorial
 
 import pytest
 import torch
@@ -36,11 +37,12 @@ class SyntheticOpenProvider(SyntheticProvider):
 
     boundary_mode = 'open'
 
-    def close_boundary(self, site, direction, opening, context):
+    def close_boundary(self, sites, direction, opening, context):
         return BoundaryClosure(
-            site=site,
+            sites=sites,
             direction=direction,
-            core=torch.full((1, self.in_dim[site], 1), float(site + 1)),
+            cores=tuple(torch.full(
+                (1, self.in_dim[site], 1), float(site + 1)) for site in sites),
             diagnostics={'synthetic_boundary': True})
 
 
@@ -55,8 +57,8 @@ class SyntheticRecursion:
         gauge_map = tk.decompositions.GaugeMap(
             gauge,
             orientation=direction,
-            site=local_target[0]).inverse_or_pinv('pinv')
-        record = gauge_map.require_cancellable()
+            site=local_target[0]).pinv()
+        record = gauge_map.diagnostics()
         recursion_context['calls'].append((
             direction,
             recursion_context['from_sites'],
@@ -239,7 +241,7 @@ class TestBidirectionalRingDriver:  # MARK: TestBidirectionalRingDriver
                 opener=_synthetic_opener([]),
                 recursion=SyntheticRecursion([]))
 
-    def test_central_block_cannot_consume_the_boundary_reconciliation_site(self):
+    def test_cyclic_center_leaves_one_reconciliation_site(self):
         with pytest.raises(ValueError, match='leave at least one boundary'):
             BidirectionalRingDriver().fit(
                 SyntheticProvider((2, 2, 2)),
@@ -277,3 +279,110 @@ class TestBidirectionalRingDriver:  # MARK: TestBidirectionalRingDriver
                 opener=opener,
                 recursion=IncompatibleRecursion([]),
                 center=2)
+
+
+class TestBoundaryClosure:
+
+    def test_multisite_closure_keeps_all_cores(self):
+        cores = tuple(torch.ones(1, 2, 1) for _ in range(3))
+        closure = BoundaryClosure((0, 1, 2), 'left', cores)
+        assert closure.sites == (0, 1, 2)
+        assert closure.cores == cores
+
+    @pytest.mark.parametrize('sites', [(), (True,), ('0',)])
+    def test_invalid_site_types(self, sites):
+        with pytest.raises(TypeError, match='sites'):
+            BoundaryClosure(sites, 'left', ())
+
+    @pytest.mark.parametrize('sites', [(-1,), (0, 2), (2, 1)])
+    def test_invalid_site_interval(self, sites):
+        with pytest.raises(ValueError, match='sites'):
+            BoundaryClosure(sites, 'left', ())
+
+    @pytest.mark.parametrize('cores', [(), (torch.ones(2, 2),), ('core',)])
+    def test_invalid_cores(self, cores):
+        with pytest.raises(ValueError, match='cores'):
+            BoundaryClosure((0,), 'left', cores)
+
+
+def _select_sites(sites):
+    """Creates an internal selection with a prescribed contiguous interval."""
+    from tensorkrowch.decompositions.ring.blocks import (
+        _BlockSelection,
+        _CentralBlockSelector,
+    )
+
+    class Selection(_CentralBlockSelector):
+        def select(self, provider, rank, center=None, *, bounds=None):
+            return _BlockSelection(
+                sites=sites,
+                in_dim=tuple(provider.in_dim[site] for site in sites),
+                left_rank_cap=1, right_rank_cap=1,
+                input_capacity=2**len(sites), required_input_capacity=1,
+                feasible=True, reason='prescribed_test_block')
+
+    return Selection()
+
+
+class TestOpenBoundaryBlocks:
+
+    def test_two_multisite_boundaries_leave_only_single_site_recursion(self):
+        calls = []
+        result = BidirectionalRingDriver().fit(
+            SyntheticOpenProvider((2,) * 11), rank=1,
+            opener=_synthetic_opener(calls, supports_two=False),
+            recursion=SyntheticRecursion([]),
+            block_selector=_select_sites((4, 5)),
+            context={'left_boundary': (0, 1),
+                     'right_boundary': (8, 9, 10)})
+        assert result.order == ((4, 5), (6,), (7,), (8, 9, 10),
+                                (3,), (2,), (0, 1))
+        assert result.boundaries[0].sites == (0, 1)
+        assert result.boundaries[8].sites == (8, 9, 10)
+        assert len(result.boundaries[8].cores) == 3
+        assert all(len(call['sites']) == 1 for call in calls[1:])
+        assert result.rank == (1,) * 11
+        torch.testing.assert_close(
+            result.contract_dense(),
+            torch.full((2,) * 11, float(factorial(11))))
+
+    @pytest.mark.parametrize('center, left, right', [
+        ((0, 1, 2), (), (6, 7)),
+        ((5, 6, 7), (0, 1), ()),
+    ])
+    def test_center_merged_with_one_boundary(self, center, left, right):
+        result = BidirectionalRingDriver().fit(
+            SyntheticOpenProvider((2,) * 8), rank=1,
+            opener=_synthetic_opener([]), recursion=SyntheticRecursion([]),
+            block_selector=_select_sites(center),
+            context={'left_boundary': left, 'right_boundary': right})
+        assert result.order[0] == center
+        assert len(result.boundaries) == 1
+        assert [core[0, 0, 0].item() for core in result.cores] == \
+            list(range(1, 9))
+
+    @pytest.mark.parametrize('n_sites', [1, 2, 3, 5])
+    def test_all_blocks_merged_requires_only_one_opening(self, n_sites):
+        calls = []
+        recursion_calls = []
+        sites = tuple(range(n_sites))
+        result = BidirectionalRingDriver().fit(
+            SyntheticOpenProvider((2,) * n_sites), rank=1,
+            opener=_synthetic_opener(calls),
+            recursion=SyntheticRecursion(recursion_calls),
+            block_selector=_select_sites(sites),
+            context={'left_boundary': (), 'right_boundary': ()})
+        assert result.order == (sites,)
+        assert result.directions == ('center',)
+        assert len(calls) == 1
+        assert not recursion_calls
+        assert not result.boundaries
+        assert result.rank == (1,) * n_sites
+
+    def test_missing_closure_implementation_is_rejected(self):
+        provider = SyntheticProvider((2,) * 5)
+        provider.boundary_mode = 'open'
+        with pytest.raises(TypeError, match='close_boundary'):
+            BidirectionalRingDriver().fit(
+                provider, rank=1, opener=_synthetic_opener([]),
+                recursion=SyntheticRecursion([]), center=2)

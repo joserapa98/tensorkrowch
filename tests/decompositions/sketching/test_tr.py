@@ -498,7 +498,7 @@ def _rank_one_sparse(dtype=torch.float64, in_sites=(0, 1, 2)):
 class TestTRRS:  # MARK: TestTRRS
 
     @pytest.mark.parametrize('in_sites', [(0, 1, 2), (2, 0)])
-    @pytest.mark.parametrize('recursion', ['adjoint', 'pinv', 'gram', 'orth'])
+    @pytest.mark.parametrize('recursion', ['adjoint', 'pinv', 'orth'])
     @pytest.mark.parametrize('expanded', [False, True])
     @pytest.mark.parametrize('operator', [
         tk.decompositions.SampledSketch(),

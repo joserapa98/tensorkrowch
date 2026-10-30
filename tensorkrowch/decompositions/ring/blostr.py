@@ -1,839 +1,632 @@
 """
 This script contains:
 
-    Internal classes:
-        * _FirstCoreFactorization
-
-    Public classes:
-        * BLOSTRLoopOpener
-
-    Internal functions:
-        * _normalize_non_negative_float
-        * _random_permutation
-        * _complex_dtype
-        * _flat_to_configuration
-        * _draw_slices
-        * _validate_slices
-        * _slice_matrix
-        * _balanced_order
-        * _selected_eigenspace
-        * _first_core
-        * _recover_tail
-        * _fit_blostr
-        * _materialize_target
-        * _mirror_cores
-
     Public functions:
         * tr_blostr
+        * tr_blostr_svd
+
+    Internal classes:
+        * _FirstCore
+
+    Internal functions:
+        * _balanced_order
+        * _spectral_order
+        * _first_core
+        * _recover_cores
+        * _fit_blostr
 """
 
-from contextlib import nullcontext
 from dataclasses import dataclass
 from math import isfinite, prod
-from typing import (Any,
-                    Mapping,
-                    Optional,
-                    Sequence,
-                    TYPE_CHECKING,
-                    Tuple,
-                    Union)
-import warnings
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
-from tensorkrowch.decompositions._utils import (_normalize_dims,
-                                                _normalize_positive_int,
-                                                _normalize_rank)
-from tensorkrowch.decompositions.ring.opening import (LoopOpenerCapabilities,
-                                                      LoopOpening,
-                                                      _mirror_rank,
-                                                      _normalize_context,
-                                                      _normalize_orientation,
-                                                      _source_from_context)
-
-from tensorkrowch.utils import safe_divide, truncated_svd
+from tensorkrowch.utils import safe_divide
 
 from tensorkrowch.decompositions._runtime import _RuntimePolicy
+from tensorkrowch.decompositions._truncation import _TruncationSpec
+from tensorkrowch.decompositions._utils import (_normalize_positive_int,
+                                              _normalize_rank)
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
-                                                 ErrorRecord,
-                                                 TimingRecord,
-                                                 TruncationRecord)
-from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   _normalize_verbosity,
-                                                   _resolve_observer)
+                                               ErrorRecord,
+                                               TimingRecord)
+from tensorkrowch.decompositions.observers import (_normalize_verbosity,
+                                                 _resolve_observer,
+                                                 DecompositionEvent)
 from tensorkrowch.decompositions.results import TRDecomposition
-from tensorkrowch.decompositions.ring.gauges import ExperimentalWarning
+from tensorkrowch.decompositions.ring.blocks import _split_block
 
 
-_Rank = Union[int, Sequence[int]]
+_Rank = Optional[Union[int, Sequence[int]]]
 _Device = Optional[Union[str, torch.device]]
 
 
-if TYPE_CHECKING:
-    from tensorkrowch.decompositions.results import _DecompositionOutput
-
-
 @dataclass(frozen=True)
-class _FirstCoreFactorization:  # MARK: _FirstCoreFactorization
-    """Stores the recovered first ``core`` and spectral diagnostics."""
+class _FirstCore:
+    """Stores the first spectral core and the sampled projections."""
 
-    core: torch.Tensor  # Raw local tensor with standard rank axes
-    # Interior configurations used for spectral slice selection
-    slices: Tuple[Tuple[int, ...], ...]
-    errors: Tuple[ErrorRecord, ...]  # Optional spectral or reconstruction error records
-
-
-def _normalize_non_negative_float(value: float, name: str) -> float:
-    """Validates one finite non-negative floating-point option."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f'`{name}` should be a real scalar')
-    value = float(value)
-    if value < 0 or not isfinite(value):
-        raise ValueError(f'`{name}` should be finite and non-negative')
-    return value
+    core: torch.Tensor
+    slices: Optional[Tuple[Tuple[int, ...], ...]]
+    cluster_error: torch.Tensor
 
 
-def _random_permutation(size: int,
-                        generator: Optional[torch.Generator]) -> torch.Tensor:
-    """Draws reproducibly and returns CPU indices for Python-side grouping."""
-    device = 'cpu' if generator is None else generator.device
-    return torch.randperm(
-        size, generator=generator, device=device).detach().cpu()
-
-
-def _complex_dtype(dtype: torch.dtype) -> torch.dtype:
-    """Returns the matching eigendecomposition ``dtype``."""
-    if dtype in (torch.float16, torch.bfloat16, torch.float32,
-                 torch.complex64):
-        return torch.complex64
-    if dtype in (torch.float64, torch.complex128):
-        return torch.complex128
-    raise TypeError('BLOSTR requires a floating or complex tensor')
-
-
-def _flat_to_configuration(flat: int,
-                           in_dim: Sequence[int]) -> Tuple[int, ...]:
-    """Unravels one ``flat`` interior-slice id."""
-    configuration = [0] * len(in_dim)
-    for axis in range(len(in_dim) - 1, -1, -1):
-        configuration[axis] = flat % in_dim[axis]
-        flat //= in_dim[axis]
-    return tuple(configuration)
-
-
-def _draw_slices(in_dim: Sequence[int],
-                 generator: Optional[torch.Generator]) -> Tuple[Tuple[int, ...], ...]:
-    """Draws two distinct slice ratios from interior configurations."""
-    interior = tuple(in_dim[1:-1])
-    n_configurations = prod(interior)
-    if n_configurations < 3:
-        raise ValueError(
-            'BLOSTR requires at least three interior slice configurations')
-    draw = min(4, n_configurations)
-    permutation = _random_permutation(
-        n_configurations, generator)[:draw].tolist()
-    configurations = tuple(
-        _flat_to_configuration(index, interior) for index in permutation)
-    if draw == 3:
-        return (configurations[0], configurations[1],
-                configurations[0], configurations[2])
-    return configurations
-
-
-def _validate_slices(slices: Sequence[Sequence[int]],
-                     in_dim: Sequence[int]) -> Tuple[Tuple[int, ...], ...]:
-    """Validates four user-provided interior slice configurations."""
-    if isinstance(slices, (str, bytes)) or not isinstance(slices, Sequence) or any(
-            isinstance(configuration, (str, bytes)) or
-            not isinstance(configuration, Sequence) for configuration in slices):
-        raise TypeError(
-            '`slices` should contain four index sequences')
-    slices = tuple(tuple(configuration) for configuration in slices)
-    if len(slices) != 4:
-        raise ValueError('`slices` should contain alpha, beta and their primes')
-    interior = tuple(in_dim[1:-1])
-    for configuration in slices:
-        if len(configuration) != len(interior):
-            raise ValueError(
-                'Every BLOSTR slice should index all interior dimensions')
-        for index, dimension in zip(configuration, interior):
-            if isinstance(index, bool) or not isinstance(index, int):
-                raise TypeError('BLOSTR slice indices should be integers')
-            if index < 0 or index >= dimension:
-                raise ValueError('A BLOSTR slice index lies outside the tensor')
-    if slices[0] == slices[1] or slices[2] == slices[3]:
-        raise ValueError('Each BLOSTR slice ratio requires distinct indices')
-    return slices
-
-
-def _slice_matrix(tensor: torch.Tensor,
-                  configuration: Sequence[int]) -> torch.Tensor:
-    """Leaves the first and last ``tensor`` axes open in one spectral slice."""
-    index = (slice(None), *configuration, slice(None))
-    return tensor[index]
-
-
-def _balanced_order(eigenvalues: torch.Tensor,
+def _balanced_order(values: torch.Tensor,
                     cluster_size: int,
                     n_clusters: int,
                     n_iters: int,
                     n_restarts: int,
-                    generator: Optional[torch.Generator]) -> torch.Tensor:
-    """Groups complex ``eigenvalues`` into equal-size clusters reproducibly."""
-    features = torch.stack(
-        (eigenvalues.real, eigenvalues.imag), dim=1).detach().cpu()
-    n_values = features.shape[0]
-    if n_values != cluster_size * n_clusters:
-        raise ValueError('The selected spectrum does not match BLOSTR ranks')
-
-    best_labels = None
+                    generator: Optional[torch.Generator]
+                    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Groups complex values into equal-size clusters by balanced k-means."""
+    features = torch.view_as_real(values).detach().cpu()
+    n_values = len(values)
     best_cost = None
+    best_labels = None
     for _ in range(n_restarts):
-        permutation = _random_permutation(n_values, generator)
+        device = 'cpu' if generator is None else generator.device
+        order = torch.randperm(n_values, generator=generator,
+                               device=device).cpu()
         labels = torch.empty(n_values, dtype=torch.long)
         for cluster in range(n_clusters):
-            labels[permutation[
-                cluster * cluster_size:(cluster + 1) * cluster_size]] = cluster
-
+            labels[order[cluster * cluster_size:
+                         (cluster + 1) * cluster_size]] = cluster
         for _ in range(n_iters):
             centers = torch.stack([
                 features[labels == cluster].mean(0)
-                for cluster in range(n_clusters)
-            ])
+                for cluster in range(n_clusters)])
             distances = torch.cdist(features, centers)
-            new_labels = torch.full_like(labels, -1)
+            new_labels = torch.empty_like(labels)
             capacity = torch.zeros(n_clusters, dtype=torch.long)
-            order = torch.argsort(distances.min(dim=1).values)
-            for value in order.tolist():
-                for cluster in torch.argsort(distances[value]).tolist():
+            for index in distances.min(dim=1).values.argsort().tolist():
+                for cluster in distances[index].argsort().tolist():
                     if capacity[cluster] < cluster_size:
-                        new_labels[value] = cluster
+                        new_labels[index] = cluster
                         capacity[cluster] += 1
                         break
             if torch.equal(new_labels, labels):
                 break
             labels = new_labels
-
         centers = torch.stack([
             features[labels == cluster].mean(0)
-            for cluster in range(n_clusters)
-        ])
-        cost = ((features - centers[labels]).square()).sum()
-        if best_cost is None or cost < best_cost:
-            best_cost = cost
-            best_labels = labels.clone()
-
-    grouped = torch.cat([
+            for cluster in range(n_clusters)])
+        cost = (features - centers[labels]).square().sum()
+        if (best_cost is None) or (cost < best_cost):
+            best_cost, best_labels = cost, labels.clone()
+    order = torch.cat([
         torch.where(best_labels == cluster)[0]
-        for cluster in range(n_clusters)
-    ])
-    return grouped.to(eigenvalues.device)
+        for cluster in range(n_clusters)])
+    return order.to(values.device), best_cost.to(values.device)
 
 
-def _selected_eigenspace(matrix: torch.Tensor,
-                         n_vectors: int,
-                         spectral_atol: float,
-                         cluster_size: int,
-                         n_clusters: int,
-                         n_iters: int,
-                         n_restarts: int,
-                         generator: Optional[torch.Generator],
-                         collect_metrics: bool = True) -> Tuple[
-        torch.Tensor,
-        torch.Tensor,
-        Optional[ErrorRecord]]:
-    """Selects, groups and interleaves one BLOSTR eigenspace."""
-    eigenvalues, eigenvectors = torch.linalg.eig(matrix)
-    order = torch.argsort(eigenvalues.abs(), descending=True)
-    order = order[eigenvalues[order].abs() > spectral_atol]
-    if order.numel() < n_vectors:
-        raise RuntimeError(
-            'BLOSTR found too few nonzero eigenvalues for the requested ranks')
-    order = order[:n_vectors]
-    selected_values = eigenvalues.index_select(0, order)
-    selected_vectors = eigenvectors.index_select(1, order)
-    grouping = _balanced_order(
-        selected_values,
-        cluster_size=cluster_size,
-        n_clusters=n_clusters,
-        n_iters=n_iters,
-        n_restarts=n_restarts,
-        generator=generator)
-    selected_values = selected_values.index_select(0, grouping)
-    selected_vectors = selected_vectors.index_select(1, grouping)
+def _spectral_order(values: torch.Tensor,
+                    ranks: Optional[Tuple[int, int]],
+                    spectral_atol: float,
+                    n_iters: int,
+                    n_restarts: int,
+                    generator: Optional[torch.Generator]
+                    ) -> Tuple[torch.Tensor, int, int, torch.Tensor]:
+    """Finds balanced multiplicities, or orders prescribed spectral blocks."""
+    if ranks is None:
+        candidates = [(len(values) // count, count)
+                      for count in range(1, len(values) + 1)
+                      if len(values) % count == 0]
+    else:
+        candidates = [ranks]
+    scale = values.abs().square().sum().clamp_min(
+        torch.finfo(values.real.dtype).tiny)
+    tolerance = max(
+        spectral_atol, 10 * len(values) * torch.finfo(values.real.dtype).eps)
+    for cyclic, adjacent in candidates:
+        order, cost = _balanced_order(
+            values, cyclic, adjacent, n_iters, n_restarts, generator)
+        relative = (cost / scale).sqrt()
+        if (ranks is not None) or (relative <= tolerance):
+            # Interleave equal-eigenvalue blocks to expose TR bond indices.
+            interleave = torch.cat([
+                cyclic * torch.arange(adjacent, device=values.device) + offset
+                for offset in range(cyclic)])
+            return order[interleave], cyclic, adjacent, relative
+    raise RuntimeError('BLOSTR could not identify balanced spectral blocks')
 
-    interleave = torch.cat([
-        cluster_size * torch.arange(
-            n_clusters, device=matrix.device) + offset
-        for offset in range(cluster_size)
-    ])
-    selected_values = selected_values.index_select(0, interleave)
-    selected_vectors = selected_vectors.index_select(1, interleave)
-    error = None
-    if collect_metrics:
-        reconstruction = (
-            selected_vectors @ torch.diag(selected_values) @
-            torch.linalg.pinv(selected_vectors))
-        denominator = torch.linalg.vector_norm(matrix)
-        absolute = torch.linalg.vector_norm(reconstruction - matrix)
-        relative = safe_divide(absolute, denominator, zero_value=absolute)
-        error = ErrorRecord(kind='eigenspace', absolute=absolute,
-                            relative=relative, denominator=denominator)
-    return selected_vectors, selected_values, error
+
+def _draw_slices(in_dim: Sequence[int],
+                 generator: Optional[torch.Generator]
+                 ) -> Tuple[Tuple[int, ...], ...]:
+    """Draws distinct configurations for two independent slice ratios."""
+    dimensions = tuple(in_dim[1:-1])
+    n_configurations = prod(dimensions)
+    if n_configurations < 3:
+        raise ValueError(
+            '`projection="slices"` requires three interior configurations')
+    device = 'cpu' if generator is None else generator.device
+    indices = torch.randperm(n_configurations, generator=generator,
+                             device=device)[:4].cpu().tolist()
+    configurations = []
+    for index in indices:
+        configuration = []
+        for dimension in reversed(dimensions):
+            configuration.append(index % dimension)
+            index //= dimension
+        configurations.append(tuple(reversed(configuration)))
+    if len(configurations) == 3:
+        configurations = [configurations[0], configurations[1],
+                          configurations[0], configurations[2]]
+    return tuple(configurations)
+
+
+def _validate_slices(slices: Sequence[Sequence[int]],
+                     dimensions: Sequence[int]
+                     ) -> Tuple[Tuple[int, ...], ...]:
+    """Validates four interior index configurations."""
+    if isinstance(slices, (str, bytes)) or not isinstance(slices, Sequence):
+        raise TypeError('`slices` should contain four index sequences')
+    configurations = []
+    for configuration in slices:
+        if isinstance(configuration, (str, bytes)) or not isinstance(
+                configuration, Sequence):
+            raise TypeError('`slices` should contain four index sequences')
+        configuration = tuple(configuration)
+        if len(configuration) != len(dimensions) - 2:
+            raise ValueError('Each entry of `slices` should index every '
+                             'interior axis')
+        for index, dimension in zip(configuration, dimensions[1:-1]):
+            if isinstance(index, bool) or not isinstance(index, int):
+                raise TypeError('Indices in `slices` should be integers')
+            if (index < 0) or (index >= dimension):
+                raise ValueError('An index in `slices` is out of bounds')
+        configurations.append(configuration)
+    if len(configurations) != 4:
+        raise ValueError('`slices` should contain four index sequences')
+    if (configurations[0] == configurations[1]) or \
+            (configurations[2] == configurations[3]):
+        raise ValueError(
+            'Each ratio in `slices` needs distinct configurations')
+    return tuple(configurations)
 
 
 def _first_core(tensor: torch.Tensor,
-                ranks: Sequence[int],
-                slices: Sequence[Sequence[int]],
+                ranks: Optional[Sequence[int]],
+                slices: Optional[Sequence[Sequence[int]]],
+                projection: str,
                 spectral_atol: float,
                 n_iters: int,
                 n_restarts: int,
-                generator: Optional[torch.Generator],
-                collect_metrics: bool = True) -> _FirstCoreFactorization:
-    """Recovers the first TR core by blockwise spectral alignment."""
-    cyclic_rank = ranks[-1]
-    right_rank = ranks[0]
-    spectral_rank = cyclic_rank * right_rank
-    if tensor.shape[0] < spectral_rank:
-        raise ValueError(
-            'The first input dimension should be at least '
-            '`rank[-1] * rank[0]` for BLOSTR')
-    if tensor.shape[-1] < spectral_rank:
-        raise ValueError(
-            'The last input dimension should be at least '
-            '`rank[-1] * rank[0]` for BLOSTR')
+                generator: Optional[torch.Generator]) -> _FirstCore:
+    """Recovers the first core by simultaneous block diagonalization."""
+    # Both projection modes leave the first and last physical axes open.
+    if projection == 'slices':
+        if slices is None:
+            slices = _draw_slices(tensor.shape, generator)
+        matrices = [tensor[(slice(None), *index, slice(None))]
+                    for index in slices]
+    else:
+        device = tensor.device if generator is None else generator.device
+        weights = torch.randn(4, prod(tensor.shape[1:-1]),
+                              dtype=tensor.dtype, device=device,
+                              generator=generator).to(tensor.device)
+        matrices = torch.einsum(
+            'amb,sm->sab', tensor.reshape(tensor.shape[0], -1,
+                                         tensor.shape[-1]), weights)
 
-    alpha, beta, alpha_prime, beta_prime = slices
-    x = _slice_matrix(tensor, alpha)
-    y = _slice_matrix(tensor, beta)
-    x_prime = _slice_matrix(tensor, alpha_prime)
-    y_prime = _slice_matrix(tensor, beta_prime)
-    matrix = x @ torch.linalg.pinv(y)
-    matrix_prime = x_prime @ torch.linalg.pinv(y_prime)
+    # Two independent ratios expose repeated spectral subspaces.
+    ratios = (matrices[0] @ torch.linalg.pinv(matrices[1]),
+              matrices[2] @ torch.linalg.pinv(matrices[3]))
+    spaces = []
+    pair = None if ranks is None else (ranks[-1], ranks[0])
+    for matrix in ratios:
+        values, vectors = torch.linalg.eig(matrix)
+        selected = values.abs().argsort(descending=True)
+        threshold = max(
+            spectral_atol, max(matrix.shape) *
+            torch.finfo(values.real.dtype).eps * values.abs().max())
+        selected = selected[values[selected].abs() > threshold]
+        if pair is not None:
+            size = prod(pair)
+            if len(selected) < size:
+                raise RuntimeError('BLOSTR found too few nonzero eigenvalues '
+                                   'for `rank`')
+            selected = selected[:size]
+        if not len(selected):
+            raise RuntimeError('BLOSTR found no nonzero eigenvalues')
+        order, cyclic, adjacent, error = _spectral_order(
+            values[selected], pair, spectral_atol, n_iters, n_restarts,
+            generator)
+        pair = cyclic, adjacent
+        spaces.append(vectors[:, selected[order]])
+    cyclic, adjacent = pair
+    if min(tensor.shape[0], tensor.shape[-1]) < cyclic * adjacent:
+        raise ValueError('The first and last axes of `tensor` should contain '
+                         'at least the product of the first two TR ranks')
 
-    eigenspace, eigenvalues, residual = _selected_eigenspace(
-        matrix,
-        spectral_rank,
-        spectral_atol,
-        cluster_size=cyclic_rank,
-        n_clusters=right_rank,
-        n_iters=n_iters,
-        n_restarts=n_restarts,
-        generator=generator,
-        collect_metrics=collect_metrics)
-    eigenspace_prime, eigenvalues_prime, residual_prime = \
-        _selected_eigenspace(
-            matrix_prime,
-            spectral_rank,
-            spectral_atol,
-            cluster_size=cyclic_rank,
-            n_clusters=right_rank,
-            n_iters=n_iters,
-            n_restarts=n_restarts,
-            generator=generator,
-            collect_metrics=collect_metrics)
-
-    alignment = torch.linalg.pinv(eigenspace) @ eigenspace_prime
-    first_block = alignment[0::right_rank, 0::right_rank]
-    transforms = [torch.eye(
-        cyclic_rank, dtype=tensor.dtype, device=tensor.device)]
-    try:
-        for block in range(1, right_rank):
-            current = alignment[block::right_rank, 0::right_rank]
-            transform = torch.linalg.solve(
-                current.mT, first_block.mT).mT
-            transforms.append(transform)
-    except RuntimeError as exc:
-        raise RuntimeError(
-            'BLOSTR could not align spectral blocks; the selected slices are '
-            'singular or spectrally degenerate') from exc
-
-    block_transform = torch.zeros_like(alignment)
-    try:
-        for block, transform in enumerate(transforms):
-            identity = torch.eye(
-                cyclic_rank, dtype=tensor.dtype, device=tensor.device)
-            block_transform[
-                block::right_rank, block::right_rank] = torch.linalg.solve(
-                    transform, identity)
-    except RuntimeError as exc:
-        raise RuntimeError(
-            'BLOSTR recovered a singular block gauge') from exc
-    first_flat = eigenspace @ block_transform
-    first_core = first_flat.reshape(
-        tensor.shape[0], cyclic_rank, right_rank).permute(1, 0, 2)
-    return _FirstCoreFactorization(
-        core=first_core,
-        slices=tuple(tuple(configuration) for configuration in slices),
-        errors=tuple(record for record in (residual, residual_prime)
-                     if record is not None))
+    # Align the degenerate eigenspaces to separate cyclic and local indices.
+    alignment = torch.linalg.pinv(spaces[0]) @ spaces[1]
+    first_block = alignment[0::adjacent, 0::adjacent]
+    transform = torch.zeros_like(alignment)
+    for block in range(adjacent):
+        current = alignment[block::adjacent, 0::adjacent]
+        factor = torch.linalg.solve(current.mT, first_block.mT).mT
+        transform[block::adjacent, block::adjacent] = torch.linalg.inv(factor)
+    matrix = spaces[0] @ transform
+    return _FirstCore(
+        matrix.reshape(tensor.shape[0], cyclic, adjacent).permute(1, 0, 2),
+        None if slices is None else tuple(tuple(s) for s in slices), error)
 
 
-def _recover_tail(first: _FirstCoreFactorization,
-                  tensor: torch.Tensor,
-                  ranks: Sequence[int],
-                  cutoff: Optional[float],
-                  atol: Optional[float],
-                  rtol: Optional[float],
-                  cum_percentage: Optional[float],
-                  collect_metrics: bool = True) -> Tuple[
-        Tuple[torch.Tensor, ...],
-        Tuple[TruncationRecord, ...]]:
-    """Recovers all remaining cores by removing Q1 and splitting the tail."""
-    first_matrix = first.core.permute(1, 0, 2).reshape(tensor.shape[0], -1)
-    tail = torch.linalg.pinv(first_matrix) @ tensor.reshape(tensor.shape[0], -1)
-    tail = tail.reshape(ranks[-1], ranks[0], *tensor.shape[1:])
-    tail = tail.movedim(0, -1)
+def _recover_cores(tensor: torch.Tensor,
+                   first: torch.Tensor,
+                   generator: Optional[torch.Generator]
+                   ) -> Tuple[torch.Tensor, ...]:
+    """Recovers uniform-rank cores using product Gaussian projections."""
+    rank = first.shape[0]
+    device = tensor.device if generator is None else generator.device
 
-    cores = [first.core]
-    records = []
-    left_rank = ranks[0]
-    remaining_input = tuple(tensor.shape[1:])
-    for offset, in_dimension in enumerate(remaining_input[:-1], start=1):
-        matrix = tail.reshape(left_rank * in_dimension, -1)
-        decomposition = truncated_svd(
-            matrix,
-            rank=ranks[offset],
-            cutoff=cutoff,
-            atol=atol,
-            rtol=rtol,
-            cum_percentage=cum_percentage,
-            return_info=collect_metrics)
-        if collect_metrics:
-            u, singular_values, vh, info = decomposition
-            records.append(TruncationRecord.from_svd_info(info, site=offset))
-        else:
-            u, singular_values, vh = decomposition
-        selected_rank = singular_values.shape[-1]
-        cores.append(u.reshape(left_rank, in_dimension, selected_rank))
-        tail = (singular_values.to(vh.dtype).unsqueeze(-1) * vh).reshape(
-            selected_rank,
-            *remaining_input[(offset):],
-            ranks[-1])
-        left_rank = selected_rank
-    cores.append(tail.reshape(
-        left_rank, remaining_input[-1], ranks[-1]))
-    return tuple(cores), tuple(records)
+    # Generic product projections avoid singular coordinate slices of otherwise
+    # injective physical cores.
+    vectors = [torch.randn(dimension, dtype=tensor.dtype, device=device,
+                           generator=generator).to(tensor.device)
+               for dimension in tensor.shape]
+    vectors = [vector / vector.norm() for vector in vectors]
+    cores = [first]
+    for site in range(1, tensor.ndim):
+        other_sites = [index for index in range(tensor.ndim)
+                       if index not in (site, site - 1)]
+        matrix = tensor.permute(site, site - 1, *other_sites)
+        for index in reversed(other_sites):
+            matrix = torch.tensordot(matrix, vectors[index], dims=([-1], [0]))
+        product = torch.eye(rank, dtype=tensor.dtype, device=tensor.device)
+        for index in range(site - 1):
+            projected = torch.einsum('aib,i->ab', cores[index], vectors[index])
+            product = product @ projected
+        previous = torch.einsum('ab,bic->iac', product, cores[-1])
+        previous = previous.reshape(-1, rank * rank).mT
+        current = (matrix @ torch.linalg.pinv(previous)).reshape(
+            tensor.shape[site], rank, rank).permute(2, 0, 1)
+        cores.append(current)
+    return tuple(cores)
 
 
 def _fit_blostr(tensor: torch.Tensor,
                 rank: _Rank,
                 *,
+                use_svd: bool,
                 slices: Optional[Sequence[Sequence[int]]] = None,
+                projection: str = 'slices',
                 spectral_atol: float = 1e-10,
                 n_attempts: int = 8,
                 n_iters: int = 50,
                 n_restarts: int = 10,
                 generator: Optional[torch.Generator] = None,
-                cutoff: Optional[float] = None,
-                atol: Optional[float] = None,
-                rtol: Optional[float] = None,
-                cum_percentage: Optional[float] = None,
+                truncation: Optional[_TruncationSpec] = None,
                 out_device: _Device = 'cpu',
-                collect_metrics: bool = True,
-                observer: Any = None) -> TRDecomposition:
-    """Runs multiple spectral slice attempts and keeps the best recovery."""
+                collect_metrics: bool = False,
+                verbose: Union[bool, int] = 0) -> TRDecomposition:
+    """Runs spectral attempts and retains the smallest reconstruction error."""
     if not isinstance(tensor, torch.Tensor):
         raise TypeError('`tensor` should be torch.Tensor type')
     if tensor.ndim < 3:
-        raise ValueError('BLOSTR requires a tensor with at least three inputs')
+        raise ValueError('`tensor` should contain at least three axes')
     if not tensor.is_floating_point() and not tensor.is_complex():
-        raise TypeError('BLOSTR requires a floating or complex tensor')
-    ranks = _normalize_rank(rank, tensor.ndim)
-    if len(set(ranks)) != 1:
-        raise ValueError(
-            'The current BLOSTR implementation requires equal TR ranks')
-    spectral_atol = _normalize_non_negative_float(
-        spectral_atol, 'spectral_atol')
-    n_attempts = _normalize_positive_int(n_attempts, 'n_attempts')
-    n_iters = _normalize_positive_int(n_iters, 'n_iters')
-    n_restarts = _normalize_positive_int(n_restarts, 'n_restarts')
+        raise TypeError('`tensor` should have floating or complex dtype')
+    if not torch.isfinite(tensor).all():
+        raise ValueError('`tensor` should contain finite values')
+    ranks = None if rank is None else _normalize_rank(rank, tensor.ndim)
+    if ranks is not None:
+        if (not use_svd) and (len(set(ranks)) != 1):
+            raise ValueError('Full BLOSTR requires uniform `rank`')
+        if use_svd and (ranks[0] != ranks[-2]):
+            raise ValueError('BLOSTR-SVD requires `rank[0] == rank[-2]`')
+    if projection not in ('slices', 'gaussian'):
+        raise ValueError('`projection` should be "slices" or "gaussian"')
+    if (slices is not None) and (projection != 'slices'):
+        raise ValueError('Explicit `slices` require `projection="slices"`')
+    if slices is not None:
+        slices = _validate_slices(slices, tensor.shape)
+    if isinstance(spectral_atol, bool) or not isinstance(
+            spectral_atol, (int, float)):
+        raise TypeError('`spectral_atol` should be a non-negative number')
+    if (spectral_atol < 0) or (not isfinite(spectral_atol)):
+        raise ValueError('`spectral_atol` should be finite and non-negative')
+    for name, value in (('n_attempts', n_attempts), ('n_iters', n_iters),
+                        ('n_restarts', n_restarts)):
+        _normalize_positive_int(value, name)
     if generator is not None and not isinstance(generator, torch.Generator):
         raise TypeError('`generator` should be torch.Generator type or None')
-    if out_device is not None:
-        out_device = torch.device(out_device)
-
-    active_tensor = tensor.to(dtype=_complex_dtype(tensor.dtype))
-    fixed_slices = None if slices is None else _validate_slices(
-        slices, tensor.shape)
-    attempts = 1 if fixed_slices is not None else n_attempts
-    failures = []
-    best = None
-    runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
-    timer_context = runtime.timer() if collect_metrics else nullcontext()
-    with timer_context as timer:
-        for attempt in range(attempts):
-            active_slices = fixed_slices
-            if active_slices is None:
-                active_slices = _draw_slices(tensor.shape, generator)
-            try:
-                first = _first_core(
-                    active_tensor,
-                    ranks,
-                    active_slices,
-                    spectral_atol,
-                    n_iters,
-                    n_restarts,
-                    generator, collect_metrics)
-                cores, records = _recover_tail(
-                    first,
-                    active_tensor,
-                    ranks,
-                    cutoff,
-                    atol,
-                    rtol,
-                    cum_percentage, collect_metrics)
-                candidate = TRDecomposition(cores)
-                approximation = candidate.contract_dense()
-                absolute = torch.linalg.vector_norm(approximation - active_tensor)
-                denominator = torch.linalg.vector_norm(active_tensor)
-                relative = safe_divide(absolute, denominator, zero_value=absolute)
-                score = relative.detach()
-                if best is None or score < best[0]:
-                    best = score, candidate, first, records, absolute, denominator
-                if observer is not None:
-                    observer.emit(DecompositionEvent(
-                        name='attempt_complete', phase='BLOSTR',
-                        values={'attempt': attempt + 1, 'attempts': attempts,
-                                'relative_error': relative.detach()}))
-            except (RuntimeError, ValueError) as exc:
-                failures.append(str(exc))
-
-    if best is None:
-        detail = '; '.join(dict.fromkeys(failures))
-        raise RuntimeError(
-            'Every BLOSTR spectral attempt failed. '
-            f'{detail}')
-    relative, candidate, first, records, absolute, denominator = best
-    metrics = DecompositionMetrics()
-    if collect_metrics:
-        metrics.truncations.extend(records)
-        metrics.errors.append(ErrorRecord(
-            kind='reconstruction', absolute=absolute, relative=relative,
-            denominator=denominator))
-        metrics.errors.extend(first.errors)
-        metrics.timings.append(TimingRecord(name='fit', elapsed=timer.elapsed))
-        metrics.warnings.extend(failures)
-    final_cores = [
-        core if out_device is None else core.to(out_device)
-        for core in candidate.cores
-    ]
-    return TRDecomposition(
-        final_cores,
-        metrics=metrics,
-        metadata={
-            'algorithm': 'blostr',
-            'experimental': True,
-            'requested_rank': list(ranks),
-            'slices': first.slices,
-            'attempts': attempts,
-        })
-
-
-def _materialize_target(target: Any,
-                        context: Mapping[str, Any]) -> torch.Tensor:
-    """Materializes a scalar local source for the spectral algorithm."""
-    return _source_from_context(target, context).contract_dense()
-
-
-def _mirror_cores(cores: Sequence[torch.Tensor]) -> Tuple[torch.Tensor, ...]:
-    """Restores ``cores`` from a reversed BLOSTR local problem."""
-    return tuple(core.permute(2, 1, 0) for core in reversed(cores))
-
-
-class BLOSTRLoopOpener:  # MARK: BLOSTRLoopOpener
-    """
-    Uses unrestricted BLOSTR as a local spectral loop initializer.
-
-    ``fit_options`` accepts the keyword options of :func:`tr_blostr` except
-    target, rank, output device and ``return_info``. BLOSTR does not support
-    fixed gauges; combine it with :class:`CompositeLoopOpener` and an ALS
-    refiner when constraints are required.
-
-    Parameters
-    ----------
-    fit_options : mapping, optional
-        Spectral slicing, clustering and tail-truncation options. The enclosing
-        opener controls target, rank, output device and metric collection. This
-        experimental strategy requires uniform local TR ranks and no fixed
-        gauges.
-    """
-
-    _capabilities = LoopOpenerCapabilities(supports_blocks=True)
-
-    def __init__(self,
-                 fit_options: Optional[Mapping[str, Any]] = None) -> None:
-        if fit_options is None:
-            fit_options = {}
-        if not isinstance(fit_options, Mapping):
-            raise TypeError('`fit_options` should be a mapping or None')
-        reserved = {'rank', 'out_device', 'return_info', 'verbose',
-                    'collect_metrics', 'observer'}
-        overlap = reserved.intersection(fit_options)
-        if overlap:
-            raise ValueError(
-                f'`fit_options` should not override {sorted(overlap)}')
-        self.fit_options = dict(fit_options)
-        warnings.warn(
-            'BLOSTRLoopOpener is experimental and its numerical behavior may '
-            'change.',
-            ExperimentalWarning,
-            stacklevel=2)
-
-    @property
-    def capabilities(self) -> LoopOpenerCapabilities:
-        """Declares unrestricted block support and no fixed-gauge support."""
-        return self._capabilities
-
-    def open(self,
-             target: Any,
-             rank: _Rank,
-             *,
-             fixed_left: Optional[torch.Tensor] = None,
-             fixed_right: Optional[torch.Tensor] = None,
-             orientation: str = 'right',
-             context: Optional[Mapping[str, Any]] = None) -> LoopOpening:
-        """
-        Recovers a free local ring and exposes its environment gauges.
-
-        Parameters
-        ----------
-        target : torch.Tensor or BaseSource
-            Local scalar tensor with axes ``(left external, *in_dim, right
-            external)``, or a source representing that tensor.
-        rank : int or sequence[int]
-            Prescribed right-link ranks of the complete local ring, including
-            the two external gauge cores. The last link closes the ring.
-        fixed_left : torch.Tensor, optional
-            Gauges to retain exactly. The selected strategy must support the
-            supplied constraints. Their shapes follow ordinary three-axis TR
-            cores.
-        fixed_right : torch.Tensor, optional
-            Gauges to retain exactly. The selected strategy must support the
-            supplied constraints. Their shapes follow ordinary three-axis TR
-            cores.
-        orientation : {"right", "left"}
-            Construction direction. Returned cores always follow the original
-            ``target`` order, including when the algorithm uses a mirrored local
-            problem.
-        context : mapping, optional
-            Provider metadata and internal execution options, such as
-            initialization, generator and whether to collect local metrics.
-
-        Returns
-        -------
-        LoopOpening
-            Gauges and cores in original ``target`` order with optional local
-            metrics.
-        """
-        orientation = _normalize_orientation(orientation)
-        context = _normalize_context(context)
-        in_dim = context.get('in_dim')
-        if in_dim is None:
-            if not isinstance(target, torch.Tensor):
-                raise ValueError(
-                    '`context["in_dim"]` is required for a lazy target')
-            in_dim = target.shape
-        in_dim = _normalize_dims(in_dim, 'in_dim')
-        ranks = _normalize_rank(rank, len(in_dim))
-        if len(set(ranks)) != 1:
-            raise ValueError(
-                'The current BLOSTR implementation requires equal TR ranks')
-        self._capabilities.require(
-            fixed_left=fixed_left is not None,
-            fixed_right=fixed_right is not None,
-            block_size=len(in_dim) - 2)
-
-        dense = _materialize_target(target, context)
-        active_ranks = ranks
-        fit_options = dict(self.fit_options)
-        if orientation == 'left':
-            dense = dense.permute(*reversed(range(dense.ndim)))
-            active_ranks = _mirror_rank(ranks)
-            if fit_options.get('slices') is not None:
-                fit_options['slices'] = tuple(
-                    tuple(reversed(configuration))
-                    for configuration in fit_options['slices'])
-        result = _fit_blostr(
-            dense,
-            active_ranks,
-            out_device=None,
-            collect_metrics=context.get('collect_metrics', True),
-            **fit_options)
-        cores = tuple(result.cores)
-        if orientation == 'left':
-            cores = _mirror_cores(cores)
-        actual_rank = tuple(core.shape[-1] for core in cores)
-        if actual_rank != ranks:
-            raise ValueError(
-                'BLOSTR initializer ranks do not match the requested local '
-                f'ranks: {actual_rank} != {ranks}')
-        return LoopOpening(
-            left_gauge=cores[0],
-            cores=cores[1:-1],
-            right_gauge=cores[-1],
-            rank=actual_rank,
-            orientation=orientation,
-            diagnostics={
-                'algorithm': 'blostr',
-                'metadata': dict(result.metadata),
-                'errors': tuple(result.metrics.errors),
-                'warnings': tuple(result.metrics.warnings),
-            })
-
-
-def tr_blostr(tensor: torch.Tensor,
-              rank: _Rank,
-              slices: Optional[Sequence[Sequence[int]]] = None,
-              spectral_atol: float = 1e-10,
-              n_attempts: int = 8,
-              n_iters: int = 50,
-              n_restarts: int = 10,
-              generator: Optional[torch.Generator] = None,
-              cutoff: Optional[float] = None,
-              atol: Optional[float] = None,
-              rtol: Optional[float] = None,
-              cum_percentage: Optional[float] = None,
-              out_device: _Device = 'cpu',
-              return_info: bool = False,
-              *,
-              verbose: Union[bool, int] = 0) -> '_DecompositionOutput':
-    r"""
-    Decomposes a dense ``tensor`` into a TR with experimental BLOSTR.
-
-    This implements the blockwise simultaneous-diagonalization construction
-    from Algorithm 1 of *A Provably Efficient Method for Tensor Ring
-    Decomposition and Its Applications*, Han Chen, Sitan Chen and Anru R. Zhang
-    (2025), available in this `paper <https://arxiv.org/abs/2512.01016>`_.
-    TensorKrowch recovers the remaining cores with its standard truncated-SVD
-    semantics and can try several reproducible spectral ``slices``.
-
-    The current implementation requires a common TR ``rank``, passed either as a
-    scalar or as an equal-valued sequence with one right-link ``rank`` per core.
-    This is the uniform-``rank`` setting covered by the spectral construction; a
-    non-uniform sequence is rejected instead of returning an inaccurate
-    decomposition. The first and last input dimensions must be at least ``rank
-    ** 2``. BLOSTR is sensitive to slice degeneracy; failed attempts produce
-    explicit diagnostics rather than silent zero padding. Spectral factors are
-    complex-valued even when ``tensor`` is real, since valid complex gauges may
-    be required to represent the same real ``tensor``.
-
-    Parameters
-    ----------
-    tensor : torch.Tensor
-        Dense ``tensor`` with one input dimension per future TR core.
-    rank : int or sequence of int
-        Common TR ``rank``, or an equal-valued sequence containing one right-link
-        ``rank`` per core. The last entry denotes the cyclic link as usual.
-    slices : sequence of four index sequences, optional
-        Explicit ``alpha``, ``beta``, ``alpha_prime`` and ``beta_prime``
-        interior ``slices``. If omitted, ``slices`` are drawn with ``generator``.
-    spectral_atol : float
-        Absolute threshold for retaining eigenvalues.
-    n_attempts : int
-        Number of slice selections tried when ``slices`` is omitted.
-    n_iters, n_restarts : int
-        Balanced clustering iterations and random restarts.
-    generator : torch.Generator, optional
-        Controls slice selection and balanced-clustering initialization.
-    cutoff : float, optional
-        Minimum singular value to keep. It must be finite and non-negative.
-        Singular values ``<= cutoff`` are removed.
-    atol : float, optional
-        Absolute tolerance over the tail sum of squared singular values.
-        Starting from the smallest singular value, values are discarded while
-        the accumulated sum of squares is ``<= atol``. It must be finite and
-        non-negative.
-    rtol : float, optional
-        Relative tolerance over the tail sum of squared singular values.
-        Starting from the smallest singular value, values are discarded while
-        the tail sum of squares divided by the total sum of squares is ``<=
-        ``rtol````. It must be finite and in ``[0, 1]``.
-    cum_percentage : float, optional
-        Minimum fraction of squared singular-value mass to keep. Equivalent to
-        setting ``rtol = 1 - cum_percentage``. It must be finite and in ``[0,
-        1]``.
-
-        .. math::
-
-        \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}} \ge
-            cum\_percentage
-    out_device : str or torch.device, optional
-        Final core storage device. ``None`` keeps the input device.
-    return_info : bool
-        If ``True``, returns ``(cores, info)``.
-
-    verbose : bool or int
-        Console level from 0 (silent) to 3 (final cores). Nonzero verbosity
-        also collects diagnostics; level 2 adds spectral-attempt errors and
-        timings.
-
-    Returns
-    -------
-    list[torch.Tensor] or tuple
-        TR cores, optionally followed by structured result information.
-
-    Examples
-    --------
-    >>> generator = torch.Generator().manual_seed(0)
-    >>> cores = [torch.randn(2, 4, 2, generator=generator)
-    ...          for _ in range(3)]
-    >>> tensor = tk.decompositions.TRDecomposition(cores).contract_dense()
-    >>> recovered = tk.decompositions.tr_blostr(
-    ...     tensor, rank=2,
-    ...     generator=torch.Generator().manual_seed(1))
-    >>> [tuple(core.shape) for core in recovered]
-    [(2, 4, 2), (2, 4, 2), (2, 4, 2)]
-    """
-    if not isinstance(return_info, bool):
-        raise TypeError('`return_info` should be bool type')
-    warnings.warn(
-        '`tr_blostr` is experimental and its numerical behavior may change.',
-        ExperimentalWarning,
-        stacklevel=2)
+    if not isinstance(collect_metrics, bool):
+        raise TypeError('`collect_metrics` should be bool type')
     verbosity = _normalize_verbosity(verbose)
     observer = _resolve_observer(verbosity, None) if verbosity else None
     if observer is not None:
         observer.emit(DecompositionEvent(
             name='start', phase='BLOSTR',
             values={'rank': rank, 'attempts': n_attempts}))
-    result = _fit_blostr(
-        tensor,
-        rank,
-        slices=slices,
-        spectral_atol=spectral_atol,
-        n_attempts=n_attempts,
-        n_iters=n_iters,
-        n_restarts=n_restarts,
-        generator=generator,
-        cutoff=cutoff,
-        atol=atol,
-        rtol=rtol,
-        cum_percentage=cum_percentage,
-        out_device=out_device,
-        collect_metrics=return_info or bool(verbosity),
-        observer=observer)
+    collect_metrics = collect_metrics or bool(verbosity)
+    runtime = _RuntimePolicy.from_tensor(tensor, out_device=out_device)
+    dtype = torch.complex128 if tensor.dtype in (
+        torch.float64, torch.complex128) else torch.complex64
+
+    # Spectral factors may be complex even when the original tensor is real.
+    active = tensor.to(dtype=dtype)
+    metrics = DecompositionMetrics()
+    failures = []
+    best = None
+    attempts = n_attempts if slices is None else 1
+    with runtime.timer() as timer:
+
+        # Reject degenerate projections and keep the best full reconstruction.
+        for attempt in range(attempts):
+            local_metrics = DecompositionMetrics()
+            try:
+                first = _first_core(active, ranks, slices, projection,
+                                    spectral_atol, n_iters, n_restarts,
+                                    generator)
+                cyclic, _, adjacent = first.core.shape
+                if use_svd:
+
+                    # Remove the first factor and place its virtual axes at the
+                    # TT ends.
+                    first_matrix = first.core.permute(1, 0, 2).reshape(
+                        active.shape[0], -1)
+                    tail = torch.linalg.pinv(first_matrix) @ active.reshape(
+                        active.shape[0], -1)
+                    tail = tail.reshape(cyclic, adjacent, *active.shape[1:])
+                    tail = tail.movedim(0, -1)
+                    options = {} if truncation is None else \
+                        truncation.as_kwargs()
+                    if (ranks is None) and all(
+                            options.get(name) is None for name in
+                            ('cutoff', 'atol', 'rtol', 'cum_percentage')):
+                        precision = (10 * max(active.shape) *
+                                     torch.finfo(active.real.dtype).eps *
+                                     torch.linalg.cond(first_matrix))
+                        options['rtol'] = min(
+                            max(spectral_atol, float(precision))**2, 1)
+                    tail_cores = _split_block(
+                        tail, active.shape[1:],
+                        rank=None if ranks is None else ranks[1:-1],
+                        cutoff=options.get('cutoff'),
+                        atol=options.get('atol'), rtol=options.get('rtol'),
+                        cum_percentage=options.get('cum_percentage'),
+                        metrics=local_metrics if collect_metrics else None)
+                    cores = (first.core, *tail_cores)
+                else:
+                    if min(active.shape) < cyclic * cyclic:
+                        raise ValueError('Full BLOSTR requires every physical '
+                                         'dimension to be at least rank**2')
+                    if cyclic != adjacent:
+                        raise ValueError('Full BLOSTR requires uniform '
+                                         'discovered ranks')
+                    cores = _recover_cores(active, first.core, generator)
+                candidate = TRDecomposition(cores)
+                approximation = candidate.contract_dense()
+                absolute = torch.linalg.vector_norm(approximation - active)
+                denominator = torch.linalg.vector_norm(active)
+                relative = safe_divide(absolute, denominator,
+                                       zero_value=absolute)
+                if (best is None) or (relative < best[0]):
+                    best = (relative, candidate, first,
+                            local_metrics.truncations, absolute)
+                if observer is not None:
+                    observer.emit(DecompositionEvent(
+                        name='attempt_complete', phase='BLOSTR', values={
+                            'attempt': attempt + 1, 'attempts': attempts,
+                            'relative_error': relative.detach()}))
+            except (RuntimeError, ValueError) as error:
+                failures.append(str(error))
+    if best is None:
+        detail = '; '.join(dict.fromkeys(failures))
+        raise RuntimeError(f'Every BLOSTR spectral attempt failed. {detail}')
+
+    # Report the accepted attempt, not the final projection that was tried.
+    relative, candidate, first, records, absolute = best
+    if collect_metrics:
+        metrics.errors.append(ErrorRecord(
+            kind='reconstruction', absolute=absolute, relative=relative,
+            denominator=torch.linalg.vector_norm(active)))
+        metrics.truncations.extend(records)
+        metrics.timings.append(TimingRecord(name='fit', elapsed=timer.elapsed))
+        metrics.warnings.extend(failures)
+    result = TRDecomposition(
+        [runtime.finalize(core) for core in candidate.cores], metrics=metrics,
+        metadata={
+            'algorithm': 'blostr_svd' if use_svd else 'blostr',
+            'requested_rank': None if ranks is None else list(ranks),
+            'adaptive': ranks is None, 'projection': projection,
+            'slices': first.slices, 'attempts': attempts,
+            'cluster_error': first.cluster_error.detach(),
+        })
     if observer is not None:
-        error = result.metrics.errors[0]
         observer.emit(DecompositionEvent(
-            name='summary', phase='BLOSTR',
-            values={'rank': result.rank, 'absolute_error': error.absolute,
-                    'relative_error': error.relative,
-                    'elapsed': result.metrics.timings[0].elapsed}))
+            name='summary', phase='BLOSTR', values={
+                'rank': result.rank, 'absolute_error': absolute,
+                'relative_error': relative, 'elapsed': timer.elapsed}))
         for site, core in enumerate(result.cores):
             observer.emit(DecompositionEvent(
                 name='core', phase='BLOSTR', level=3, site=site,
                 values={'shape': tuple(core.shape), 'tensor': core}))
-        observer.close(result.metrics)
-    if return_info:
-        return result.cores, result.as_info()
-    return result.cores
+        observer.close(metrics)
+    return result
 
-__all__ = [
-    'BLOSTRLoopOpener',
-    'tr_blostr',
-]
-__all__ = [
-    'BLOSTRLoopOpener',
-    'tr_blostr',
-]
+
+def tr_blostr(tensor: torch.Tensor,
+              rank: _Rank = None,
+              *,
+              slices: Optional[Sequence[Sequence[int]]] = None,
+              projection: str = 'slices',
+              spectral_atol: float = 1e-10,
+              n_attempts: int = 8,
+              n_iters: int = 50,
+              n_restarts: int = 10,
+              generator: Optional[torch.Generator] = None,
+              out_device: _Device = 'cpu',
+              collect_metrics: bool = False,
+              verbose: Union[bool, int] = 0) -> TRDecomposition:
+    r"""
+    Recovers a dense tensor ring using spectral BLOSTR at every site.
+
+    Two pairs of interior slices identify the first core through blockwise
+    simultaneous diagonalization. Product Gaussian projections of all but
+    two physical axes then recover each remaining core by a linear solve.
+    These avoid singular coordinate slices of otherwise injective cores.
+    This is the uniform-rank construction of
+    Algorithm 1 in `A Provably Efficient Method for Tensor Ring Decomposition
+    and Its Applications <https://arxiv.org/abs/2512.01016>`_. It targets exact
+    tensors with injective physical unfoldings at every site and nondegenerate
+    projection ratios. Each physical dimension must therefore be at least the
+    squared TR rank. This differs from :func:`tr_blostr_svd`, which needs
+    injectivity only at its two external physical axes. No accuracy guarantee
+    is made for approximate inputs or rank-deficient recovery environments.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Dense tensor with one physical axis per future TR core.
+    rank : int or sequence[int], optional
+        Prescribed right-link ranks, including the cyclic last entry. Full
+        BLOSTR requires equal ranks. With ``None``, balanced k-means discovers
+        the multiplicities of the nonzero spectrum and requires them to imply
+        equal cyclic and adjacent ranks.
+    slices : sequence of four index sequences, optional
+        Configurations fixing every interior axis for the two spectral ratios.
+        With ``None``, configurations are drawn using ``generator``.
+    projection : {"slices", "gaussian"}
+        Coordinate slices or contractions against four independent dense
+        Gaussian tensors over all interior axes. The latter can span matrix
+        directions absent from any single coordinate slice. Explicit
+        ``slices`` require ``"slices"``.
+    spectral_atol : float
+        Absolute eigenvalue cutoff and relative within-cluster tolerance used
+        when discovering balanced spectral multiplicities. A machine-precision
+        floor is applied to both tests. Default is 1e-10.
+    n_attempts : int
+        Number of independent spectral attempts. Default is 8; explicit
+        ``slices`` use one attempt. The smallest reconstruction error is kept.
+    n_iters, n_restarts : int
+        Balanced k-means iteration and restart budgets. Defaults are 50 and 10.
+    generator : torch.Generator, optional
+        Controls spectral projections, balanced clustering and recovery
+        projections.
+    out_device : str or torch.device, optional
+        Final core storage device. ``None`` keeps the input device.
+    collect_metrics : bool
+        Whether to retain reconstruction, truncation and timing diagnostics.
+    verbose : bool or int
+        Console verbosity from 0 (silent) to 3.
+
+    Returns
+    -------
+    TRDecomposition
+        Recovered TR cores and construction metadata. Spectral factors use a
+        complex dtype even for real input tensors.
+
+    Examples
+    --------
+    >>> cores = [torch.randn(1, 3, 1, dtype=torch.float64) for _ in range(3)]
+    >>> tensor = tk.formats.TR(cores).contract_dense()
+    >>> result = tk.decompositions.tr_blostr(tensor, rank=1)
+    >>> torch.allclose(result.contract_dense(), tensor.to(torch.complex128))
+    True
+    """
+    return _fit_blostr(
+        tensor, rank, use_svd=False, slices=slices, projection=projection,
+        spectral_atol=spectral_atol, n_attempts=n_attempts, n_iters=n_iters,
+        n_restarts=n_restarts, generator=generator, out_device=out_device,
+        collect_metrics=collect_metrics, verbose=verbose)
+
+
+def tr_blostr_svd(tensor: torch.Tensor,
+                  rank: _Rank = None,
+                  *,
+                  slices: Optional[Sequence[Sequence[int]]] = None,
+                  projection: str = 'slices',
+                  spectral_atol: float = 1e-10,
+                  n_attempts: int = 8,
+                  n_iters: int = 50,
+                  n_restarts: int = 10,
+                  generator: Optional[torch.Generator] = None,
+                  cutoff: Optional[float] = None,
+                  atol: Optional[float] = None,
+                  rtol: Optional[float] = None,
+                  cum_percentage: Optional[float] = None,
+                  out_device: _Device = 'cpu',
+                  collect_metrics: bool = False,
+                  verbose: Union[bool, int] = 0) -> TRDecomposition:
+    r"""
+    Recovers the first TR core spectrally and splits the rest with TT-SVD.
+
+    Unlike :func:`tr_blostr`, interior ranks may differ. The two ranks bounding
+    the projected interior chain must coincide: ``rank[0] == rank[-2]``.
+    The cyclic rank may differ. Gaussian joint projections can retain full
+    matrix rank even when an intermediate bond makes each coordinate slice
+    deficient. The physical first and last axes must both have dimension at
+    least ``rank[-1] * rank[0]``. These conditions permit spectral recovery;
+    they do not guarantee spectral separation for a particular projection.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Dense tensor with one physical axis per future TR core.
+    rank : int or sequence[int], optional
+        Prescribed right-link ranks, including the cyclic last entry. With
+        ``None``, balanced k-means discovers the first cyclic and adjacent
+        ranks; TT-SVD discovers the remaining bonds numerically.
+    slices : sequence of four index sequences, optional
+        Configurations fixing every interior axis for the two spectral ratios.
+        With ``None``, configurations are drawn using ``generator``.
+    projection : {"slices", "gaussian"}
+        Coordinate slices or contractions against four independent dense
+        Gaussian tensors over all interior axes. The latter can span matrix
+        directions absent from any single coordinate slice. Explicit
+        ``slices`` require ``"slices"``.
+    spectral_atol : float
+        Absolute eigenvalue cutoff and relative within-cluster tolerance used
+        when discovering balanced spectral multiplicities. A machine-precision
+        floor is applied to both tests. Default is 1e-10.
+    n_attempts : int
+        Number of independent spectral attempts. Default is 8; explicit
+        ``slices`` use one attempt. The smallest reconstruction error is kept.
+    n_iters, n_restarts : int
+        Balanced k-means iteration and restart budgets. Defaults are 50 and 10.
+    generator : torch.Generator, optional
+        Controls spectral projections, balanced clustering and recovery
+        projections.
+    cutoff : float, optional
+        Singular values at or below this value are discarded in tail TT-SVD.
+    atol, rtol, cum_percentage : float, optional
+        Absolute or relative discarded-energy tolerance, or retained squared
+        singular-value fraction, in tail TT-SVD. With no rank or tolerance,
+        a numerical threshold accounts for the precision and conditioning of
+        the recovered first core. A supplied rank is an upper bound; smaller
+        retained ranks are returned without zero padding.
+    out_device : str or torch.device, optional
+        Final core storage device. ``None`` keeps the input device.
+    collect_metrics : bool
+        Whether to retain reconstruction, truncation and timing diagnostics.
+    verbose : bool or int
+        Console verbosity from 0 (silent) to 3.
+
+    Returns
+    -------
+    TRDecomposition
+        Recovered TR cores and construction metadata. Spectral factors use a
+        complex dtype even for real input tensors.
+
+    Examples
+    --------
+    >>> cores = [torch.randn(1, 3, 1, dtype=torch.float64) for _ in range(3)]
+    >>> tensor = tk.formats.TR(cores).contract_dense()
+    >>> result = tk.decompositions.tr_blostr_svd(tensor, rank=1)
+    >>> torch.allclose(result.contract_dense(), tensor.to(torch.complex128))
+    True
+    """
+    truncation = _TruncationSpec(cutoff=cutoff, atol=atol, rtol=rtol,
+                                 cum_percentage=cum_percentage)
+    return _fit_blostr(
+        tensor, rank, use_svd=True, slices=slices, projection=projection,
+        spectral_atol=spectral_atol, n_attempts=n_attempts, n_iters=n_iters,
+        n_restarts=n_restarts, generator=generator, truncation=truncation,
+        out_device=out_device, collect_metrics=collect_metrics,
+        verbose=verbose)
+
+
+__all__ = ['tr_blostr', 'tr_blostr_svd']

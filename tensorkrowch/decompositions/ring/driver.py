@@ -30,11 +30,11 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  GaugeRecord)
 from tensorkrowch.decompositions.observers import DecompositionEvent
 from tensorkrowch.decompositions.results import TRDecomposition
-from tensorkrowch.decompositions.ring.blocks import (BlockSelection,
-                                                     CentralBlockSelector)
+from tensorkrowch.decompositions.ring.blocks import (_BlockSelection,
+                                                     _CentralBlockSelector)
 from tensorkrowch.decompositions.ring.gauges import (GaugeRecursion,
                                                      GaugeRecursionStep)
-from tensorkrowch.decompositions.ring.opening import (FixedGaugeCoreOpener,
+from tensorkrowch.decompositions.ring.opening import (_FixedGaugeCoreOpener,
                                                       LoopOpener,
                                                       LoopOpening,
                                                       _normalize_context)
@@ -68,34 +68,49 @@ class RingTargetProvider(Protocol):  # MARK: RingTargetProvider
 @dataclass(frozen=True)
 class BoundaryClosure:  # MARK: BoundaryClosure
     """
-    Stores one final ``core`` obtained by absorbing an open target boundary.
+    Stores the cores recovered by absorbing one boundary block.
+
+    Parameters
+    ----------
+    sites : sequence[int]
+        Contiguous non-negative sites covered by the boundary block.
+    direction : {"left", "right"}
+        End of the target chain closed by this block.
+    cores : sequence[torch.Tensor]
+        One standard three-axis TR core per site, in target order.
+    records : sequence[GaugeRecord]
+        Optional gauge measurements from the boundary operation.
+    diagnostics : mapping
+        Optional metadata from boundary absorption or splitting.
     """
 
-    site: int  # Optional zero-based active site
-    direction: str  # Direction of the current sweep or closure
-    core: torch.Tensor  # Raw local tensor with standard rank axes
-    # Gauge measurements produced by this transition
-    records: Sequence[GaugeRecord] = ()
-    # Local strategy diagnostics and construction state
+    sites: Sequence[int]  # Contiguous sites of the boundary block
+    direction: str  # Left or right boundary
+    cores: Sequence[torch.Tensor]  # Standard three-axis cores
+    records: Sequence[GaugeRecord] = ()  # Gauge diagnostics
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if isinstance(self.site, bool) or not isinstance(self.site, int):
-            raise TypeError('`site` should be int type')
-        if self.site < 0:
-            raise ValueError('`site` should be non-negative')
+        sites, cores = tuple(self.sites), tuple(self.cores)
+        if not sites or any(isinstance(site, bool) or
+                            not isinstance(site, int) for site in sites):
+            raise TypeError('`sites` should contain integer indices')
+        if (sites[0] < 0) or (sites != tuple(range(sites[0], sites[-1] + 1))):
+            raise ValueError('`sites` should be contiguous and non-negative')
         if self.direction not in ('left', 'right'):
             raise ValueError("`direction` should be 'left' or 'right'")
-        if not isinstance(self.core, torch.Tensor):
-            raise TypeError('`core` should be torch.Tensor type')
-        if self.core.ndim != 3:
-            raise ValueError('A boundary core should be three-dimensional')
-        records = tuple(self.records)
-        if not all(isinstance(record, GaugeRecord) for record in records):
+        if (len(cores) != len(sites)) or any(
+                not isinstance(core, torch.Tensor) or (core.ndim != 3)
+                for core in cores):
+            raise ValueError('`cores` should contain one three-axis core '
+                             'per boundary site')
+        if not all(isinstance(record, GaugeRecord) for record in self.records):
             raise TypeError('`records` should contain GaugeRecord objects')
         if not isinstance(self.diagnostics, Mapping):
             raise TypeError('`diagnostics` should be a mapping')
-        object.__setattr__(self, 'records', records)
+        object.__setattr__(self, 'sites', sites)
+        object.__setattr__(self, 'cores', cores)
+        object.__setattr__(self, 'records', tuple(self.records))
         object.__setattr__(self, 'diagnostics', dict(self.diagnostics))
 
 
@@ -106,7 +121,7 @@ class BidirectionalRingResult:  # MARK: BidirectionalRingResult
     """
 
     cores: Sequence[torch.Tensor]  # Raw cores in site order
-    central_block: BlockSelection  # Selection defining the initial block
+    central_block: _BlockSelection  # Selection defining the initial block
     # Completed local openings indexed by their sites
     openings: Mapping[Tuple[int, ...], LoopOpening]
     # Site order used by the contraction or construction
@@ -125,24 +140,25 @@ class BidirectionalRingResult:  # MARK: BidirectionalRingResult
         boundaries = dict(self.boundaries)
         order = tuple(tuple(sites) for sites in self.order)
         directions = tuple(self.directions)
-        if not isinstance(self.central_block, BlockSelection):
-            raise TypeError('`central_block` should be BlockSelection type')
+        if not isinstance(self.central_block, _BlockSelection):
+            raise TypeError('`central_block` should be _BlockSelection type')
         if not all(isinstance(opening, LoopOpening)
                    for opening in openings.values()):
             raise TypeError('`openings` should contain LoopOpening objects')
         if not all(isinstance(site, int) and
                    isinstance(closure, BoundaryClosure) and
-                   closure.site == site
+                   (closure.sites[0] == site)
                    for site, closure in boundaries.items()):
             raise TypeError(
                 '`boundaries` should map sites to matching BoundaryClosure '
                 'objects')
         opening_keys = set(openings)
-        boundary_keys = {(site,) for site in boundaries}
+        boundary_keys = {closure.sites for closure in boundaries.values()}
         if opening_keys.intersection(boundary_keys):
-            raise ValueError('A site cannot be both opened and boundary-closed')
+            raise ValueError(
+                'A site cannot be both opened and boundary-closed')
         step_keys = opening_keys.union(boundary_keys)
-        if len(step_keys) != len(order) or step_keys != set(order):
+        if (len(step_keys) != len(order)) or (step_keys != set(order)):
             raise ValueError('`order` should identify every stored opening')
         opened_sites = tuple(site for sites in order for site in sites)
         if sorted(opened_sites) != list(range(len(cores))):
@@ -204,8 +220,6 @@ def _validate_provider(provider: RingTargetProvider) -> Tuple[int, ...]:
     if not isinstance(provider, RingTargetProvider):
         raise TypeError('`provider` should implement RingTargetProvider')
     in_dim = _normalize_dims(provider.in_dim, 'provider.in_dim')
-    if len(in_dim) < 3:
-        raise ValueError('Bidirectional ring construction requires three sites')
     return in_dim
 
 
@@ -222,11 +236,11 @@ def _validate_opening(opening: LoopOpening,
     if len(opening.cores) != len(sites):
         raise ValueError(
             'The loop opener returned a different number of local cores')
-    if fixed_left is not None and \
+    if (fixed_left is not None) and \
             (opening.left_gauge is None or
              not torch.equal(opening.left_gauge, fixed_left)):
         raise ValueError('The loop opener changed the fixed left gauge')
-    if fixed_right is not None and \
+    if (fixed_right is not None) and \
             (opening.right_gauge is None or
              not torch.equal(opening.right_gauge, fixed_right)):
         raise ValueError('The loop opener changed the fixed right gauge')
@@ -234,12 +248,16 @@ def _validate_opening(opening: LoopOpening,
 
 class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
     """
-    Builds a ring from a center block and two alternating recursions.
+    Builds a ring from one central opening and outward gauge transports.
 
-    The unprocessed complement of the central block is one cyclic interval.
-    Sites are opened alternately from its right and left ends with one fixed
-    gauge. Its final site is opened with both gauges, explicitly reconciling
-    the two fronts instead of leaving an unchecked cyclic interface.
+    Open target providers run an independent rightward branch followed by a
+    leftward branch. Each branch ends by absorbing its learned gauge into a
+    provider-defined boundary block. Central and boundary blocks may merge,
+    including the case where the central opening covers the whole chain.
+
+    The private sketching compatibility path also accepts cyclic providers.
+    It alternates the two fronts and solves their final common site with two
+    fixed gauges. TT2TR uses only the open-provider path.
     """
 
     def _fit_open_boundaries(self,
@@ -247,7 +265,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                              rank: Union[int, Sequence[int]],
                              opener: LoopOpener,
                              recursion: GaugeRecursion,
-                             selection: BlockSelection,
+                             selection: _BlockSelection,
                              central_opening: LoopOpening,
                              in_dim: Tuple[int, ...],
                              context: Mapping[str, Any],
@@ -256,113 +274,55 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                              order: list,
                              directions: list,
                              metrics: DecompositionMetrics,
-                             recursion_diagnostics: list) -> BidirectionalRingResult:
+                             recursion_diagnostics: list
+                             ) -> BidirectionalRingResult:
         """Runs two independent sweeps and absorbs both open target edges."""
-        if selection.left == 0 or selection.right == len(in_dim) - 1:
-            raise ValueError(
-                'An open-boundary provider requires an internal central block')
         close_boundary = getattr(provider, 'close_boundary', None)
         if not callable(close_boundary):
-            raise TypeError(
-                'An open-boundary provider should implement `close_boundary`')
-
+            raise TypeError('An open provider should implement '
+                            '`close_boundary`')
         boundaries = {}
-        right_opening = central_opening
-        for site in range(selection.right + 1, len(in_dim) - 1):
-            sites = (site,)
-            target = provider.local_target(sites, context)
-            fixed_left = self._advance(
-                recursion=recursion,
-                direction='right',
-                opening=right_opening,
-                local_target=target,
-                from_sites=self._opening_sites(openings, right_opening),
-                to_sites=sites,
-                provider=provider,
-                context=context,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics)
-            # Residual enrichment can replace the destination TT coordinates.
-            target = provider.local_target(sites, context)
-            opening = self._open(
-                provider=provider,
-                rank=rank,
-                opener=opener,
-                sites=sites,
-                target=target,
-                orientation='right',
-                fixed_left=fixed_left,
-                fixed_right=None,
-                context=context)
-            self._store_opening(
-                sites, 'right', opening, cores, openings, order,
-                directions, metrics)
-            right_opening = opening
-        right_closure = close_boundary(
-            site=len(in_dim) - 1,
-            direction='right',
-            opening=right_opening,
-            context=self._boundary_context(
-                recursion=recursion,
-                direction='right',
-                opening=right_opening,
-                boundary_site=len(in_dim) - 1,
-                provider=provider,
-                context=context,
-                openings=openings,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics))
-        self._store_boundary(
-            right_closure, cores, boundaries, order, directions, metrics,
-            observer=context.get('_observer'))
+        left_sites = tuple(context.get('left_boundary', (0,)))
+        right_sites = tuple(context.get('right_boundary', (len(in_dim) - 1,)))
 
-        left_opening = central_opening
-        for site in range(selection.left - 1, 0, -1):
-            sites = (site,)
-            target = provider.local_target(sites, context)
-            fixed_right = self._advance(
-                recursion=recursion,
-                direction='left',
-                opening=left_opening,
-                local_target=target,
-                from_sites=self._opening_sites(openings, left_opening),
-                to_sites=sites,
-                provider=provider,
-                context=context,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics)
-            target = provider.local_target(sites, context)
-            opening = self._open(
-                provider=provider,
-                rank=rank,
-                opener=opener,
-                sites=sites,
-                target=target,
-                orientation='left',
-                fixed_left=None,
-                fixed_right=fixed_right,
-                context=context)
-            self._store_opening(
-                sites, 'left', opening, cores, openings, order,
-                directions, metrics)
-            left_opening = opening
-        left_closure = close_boundary(
-            site=0,
-            direction='left',
-            opening=left_opening,
-            context=self._boundary_context(
-                recursion=recursion,
-                direction='left',
-                opening=left_opening,
-                boundary_site=0,
-                provider=provider,
-                context=context,
-                openings=openings,
-                metrics=metrics,
-                diagnostics=recursion_diagnostics))
-        self._store_boundary(
-            left_closure, cores, boundaries, order, directions, metrics,
-            observer=context.get('_observer'))
+        # Each outward branch starts independently from the same central
+        # opening.
+        for direction, boundary_sites in (('right', right_sites),
+                                           ('left', left_sites)):
+            if not boundary_sites:
+                continue
+            if direction == 'right':
+                sites_to_open = range(selection.right + 1, boundary_sites[0])
+            else:
+                sites_to_open = range(selection.left - 1,
+                                      boundary_sites[-1], -1)
+            previous = central_opening
+            for site in sites_to_open:
+                sites = (site,)
+                fixed = self._advance(
+                    recursion, direction, previous,
+                    provider.local_target(sites, context),
+                    self._opening_sites(openings, previous), sites, provider,
+                    context, metrics, recursion_diagnostics)
+                opening = self._open(
+                    provider, rank, opener, sites,
+                    provider.local_target(sites, context), direction,
+                    fixed if direction == 'right' else None,
+                    fixed if direction == 'left' else None, context)
+                self._store_opening(
+                    sites, direction, opening, cores, openings, order,
+                    directions, metrics)
+                previous = opening
+            adjacent = (boundary_sites[0] if direction == 'right'
+                        else boundary_sites[-1])
+            closure = close_boundary(
+                sites=boundary_sites, direction=direction, opening=previous,
+                context=self._boundary_context(
+                    recursion, direction, previous, adjacent, provider,
+                    context, openings, metrics, recursion_diagnostics))
+            self._store_boundary(
+                closure, cores, boundaries, order, directions, metrics,
+                observer=context.get('_observer'))
 
         if any(core is None for core in cores):
             raise RuntimeError('The ring driver did not assemble every site')
@@ -433,7 +393,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                     name='gauge', phase='TT to TR', level=2,
                     site=record.site,
                     values={'orientation': record.orientation,
-                            'rank': (record.numerical_rank, record.cancellable_rank),
+                            'rank': (record.numerical_rank,
+                                     record.cancellable_rank),
                             'condition_number': record.condition_number,
                             'cancellation_error': record.cancellation_error,
                             'projective': record.projective}))
@@ -484,7 +445,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                     name='gauge', phase='TT to TR', level=2,
                     site=record.site,
                     values={'orientation': record.orientation,
-                            'rank': (record.numerical_rank, record.cancellable_rank),
+                            'rank': (record.numerical_rank,
+                                     record.cancellable_rank),
                             'condition_number': record.condition_number,
                             'cancellation_error': record.cancellation_error,
                             'projective': record.projective}))
@@ -540,7 +502,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
         """
         Stores ``cores`` and records after checking ``sites`` are still empty.
         """
-        if sites in openings or any(cores[site] is not None for site in sites):
+        if (sites in openings) or any(
+                cores[site] is not None for site in sites):
             raise RuntimeError('A ring site was opened more than once')
         for site, core in zip(sites, opening.cores):
             cores[site] = core
@@ -563,19 +526,22 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
         """Stores one provider-specific open-boundary absorption."""
         if not isinstance(closure, BoundaryClosure):
             raise TypeError('`close_boundary` should return BoundaryClosure')
-        if closure.site >= len(cores):
-            raise ValueError('Boundary closure site lies outside the ring')
-        if cores[closure.site] is not None or closure.site in boundaries:
-            raise RuntimeError('A ring boundary was resolved more than once')
-        cores[closure.site] = closure.core
-        boundaries[closure.site] = closure
-        order.append((closure.site,))
+        if closure.sites[-1] >= len(cores):
+            raise ValueError('Boundary sites lie outside the ring')
+        if any(cores[site] is not None for site in closure.sites):
+            raise RuntimeError('A boundary site was resolved more than once')
+        for site, core in zip(closure.sites, closure.cores):
+            cores[site] = core
+        boundaries[closure.sites[0]] = closure
+        order.append(closure.sites)
         directions.append(f'{closure.direction}_boundary')
         metrics.gauges.extend(closure.records)
+        metrics.truncations.extend(closure.diagnostics.get('truncations', ()))
         if observer is not None:
             observer.emit(DecompositionEvent(
-                name='site_complete', phase='TT to TR', site=closure.site,
-                values={'sites': (closure.site,),
+                name='site_complete', phase='TT to TR',
+                site=closure.sites[0],
+                values={'sites': closure.sites,
                         'direction': closure.direction,
                         'total_sites': len(cores)}))
 
@@ -584,27 +550,59 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             rank: Union[int, Sequence[int]],
             opener: LoopOpener,
             recursion: GaugeRecursion,
-            block_selector: Optional[CentralBlockSelector] = None,
+            block_selector: Optional[_CentralBlockSelector] = None,
             *,
             center: Optional[int] = None,
             boundary_opener: Optional[LoopOpener] = None,
-            context: Optional[Mapping[str, Any]] = None) -> BidirectionalRingResult:
-        """Runs the isolated central/right/left/boundary driver workflow."""
+            context: Optional[Mapping[str, Any]] = None
+            ) -> BidirectionalRingResult:
+        """
+        Opens the center, transports both branches and assembles the TR.
+
+        Parameters
+        ----------
+        provider : RingTargetProvider
+            Supplies local targets, local ranks and opener metadata. An open
+            provider also implements boundary-block closure.
+        rank : int or sequence[int]
+            Right-link ranks supplied to the provider for local openings.
+        opener : LoopOpener
+            Solves the central block and subsequent one-site problems.
+        recursion : GaugeRecursion
+            Builds the fixed gauge inherited by each subsequent opening.
+        block_selector : _CentralBlockSelector, optional
+            Internal central-block policy. TT2TR supplies its already selected
+            block; the default capacity selector supports legacy sketching.
+        center : int, optional
+            Seed site passed to the block selector.
+        boundary_opener : LoopOpener, optional
+            Solver for the final two-fixed-gauge site of a cyclic provider.
+            Open providers close their boundary blocks directly instead.
+        context : mapping, optional
+            Provider execution data. ``left_boundary`` and ``right_boundary``
+            contain the open-provider boundary sites; an empty tuple denotes
+            a boundary already included in the central block.
+
+        Returns
+        -------
+        BidirectionalRingResult
+            Ordered cores, selected blocks, local openings and diagnostics.
+        """
         in_dim = _validate_provider(provider)
         if not isinstance(opener, LoopOpener):
             raise TypeError('`opener` should implement LoopOpener')
         if not isinstance(recursion, GaugeRecursion):
             raise TypeError('`recursion` should implement GaugeRecursion')
         if block_selector is None:
-            block_selector = CentralBlockSelector()
-        elif not isinstance(block_selector, CentralBlockSelector):
+            block_selector = _CentralBlockSelector()
+        elif not isinstance(block_selector, _CentralBlockSelector):
             raise TypeError(
-                '`block_selector` should be CentralBlockSelector type')
+                '`block_selector` should be _CentralBlockSelector type')
         if boundary_opener is None:
             if opener.capabilities.supports_two_fixed_gauges:
                 boundary_opener = opener
             else:
-                boundary_opener = FixedGaugeCoreOpener()
+                boundary_opener = _FixedGaugeCoreOpener()
         elif not isinstance(boundary_opener, LoopOpener):
             raise TypeError('`boundary_opener` should implement LoopOpener')
         context = _normalize_context(context)
@@ -622,7 +620,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 f'reason={selection.reason}, sites={selection.sites}, '
                 f'input_capacity={selection.input_capacity}, '
                 f'required_input_capacity={selection.required_input_capacity}')
-        if len(selection.sites) == len(in_dim):
+        if (len(selection.sites) == len(in_dim)) and (
+                boundary_mode != 'open'):
             raise ValueError(
                 'The central block should leave at least one boundary site '
                 'to reconcile its two outgoing gauges')
@@ -646,6 +645,11 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             fixed_left=None,
             fixed_right=None,
             context=context)
+
+        # Merged end blocks absorb their dummy gauges before cores are stored.
+        finalize = getattr(provider, 'finalize_center', None)
+        if callable(finalize):
+            central_opening = finalize(central_opening, central_sites)
         self._store_opening(
             central_sites,
             'center',
@@ -656,6 +660,8 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
             directions,
             metrics)
 
+        # Open providers own boundary absorption; cyclic compatibility uses the
+        # separate two-front path below.
         if boundary_mode == 'open':
             return self._fit_open_boundaries(
                 provider=provider,
@@ -673,6 +679,7 @@ class BidirectionalRingDriver:  # MARK: BidirectionalRingDriver
                 metrics=metrics,
                 recursion_diagnostics=recursion_diagnostics)
 
+        # Compatibility path: reconcile both fronts at the final cyclic site.
         remaining = len(in_dim) - len(central_sites)
         left_site = (selection.left - 1) % len(in_dim)
         right_site = (selection.right + 1) % len(in_dim)

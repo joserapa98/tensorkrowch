@@ -1,4 +1,4 @@
-"""Tests for ring/schedules."""
+"""Regression tests for private recursive-sketching schedules."""
 
 from dataclasses import dataclass
 
@@ -8,7 +8,7 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.ring.driver import BoundaryClosure
-from tensorkrowch.decompositions.ring.schedules import AlternatingRingDriver
+from tensorkrowch.decompositions.ring._schedules import AlternatingRingDriver
 
 
 class SyntheticProvider:
@@ -35,11 +35,12 @@ class SyntheticOpenProvider(SyntheticProvider):
 
     boundary_mode = 'open'
 
-    def close_boundary(self, site, direction, opening, context):
+    def close_boundary(self, sites, direction, opening, context):
+        site, = sites
         return BoundaryClosure(
-            site=site,
+            sites=sites,
             direction=direction,
-            core=torch.full((1, self.in_dim[site], 1), float(site + 1)),
+            cores=(torch.full((1, self.in_dim[site], 1), float(site + 1)),),
             diagnostics={'synthetic_boundary': True})
 
 
@@ -54,8 +55,8 @@ class SyntheticRecursion:
         gauge_map = tk.decompositions.GaugeMap(
             gauge,
             orientation=direction,
-            site=local_target[0]).inverse_or_pinv('pinv')
-        record = gauge_map.require_cancellable()
+            site=local_target[0]).pinv()
+        record = gauge_map.diagnostics()
         recursion_context['calls'].append((
             direction,
             recursion_context['from_sites'],

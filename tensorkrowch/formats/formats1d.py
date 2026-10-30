@@ -208,7 +208,7 @@ def _redistribute(cores: List[torch.Tensor],
 def _validate_minimal_options(max_iter: int,
                               lr: float,
                               rtol: float,
-                              change_rtol: float,
+                              stagnation_rtol: float,
                               patience: int,
                               method: str,
                               return_info: bool) -> None:
@@ -225,7 +225,7 @@ def _validate_minimal_options(max_iter: int,
         if value < 1:
             raise ValueError(f'`{name}` should be positive')
     for name, value in [('lr', lr), ('rtol', rtol),
-                        ('change_rtol', change_rtol)]:
+                        ('stagnation_rtol', stagnation_rtol)]:
         if isinstance(value, bool) or not isinstance(value, Real):
             raise TypeError(f'`{name}` should be a real number')
         if not isfinite(value) or value <= 0:
@@ -3654,7 +3654,7 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
             rtol: float = 1e-8,
             *,
             method: str = 'adam',
-            change_rtol: float = 1e-6,
+            stagnation_rtol: float = 1e-6,
             patience: int = 5,
             return_info: bool = False
         ) -> Union['TensorFormat1D',
@@ -3675,7 +3675,7 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
         information and constrained Newton steps.
 
         Stops when the relative Gram imbalance reaches ``rtol`` or its
-        relative change stays below ``change_rtol`` for ``patience``
+        relative change stays below ``stagnation_rtol`` for ``patience``
         consecutive steps. Returns that iterate on convergence, or the finite
         iterate with lowest objective on an iteration limit or numerical
         failure. This implements the minimization objective discussed in
@@ -3707,14 +3707,14 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
             cores and multiply the accumulated gauges on the right. A smaller
             ``lr`` may be needed for descent. This method needs no backward
             pass for the gauge search.
-        change_rtol : float
+        stagnation_rtol : float
             Finite positive tolerance for the relative change of consecutive
             errors: ``abs(error - previous) / max(error, previous, eps)``,
             where ``eps`` is machine epsilon of the real core dtype.
             This measures stagnation, which can occur at a large imbalance.
         patience : int
             Positive number of consecutive steps satisfying
-            ``change_rtol``. The counter resets on a larger change.
+            ``stagnation_rtol``. The counter resets on a larger change.
         return_info : bool
             If ``True``, returns the format together with the operation-specific
             information record.
@@ -3741,7 +3741,7 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
         >>> info.stop_reason
         'tolerance'
         """
-        _validate_minimal_options(max_iter, lr, rtol, change_rtol,
+        _validate_minimal_options(max_iter, lr, rtol, stagnation_rtol,
                                   patience, method, return_info)
 
         # Optimize gauges on detached cores to avoid accumulating core gradients.
@@ -3806,7 +3806,7 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
                     change = abs(error_value - previous_error) / max(
                         error_value, previous_error, eps)
                     stagnant_steps = (stagnant_steps + 1
-                                      if change <= change_rtol else 0)
+                                      if change <= stagnation_rtol else 0)
                 previous_error = error_value
 
                 if (error_value <= rtol) or (stagnant_steps >= patience):

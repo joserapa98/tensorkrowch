@@ -94,11 +94,11 @@ def test_joint_gram_imbalance_and_relative_scaling(dtype):
 def test_minimal_stopping_criteria(make_format, kind, reason, method):
     format = make_format(kind, 3, dtype=torch.float64)
     dense = format.contract_dense()
-    options = dict(rtol=1e-15, change_rtol=1e-15, max_iter=1)
+    options = dict(rtol=1e-15, stagnation_rtol=1e-15, max_iter=1)
     if reason == 'tolerance':
         options['rtol'] = 10.
     elif reason == 'stagnation':
-        options.update(max_iter=8, change_rtol=1., patience=2)
+        options.update(max_iter=8, stagnation_rtol=1., patience=2)
     _, info = format.canonicalize_minimal(method=method, return_info=True,
                                          **options)
     assert info.stop_reason == reason
@@ -113,7 +113,7 @@ def test_minimal_stopping_criteria(make_format, kind, reason, method):
 def test_minimal_relative_stopping_is_scale_invariant(make_format, method):
     format = make_format('tr', 3, dtype=torch.float64)
     scaled = tk.formats.TR([100 * core for core in format.cores])
-    options = dict(max_iter=12, rtol=1e-15, change_rtol=1., patience=3,
+    options = dict(max_iter=12, rtol=1e-15, stagnation_rtol=1., patience=3,
                    method=method, return_info=True)
     _, info = format.canonicalize_minimal(**options)
     _, scaled_info = scaled.canonicalize_minimal(**options)
@@ -134,7 +134,7 @@ def test_minimal_stagnation_counter_resets(make_format, monkeypatch):
 
     monkeypatch.setattr(GaugeOrbit, 'gram_imbalance', controlled_imbalance)
     _, info = make_format('tr', 3).canonicalize_minimal(
-        max_iter=10, rtol=1e-8, change_rtol=1e-6, patience=3,
+        max_iter=10, rtol=1e-8, stagnation_rtol=1e-6, patience=3,
         return_info=True)
     assert info.stop_reason == 'stagnation'
     assert info.iterations == 7
@@ -180,8 +180,8 @@ def test_minimal_numerical_failure_returns_finite_fallback(make_format,
 @pytest.mark.parametrize('options, error', [
     ({'rtol': 0}, ValueError),
     ({'rtol': float('nan')}, ValueError),
-    ({'change_rtol': float('inf')}, ValueError),
-    ({'change_rtol': True}, TypeError),
+    ({'stagnation_rtol': float('inf')}, ValueError),
+    ({'stagnation_rtol': True}, TypeError),
     ({'patience': 0}, ValueError),
     ({'patience': 1.5}, TypeError),
     ({'method': 'newton'}, ValueError),
@@ -320,7 +320,7 @@ def test_minimal_open_format_information(make_format, topology, quantized, dtype
 @pytest.mark.parametrize('topology', ['tt', 'ttm'])
 @pytest.mark.parametrize('options', [
     {'max_iter': 10}, {'lr': 0.1}, {'rtol': 1e-8}, {'method': 'gradient'},
-    {'change_rtol': 1e-6}, {'patience': 5},
+    {'stagnation_rtol': 1e-6}, {'patience': 5},
 ])
 def test_minimal_open_format_rejects_iterative_options(make_format,
                                                       topology, options):

@@ -1089,7 +1089,7 @@ def test_batched_ttm_operations(make_format, n_sites, n_batches):
         assert torch.allclose(gram[index], (member.H @ member).contract_dense())
 
     canonical = format.clone().canonicalize()
-    minimal = format.clone().canonicalize_minimal(method='gradient')
+    minimal = format.clone().canonicalize_minimal()
     rounded = format.clone().rounding()
     for result in (canonical, minimal, rounded):
         assert result.batch_shape == format.batch_shape

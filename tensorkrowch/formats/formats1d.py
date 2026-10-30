@@ -224,7 +224,7 @@ def _validate_minimal_options(max_iter: int,
                               patience: int,
                               method: str,
                               return_info: bool) -> None:
-    """Checks the options shared by minimal canonicalization methods."""
+    """Checks the options for cyclic minimal canonicalization."""
     if not isinstance(return_info, bool):
         raise TypeError('`return_info` should be bool type')
     if not isinstance(method, str):
@@ -3564,13 +3564,7 @@ class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
 
     def canonicalize_minimal(
             self,
-            max_iter: int = 200,
-            lr: float = 0.05,
-            rtol: float = 1e-8,
             *,
-            method: str = 'adam',
-            stagnation_rtol: float = 1e-6,
-            patience: int = 5,
             return_info: bool = False
         ) -> Union['TensorFormat1D',
                    Tuple['TensorFormat1D', MinimalCanonicalInfo]]:
@@ -3587,19 +3581,6 @@ class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
 
         Parameters
         ----------
-        max_iter : int
-            Positive iteration limit retained for a common interface with rings.
-            Open chains do not perform iterative optimization.
-        lr : float
-            Positive learning rate, used only by cyclic formats.
-        rtol : float
-            Positive relative Gram-imbalance tolerance, used only by rings.
-        method : {'adam', 'gradient'}
-            Gauge optimization method, used only by rings.
-        stagnation_rtol : float
-            Positive relative error-change tolerance, used only by rings.
-        patience : int
-            Positive number of consecutive stagnant steps, used only by rings.
         return_info : bool
             Whether to return the canonicalization information with the format.
 
@@ -3619,8 +3600,8 @@ class _OpenFormat1D(TensorFormat1D):  # MARK: _OpenFormat1D
         >>> info.iterations, info.converged
         (0, True)
         """
-        _validate_minimal_options(max_iter, lr, rtol, stagnation_rtol,
-                                  patience, method, return_info)
+        if not isinstance(return_info, bool):
+            raise TypeError('`return_info` should be bool type')
         self.canonicalize_vidal('implicit')
         if return_info:
             return self, MinimalCanonicalInfo(0, True, None, 'vidal')

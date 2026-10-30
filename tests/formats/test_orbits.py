@@ -51,7 +51,7 @@ def test_minimal_train_route(make_format):
     format.canonicalize_minimal()
     assert format.bonds.powers == [(0.5, 0.5)] * (format.n_sites - 1)
     assert torch.allclose(format.contract_dense(), dense)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         format.canonicalize_minimal(max_iter=0)
 
 
@@ -176,7 +176,7 @@ def test_minimal_numerical_failure_returns_finite_fallback(make_format,
     assert torch.allclose(format.contract_dense(), dense)
 
 
-@pytest.mark.parametrize('kind', ['tt', 'tr'])
+@pytest.mark.parametrize('kind', ['tr', 'trm'])
 @pytest.mark.parametrize('options, error', [
     ({'rtol': 0}, ValueError),
     ({'rtol': float('nan')}, ValueError),
@@ -315,3 +315,24 @@ def test_minimal_open_format_information(make_format, topology, quantized, dtype
     assert info.gram_imbalance is None and info.stop_reason == 'vidal'
     assert format.bonds.powers == [(0.5, 0.5)] * (format.n_sites - 1)
     assert torch.allclose(format.contract_dense(), before, rtol=1e-10, atol=1e-11)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'ttm'])
+@pytest.mark.parametrize('options', [
+    {'max_iter': 10}, {'lr': 0.1}, {'rtol': 1e-8}, {'method': 'gradient'},
+    {'stagnation_rtol': 1e-6}, {'patience': 5},
+])
+def test_minimal_open_format_rejects_iterative_options(make_format,
+                                                      topology, options):
+    format = make_format(topology)
+    before = format.contract_dense()
+    with pytest.raises(TypeError, match='unexpected keyword argument'):
+        format.canonicalize_minimal(**options)
+    assert torch.equal(format.contract_dense(), before)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'ttm'])
+def test_minimal_open_format_rejects_invalid_return_info(make_format, topology):
+    format = make_format(topology)
+    with pytest.raises(TypeError, match='`return_info` should be bool'):
+        format.canonicalize_minimal(return_info=1)

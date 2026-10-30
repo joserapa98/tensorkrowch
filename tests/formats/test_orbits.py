@@ -141,6 +141,27 @@ def test_minimal_stagnation_counter_resets(make_format, monkeypatch):
 
 
 @pytest.mark.parametrize('method', ['adam', 'gradient'])
+@pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+@pytest.mark.parametrize('error_scale', [1e-2, 1e-24])
+def test_minimal_stagnation_retains_relative_changes_below_epsilon(
+        make_format, monkeypatch, method, dtype, error_scale):
+    errors = iter(error_scale * value for value in (
+        1., 0.5, 0.25, 0.125, 0.125, 0.125))
+
+    def controlled_imbalance(orbit, relative=False):
+        return orbit.cores[0].real.new_tensor(
+            next(errors, error_scale * 0.125))
+
+    monkeypatch.setattr(GaugeOrbit, 'gram_imbalance', controlled_imbalance)
+    _, info = make_format('tr', 3, dtype=dtype).canonicalize_minimal(
+        method=method, max_iter=8, rtol=error_scale * 1e-5,
+        stagnation_rtol=1e-6, patience=2, return_info=True)
+    assert info.converged
+    assert info.stop_reason == 'stagnation'
+    assert info.iterations == 6
+
+
+@pytest.mark.parametrize('method', ['adam', 'gradient'])
 def test_minimal_internal_gradients_are_isolated(make_format, method):
     format = make_format('tr', 3, dtype=torch.float64)
     original = list(format.cores)

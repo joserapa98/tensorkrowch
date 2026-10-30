@@ -3750,8 +3750,8 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
             pass for the gauge search.
         stagnation_rtol : float
             Finite positive tolerance for the relative change of consecutive
-            errors: ``abs(error - previous) / max(error, previous, eps)``,
-            where ``eps`` is machine epsilon of the real core dtype.
+            errors: ``abs(error - previous) / max(error, previous)``.
+            The change is zero when both errors are zero.
             This measures stagnation, which can occur at a large imbalance.
         patience : int
             Positive number of consecutive steps satisfying
@@ -3805,7 +3805,6 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
         converged, iterations = False, 0
         stop_reason = 'max_iter'
         previous_error, stagnant_steps = None, 0
-        eps = torch.finfo(self._cores[0].real.dtype).eps
         with torch.set_grad_enabled(method == 'adam'):
             if method == 'adam':
                 parameters = [torch.zeros_like(gauge, requires_grad=True)
@@ -3844,8 +3843,9 @@ class _CyclicFormat1D(TensorFormat1D):  # MARK: _CyclicFormat1D
                     best_gauge = [gauge.detach() for gauge in gauges]
                 error_value = error.item()
                 if previous_error is not None:
-                    change = abs(error_value - previous_error) / max(
-                        error_value, previous_error, eps)
+                    error_scale = max(error_value, previous_error)
+                    change = abs(error_value - previous_error) / (
+                        error_scale if error_scale > 0 else 1)
                     stagnant_steps = (stagnant_steps + 1
                                       if change <= stagnation_rtol else 0)
                 previous_error = error_value

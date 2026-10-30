@@ -123,7 +123,7 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         backend = _FakeALSBackend([1., 0.8, 0.8001, 0.8002])
         policy = tk.decompositions.ConvergencePolicy(
             max_sweeps=10,
-            change_rtol=1e-3,
+            stagnation_rtol=1e-3,
             patience=2)
 
         result = tk.decompositions.ALSSweepDriver().fit(
@@ -192,9 +192,9 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
     ({'atol': -1.}, ValueError), ({'atol': float('inf')}, ValueError),
     ({'atol': True}, TypeError), ({'rtol': 'small'}, TypeError),
     ({'rtol': float('nan')}, ValueError),
-    ({'change_rtol': -0.1}, ValueError),
+    ({'stagnation_rtol': -0.1}, ValueError),
     ({'patience': 0}, ValueError), ({'patience': 2}, ValueError),
-    ({'patience': True, 'change_rtol': 0.1}, ValueError),
+    ({'patience': True, 'stagnation_rtol': 0.1}, ValueError),
     ({'keep_best': 1}, TypeError), ({'callback': 1}, TypeError),
 ])
 def test_policy_rejects_invalid_configuration(kwargs, error):
@@ -203,7 +203,7 @@ def test_policy_rejects_invalid_configuration(kwargs, error):
 
 
 @pytest.mark.parametrize('kwargs', [
-    {'atol': 0.}, {'rtol': 0.}, {'change_rtol': 0.}, {'keep_best': True},
+    {'atol': 0.}, {'rtol': 0.}, {'stagnation_rtol': 0.}, {'keep_best': True},
 ])
 def test_fixed_objective_requirement(kwargs):
     policy = tk.decompositions.ConvergencePolicy(**kwargs)
@@ -226,7 +226,7 @@ def test_default_policy_and_explicit_budget():
 
 def test_stability_restarts_after_large_change():
     policy = tk.decompositions.ConvergencePolicy(
-        max_sweeps=10, change_rtol=0.01, patience=2)
+        max_sweeps=10, stagnation_rtol=0.01, patience=2)
     records = [tk.decompositions.SweepRecord(sweep=site, rel_change=value)
                for site, value in enumerate([None, 0.001, 0.2, 0.001, 0.001])]
     stable = 0
@@ -239,7 +239,7 @@ def test_stability_restarts_after_large_change():
 
 
 def test_stability_defaults_to_one_sweep():
-    policy = tk.decompositions.ConvergencePolicy(change_rtol=0.)
+    policy = tk.decompositions.ConvergencePolicy(stagnation_rtol=0.)
     record = tk.decompositions.SweepRecord(sweep=1, rel_change=0.)
     assert policy.stopping_reason(record, 0) == ('relative_stability', 1)
 

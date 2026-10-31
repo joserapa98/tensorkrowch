@@ -1670,14 +1670,17 @@ class TestMPS:  # MARK: TestMPS
         assert result.shape == (5,)
 
     @pytest.mark.parametrize('out_position', [0, 1, 3])
-    def test_condition_matches_mpslayer_fixed_output(self, out_position):
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('mps_seed', [0, 25], indirect=True)
+    def test_condition_matches_mpslayer_fixed_output(self, out_position,
+                                                    dtype, mps_seed):
         label = 1
         layer = tk.models.MPSLayer(n_features=4,
                                    in_dim=2,
                                    out_dim=3,
                                    bond_dim=2,
                                    out_position=out_position,
-                                   boundary='obc')
+                                   boundary='obc').to(dtype=dtype)
         label_data = tk.embeddings.basis(torch.tensor(label), dim=3)\
             .to(layer.mats_env[0].dtype)
 
@@ -1688,15 +1691,20 @@ class TestMPS:  # MARK: TestMPS
         layer_output = layer(data)[:, label]
         cond_output = cond_mps(data)
 
-        assert torch.allclose(cond_output, layer_output)
+        error = torch.linalg.vector_norm(cond_output - layer_output)
+        scale = torch.linalg.vector_norm(layer_output)
+        rtol = 1e-5 if dtype == torch.float32 else 1e-12
+        assert error <= rtol * scale
 
     @pytest.mark.parametrize('boundary', ['obc', 'pbc'])
-    def test_condition_multiple_output_nodes(self, boundary):
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('mps_seed', [0, 124], indirect=True)
+    def test_condition_multiple_output_nodes(self, boundary, dtype, mps_seed):
         mps = tk.models.MPS(n_features=5,
                             phys_dim=2,
                             bond_dim=2,
                             boundary=boundary,
-                            out_features=[1, 3])
+                            out_features=[1, 3]).to(dtype=dtype)
         out_values = [1, 0]
         out_data = [
             tk.embeddings.basis(torch.tensor(value), dim=2)
@@ -1711,7 +1719,10 @@ class TestMPS:  # MARK: TestMPS
         original_output = mps(data)[:, out_values[0], out_values[1]]
         cond_output = cond_mps(data)
 
-        assert torch.allclose(cond_output, original_output)
+        error = torch.linalg.vector_norm(cond_output - original_output)
+        scale = torch.linalg.vector_norm(original_output)
+        rtol = 1e-5 if dtype == torch.float32 else 1e-12
+        assert error <= rtol * scale
 
     @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
     @pytest.mark.parametrize('mps_seed', [0, 227], indirect=True)
@@ -1793,7 +1804,9 @@ class TestMPS:  # MARK: TestMPS
         original_output = mps(data)[:, out_values[0], out_values[1]]
         cond_output = cond_mps(data)
 
-        assert torch.allclose(cond_output, original_output)
+        error = torch.linalg.vector_norm(cond_output - original_output)
+        scale = torch.linalg.vector_norm(original_output)
+        assert error <= 1e-5 * scale
 
     @pytest.mark.parametrize(
         'data',

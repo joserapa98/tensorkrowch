@@ -706,7 +706,7 @@ def test_qtr_svd_function(criteria, renormalize, device_dtype, assert_close):
         source, out_device=None).fit(**options)
 
     assert isinstance(result, tk.decompositions.QTRDecomposition)
-    assert result.device == torch.device(device)
+    assert result.device == source.device
     assert result.dtype == dtype
     assert result.metrics.truncations
     assert_close(result.contract_dense(), expected.contract_dense())

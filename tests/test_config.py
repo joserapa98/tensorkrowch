@@ -79,18 +79,22 @@ class TestSVDMethodConfiguration:  # MARK: TestSVDMethodConfiguration
                               before[0] @ before[1], atol=1e-15, rtol=1e-12)
 
     @pytest.mark.parametrize('method', ['svd', 'qr_svd'])
-    @pytest.mark.parametrize('decomposer, shape', [
-        (tk.decompositions.TTSVD, (2, 3, 2)),
-        (tk.decompositions.TRSVD, (2, 3, 2)),
-        (tk.decompositions.TTMSVD, (2, 3, 2, 2)),
-        (tk.decompositions.TRMSVD, (2, 3, 2, 2)),
+    @pytest.mark.parametrize('decomposer, shape, permutation', [
+        (tk.decompositions.TTSVD, (2, 3, 2), None),
+        (tk.decompositions.TRSVD, (2, 3, 2), None),
+        (tk.decompositions.TTMSVD, (2, 3, 2, 2), (0, 2, 1, 3)),
+        (tk.decompositions.TRMSVD, (2, 3, 2, 2), (0, 2, 1, 3)),
     ])
-    def test_refinement_reaches_decompositions(self, method, decomposer, shape):
+    def test_refinement_reaches_decompositions(self, method, decomposer, shape,
+                                             permutation):
         generator = torch.Generator().manual_seed(17)
         tensor = torch.randn(shape, dtype=torch.float64, generator=generator)
         with tk.svd_method(method, refine=True):
             result = decomposer(tensor).fit()
-        assert torch.allclose(result.contract_dense(), tensor,
+        # Raw matrix inputs have grouped axes; formats contract interleaved.
+        expected = (tensor if permutation is None else
+                    tensor.permute(permutation))
+        assert torch.allclose(result.contract_dense(), expected,
                               rtol=1e-10, atol=1e-12)
 
     def test_set_svd_method(self):

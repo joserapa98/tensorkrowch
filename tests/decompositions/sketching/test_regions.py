@@ -3,6 +3,7 @@
 import pytest
 import torch
 
+from tensorkrowch.decompositions.sources import ConfigurationBatch
 from tensorkrowch.decompositions.sketching.regions import (RegionSketch,
                                                            SiteRegion,
                                                            SketchRecursion,
@@ -50,6 +51,20 @@ class TestSiteRegion:  # MARK: TestSiteRegion
 
 
 class TestSamplePool:  # MARK: TestSamplePool
+
+    @pytest.mark.parametrize('packed', [True, False])
+    def test_configuration_batch_and_one_variable(self, packed):
+        values = torch.tensor([[2], [1], [2], [0]])
+        batch = ConfigurationBatch(
+            values if packed else (values[:, 0],), kind='indices')
+        pool = _SamplePool(batch)
+        sketch = pool.restrict(SiteRegion((0,)))
+
+        assert pool.n_rows == 4
+        assert pool.n_sites == 1
+        assert sketch.n_unique == 3
+        assert torch.equal(
+            sketch.values[0][sketch.inverse_ids], values[:, 0])
 
     def test_scalar_restriction_has_vectorized_unique_inverse_and_cache(self):
         samples = torch.tensor([
@@ -124,7 +139,8 @@ class TestSamplePool:  # MARK: TestSamplePool
 
         assert sketch.n_unique == 1
         assert sketch.values == ()
-        assert torch.equal(sketch.inverse_ids, torch.zeros(4, dtype=torch.long))
+        assert torch.equal(
+            sketch.inverse_ids, torch.zeros(4, dtype=torch.long))
         assert torch.equal(
             sketch.representative_row_ids, torch.zeros(1, dtype=torch.long))
 
@@ -143,6 +159,14 @@ class TestSamplePool:  # MARK: TestSamplePool
 
 
 class TestRegionSketch:  # MARK: TestRegionSketch
+
+    def test_scalar_values_are_rejected_with_a_clear_shape_error(self):
+        pool = _SamplePool(torch.tensor([[0], [1]]))
+        valid = pool.restrict(SiteRegion((0,)))
+        with pytest.raises(ValueError, match='one unique row'):
+            RegionSketch(
+                valid.pool_id, valid.region, (torch.tensor(1),),
+                valid.representative_row_ids, valid.inverse_ids, pool)
 
     def test_restrict_and_correlated_combine_reuse_original_pool_rows(self):
         samples = torch.tensor([
@@ -192,6 +216,28 @@ class TestRegionSketch:  # MARK: TestRegionSketch
 
 
 class TestSketchRecursion:  # MARK: TestSketchRecursion
+
+    @pytest.mark.parametrize('axis', [-1, 1])
+    def test_negative_axis_and_identity_region(self, axis):
+        pool = _SamplePool(torch.tensor([[0], [1], [0]]))
+        sketch = pool.restrict(SiteRegion((0,)))
+        recursion = sketch.recursive_projector(sketch)
+        tensor = torch.randn(3, 2, dtype=torch.complex128)
+        assert torch.equal(recursion.apply(tensor, axis=axis), tensor)
+        assert recursion.new_values == ()
+
+    @pytest.mark.parametrize('axis', [True, 2, -3])
+    def test_invalid_axis(self, axis):
+        pool = _SamplePool(torch.tensor([[0], [1]]))
+        sketch = pool.restrict(SiteRegion((0,)))
+        recursion = sketch.recursive_projector(sketch)
+        with pytest.raises((TypeError, ValueError), match='axis'):
+            recursion.apply(torch.ones(3, 2), axis=axis)
+
+    def test_scalar_new_values_are_rejected_with_a_shape_error(self):
+        with pytest.raises(ValueError, match='parent size'):
+            SketchRecursion('pool', SiteRegion(), SiteRegion((0,)),
+                            1, 1, torch.tensor([0]), (torch.tensor(1),))
 
     @pytest.mark.parametrize('in_dim', [None, 2])
     def test_left_recursion_matches_direct_prefix_lookup(self, in_dim):

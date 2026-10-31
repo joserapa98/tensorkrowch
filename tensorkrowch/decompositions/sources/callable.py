@@ -203,7 +203,8 @@ class CallableSource(BaseSource):  # MARK: CallableSource
         With ``kernel=None``, evaluation returns the total weight of samples
         exactly matching each query, and zero elsewhere. With a kernel, it
         returns the weighted sum of its query-to-sample values. For example,
-        pass :func:`gaussian_kernel` with ``bandwidth`` to obtain a Gaussian
+        pass :func:`~tensorkrowch.decompositions.kernels.gaussian_kernel`
+        with ``bandwidth`` to obtain a Gaussian
         density estimate; no kernel is selected automatically.
 
         All dataset columns are continuous inputs in their given order, with

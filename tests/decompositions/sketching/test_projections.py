@@ -4,9 +4,10 @@ import pytest
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.utils import random_unitary, truncated_svd
+from tensorkrowch.utils import truncated_svd
 
-from tensorkrowch.decompositions.sketching import (projections as projection_module)
+from tensorkrowch.decompositions.sketching import (
+    projections as projection_module)
 from tensorkrowch.decompositions.sketching.projections import ProjectedRange
 
 
@@ -26,19 +27,6 @@ def _low_rank_matrix(n_rows=10, n_columns=8, rank=2, dtype=torch.float64):
 
 
 class TestRangeProjectionContracts:  # MARK: TestRangeProjectionContracts
-
-    def test_legacy_square_randu_only_rotates_the_right_basis(self):
-        matrix = torch.randn(7, 5, generator=_generator(1), dtype=torch.float64)
-        unitary = random_unitary(
-            5, dtype=torch.float64, generator=_generator(2))
-        rotated = matrix @ unitary
-
-        assert torch.allclose(
-            rotated @ rotated.mH, matrix @ matrix.mH, atol=1e-12)
-        assert torch.allclose(
-            torch.linalg.svdvals(rotated),
-            torch.linalg.svdvals(matrix),
-            atol=1e-12)
 
     def test_identity_preserves_the_exact_matrix_and_storage(self):
         matrix = torch.randn(5, 4)
@@ -83,7 +71,8 @@ class TestRangeProjectionContracts:  # MARK: TestRangeProjectionContracts
         assert projected.record.oversampling == 2
 
     def test_rank_none_uses_a_square_non_reducing_random_map(self):
-        matrix = torch.randn(7, 5, generator=_generator(5), dtype=torch.float64)
+        matrix = torch.randn(
+            7, 5, generator=_generator(5), dtype=torch.float64)
 
         projected = tk.decompositions.RandomizedRangeProjector().project(
             matrix, generator=_generator(6), return_info=True)
@@ -257,3 +246,67 @@ def test_invalid_projection_call_options(kwargs, error, match):
     with pytest.raises(error, match=match):
         tk.decompositions.RandomizedRangeProjector().project(
             torch.ones(3, 2), **kwargs)
+
+
+@pytest.mark.parametrize('projector_class', [
+    tk.decompositions.IdentityRangeProjector,
+    tk.decompositions.RandomizedRangeProjector])
+def test_no_diagnostics_allocates_no_runtime(projector_class, monkeypatch):
+    def forbidden(*args, **kwargs):
+        raise AssertionError('A disabled timer should not be constructed')
+
+    monkeypatch.setattr(projection_module._RuntimePolicy, 'from_tensor',
+                        forbidden)
+    projection = projector_class().project(torch.eye(2))
+    assert projection.record is None
+
+
+@pytest.mark.parametrize('shape, axis', [((2, 3), 0), ((2, 3, 4), -2)])
+def test_identity_handles_nonfinal_axes_and_lifted_layout(shape, axis):
+    tensor = torch.arange(torch.tensor(shape).prod()).reshape(shape).double()
+    projection = tk.decompositions.IdentityRangeProjector().project(
+        tensor, axis=axis)
+    u, _, _ = torch.linalg.svd(projection.small_matrix, full_matrices=False)
+
+    torch.testing.assert_close(projection.reconstruct(), tensor)
+    expected_shape = list(shape)
+    expected_shape[axis] = u.shape[1]
+    assert projection.restore_left(u).shape == tuple(expected_shape)
+
+
+@pytest.mark.parametrize('matrix, error', [
+    (torch.ones(2), ValueError),
+    (torch.ones(2, 2, dtype=torch.long), TypeError),
+    (torch.full((2, 2), float('nan')), ValueError),
+    ([], TypeError)])
+def test_projectors_reject_invalid_matrices(matrix, error):
+    for projector in [tk.decompositions.IdentityRangeProjector(),
+                      tk.decompositions.RandomizedRangeProjector()]:
+        with pytest.raises(error):
+            projector.project(matrix)
+
+
+@pytest.mark.parametrize('kwargs', [
+    {'projection_dim': True}, {'projection_oversampling': False},
+    {'n_power_iter': True}])
+def test_projector_rejects_boolean_dimensions(kwargs):
+    with pytest.raises(TypeError):
+        tk.decompositions.RandomizedRangeProjector(**kwargs)
+
+
+def test_lifting_rejects_incompatible_vectors():
+    projection = tk.decompositions.IdentityRangeProjector().project(
+        torch.eye(3))
+    with pytest.raises(ValueError, match='rows'):
+        projection.lift_left(torch.ones(2, 2))
+    with pytest.raises(ValueError, match='dtype'):
+        projection.lift_left(torch.ones(3, 2, dtype=torch.float64))
+
+
+def test_one_entry_projection_preserves_gradients():
+    matrix = torch.tensor([[2.]], dtype=torch.float64, requires_grad=True)
+    projection = tk.decompositions.RandomizedRangeProjector(
+        projection_dim=1).project(matrix, generator=_generator(42))
+    projection.reconstruct().sum().backward()
+
+    torch.testing.assert_close(matrix.grad, torch.ones_like(matrix))

@@ -101,8 +101,9 @@ class TestMPSAdapter:  # MARK: TestMPSAdapter
         source = tk.decompositions.as_tensor_source(model)
         assert source.format._cyclic
         indices = torch.tensor([[0, 0, 0], [1, 1, 1]])
-        torch.testing.assert_close(source.evaluate(tk.decompositions.ConfigurationBatch(indices)),
-                                   source.format.evaluate(indices))
+        values = source.evaluate(
+            tk.decompositions.ConfigurationBatch(indices))
+        torch.testing.assert_close(values, source.format.evaluate(indices))
 
     @pytest.mark.parametrize('boundary', ['obc', 'pbc'])
     def test_mpo_is_adapted_as_a_matrix(self, boundary):
@@ -155,3 +156,26 @@ class TestRSInputSources:  # MARK: TestRSInputSources
         assert torch.equal(indices, source.support.as_tensor())
         assert torch.equal(values, source.support_values)
         assert indices.shape[0] == 3
+
+
+def test_empty_support_produces_no_batches():
+    source = tk.decompositions.SparseTensorSource(
+        torch.empty((0, 2), dtype=torch.long), torch.empty(0), (2, 3))
+    assert list(_iter_support(source)) == []
+    assert list(_iter_support(source, batch_size=2)) == []
+
+
+@pytest.mark.parametrize('batch_size, error', [(0, ValueError),
+                                              (-1, ValueError),
+                                              (True, TypeError),
+                                              (1.5, TypeError)])
+def test_support_iterator_rejects_invalid_batch_sizes(batch_size, error):
+    source = tk.decompositions.SparseTensorSource(
+        torch.tensor([[0]]), torch.ones(1), (2,))
+    with pytest.raises(error):
+        list(_iter_support(source, batch_size=batch_size))
+
+
+def test_support_iterator_requires_complete_finite_support():
+    with pytest.raises(TypeError, match='finite support'):
+        list(_iter_support(object()))

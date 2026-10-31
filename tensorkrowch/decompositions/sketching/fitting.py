@@ -32,16 +32,20 @@ import torch
 
 from tensorkrowch.utils import _INTEGER_DTYPES, safe_divide
 
-from tensorkrowch.decompositions._utils import _normalize_dims, _unravel_indices
+from tensorkrowch.decompositions._utils import (_normalize_dims,
+                                               _unravel_indices)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import InputFitRecord
 from tensorkrowch.decompositions.sketching.phi import PhiView
 
 
+_Phi = Union[torch.Tensor, PhiView]
+
+
 Embedding = Union[torch.Tensor, Callable[[torch.Tensor], torch.Tensor]]
 
 
-def _phi_shape(phi_view: PhiView) -> Tuple[int, ...]:
+def _phi_shape(phi_view: _Phi) -> Tuple[int, ...]:
     """Returns and validates the shape required for input-axis fitting."""
     shape = getattr(phi_view, 'shape', None)
     if shape is None:
@@ -55,23 +59,24 @@ def _normalize_axis(axis: int, shape: Sequence[int]) -> int:
         raise TypeError('`axis` should be int type')
     if axis < 0:
         axis += len(shape)
-    if axis < 0 or axis >= len(shape):
+    if (axis < 0) or (axis >= len(shape)):
         raise ValueError('`axis` is out of bounds for Phi')
     return axis
 
 
-def _phi_device(phi_view: PhiView, domain: torch.Tensor) -> torch.device:
+def _phi_device(phi_view: _Phi, domain: torch.Tensor) -> torch.device:
     """Infers a device for fixed-index batches without evaluating Phi."""
     source = getattr(phi_view, 'source', None)
-    if source is not None and hasattr(source, 'device'):
+    if (source is not None) and hasattr(source, 'device'):
         return source.device
-    tensor = getattr(phi_view, 'tensor', None)
+    tensor = phi_view if isinstance(phi_view, torch.Tensor) \
+        else getattr(phi_view, 'tensor', None)
     if isinstance(tensor, torch.Tensor):
         return tensor.device
     return domain.device
 
 
-def _collect_phi_target(phi_view: PhiView,
+def _collect_phi_target(phi_view: _Phi,
                         axis: int,
                         domain: torch.Tensor,
                         fiber_batch_size: Optional[
@@ -80,27 +85,29 @@ def _collect_phi_target(phi_view: PhiView,
         Tuple[int, ...],
         bool]:
     """Returns Phi as ``domain_size x n_fibers`` using one selected path."""
-    if not isinstance(phi_view, PhiView):
-        raise TypeError('`phi_view` should implement PhiView')
+    if not isinstance(phi_view, (torch.Tensor, PhiView)):
+        raise TypeError('`phi_view` should be a tensor or implement PhiView')
     if not isinstance(domain, torch.Tensor):
         raise TypeError('`domain` should be torch.Tensor type')
-    if domain.ndim < 1 or domain.shape[0] < 1:
+    if (domain.ndim < 1) or (domain.shape[0] < 1):
         raise ValueError('`domain` should have a non-empty values dimension')
     shape = _phi_shape(phi_view)
     axis = _normalize_axis(axis, shape)
     if shape[axis] != domain.shape[0]:
         raise ValueError(
             '`domain` should contain one value per selected Phi-axis entry')
-    if fiber_batch_size is not None and (
+    if (fiber_batch_size is not None) and (
             isinstance(fiber_batch_size, bool) or
             not isinstance(fiber_batch_size, int) or
-            fiber_batch_size < 1):
+            (fiber_batch_size < 1)):
         raise ValueError(
             '`fiber_batch_size` should be a positive integer or None')
 
-    if fiber_batch_size is None:
-        tensor = phi_view.materialize()
-        if not isinstance(tensor, torch.Tensor) or tuple(tensor.shape) != shape:
+    if (fiber_batch_size is None) or isinstance(phi_view, torch.Tensor):
+        tensor = phi_view if isinstance(phi_view, torch.Tensor) \
+            else phi_view.materialize()
+        if not isinstance(tensor, torch.Tensor) or \
+                (tuple(tensor.shape) != shape):
             raise ValueError(
                 '`phi_view.materialize()` should preserve the declared shape')
         target = tensor.movedim(axis, 0).reshape(shape[axis], -1)
@@ -128,7 +135,8 @@ def _collect_phi_target(phi_view: PhiView,
         fibers = fibers.reshape(stop - start, shape[axis]).transpose(0, 1)
         if target is None:
             target = fibers.new_empty((shape[axis], n_fibers))
-        elif fibers.device != target.device or fibers.dtype != target.dtype:
+        elif (fibers.device != target.device) or \
+                (fibers.dtype != target.dtype):
             raise ValueError('All Phi fibers should share a device and dtype')
         target[:, start:stop] = fibers
     return target, shape, True
@@ -145,7 +153,12 @@ def _restore_fitted_axis(solution: torch.Tensor,
 @dataclass(frozen=True)
 class FittedInputAxis:  # MARK: FittedInputAxis
     """
-    Tensor obtained after replacing one sampled Phi ``axis`` by an input ``axis``.
+    Fitted tensor and optional diagnostics for one physical input axis.
+
+    ``tensor`` preserves every Phi axis except ``axis``, whose size becomes
+    ``in_dim``. ``domain_size`` records its original size. ``record`` contains
+    optional least-squares diagnostics; ``model`` and ``model_state`` retain
+    a trainable embedding only when requested from its fitter.
     """
 
     tensor: torch.Tensor
@@ -164,7 +177,7 @@ class FittedInputAxis:  # MARK: FittedInputAxis
             raise ValueError('`tensor` should have at least one axis')
         if isinstance(self.axis, bool) or not isinstance(self.axis, int):
             raise TypeError('`axis` should be int type')
-        if self.axis < 0 or self.axis >= self.tensor.ndim:
+        if (self.axis < 0) or (self.axis >= self.tensor.ndim):
             raise ValueError('`axis` is out of bounds for `tensor`')
         for name in ('domain_size', 'in_dim'):
             value = getattr(self, name)
@@ -175,10 +188,10 @@ class FittedInputAxis:  # MARK: FittedInputAxis
         if self.tensor.shape[self.axis] != self.in_dim:
             raise ValueError(
                 '`tensor` size at `axis` should equal `in_dim`')
-        if self.record is not None and \
+        if (self.record is not None) and \
                 not isinstance(self.record, InputFitRecord):
             raise TypeError('`record` should be InputFitRecord type or None')
-        if self.model is not None and not isinstance(
+        if (self.model is not None) and not isinstance(
                 self.model, torch.nn.Module):
             raise TypeError('`model` should be torch.nn.Module type or None')
         if self.model_state is not None:
@@ -195,26 +208,62 @@ class FittedInputAxis:  # MARK: FittedInputAxis
 
 @runtime_checkable
 class InputFitter(Protocol):  # MARK: InputFitter
-    """Strategy that replaces one sampled Phi axis by an input basis."""
-
-    def required_queries(self,
-                         phi_view: PhiView,
-                         axis: int,
-                         domain: torch.Tensor,
-                         context: Any = None) -> Sequence[torch.Tensor]:
-        """Declares additional Phi selections before evaluation-plan freeze."""
+    """Replaces one finite-domain Phi axis by input-basis coefficients."""
 
     def fit(self,
-            phi_view: PhiView,
+            phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            context: Any = None,
             return_info: bool = False) -> FittedInputAxis:
-        """Fits one Phi ``axis`` and optionally records fitting diagnostics."""
+        """
+        Fits one Phi axis in a physical input basis.
+
+        Parameters
+        ----------
+        phi_view : torch.Tensor or PhiView
+            Local tensor or functional Phi supporting entries and fibers.
+        axis : int
+            Physical axis to replace by embedding coefficients.
+        domain : torch.Tensor
+            Coordinate values for this axis, with shape
+            ``(domain_size, *coordinate_shape)``.
+        return_info : bool
+            Whether to collect fitting diagnostics. Default is ``False``.
+
+        Returns
+        -------
+        FittedInputAxis
+            Tensor in the input basis and optional fitting diagnostics.
+        """
 
 
 class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
-    """Fits Phi values in a fixed finite-domain embedding by least squares."""
+    """
+    Fits Phi values in a fixed finite-domain embedding by least squares.
+
+    All fibers are solved against the same embedding matrix. The fitted
+    physical axis contains basis coefficients, and may have a different size
+    from the evaluated domain.
+
+    Parameters
+    ----------
+    embedding : torch.Tensor or callable
+        Matrix with shape ``(domain_size, in_dim)``, or callable returning
+        that matrix when evaluated on ``domain``.
+    solver : LeastSquaresSolver, optional
+        Local least-squares solver. Defaults to :class:`LeastSquaresSolver`.
+    fiber_batch_size : int, optional
+        Number of functional Phi fibers collected together. ``None``
+        materializes the complete Phi; an existing tensor is used directly.
+
+    Examples
+    --------
+    >>> fitter = tk.decompositions.FixedEmbeddingFitter(torch.eye(2))
+    >>> fitter.fit(torch.arange(4.).reshape(2, 2), 0,
+    ...            torch.arange(2)).tensor
+    tensor([[0., 1.],
+            [2., 3.]])
+    """
 
     def __init__(self,
                  embedding: Embedding,
@@ -222,12 +271,13 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
                  fiber_batch_size: Optional[int] = None) -> None:
         if not (isinstance(embedding, torch.Tensor) or callable(embedding)):
             raise TypeError('`embedding` should be a tensor or callable')
-        if solver is not None and not isinstance(solver, LeastSquaresSolver):
-            raise TypeError('`solver` should be LeastSquaresSolver type or None')
-        if fiber_batch_size is not None and (
+        if (solver is not None) and not isinstance(solver, LeastSquaresSolver):
+            raise TypeError(
+                '`solver` should be LeastSquaresSolver type or None')
+        if (fiber_batch_size is not None) and (
                 isinstance(fiber_batch_size, bool) or
                 not isinstance(fiber_batch_size, int) or
-                fiber_batch_size < 1):
+                (fiber_batch_size < 1)):
             raise ValueError(
                 '`fiber_batch_size` should be a positive integer or None')
         self.embedding = embedding
@@ -243,8 +293,8 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
             raise ValueError('`embedding` failed on `domain`') from exc
         if not isinstance(matrix, torch.Tensor):
             raise TypeError('`embedding` should produce a torch.Tensor')
-        if matrix.ndim != 2 or matrix.shape[0] != domain.shape[0] or \
-                matrix.shape[1] < 1:
+        if (matrix.ndim != 2) or (matrix.shape[0] != domain.shape[0]) or \
+                (matrix.shape[1] < 1):
             raise ValueError(
                 '`embedding` should produce shape (domain_size, in_dim)')
         if not (matrix.is_floating_point() or matrix.is_complex()):
@@ -253,30 +303,31 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
             raise ValueError('`embedding` should contain finite values')
         return matrix
 
-    def required_queries(self,
-                         phi_view: PhiView,
-                         axis: int,
-                         domain: torch.Tensor,
-                         context: Any = None) -> Sequence[torch.Tensor]:
-        """
-        Fixed finite-``domain`` fitting requires no additional Phi queries.
-        """
-        shape = _phi_shape(phi_view)
-        axis = _normalize_axis(axis, shape)
-        if not isinstance(domain, torch.Tensor):
-            raise TypeError('`domain` should be torch.Tensor type')
-        if domain.ndim < 1 or domain.shape[0] != shape[axis]:
-            raise ValueError(
-                '`domain` should match the selected Phi-axis size')
-        return ()
-
     def fit(self,
-            phi_view: PhiView,
+            phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            context: Any = None,
             return_info: bool = False) -> FittedInputAxis:
-        """Solves all fibers together against the fixed embedding matrix."""
+        """
+        Solves all Phi fibers against the fixed embedding matrix.
+
+        Parameters
+        ----------
+        phi_view : torch.Tensor or PhiView
+            Local tensor or functional Phi supporting entries and fibers.
+        axis : int
+            Physical axis to replace by embedding coefficients.
+        domain : torch.Tensor
+            Coordinate values for this axis, with shape
+            ``(domain_size, *coordinate_shape)``.
+        return_info : bool
+            Whether to collect fitting diagnostics. Default is ``False``.
+
+        Returns
+        -------
+        FittedInputAxis
+            Tensor in the input basis and optional fitting diagnostics.
+        """
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
         target, shape, used_fibers = _collect_phi_target(
@@ -319,19 +370,33 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
 
 
 class BasisFitter:  # MARK: BasisFitter
-    """Fits an integer-labelled Phi axis in the corresponding basis exactly."""
+    """
+    Places an integer-labelled Phi axis in the corresponding input basis.
+
+    Unobserved labels receive zero coefficients. This operation performs no
+    least-squares solve or averaging.
+
+    Parameters
+    ----------
+    in_dim : int, optional
+        Full input-basis dimension. Defaults to the largest domain label
+        plus one.
+    fiber_batch_size : int, optional
+        Number of functional Phi fibers collected together. ``None``
+        materializes the complete Phi; an existing tensor is used directly.
+    """
 
     def __init__(self,
                  in_dim: Optional[int] = None,
                  fiber_batch_size: Optional[int] = None) -> None:
-        if in_dim is not None and (
+        if (in_dim is not None) and (
                 isinstance(in_dim, bool) or not isinstance(in_dim, int)
-                or in_dim < 1):
+                or (in_dim < 1)):
             raise ValueError('`in_dim` should be a positive integer or None')
-        if fiber_batch_size is not None and (
+        if (fiber_batch_size is not None) and (
                 isinstance(fiber_batch_size, bool) or
                 not isinstance(fiber_batch_size, int) or
-                fiber_batch_size < 1):
+                (fiber_batch_size < 1)):
             raise ValueError(
                 '`fiber_batch_size` should be a positive integer or None')
         self.in_dim = in_dim
@@ -343,10 +408,10 @@ class BasisFitter:  # MARK: BasisFitter
         """Validates basis labels and resolves the complete input dimension."""
         if not isinstance(domain, torch.Tensor):
             raise TypeError('`domain` should be torch.Tensor type')
-        if domain.ndim != 1 or domain.shape[0] < 1 or \
-                domain.dtype not in _INTEGER_DTYPES:
+        if (domain.ndim != 1) or (domain.shape[0] < 1) or \
+                (domain.dtype not in _INTEGER_DTYPES):
             raise ValueError(
-                '`domain` should be a non-empty integer vector of basis labels')
+                '`domain` should be a non-empty vector of integer labels')
         labels = domain.to(torch.long)
         if torch.unique(labels).shape[0] != labels.shape[0]:
             raise ValueError('Basis labels in `domain` should be unique')
@@ -358,27 +423,31 @@ class BasisFitter:  # MARK: BasisFitter
                 'Basis labels in `domain` should lie inside `in_dim`')
         return labels, resolved_dim
 
-    def required_queries(self,
-                         phi_view: PhiView,
-                         axis: int,
-                         domain: torch.Tensor,
-                         context: Any = None) -> Sequence[torch.Tensor]:
-        """Basis selection requires no additional Phi queries."""
-        shape = _phi_shape(phi_view)
-        axis = _normalize_axis(axis, shape)
-        labels, _ = self._labels(domain, self.in_dim)
-        if labels.shape[0] != shape[axis]:
-            raise ValueError(
-                '`domain` should match the selected Phi-axis size')
-        return ()
-
     def fit(self,
-            phi_view: PhiView,
+            phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            context: Any = None,
             return_info: bool = False) -> FittedInputAxis:
-        """Places sampled values at their basis labels without solving."""
+        """
+        Places Phi values at their basis labels without solving.
+
+        Parameters
+        ----------
+        phi_view : torch.Tensor or PhiView
+            Local tensor or functional Phi supporting entries and fibers.
+        axis : int
+            Physical axis to replace by embedding coefficients.
+        domain : torch.Tensor
+            Coordinate values for this axis, with shape
+            ``(domain_size, *coordinate_shape)``.
+        return_info : bool
+            Whether to collect fitting diagnostics. Default is ``False``.
+
+        Returns
+        -------
+        FittedInputAxis
+            Tensor in the input basis and optional fitting diagnostics.
+        """
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
         labels, in_dim = self._labels(domain, self.in_dim)
@@ -420,6 +489,34 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
     :class:`FittedInputAxis` only when ``return_info=True``. Otherwise the
     result contains only the fitted tensor and the model remains accessible as
     ``fitter.model``.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Embedding model returning shape ``(domain_size, in_dim)``.
+    in_dim : int, optional
+        Expected model output dimension. Inferred from the model if omitted.
+    optimizer_factory : callable, optional
+        Optimizer constructor. Defaults to :class:`torch.optim.Adam`.
+    optimizer_kwargs : mapping, optional
+        Optimizer arguments. Defaults to ``{'lr': 1e-2}``.
+    solver : LeastSquaresSolver, optional
+        Solver for the final coefficient fit. Defaults to
+        :class:`LeastSquaresSolver`.
+    max_steps : int
+        Maximum optimizer steps. Default is ``500``.
+    tolerance : float
+        Relative residual at which training stops. Default is ``1e-6``.
+    patience : int
+        Consecutive steps without loss improvement before stopping.
+        Default is ``50``.
+    fiber_batch_size : int, optional
+        Number of functional Phi fibers collected together. ``None``
+        materializes the complete Phi; an existing tensor is used directly.
+        Default is ``64``.
+    seed : int
+        Seed for the local coefficient initialization. The caller's random
+        state is restored after training. Default is ``0``.
     """
 
     def __init__(self,
@@ -435,18 +532,19 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
                  seed: int = 0) -> None:
         if not isinstance(model, torch.nn.Module):
             raise TypeError('`model` should be torch.nn.Module type')
-        if in_dim is not None and (
+        if (in_dim is not None) and (
                 isinstance(in_dim, bool) or not isinstance(in_dim, int)):
             raise TypeError('`in_dim` should be int type or None')
-        if in_dim is not None and in_dim < 1:
+        if (in_dim is not None) and (in_dim < 1):
             raise ValueError('`in_dim` should be positive')
-        if optimizer_factory is not None and not callable(optimizer_factory):
+        if (optimizer_factory is not None) and not callable(optimizer_factory):
             raise TypeError('`optimizer_factory` should be callable or None')
-        if optimizer_kwargs is not None and not isinstance(
+        if (optimizer_kwargs is not None) and not isinstance(
                 optimizer_kwargs, Mapping):
             raise TypeError('`optimizer_kwargs` should be a mapping or None')
-        if solver is not None and not isinstance(solver, LeastSquaresSolver):
-            raise TypeError('`solver` should be LeastSquaresSolver type or None')
+        if (solver is not None) and not isinstance(solver, LeastSquaresSolver):
+            raise TypeError(
+                '`solver` should be LeastSquaresSolver type or None')
         for name, value, minimum in (
                 ('max_steps', max_steps, 1),
                 ('patience', patience, 1),
@@ -461,12 +559,12 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
             raise TypeError('`tolerance` should be a real scalar')
         if tolerance < 0:
             raise ValueError('`tolerance` should be non-negative')
-        if fiber_batch_size is not None and (
+        if (fiber_batch_size is not None) and (
                 isinstance(fiber_batch_size, bool) or
                 not isinstance(fiber_batch_size, int)):
             raise TypeError(
                 '`fiber_batch_size` should be int type or None')
-        if fiber_batch_size is not None and fiber_batch_size < 1:
+        if (fiber_batch_size is not None) and (fiber_batch_size < 1):
             raise ValueError('`fiber_batch_size` should be positive')
 
         self.model = model
@@ -482,23 +580,6 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
         self.fiber_batch_size = fiber_batch_size
         self.seed = seed
 
-    def required_queries(self,
-                         phi_view: PhiView,
-                         axis: int,
-                         domain: torch.Tensor,
-                         context: Any = None) -> Sequence[torch.Tensor]:
-        """
-        Declares no points beyond the complete selected training ``domain``.
-        """
-        shape = _phi_shape(phi_view)
-        axis = _normalize_axis(axis, shape)
-        if not isinstance(domain, torch.Tensor):
-            raise TypeError('`domain` should be torch.Tensor type')
-        if domain.ndim < 1 or domain.shape[0] != shape[axis]:
-            raise ValueError(
-                '`domain` should match the selected Phi-axis size')
-        return ()
-
     def _embedding_matrix(self,
                           domain: torch.Tensor,
                           device: torch.device) -> torch.Tensor:
@@ -506,11 +587,11 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
         matrix = self.model(domain.to(device=device))
         if not isinstance(matrix, torch.Tensor):
             raise TypeError('`model` should return a torch.Tensor')
-        if matrix.ndim != 2 or matrix.shape[0] != domain.shape[0] or \
-                matrix.shape[1] < 1:
+        if (matrix.ndim != 2) or (matrix.shape[0] != domain.shape[0]) or \
+                (matrix.shape[1] < 1):
             raise ValueError(
                 '`model` should return shape (domain_size, in_dim)')
-        if self.in_dim is not None and matrix.shape[1] != self.in_dim:
+        if (self.in_dim is not None) and (matrix.shape[1] != self.in_dim):
             raise ValueError('`model` output does not match `in_dim`')
         if not (matrix.is_floating_point() or matrix.is_complex()):
             raise TypeError('`model` output should be floating or complex')
@@ -519,13 +600,29 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
         return matrix
 
     def fit(self,
-            phi_view: PhiView,
+            phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            context: Any = None,
             return_info: bool = False) -> FittedInputAxis:
         """
-        Trains the embedding on batched Phi fibers and returns coefficients.
+        Trains the embedding on Phi fibers and returns coefficients.
+
+        Parameters
+        ----------
+        phi_view : torch.Tensor or PhiView
+            Local tensor or functional Phi supporting entries and fibers.
+        axis : int
+            Physical axis to replace by embedding coefficients.
+        domain : torch.Tensor
+            Coordinate values for this axis, with shape
+            ``(domain_size, *coordinate_shape)``.
+        return_info : bool
+            Whether to collect fitting diagnostics. Default is ``False``.
+
+        Returns
+        -------
+        FittedInputAxis
+            Tensor in the input basis and optional fitting diagnostics.
         """
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
@@ -584,7 +681,7 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
                     break
                 improvement = best_loss - loss_value
                 threshold = max(abs(best_loss), 1.0) * 1e-12
-                if best_loss == float('inf') or improvement > threshold:
+                if (best_loss == float('inf')) or (improvement > threshold):
                     best_loss = loss_value
                     stale_steps = 0
                 else:

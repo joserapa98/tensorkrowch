@@ -362,25 +362,13 @@ class TestSketchingFitSpec:  # MARK: TestSketchingFitSpec
             'rtol': 1e-6,
             'cum_percentage': 0.99,
         }
-        assert spec.effective_projection_dim == 5
         assert spec.verbosity == 2
-        assert spec.diagnostics_enabled
-
-    def test_projection_dimension_defaults_to_rank_or_square_projection(self):
-        assert _SketchingFitSpec(
-            rank=None).effective_projection_dim is None
-        assert _SketchingFitSpec(
-            rank=None, projection_dim=7).effective_projection_dim == 7
-        assert _SketchingFitSpec(
-            rank=4, random_projection=False).effective_projection_dim is None
+        assert spec.collect_metrics
 
     @pytest.mark.parametrize(
         'kwargs, error, match',
         [
             ({'rank': True}, TypeError, 'rank'),
-            ({'projection_dim': 0}, ValueError, 'positive'),
-            ({'random_projection': False, 'projection_dim': 3},
-             ValueError, 'requires'),
             ({'batch_size': 0}, ValueError, 'positive'),
             ({'verbose': 4}, ValueError, 'between 0 and 3'),
             ({'collect_metrics': 1}, TypeError, 'bool'),
@@ -393,7 +381,7 @@ class TestSketchingFitSpec:  # MARK: TestSketchingFitSpec
         spec = _SketchingFitSpec(verbose=0, collect_metrics=False)
 
         assert spec.verbosity == 0
-        assert not spec.diagnostics_enabled
+        assert not spec.collect_metrics
 
 
 @pytest.mark.parametrize('error', [AssertionError, IndexError])

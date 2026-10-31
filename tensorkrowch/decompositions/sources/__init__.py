@@ -42,7 +42,7 @@ sources provide ``.matrix(...)`` constructors for paired input/output axes;
 ``FormatSource`` reads this structure from the format. Sparse and callable
 ``.from_data(...)`` constructors build sources from weighted observations.
 Callable dataset constructors can also use a kernel such as
-:func:`gaussian_kernel`.
+:func:`~tensorkrowch.decompositions.kernels.gaussian_kernel`.
 
 Evaluation:
 
@@ -91,7 +91,6 @@ from tensorkrowch.decompositions.sources.callable import (CallableSource,
                                                           CallableTensorSource)
 from tensorkrowch.decompositions.sources.quantics import CallableQuanticsSource
 from tensorkrowch.decompositions.sources.factory import as_tensor_source
-from tensorkrowch.decompositions.sources.kernels import gaussian_kernel
 
 __all__ = [
     'ConfigurationBatch',
@@ -103,5 +102,4 @@ __all__ = [
     'CallableTensorSource',
     'CallableQuanticsSource',
     'as_tensor_source',
-    'gaussian_kernel',
 ]

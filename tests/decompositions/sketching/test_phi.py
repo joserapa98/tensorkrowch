@@ -1,4 +1,4 @@
-"""Tests retained for redistribution."""
+"""Tests for lazy, cached and shared local Phi operators."""
 
 from itertools import product
 
@@ -7,10 +7,9 @@ import torch
 
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.evaluations import (_EvaluationPlanBuilder)
-from tensorkrowch.decompositions.sketching.phi import (PhiOperator,
-                                                       PhiView,
-                                                       _MaterializedPhi)
+from tensorkrowch.decompositions.sketching.evaluations import (
+    ConfigurationMap, _EvaluationPlanBuilder)
+from tensorkrowch.decompositions.sketching.phi import PhiOperator, PhiView
 from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
@@ -24,6 +23,144 @@ def _scalar_output_spec(n_inputs):
 
 
 class TestPhiOperator:  # MARK: TestPhiOperator
+
+    def test_five_site_shared_and_cached_queries_on_available_devices(
+            self, device_dtype, assert_close):
+        device, dtype = device_dtype
+        tensor = torch.randn(2, 3, 2, 2, 3, device=device, dtype=dtype)
+        source = tk.decompositions.DenseTensorSource(tensor)
+        phi = PhiOperator(
+            source, tuple((site, torch.arange(dim, device=device))
+                          for site, dim in enumerate(tensor.shape)),
+            _scalar_output_spec(5))
+        builder = _EvaluationPlanBuilder(source)
+        handle = phi.collect(builder)
+        configurations = ConfigurationMap(builder.freeze(), batch_size=7,
+                                          transform=lambda table:
+                                          table.values * 2)
+        phi._bind(configurations, handle)
+        selection = torch.tensor([[0, 2, 1, 0, 2], [1, 0, 0, 1, 1]],
+                                 device=device)
+
+        expected = 2 * tensor[tuple(selection.unbind(-1))]
+        assert_close(phi.evaluate(selection), expected)
+        assert phi.tensor is None
+        assert_close(phi.materialize(), 2 * tensor)
+        assert_close(phi.evaluate(selection), expected)
+        assert phi.tensor.device == tensor.device
+        assert phi.tensor.dtype == tensor.dtype
+        assert configurations.stats.unique_points == tensor.numel()
+        assert source.evaluation_stats.source_calls == 11
+
+    @pytest.mark.parametrize('selection', [
+        torch.tensor([[0, 2]]), torch.tensor([[-1]]),
+        torch.tensor([[2]]), torch.tensor([[0.]]), torch.tensor(0)])
+    def test_invalid_selected_indices_are_rejected(self, selection):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2))
+        phi = PhiOperator(source, ((0, torch.arange(2)),),
+                          _scalar_output_spec(1))
+        with pytest.raises((TypeError, ValueError), match='index_selection'):
+            phi.evaluate(selection)
+
+    @pytest.mark.parametrize('axis', [True, '0', 1, -2])
+    def test_invalid_fiber_axes_are_rejected(self, axis):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2))
+        phi = PhiOperator(source, ((0, torch.arange(2)),),
+                          _scalar_output_spec(1))
+        with pytest.raises((TypeError, ValueError), match='axis'):
+            phi.fiber(axis)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_cached_queries_release_and_rematerialize_preserve_gradients(
+            self, dtype):
+        tensor = torch.arange(12., dtype=torch.float64).reshape(2, 3, 2)
+        tensor = tensor.to(dtype).requires_grad_()
+        source = tk.decompositions.DenseTensorSource(tensor)
+        phi = PhiOperator(
+            source, tuple((site, torch.arange(dim))
+                          for site, dim in enumerate(tensor.shape)),
+            _scalar_output_spec(3))
+        selection = torch.tensor([[0, 1, 1], [1, 2, 0]])
+
+        assert phi.tensor is None
+        expected = phi.evaluate(selection)
+        cached = phi.materialize(batch_size=4)
+        before = source.evaluation_stats
+        assert cached is phi.tensor
+        assert phi.materialize() is cached
+        assert torch.equal(phi.evaluate(selection), expected)
+        assert torch.equal(phi.fiber(1, torch.tensor([1, 0])), tensor[1, :, 0])
+        assert source.evaluation_stats == before
+        phi.evaluate(selection).real.sum().backward()
+        assert tensor.grad[0, 1, 1] == 1
+        assert tensor.grad[1, 2, 0] == 1
+        assert tensor.grad.abs().sum() == 2
+
+        phi.tensor = None
+        assert torch.equal(phi.materialize(), cached)
+        assert source.evaluation_stats.source_calls == before.source_calls + 1
+
+    def test_bound_map_preserves_transformed_selected_queries(self):
+        source = tk.decompositions.DenseTensorSource(
+            torch.arange(12.).reshape(2, 3, 2))
+        phi = PhiOperator(
+            source, tuple((site, torch.arange(dim))
+                          for site, dim in enumerate(source.in_dim)),
+            _scalar_output_spec(3))
+        builder = _EvaluationPlanBuilder(source)
+        handle = phi.collect(builder)
+        configurations = ConfigurationMap(builder.freeze(),
+                                          transform=lambda table:
+                                          2 * table.values + 1)
+        phi._bind(configurations, handle)
+        selection = torch.tensor([[0, 1, 1], [1, 2, 0]])
+
+        assert torch.equal(phi.evaluate(selection), torch.tensor([7., 21.]))
+        assert phi.tensor is None
+        assert torch.equal(phi.fiber(1, torch.tensor([1, 0])),
+                           torch.tensor([13., 17., 21.]))
+        cached = phi.materialize()
+        phi.tensor = None
+        assert torch.equal(phi.materialize(), cached)
+        assert source.evaluation_stats.source_calls == 1
+
+    def test_selected_views_map_queries_without_materializing_the_parent(self):
+        source = tk.decompositions.DenseTensorSource(
+            torch.arange(12.).reshape(2, 3, 2))
+        phi = PhiOperator(
+            source, tuple((site, torch.arange(dim))
+                          for site, dim in enumerate(source.in_dim)),
+            _scalar_output_spec(3))
+        view = phi.select(torch.tensor([
+            [[0, 0, 0], [0, 1, 1]], [[1, 0, 0], [1, 2, 1]]]))
+        assert torch.equal(view.evaluate(torch.tensor([[0, 1], [1, 1]])),
+                           torch.tensor([3., 11.]))
+        assert torch.equal(view.fiber(1, torch.tensor([1])),
+                           torch.tensor([6., 11.]))
+        assert phi.tensor is None
+        assert source.evaluation_stats.requested_points == 4
+
+    def test_one_axis_and_scalar_selected_views(self):
+        source = tk.decompositions.DenseTensorSource(torch.tensor([2., 3.]))
+        phi = PhiOperator(source, ((0, torch.arange(2)),),
+                          _scalar_output_spec(1))
+        assert torch.equal(phi.fiber(0), torch.tensor([2., 3.]))
+        assert torch.equal(phi.fiber(0, torch.empty(2, 0, dtype=torch.long)),
+                           torch.tensor([[2., 3.], [2., 3.]]))
+        view = phi.select(torch.tensor([1]))
+        assert view.materialize().shape == ()
+        assert torch.equal(view.evaluate(torch.empty(2, 0, dtype=torch.long)),
+                           torch.tensor([3., 3.]))
+
+    @pytest.mark.parametrize('batch_size', [True, 0, -1, 1.5])
+    def test_materialize_validates_batch_size_even_with_cached_data(
+            self, batch_size):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2))
+        phi = PhiOperator(source, ((0, torch.arange(2)),),
+                          _scalar_output_spec(1))
+        phi.materialize()
+        with pytest.raises((TypeError, ValueError), match='batch_size'):
+            phi.materialize(batch_size=batch_size)
 
     def test_coordinate_phi_matches_explicit_cartesian_evaluation(self):
         source = tk.decompositions.CallableSource(lambda values: (
@@ -79,7 +216,9 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             replaced.fiber(1, torch.tensor([1, 0])), fiber)
 
     def test_functional_fiber_after_freeze_uses_an_independent_session(self):
-        source = tk.decompositions.CallableSource(lambda values: values.sum(dim=1).to(torch.float64), n_sites=2, dtype=torch.float64)
+        source = tk.decompositions.CallableSource(
+            lambda values: values.sum(dim=1).to(torch.float64),
+            n_sites=2, dtype=torch.float64)
         phi = PhiOperator(
             source,
             ((0, torch.tensor([0., 1.])),
@@ -90,7 +229,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
         phi.collect(builder)
         builder.freeze()
 
-        with pytest.raises(RuntimeError, match='before expand'):
+        with pytest.raises(RuntimeError, match='already frozen'):
             phi.collect(builder)
         fiber = phi.fiber_at(
             0, torch.tensor([-1., 2.]), fixed_indices=torch.tensor([1]))
@@ -128,14 +267,15 @@ class TestPhiOperator:  # MARK: TestPhiOperator
 
         selected = phi.evaluate(selection)
         view = phi.select(selection)
-        materialized = _MaterializedPhi(phi.materialize(), phi.layout)
+        materialized = phi.materialize()
 
         assert isinstance(view, PhiView)
         assert torch.equal(selected, torch.tensor([3., 4.]))
         assert torch.equal(view.materialize(), selected)
-        assert torch.equal(materialized.evaluate(selection), selected)
+        assert torch.equal(phi.evaluate(selection), selected)
+        assert phi.materialize() is materialized
         assert torch.equal(
-            materialized.fiber(1, torch.tensor([1, 0])),
+            phi.fiber(1, torch.tensor([1, 0])),
             torch.tensor([4., 6.]))
 
     def test_input_fiber_uses_source_partial_contraction(self):
@@ -164,7 +304,8 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             scalar, vector = values
             return scalar + vector[:, 0] - vector[:, 1]
 
-        source = tk.decompositions.CallableSource(function, n_sites=2, dtype=torch.float64)
+        source = tk.decompositions.CallableSource(
+            function, n_sites=2, dtype=torch.float64)
         phi = PhiOperator(
             source,
             (
@@ -239,7 +380,8 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             torch.tensor([15., 16.], dtype=torch.float64))
 
     @pytest.mark.parametrize('source_kind', ['dense', 'sparse', 'tt'])
-    def test_dense_sparse_and_tt_sources_share_phi_semantics(self, source_kind):
+    def test_dense_sparse_and_tt_sources_share_phi_semantics(
+            self, source_kind):
         cores = make_tt_cores(
             generator=torch.Generator().manual_seed(42))
         dense = contract_tt_dense(cores)
@@ -262,7 +404,8 @@ class TestPhiOperator:  # MARK: TestPhiOperator
 
     def test_custom_site_order_preserves_correlated_samples(self):
         sites = (3, 1, 5, 7)
-        source = tk.decompositions.CallableSource(lambda values: values.sum(dim=1), n_sites=4, dtype=torch.float32)
+        source = tk.decompositions.CallableSource(
+            lambda values: values.sum(dim=1), n_sites=4, dtype=torch.float32)
         samples = torch.tensor([
             [0., 1., 0., 0.],
             [1., 0., 1., 0.],

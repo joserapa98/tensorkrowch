@@ -21,7 +21,14 @@ from tensorkrowch.decompositions.sources import ConfigurationBatch
 
 @runtime_checkable
 class SupportTensorSource(Protocol):  # MARK: SupportTensorSource
-    """Optional source exposing its complete finite non-zero support."""
+    """
+    Source exposing its complete finite nonzero support.
+
+    ``support`` contains the unique configurations with nonzero values;
+    ``support_values`` contains their aligned values. Entries outside
+    this support are zero, rather than unobserved. Sketch builders use these
+    tables to contract sparse tensors without enumerating a Cartesian grid.
+    """
 
     @property
     def support(self) -> ConfigurationBatch:
@@ -42,8 +49,11 @@ def _iter_support(source: SupportTensorSource,
     support = source.support
     values = source.support_values
     if support.batch_size != values.shape[0]:
-        raise ValueError('Source support and values should have matching sizes')
+        raise ValueError(
+            '`support` and `support_values` should have matching batch sizes')
     if batch_size is None:
+        if not support.batch_size:
+            return
         batch_size = support.batch_size
     if isinstance(batch_size, bool) or not isinstance(batch_size, int):
         raise TypeError('`batch_size` should be int type or None')

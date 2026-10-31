@@ -197,7 +197,8 @@ class _EmbeddingSpec:  # MARK: _EmbeddingSpec
                 '`matrices` should contain one entry per input site')
         for site, (embedding, matrix) in enumerate(zip(
                 embeddings, matrices)):
-            if not (callable(embedding) or isinstance(embedding, torch.Tensor)):
+            if not (callable(embedding) or
+                    isinstance(embedding, torch.Tensor)):
                 raise TypeError(
                     f'Embedding at site {site} should be callable or a tensor')
             self._validate_matrix(site, matrix)
@@ -206,7 +207,7 @@ class _EmbeddingSpec:  # MARK: _EmbeddingSpec
 
     @classmethod
     def normalize(cls,
-                  embedding: Union[torch.Tensor, Callable, Sequence[Union[torch.Tensor, Callable]]],
+                  embedding: Union[_Embedding, Sequence[_Embedding]],
                   domains: _DomainSpec) -> '_EmbeddingSpec':
         """Broadcasts embeddings and evaluates every finite domain once."""
         if not isinstance(domains, _DomainSpec):
@@ -247,7 +248,7 @@ class _EmbeddingSpec:  # MARK: _EmbeddingSpec
                                     matrix: torch.Tensor,
                                     domain: torch.Tensor) -> None:
         """
-        Validates one cached embedding ``matrix`` against its ``site`` ``domain``.
+        Validates an embedding matrix against its finite domain.
         """
         if not isinstance(matrix, torch.Tensor):
             raise TypeError(
@@ -363,8 +364,10 @@ class _OutputSpec:  # MARK: _OutputSpec
     positions: Sequence[int] = ()
 
     def __post_init__(self) -> None:
-        n_input_sites = _normalize_positive_int(self.n_input_sites, 'n_input_sites')
-        out_shape = _normalize_dims(self.out_shape, 'out_shape', allow_empty=True)
+        n_input_sites = _normalize_positive_int(
+            self.n_input_sites, 'n_input_sites')
+        out_shape = _normalize_dims(
+            self.out_shape, 'out_shape', allow_empty=True)
         if isinstance(self.positions, (str, bytes)) or \
                 not isinstance(self.positions, Sequence):
             raise TypeError('`positions` should be a sequence of integers')
@@ -376,7 +379,8 @@ class _OutputSpec:  # MARK: _OutputSpec
                for position in positions):
             raise TypeError('Output positions should be integers')
         n_sites = n_input_sites + len(out_shape)
-        if any(position < 0 or position >= n_sites for position in positions):
+        if any((position < 0) or (position >= n_sites)
+               for position in positions):
             raise ValueError(
                 f'Output positions should be between 0 and {n_sites - 1}')
         if any(left >= right for left, right in zip(
@@ -391,7 +395,8 @@ class _OutputSpec:  # MARK: _OutputSpec
     def normalize(cls,
                   values: torch.Tensor,
                   n_input_sites: int,
-                  out_position: Optional[Union[int, Sequence[int]]] = None) -> '_OutputSpec':
+                  out_position: Optional[Union[int, Sequence[int]]] = None
+                  ) -> '_OutputSpec':
         """Infers scalar/tensor output semantics from one evaluated batch."""
         if not isinstance(values, torch.Tensor):
             raise TypeError('Function output should be a torch.Tensor')
@@ -481,7 +486,7 @@ class _OutputSpec:  # MARK: _OutputSpec
         if self.scalar:
             if values.ndim == 1:
                 canonical = values
-            elif values.ndim == 2 and values.shape[1] == 1:
+            elif (values.ndim == 2) and (values.shape[1] == 1):
                 canonical = values.squeeze(1)
             else:
                 raise ValueError(
@@ -491,7 +496,8 @@ class _OutputSpec:  # MARK: _OutputSpec
             if (values.ndim != (1 + len(expected_tail))) or \
                     (tuple(values.shape[1:]) != expected_tail):
                 raise ValueError(
-                    f'Tensor output should have shape (batch, {expected_tail})')
+                    'Tensor output should have shape '
+                    f'(batch, {expected_tail})')
             canonical = values
         if not (canonical.is_floating_point() or canonical.is_complex()):
             raise TypeError('Function output should be floating or complex')
@@ -503,7 +509,7 @@ class _OutputSpec:  # MARK: _OutputSpec
         """Flattens one index per output axis in row-major order."""
         if not isinstance(indices, torch.Tensor):
             raise TypeError('`indices` should be torch.Tensor type')
-        if indices.ndim != 2 or indices.shape[1] != self.n_output_sites:
+        if (indices.ndim != 2) or (indices.shape[1] != self.n_output_sites):
             raise ValueError(
                 '`indices` should have shape (batch, n_output_sites)')
         if indices.dtype not in _INTEGER_DTYPES:
@@ -543,8 +549,10 @@ class _OutputSpec:  # MARK: _OutputSpec
             raise ValueError('A scalar function has no output labels')
         if zero_policy not in ('error', 'uniform'):
             raise ValueError("`zero_policy` should be 'error' or 'uniform'")
-        if generator is not None and not isinstance(generator, torch.Generator):
-            raise TypeError('`generator` should be torch.Generator type or None')
+        if (generator is not None) and not isinstance(
+                generator, torch.Generator):
+            raise TypeError(
+                '`generator` should be torch.Generator type or None')
         values = self.validate_values(values)
         weights = values.reshape(values.shape[0], -1).abs().square()
         norms = weights.sum(dim=1, keepdim=True)
@@ -577,12 +585,13 @@ class _OutputSpec:  # MARK: _OutputSpec
             torch.Tensor,
             torch.Tensor]:
         """
-        Returns flat ``labels``, per-axis indices and selected output ``values``.
+        Returns flat labels, per-axis indices and selected output values.
         """
         values = self.validate_values(values)
         if self.scalar:
             if labels is not None:
-                raise ValueError('`labels` should be None for a scalar function')
+                raise ValueError(
+                    '`labels` should be None for a scalar function')
             indices = torch.empty(
                 values.shape[0], 0, device=values.device, dtype=torch.long)
             return None, indices, values
@@ -601,15 +610,16 @@ class _OutputSpec:  # MARK: _OutputSpec
 
     def insert_indices(self,
                        samples: Union[torch.Tensor, Sequence[torch.Tensor]],
-                       output_indices: torch.Tensor) -> Tuple[torch.Tensor, ...]:
+                       output_indices: torch.Tensor
+                       ) -> Tuple[torch.Tensor, ...]:
         """
         Inserts one discrete index tensor per output axis into ``samples``.
         """
         input_values = _split_samples(samples, self.n_input_sites)
         if not isinstance(output_indices, torch.Tensor):
             raise TypeError('`output_indices` should be torch.Tensor type')
-        if output_indices.ndim != 2 or \
-                output_indices.shape[1] != self.n_output_sites:
+        if (output_indices.ndim != 2) or \
+                (output_indices.shape[1] != self.n_output_sites):
             raise ValueError(
                 '`output_indices` should have shape '
                 '(batch, n_output_sites)')
@@ -648,26 +658,25 @@ class _OutputSpec:  # MARK: _OutputSpec
             return embeddings.evaluate(axis, values)
         if not isinstance(values, torch.Tensor):
             raise TypeError('`values` should be torch.Tensor type')
-        if values.ndim != 1 or values.dtype not in _INTEGER_DTYPES:
+        if (values.ndim != 1) or (values.dtype not in _INTEGER_DTYPES):
             raise TypeError('Output-site values should be integer indices')
         if torch.any(values < 0) or \
                 torch.any(values >= self.out_shape[axis]):
-            raise ValueError(f'Output indices at axis {axis} are out of bounds')
+            raise ValueError(
+                f'Output indices at axis {axis} are out of bounds')
         embedded = basis(values, dim=self.out_shape[axis])
         return embedded if dtype is None else embedded.to(dtype=dtype)
 
 
 @dataclass(frozen=True)
 class _SketchingFitSpec:  # MARK: _SketchingFitSpec
-    """Groups ``truncation``, range projection, batching and diagnostics."""
+    """Groups local truncation, evaluation batching and diagnostics."""
 
     rank: Optional[int] = None
     cutoff: Optional[float] = None
     atol: Optional[float] = None
     rtol: Optional[float] = None
     cum_percentage: Optional[float] = None
-    random_projection: bool = True
-    projection_dim: Optional[int] = None
     batch_size: int = 64
     verbose: Union[bool, int] = 0
     collect_metrics: bool = False
@@ -683,17 +692,6 @@ class _SketchingFitSpec:  # MARK: _SketchingFitSpec
             atol=self.atol,
             rtol=self.rtol,
             cum_percentage=self.cum_percentage)
-        if not isinstance(self.random_projection, bool):
-            raise TypeError('`random_projection` should be bool type')
-        if self.projection_dim is not None:
-            if isinstance(self.projection_dim, bool) or \
-                    not isinstance(self.projection_dim, int):
-                raise TypeError('`projection_dim` should be int type or None')
-            if self.projection_dim < 1:
-                raise ValueError('`projection_dim` should be positive')
-            if not self.random_projection:
-                raise ValueError(
-                    '`projection_dim` requires `random_projection=True`')
         if isinstance(self.batch_size, bool) or \
                 not isinstance(self.batch_size, int):
             raise TypeError('`batch_size` should be int type')
@@ -704,18 +702,6 @@ class _SketchingFitSpec:  # MARK: _SketchingFitSpec
         object.__setattr__(self, 'truncation', truncation)
         object.__setattr__(
             self, 'verbosity', _normalize_verbosity(self.verbose))
-
-    @property
-    def effective_projection_dim(self) -> Optional[int]:
-        """Projection dimension, with ``rank`` as the reducing default."""
-        if not self.random_projection:
-            return None
-        return self.rank if self.projection_dim is None else self.projection_dim
-
-    @property
-    def diagnostics_enabled(self) -> bool:
-        """Whether fitting should collect structured diagnostic records."""
-        return self.collect_metrics or bool(self.verbosity)
 
 
 __all__ = [

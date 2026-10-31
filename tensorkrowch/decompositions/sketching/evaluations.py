@@ -1,89 +1,78 @@
 """
 This script contains:
 
-    Classes:
+    Public classes:
+        * ConfigurationMap
+
+    Internal classes:
         * _EvaluationRequest
         * _IncidenceMap
-        * EvaluationView
         * _EvaluationPlan
-        * _EvaluationRegistry
         * _EvaluationPlanBuilder
-        * _EvaluationSession
 
-    Functions:
+    Internal functions:
         * _input_values
         * _concatenate_configurations
 """
 
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence, TYPE_CHECKING, Tuple
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
 from tensorkrowch.decompositions.metrics import EvaluationStats
 from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
-                                                           _SamplePool)
+                                                         _SamplePool)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
-from tensorkrowch.decompositions.sources import (ConfigurationBatch,
-                                                 BaseSource)
+from tensorkrowch.decompositions.sources import (BaseSource,
+                                               ConfigurationBatch)
 
 
-if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sketching.transforms import GlobalValueTransform
-
-
-def _input_values(
-    configurations: ConfigurationBatch
-) -> Tuple[torch.Tensor, ...]:
+def _input_values(configurations: ConfigurationBatch
+                  ) -> Tuple[torch.Tensor, ...]:
     """Returns one tensor per configuration input."""
     if configurations.packed:
-        return tuple(
-            configurations.values[:, site]
-            for site in range(configurations.n_inputs))
+        return tuple(configurations.values[:, site]
+                     for site in range(configurations.n_inputs))
     return tuple(configurations.values)
 
 
-def _concatenate_configurations(
-    batches: Sequence[ConfigurationBatch]
-) -> ConfigurationBatch:
-    """
-    Concatenates compatible packed or heterogeneous configuration ``batches``.
-    """
+def _concatenate_configurations(batches: Sequence[ConfigurationBatch]
+                                ) -> ConfigurationBatch:
+    """Concatenates compatible configuration batches along their row axis."""
     batches = tuple(batches)
     if not batches:
-        raise ValueError('At least one configuration batch is required')
+        raise ValueError('`batches` should contain a configuration batch')
     first = batches[0]
-    for batch in batches:
+    if not isinstance(first, ConfigurationBatch):
+        raise TypeError('`batches` should contain ConfigurationBatch objects')
+    for batch in batches[1:]:
         if not isinstance(batch, ConfigurationBatch):
             raise TypeError(
                 '`batches` should contain ConfigurationBatch objects')
         if batch.n_inputs != first.n_inputs:
-            raise ValueError(
-                'Configuration batches should contain the same number of inputs')
+            raise ValueError('`batches` should have the same input count')
         if batch.kind != first.kind:
-            raise ValueError(
-                'Configuration batches should use the same value kind')
+            raise ValueError('`batches` should use the same value kind')
         if batch.feature_shape != first.feature_shape:
-            raise ValueError(
-                'Configuration batches should have matching feature shapes')
+            raise ValueError('`batches` should have matching feature shapes')
         if batch.device != first.device:
-            raise ValueError('Configuration batches should share a device')
+            raise ValueError('`batches` should share a device')
         if batch.dtype != first.dtype:
-            raise ValueError('Configuration batches should share a dtype')
+            raise ValueError('`batches` should share a dtype')
 
     if all(batch.packed for batch in batches):
         values = torch.cat([batch.values for batch in batches], dim=0)
     else:
         split = [_input_values(batch) for batch in batches]
-        values = tuple(torch.cat(
-            [batch_values[site] for batch_values in split], dim=0)
-            for site in range(first.n_inputs))
+        values = tuple(torch.cat([items[site] for items in split], dim=0)
+                       for site in range(first.n_inputs))
     return ConfigurationBatch(values, kind=first.kind)
 
 
 @dataclass(frozen=True)
 class _EvaluationRequest:  # MARK: _EvaluationRequest
-    """One flattened Phi or closure request before global deduplication."""
+    """One flattened Phi request before global deduplication."""
 
     configurations: ConfigurationBatch
     result_shape: Sequence[int]
@@ -92,153 +81,87 @@ class _EvaluationRequest:  # MARK: _EvaluationRequest
 
     def __post_init__(self) -> None:
         if not isinstance(self.configurations, ConfigurationBatch):
-            raise TypeError(
-                '`configurations` should be ConfigurationBatch type')
+            raise TypeError('`configurations` should be ConfigurationBatch')
         if isinstance(self.result_shape, (str, bytes)) or \
                 not isinstance(self.result_shape, Sequence):
             raise TypeError('`result_shape` should be a sequence of integers')
-        result_shape = tuple(self.result_shape)
-        if any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 0
-               for dim in result_shape):
-            raise ValueError(
-                '`result_shape` should contain non-negative integers')
+        shape = tuple(self.result_shape)
         n_results = 1
-        for dim in result_shape:
+        for dim in shape:
+            if isinstance(dim, bool) or not isinstance(dim, int) or (dim < 0):
+                raise ValueError(
+                    '`result_shape` should contain non-negative integers')
             n_results *= dim
         if n_results != self.configurations.batch_size:
             raise ValueError(
                 '`result_shape` should contain one entry per configuration')
-        if self.output_spec is not None and \
+        if (self.output_spec is not None) and \
                 not isinstance(self.output_spec, _OutputSpec):
-            raise TypeError('`output_spec` should be _OutputSpec type or None')
-        if self.output_spec is None or self.output_spec.scalar:
+            raise TypeError('`output_spec` should be _OutputSpec or None')
+        if (self.output_spec is None) or self.output_spec.scalar:
             if self.output_labels is not None:
                 raise ValueError(
                     '`output_labels` requires a tensor-valued output spec')
         else:
-            labels = self.output_spec._validate_flat_labels(
-                self.output_labels)
+            labels = self.output_spec._validate_flat_labels(self.output_labels)
             if labels.shape[0] != self.configurations.batch_size:
                 raise ValueError(
                     '`output_labels` should match the configuration batch')
             object.__setattr__(self, 'output_labels', labels)
-        object.__setattr__(self, 'result_shape', result_shape)
+        object.__setattr__(self, 'result_shape', shape)
 
 
 @dataclass(frozen=True)
 class _IncidenceMap:  # MARK: _IncidenceMap
-    """Maps one request's rows to globally unique source configurations."""
+    """Gather indices and output selection for one planned Phi."""
 
     unique_ids: torch.Tensor
-    result_shape: Sequence[int]
+    result_shape: Tuple[int, ...]
     output_spec: Optional[_OutputSpec] = None
     output_labels: Optional[torch.Tensor] = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.unique_ids, torch.Tensor) or \
-                self.unique_ids.ndim != 1 or \
-                self.unique_ids.dtype != torch.long:
-            raise TypeError('`unique_ids` should be a one-dimensional long tensor')
-        result_shape = tuple(self.result_shape)
-        n_results = 1
-        for dim in result_shape:
-            if isinstance(dim, bool) or not isinstance(dim, int) or dim < 0:
-                raise ValueError(
-                    '`result_shape` should contain non-negative integers')
-            n_results *= dim
-        if n_results != self.unique_ids.shape[0]:
-            raise ValueError(
-                '`result_shape` should contain one entry per incidence id')
-        if self.output_spec is not None and \
-                not isinstance(self.output_spec, _OutputSpec):
-            raise TypeError('`output_spec` should be _OutputSpec type or None')
-        if self.output_labels is not None:
-            if not isinstance(self.output_labels, torch.Tensor) or \
-                    self.output_labels.shape != self.unique_ids.shape or \
-                    self.output_labels.dtype != torch.long:
-                raise TypeError(
-                    '`output_labels` should be a long vector matching ids')
-        object.__setattr__(self, 'result_shape', result_shape)
-
-
-@dataclass(frozen=True)
-class EvaluationView:  # MARK: EvaluationView
-    """
-    Read-only ``configurations``, ``values`` and ``incidences`` for advanced callbacks.
-    """
-
-    configurations: ConfigurationBatch
-    values: Optional[torch.Tensor] = None
-    incidences: Sequence[_IncidenceMap] = ()
-    phase: str = 'collect'
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.configurations, ConfigurationBatch):
-            raise TypeError(
-                '`configurations` should be ConfigurationBatch type')
-        if self.values is not None:
-            if not isinstance(self.values, torch.Tensor):
-                raise TypeError('`values` should be torch.Tensor type or None')
-            if self.values.shape[0] != self.configurations.batch_size:
-                raise ValueError(
-                    '`values` should match the configuration batch')
-        incidences = tuple(self.incidences)
-        if not all(isinstance(item, _IncidenceMap) for item in incidences):
-            raise TypeError('`incidences` should contain _IncidenceMap objects')
-        if self.phase not in ('collect', 'expand', 'frozen', 'evaluated'):
-            raise ValueError('`phase` is not a valid evaluation phase')
-        object.__setattr__(self, 'incidences', incidences)
 
 
 @dataclass(frozen=True)
 class _EvaluationPlan:  # MARK: _EvaluationPlan
-    """Frozen unique ``configurations`` and request incidence maps."""
+    """Unique source configurations and the gathers for all planned Phis."""
 
     source: BaseSource
     configurations: ConfigurationBatch
-    incidences: Sequence[_IncidenceMap]
+    incidences: Tuple[_IncidenceMap, ...]
     stats: EvaluationStats
-    global_transform_prepared: bool = False
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.source, BaseSource):
+
+class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
+    """Collects Phi requests and deduplicates their source configurations."""
+
+    def __init__(self, source: BaseSource) -> None:
+        if not isinstance(source, BaseSource):
             raise TypeError('`source` should inherit from BaseSource')
-        if not isinstance(self.configurations, ConfigurationBatch):
-            raise TypeError(
-                '`configurations` should be ConfigurationBatch type')
-        incidences = tuple(self.incidences)
-        if not incidences or \
-                not all(isinstance(item, _IncidenceMap)
-                        for item in incidences):
-            raise TypeError(
-                '`incidences` should contain _IncidenceMap objects')
-        if not isinstance(self.stats, EvaluationStats):
-            raise TypeError('`stats` should be EvaluationStats type')
-        if not isinstance(self.global_transform_prepared, bool):
-            raise TypeError('`global_transform_prepared` should be bool type')
-        object.__setattr__(self, 'incidences', incidences)
+        self.source = source
+        self._requests = []
+        self._frozen = False
 
-    def view(self) -> EvaluationView:
-        """Returns the frozen global evaluation table without values."""
-        return EvaluationView(
-            configurations=self.configurations,
-            incidences=self.incidences,
-            phase='frozen')
+    def collect(self, request: _EvaluationRequest) -> int:
+        """Adds a request and returns its stable result handle."""
+        if self._frozen:
+            raise RuntimeError('The evaluation plan is already frozen')
+        if not isinstance(request, _EvaluationRequest):
+            raise TypeError('`request` should be _EvaluationRequest type')
+        if request.configurations.n_inputs != len(self.source.in_sites):
+            raise ValueError(
+                '`configurations` should contain one value per source input')
+        handle = len(self._requests)
+        self._requests.append(request)
+        return handle
 
-
-class _EvaluationRegistry:  # MARK: _EvaluationRegistry
-    """Deduplicates request points and builds their gather incidence maps."""
-
-    @staticmethod
-    def build(source: BaseSource,
-              requests: Sequence[_EvaluationRequest],
-              global_transform_prepared: bool = False) -> _EvaluationPlan:
-        """
-        Freezes ``requests`` into one globally deduplicated evaluation plan.
-        """
-        requests = tuple(requests)
+    def freeze(self) -> _EvaluationPlan:
+        """Deduplicates the requests and permanently freezes this builder."""
+        if self._frozen:
+            raise RuntimeError('The evaluation plan is already frozen')
+        if not self._requests:
+            raise ValueError('The evaluation plan should contain a request')
         configurations = _concatenate_configurations(
-            [request.configurations for request in requests])
+            [request.configurations for request in self._requests])
         pool = _SamplePool(configurations)
         unique = pool.restrict(SiteRegion(range(configurations.n_inputs)))
         unique_configurations = configurations.index_select(
@@ -246,7 +169,7 @@ class _EvaluationRegistry:  # MARK: _EvaluationRegistry
 
         incidences = []
         start = 0
-        for request in requests:
+        for request in self._requests:
             stop = start + request.configurations.batch_size
             incidences.append(_IncidenceMap(
                 unique_ids=unique.inverse_ids[start:stop],
@@ -254,278 +177,233 @@ class _EvaluationRegistry:  # MARK: _EvaluationRegistry
                 output_spec=request.output_spec,
                 output_labels=request.output_labels))
             start = stop
-        requested_points = configurations.batch_size
-        unique_points = unique_configurations.batch_size
         stats = EvaluationStats(
-            requested_points=requested_points,
-            unique_points=unique_points,
-            cache_hits=requested_points - unique_points)
-        return _EvaluationPlan(
-            source=source,
-            configurations=unique_configurations,
-            incidences=incidences,
-            stats=stats,
-            global_transform_prepared=global_transform_prepared)
+            requested_points=configurations.batch_size,
+            unique_points=unique_configurations.batch_size,
+            cache_hits=(configurations.batch_size -
+                        unique_configurations.batch_size))
+        self._frozen = True
+        return _EvaluationPlan(self.source, unique_configurations,
+                               tuple(incidences), stats)
 
 
-class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
-    """Mutable collect/expand builder whose ``freeze`` result is immutable."""
+class ConfigurationMap:  # MARK: ConfigurationMap
+    """
+    Source values shared by all RSS queries and a global transformation.
 
-    def __init__(self, source: BaseSource) -> None:
-        if not isinstance(source, BaseSource):
-            raise TypeError('`source` should inherit from BaseSource')
-        self.source = source
-        self._requests = []
-        self._phase = 'collect'
-        self._global_transform_prepared = False
+    RSS passes this object to ``transform(configuration_map)`` after evaluating
+    the unique configurations needed by the local Phis. :attr:`configurations`
+    contains these inputs directly, and :attr:`values` contains the aligned raw
+    source values. Both tables keep their original shape and order while the
+    callback runs. The callback returns transformed values with the same shape.
 
-    @property
-    def phase(self) -> str:
-        """Current lifecycle phase."""
-        return self._phase
+    :meth:`evaluate` can query additional configurations. It returns raw source
+    values, preserving the requested order and repetitions, and evaluates only
+    points absent from the shared cache. These auxiliary points do not change
+    the initial tables or the sketch samples. Evaluation never recursively
+    applies the transformation.
 
-    def _validate_request(self, request: _EvaluationRequest) -> None:
-        """
-        Validates one ``request`` against the shared source input metadata.
-        """
-        if not isinstance(request, _EvaluationRequest):
-            raise TypeError('`request` should be _EvaluationRequest type')
-        if request.configurations.n_inputs != len(self.source.in_sites):
-            raise ValueError(
-                'Configurations should contain one value per source input site')
+    Instances are created by RSS; callbacks normally only read these properties
+    and call :meth:`evaluate`. Source input columns follow ``source.in_sites``.
+    Treat the exposed tables as read-only so cached raw evaluations remain
+    available throughout the callback.
 
-    def collect(self, request: _EvaluationRequest) -> int:
-        """Adds a Phi ``request`` during the initial collect phase."""
-        if self._phase != 'collect':
-            raise RuntimeError('Phi requests can only be collected before expand')
-        if self._global_transform_prepared:
-            raise RuntimeError(
-                'Phi requests should be collected before global preparation')
-        self._validate_request(request)
-        handle = len(self._requests)
-        self._requests.append(request)
-        return handle
+    Examples
+    --------
+    A symmetry average can evaluate new configurations in the callback::
 
-    def expand(self, configurations: ConfigurationBatch) -> int:
-        """
-        Adds closure points before freeze and returns their result handle.
-        """
-        if self._phase == 'frozen':
-            raise RuntimeError('An evaluation plan cannot expand after freeze')
-        if not isinstance(configurations, ConfigurationBatch):
-            raise TypeError(
-                '`configurations` should be ConfigurationBatch type')
-        self._phase = 'expand'
-        request = _EvaluationRequest(
-            configurations=configurations,
-            result_shape=(configurations.batch_size,))
-        self._validate_request(request)
-        handle = len(self._requests)
-        self._requests.append(request)
-        return handle
+        def transform(configuration_map):
+            inputs = configuration_map.configurations
+            reflected = inputs.flip(1)
+            return (configuration_map.values +
+                    configuration_map.evaluate(reflected)) / 2
+    """
 
-    def snapshot(self) -> EvaluationView:
-        """
-        Returns all requested rows without exposing mutable builder storage.
-        """
-        if not self._requests:
-            raise ValueError('The evaluation plan should contain a request')
-        return EvaluationView(
-            configurations=_concatenate_configurations([
-                request.configurations for request in self._requests]),
-            phase=self._phase)
-
-    def _mark_global_transform_prepared(self) -> None:
-        """
-        Marks that global closure requirements were handled before freeze.
-        """
-        if self._phase == 'frozen':
-            raise RuntimeError(
-                'A global transform cannot be prepared after freeze')
-        if self._global_transform_prepared:
-            raise RuntimeError('The global transform is already prepared')
-        self._global_transform_prepared = True
-
-    def freeze(self) -> _EvaluationPlan:
-        """Deduplicates every request and permanently freezes this builder."""
-        if self._phase == 'frozen':
-            raise RuntimeError('The evaluation plan is already frozen')
-        if not self._requests:
-            raise ValueError('The evaluation plan should contain a request')
-        plan = _EvaluationRegistry.build(
-            self.source,
-            self._requests,
-            global_transform_prepared=self._global_transform_prepared)
-        self._phase = 'frozen'
-        return plan
-
-
-class _EvaluationSession:  # MARK: _EvaluationSession
-    """Evaluates one frozen plan once and scatters values to all requests."""
-
-    def __init__(self,
-                 plan: _EvaluationPlan,
-                 global_transform: Optional['GlobalValueTransform'] = None,
-                 context: Any = None) -> None:
+    def __init__(self, plan: _EvaluationPlan,
+                 batch_size: Optional[int] = 64,
+                 transform: Optional[Callable] = None) -> None:
         if not isinstance(plan, _EvaluationPlan):
             raise TypeError('`plan` should be _EvaluationPlan type')
-        self.plan = plan
-        self.global_transform = global_transform
-        self.context = context
-        if global_transform is not None and \
-                not getattr(global_transform, 'is_identity', False) and \
-                not plan.global_transform_prepared:
-            raise RuntimeError(
-                'The global transform should be prepared before freeze')
+        if (batch_size is not None) and (
+                isinstance(batch_size, bool) or
+                not isinstance(batch_size, int)):
+            raise TypeError('`batch_size` should be int type or None')
+        if (batch_size is not None) and (batch_size < 1):
+            raise ValueError('`batch_size` should be positive')
+        if (transform is not None) and not callable(transform):
+            raise TypeError('`transform` should be callable or None')
+        self._plan = plan
+        self._batch_size = batch_size
+        self._transform = transform
         self._values = None
-        self._raw_values = None
-        self._results = [None] * len(plan.incidences)
-        self._stats = None
+        self._transformed_values = None
+        self._cache_configurations = plan.configurations
+        self._cache_values = None
+        self._stats = plan.stats
+
+    @property
+    def configurations(self) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
+        """Initial packed inputs or one tensor per input, in query order."""
+        return self._plan.configurations.values
+
+    @property
+    def values(self) -> torch.Tensor:
+        """Raw source values aligned with the initial configurations."""
+        return self.evaluate_source()
 
     @property
     def stats(self) -> EvaluationStats:
-        """
-        Final session stats, or planned deduplication stats before evaluate.
-        """
-        return self.plan.stats if self._stats is None else self._stats
+        """Source calls and cache reuse, including auxiliary evaluations."""
+        return self._stats
 
-    def _evaluate_unique(self, batch_size: Optional[int]) -> torch.Tensor:
-        """
-        Evaluates unique configurations in deterministic contiguous batches.
-        """
-        n_points = self.plan.configurations.batch_size
-        if batch_size is None:
-            batch_size = n_points
-        elif isinstance(batch_size, bool) or not isinstance(batch_size, int):
-            raise TypeError('`batch_size` should be int type or None')
-        elif batch_size < 1:
-            raise ValueError('`batch_size` should be positive')
-
-        before = getattr(self.plan.source, 'evaluation_stats', None)
+    def _evaluate_batches(self, configurations: ConfigurationBatch
+                          ) -> torch.Tensor:
+        """Evaluates missing points in contiguous batches."""
+        batch_size = self._batch_size or configurations.batch_size
+        before = self._plan.source.evaluation_stats
         chunks = []
         n_calls = 0
-        for start in range(0, n_points, batch_size):
-            stop = min(start + batch_size, n_points)
-            ids = torch.arange(
-                start, stop, device=self.plan.configurations.device)
-            chunks.append(self.plan.source.evaluate(
-                self.plan.configurations.index_select(ids)))
+        for start in range(0, configurations.batch_size, batch_size):
+            ids = torch.arange(start, min(start + batch_size,
+                                          configurations.batch_size),
+                               device=configurations.device)
+            values = self._plan.source.evaluate(
+                configurations.index_select(ids))
+            if values.shape[0] != ids.numel():
+                raise ValueError(
+                    'Source values should preserve the configuration batch')
+            chunks.append(values)
             n_calls += 1
         values = torch.cat(chunks, dim=0)
-        if values.shape[0] != n_points:
-            raise ValueError(
-                'The source should preserve the configuration batch dimension')
-
-        after = getattr(self.plan.source, 'evaluation_stats', None)
-        if isinstance(before, EvaluationStats) and \
-                isinstance(after, EvaluationStats):
-            delta = after.delta(before)
-            batches = delta.batches
-            source_calls = delta.source_calls
-        else:
-            batches = n_calls
-            source_calls = n_calls
+        delta = self._plan.source.evaluation_stats.delta(before)
+        # Custom sources may not maintain counters, but each call still counts.
         self._stats = EvaluationStats(
-            requested_points=self.plan.stats.requested_points,
-            unique_points=self.plan.stats.unique_points,
-            batches=batches,
-            cache_hits=self.plan.stats.cache_hits,
-            source_calls=source_calls)
+            requested_points=self._stats.requested_points,
+            unique_points=self._stats.unique_points,
+            batches=self._stats.batches + (delta.batches or n_calls),
+            cache_hits=self._stats.cache_hits,
+            source_calls=(self._stats.source_calls +
+                          (delta.source_calls or n_calls)))
         return values
 
-    @staticmethod
-    def _scatter(values: torch.Tensor,
-                 incidence: _IncidenceMap) -> torch.Tensor:
-        """
-        Scatters global ``values`` through one ``incidence`` and output selection.
-        """
-        unique_ids = incidence.unique_ids.to(values.device)
-        selected = values.index_select(0, unique_ids)
-        if incidence.output_spec is None:
-            return selected.reshape(
-                (*incidence.result_shape, *selected.shape[1:]))
-        selected = incidence.output_spec.validate_values(selected)
-        if incidence.output_spec.scalar:
-            return selected.reshape(incidence.result_shape)
-        labels = incidence.output_labels.to(values.device)
-        selected = selected.reshape(selected.shape[0], -1).gather(
-            1, labels.unsqueeze(1)).squeeze(1)
-        return selected.reshape(incidence.result_shape)
-
-    def prepare_values(self, batch_size: Optional[int] = None) -> torch.Tensor:
-        """Evaluates and transforms the shared unique-value table once."""
-        if self._values is not None:
-            return self._values
-        self.evaluate_source(batch_size=batch_size)
-        if self.global_transform is None:
-            self._values = self._raw_values
-        else:
-            view = EvaluationView(
-                configurations=self.plan.configurations,
-                values=self._raw_values,
-                incidences=self.plan.incidences,
-                phase='evaluated')
-            self._values = self.global_transform.apply(view, self.context)
-            if not isinstance(self._values, torch.Tensor):
-                raise TypeError(
-                    'A global value transform should return a torch.Tensor')
-            if self._values.shape != self._raw_values.shape:
-                raise ValueError(
-                    'A global value transform should preserve value shape')
-            if self._values.device != self._raw_values.device:
-                raise ValueError(
-                    'A global value transform should preserve value device')
+    def evaluate_source(self) -> torch.Tensor:
+        """Evaluates and retains the initial raw source table once."""
+        if self._values is None:
+            self._values = self._evaluate_batches(self._plan.configurations)
+            self._cache_values = self._values
         return self._values
 
-    def evaluate(self,
-                 batch_size: Optional[int] = None) -> Tuple[torch.Tensor, ...]:
+    def evaluate(self, configurations: Union[
+            torch.Tensor, Sequence[torch.Tensor], ConfigurationBatch]
+                 ) -> torch.Tensor:
         """
-        Evaluates and scatters every request, caching convenience results.
+        Evaluates raw source values using the shared configuration cache.
+
+        Parameters
+        ----------
+        configurations : torch.Tensor or sequence of torch.Tensor
+            Packed inputs with shape ``(batch, n_inputs, *feature_shape)``, or
+            one tensor per input with a common leading batch dimension. Use
+            the same input order, feature shapes, device and dtype as
+            :attr:`configurations`. Discrete inputs contain scalar indices.
+
+        Returns
+        -------
+        torch.Tensor
+            Raw source values with shape ``(batch, *out_shape)``, in requested
+            order. Repeated configurations produce repeated rows.
         """
-        return tuple(
-            self.result(handle, batch_size=batch_size)
-            for handle in range(len(self.plan.incidences)))
+        self.evaluate_source()
+        if not isinstance(configurations, ConfigurationBatch):
+            configurations = ConfigurationBatch(
+                configurations, kind=self._plan.configurations.kind)
+        combined = _concatenate_configurations(
+            (self._cache_configurations, configurations))
+        if configurations.batch_size == 0:
+            return self._cache_values[:0]
 
-    def evaluate_source(self,
-                        batch_size: Optional[int] = None) -> torch.Tensor:
-        """Evaluates and caches only the globally unique source values."""
-        if self._raw_values is None:
-            self._raw_values = self._evaluate_unique(batch_size)
-        return self._raw_values
+        pool = _SamplePool(combined)
+        unique = pool.restrict(SiteRegion(range(combined.n_inputs)))
+        n_cached = self._cache_configurations.batch_size
+        representatives = unique.representative_row_ids
+        missing_ids = representatives[representatives >= n_cached]
+        n_missing = missing_ids.numel()
+        lookup = torch.empty(unique.n_unique, dtype=torch.long,
+                             device=combined.device)
+        lookup[unique.inverse_ids[:n_cached]] = torch.arange(
+            n_cached, device=combined.device)
+        if n_missing:
+            missing = combined.index_select(missing_ids)
+            values = self._evaluate_batches(missing)
+            self._cache_configurations = _concatenate_configurations(
+                (self._cache_configurations, missing))
+            self._cache_values = torch.cat((self._cache_values, values), dim=0)
+            lookup[unique.inverse_ids[missing_ids]] = torch.arange(
+                n_cached, n_cached + n_missing, device=combined.device)
 
-    def result(self,
-               handle: int,
-               batch_size: Optional[int] = None) -> torch.Tensor:
-        """Returns one request result by its stable builder ``handle``."""
+        self._stats = EvaluationStats(
+            requested_points=(self._stats.requested_points +
+                              configurations.batch_size),
+            unique_points=self._stats.unique_points + n_missing,
+            batches=self._stats.batches,
+            cache_hits=(self._stats.cache_hits +
+                        configurations.batch_size - n_missing),
+            source_calls=self._stats.source_calls)
+        ids = lookup[unique.inverse_ids[n_cached:]]
+        return self._cache_values.index_select(0, ids.to(
+            self._cache_values.device))
+
+    def prepare_values(self) -> torch.Tensor:
+        """Applies the callback once to the stable initial raw table."""
+        if self._transformed_values is None:
+            raw = self.evaluate_source()
+            values = raw if self._transform is None else self._transform(self)
+            if not isinstance(values, torch.Tensor):
+                raise TypeError('`transform` should return a torch.Tensor')
+            if values.shape != raw.shape:
+                raise ValueError('`transform` should preserve the value shape')
+            if values.device != raw.device:
+                raise ValueError(
+                    '`transform` should preserve the value device')
+            if not (values.is_floating_point() or values.is_complex()):
+                raise TypeError(
+                    '`transform` should return floating or complex values')
+            if not torch.isfinite(values).all():
+                raise ValueError('`transform` should return finite values')
+            self._transformed_values = values
+        return self._transformed_values
+
+    def _result(self, handle: int,
+               index_selection: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Scatters one planned Phi without retaining another tensor cache."""
         if isinstance(handle, bool) or not isinstance(handle, int):
             raise TypeError('`handle` should be int type')
-        if handle < 0 or handle >= len(self.plan.incidences):
+        if (handle < 0) or (handle >= len(self._plan.incidences)):
             raise ValueError('`handle` is outside the evaluation plan')
-        result = self._results[handle]
-        if result is None:
-            values = self.prepare_values(batch_size=batch_size)
-            result = self._scatter(values, self.plan.incidences[handle])
-            self._results[handle] = result
-        return result
+        incidence = self._plan.incidences[handle]
+        values = self.prepare_values()
+        ids = incidence.unique_ids
+        labels = incidence.output_labels
+        result_shape = incidence.result_shape
+        if index_selection is not None:
+            selection = index_selection.to(ids.device).reshape(
+                -1, len(result_shape))
+            indices = tuple(selection.unbind(-1))
+            ids = ids.reshape(result_shape)[indices]
+            if labels is not None:
+                labels = labels.reshape(result_shape)[indices]
+            result_shape = tuple(index_selection.shape[:-1])
+        selected = values.index_select(0, ids.to(values.device))
+        if incidence.output_spec is None:
+            return selected.reshape(
+                (*result_shape, *selected.shape[1:]))
+        selected = incidence.output_spec.validate_values(selected)
+        if incidence.output_spec.scalar:
+            return selected.reshape(result_shape)
+        labels = labels.to(values.device)
+        selected = selected.reshape(selected.shape[0], -1).gather(
+            1, labels.unsqueeze(1)).squeeze(1)
+        return selected.reshape(result_shape)
 
-    def release(self, handle: int) -> None:
-        """Drops one scattered request while retaining shared source values."""
-        if isinstance(handle, bool) or not isinstance(handle, int):
-            raise TypeError('`handle` should be int type')
-        if handle < 0 or handle >= len(self.plan.incidences):
-            raise ValueError('`handle` is outside the evaluation plan')
-        self._results[handle] = None
 
-    def view(self, batch_size: Optional[int] = None) -> EvaluationView:
-        """Returns the evaluated global table and immutable incidence maps."""
-        self.prepare_values(batch_size=batch_size)
-        return EvaluationView(
-            configurations=self.plan.configurations,
-            values=self._values,
-            incidences=self.plan.incidences,
-            phase='evaluated')
-
-
-__all__ = [
-    'EvaluationView',
-]
+__all__ = ['ConfigurationMap']

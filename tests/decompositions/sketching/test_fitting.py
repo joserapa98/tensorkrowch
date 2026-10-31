@@ -8,7 +8,6 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
-from tensorkrowch.decompositions.sketching.phi import _MaterializedPhi
 from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
                                                          _EmbeddingSpec)
 
@@ -17,23 +16,29 @@ class _FiberOnlyPhi:
     """Phi test double that forbids complete materialization."""
 
     def __init__(self, tensor):
-        self.base = _MaterializedPhi(tensor, range(tensor.ndim))
+        self.tensor = tensor
         self.shape = tuple(tensor.shape)
         self.fiber_calls = 0
 
     def evaluate(self, index_selection):
-        return self.base.evaluate(index_selection)
+        indices = index_selection.to(self.tensor.device)
+        return self.tensor[tuple(indices.unbind(-1))]
 
     def fiber(self, axis, fixed_indices=None):
         self.fiber_calls += 1
-        return self.base.fiber(axis, fixed_indices)
+        other_axes = [index for index in range(self.tensor.ndim)
+                      if index != axis]
+        if not other_axes:
+            return self.tensor
+        moved = self.tensor.permute(*other_axes, axis)
+        return moved[tuple(fixed_indices.to(self.tensor.device).unbind(-1))]
 
     def materialize(self, batch_size=None):
         raise AssertionError('The fitter should consume fibers')
 
 
 def _materialized(tensor):
-    return _MaterializedPhi(tensor, range(tensor.ndim))
+    return tensor
 
 
 class _AffineEmbedding(torch.nn.Module):
@@ -198,13 +203,6 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
         assert torch.equal(fitted.tensor, torch.tensor([1.0, 2.0]))
         assert fitted.record is None
 
-    def test_fixed_fitter_declares_no_additional_queries(self):
-        phi = _materialized(torch.ones(3, 2))
-        fitter = tk.decompositions.FixedEmbeddingFitter(torch.randn(3, 2))
-
-        assert fitter.required_queries(
-            phi, axis=0, domain=torch.arange(3)) == ()
-
     def test_cached_heterogeneous_site_embeddings_feed_independent_fitters(
             self):
         domains = _DomainSpec((
@@ -284,7 +282,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
     @pytest.mark.parametrize(
         'domain, match',
         [
-            (torch.tensor([0., 1.]), 'integer vector'),
+            (torch.tensor([0., 1.]), 'integer labels'),
             (torch.tensor([0, 0]), 'unique'),
             (torch.tensor([-1, 0]), 'inside'),
         ])
@@ -348,17 +346,6 @@ class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
         assert fitted.model_state is None
         assert torch.allclose(fitter.model(domain) @ fitted.tensor, target)
 
-    def test_query_declaration_validates_domain_before_freeze(self):
-        phi = _materialized(torch.ones(3, 2))
-        fitter = tk.decompositions.TrainableEmbeddingFitter(
-            _AffineEmbedding(), max_steps=1)
-
-        assert fitter.required_queries(
-            phi, axis=0, domain=torch.arange(3.)) == ()
-        with pytest.raises(ValueError, match='match'):
-            fitter.required_queries(
-                phi, axis=0, domain=torch.arange(2.))
-
 
 @pytest.mark.parametrize('error', [AssertionError, IndexError])
 def test_fixed_embedding_keeps_unexpected_callback_errors(error):
@@ -367,4 +354,72 @@ def test_fixed_embedding_keeps_unexpected_callback_errors(error):
 
     fitter = tk.decompositions.FixedEmbeddingFitter(embedding)
     with pytest.raises(error, match='Callback failure'):
-        fitter.fit(_materialized(torch.ones(2)), axis=0, domain=torch.arange(2))
+        fitter.fit(_materialized(torch.ones(2)), axis=0,
+                   domain=torch.arange(2))
+
+
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('fiber_batch_size', [None, 2])
+def test_tensor_and_lazy_fits_agree_with_negative_axis(
+        dtype, fiber_batch_size):
+    generator = torch.Generator().manual_seed(23)
+    embedding = torch.randn(5, 3, dtype=dtype, generator=generator)
+    coefficients = torch.randn(2, 3, dtype=dtype, generator=generator)
+    target = coefficients @ embedding.transpose(0, 1)
+    fitter = tk.decompositions.FixedEmbeddingFitter(
+        embedding, fiber_batch_size=fiber_batch_size)
+    phi = target if fiber_batch_size is None else _FiberOnlyPhi(target)
+
+    fitted = fitter.fit(phi, -1, torch.arange(5), return_info=True)
+
+    torch.testing.assert_close(fitted.tensor, coefficients)
+    assert fitted.axis == 1
+    assert fitted.record.used_fibers == (fiber_batch_size is not None)
+
+
+def test_basis_fitter_infers_dimension_for_single_physical_axis():
+    fitted = tk.decompositions.BasisFitter().fit(
+        torch.tensor([7.]), 0, torch.tensor([2]), return_info=True)
+
+    torch.testing.assert_close(fitted.tensor, torch.tensor([0., 0., 7.]))
+    assert fitted.in_dim == 3
+    assert fitted.record.abs_residual == 0
+
+
+@pytest.mark.parametrize(
+    'factory, kwargs, error',
+    [(tk.decompositions.FixedEmbeddingFitter,
+      {'embedding': 2}, TypeError),
+     (tk.decompositions.FixedEmbeddingFitter,
+      {'embedding': torch.eye(2), 'solver': object()}, TypeError),
+     (tk.decompositions.FixedEmbeddingFitter,
+      {'embedding': torch.eye(2), 'fiber_batch_size': 0}, ValueError),
+     (tk.decompositions.BasisFitter, {'in_dim': True}, ValueError),
+     (tk.decompositions.BasisFitter, {'in_dim': 0}, ValueError),
+     (tk.decompositions.TrainableEmbeddingFitter,
+      {'model': object()}, TypeError),
+     (tk.decompositions.TrainableEmbeddingFitter,
+      {'model': _AffineEmbedding(), 'max_steps': 0}, ValueError),
+     (tk.decompositions.TrainableEmbeddingFitter,
+      {'model': _AffineEmbedding(), 'optimizer_kwargs': []}, TypeError)])
+def test_invalid_fitter_construction(factory, kwargs, error):
+    with pytest.raises(error):
+        factory(**kwargs)
+
+
+@pytest.mark.parametrize(
+    'axis, domain, error',
+    [(True, torch.arange(2), TypeError),
+     (2, torch.arange(2), ValueError),
+     (0, torch.arange(3), ValueError),
+     (0, torch.empty(0), ValueError)])
+def test_fixed_fitter_rejects_invalid_axis_or_domain(axis, domain, error):
+    fitter = tk.decompositions.FixedEmbeddingFitter(torch.eye(2))
+    with pytest.raises(error):
+        fitter.fit(torch.ones(2, 2), axis, domain)
+
+
+def test_trainable_fitter_requires_trainable_parameters():
+    fitter = tk.decompositions.TrainableEmbeddingFitter(torch.nn.Identity())
+    with pytest.raises(ValueError, match='trainable parameter'):
+        fitter.fit(torch.ones(2, 2), 0, torch.arange(2.))

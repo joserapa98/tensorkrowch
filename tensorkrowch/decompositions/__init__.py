@@ -13,7 +13,7 @@ Tensor decomposition algorithms and their numerical results.
         * qtt_svd, qtr_svd, qttm_svd, qtrm_svd
         * TTALS, TRALS
         * TT2TR, tt2tr, tr_blostr, tr_blostr_svd
-        * TTRSS, TRRSS, TTRS, TRRS
+        * TTRSS, TRRSS, TTRS
 
     Results:
         * TTDecomposition, TRDecomposition
@@ -29,11 +29,8 @@ Arithmetic returns ordinary formats; ``to_format`` removes fit diagnostics
 while preserving the numerical representation. Model construction remains
 explicit.
 
-SVD, ALS and ring functions return decomposition objects. Other functions
-retain their documented core-return controls. Where supported,
-``return_result=True`` returns
-the numerical result object, while ``return_info=True`` returns cores and
-diagnostics. These two return controls are mutually exclusive.
+Decomposition functions and classes return numerical result objects.
+Legacy model-construction helpers retain their documented return conventions.
 """
 
 from tensorkrowch.decompositions.als import (ALSProblem,
@@ -61,6 +58,7 @@ from tensorkrowch.decompositions.als import (ALSProblem,
                                              UniformRows,
                                              tr_als,
                                              tt_als)
+from tensorkrowch.decompositions.kernels import gaussian_kernel
 from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
                                                  ErrorRecord,
                                                  EvaluationStats,
@@ -101,29 +99,19 @@ from tensorkrowch.decompositions.ring import (ALSLoopOpener,
                                               tr_blostr_svd,
                                               tt2tr)
 from tensorkrowch.decompositions.sketching import (BasisFitter,
-                                                   CallableGlobalValueTransform,
-                                                   CallableLocalValueTransform,
-                                                   CompositeGlobalValueTransform,
-                                                   CompositeLocalValueTransform,
+                                                   ConfigurationMap,
                                                    CoreDeterminingSystem,
-                                                   EvaluationView,
                                                    FixedEmbeddingFitter,
-                                                   GlobalValueTransform,
-                                                   IdentityGlobalValueTransform,
-                                                   IdentityLocalValueTransform,
                                                    IdentityRangeProjector,
                                                    InputFitter,
-                                                   LocalTransformContext,
-                                                   LocalValueTransform,
                                                    MarginalSketch,
+                                                   PhiOperator,
                                                    RandomizedRangeProjector,
                                                    RangeProjector,
                                                    RecursiveSketching,
                                                    SampledSketch,
-                                                   SketchGaugeRecursion,
                                                    SketchOperator,
                                                    SketchSystemBuilder,
-                                                   TRRS,
                                                    TRRSS,
                                                    TTRS,
                                                    TTRSS,
@@ -131,7 +119,6 @@ from tensorkrowch.decompositions.sketching import (BasisFitter,
                                                    TrainableEmbeddingFitter,
                                                    qtr_rss,
                                                    qtt_rss,
-                                                   tr_rs,
                                                    tr_rss,
                                                    tt_rs,
                                                    tt_rss)
@@ -159,8 +146,6 @@ from tensorkrowch.decompositions.svd import (TRMSVD,
 from tensorkrowch.decompositions.svd.tt import vec_to_mps
 from tensorkrowch.decompositions.svd.ttm import mat_to_mpo
 
-
-from tensorkrowch.decompositions.sources.kernels import gaussian_kernel
 
 __all__ = [
     'TensorDecomposition',
@@ -250,7 +235,8 @@ __all__ = [
     'qtrm_svd',
     'vec_to_mps',
     'mat_to_mpo',
-    'EvaluationView',
+    'ConfigurationMap',
+    'PhiOperator',
     'RecursiveSketching',
     'SketchOperator',
     'SketchSystemBuilder',
@@ -266,24 +252,12 @@ __all__ = [
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
     'CallableQuanticsSource',
-    'GlobalValueTransform',
-    'IdentityGlobalValueTransform',
-    'CallableGlobalValueTransform',
-    'CompositeGlobalValueTransform',
-    'LocalTransformContext',
-    'LocalValueTransform',
-    'IdentityLocalValueTransform',
-    'CallableLocalValueTransform',
-    'CompositeLocalValueTransform',
     'TTRSS',
     'tt_rss',
     'TTRS',
     'tt_rs',
     'qtt_rss',
-    'TRRS',
-    'tr_rs',
     'qtr_rss',
-    'SketchGaugeRecursion',
     'TRRSS',
     'tr_rss',
 ]

@@ -313,14 +313,14 @@ Sketching decompositions
 The class interfaces keep the source, embeddings, domains and output layout
 fixed, and allow several independent ``fit`` calls with different ranks or
 sketch samples. The functional interfaces construct the corresponding class
-and return a list of cores for direct use in TensorKrowch models. Use the class
-when structured metrics, metadata or repeated fits are needed.
+and return decomposition results with cores, metadata and optional metrics.
+Use the class for repeated fits and advanced fitting or projection strategies.
 
 :class:`TTRSS` and :class:`TRRSS` accept the finite sources listed above,
 tensors, :class:`CallableSource` and raw callables. Wrap formats or MPS models
 in :class:`FormatSource`. Continuous inputs require an embedding; finite
-sources use basis embeddings by default. :class:`TTRS` and :class:`TRRS`
-require finite tensor sources and also adapt tensors, non-Quantics formats
+sources use basis embeddings by default. :class:`TTRS`
+requires finite tensor sources and also adapts tensors, non-Quantics formats
 and MPS models directly. These sketching methods do not support structural
 batches.
 
@@ -342,13 +342,19 @@ Maturity
      - Full projection of discrete, sparse, empirical or TT sources.
    * - :class:`TRRSS`, :func:`tr_rss`
      - Experimental
-     - Cyclic RSS with configurable loop opening and gauge recursion.
-   * - :class:`TRRS`, :func:`tr_rs`
-     - Experimental
-     - Cyclic extension of full-source recursive sketching.
+     - Cyclic RSS with automatic blocks and recursive sketch gauges.
    * - :func:`qtt_rss`, :func:`qtr_rss`
      - Experimental
      - Quantized coordinate adapters over TT-RSS and TR-RSS.
+
+All three algorithms accept ``center`` and scalar or per-bond ``rank``;
+``rank=None`` discovers numerical ranks. Local SVDs absorb singular spectra
+into the retained tensors. TR-RSS accepts a :class:`QRLoopOpener` for local
+balancing and refinement. Sampled algorithms apply one optional
+``transform(configuration_map)`` to the shared query table; TT-RS applies
+``transform(phi)`` independently to each three-axis local tensor.
+``ConfigurationMap.evaluate`` supports cached auxiliary raw-source queries
+without adding sketch samples.
 
 Sampled recursive sketching
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -371,11 +377,6 @@ Full-source recursive sketching
 
 .. autofunction:: tt_rs
 
-.. autoclass:: TRRS
-   :members: fit
-
-.. autofunction:: tr_rs
-
 .. autoclass:: SampledSketch
    :members:
 
@@ -384,6 +385,30 @@ Full-source recursive sketching
 
 .. autoclass:: TTStackSketch
    :members:
+
+Evaluation and local strategies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: ConfigurationMap
+   :members:
+
+.. autoclass:: PhiOperator
+   :members:
+
+.. autoclass:: FixedEmbeddingFitter
+   :members: fit
+
+.. autoclass:: BasisFitter
+   :members: fit
+
+.. autoclass:: TrainableEmbeddingFitter
+   :members: fit
+
+.. autoclass:: IdentityRangeProjector
+   :members: project
+
+.. autoclass:: RandomizedRangeProjector
+   :members: project
 
 Quantized sketching
 ^^^^^^^^^^^^^^^^^^^^
@@ -413,8 +438,8 @@ original variable coordinates for both layouts.
 
 .. autofunction:: qtr_rss
 
-Sources and fitting strategies
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sources
+^^^^^^^
 
 The source abstraction is shared by SVD, ALS and sketching.
 :class:`TTALS` and :class:`TRALS` accept finite sources, tensors,
@@ -443,18 +468,6 @@ these values without materializing the complete tensor.
    :members:
 
 .. autoclass:: FormatSource
-   :members:
-
-.. autoclass:: FixedEmbeddingFitter
-   :members:
-
-.. autoclass:: BasisFitter
-   :members:
-
-.. autoclass:: TrainableEmbeddingFitter
-   :members:
-
-.. autoclass:: QTTInputFitter
    :members:
 
 Examples
@@ -514,12 +527,11 @@ Quantized RSS for a two-variable physical function:
    samples = torch.cartesian_prod(grid, grid)
    function = lambda x: (1 + x).prod(dim=1)
 
-   cores = tk.decompositions.qtt_rss(
+   source = tk.decompositions.CallableQuanticsSource(
        function,
-       samples,
-       n_coordinates=2,
+       2,
        base=2,
        level=3,
        domain=torch.tensor([0., 1.]),
-       rank=4,
    )
+   result = tk.decompositions.qtt_rss(source, samples, rank=4)

@@ -27,8 +27,20 @@ SampleValues = Union[
 @dataclass(frozen=True)
 class SiteRegion:  # MARK: SiteRegion
     """
-    Ordered collection of distinct integer ``sites`` with set-like region
-    operations.
+    Ordered collection of distinct integer sites with set-like operations.
+
+    Parameters
+    ----------
+    sites : sequence of int, optional
+        Distinct site identifiers, in the required local order. An empty
+        sequence represents the boundary outside a chain.
+
+    Examples
+    --------
+    >>> from tensorkrowch.decompositions.sketching.regions import SiteRegion
+    >>> region = SiteRegion((2, 0))
+    >>> region.union(SiteRegion((0, 1))).sites
+    (2, 0, 1)
     """
 
     sites: Sequence[int] = ()
@@ -58,7 +70,14 @@ class SiteRegion:  # MARK: SiteRegion
         return iter(self.sites)
 
     def contains(self, other: Union[int, 'SiteRegion']) -> bool:
-        """Checks membership of one site or containment of another region."""
+        """
+        Checks membership of a site or containment of a region.
+
+        Parameters
+        ----------
+        other : int or SiteRegion
+            Site or region to check; region order does not affect containment.
+        """
         if isinstance(other, SiteRegion):
             return other._membership.issubset(self._membership)
         try:
@@ -67,7 +86,14 @@ class SiteRegion:  # MARK: SiteRegion
             return False
 
     def union(self, *others: 'SiteRegion') -> 'SiteRegion':
-        """Returns the ordered first-occurrence union of compatible regions."""
+        """
+        Returns the union, preserving the first occurrence of each site.
+
+        Parameters
+        ----------
+        *others : SiteRegion
+            Regions whose sites follow the sites already in this region.
+        """
         sites = list(self.sites)
         membership = set(self._membership)
         for other in others:
@@ -80,17 +106,32 @@ class SiteRegion:  # MARK: SiteRegion
         return SiteRegion(sites)
 
     def difference(self, other: 'SiteRegion') -> 'SiteRegion':
-        """Returns sites absent from ``other`` while preserving local order."""
+        """
+        Returns sites absent from ``other``, preserving local order.
+
+        Parameters
+        ----------
+        other : SiteRegion
+            Region whose sites are removed.
+        """
         if not isinstance(other, SiteRegion):
             raise TypeError('`other` should be SiteRegion type')
         return SiteRegion([
             site for site in self.sites if not other.contains(site)])
 
     def intersection(self, other: 'SiteRegion') -> 'SiteRegion':
-        """Returns common sites in this region's order."""
+        """
+        Returns common sites in this region's order.
+
+        Parameters
+        ----------
+        other : SiteRegion
+            Region whose sites are compared.
+        """
         if not isinstance(other, SiteRegion):
             raise TypeError('`other` should be SiteRegion type')
-        return SiteRegion([site for site in self.sites if other.contains(site)])
+        return SiteRegion([
+            site for site in self.sites if other.contains(site)])
 
 
 class _SamplePool:  # MARK: _SamplePool
@@ -129,7 +170,7 @@ class _SamplePool:  # MARK: _SamplePool
         if not site_values:
             raise ValueError('`samples` should contain at least one site')
         first = site_values[0]
-        if first.ndim < 1 or first.shape[0] < 1:
+        if (first.ndim < 1) or (first.shape[0] < 1):
             raise ValueError('Samples should contain a non-empty batch')
         for site, values in enumerate(site_values):
             if values.ndim < 1:
@@ -249,7 +290,27 @@ class _SamplePool:  # MARK: _SamplePool
 
 @dataclass(frozen=True)
 class RegionSketch:  # MARK: RegionSketch
-    """Unique correlated sample restrictions associated with one ``region``."""
+    """
+    Unique correlated sample restrictions associated with one region.
+
+    Regional operations preserve correlations through the owning sample pool.
+    In particular, combining two sketches never creates a Cartesian product.
+
+    Parameters
+    ----------
+    pool_id : hashable
+        Identifier shared by sketches from the same sample pool.
+    region : SiteRegion
+        Ordered sites represented by each row.
+    values : sequence of torch.Tensor
+        One tensor per region site, each with ``n_unique`` leading rows.
+    representative_row_ids : torch.Tensor
+        Long vector mapping each unique regional row to its first pool row.
+    inverse_ids : torch.Tensor
+        Long vector mapping every pool row to its unique regional row.
+    _pool : _SamplePool
+        Owning pool, retained for correlated restrictions and combinations.
+    """
 
     pool_id: Hashable
     region: SiteRegion
@@ -267,15 +328,16 @@ class RegionSketch:  # MARK: RegionSketch
             raise ValueError('`pool_id` should match the owning sample pool')
         values = tuple(self.values)
         if len(values) != len(self.region):
-            raise ValueError('`values` should contain one tensor per region site')
+            raise ValueError(
+                '`values` should contain one tensor per region site')
         if not isinstance(self.representative_row_ids, torch.Tensor) or \
-                self.representative_row_ids.ndim != 1 or \
-                self.representative_row_ids.dtype != torch.long:
+                (self.representative_row_ids.ndim != 1) or \
+                (self.representative_row_ids.dtype != torch.long):
             raise TypeError(
                 '`representative_row_ids` should be a long vector')
         if not isinstance(self.inverse_ids, torch.Tensor) or \
-                self.inverse_ids.ndim != 1 or \
-                self.inverse_ids.dtype != torch.long:
+                (self.inverse_ids.ndim != 1) or \
+                (self.inverse_ids.dtype != torch.long):
             raise TypeError('`inverse_ids` should be a long vector')
         if self.inverse_ids.shape[0] != self._pool.n_rows:
             raise ValueError(
@@ -291,7 +353,7 @@ class RegionSketch:  # MARK: RegionSketch
         for value in values:
             if not isinstance(value, torch.Tensor):
                 raise TypeError('`values` should contain torch.Tensor objects')
-            if value.shape[0] != self.n_unique:
+            if (value.ndim < 1) or (value.shape[0] != self.n_unique):
                 raise ValueError(
                     'Every tensor in `values` should contain one unique row')
         object.__setattr__(self, 'values', values)
@@ -307,13 +369,27 @@ class RegionSketch:  # MARK: RegionSketch
         return self.inverse_ids.shape[0]
 
     def restrict(self, region: SiteRegion) -> 'RegionSketch':
-        """Restricts this sketch to a contained ``region`` through its pool."""
+        """
+        Restricts this sketch to a contained region through its sample pool.
+
+        Parameters
+        ----------
+        region : SiteRegion
+            Selected sites, in the required local order.
+        """
         if not self.region.contains(region):
             raise ValueError('`region` should be contained in this sketch')
         return self._pool.restrict(region)
 
     def combine(self, *others: 'RegionSketch') -> 'RegionSketch':
-        """Combines same-pool sketches by correlated rows, never Cartesian."""
+        """
+        Combines sketches by correlated rows in their pool's site order.
+
+        Parameters
+        ----------
+        *others : RegionSketch
+            Sketches belonging to the same sample pool.
+        """
         membership = set(self.region.sites)
         for other in others:
             if not isinstance(other, RegionSketch):
@@ -322,15 +398,22 @@ class RegionSketch:  # MARK: RegionSketch
                     (other.pool_id != self.pool_id) or \
                     (other.n_rows != self.n_rows):
                 raise ValueError(
-                    'Correlated sketches should belong to the same sample pool')
+                    'Correlated sketches should share the same sample pool')
             membership.update(other.region.sites)
         region = SiteRegion([
             site for site in self._pool.region if site in membership])
         return self._pool.restrict(region)
 
-    def compare(self,
-                other: 'RegionSketch') -> Tuple[SiteRegion, SiteRegion, SiteRegion]:
-        """Returns common, self-only and ``other``-only ordered regions."""
+    def compare(self, other: 'RegionSketch'
+                ) -> Tuple[SiteRegion, SiteRegion, SiteRegion]:
+        """
+        Returns common, self-only and other-only regions, in local order.
+
+        Parameters
+        ----------
+        other : RegionSketch
+            Sketch whose region is compared.
+        """
         if not isinstance(other, RegionSketch):
             raise TypeError('`other` should be RegionSketch type')
         return (
@@ -341,7 +424,12 @@ class RegionSketch:  # MARK: RegionSketch
 
     def recursive_projector(self, target: 'RegionSketch') -> 'SketchRecursion':
         """
-        Builds the gather and new values for a contained ``target`` sketch.
+        Builds the gather and new values for an expanded target sketch.
+
+        Parameters
+        ----------
+        target : RegionSketch
+            Same-pool sketch whose region contains this sketch's sites.
         """
         if not isinstance(target, RegionSketch):
             raise TypeError('`target` should be RegionSketch type')
@@ -371,7 +459,25 @@ class RegionSketch:  # MARK: RegionSketch
 
 @dataclass(frozen=True)
 class SketchRecursion:  # MARK: SketchRecursion
-    """Gather map and new site values relating two regional sketch bases."""
+    """
+    Gather map and new site values relating two regional sketch bases.
+
+    ``gather`` selects child rows in parent-row order. It acts only on the
+    regional row axis; ``new_values`` supplies newly introduced coordinates.
+
+    Parameters
+    ----------
+    pool_id : hashable
+        Identifier of the shared sample pool.
+    child_region, parent_region : SiteRegion
+        Source and target regions of the row mapping.
+    child_size, parent_size : int
+        Number of unique rows in the source and target regions.
+    gather : torch.Tensor
+        Long vector of shape ``(parent_size,)`` with child row indices.
+    new_values : sequence of torch.Tensor, optional
+        Parent-aligned values for each site added to the child region.
+    """
 
     pool_id: Hashable
     child_region: SiteRegion
@@ -393,7 +499,7 @@ class SketchRecursion:  # MARK: SketchRecursion
             if value < 1:
                 raise ValueError(f'`{name}` should be positive')
         if not isinstance(self.gather, torch.Tensor) or \
-                self.gather.ndim != 1 or self.gather.dtype != torch.long:
+                (self.gather.ndim != 1) or (self.gather.dtype != torch.long):
             raise TypeError('`gather` should be a one-dimensional long tensor')
         if self.gather.shape[0] != self.parent_size:
             raise ValueError('`gather` should contain one id per parent row')
@@ -409,7 +515,7 @@ class SketchRecursion:  # MARK: SketchRecursion
             if not isinstance(value, torch.Tensor):
                 raise TypeError(
                     '`new_values` should contain torch.Tensor objects')
-            if value.shape[0] != self.parent_size:
+            if (value.ndim < 1) or (value.shape[0] != self.parent_size):
                 raise ValueError(
                     'Every tensor in `new_values` should match parent size')
             if value.device != self.gather.device:
@@ -427,13 +533,30 @@ class SketchRecursion:  # MARK: SketchRecursion
         return self.child_region.difference(self.parent_region)
 
     def value(self, site: int) -> torch.Tensor:
-        """Returns parent-aligned values for one newly introduced ``site``."""
+        """
+        Returns parent-aligned values for one newly introduced site.
+
+        Parameters
+        ----------
+        site : int
+            Site in ``new_region``.
+        """
         if not self.new_region.contains(site):
-            raise ValueError('`site` should belong to the new recursion region')
+            raise ValueError(
+                '`site` should belong to the new recursion region')
         return self.new_values[self.new_region.sites.index(site)]
 
     def apply(self, tensor: torch.Tensor, axis: int = 0) -> torch.Tensor:
-        """Gathers a child sketch ``axis`` into parent-row order."""
+        """
+        Gathers the selected child axis into parent-row order.
+
+        Parameters
+        ----------
+        tensor : torch.Tensor
+            Tensor whose selected axis has size ``child_size``.
+        axis : int, optional
+            Axis representing the child sketch rows.
+        """
         if not isinstance(tensor, torch.Tensor):
             raise TypeError('`tensor` should be torch.Tensor type')
         if isinstance(axis, bool) or not isinstance(axis, int):
@@ -442,7 +565,7 @@ class SketchRecursion:  # MARK: SketchRecursion
             raise ValueError('`tensor` should have at least one dimension')
         if axis < 0:
             axis += tensor.ndim
-        if axis < 0 or axis >= tensor.ndim:
+        if (axis < 0) or (axis >= tensor.ndim):
             raise ValueError('`axis` is out of bounds for `tensor`')
         if tensor.shape[axis] != self.child_size:
             raise ValueError(
@@ -450,14 +573,22 @@ class SketchRecursion:  # MARK: SketchRecursion
         return tensor.index_select(axis, self.gather.to(tensor.device))
 
     def compose(self, next_recursion: 'SketchRecursion') -> 'SketchRecursion':
-        """Composes consecutive monotone sketch expansions by gather."""
+        """
+        Composes consecutive monotone sketch expansions by gather.
+
+        Parameters
+        ----------
+        next_recursion : SketchRecursion
+            Expansion whose child region equals this parent region.
+        """
         if not isinstance(next_recursion, SketchRecursion):
             raise TypeError(
                 '`next_recursion` should be SketchRecursion type')
         if self.pool_id != next_recursion.pool_id:
-            raise ValueError('Recursions should belong to the same sample pool')
-        if self.parent_region != next_recursion.child_region or \
-                self.parent_size != next_recursion.child_size:
+            raise ValueError(
+                'Recursions should belong to the same sample pool')
+        if (self.parent_region != next_recursion.child_region) or \
+                (self.parent_size != next_recursion.child_size):
             raise ValueError('Recursions should have consecutive regions')
         if not self.parent_region.contains(self.child_region) or \
                 not next_recursion.parent_region.contains(
@@ -492,11 +623,13 @@ class SketchRecursion:  # MARK: SketchRecursion
         if not self.parent_region.contains(self.child_region):
             raise ValueError('Only a regional expansion can be inverted')
         if self.child_size != self.parent_size:
-            raise ValueError('The recursion should be bijective to be inverted')
+            raise ValueError(
+                'The recursion should be bijective to be inverted')
         expected = torch.arange(
             self.child_size, device=self.gather.device, dtype=torch.long)
         if not torch.equal(torch.sort(self.gather).values, expected):
-            raise ValueError('The recursion should be bijective to be inverted')
+            raise ValueError(
+                'The recursion should be bijective to be inverted')
         return SketchRecursion(
             pool_id=self.pool_id,
             child_region=self.parent_region,

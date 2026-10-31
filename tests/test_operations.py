@@ -6059,16 +6059,19 @@ class TestEinsum:  # MARK: TestEinsum
         ([node] + list(net.data_nodes.values())))
         assert out_node.shape == (10, 2)
 
-    def test_stacked_einsum_mps(self):
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('seed', [47, 593])
+    def test_stacked_einsum_mps(self, dtype, seed):
         # MPS
+        generator = torch.Generator().manual_seed(seed)
         net = tk.TensorNetwork()
         nodes = []
         input_edges = []
         for i in range(11):
-            node = tk.Node(shape=(2, 5, 2),
+            node = tk.Node(tensor=torch.randn(
+                               2, 5, 2, dtype=dtype, generator=generator),
                            axes_names=('left', 'input', 'right'),
-                           network=net,
-                           init_method='randn')
+                           network=net)
             nodes.append(node)
             if i != 5:
                 input_edges.append(node['input'])
@@ -6080,7 +6083,7 @@ class TestEinsum:  # MARK: TestEinsum
         net['node_10']['right'] ^ net['node_0']['left']
 
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(100, 10, 5)
+        data = torch.randn(100, 10, 5, dtype=dtype, generator=generator)
         net.add_data(data)
 
         result_list = tk.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:],
@@ -6101,7 +6104,12 @@ class TestEinsum:  # MARK: TestEinsum
         node2 = tk.einsum('lbol->bo', node2)
 
         assert node2.shape == (100, 5)
-        assert torch.allclose(node1.tensor, node2.tensor, rtol=1e-3, atol=1e-5)
+        # Contraction orders round differently near cancellation. Compare
+        # the complete output at its global scale, including in float32.
+        error = torch.linalg.vector_norm(node1.tensor - node2.tensor)
+        scale = torch.linalg.vector_norm(node2.tensor)
+        rtol = 1e-5 if dtype == torch.float32 else 1e-12
+        assert error <= rtol * scale
 
     def test_aux(self):
         # MPS
@@ -6128,15 +6136,18 @@ class TestEinsum:  # MARK: TestEinsum
 
         assert torch.allclose(node3.tensor, node4.tensor)
 
-    def test_stacked_einsum_param_mps(self):
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('seed', [47, 593])
+    def test_stacked_einsum_param_mps(self, dtype, seed):
+        generator = torch.Generator().manual_seed(seed)
         net = tk.TensorNetwork()
         nodes = []
         input_edges = []
         for i in range(11):
-            node = tk.ParamNode(shape=(2, 5, 2),
+            node = tk.ParamNode(tensor=torch.randn(
+                                    2, 5, 2, dtype=dtype, generator=generator),
                                 axes_names=('left', 'input', 'right'),
-                                network=net,
-                                init_method='randn')
+                                network=net)
             nodes.append(node)
             if i != 5:
                 input_edges.append(node['input'])
@@ -6148,7 +6159,7 @@ class TestEinsum:  # MARK: TestEinsum
         net['paramnode_10']['right'] ^ net['paramnode_0']['left']
 
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(100, 10, 5)
+        data = torch.randn(100, 10, 5, dtype=dtype, generator=generator)
         net.add_data(data)
 
         result_list = tk.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:],
@@ -6169,7 +6180,10 @@ class TestEinsum:  # MARK: TestEinsum
         node2 = tk.einsum('lbol->bo', node2)
 
         assert node2.shape == (100, 5)
-        assert torch.allclose(node1.tensor, node2.tensor, atol=1e-7, rtol=1e-3)
+        error = torch.linalg.vector_norm(node1.tensor - node2.tensor)
+        scale = torch.linalg.vector_norm(node2.tensor)
+        rtol = 1e-5 if dtype == torch.float32 else 1e-12
+        assert error <= rtol * scale
 
 
 class TestTNModels:  # MARK: TestTNModels

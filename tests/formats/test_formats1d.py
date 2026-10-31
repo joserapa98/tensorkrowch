@@ -1175,11 +1175,40 @@ def test_constructor_shapes_storage_and_dense_oracle(make_format, topology,
                           in_layout=format.in_layout, out_layout=format.out_layout,
                           in_coordinate_map=format.in_coordinate_map,
                           out_coordinate_map=format.out_coordinate_map)
-    for container in (list(format.cores), tuple(format.cores), iter(format.cores)):
+    for container in (list(format.cores), tuple(format.cores)):
         peer = type(format)(container, **kwargs)
         assert peer.cores is not format.cores
         assert all(new is old for new, old in zip(peer.cores, format.cores))
         assert_close(peer.contract_dense(), expected)
+
+    for container in (iter(format.cores), (core for core in format.cores),
+                      set(format.cores), dict(enumerate(format.cores)),
+                      'cores', b'cores'):
+        with pytest.raises(TypeError, match='sequence of torch.Tensor'):
+            type(format)(container, **kwargs)
+
+
+@pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])
+@pytest.mark.parametrize('mutation', ['assign', 'replace'])
+@pytest.mark.parametrize('container', ['iterator', 'generator'])
+def test_core_mutations_reject_non_sequences_without_changing_state(
+        make_format, topology, mutation, container):
+    format = make_format(topology, 3).canonicalize(orth_center=1)
+    previous = format.cores
+    expected = format.contract_dense()
+    cores = (iter(previous) if container == 'iterator' else
+             (core for core in previous))
+
+    with pytest.raises(TypeError, match='sequence'):
+        if mutation == 'assign':
+            format.cores = cores
+        else:
+            format.replace_cores(0, cores)
+
+    assert next(cores) is previous[0]
+    assert format.cores is previous
+    assert format.orth_center == 1
+    torch.testing.assert_close(format.contract_dense(), expected)
 
 
 @pytest.mark.parametrize('topology', ['tt', 'tr', 'ttm', 'trm'])

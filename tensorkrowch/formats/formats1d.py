@@ -606,7 +606,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
 
     @cores.setter
     def cores(self, cores: Sequence[torch.Tensor]) -> None:
-        if isinstance(cores, torch.Tensor):
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError(
                 '`cores` should be a sequence of torch.Tensor objects')
         previous = self._cores
@@ -686,8 +686,9 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
             powers: Optional[Sequence[Tuple[float, float]]] = None
         ) -> None:
         """Replaces cores and bonds together, restoring state on invalid input."""
-        if isinstance(cores, torch.Tensor):
-            raise TypeError('`cores` should be a sequence of torch.Tensor objects')
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
+            raise TypeError(
+                '`cores` should be a sequence of torch.Tensor objects')
 
         cores = list(cores)
         previous = self.__dict__.copy()
@@ -785,7 +786,7 @@ class TensorFormat1D(TensorFormat):  # MARK: TensorFormat1D
         """
         if isinstance(first, bool) or not isinstance(first, int):
             raise TypeError('The first replacement site should be an integer')
-        if isinstance(cores, torch.Tensor):
+        if isinstance(cores, (str, bytes)) or not isinstance(cores, Sequence):
             raise TypeError('Replacement cores should be a sequence')
         if isinstance(bonds, torch.Tensor):
             raise TypeError('Replacement bonds should be a sequence or None')

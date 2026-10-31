@@ -1713,12 +1713,14 @@ class TestMPS:  # MARK: TestMPS
 
         assert torch.allclose(cond_output, original_output)
 
-    def test_condition_pbc_output_regions_at_both_ends(self):
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('mps_seed', [0, 227], indirect=True)
+    def test_condition_pbc_output_regions_at_both_ends(self, dtype, mps_seed):
         mps = tk.models.MPS(n_features=5,
                             phys_dim=2,
                             bond_dim=2,
                             boundary='pbc',
-                            out_features=[0, 3, 4])
+                            out_features=[0, 3, 4]).to(dtype=dtype)
         out_values = [1, 0, 1]
         out_data = [
             tk.embeddings.basis(torch.tensor(value), dim=2)
@@ -1735,7 +1737,12 @@ class TestMPS:  # MARK: TestMPS
         cond_output = cond_mps(data)
 
         assert cond_mps.boundary == 'pbc'
-        assert torch.allclose(cond_output, original_output)
+        # Conditioning changes contraction order. A nearly cancelled entry
+        # can have large relative roundoff while the complete output agrees.
+        error = torch.linalg.vector_norm(cond_output - original_output)
+        scale = torch.linalg.vector_norm(original_output)
+        rtol = 1e-5 if dtype == torch.float32 else 1e-12
+        assert error <= rtol * scale
 
     @pytest.mark.parametrize(
         'layout',

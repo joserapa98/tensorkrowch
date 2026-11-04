@@ -155,6 +155,7 @@ class TestTRALSExact:  # MARK: TestTRALSExact
 
 
 class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
+
     def test_uniform_samples_and_values_are_reused_by_generation(
         self, monkeypatch
     ):
@@ -169,7 +170,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         history = HistoryObserver()
         from importlib import import_module
         monkeypatch.setattr(
-            import_module('tensorkrowch.decompositions.als.tr'),
+            import_module('tensorkrowch.decompositions.als.tt'),
             '_resolve_observer', lambda *args: history)
         result = tk.decompositions.TRALS(
             tk.decompositions.CallableTensorSource(
@@ -551,7 +552,7 @@ def test_perturbed_nontrivial_ring_initialization_recovers_dense_target(
     cores = make_tr_cores((3, 3, 3, 3), (2, 2, 2, 2), dtype, generator)
     tensor = contract_tr_dense(cores)
     initial = [core + 0.01 * torch.randn(core.shape, dtype=dtype,
-                                       generator=generator)
+                                         generator=generator)
                for core in cores]
     result = tk.decompositions.TRALS(tensor, out_device=None).fit(
         initial_cores=initial, gauge=gauge,

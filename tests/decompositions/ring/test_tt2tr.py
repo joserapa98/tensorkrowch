@@ -291,12 +291,12 @@ class TestExpansionInvariants:
             matrix = target.permute(1, 2, 0).reshape(-1, target.shape[0])
             basis = torch.einsum('apb,bng->pnag', core, right).reshape(
                 matrix.shape[0], -1)
-        q, x = strategy._isometric_coordinates(
-            matrix, basis, direction, context)
+        q, x = provider._transport_matrices(
+            matrix, basis, context['from_sites'], direction)
         old_target = provider.cores[site].clone()
         step = expanded._advance(opening, old_target, context, direction)
-        old_dim = step.diagnostics['old_dimension']
-        coords = step.gauge.permute(1, 0, 2).reshape(step.gauge.shape[1], -1)
+        old_dim = step.metadata['old_dimension']
+        coords = step.core.permute(1, 0, 2).reshape(step.core.shape[1], -1)
         bond = 2 if direction == 'right' else 1
         power = 1 - provider.powers[bond][1 if direction == 'right' else 0]
         scale = provider.spectra[bond].pow(power)
@@ -341,7 +341,7 @@ class TestExpansionInvariants:
             step = expanded.advance_right(
                 opening, next_core, {'provider': provider,
                                     'from_sites': (1,), 'to_sites': (2,)})
-            fixed = step.gauge[0]
+            fixed = step.core[0]
             target = provider.local_target((2,), {}).reshape(
                 fixed.shape[0], -1)
             factor = torch.linalg.pinv(fixed) @ target
@@ -351,7 +351,7 @@ class TestExpansionInvariants:
                 factor = factor + null @ torch.ones(2, 2, dtype=dtype)
                 assert (factor - target_pair).norm() > .5
             else:
-                assert step.diagnostics['added'] == 1
+                assert step.metadata['added'] == 1
                 torch.testing.assert_close(factor, target_pair)
             torch.testing.assert_close(fixed @ factor, target)
 

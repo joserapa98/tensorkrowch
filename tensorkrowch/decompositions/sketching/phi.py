@@ -23,15 +23,16 @@ from typing import (Any,
 
 import torch
 
-from tensorkrowch.utils import _INTEGER_DTYPES
+from tensorkrowch.utils import _INTEGER_DTYPES, truncated_svd
 
-from tensorkrowch.decompositions.metrics import EvaluationStats
-from tensorkrowch.decompositions.sketching.evaluations import (
-    ConfigurationMap, _EvaluationPlanBuilder, _EvaluationRequest)
+from tensorkrowch.decompositions.metrics import (EvaluationStats,
+                                                 TruncationRecord)
+from tensorkrowch.decompositions.sketching.evaluations import ConfigurationMap
 from tensorkrowch.decompositions.sketching.regions import (RegionSketch,
                                                            SiteRegion)
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 from tensorkrowch.decompositions.sources import (ConfigurationBatch,
+                                                 DenseTensorSource,
                                                  BaseSource)
 
 
@@ -40,7 +41,8 @@ PhiComponent = Union[RegionSketch, AxisComponent]
 
 
 if TYPE_CHECKING:
-    from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
+    from tensorkrowch.decompositions.sketching.projections import (
+        RangeProjector)
 
 
 def _normalize_selection(shape: Sequence[int],
@@ -202,8 +204,10 @@ class PhiOperator:  # MARK: PhiOperator
     :meth:`evaluate` and :meth:`fiber` can query selected entries without
     constructing the complete tensor. :meth:`materialize` fills ``tensor``,
     initially ``None``, and later queries reuse it. Clearing ``tensor`` drops
-    that cache. Fitting or truncating an axis produces separate tensors and
-    does not change the operator's coordinates.
+    that cache. :meth:`fit` stores physical-basis coefficients and fitting
+    diagnostics on this operator. :meth:`truncate` updates ``coefficients``
+    and retains central lifting maps in ``left_lift`` and ``right_lift``.
+    These operations leave the original query coordinates and cache unchanged.
 
     Parameters
     ----------
@@ -335,10 +339,164 @@ class PhiOperator:  # MARK: PhiOperator
                            if input_kind is None else input_kind)
         self.shape = tuple(shape)
         self.layout = tuple(layout)
+
+        # Original query coordinates and the shared evaluation cache.
         self.tensor = None
         self._configuration_map = None
         self._handle = None
         self._last_stats = None
+
+        # Fitted coefficients and directional SVD lifting maps.
+        self.coefficients = None
+        self.left_lift = self.right_lift = None
+        self.truncations = self.projections = ()
+
+        # Physical-input fitting diagnostics and optional trainable model.
+        self.record = None
+        self.model = self.model_state = None
+        self.metadata = {}
+
+    @classmethod
+    def from_tensor(cls, tensor: torch.Tensor) -> 'PhiOperator':
+        """
+        Creates a local operator from a Phi already obtained by contraction.
+
+        Parameters
+        ----------
+        tensor : torch.Tensor
+            Materialized local tensor. Its storage is shared, not copied.
+        """
+        source = DenseTensorSource(tensor)
+        components = [(site, torch.arange(dim, device=tensor.device))
+                      for site, dim in enumerate(tensor.shape)]
+        phi = cls(source, components, _OutputSpec((), tensor.ndim))
+        phi.tensor = tensor
+        phi.coefficients = tensor
+        return phi
+
+    def _set_prepared(self, tensor: torch.Tensor,
+                      left: Optional[torch.Tensor],
+                      right: Optional[torch.Tensor], truncations: Sequence,
+                      projections: Sequence) -> 'PhiOperator':
+        """Retains coefficients and their isometric lifting maps together."""
+        self.coefficients = tensor
+        self.left_lift, self.right_lift = left, right
+        self.truncations = tuple(truncations)
+        self.projections = tuple(projections)
+        return self
+
+    def truncate(self, direction: Optional[str], *,
+                 rank_left: Optional[int] = None,
+                 rank_right: Optional[int] = None,
+                 numerical: Tuple[bool, bool] = (False, False),
+                 cutoff: Optional[float] = None,
+                 atol: Optional[float] = None,
+                 rtol: Optional[float] = None,
+                 cum_percentage: Optional[float] = None,
+                 projector: Optional['RangeProjector'] = None,
+                 generator: Optional[torch.Generator] = None,
+                 site: Optional[int] = None,
+                 collect_metrics: bool = False) -> 'PhiOperator':
+        """
+        Truncates coefficients, retaining spectra and central lifting maps.
+
+        Parameters
+        ----------
+        direction : {"left", "right", "center"} or None
+            External coefficient axes to truncate; ``None`` keeps all axes.
+        rank_left, rank_right : int, optional
+            Maximum retained dimensions of the two external coefficient axes.
+        numerical : tuple of bool
+            Force numerical support discovery at each axis under its cap.
+        cutoff, atol, rtol, cum_percentage : float, optional
+            Singular-value cutoff, absolute/relative discarded squared mass,
+            or minimum retained squared mass, as in ``truncated_svd``.
+        projector : RangeProjector, optional
+            Range-compression strategy before the local SVD.
+        generator : torch.Generator, optional
+            Generator used by a randomized projector.
+        site : int, optional
+            Global site index used to label truncation records.
+        collect_metrics : bool
+            Whether to retain projection and truncation measurements.
+
+        Returns
+        -------
+        PhiOperator
+            This operator with updated ``coefficients``, ``left_lift`` and
+            ``right_lift``. Original query coordinates and cache are unchanged.
+        """
+        tensor = (self.coefficients if self.coefficients is not None
+                  else self.materialize())
+        if direction is None:
+            self.coefficients = tensor
+            return self
+        if direction not in ('left', 'right', 'center'):
+            raise ValueError("`direction` should be 'left', 'right' "
+                             "or 'center'")
+        truncations = []
+        projections = []
+
+        def split(matrix: torch.Tensor,
+                  rank: Optional[int],
+                  cut: Optional[int],
+                  discover: bool = False) -> Tuple[torch.Tensor, ...]:
+            options = {'rank': rank, 'cutoff': cutoff, 'atol': atol,
+                       'rtol': rtol, 'cum_percentage': cum_percentage}
+            # Auxiliary pair cuts discover support under their physical cap.
+            if ((rank is None) or discover) and all(
+                    value is None for value in (
+                    cutoff, atol, rtol, cum_percentage)):
+                options['rtol'] = (max(matrix.shape) *
+                                   torch.finfo(matrix.real.dtype).eps) ** 2
+            projection = None
+            if projector is not None:
+                projection = projector.project(
+                    matrix, rank=rank, generator=generator,
+                    return_info=collect_metrics)
+                matrix = projection.small_matrix
+                if projection.record is not None:
+                    projections.append(projection.record)
+            if collect_metrics:
+                u, s, vh, info = truncated_svd(
+                    matrix, return_info=True, **options)
+                if (cut is not None) and (cut >= 0):
+                    truncations.append(TruncationRecord.from_svd_info(
+                        info, site=cut))
+            else:
+                u, s, vh = truncated_svd(matrix, **options)
+            if projection is not None:
+                u = projection.lift_left(u)
+            return u, s, vh
+
+        left_size, dimension, right_size = tensor.shape
+        if direction == 'left':
+            u, s, _ = split(
+                tensor.reshape(left_size, -1).mH, rank_left,
+                None if site is None else site - 1, numerical[0])
+            basis = (s.to(u.dtype).unsqueeze(-1) * u.mH).reshape(
+                u.shape[-1], dimension, right_size)
+            return self._set_prepared(
+                basis, None, None, truncations, projections)
+
+        u, s, vh = split(
+            tensor.reshape(-1, right_size), rank_right, site, numerical[1])
+        basis = (u * s.to(u.dtype)).reshape(
+            left_size, dimension, u.shape[-1])
+        if direction == 'right':
+            return self._set_prepared(
+                basis, None, None, truncations, projections)
+
+        right = vh
+        # Select both supports in the original Phi metric. Their isometric
+        # lifts leave all retained spectral scales inside the central tensor.
+        _, _, vh = split(
+            tensor.reshape(left_size, -1).mH, rank_left,
+            None if site is None else site - 1, numerical[0])
+        left = vh.mH
+        compact = left.mH @ basis.reshape(left_size, -1)
+        basis = compact.reshape(left.shape[-1], dimension, right.shape[0])
+        return self._set_prepared(basis, left, right, truncations, projections)
 
     @property
     def last_stats(self) -> Optional[EvaluationStats]:
@@ -399,16 +557,12 @@ class PhiOperator:  # MARK: PhiOperator
 
     def _request(self,
                  index_selection: Optional[torch.Tensor]
-                 ) -> _EvaluationRequest:
+                 ) -> tuple:
         """Builds one flattened request without evaluating the source."""
         selection, result_shape = _normalize_selection(
             self.shape, index_selection, self.source.device)
         configurations, labels = self._configuration_and_labels(selection)
-        return _EvaluationRequest(
-            configurations=configurations,
-            result_shape=result_shape,
-            output_spec=self.output_spec,
-            output_labels=labels)
+        return configurations, result_shape, labels
 
     def configuration_batch(self,
                             index_selection: Optional[torch.Tensor] = None
@@ -424,27 +578,12 @@ class PhiOperator:  # MARK: PhiOperator
             variables select source output components and are absent from the
             returned input configurations.
         """
-        return self._request(index_selection).configurations
+        return self._request(index_selection)[0]
 
-    def collect(self,
-                builder: _EvaluationPlanBuilder,
+    def collect(self, configuration_map: ConfigurationMap,
                 index_selection: Optional[torch.Tensor] = None) -> int:
-        """
-        Collects this Phi request in a shared evaluation-plan ``builder``.
-
-        Parameters
-        ----------
-        builder : _EvaluationPlanBuilder
-            Unfrozen planner using the same source as this Phi.
-        index_selection : torch.Tensor, optional
-            Integer indices with shape ``(*batch, len(shape))``. Collects the
-            complete Phi when omitted. Returns the request's integer handle.
-        """
-        if not isinstance(builder, _EvaluationPlanBuilder):
-            raise TypeError('`builder` should be _EvaluationPlanBuilder type')
-        if builder.source is not self.source:
-            raise ValueError('The builder and Phi should share a source')
-        return builder.collect(self._request(index_selection))
+        """Registers this operator's entries in a shared configuration map."""
+        return configuration_map.register(self, index_selection)
 
     def _bind(self, configuration_map: ConfigurationMap, handle: int) -> None:
         """Reuses a shared source table and its planned full-Phi gather."""
@@ -471,10 +610,9 @@ class PhiOperator:  # MARK: PhiOperator
                 self._handle, index_selection=index_selection)
             self._last_stats = self._configuration_map.stats
             return result
-        builder = _EvaluationPlanBuilder(self.source)
-        handle = self.collect(builder, index_selection)
-        configuration_map = ConfigurationMap(builder.freeze(),
+        configuration_map = ConfigurationMap(self.source,
                                              batch_size=batch_size)
+        handle = configuration_map.register(self, index_selection)
         result = configuration_map._result(handle)
         self._last_stats = configuration_map.stats
         return result
@@ -512,7 +650,7 @@ class PhiOperator:  # MARK: PhiOperator
 
         Regional and output axes cannot be replaced. The returned operator
         owns no evaluated ``values`` and can therefore be collected into a new
-        evaluation plan before that plan is frozen.
+        configuration map before that map is frozen.
 
         Parameters
         ----------
@@ -570,7 +708,7 @@ class PhiOperator:  # MARK: PhiOperator
             axis: int,
             fitter: Any,
             domain: torch.Tensor,
-            return_info: bool = False) -> 'FittedInputAxis':
+            return_info: bool = False) -> 'PhiOperator':
         """
         Fits one explicit input axis using an input fitter.
 
@@ -584,7 +722,7 @@ class PhiOperator:  # MARK: PhiOperator
             Evaluated input values with shape ``(n_values, *feature_shape)``.
         return_info : bool, optional
             Whether to include fitting diagnostics in the returned
-            ``FittedInputAxis``. Defaults to ``False``.
+            ``PhiOperator``. Defaults to ``False``.
         """
         from tensorkrowch.decompositions.sketching.fitting import InputFitter
 
@@ -620,17 +758,17 @@ class PhiOperator:  # MARK: PhiOperator
         if isinstance(component, tuple) and (component[0] in self.input_sites):
             base_selection = selection[..., 0, :]
             base_request = self._request(base_selection)
-            if base_request.configurations.packed:
+            if base_request[0].packed:
                 site, values = component
                 source_axis = self.source.in_sites[
                     self.input_sites.index(site)]
                 before = getattr(self.source, 'evaluation_stats', None)
                 fiber = self.source.fiber(
-                    base_request.configurations,
+                    base_request[0],
                     source_axis,
                     values.to(self.source.device))
                 expected = (
-                    base_request.configurations.batch_size,
+                    base_request[0].batch_size,
                     self.shape[normalized_axis])
                 if fiber.shape[:2] != expected:
                     raise ValueError(
@@ -656,7 +794,7 @@ class PhiOperator:  # MARK: PhiOperator
                 flat = self.output_spec.validate_values(flat)
                 if self.output_spec.scalar:
                     return flat.reshape(result_shape)
-                labels = base_request.output_labels.to(fiber.device)
+                labels = base_request[2].to(fiber.device)
                 labels = labels.unsqueeze(1).expand(
                     -1, expected[1]).reshape(-1)
                 flat = flat.reshape(flat.shape[0], -1).gather(

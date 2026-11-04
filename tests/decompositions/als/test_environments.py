@@ -24,7 +24,7 @@ from tests.decompositions.als._oracles import (absorb_right_qr,
 
 def _empty_update():
     """Returns an atomic commit that only advances a fixed site."""
-    return tk.decompositions.CoreUpdateSet((), (), (), reason='fixed')
+    return dict(zip((), ()))
 
 
 def _prepared_local(cores, versions, order, site, samples=None,
@@ -34,10 +34,11 @@ def _prepared_local(cores, versions, order, site, samples=None,
         cores, core_versions=versions, renormalize=renormalize)
     cache.prepare_sweep(order, samples=samples)
     for previous_site in order:
-        environment = cache.local_environment(previous_site)
+        cache.design(previous_site)
+        environment = cache
         if previous_site == site:
             return environment
-        cache.commit(_empty_update())
+        cache.update(_empty_update())
     raise RuntimeError('Requested site is not in the sweep')
 
 
@@ -58,14 +59,12 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         cache.prepare_sweep(order)
 
         for site in order:
-            local = cache.local_environment(site)
+            cache.design(site)
+            local = cache
             expected = dense_local_design(cores, site, topology='tt')
             assert torch.allclose(
-                local.design(), expected, rtol=1e-12, atol=1e-12)
-            assert local.key.direction == direction
-            assert local.key.device == cores[0].device
-            assert local.key.dtype == dtype
-            cache.commit(_empty_update())
+                local.matrix, expected, rtol=1e-12, atol=1e-12)
+            cache.update(_empty_update())
 
     @pytest.mark.parametrize('direction', ['forward', 'reverse'])
     def test_sampled_slices_match_selected_dense_rows(self, direction):
@@ -87,30 +86,29 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         cache.prepare_sweep(order, samples=samples)
 
         for site in order:
-            local = cache.local_environment(site)
+            cache.design(site)
+            local = cache
             expected = dense_local_design(
                 cores, site, topology='tt').index_select(0, flat_ids)
-            assert torch.allclose(local.design(), expected)
-            assert local.key.sample_generation == 4
-            cache.commit(_empty_update())
+            assert torch.allclose(local.matrix, expected)
+            cache.update(_empty_update())
 
     def test_local_commit_grows_prefix_from_updated_core(self):
         cores = make_tt_cores(generator=torch.Generator().manual_seed(42))
         cache = tk.decompositions.TTEnvironmentCache(cores)
         order = tuple(range(len(cores)))
         cache.prepare_sweep(order)
-        cache.local_environment(0)
+        cache.design(0)
         new_core = cores[0] + 0.1
 
-        cache.commit(tk.decompositions.CoreUpdateSet(
-            sites=(0,), cores=(new_core,), versions=(1,)))
-        local = cache.local_environment(1)
+        cache.update(dict(zip((0,), (new_core,))))
+        cache.design(1)
+        local = cache
         expected_cores = [new_core, *cores[1:]]
         expected = _prepared_local(
             expected_cores, (1, 0, 0), order, site=1)
 
-        assert torch.allclose(local.design(), expected.design())
-        assert local.key.dependency_versions[0] == (0, 1)
+        assert torch.allclose(local.matrix, expected.matrix)
 
     def test_qr_update_of_current_and_neighbour_is_atomic(self):
         cores = make_tt_cores(
@@ -122,20 +120,17 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         cache = tk.decompositions.TTEnvironmentCache(cores)
         order = tuple(range(len(cores)))
         cache.prepare_sweep(order)
-        cache.local_environment(0)
+        cache.design(0)
 
-        cache.commit(tk.decompositions.CoreUpdateSet(
-            sites=(0, 1),
-            cores=(gauged[0], gauged[1]),
-            versions=(1, 1),
-            reason='qr'))
-        local = cache.local_environment(1)
+        cache.update(dict(zip((0, 1), (gauged[0], gauged[1]))))
+        cache.design(1)
+        local = cache
         expected = _prepared_local(
             gauged, (1, 1, 0), order, site=1)
 
         assert torch.allclose(contract_tt_dense(cores),
                               contract_tt_dense(gauged))
-        assert torch.allclose(local.design(), expected.design())
+        assert torch.allclose(local.matrix, expected.matrix)
 
     def test_forward_far_normalization_rebuilds_affected_suffixes(self):
         cores = make_tt_cores(
@@ -148,20 +143,17 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         cache = tk.decompositions.TTEnvironmentCache(cores)
         order = tuple(range(len(cores)))
         cache.prepare_sweep(order)
-        cache.local_environment(0)
+        cache.design(0)
 
-        cache.commit(tk.decompositions.CoreUpdateSet(
-            sites=(0, 2),
-            cores=(updated[0], updated[2]),
-            versions=(1, 1),
-            reason='normalization'))
-        local = cache.local_environment(1)
+        cache.update(dict(zip((0, 2), (updated[0], updated[2]))))
+        cache.design(1)
+        local = cache
         expected = _prepared_local(
             updated, (1, 0, 1, 0), order, site=1)
 
         assert torch.allclose(contract_tt_dense(cores),
                               contract_tt_dense(updated))
-        assert torch.allclose(local.design(), expected.design())
+        assert torch.allclose(local.matrix, expected.matrix)
 
     def test_reverse_far_normalization_rebuilds_affected_prefixes(self):
         cores = make_tt_cores(
@@ -174,26 +166,23 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         cache = tk.decompositions.TTEnvironmentCache(cores)
         order = tuple(reversed(range(len(cores))))
         cache.prepare_sweep(order)
-        cache.local_environment(3)
+        cache.design(3)
 
-        cache.commit(tk.decompositions.CoreUpdateSet(
-            sites=(3, 1),
-            cores=(updated[3], updated[1]),
-            versions=(1, 1),
-            reason='normalization'))
-        local = cache.local_environment(2)
+        cache.update(dict(zip((3, 1), (updated[3], updated[1]))))
+        cache.design(2)
+        local = cache
         expected = _prepared_local(
             updated, (0, 1, 0, 1), order, site=2)
 
         assert torch.allclose(contract_tt_dense(cores),
                               contract_tt_dense(updated))
-        assert torch.allclose(local.design(), expected.design())
+        assert torch.allclose(local.matrix, expected.matrix)
 
     def test_incompatible_update_fails_before_mutating_cache(self):
         cores = make_tt_cores(generator=torch.Generator().manual_seed(46))
         cache = tk.decompositions.TTEnvironmentCache(cores)
         cache.prepare_sweep(range(len(cores)))
-        cache.local_environment(0)
+        cache.design(0)
         invalid = torch.randn(
             1,
             cores[0].shape[1],
@@ -201,13 +190,12 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
             dtype=cores[0].dtype)
 
         with pytest.raises(ValueError, match='Adjacent TT ranks'):
-            cache.commit(tk.decompositions.CoreUpdateSet(
-                sites=(0,), cores=(invalid,), versions=(1,)))
+            cache.update(dict(zip((0,), (invalid,))))
 
         assert cache.core_versions == (0, 0, 0)
         assert all(before is after
                    for before, after in zip(cores, cache.cores))
-        cache.commit(_empty_update())
+        cache.update(_empty_update())
 
     def test_changing_direction_after_a_sweep_rebuilds_the_mirror_cache(self):
         cores = make_tt_cores(generator=torch.Generator().manual_seed(47))
@@ -216,15 +204,16 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         reverse = tuple(reversed(forward))
         cache.prepare_sweep(forward)
         for site in forward:
-            cache.local_environment(site)
-            cache.commit(_empty_update())
+            cache.design(site)
+            cache.update(_empty_update())
 
         cache.prepare_sweep(reverse)
         for site in reverse:
-            local = cache.local_environment(site)
+            cache.design(site)
+            local = cache
             assert torch.allclose(
-                local.design(), dense_local_design(cores, site, 'tt'))
-            cache.commit(_empty_update())
+                local.matrix, dense_local_design(cores, site, 'tt'))
+            cache.update(_empty_update())
 
     @pytest.mark.parametrize('direction', ['forward', 'reverse'])
     def test_standard_zip_up_contracts_each_core_once_per_side(
@@ -253,8 +242,8 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
             order = tuple(reversed(order))
         cache.prepare_sweep(order)
         for site in order:
-            cache.local_environment(site)
-            cache.commit(_empty_update())
+            cache.design(site)
+            cache.update(_empty_update())
 
         assert calls == {'left': len(cores), 'right': len(cores)}
 
@@ -274,16 +263,18 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         cache = tk.decompositions.TTEnvironmentCache(cores)
         order = tuple(range(len(cores)))
         cache.prepare_sweep(order, first_samples)
-        first_key = cache.local_environment(0).key
+        cache.design(0)
+        first_generation = cache._sample_generation
         cache.invalidate('sample_refresh')
 
         with pytest.raises(RuntimeError, match='sample_refresh'):
-            cache.local_environment(0)
+            cache.design(0)
         cache.prepare_sweep(order, second_samples)
-        second_key = cache.local_environment(0).key
+        cache.design(0)
+        second_generation = cache._sample_generation
 
-        assert first_key.sample_generation == 0
-        assert second_key.sample_generation == 1
+        assert first_generation == 0
+        assert second_generation == 1
 
     def test_global_log_normalization_preserves_regularized_solve(self):
         cores = [
@@ -303,12 +294,12 @@ class TestTTEnvironmentCache:  # MARK: TestTTEnvironmentCache
         direct_solution, _ = tk.decompositions.LeastSquaresSolver(
             l2_reg=regularization,
             column_scaling=False,
-            system_scaling=True).solve(direct.design(), target)
+            system_scaling=True).solve(direct.matrix, target)
         normalized_solution, _ = tk.decompositions.LeastSquaresSolver(
-            l2_reg=normalized.scale_l2_reg(regularization),
+            l2_reg=(regularization * (-2 * normalized.log_scale).exp()).item(),
             column_scaling=False,
             system_scaling=True).solve(
-                normalized.design(), normalized.scale_target(target))
+                normalized.matrix, (target * (-normalized.log_scale).exp()))
 
         assert normalized.log_scale > 0
         assert torch.allclose(
@@ -474,7 +465,7 @@ class TestLegacyTRALSCharacterization:  # MARK: TestLegacyTRALSCharacterization
 
 def _tr_environments_empty_update():
     """Advances a fixed site without changing a core."""
-    return tk.decompositions.CoreUpdateSet((), (), (), reason='fixed')
+    return dict(zip((), ()))
 
 
 class TestDirectTREnvironment:  # MARK: TestDirectTREnvironment
@@ -489,12 +480,12 @@ class TestDirectTREnvironment:  # MARK: TestDirectTREnvironment
         direct = tk.decompositions.DirectTREnvironment(cores)
 
         for site in range(len(cores)):
-            local = direct.local_environment(site)
+            direct.design(site)
+            local = direct
             expected = dense_local_design(cores, site, topology='tr')
             assert torch.allclose(
-                local.design(), expected, rtol=1e-12, atol=1e-12)
+                local.matrix, expected, rtol=1e-12, atol=1e-12)
             assert not local.sampled
-            assert local.key.direction == 'direct'
 
     def test_sampled_rows_preserve_order_and_duplicates(self):
         cores = make_tr_cores(generator=torch.Generator().manual_seed(91))
@@ -505,14 +496,13 @@ class TestDirectTREnvironment:  # MARK: TestDirectTREnvironment
             probabilities=probabilities,
             weights=(4 * probabilities).rsqrt(),
             generation=3)
-        local = tk.decompositions.DirectTREnvironment(
-            cores).local_environment(1, samples=samples)
+        local = tk.decompositions.DirectTREnvironment(cores)
+        local.design(1, samples=samples)
         expected = dense_local_design(
             cores, 1, topology='tr').index_select(0, ids)
 
-        assert torch.allclose(local.design(), expected)
+        assert torch.allclose(local.matrix, expected)
         assert local.sampled
-        assert local.key.sample_generation == 3
 
 
 class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
@@ -535,12 +525,12 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         cache.prepare_sweep(order)
 
         for site in order:
-            local = cache.local_environment(site)
+            cache.design(site)
+            local = cache
             expected = dense_local_design(cores, site, topology='tr')
             assert torch.allclose(
-                local.design(), expected, rtol=2e-12, atol=2e-12)
-            assert local.key.direction == direction
-            cache.commit(_tr_environments_empty_update())
+                local.matrix, expected, rtol=2e-12, atol=2e-12)
+            cache.update(_tr_environments_empty_update())
 
     @pytest.mark.parametrize('direction', ['forward', 'reverse'])
     def test_sampled_slices_match_direct_oracle(self, direction):
@@ -561,13 +551,13 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         cache.prepare_sweep(order, samples=samples)
 
         for site in order:
-            local = cache.local_environment(site)
+            cache.design(site)
+            local = cache
             expected = dense_local_design(
                 cores, site, topology='tr').index_select(0, ids)
-            assert torch.allclose(local.design(), expected)
+            assert torch.allclose(local.matrix, expected)
             assert local.sampled
-            assert local.key.sample_generation == 6
-            cache.commit(_tr_environments_empty_update())
+            cache.update(_tr_environments_empty_update())
 
     def test_cross_segment_gauge_update_is_atomic(self):
         cores = make_tr_cores(
@@ -579,19 +569,16 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         cache = tk.decompositions.TRSegmentEnvironmentCache(
             cores, n_segments=2)
         cache.prepare_sweep(range(len(cores)))
-        cache.local_environment(0)
-        cache.commit(_tr_environments_empty_update())
-        cache.local_environment(1)
-        cache.commit(tk.decompositions.CoreUpdateSet(
-            sites=(1, 2),
-            cores=(gauged[1], gauged[2]),
-            versions=(1, 1),
-            reason='qr'))
+        cache.design(0)
+        cache.update(_tr_environments_empty_update())
+        cache.design(1)
+        cache.update(dict(zip((1, 2), (gauged[1], gauged[2]))))
 
-        local = cache.local_environment(2)
-        expected = tk.decompositions.DirectTREnvironment(
-            gauged).local_environment(2)
-        assert torch.allclose(local.design(), expected.design())
+        cache.design(2)
+        local = cache
+        expected = tk.decompositions.DirectTREnvironment(gauged)
+        expected.design(2)
+        assert torch.allclose(local.matrix, expected.matrix)
         assert cache.core_versions == (0, 1, 1, 0)
 
     @pytest.mark.parametrize('direction', ['forward', 'reverse'])
@@ -608,21 +595,22 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         target = torch.randn(24, dtype=cores[0].dtype)
 
         for site in order:
-            local = cache.local_environment(site)
-            direct = tk.decompositions.DirectTREnvironment(
-                cache.cores).local_environment(site)
-            scale = local.log_scale.exp().to(local.design().dtype)
+            cache.design(site)
+            local = cache
+            direct = tk.decompositions.DirectTREnvironment(cache.cores)
+            direct.design(site)
+            scale = local.log_scale.exp().to(local.matrix.dtype)
             assert torch.allclose(
-                local.design() * scale,
-                direct.design(),
+                local.matrix * scale,
+                direct.matrix,
                 rtol=2e-12,
                 atol=2e-12)
             assert torch.allclose(
-                local.scale_target(target) * scale,
+                (target * (-local.log_scale).exp()) * scale,
                 target,
                 rtol=2e-12,
                 atol=2e-12)
-            cache.commit(_tr_environments_empty_update())
+            cache.update(_tr_environments_empty_update())
 
     def test_invalid_cross_segment_update_does_not_mutate_cache(self):
         cores = make_tr_cores(
@@ -630,7 +618,7 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         cache = tk.decompositions.TRSegmentEnvironmentCache(
             cores, n_segments=3)
         cache.prepare_sweep(range(len(cores)))
-        cache.local_environment(0)
+        cache.design(0)
 
         invalid = torch.randn(
             cores[2].shape[0] + 1,
@@ -638,16 +626,12 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
             cores[2].shape[2],
             dtype=cores[2].dtype)
         with pytest.raises(ValueError, match='Adjacent TR ranks'):
-            cache.commit(tk.decompositions.CoreUpdateSet(
-                sites=(2,),
-                cores=(invalid,),
-                versions=(1,),
-                reason='invalid_far_update'))
+            cache.update(dict(zip((2,), (invalid,))))
 
         assert cache.core_versions == (0, 0, 0, 0)
         assert all(before is after
                    for before, after in zip(cores, cache.cores))
-        cache.commit(_tr_environments_empty_update())
+        cache.update(_tr_environments_empty_update())
 
     def test_segment_partition_is_balanced_and_complete(self):
         cores = make_tr_cores(
@@ -676,20 +660,20 @@ class TestTRSegmentEnvironmentCache:  # MARK: TestTRSegmentEnvironmentCache
         cache.prepare_sweep(order)
         updated = list(cores)
         for site in order:
-            local = cache.local_environment(site)
-            expected = tk.decompositions.DirectTREnvironment(
-                updated).local_environment(site)
+            cache.design(site)
+            local = cache
+            expected = tk.decompositions.DirectTREnvironment(updated)
+            expected.design(site)
             assert torch.allclose(
-                local.design() * local.log_scale.exp(), expected.design(),
+                local.matrix * local.log_scale.exp(), expected.matrix,
                 rtol=1e-11, atol=1e-11)
             if site == active:
                 updated[active] = updated[active] / 3
                 updated[receiver] = updated[receiver] * 3
-                cache.commit(tk.decompositions.CoreUpdateSet(
-                    (active, receiver), (updated[active], updated[receiver]),
-                    (1, 1), reason='skip_fixed_receiver'))
+                cache.update({active: updated[active],
+                              receiver: updated[receiver]})
             else:
-                cache.commit(_empty_update())
+                cache.update(_empty_update())
         assert torch.allclose(contract_tr_dense(
             updated), contract_tr_dense(cores))
 
@@ -707,21 +691,19 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
         assert cache.in_dim == (3,)
         assert cache.core_versions == (0,)
         cache.prepare_sweep((0,))
-        local = cache.local_environment(0)
+        cache.design(0)
+        local = cache
         expected = dense_local_design([core], 0, topology)
-        assert torch.allclose(local.design() * local.log_scale.exp(), expected)
+        assert torch.allclose(local.matrix * local.log_scale.exp(), expected)
         target = expected @ core.reshape(-1)
-        assert torch.allclose(local.scale_target(
-            target) * local.log_scale.exp(), target)
-        assert local.scale_l2_reg(0.5) == pytest.approx(
+        assert torch.allclose(
+            (target * (-local.log_scale).exp()) * local.log_scale.exp(),
+            target)
+        assert (0.5 * (-2 * local.log_scale).exp()).item() == pytest.approx(
             0.5 * torch.exp(-2 * local.log_scale).item())
-        with pytest.raises(ValueError, match='row dimension'):
-            local.scale_target(torch.tensor(1.))
-        with pytest.raises(ValueError, match='non-negative'):
-            local.scale_l2_reg(-1)
-        cache.commit(_empty_update())
+        cache.update(_empty_update())
         with pytest.raises(RuntimeError, match='complete'):
-            cache.local_environment(0)
+            cache.design(0)
 
     @pytest.mark.parametrize('cache_type', [
         tk.decompositions.TTEnvironmentCache,
@@ -739,51 +721,40 @@ class TestEnvironmentContracts:  # MARK: TestEnvironmentContracts
             cache_type(cores, renormalize=1)
         cache = cache_type(cores)
         with pytest.raises(RuntimeError, match='not prepared'):
-            cache.local_environment(0)
+            cache.design(0)
         with pytest.raises(ValueError, match='order'):
             cache.prepare_sweep((0,))
         with pytest.raises(TypeError, match='integers'):
             cache.prepare_sweep((False, True))
         cache.prepare_sweep((0, 1))
         with pytest.raises(TypeError, match='int type'):
-            cache.local_environment(False)
+            cache.design(False)
         with pytest.raises(ValueError, match='next site'):
-            cache.local_environment(1)
-        cache.local_environment(0)
+            cache.design(1)
+        cache.design(0)
         with pytest.raises(RuntimeError, match='committed first'):
             cache.prepare_sweep((0, 1))
         cache.invalidate('new samples')
         with pytest.raises(RuntimeError, match='new samples'):
-            cache.local_environment(0)
+            cache.design(0)
 
     @pytest.mark.parametrize('cache_type', [
         tk.decompositions.TTEnvironmentCache,
         tk.decompositions.TRSegmentEnvironmentCache,
     ])
-    @pytest.mark.parametrize('change', ['dimension', 'dtype', 'version'])
+    @pytest.mark.parametrize('change', ['dimension', 'dtype', 'site'])
     def test_invalid_commits_preserve_state(self, cache_type, change):
         cores = [torch.ones(1, 2, 1), torch.ones(1, 3, 1)]
         cache = cache_type(cores)
         cache.prepare_sweep((0, 1))
-        cache.local_environment(0)
+        cache.design(0)
         core = torch.ones(1, 3, 1) if change == 'dimension' else cores[0]
         if change == 'dtype':
             core = core.double()
-        version = 0 if change == 'version' else 1
+        site = 3 if change == 'site' else 0
         with pytest.raises(ValueError):
-            cache.commit(tk.decompositions.CoreUpdateSet(
-                (0,), (core,), (version,)))
+            cache.update({site: core})
         assert cache.core_versions == (0, 0)
         assert all(original is current for original,
                    current in zip(cores, cache.cores))
-        cache.commit(_empty_update())
-
-    @pytest.mark.parametrize('kwargs', [
-        {'sites': (0, 0), 'cores': (torch.ones(1),) * 2, 'versions': (1, 1)},
-        {'sites': (True,), 'cores': (torch.ones(1),), 'versions': (1,)},
-        {'sites': (0,), 'cores': (None,), 'versions': (1,)},
-        {'sites': (0,), 'cores': (torch.ones(1),), 'versions': (-1,)},
-    ])
-    def test_invalid_core_update_metadata(self, kwargs):
-        with pytest.raises((TypeError, ValueError)):
-            tk.decompositions.CoreUpdateSet(**kwargs)
+        cache.update(_empty_update())

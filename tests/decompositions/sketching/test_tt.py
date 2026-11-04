@@ -1,6 +1,5 @@
 """Tests for centered TT-RSS, TT-RS and their public wrappers."""
 
-from dataclasses import replace
 import gc
 import math
 import weakref
@@ -59,7 +58,8 @@ class TestTTRSS:  # MARK: TestTTRSS
             def fit(self, phi_view, axis, domain, return_info=False):
                 fitted = tk.decompositions.BasisFitter().fit(
                     phi_view, axis, domain, return_info=return_info)
-                return replace(fitted, tensor=fitted.tensor.real)
+                fitted.coefficients = fitted.coefficients.real
+                return fitted
 
         target = torch.full((2, 2), 1 + 1j, dtype=torch.complex128)
         result = tk.decompositions.TTRSS(
@@ -110,7 +110,7 @@ class TestTTRSS:  # MARK: TestTTRSS
         samples = torch.arange(2).repeat_interleave(3).reshape(-1, 1)
         labels = torch.arange(3).repeat(2)
         result = tk.decompositions.tt_rss(source, samples, rank=1,
-                                         labels=labels)
+                                          labels=labels)
         assert result.rank == []
         assert result.n_sites == 1
         torch.testing.assert_close(result.contract_dense(), tensor)
@@ -118,14 +118,14 @@ class TestTTRSS:  # MARK: TestTTRSS
     def test_noisy_matrix_keeps_auxiliary_svd_capacity_bounds(self):
         generator = torch.Generator().manual_seed(97)
         cores = [torch.randn(2, 2, 2, dtype=torch.float64,
-                              generator=generator)]
+                             generator=generator)]
         cores.extend(torch.randn(2, 2, 2, 2, dtype=torch.float64,
-                                  generator=generator) for _ in range(2))
+                                 generator=generator) for _ in range(2))
         cores.append(torch.randn(2, 2, 2, dtype=torch.float64,
-                                  generator=generator))
+                                 generator=generator))
         tensor = tk.formats.TTM(cores).contract_dense()
         noise = torch.randn(tensor.shape, dtype=tensor.dtype,
-                             generator=generator)
+                            generator=generator)
         noise = noise * (1e-7 * tensor.norm() / noise.norm())
         target = tensor + noise
         source = tk.decompositions.DenseTensorSource.matrix(
@@ -147,7 +147,7 @@ class TestTTRSS:  # MARK: TestTTRSS
     @pytest.mark.parametrize('rank', [2, (2, 2, 2, 2), None])
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     def test_centered_five_site_finite_tensor_recovery(self, center, rank,
-                                                     dtype):
+                                                       dtype):
         tensor = _rank_two_tensor((2, 3, 2, 3, 2), dtype)
         result = tk.decompositions.tt_rss(
             tensor, _grid(tensor.shape), rank=rank, center=center,
@@ -294,7 +294,7 @@ class TestTTRSS:  # MARK: TestTTRSS
 
     @pytest.mark.parametrize('out_position', [(0, 4), (1, 3)])
     def test_tensor_output_axis_placement_and_flattened_labels(self,
-                                                            out_position):
+                                                               out_position):
         domain = torch.tensor([0., 1.], dtype=torch.float64)
         inputs = torch.cartesian_prod(domain, domain, domain)
         samples = inputs.repeat_interleave(6, 0)
@@ -358,6 +358,7 @@ class TestTTRSS:  # MARK: TestTTRSS
     def test_generator_preserves_global_random_state(self):
         domain = torch.tensor([0., 1.], dtype=torch.float64)
         samples = torch.cartesian_prod(domain, domain, domain).repeat(4, 1)
+
         def embedding(x):
             return torch.stack((1 - x, x), -1)
 
@@ -608,7 +609,7 @@ class TestTTRS:  # MARK: TestTTRS
         train = tk.decompositions.tt_svd(tensor, rank=2)
         source = tk.decompositions.FormatSource(train)
         result = tk.decompositions.TTRS(source).fit(rank=2, center=center,
-                                                  batch_size=3)
+                                                    batch_size=3)
         torch.testing.assert_close(result.contract_dense(), tensor,
                                    rtol=1e-9, atol=1e-10)
         assert result.metadata['system']['source_path'] == 'structured_tt'
@@ -674,7 +675,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
     @pytest.mark.parametrize('ordering', ['grouped', 'interleaved'])
     @pytest.mark.parametrize('center', [0, 2, 3])
     def test_layouts_and_centers_fit_same_physical_function(self, ordering,
-                                                          center):
+                                                            center):
         layout = tk.formats.QuantizedLayout(2, base=2, level=2,
                                             ordering=ordering)
         domain = torch.tensor([[0., 1.], [-1., 1.]], dtype=torch.float64)
@@ -686,7 +687,7 @@ class TestQTTRSS:  # MARK: TestQTTRSS
             lambda x: 1 + x[:, 0] + 2 * x[:, 1], 2, layout=layout,
             coordinate_map=coordinate_map)
         result = tk.decompositions.qtt_rss(source, physical, rank=4,
-                                          center=center)
+                                           center=center)
         assert isinstance(result, tk.decompositions.QTTDecomposition)
         torch.testing.assert_close(result.evaluate_coordinates(physical),
                                    1 + physical[:, 0] + 2 * physical[:, 1])
@@ -753,12 +754,13 @@ class TestQTTRSS:  # MARK: TestQTTRSS
     @pytest.mark.parametrize('digit_order', [
         'coarse_to_fine', ('coarse_to_fine', 'fine_to_coarse')])
     def test_result_retains_coordinates_without_retaining_source(self,
-                                                               digit_order):
+                                                                 digit_order):
         layout = tk.formats.QuantizedLayout(
             2, 2, 2, ordering='interleaved', digit_order=digit_order)
         domain = torch.tensor([[0., 1.], [0., 1.]], dtype=torch.float64)
         indices = _grid((4, 4))
         coordinates = indices.to(torch.float64) / 3
+
         def function(x):
             return 1 + x[:, 0] + 2 * x[:, 1]
         reference = weakref.ref(function)
@@ -887,14 +889,15 @@ def test_continuous_matrix_rss_uses_output_basis_sites(out_shape):
     source = tk.decompositions.CallableSource.matrix(
         function, n_sites=2, out_shape=out_shape)
     coordinates = torch.cartesian_prod(torch.tensor([0., 1.]),
-                                        torch.tensor([0., 1.]))
+                                       torch.tensor([0., 1.]))
     samples = coordinates.repeat_interleave(4, 0)
+
     def embedding(x):
         return torch.stack((torch.ones_like(x), x), -1)
     result = tk.decompositions.TTRSS(
         source, embedding, domain=(torch.tensor([0., 1.]),) * 2).fit(
             samples, labels=torch.arange(4).repeat(4), rank=1)
     assert isinstance(result, tk.decompositions.TTMDecomposition)
-    torch.testing.assert_close(result.evaluate(
-        embedding(coordinates), in_sites=(0, 1), out_sites=()),
+    torch.testing.assert_close(
+        result.evaluate(embedding(coordinates), in_sites=(0, 1), out_sites=()),
         function(coordinates))

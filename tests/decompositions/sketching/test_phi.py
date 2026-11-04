@@ -8,7 +8,7 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.sketching.evaluations import (
-    ConfigurationMap, _EvaluationPlanBuilder)
+    ConfigurationMap)
 from tensorkrowch.decompositions.sketching.phi import PhiOperator, PhiView
 from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
@@ -33,11 +33,11 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             source, tuple((site, torch.arange(dim, device=device))
                           for site, dim in enumerate(tensor.shape)),
             _scalar_output_spec(5))
-        builder = _EvaluationPlanBuilder(source)
+        builder = ConfigurationMap(source)
         handle = phi.collect(builder)
-        configurations = ConfigurationMap(builder.freeze(), batch_size=7,
-                                          transform=lambda table:
-                                          table.values * 2)
+        configurations = builder
+        configurations._batch_size = 7
+        configurations._transform = lambda table: table.values * 2
         phi._bind(configurations, handle)
         selection = torch.tensor([[0, 2, 1, 0, 2], [1, 0, 0, 1, 1]],
                                  device=device)
@@ -107,11 +107,10 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             source, tuple((site, torch.arange(dim))
                           for site, dim in enumerate(source.in_dim)),
             _scalar_output_spec(3))
-        builder = _EvaluationPlanBuilder(source)
+        builder = ConfigurationMap(source)
         handle = phi.collect(builder)
-        configurations = ConfigurationMap(builder.freeze(),
-                                          transform=lambda table:
-                                          2 * table.values + 1)
+        configurations = builder
+        configurations._transform = lambda table: 2 * table.values + 1
         phi._bind(configurations, handle)
         selection = torch.tensor([[0, 1, 1], [1, 2, 0]])
 
@@ -225,7 +224,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
              (1, torch.tensor([0., 1.]))),
             _scalar_output_spec(2),
             input_kind='features')
-        builder = _EvaluationPlanBuilder(source)
+        builder = ConfigurationMap(source)
         phi.collect(builder)
         builder.freeze()
 
@@ -254,7 +253,7 @@ class TestPhiOperator:  # MARK: TestPhiOperator
             domain=torch.arange(3))
 
         assert torch.allclose(
-            fitted.tensor, torch.tensor([[1., 2.], [3., 4.]]))
+            fitted.coefficients, torch.tensor([[1., 2.], [3., 4.]]))
 
     def test_evaluate_select_and_materialized_views_are_consistent(self):
         source = tk.decompositions.DenseTensorSource(
@@ -445,3 +444,165 @@ class TestPhiOperator:  # MARK: TestPhiOperator
                 source,
                 ((0, torch.arange(2)), (0, torch.arange(2))),
                 output_spec)
+
+
+def _prepare_phi(tensor, direction, **options):
+    return PhiOperator.from_tensor(tensor).truncate(direction, **options)
+
+
+class TestPhiPreparation:
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('direction', ['left', 'right'])
+    def test_auxiliary_rank_discovery_respects_caps_and_selected_axis(
+            self, dtype, direction):
+        tensor = torch.ones(4, 2, 4, dtype=dtype)
+        left = direction == 'left'
+        prepared = _prepare_phi(
+            tensor, direction, rank_left=3, rank_right=3,
+            numerical=(left, not left))
+        prescribed = _prepare_phi(
+            tensor, direction, rank_left=3, rank_right=3,
+            numerical=(not left, left))
+        axis = 0 if left else -1
+
+        assert prepared.coefficients.shape[axis] == 1
+        assert prescribed.coefficients.shape[axis] == 3
+
+        tensor = torch.randn(4, 2, 4, dtype=dtype)
+        capped = _prepare_phi(
+            tensor, direction, rank_left=2, rank_right=2,
+            numerical=(True, True))
+        assert capped.coefficients.shape[axis] == 2
+
+    @pytest.mark.parametrize('numerical, shape', [
+        ((True, False), (1, 2, 3)),
+        ((False, True), (2, 2, 1)),
+        ((True, True), (1, 2, 1))])
+    def test_central_auxiliary_rank_discovery_is_axis_specific(
+            self, numerical, shape):
+        tensor = torch.ones(4, 2, 4, dtype=torch.float64)
+        prepared = _prepare_phi(
+            tensor, 'center', rank_left=2, rank_right=3,
+            numerical=numerical)
+
+        assert prepared.coefficients.shape == shape
+        approximation = torch.einsum(
+            'ab,bpc,cd->apd', prepared.left_lift, prepared.coefficients,
+            prepared.right_lift)
+        torch.testing.assert_close(approximation, tensor)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    @pytest.mark.parametrize('rtol', [None, 1e-22])
+    def test_central_support_selection_preserves_small_singular_values(
+            self, dtype, rtol):
+        factors = [torch.randn(size, 2, dtype=dtype) for size in (6, 2, 6)]
+        tensor = torch.einsum('a,p,b->apb', *(x[:, 0] for x in factors))
+        tensor = tensor + 1e-8 * torch.einsum(
+            'a,p,b->apb', *(x[:, 1] for x in factors))
+        prepared = _prepare_phi(tensor, 'center', rtol=rtol, site=2)
+
+        assert prepared.coefficients.shape == (2, 2, 2)
+        approximation = torch.einsum(
+            'ab,bpc,cd->apd', prepared.left_lift, prepared.coefficients,
+            prepared.right_lift)
+        torch.testing.assert_close(approximation, tensor,
+                                   rtol=1e-12, atol=1e-13)
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_central_factors_restore_full_target(self, dtype):
+        tensor = torch.randn(3, 4, 5, dtype=dtype)
+        prepared = _prepare_phi(tensor, 'center', site=2,
+                                collect_metrics=True)
+        reconstructed = torch.einsum(
+            'ab,bpc,cd->apd', prepared.left_lift, prepared.coefficients,
+            prepared.right_lift)
+
+        torch.testing.assert_close(reconstructed, tensor)
+        torch.testing.assert_close(prepared.coefficients.norm(), tensor.norm())
+        torch.testing.assert_close(
+            prepared.left_lift.mH @ prepared.left_lift,
+            torch.eye(prepared.left_lift.shape[-1], dtype=dtype))
+        torch.testing.assert_close(
+            prepared.right_lift @ prepared.right_lift.mH,
+            torch.eye(prepared.right_lift.shape[0], dtype=dtype))
+        assert len(prepared.truncations) == 2
+        assert [record.site for record in prepared.truncations] == [2, 1]
+
+    @pytest.mark.parametrize('direction', ['left', 'right'])
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_outward_tensors_retain_singular_values(self, direction, dtype):
+        tensor = torch.randn(3, 4, 5, dtype=dtype)
+        prepared = _prepare_phi(tensor, direction, rank_left=2, rank_right=2)
+        basis = prepared.coefficients
+        if direction == 'left':
+            basis = basis.reshape(basis.shape[0], -1).mH
+            matrix = tensor.reshape(tensor.shape[0], -1).mH
+        else:
+            basis = basis.reshape(-1, basis.shape[-1])
+            matrix = tensor.reshape(-1, tensor.shape[-1])
+
+        spectra = torch.linalg.svdvals(matrix)[:2]
+        torch.testing.assert_close(
+            basis.mH @ basis, torch.diag(spectra.square()).to(dtype))
+        assert prepared.left_lift is None
+        assert prepared.right_lift is None
+
+    @pytest.mark.parametrize('direction', ['left', 'right', 'center'])
+    def test_truncated_tensors_preserve_retained_scales(self, direction):
+        tensor = torch.diag(torch.tensor([4., 2., 0.1])).unsqueeze(1)
+        prepared = _prepare_phi(
+            tensor, direction, rank_left=2, rank_right=2)
+        assert prepared.coefficients.norm().item() == pytest.approx(20 ** 0.5)
+        if direction == 'center':
+            approximation = torch.einsum(
+                'ab,bpc,cd->apd', prepared.left_lift, prepared.coefficients,
+                prepared.right_lift)
+            assert (tensor - approximation).norm().item() == \
+                pytest.approx(0.1)
+
+    def test_randomized_projection_is_optional_and_owns_its_parameters(self):
+        tensor = torch.randn(3, 4, 5, dtype=torch.float64)
+        projector = tk.decompositions.RandomizedRangeProjector(
+            projection_dim=5, projection_oversampling=1, n_power_iter=1)
+        prepared = _prepare_phi(
+            tensor, 'center', projector=projector,
+            generator=torch.Generator().manual_seed(101),
+            collect_metrics=True, site=2)
+        reconstructed = torch.einsum(
+            'ab,bpc,cd->apd', prepared.left_lift, prepared.coefficients,
+            prepared.right_lift)
+
+        torch.testing.assert_close(reconstructed, tensor)
+        assert len(prepared.projections) == 2
+
+    def test_raw_boundary_keeps_original_tensor(self):
+        tensor = torch.randn(1, 3, 2)
+        prepared = _prepare_phi(tensor, None)
+        assert prepared.coefficients is tensor
+        assert prepared.truncations == ()
+
+
+class TestPreparedPhiOwnership:
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_raw_queries_survive_fitting_and_truncation(self, dtype):
+        generator = torch.Generator().manual_seed(708)
+        tensor = torch.randn(3, 4, 5, dtype=dtype, generator=generator)
+        phi = PhiOperator.from_tensor(tensor)
+        fitted = phi.fit(1, tk.decompositions.BasisFitter(), torch.arange(4))
+        assert fitted is phi
+        assert phi.tensor is tensor
+        assert phi.coefficients is not None
+        prepared = phi.truncate('center', rank_left=2, rank_right=2,
+                                collect_metrics=True, site=2)
+        assert prepared is phi
+        assert phi.coefficients.shape == (2, 4, 2)
+        assert phi.shape == tuple(tensor.shape)
+        torch.testing.assert_close(phi.materialize(), tensor)
+        selected = torch.tensor([[0, 1, 2], [2, 3, 4]])
+        torch.testing.assert_close(phi.evaluate(selected), tensor[
+            tuple(selected.unbind(1))])
+        assert len(phi.truncations) == 2
+        assert phi.left_lift.shape == (3, 2)
+        assert phi.right_lift.shape == (2, 5)

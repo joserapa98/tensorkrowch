@@ -1,13 +1,12 @@
 """Tests for ALS row sampling and refresh semantics."""
 
 from math import prod
+from types import SimpleNamespace
 
 import pytest
 import torch
 
 import tensorkrowch as tk
-
-from tensorkrowch.decompositions.als.sampling import _RowSamplingState
 
 from tests.decompositions.als._oracles import dense_local_design, make_tr_cores
 
@@ -29,7 +28,16 @@ def _mixed_canonical_cores(tensor, site, rank=2):
     return cores
 
 
+def _owner(n_rows, core_versions, device='cpu'):
+    dimensions = [n_rows] + [1] * (len(core_versions) - 1)
+    return SimpleNamespace(
+        cores=tuple(torch.empty(1, dim, 1, device=device)
+                    for dim in dimensions),
+        core_versions=tuple(core_versions))
+
+
 class TestSamplingPolicy:  # MARK: TestSamplingPolicy
+
     @pytest.mark.parametrize(
         'method', ['uniform', 'leverage', 'exact_leverage']
     )
@@ -79,7 +87,7 @@ class TestSamplingPolicy:  # MARK: TestSamplingPolicy
 class TestSampleBatch:  # MARK: TestSampleBatch
 
     def test_exact_rows_reproduce_the_complete_system(self):
-        state = _RowSamplingState(n_rows=6, core_versions=(0, 0, 0))
+        state = _owner(n_rows=6, core_versions=(0, 0, 0))
         batch = tk.decompositions.ExactRows().draw(
             state, site=1, n_samples=None, generator=None)
         environment = torch.randn(6, 3)
@@ -160,7 +168,7 @@ class TestSampleBatch:  # MARK: TestSampleBatch
 class TestRowSamplers:  # MARK: TestRowSamplers
 
     def test_uniform_sampling_is_deterministic(self):
-        state = _RowSamplingState(n_rows=11, core_versions=(0, 0))
+        state = _owner(n_rows=11, core_versions=(0, 0))
         sampler = tk.decompositions.UniformRows()
 
         first = sampler.draw(
@@ -185,7 +193,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
         generator = torch.Generator().manual_seed(31)
         environment = torch.randn(7, 3, generator=generator)
         target = torch.randn(7, 2, generator=generator)
-        state = _RowSamplingState(n_rows=7, core_versions=(0, 0, 0))
+        state = _owner(n_rows=7, core_versions=(0, 0, 0))
         batch = tk.decompositions.UniformRows().draw(
             state,
             site=1,
@@ -212,7 +220,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
             values=torch.tensor([2., 3., 4.]),
             in_dim=(2, 3))
         sampler = tk.decompositions.ObservedRows(observations)
-        state = _RowSamplingState(n_rows=6, core_versions=(0, 0))
+        state = _owner(n_rows=6, core_versions=(0, 0))
 
         batch = sampler.draw(
             state, site=0, n_samples=None, generator=None)
@@ -224,7 +232,7 @@ class TestRowSamplers:  # MARK: TestRowSamplers
     @pytest.mark.skipif(
         not torch.cuda.is_available(), reason='CUDA is not available')
     def test_cuda_sampling_uses_a_matching_generator(self):
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=5,
             core_versions=(0, 0),
             device=torch.device('cuda'))
@@ -242,62 +250,34 @@ class TestRowSamplers:  # MARK: TestRowSamplers
                 n_samples=8,
                 generator=torch.Generator().manual_seed(32))
 
-    def test_sampler_updates_only_the_committed_core_version(self):
-        state = _RowSamplingState(n_rows=8, core_versions=(2, 3, 4))
+    def test_draw_versions_follow_owner_without_mutating_previous_batch(self):
+        owner = _owner(8, (2, 3, 4))
+        sampler = tk.decompositions.UniformRows()
+        before = sampler.draw(owner, 0, 4, torch.Generator().manual_seed(3))
+        owner.core_versions = (2, 4, 4)
+        sampler.draw(owner, 1, 4, torch.Generator().manual_seed(3))
+        assert owner.core_versions == (2, 4, 4)
+        assert before.generation == 0
 
-        updated = tk.decompositions.UniformRows().update_after_core(
-            state, site=1)
 
-        assert state.core_versions == (2, 3, 4)
-        assert updated.core_versions == (2, 4, 4)
-
-
-class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
+class TestSampleReuse:  # MARK: TestSampleReuse
 
     def test_uniform_samples_and_probabilities_are_reused_by_generation(self):
         sampler = tk.decompositions.UniformRows()
-        policy = tk.decompositions.SampleRefreshPolicy(reuse_sweeps=2)
-        state = _RowSamplingState(n_rows=13, core_versions=(0, 0))
-        generator = torch.Generator().manual_seed(33)
-        invalidations = []
-
-        first, state, refreshed = policy.sample(
-            sampler,
-            state,
-            site=0,
-            n_samples=10,
-            generator=generator,
-            sweep=0,
-            invalidate=lambda old, new: invalidations.append(
-                (old, new.generation)))
-        reused, state, refreshed_reused = policy.sample(
-            sampler,
-            state,
-            site=0,
-            n_samples=10,
-            generator=generator,
-            sweep=1,
-            current=first,
-            invalidate=lambda old, new: invalidations.append(
-                (old, new.generation)))
-        second, state, refreshed_second = policy.sample(
-            sampler,
-            state,
-            site=0,
-            n_samples=10,
-            generator=generator,
-            sweep=2,
-            current=reused,
-            invalidate=lambda old, new: invalidations.append(
-                (old.generation, new.generation)))
-
-        assert refreshed
+        policy = tk.decompositions.SamplingPolicy(10, reuse_sweeps=2)
+        owner = _owner(13, (0, 0))
+        generator = torch.Generator().manual_seed(9)
+        first, refreshed = policy.sample(
+            sampler, owner, 0, 10, generator, sweep=0)
+        reused, refreshed_reused = policy.sample(
+            sampler, owner, 0, 10, generator, sweep=1, current=first)
+        second, refreshed_second = policy.sample(
+            sampler, owner, 0, 10, generator, sweep=2, current=reused)
+        assert refreshed and refreshed_second
         assert not refreshed_reused
-        assert refreshed_second
         assert reused is first
         assert torch.equal(reused.probabilities, first.probabilities)
         assert second.generation == 1
-        assert invalidations == [(None, 0), (0, 1)]
 
     def test_completion_never_refreshes_observed_rows(self):
         observations = tk.decompositions.SparseTensorSource(
@@ -305,12 +285,12 @@ class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
             values=torch.tensor([1., 2.]),
             in_dim=(2, 2))
         sampler = tk.decompositions.ObservedRows(observations)
-        policy = tk.decompositions.SampleRefreshPolicy(reuse_sweeps=1)
-        state = _RowSamplingState(n_rows=4, core_versions=(0, 0))
+        policy = tk.decompositions.SamplingPolicy(1, reuse_sweeps=1)
+        state = _owner(n_rows=4, core_versions=(0, 0))
 
-        first, state, refreshed = policy.sample(
+        first, refreshed = policy.sample(
             sampler, state, 0, None, None, sweep=0)
-        later, state, refreshed_later = policy.sample(
+        later, refreshed_later = policy.sample(
             sampler, state, 0, None, None, sweep=50, current=first)
 
         assert refreshed
@@ -319,7 +299,7 @@ class TestSampleRefreshPolicy:  # MARK: TestSampleRefreshPolicy
         assert later.generation == 0
 
     def test_generation_is_incremental_and_deterministic(self):
-        policy = tk.decompositions.SampleRefreshPolicy(reuse_sweeps=3)
+        policy = tk.decompositions.SamplingPolicy(1, reuse_sweeps=3)
 
         assert [policy.generation(sweep) for sweep in range(8)] == [
             0, 0, 0, 1, 1, 1, 2, 2]
@@ -374,7 +354,7 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
         cores = _mixed_canonical_cores(tensor, site)
         sampler = tk.decompositions.TTLeverageRows(
             lambda: cores, uniform_mix=0.1)
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=tensor.numel(),
             core_versions=(2, 4, 3))
 
@@ -404,7 +384,7 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
                              generator=generator)
         sampler = tk.decompositions.TTLeverageRows(
             lambda: cores, uniform_mix=0.1)
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=design.shape[0], core_versions=(0, 0, 0))
 
         batch = sampler.draw(
@@ -433,7 +413,7 @@ class TestTTLeverageRows:  # MARK: TestTTLeverageRows
             torch.randn(2, 2, 1),
         ]
         sampler = tk.decompositions.TTLeverageRows(lambda: cores)
-        state = _RowSamplingState(n_rows=8, core_versions=(0, 0, 0))
+        state = _owner(n_rows=8, core_versions=(0, 0, 0))
 
         with pytest.raises(ValueError, match='isometric'):
             sampler.draw(
@@ -498,7 +478,7 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
             generator=torch.Generator().manual_seed(72))
         sampler = tk.decompositions.TRProductLeverageRows(
             lambda: cores, uniform_mix=0.1)
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=prod(core.shape[1] for core in cores),
             core_versions=(2, 4, 3, 1))
         batch = sampler.draw(
@@ -526,8 +506,6 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
             fibers[:, :, :2], fibers[:, :1, :2].expand(-1, 2, -1))
         assert torch.equal(
             fibers[:, :, 3:], fibers[:, :1, 3:].expand(-1, 2, -1))
-        assert sampler.update_after_core(
-            state, 1).core_versions == (2, 5, 3, 1)
 
     def test_reweighted_full_objective_is_unbiased_in_expectation(self):
         generator = torch.Generator().manual_seed(74)
@@ -541,7 +519,7 @@ class TestTRProductLeverageRows:  # MARK: TestTRProductLeverageRows
             design.shape[0], dtype=design.dtype, generator=generator)
         sampler = tk.decompositions.TRProductLeverageRows(
             lambda: cores, uniform_mix=0.2)
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=design.shape[0], core_versions=(0, 0, 0))
         batch = sampler.draw(
             state,
@@ -599,7 +577,7 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
         site = 2
         sampler = tk.decompositions.TRExactLeverageRows(
             lambda: cores, uniform_mix=0.1)
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=prod(in_dim), core_versions=(1, 4, 2, 3))
         batch = sampler.draw(
             state,
@@ -637,7 +615,7 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
         site = 1
         n_samples = 30_000
         sampler = tk.decompositions.TRExactLeverageRows(lambda: cores)
-        state = _RowSamplingState(
+        state = _owner(
             n_rows=prod(in_dim), core_versions=(0, 0, 0, 0))
         batch = sampler.draw(
             state,
@@ -667,7 +645,7 @@ class TestTRExactLeverageRows:  # MARK: TestTRExactLeverageRows
             generator=torch.Generator().manual_seed(78))
         cores[0].zero_()
         sampler = tk.decompositions.TRExactLeverageRows(lambda: cores)
-        state = _RowSamplingState(n_rows=8, core_versions=(0, 0, 0))
+        state = _owner(n_rows=8, core_versions=(0, 0, 0))
 
         with pytest.raises(ValueError, match='positive numerical rank'):
             sampler.draw(
@@ -755,7 +733,7 @@ class TestLeverageContracts:  # MARK: TestLeverageContracts
 
         empty = tk.decompositions.ConfigurationBatch(indices[:0])
         assert sampler.probabilities(site, empty).shape == (0,)
-        state = _RowSamplingState(prod(dimensions), (0,) * n_sites)
+        state = _owner(prod(dimensions), (0,) * n_sites)
         batch = sampler.draw(state, site, 8, generator=generator)
         drawn = torch.stack(torch.unravel_index(batch.ids, dimensions), dim=1)
         expected = sampler.probabilities(
@@ -764,7 +742,7 @@ class TestLeverageContracts:  # MARK: TestLeverageContracts
         assert batch.ids.numel() == (
             8 if method == 'tt' else 8 * dimensions[site])
         with pytest.raises(ValueError, match='n_rows'):
-            sampler.draw(_RowSamplingState(1, (0,) * n_sites), site, 8)
+            sampler.draw(_owner(1, (0,) * n_sites), site, 8)
 
     @pytest.mark.parametrize('n_sites', [1, 5])
     def test_observations_include_stored_zeros(self, n_sites):
@@ -772,7 +750,7 @@ class TestLeverageContracts:  # MARK: TestLeverageContracts
         observations = tk.decompositions.SparseTensorSource(
             indices, torch.tensor([0., 2.]), (2,) * n_sites)
         sampler = tk.decompositions.ObservedRows(observations)
-        state = _RowSamplingState(2 ** n_sites, (0,) * n_sites)
+        state = _owner(2 ** n_sites, (0,) * n_sites)
         batch = sampler.draw(state, 0)
         assert torch.equal(batch.ids, torch.tensor([0, 2 ** n_sites - 1]))
         assert torch.equal(batch.weights, torch.ones(2))

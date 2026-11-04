@@ -109,6 +109,10 @@ Shared internal infrastructure:
     svd._utils
         Source preparation and _SVDProgress events.
 
+    _TTSVDFitContext
+        One fit-local state for dimensions, normalization and error sums.
+        Cuts return their core, residual and optional record directly.
+
     _TruncationSpec
         Shared rank selection and singular-value truncation criteria.
 
@@ -119,9 +123,11 @@ Shared internal infrastructure:
         Constructs the vector/matrix/Quantics result with source information.
 """
 
-from tensorkrowch.decompositions.svd.tt import TTSVD, tt_svd, qtt_svd, vec_to_mps
+from tensorkrowch.decompositions.svd.tt import (TTSVD, tt_svd, qtt_svd,
+                                                vec_to_mps)
 from tensorkrowch.decompositions.svd.tr import TRSVD, tr_svd, qtr_svd
-from tensorkrowch.decompositions.svd.ttm import TTMSVD, ttm_svd, qttm_svd, mat_to_mpo
+from tensorkrowch.decompositions.svd.ttm import (TTMSVD, ttm_svd, qttm_svd,
+                                                 mat_to_mpo)
 from tensorkrowch.decompositions.svd.trm import TRMSVD, trm_svd, qtrm_svd
 
 

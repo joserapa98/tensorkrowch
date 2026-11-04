@@ -7,7 +7,7 @@ import torch
 
 import tensorkrowch as tk
 
-from tensorkrowch.decompositions.sketching.fitting import FittedInputAxis
+from tensorkrowch.decompositions.sketching.phi import PhiOperator
 from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
                                                          _EmbeddingSpec)
 
@@ -72,12 +72,12 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
             _materialized(phi), axis=1, domain=torch.arange(4.))
 
         assert isinstance(fitter, tk.decompositions.InputFitter)
-        assert isinstance(fitted, FittedInputAxis)
+        assert isinstance(fitted, PhiOperator)
         assert fitted.axis == 1
         assert fitted.domain_size == 4
         assert fitted.in_dim == 2
         assert fitted.record is None
-        assert torch.allclose(fitted.tensor, coefficients)
+        assert torch.allclose(fitted.coefficients, coefficients)
 
     def test_overdetermined_fit_records_residual_and_condition(self):
         embedding = torch.tensor([
@@ -99,7 +99,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
             domain=torch.linspace(-1, 1, 5),
             return_info=True)
 
-        assert torch.allclose(fitted.tensor, coefficients)
+        assert torch.allclose(fitted.coefficients, coefficients)
         assert fitted.record.method == 'fixed_embedding'
         assert fitted.record.abs_residual < 1e-12
         assert fitted.record.rel_residual < 1e-12
@@ -132,8 +132,8 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
         fitted = tk.decompositions.FixedEmbeddingFitter(embedding).fit(
             _materialized(phi), axis=0, domain=domain)
 
-        assert fitted.tensor.dtype == torch.complex128
-        assert torch.allclose(fitted.tensor, coefficients)
+        assert fitted.coefficients.dtype == torch.complex128
+        assert torch.allclose(fitted.coefficients, coefficients)
 
     def test_fiber_path_matches_materialization_without_calling_it(self):
         embedding = torch.tensor([
@@ -153,7 +153,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
             domain=torch.arange(3),
             return_info=True)
 
-        assert torch.allclose(fitted.tensor, coefficients, atol=1e-6)
+        assert torch.allclose(fitted.coefficients, coefficients, atol=1e-6)
         assert fitted.record.used_fibers
         assert fiber_phi.fiber_calls == math.ceil((2 * 2) / 3)
 
@@ -183,7 +183,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
         fitted = fitter.fit(
             _materialized(target), axis=0, domain=torch.arange(3))
 
-        assert torch.allclose(fitted.tensor, expected)
+        assert torch.allclose(fitted.coefficients, expected)
 
     def test_no_diagnostics_skips_condition_number_svd(self, monkeypatch):
         embedding = torch.eye(2)
@@ -200,7 +200,7 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
             domain=torch.arange(2),
             return_info=False)
 
-        assert torch.equal(fitted.tensor, torch.tensor([1.0, 2.0]))
+        assert torch.equal(fitted.coefficients, torch.tensor([1.0, 2.0]))
         assert fitted.record is None
 
     def test_cached_heterogeneous_site_embeddings_feed_independent_fitters(
@@ -225,7 +225,8 @@ class TestFixedEmbeddingFitter:  # MARK: TestFixedEmbeddingFitter
                     domain=domains.for_site(site))
 
             assert fitted.in_dim == coefficients[site].shape[0]
-            assert torch.allclose(fitted.tensor, coefficients[site], atol=1e-6)
+            assert torch.allclose(
+                fitted.coefficients, coefficients[site], atol=1e-6)
 
 
 class TestBasisFitter:  # MARK: TestBasisFitter
@@ -240,7 +241,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
             domain=first_labels,
             return_info=True)
         second = tk.decompositions.BasisFitter(in_dim=2).fit(
-            _materialized(first.tensor),
+            _materialized(first.coefficients),
             axis=2,
             domain=second_labels,
             return_info=True)
@@ -249,7 +250,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
         expected = torch.zeros_like(expected_first)
         expected.index_copy_(2, second_labels, expected_first)
 
-        assert torch.equal(second.tensor, expected)
+        assert torch.equal(second.coefficients, expected)
         assert first.record.method == 'basis'
         assert second.record.condition_number == 1.
 
@@ -261,7 +262,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
             axis=0,
             domain=torch.tensor([3, 1]))
 
-        assert torch.equal(fitted.tensor, torch.tensor([0., 5., 0., 3.]))
+        assert torch.equal(fitted.coefficients, torch.tensor([0., 5., 0., 3.]))
 
     def test_basis_fitter_supports_fibers(self):
         tensor = torch.arange(12.).reshape(2, 3, 2)
@@ -276,7 +277,7 @@ class TestBasisFitter:  # MARK: TestBasisFitter
         expected = torch.zeros_like(tensor)
         expected.index_copy_(1, torch.tensor([1, 2, 0]), tensor)
 
-        assert torch.equal(fitted.tensor, expected)
+        assert torch.equal(fitted.coefficients, expected)
         assert fitted.record.used_fibers
 
     @pytest.mark.parametrize(
@@ -320,7 +321,7 @@ class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
 
         matrix = fitter.model(domain)
         assert torch.allclose(
-            matrix @ fitted.tensor, target, rtol=1e-9, atol=1e-10)
+            matrix @ fitted.coefficients, target, rtol=1e-9, atol=1e-10)
         assert phi.fiber_calls == 2
         assert fitted.record.method == 'trainable_embedding'
         assert fitted.record.used_fibers
@@ -344,7 +345,8 @@ class TestTrainableEmbeddingFitter:  # MARK: TestTrainableEmbeddingFitter
         assert fitted.record is None
         assert fitted.model is None
         assert fitted.model_state is None
-        assert torch.allclose(fitter.model(domain) @ fitted.tensor, target)
+        assert torch.allclose(
+            fitter.model(domain) @ fitted.coefficients, target)
 
 
 @pytest.mark.parametrize('error', [AssertionError, IndexError])
@@ -372,7 +374,7 @@ def test_tensor_and_lazy_fits_agree_with_negative_axis(
 
     fitted = fitter.fit(phi, -1, torch.arange(5), return_info=True)
 
-    torch.testing.assert_close(fitted.tensor, coefficients)
+    torch.testing.assert_close(fitted.coefficients, coefficients)
     assert fitted.axis == 1
     assert fitted.record.used_fibers == (fiber_batch_size is not None)
 
@@ -381,7 +383,7 @@ def test_basis_fitter_infers_dimension_for_single_physical_axis():
     fitted = tk.decompositions.BasisFitter().fit(
         torch.tensor([7.]), 0, torch.tensor([2]), return_info=True)
 
-    torch.testing.assert_close(fitted.tensor, torch.tensor([0., 0., 7.]))
+    torch.testing.assert_close(fitted.coefficients, torch.tensor([0., 0., 7.]))
     assert fitted.in_dim == 3
     assert fitted.record.abs_residual == 0
 

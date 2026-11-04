@@ -1,21 +1,22 @@
 """
 This script contains:
 
-    Public classes:
+    Classes:
         * ExperimentalWarning
         * GaugeMap
-        * GaugeRecursionStep
         * GaugeRecursion
         * OrthGaugeRecursion
         * PinvGaugeRecursion
         * AdjointGaugeRecursion
+        * _ExpandedGaugeRecursion
 
-    Internal functions:
-        * _pinv_options
-        * _rank_statistics
+    Functions:
         * _validate_non_negative_float
         * _matrix_from_core
         * _core_from_matrix
+        * _pinv_options
+        * _rank_statistics
+        * _residual_directions
 """
 
 from dataclasses import dataclass, field
@@ -72,26 +73,6 @@ def _core_from_matrix(matrix: torch.Tensor,
     if orientation == 'left':
         return tensor.permute(1, 0, 2)
     return tensor.permute(2, 0, 1)
-
-
-def _weight_rows(matrix: torch.Tensor,
-                 basis: torch.Tensor,
-                 factor: torch.Tensor,
-                 direction: str) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Weights the incoming virtual rows by a Schmidt factor."""
-    physical_dim = matrix.shape[0] // factor.shape[1]
-    if direction == 'right':
-        matrix = torch.einsum('xa,apb->xpb', factor, matrix.reshape(
-            factor.shape[1], physical_dim, -1))
-        basis = torch.einsum('xa,apy->xpy', factor, basis.reshape(
-            factor.shape[1], physical_dim, -1))
-    else:
-        matrix = torch.einsum('xb,pba->pxa', factor, matrix.reshape(
-            physical_dim, factor.shape[1], -1))
-        basis = torch.einsum('xb,pby->pxy', factor, basis.reshape(
-            physical_dim, factor.shape[1], -1))
-    return (matrix.reshape(-1, matrix.shape[-1]),
-            basis.reshape(-1, basis.shape[-1]))
 
 
 def _pinv_options(options: Mapping[str, Any]) -> dict:
@@ -163,6 +144,10 @@ class GaugeMap:  # MARK: GaugeMap
         Which external gauge is represented by ``core``.
     site : int, optional
         Destination site used in diagnostics.
+    records : sequence of GaugeRecord
+        Optional measurements from the transport that produced this map.
+    metadata : mapping
+        Optional transport diagnostics, copied when the map is constructed.
 
     Examples
     --------
@@ -175,10 +160,17 @@ class GaugeMap:  # MARK: GaugeMap
     core: torch.Tensor  # Raw tensor with standard TR axes
     orientation: str  # Left or right interpretation of the TR axes
     site: Optional[int] = None  # Destination site used in diagnostics
+    # Original map retained for dual-cancellation diagnostics
     _reference_matrix: Optional[torch.Tensor] = field(
         default=None, repr=False, compare=False)
+    # Validated options for the directional pseudoinverse
     _pinv_kwargs: Mapping[str, Any] = field(
         default_factory=dict, repr=False, compare=False)
+
+    # Measurements from the transport that produced this map
+    records: Sequence[GaugeRecord] = ()
+    # Transport diagnostics independent of the gauge tensor
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.core, torch.Tensor):
@@ -207,6 +199,13 @@ class GaugeMap:  # MARK: GaugeMap
             if (reference.device != self.core.device) or \
                     (reference.dtype != self.core.dtype):
                 raise ValueError('Reference and dual should share runtime')
+
+        if not all(isinstance(record, GaugeRecord) for record in self.records):
+            raise TypeError('`records` should contain GaugeRecord objects')
+        if not isinstance(self.metadata, Mapping):
+            raise TypeError('`metadata` should be a mapping')
+        object.__setattr__(self, 'records', tuple(self.records))
+        object.__setattr__(self, 'metadata', dict(self.metadata))
 
     @property
     def matrix(self) -> torch.Tensor:
@@ -305,32 +304,6 @@ class GaugeMap:  # MARK: GaugeMap
             })
 
 
-@dataclass(frozen=True)
-class GaugeRecursionStep:  # MARK: GaugeRecursionStep
-    """
-    Stores the fixed ``gauge`` and ``diagnostics`` produced by one recursion.
-    """
-
-    gauge: torch.Tensor  # Gauge passed to the next local problem
-    # Gauge measurements produced by this transition
-    records: Sequence[GaugeRecord] = ()
-    # Local strategy diagnostics and construction state
-    diagnostics: Mapping[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.gauge, torch.Tensor):
-            raise TypeError('`gauge` should be torch.Tensor type')
-        if self.gauge.ndim != 3:
-            raise ValueError('`gauge` should be a three-dimensional core')
-        records = tuple(self.records)
-        if not all(isinstance(record, GaugeRecord) for record in records):
-            raise TypeError('`records` should contain GaugeRecord objects')
-        if not isinstance(self.diagnostics, Mapping):
-            raise TypeError('`diagnostics` should be a mapping')
-        object.__setattr__(self, 'records', records)
-        object.__setattr__(self, 'diagnostics', dict(self.diagnostics))
-
-
 @runtime_checkable
 class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
     """
@@ -345,7 +318,7 @@ class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
                      opening: LoopOpening,
                      local_target: Any,
                      recursion_context: Mapping[str, Any]
-                     ) -> GaugeRecursionStep:
+                     ) -> GaugeMap:
         """
         Builds the fixed right gauge for the next site to the left.
 
@@ -360,7 +333,7 @@ class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
 
         Returns
         -------
-        GaugeRecursionStep
+        GaugeMap
             Gauge fixed on the right of the destination and its diagnostics.
         """
 
@@ -368,7 +341,7 @@ class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
                       opening: LoopOpening,
                       local_target: Any,
                       recursion_context: Mapping[str, Any]
-                      ) -> GaugeRecursionStep:
+                      ) -> GaugeMap:
         """
         Builds the fixed left gauge for the next site to the right.
 
@@ -383,7 +356,7 @@ class GaugeRecursion(Protocol):  # MARK: GaugeRecursion
 
         Returns
         -------
-        GaugeRecursionStep
+        GaugeMap
             Gauge fixed on the left of the destination and its diagnostics.
         """
 
@@ -416,7 +389,7 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
     def _advance(self,
                  opening: LoopOpening,
                  recursion_context: Mapping[str, Any],
-                 direction: str) -> GaugeRecursionStep:
+                 direction: str) -> GaugeMap:
         """Dualizes and mirrors the outgoing gauge in one ``direction``."""
         if not isinstance(opening, LoopOpening):
             raise TypeError('`opening` should be LoopOpening type')
@@ -441,10 +414,11 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
             outgoing, orientation, to_sites[0]).pinv(
                 **self._pinv_kwargs).mirror()
         record = fixed_map.diagnostics()
-        return GaugeRecursionStep(
-            gauge=fixed_map.core,
+        return GaugeMap(
+            orientation='left' if direction == 'right' else 'right',
+            core=fixed_map.core,
             records=(record,),
-            diagnostics={
+            metadata={
                 'inverse_method': record.inverse_method,
                 'projective': record.projective,
                 'cancellation_error': record.cancellation_error,
@@ -454,7 +428,7 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
                      opening: LoopOpening,
                      local_target: Any,
                      recursion_context: Mapping[str, Any]
-                     ) -> GaugeRecursionStep:
+                     ) -> GaugeMap:
         """Builds the fixed right gauge for the next site to the left."""
         return self._advance(opening, recursion_context, 'left')
 
@@ -462,7 +436,7 @@ class OrthGaugeRecursion:  # MARK: OrthGaugeRecursion
                       opening: LoopOpening,
                       local_target: Any,
                       recursion_context: Mapping[str, Any]
-                      ) -> GaugeRecursionStep:
+                      ) -> GaugeMap:
         """Builds the fixed left gauge for the next site to the right."""
         return self._advance(opening, recursion_context, 'right')
 
@@ -594,7 +568,7 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
     def _advance(self,
                  opening: LoopOpening,
                  recursion_context: Mapping[str, Any],
-                 direction: str) -> GaugeRecursionStep:
+                 direction: str) -> GaugeMap:
         """Extends a retained TR prefix or suffix through its source block."""
         matrix, basis, tr_core = self._local_matrices(
             opening, recursion_context, direction)
@@ -609,26 +583,34 @@ class PinvGaugeRecursion(OrthGaugeRecursion):  # MARK: PinvGaugeRecursion
         gauge = coordinates.reshape(
             matrix.shape[1], cyclic_rank, local_rank).permute(1, 0, 2)
 
-        return GaugeRecursionStep(
-            gauge=gauge,
+        return GaugeMap(
+            orientation='left' if direction == 'right' else 'right',
+            core=gauge,
             records=(record,),
-            diagnostics={
+            metadata={
                 'inverse_method': record.inverse_method,
                 'projective': record.projective,
                 'projection_error': record.cancellation_error,
                 'source_site': site,
             })
 
-def _schmidt_power(spectrum: torch.Tensor, power: float) -> torch.Tensor:
-    """Applies a spectral power on positive support, zeroing inverse zeros."""
-    if power == 0:
-        return torch.ones_like(spectrum)
-    positive = spectrum > 0
-    safe = torch.where(positive, spectrum, torch.ones_like(spectrum))
-    result = torch.where(positive, safe.pow(power), torch.zeros_like(spectrum))
-    if not torch.isfinite(result).all():
-        raise ValueError('Schmidt powers overflow on the retained support')
-    return result
+
+def _residual_directions(q: torch.Tensor, basis: torch.Tensor,
+                         rank: Optional[int], rtol: float
+                         ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Finds significant learned directions outside an orthonormal range."""
+    residual = basis - q @ (q.mH @ basis)
+    residual = residual - q @ (q.mH @ residual)
+    u, values, _ = torch.linalg.svd(residual, full_matrices=False)
+    capacity = max(0, basis.shape[0] - q.shape[1])
+    if rank is not None:
+        capacity = min(capacity, rank)
+    selected = min(capacity, int((values > basis.norm() * rtol).sum()))
+    extra = u[:, :selected]
+    if selected:
+        extra = extra - q @ (q.mH @ extra)
+        extra = torch.linalg.qr(extra, mode='reduced').Q
+    return extra, residual
 
 
 class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
@@ -666,7 +648,7 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                     recursion_context: Mapping[str, Any],
                     direction: str,
                     enrich_rank: Optional[int] = 0,
-                    enrich_rtol: float = 1e-12) -> GaugeRecursionStep:
+                    enrich_rtol: float = 1e-12) -> GaugeMap:
         """Moves the canonical center while retaining residual coordinates."""
         provider = recursion_context['provider']
         shift_center = getattr(provider, 'shift_center', None)
@@ -680,19 +662,11 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
         # isometry supplies the adjoint transport.
         q, factor = torch.linalg.qr(matrix, mode='reduced')
 
-        # A second projection suppresses roundoff in nearly-null residual rows.
-        residual = basis - q @ (q.mH @ basis)
-        residual = residual - q @ (q.mH @ residual)
-        u, singular, _ = torch.linalg.svd(residual, full_matrices=False)
-        capacity = max(0, matrix.shape[0] - q.shape[1])
-        if enrich_rank is not None:
-            capacity = min(capacity, enrich_rank)
-        selected = min(capacity, int((
-            singular > basis.norm() * enrich_rtol).sum()))
+        extra, residual = _residual_directions(
+            q, basis, enrich_rank, enrich_rtol)
+        selected = extra.shape[1]
         old_dimension = q.shape[1]
         if selected:
-            extra = u[:, :selected] - q @ (q.mH @ u[:, :selected])
-            extra = torch.linalg.qr(extra, mode='reduced').Q
             q = torch.cat((q, extra), dim=1)
             factor = torch.cat((
                 factor, factor.new_zeros(selected, factor.shape[1])), dim=0)
@@ -707,7 +681,10 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                 q.shape[1], block.shape[0],
                 opening.right_gauge.shape[-1]).permute(1, 0, 2)
         identity = torch.eye(q.shape[1], dtype=q.dtype, device=q.device)
-        return GaugeRecursionStep(gauge=gauge, diagnostics={
+        return GaugeMap(core=gauge,
+                        orientation=('left' if direction == 'right'
+                                     else 'right'),
+                        metadata={
             'algorithm': 'orthogonal_residual_enrichment',
             'old_dimension': old_dimension, 'new_dimension': q.shape[1],
             'added': selected,
@@ -722,34 +699,12 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
     def _advance(self,
                  opening: LoopOpening,
                  recursion_context: Mapping[str, Any],
-                 direction: str) -> GaugeRecursionStep:
+                 direction: str) -> GaugeMap:
         """Uses QR for ordinary targets and Schmidt adjoints for Vidal."""
         provider = recursion_context['provider']
         if callable(getattr(provider, 'shift_center', None)):
             return self._advance_qr(opening, recursion_context, direction)
         return super()._advance(opening, recursion_context, direction)
-
-    def _isometric_coordinates(self,
-                               matrix: torch.Tensor,
-                               basis: torch.Tensor,
-                               direction: str,
-                               context: Mapping[str, Any]
-                               ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Weights incoming rows and removes outgoing absorbed powers."""
-        provider = context['provider']
-
-        # Undo the stored Vidal absorption powers to recover an isometry.
-        first, last = context['from_sites'][0], context['from_sites'][-1]
-        if direction == 'right':
-            factor = provider.left_factors[first]
-            spectrum = provider.spectra[last]
-            power = -provider.powers[last][0]
-        else:
-            factor = provider.right_factors[last + 1]
-            spectrum = provider.spectra[first - 1]
-            power = -provider.powers[first - 1][1]
-        matrix, basis = _weight_rows(matrix, basis, factor, direction)
-        return (matrix * _schmidt_power(spectrum, power).unsqueeze(0), basis)
 
     def _transport_coordinates(self,
                                matrix: torch.Tensor,
@@ -759,20 +714,19 @@ class AdjointGaugeRecursion(PinvGaugeRecursion):  # MARK: AdjointGaugeRecursion
                                context: Mapping[str, Any]
                                ) -> Tuple[torch.Tensor, GaugeRecord]:
         """Projects and converts to the next target's Schmidt powers."""
-        isometry, weighted = self._isometric_coordinates(
-            matrix, basis, direction, context)
+        provider = context['provider']
+        sites = context['from_sites']
+        isometry, weighted = provider._transport_matrices(
+            matrix, basis, sites, direction)
         center_coordinates = isometry.mH @ weighted
         record = self._coordinate_record(
             isometry, weighted, center_coordinates, 'adjoint', direction, site)
-        bond = site if direction == 'right' else site - 1
-        provider = context['provider']
-        power = provider.powers[bond][1 if direction == 'right' else 0] - 1
-        coordinates = center_coordinates * _schmidt_power(
-            context['provider'].spectra[bond], power).unsqueeze(1)
+        coordinates = provider._transport_coordinates(
+            center_coordinates, sites, direction)
         return coordinates, record
 
 
-class _ExpandedGaugeRecursion:
+class _ExpandedGaugeRecursion:  # MARK: _ExpandedGaugeRecursion
     """
     Appends orthogonal zero-target constraints, retaining the base transport.
 
@@ -804,7 +758,7 @@ class _ExpandedGaugeRecursion:
                  opening: LoopOpening,
                  local_target: Any,
                  context: Mapping[str, Any],
-                 direction: str) -> GaugeRecursionStep:
+                 direction: str) -> GaugeMap:
         """Preserves base coordinates and appends the orthogonal residual."""
         if isinstance(self.recursion, AdjointGaugeRecursion) and callable(
                 getattr(context['provider'], 'shift_center', None)):
@@ -817,25 +771,16 @@ class _ExpandedGaugeRecursion:
         matrix, basis, block = PinvGaugeRecursion._local_matrices(
             opening, context, direction)
         if isinstance(self.recursion, AdjointGaugeRecursion):
-            matrix, basis = self.recursion._isometric_coordinates(
-                matrix, basis, direction, context)
+            matrix, basis = context['provider']._transport_matrices(
+                matrix, basis, context['from_sites'], direction)
         # An SVD identifies support without assigning arbitrary bases to null
         # reference columns. Its cutoff is numerical, not a TT truncation.
         q, values, _ = torch.linalg.svd(matrix, full_matrices=False)
         cutoff = torch.finfo(values.dtype).eps * max(matrix.shape) * values[0]
         q = q[:, values > cutoff]
-        residual = basis - q @ (q.mH @ basis)
-        residual = residual - q @ (q.mH @ residual)
-        u, values, _ = torch.linalg.svd(residual, full_matrices=False)
-        capacity = matrix.shape[0] - q.shape[1]
-        if self.enrich_rank is not None:
-            capacity = min(capacity, self.enrich_rank)
-        selected = min(capacity, int((
-            values > basis.norm() * self.enrich_rtol).sum()))
-        extra = u[:, :selected]
-        if selected:
-            extra = extra - q @ (q.mH @ extra)
-            extra = torch.linalg.qr(extra, mode='reduced').Q
+        extra, residual = _residual_directions(
+            q, basis, self.enrich_rank, self.enrich_rtol)
+        selected = extra.shape[1]
         coordinates = extra.mH @ basis
         if direction == 'right':
             added_gauge = coordinates.reshape(
@@ -843,8 +788,8 @@ class _ExpandedGaugeRecursion:
         else:
             added_gauge = coordinates.reshape(
                 selected, block.shape[0], opening.right_gauge.shape[-1])
-        old_dimension = step.gauge.shape[1]
-        gauge = torch.cat((step.gauge, added_gauge.permute(1, 0, 2)), dim=1)
+        old_dimension = step.core.shape[1]
+        gauge = torch.cat((step.core, added_gauge.permute(1, 0, 2)), dim=1)
         provider = context['provider']
         destination = context['to_sites'][0]
         before = provider.cores[destination]
@@ -861,7 +806,7 @@ class _ExpandedGaugeRecursion:
             before.norm())
         identity = torch.eye(selected, dtype=extra.dtype, device=extra.device)
         diagnostics = {
-            **step.diagnostics,
+            **step.metadata,
             'algorithm': 'orthogonal_residual_enrichment',
             'base_recursion': type(self.recursion).__name__,
             'old_dimension': old_dimension,
@@ -873,13 +818,15 @@ class _ExpandedGaugeRecursion:
             'orthogonality_error': (extra.mH @ extra - identity).norm(),
             'cross_orthogonality_error': (q.mH @ extra).norm(),
         }
-        return GaugeRecursionStep(gauge, step.records, diagnostics)
+        return GaugeMap(gauge,
+                        'left' if direction == 'right' else 'right',
+                        records=step.records, metadata=diagnostics)
 
     def advance_right(self,
                       opening: LoopOpening,
                       local_target: Any,
                       recursion_context: Mapping[str, Any]
-                      ) -> GaugeRecursionStep:
+                      ) -> GaugeMap:
         """Expands the next left gauge in rightward transport."""
         return self._advance(opening, local_target, recursion_context, 'right')
 
@@ -887,14 +834,13 @@ class _ExpandedGaugeRecursion:
                      opening: LoopOpening,
                      local_target: Any,
                      recursion_context: Mapping[str, Any]
-                     ) -> GaugeRecursionStep:
+                     ) -> GaugeMap:
         """Expands the next right gauge in leftward transport."""
         return self._advance(opening, local_target, recursion_context, 'left')
 
 
 __all__ = [
     'GaugeMap',
-    'GaugeRecursionStep',
     'GaugeRecursion',
     'OrthGaugeRecursion',
     'PinvGaugeRecursion',

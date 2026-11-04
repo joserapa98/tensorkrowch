@@ -1,26 +1,22 @@
 """
 This script contains:
 
-    Internal classes:
-        * _ALSDriverResult
-
-    Public classes:
+    Classes:
         * ALSBackend
         * ALSSweepDriver
 
-    Internal functions:
+    Functions:
         * _relative_objective_change
         * _report_als_result
 """
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from time import perf_counter
 from typing import Optional, Protocol, Sequence, Tuple, TYPE_CHECKING
 
 import torch
 
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
-from tensorkrowch.decompositions.als.environments import CoreUpdateSet
 from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.solvers import (NonFiniteLocalSystemError,
                                                      NonFiniteSolutionError)
@@ -55,18 +51,14 @@ class ALSBackend(Protocol):  # MARK: ALSBackend
                       sweep: int) -> Tuple[Optional[int], bool]:
         """Prepares caches/samples and reports generation plus refresh."""
 
-    def solve_site(self,
-                   site: int,
-                   sweep: int,
-                   return_record: bool) -> Tuple[
-            CoreUpdateSet, Optional[LocalSolveRecord]]:
-        """Builds one atomic local update without committing it."""
+    def update_site(self,
+                    site: int,
+                    sweep: int,
+                    return_record: bool) -> Optional[LocalSolveRecord]:
+        """Solves and applies one complete atomic local update."""
 
     def skip_site(self, site: int) -> None:
         """Advances caches through a fixed ``site``."""
-
-    def commit(self, update_set: CoreUpdateSet) -> None:
-        """Commits a topology-specific update atomically."""
 
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
@@ -78,17 +70,6 @@ class ALSBackend(Protocol):  # MARK: ALSBackend
 
     def restore(self, cores: Sequence[torch.Tensor]) -> None:
         """Restores a previously captured state."""
-
-
-@dataclass(frozen=True)
-class _ALSDriverResult:  # MARK: _ALSDriverResult
-    """Internal result returned from the generic ALS sweep driver."""
-
-    cores: Tuple[torch.Tensor, ...]  # Raw cores in site order
-    metrics: DecompositionMetrics  # Collected solve and sweep measurements
-    converged: bool  # Whether the normalized stop reason denotes convergence
-    stop_reason: str  # Normalized reason for stopping
-    n_sweeps: int  # Number of completed directional sweeps
 
 
 def _relative_objective_change(previous: SweepRecord,
@@ -116,9 +97,20 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
     Runs directional sweeps without topology-specific contractions.
 
     The backend owns environment construction and local solves. This driver
-    chooses sweep directions, commits atomic updates, measures only complete
-    sweep objectives, applies convergence and emits structured events.
+    chooses sweep directions, requests complete site updates, measures
+    complete-sweep objectives, applies convergence and emits structured events.
     """
+
+    def _finish(self, cores: Sequence[torch.Tensor],
+                metrics: DecompositionMetrics, converged: bool,
+                stop_reason: str, n_sweeps: int) -> 'ALSSweepDriver':
+        """Retains the final run state on the driver itself."""
+        self.cores = tuple(cores)
+        self.metrics = metrics
+        self.converged = converged
+        self.stop_reason = stop_reason
+        self.n_sweeps = n_sweeps
+        return self
 
     def fit(self,
             problem: ALSProblem,
@@ -128,7 +120,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             collect_metrics: bool = False,
             phase: str = 'ALS',
             *,
-            sweep_direction: str = 'forward') -> _ALSDriverResult:
+            sweep_direction: str = 'forward') -> 'ALSSweepDriver':
         """
         Runs ALS until a normalized stopping reason is reached.
 
@@ -158,7 +150,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
 
         Returns
         -------
-        _ALSDriverResult
+        ALSSweepDriver
             Final cores, optional metrics, completed sweep count and stopping
             reason. Stagnation alone does not certify a small residual.
         """
@@ -197,7 +189,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
 
         metrics = DecompositionMetrics()
         if not trainable_sites:
-            result = _ALSDriverResult(
+            result = self._finish(
                 cores=tuple(backend.cores),
                 metrics=metrics,
                 converged=True,
@@ -250,11 +242,10 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                     backend.skip_site(site)
                     continue
                 try:
-                    update_set, local_record = backend.solve_site(
+                    local_record = backend.update_site(
                         site=site,
                         sweep=sweep,
                         return_record=need_local_records)
-                    backend.commit(update_set)
                 except NonFiniteLocalSystemError:
                     stop_reason = 'nonfinite_local_system'
                     break
@@ -377,7 +368,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             'nonfinite_local_system',
             'nonfinite_solution',
         )
-        result = _ALSDriverResult(
+        result = self._finish(
             cores=tuple(backend.cores),
             metrics=metrics,
             converged=converged,

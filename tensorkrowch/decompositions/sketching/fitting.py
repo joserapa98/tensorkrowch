@@ -2,7 +2,6 @@
 This script contains:
 
     Classes:
-        * FittedInputAxis
         * InputFitter
         * FixedEmbeddingFitter
         * BasisFitter
@@ -14,9 +13,9 @@ This script contains:
         * _phi_device
         * _collect_phi_target
         * _restore_fitted_axis
+        * _store_fit
 """
 
-from dataclasses import dataclass, field
 from math import prod
 from typing import (Any,
                     Callable,
@@ -33,10 +32,10 @@ import torch
 from tensorkrowch.utils import _INTEGER_DTYPES, safe_divide
 
 from tensorkrowch.decompositions._utils import (_normalize_dims,
-                                               _unravel_indices)
+                                                _unravel_indices)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
 from tensorkrowch.decompositions.metrics import InputFitRecord
-from tensorkrowch.decompositions.sketching.phi import PhiView
+from tensorkrowch.decompositions.sketching.phi import PhiOperator, PhiView
 
 
 _Phi = Union[torch.Tensor, PhiView]
@@ -150,60 +149,24 @@ def _restore_fitted_axis(solution: torch.Tensor,
     return solution.reshape(solution.shape[0], *other_shape).movedim(0, axis)
 
 
-@dataclass(frozen=True)
-class FittedInputAxis:  # MARK: FittedInputAxis
-    """
-    Fitted tensor and optional diagnostics for one physical input axis.
-
-    ``tensor`` preserves every Phi axis except ``axis``, whose size becomes
-    ``in_dim``. ``domain_size`` records its original size. ``record`` contains
-    optional least-squares diagnostics; ``model`` and ``model_state`` retain
-    a trainable embedding only when requested from its fitter.
-    """
-
-    tensor: torch.Tensor
-    axis: int
-    domain_size: int
-    in_dim: int
-    record: Optional[InputFitRecord] = None
-    model: Optional[torch.nn.Module] = None
-    model_state: Optional[Mapping[str, torch.Tensor]] = None
-    metadata: Mapping[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.tensor, torch.Tensor):
-            raise TypeError('`tensor` should be torch.Tensor type')
-        if self.tensor.ndim < 1:
-            raise ValueError('`tensor` should have at least one axis')
-        if isinstance(self.axis, bool) or not isinstance(self.axis, int):
-            raise TypeError('`axis` should be int type')
-        if (self.axis < 0) or (self.axis >= self.tensor.ndim):
-            raise ValueError('`axis` is out of bounds for `tensor`')
-        for name in ('domain_size', 'in_dim'):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise TypeError(f'`{name}` should be int type')
-            if value < 1:
-                raise ValueError(f'`{name}` should be positive')
-        if self.tensor.shape[self.axis] != self.in_dim:
-            raise ValueError(
-                '`tensor` size at `axis` should equal `in_dim`')
-        if (self.record is not None) and \
-                not isinstance(self.record, InputFitRecord):
-            raise TypeError('`record` should be InputFitRecord type or None')
-        if (self.model is not None) and not isinstance(
-                self.model, torch.nn.Module):
-            raise TypeError('`model` should be torch.nn.Module type or None')
-        if self.model_state is not None:
-            if not isinstance(self.model_state, Mapping) or not all(
-                    isinstance(name, str) and isinstance(value, torch.Tensor)
-                    for name, value in self.model_state.items()):
-                raise TypeError(
-                    '`model_state` should map strings to tensors or be None')
-            object.__setattr__(self, 'model_state', dict(self.model_state))
-        if not isinstance(self.metadata, Mapping):
-            raise TypeError('`metadata` should be a mapping')
-        object.__setattr__(self, 'metadata', dict(self.metadata))
+def _store_fit(phi_view: _Phi, tensor: torch.Tensor, axis: int,
+               domain_size: int, in_dim: int,
+               record: Optional[InputFitRecord] = None,
+               model: Optional[torch.nn.Module] = None,
+               model_state: Optional[Mapping[str, torch.Tensor]] = None,
+               metadata: Optional[Mapping[str, Any]] = None) -> PhiOperator:
+    """Updates the original Phi, or wraps a standalone fitter input once."""
+    if isinstance(phi_view, PhiOperator):
+        phi = phi_view
+    else:
+        original = phi_view if isinstance(phi_view, torch.Tensor) else tensor
+        phi = PhiOperator.from_tensor(original)
+    phi.coefficients = tensor
+    phi.axis, phi.domain_size, phi.in_dim = axis, domain_size, in_dim
+    phi.record = record
+    phi.model, phi.model_state = model, model_state
+    phi.metadata = {} if metadata is None else dict(metadata)
+    return phi
 
 
 @runtime_checkable
@@ -214,7 +177,7 @@ class InputFitter(Protocol):  # MARK: InputFitter
             phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            return_info: bool = False) -> FittedInputAxis:
+            return_info: bool = False) -> PhiOperator:
         """
         Fits one Phi axis in a physical input basis.
 
@@ -232,8 +195,9 @@ class InputFitter(Protocol):  # MARK: InputFitter
 
         Returns
         -------
-        FittedInputAxis
-            Tensor in the input basis and optional fitting diagnostics.
+        PhiOperator
+            Operator retaining the fitted ``coefficients`` and optional
+            diagnostics. A ``PhiOperator`` input is updated and returned.
         """
 
 
@@ -307,7 +271,7 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
             phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            return_info: bool = False) -> FittedInputAxis:
+            return_info: bool = False) -> PhiOperator:
         """
         Solves all Phi fibers against the fixed embedding matrix.
 
@@ -325,8 +289,9 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
 
         Returns
         -------
-        FittedInputAxis
-            Tensor in the input basis and optional fitting diagnostics.
+        PhiOperator
+            Operator retaining the fitted ``coefficients`` and optional
+            diagnostics. A ``PhiOperator`` input is updated and returned.
         """
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
@@ -361,8 +326,8 @@ class FixedEmbeddingFitter:  # MARK: FixedEmbeddingFitter
                 used_fibers=used_fibers,
                 local_solve=local_record)
         tensor = _restore_fitted_axis(solution, shape, axis)
-        return FittedInputAxis(
-            tensor=tensor,
+        return _store_fit(
+            phi_view, tensor=tensor,
             axis=axis,
             domain_size=matrix.shape[0],
             in_dim=matrix.shape[1],
@@ -427,7 +392,7 @@ class BasisFitter:  # MARK: BasisFitter
             phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            return_info: bool = False) -> FittedInputAxis:
+            return_info: bool = False) -> PhiOperator:
         """
         Places Phi values at their basis labels without solving.
 
@@ -445,8 +410,9 @@ class BasisFitter:  # MARK: BasisFitter
 
         Returns
         -------
-        FittedInputAxis
-            Tensor in the input basis and optional fitting diagnostics.
+        PhiOperator
+            Operator retaining the fitted ``coefficients`` and optional
+            diagnostics. A ``PhiOperator`` input is updated and returned.
         """
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
@@ -466,8 +432,8 @@ class BasisFitter:  # MARK: BasisFitter
             condition_number=1.,
             used_fibers=used_fibers) if return_info else None
         tensor = _restore_fitted_axis(solution, shape, axis)
-        return FittedInputAxis(
-            tensor=tensor,
+        return _store_fit(
+            phi_view, tensor=tensor,
             axis=axis,
             domain_size=domain.shape[0],
             in_dim=in_dim,
@@ -486,7 +452,7 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
     decomposition remains an ordinary numerical routine.
 
     The trained model and a detached CPU state dictionary are attached to
-    :class:`FittedInputAxis` only when ``return_info=True``. Otherwise the
+    :class:`PhiOperator` only when ``return_info=True``. Otherwise the
     result contains only the fitted tensor and the model remains accessible as
     ``fitter.model``.
 
@@ -603,7 +569,7 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
             phi_view: _Phi,
             axis: int,
             domain: torch.Tensor,
-            return_info: bool = False) -> FittedInputAxis:
+            return_info: bool = False) -> PhiOperator:
         """
         Trains the embedding on Phi fibers and returns coefficients.
 
@@ -621,8 +587,9 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
 
         Returns
         -------
-        FittedInputAxis
-            Tensor in the input basis and optional fitting diagnostics.
+        PhiOperator
+            Operator retaining the fitted ``coefficients`` and optional
+            diagnostics. A ``PhiOperator`` input is updated and returned.
         """
         if not isinstance(return_info, bool):
             raise TypeError('`return_info` should be bool type')
@@ -732,8 +699,8 @@ class TrainableEmbeddingFitter:  # MARK: TrainableEmbeddingFitter
                     for name, value in self.model.state_dict().items()
                 }
         tensor = _restore_fitted_axis(solution, shape, axis)
-        return FittedInputAxis(
-            tensor=tensor,
+        return _store_fit(
+            phi_view, tensor=tensor,
             axis=axis,
             domain_size=domain.shape[0],
             in_dim=matrix.shape[1],

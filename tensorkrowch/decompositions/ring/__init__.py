@@ -30,6 +30,14 @@ and a right gauge. Its public strategies are:
     LoopOpening                        gauges, physical cores and diagnostics
     LoopOpenerCapabilities             supported fixed gauges and block sizes
 
+``BidirectionalRingDriver`` owns partitioning, center adaptation, both
+outward branches and final assembly for TT2TR and TR-RSS. Providers supply
+local targets and boundary absorption. Local openings retain their original
+gauges; ``LoopOpening.transform_gauges`` only applies external linear maps,
+for example to lift central gauges to sample evaluations. It performs no
+recursion or boundary closure. Gauge transports return a ``GaugeMap`` with
+its records and metadata, rather than another intermediate result object.
+
 The optimization route transports the learned factors using:
 
     GaugeRecursion
@@ -54,7 +62,6 @@ from tensorkrowch.decompositions.ring.gauges import (AdjointGaugeRecursion,
                                                      ExperimentalWarning,
                                                      GaugeMap,
                                                      GaugeRecursion,
-                                                     GaugeRecursionStep,
                                                      OrthGaugeRecursion,
                                                      PinvGaugeRecursion)
 from tensorkrowch.decompositions.ring.opening import (ALSLoopOpener,
@@ -82,7 +89,6 @@ __all__ = [
     'BLOSTRSVDLoopOpener',
     'CallableLoopOpener',
     'GaugeRecursion',
-    'GaugeRecursionStep',
     'AdjointGaugeRecursion',
     'PinvGaugeRecursion',
     'OrthGaugeRecursion',

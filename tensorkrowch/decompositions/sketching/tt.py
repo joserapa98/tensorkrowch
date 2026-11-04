@@ -7,11 +7,10 @@ This script contains:
 
     Functions:
         * tt_rs
-        * qtt_rss
         * tt_rss
+        * qtt_rss
 """
 
-from dataclasses import replace
 from math import prod
 from typing import (Any,
                     Callable,
@@ -41,7 +40,7 @@ from tensorkrowch.decompositions.results import (TensorDecomposition,
 from tensorkrowch.decompositions.sketching.base import (RecursiveSketching,
                                                         _SketchingFitContext)
 from tensorkrowch.decompositions.sketching.evaluations import (
-    ConfigurationMap, _EvaluationPlanBuilder)
+    ConfigurationMap)
 from tensorkrowch.decompositions.sketching.fitting import InputFitter
 from tensorkrowch.decompositions.sketching.phi import PhiOperator
 from tensorkrowch.decompositions.sketching.projections import RangeProjector
@@ -49,7 +48,7 @@ from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
                                                            _SamplePool)
 from tensorkrowch.decompositions.sketching.sketches import (MarginalSketch,
                                                             SketchOperator,
-                                                            _prepare_phi)
+                                                            )
 from tensorkrowch.decompositions.sketching.sources import SupportTensorSource
 from tensorkrowch.decompositions.sketching.specs import (_DomainSpec,
                                                          _EmbeddingSpec,
@@ -199,7 +198,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         if getattr(source, 'n_batches', 0):
             raise ValueError('Batched sources are not supported by RSS')
         if isinstance(source, BaseSource) and source.is_discrete_tensor and \
-                embedding is None:
+                (embedding is None):
             in_dim = source._in_sites_dims
             embedding = tuple(
                 torch.eye(dim, device=source.device) for dim in in_dim)
@@ -689,11 +688,10 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         count, center = self.outputs.n_sites, context.state['center']
         phis = [self._build_phi(site, context.regions, context)
                 for site in range(count)]
-        builder = _EvaluationPlanBuilder(self._source)
-        handles = [phi.collect(builder) for phi in phis]
         configurations = ConfigurationMap(
-            builder.freeze(), batch_size=context.spec.batch_size,
+            self._source, batch_size=context.spec.batch_size,
             transform=self.transform)
+        handles = [configurations.register(phi) for phi in phis]
         with context.phase('source.evaluate'):
             configurations.evaluate_source()
         with context.phase('values.transform'):
@@ -742,8 +740,9 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
             numerical = (matrix and (site % 2 == 1),
                          matrix and (site % 2 == 0))
             with context.phase('svd.trim', site=site):
-                item = _prepare_phi(
-                    tensor, direction, rank_left=left_cap,
+                phi.coefficients = tensor
+                item = phi.truncate(
+                    direction, rank_left=left_cap,
                     rank_right=right_cap, **options,
                     numerical=numerical,
                     projector=self._range_projector,
@@ -760,26 +759,25 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         # embeddings' source dtype before any recursive contractions.
         dtype = self._source.dtype
         for item in prepared:
-            dtype = torch.promote_types(dtype, item.tensor.dtype)
-        prepared = [replace(
-            item, tensor=item.tensor.to(dtype),
-            left=None if item.left is None else item.left.to(dtype),
-            right=None if item.right is None else item.right.to(dtype))
-            for item in prepared]
+            dtype = torch.promote_types(dtype, item.coefficients.dtype)
+        for item in prepared:
+            item.coefficients = item.coefficients.to(dtype)
+            if item.left_lift is not None:
+                item.left_lift = item.left_lift.to(dtype)
+            if item.right_lift is not None:
+                item.right_lift = item.right_lift.to(dtype)
 
-        # No branch reconstructs a factor outside the first or last site.
         initial = prepared[center]
         if center == 0:
-            initial = replace(initial, tensor=torch.einsum(
-                'ab,bpc->apc', initial.left, initial.tensor),
-                left=torch.ones_like(initial.left))
+            initial.coefficients = torch.einsum(
+                'ab,bpc->apc', initial.left_lift, initial.coefficients)
+            initial.left_lift = torch.ones_like(initial.left_lift)
         if center == count - 1:
-            initial = replace(initial, tensor=torch.einsum(
-                'apb,bc->apc', initial.tensor, initial.right),
-                right=torch.ones_like(initial.right))
-        prepared[center] = initial
+            initial.coefficients = torch.einsum(
+                'apb,bc->apc', initial.coefficients, initial.right_lift)
+            initial.right_lift = torch.ones_like(initial.right_lift)
         context.state['fitted_site_dim'] = tuple(
-            item.tensor.shape[1] for item in prepared)
+            item.coefficients.shape[1] for item in prepared)
         return prepared
 
     def _recursion_matrix(self, site: int, tensor: torch.Tensor,
@@ -810,21 +808,22 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         count, center = len(prepared), context.state['center']
         cores = [None] * count
         initial = prepared[center]
-        cores[center] = initial.tensor
+        cores[center] = initial.coefficients
         if report:
             context.complete(center, cores[center], count)
         for direction, sites in (
                 ('right', range(center + 1, count)),
                 ('left', range(center - 1, -1, -1))):
-            previous = (torch.einsum('ab,bpc->apc', initial.left,
-                                     initial.tensor)
+            previous = (torch.einsum('ab,bpc->apc', initial.left_lift,
+                                     initial.coefficients)
                         if direction == 'right' else torch.einsum(
-                            'apb,bc->apc', initial.tensor, initial.right))
+                            'apb,bc->apc', initial.coefficients,
+                            initial.right_lift))
             for site in sites:
                 prior_site = site - 1 if direction == 'right' else site + 1
                 environment = self._recursion_matrix(
                     prior_site, previous, direction, context)
-                target = prepared[site].tensor
+                target = prepared[site].coefficients
                 with context.phase('core.solve', site=site):
                     if direction == 'right':
                         matrix = target.reshape(target.shape[0], -1)
@@ -866,7 +865,7 @@ class TTRSS(RecursiveSketching):  # MARK: TTRSS
         # A generic table transform need not define values at arbitrary new
         # points. Validate on its initial table, including every output entry.
         configurations = context.state['configuration_map']
-        inputs = configurations._plan.configurations
+        inputs = configurations._configurations
         values = self.outputs.validate_values(configurations.prepare_values())
         if self.outputs.scalar:
             return (_split_samples(inputs, self.outputs.n_input_sites),
@@ -1035,7 +1034,7 @@ class TTRS:  # MARK: TTRS
             raise ValueError('Batched sources are not supported by RS')
         if sketch_operator is None:
             sketch_operator = MarginalSketch()
-        if not isinstance(sketch_operator, SketchOperator):
+        if not callable(getattr(sketch_operator, 'build', None)):
             raise TypeError(
                 '`sketch_operator` should implement SketchOperator')
         if (transform is not None) and not callable(transform):
@@ -1132,8 +1131,9 @@ class TTRS:  # MARK: TTRS
         context.emit('start', values={
             'n_sites': count, 'operator': type(self.sketch_operator).__name__})
         with context.phase('fit'):
-            system = self.sketch_operator.builder(self._tensor_source).build(
-                batch_size=batch_size, generator=generator)
+            system = self.sketch_operator.build(
+                self._tensor_source, batch_size=batch_size,
+                generator=generator)
             result = system.solve(
                 rank=rank, center=center, cutoff=cutoff, atol=atol, rtol=rtol,
                 cum_percentage=cum_percentage, strict_system=strict_system,

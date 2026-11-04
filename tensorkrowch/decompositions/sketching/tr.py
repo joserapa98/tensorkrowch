@@ -1,10 +1,8 @@
 """
 This script contains:
 
-    Internal classes:
+    Classes:
         * _SketchCoreProvider
-
-    Public classes:
         * TRRSS
 
     Functions:
@@ -12,7 +10,6 @@ This script contains:
         * qtr_rss
 """
 
-from dataclasses import replace
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
 import torch
@@ -24,17 +21,12 @@ from tensorkrowch.decompositions.metrics import ErrorRecord
 from tensorkrowch.decompositions.results import (TensorDecomposition,
                                                  TRDecomposition,
                                                  _result_from_source)
-from tensorkrowch.decompositions.ring.blocks import (_CentralBlockSelector,
-                                                     _boundary_partition,
-                                                     _discovery_partition)
 from tensorkrowch.decompositions.ring.driver import BidirectionalRingDriver
-from tensorkrowch.decompositions.ring.gauges import GaugeRecursionStep
+from tensorkrowch.decompositions.ring.gauges import GaugeMap
 from tensorkrowch.decompositions.ring.opening import (LoopOpener,
                                                       LoopOpening,
                                                       resolve_loop_opener)
-from tensorkrowch.decompositions.ring.tt2tr import (_BlockOpener,
-                                                    _SelectedBlock,
-                                                    _TTCoreProvider)
+from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
 from tensorkrowch.decompositions.sketching.base import _SketchingFitContext
 from tensorkrowch.decompositions.sketching.tt import (Device,
                                                       Domain,
@@ -59,8 +51,6 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
         self.fit_context = context
         self.central_sites = ()
         self.boundary_sites = ()
-        self.central_opening = None
-        self.compact_center = None
         self.reported = set()
 
     def local_target(self, sites: Sequence[int],
@@ -72,7 +62,7 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
             return super().local_target(sites, context)
         if sites == self.central_sites:
             return super().local_target(sites, context)
-        return self.prepared[sites[0]].tensor
+        return self.prepared[sites[0]].coefficients
 
     def _sample_environment(self, edge: int, direction: str) -> torch.Tensor:
         """Evaluates the TT exterior on the requested unique sketch rows."""
@@ -105,27 +95,19 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
     def finalize_center(self, opening: LoopOpening,
                         sites: Sequence[int]) -> LoopOpening:
         """Lifts central TT coordinates back to the two sample spaces."""
-        compact = super().finalize_center(opening, sites)
-        self.compact_center = compact
-        left = self._sample_environment(sites[0], 'left')
-        right = self._sample_environment(sites[-1] + 1, 'right')
-        lifted = replace(
-            compact,
-            left_gauge=torch.einsum('ma,gar->gmr', left,
-                                     compact.left_gauge),
-            right_gauge=torch.einsum('rag,ma->rmg', compact.right_gauge,
-                                      right))
-        self.central_opening = lifted
-        self._report(lifted, sites)
-        return lifted
+        opening = super().finalize_center(opening, sites)
+        opening.left_map = self._sample_environment(sites[0], 'left')
+        opening.right_map = self._sample_environment(sites[-1] + 1, 'right')
+        self._report(opening, sites)
+        return opening
 
     def advance_right(self, opening: LoopOpening, local_target: Any,
                       recursion_context: Mapping[str, Any]
-                      ) -> GaugeRecursionStep:
+                      ) -> GaugeMap:
         """Extends the incoming gauge through TR cores on prefix samples."""
         sites = recursion_context['from_sites']
         self._report(opening, sites)
-        gauge = opening.left_gauge
+        gauge, _ = opening.transform_gauges()
         prefixes = self.fit_context.regions['prefixes']
         for site, core in zip(sites, opening.cores):
             recursion = prefixes[site].recursive_projector(prefixes[site + 1])
@@ -134,16 +116,16 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
                 site, recursion.new_values[0], self.engine.embeddings,
                 dtype=core.dtype).to(device=core.device, dtype=core.dtype)
             gauge = torch.einsum('gml,lpr,mp->gmr', selected, core, vectors)
-        return GaugeRecursionStep(gauge, diagnostics={
+        return GaugeMap(gauge, 'left', metadata={
             'algorithm': 'sketch_recursion', 'direction': 'right'})
 
     def advance_left(self, opening: LoopOpening, local_target: Any,
                      recursion_context: Mapping[str, Any]
-                     ) -> GaugeRecursionStep:
+                     ) -> GaugeMap:
         """Extends the incoming gauge through TR cores on suffix samples."""
         sites = recursion_context['from_sites']
         self._report(opening, sites)
-        gauge = opening.right_gauge
+        _, gauge = opening.transform_gauges()
         suffixes = self.fit_context.regions['suffixes']
         for site, core in reversed(tuple(zip(sites, opening.cores))):
             recursion = suffixes[site + 1].recursive_projector(suffixes[site])
@@ -152,16 +134,14 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
                 site, recursion.new_values[0], self.engine.embeddings,
                 dtype=core.dtype).to(device=core.device, dtype=core.dtype)
             gauge = torch.einsum('lpr,mp,rmg->lmg', core, vectors, selected)
-        return GaugeRecursionStep(gauge, diagnostics={
+        return GaugeMap(gauge, 'right', metadata={
             'algorithm': 'sketch_recursion', 'direction': 'left'})
 
     def prepare_boundary(self, opening: LoopOpening, local_target: Any,
                          recursion_context: Mapping[str, Any], direction: str
-                         ) -> GaugeRecursionStep:
+                         ) -> GaugeMap:
         """Keeps the actual outgoing gauge for TT end-block absorption."""
         self._report(opening, recursion_context['from_sites'])
-        if opening is self.central_opening:
-            opening = self.compact_center
         return super().prepare_boundary(
             opening, local_target, recursion_context, direction)
 
@@ -169,10 +149,10 @@ class _SketchCoreProvider(_TTCoreProvider):  # MARK: _SketchCoreProvider
                        opening: LoopOpening, context: Mapping[str, Any]
                        ) -> Any:
         """Absorbs the outgoing gauge and splits the existing TT end block."""
-        closure = super().close_boundary(sites, direction, opening, context)
-        for site, core in zip(sites, closure.cores):
+        cores = super().close_boundary(sites, direction, opening, context)
+        for site, core in zip(sites, cores):
             self.fit_context.complete(site, core, len(self.cores))
-        return closure
+        return cores
 
 
 class TRRSS(TTRSS):  # MARK: TRRSS
@@ -321,52 +301,29 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             absolute = torch.linalg.vector_norm(approximation - target)
             denominator = torch.linalg.vector_norm(target)
             relative = safe_divide(absolute, denominator,
-                                  zero_value=torch.where(
-                                      absolute == 0, 0, torch.inf))
+                                   zero_value=torch.where(
+                                       absolute == 0, 0, torch.inf))
             context.metrics.errors.append(ErrorRecord(
                 kind='tt_alignment', absolute=absolute, relative=relative,
                 denominator=denominator, size=target.shape[0]))
         provider = _SketchCoreProvider(tt, prepared, self, context)
-        count, center = tt.n_sites, context.state['center']
-        ranks = context.state['tr_rank']
-        rtol = context.spec.rtol
-        discovery = None
-        if ranks is None:
-            precision = torch.finfo(tt.dtype).eps
-            numerical = (max(core.numel() for core in provider.cores) *
-                         precision) ** 2
-            rtol = max(1e-12 if rtol is None else rtol, numerical)
-            sites, left, right, ranks, discovery = _discovery_partition(
-                provider, center, rtol)
-            opener = _BlockOpener(context.state['loop_opener'], rtol)
-        else:
-            capacity = ranks[center - 1] * ranks[center]
-            if (provider.in_dim[center] <= capacity) and \
-                    (0 < center < count - 1):
-                sites = tuple(_CentralBlockSelector().select(
-                    provider, ranks, center, bounds=(1, count - 2)).sites)
-            else:
-                sites = (center,)
-            if context.state['block_boundaries']:
-                sites, left, right = _boundary_partition(provider, sites)
-            else:
-                left = () if sites[0] == 0 else (0,)
-                right = () if sites[-1] == count - 1 else (count - 1,)
-            opener = context.state['loop_opener']
-        provider.central_sites = sites
-        provider.boundary_sites = (*left, *right)
-        driver = BidirectionalRingDriver().fit(
-            provider, ranks, opener, provider,
-            block_selector=_SelectedBlock(sites), center=center,
+        center = context.state['center']
+        prescribed = context.state['tr_rank']
+        driver = BidirectionalRingDriver()
+        result = driver.fit(
+            provider, prescribed, context.state['loop_opener'], provider,
+            center=center, block_boundaries=context.state['block_boundaries'],
+            rtol=context.spec.rtol,
             context={'generator': context.generator,
-                     'collect_metrics': context.need_diagnostics,
-                     'left_boundary': left, 'right_boundary': right,
-                     'rank_caps': context.state['tr_rank'], 'rtol': rtol})
+                     'collect_metrics': context.need_diagnostics})
+        sites = driver.central_block
+        left, right = driver.boundary_blocks
+        discovery = driver.rank_discovery
         if context.collect_metrics:
             context.metrics.local_solves.extend(driver.metrics.local_solves)
             context.metrics.truncations.extend(driver.metrics.truncations)
             context.metrics.errors.extend(driver.metrics.errors)
-        context.cores.extend(driver.cores)
+        context.cores.extend(result.cores)
         context.state.update(center_block=sites, boundary_blocks=(left, right),
                              rank_discovery=discovery, order=driver.order)
         return self._assemble_result(context)
@@ -402,8 +359,8 @@ class TRRSS(TTRSS):  # MARK: TRRSS
             absolute = torch.linalg.vector_norm(approximation - target)
             denominator = torch.linalg.vector_norm(target)
             relative = safe_divide(absolute, denominator,
-                                  zero_value=torch.where(
-                                      absolute == 0, 0, torch.inf))
+                                   zero_value=torch.where(
+                                       absolute == 0, 0, torch.inf))
             context.metrics.errors.append(ErrorRecord(
                 kind=kind, absolute=absolute, relative=relative,
                 denominator=denominator, size=target.shape[0]))

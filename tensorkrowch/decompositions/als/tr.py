@@ -1,27 +1,21 @@
 """
 This script contains:
 
-    Internal classes:
+    Classes:
         * _TRALSBackend
         * _TRLeverageALSBackend
-
-    Public classes:
         * TRALS
 
-    Internal functions:
+    Functions:
         * _standard_tr_cores
         * _contract_standard_tr
         * _evaluate_standard_tr
         * _tr_gauge_core_update
         * _normalize_tr_core_update
-
-    Public functions:
         * tr_als
 """
 
-from dataclasses import asdict, replace
-from math import prod
-from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Mapping, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
@@ -30,10 +24,9 @@ from tensorkrowch.formats.formats1d import TensorFormat1D
 from tensorkrowch.decompositions._utils import (_normalize_rank,
                                                 _unravel_indices)
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
-from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
-                                                    _report_als_result)
+from tensorkrowch.decompositions.als.driver import ALSBackend
 from tensorkrowch.decompositions.als.environments import (
-    CoreUpdateSet,
+    _updated_cores,
     DirectTREnvironment,
     TRSegmentEnvironmentCache,
     _environment_norm,
@@ -41,24 +34,16 @@ from tensorkrowch.decompositions.als.environments import (
 from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
                                                     _factor_core)
 from tensorkrowch.decompositions.als.problem import ALSProblem
-from tensorkrowch.decompositions.als.sampling import (ObservedRows,
-                                                      RowSampler,
-                                                      SampleRefreshPolicy,
+from tensorkrowch.decompositions.als.sampling import (RowSampler,
                                                       SamplingPolicy,
                                                       TRExactLeverageRows,
                                                       TRProductLeverageRows,
-                                                      UniformRows,
-                                                      _RowSamplingState)
+                                                      )
 from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
-                                                     _relative_error,
                                                      _solve_local_proposal)
 from tensorkrowch.decompositions.als.tt import TTALS
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
-from tensorkrowch.decompositions.observers import (DecompositionEvent,
-                                                   _normalize_verbosity,
-                                                   _resolve_observer)
-from tensorkrowch.decompositions.results import (TRDecomposition,
-                                                 _result_from_source)
+from tensorkrowch.decompositions.results import TRDecomposition
 from tensorkrowch.decompositions.sources import (BaseSource,
                                                  ConfigurationBatch)
 
@@ -121,12 +106,12 @@ def _evaluate_standard_tr(cores: Sequence[torch.Tensor],
 
 
 def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
-                          versions: Sequence[int],
                           fixed_sites: Sequence[int],
                           gauge: str,
                           direction: str,
                           site: int,
-                          proposal: torch.Tensor) -> CoreUpdateSet:
+                          proposal: torch.Tensor
+                          ) -> Mapping[int, torch.Tensor]:
     """Builds an atomic cyclic current-plus-receiver ``gauge`` update."""
     n_sites = len(cores)
     receiver = (site + 1) % n_sites if direction == 'forward' else \
@@ -141,58 +126,34 @@ def _tr_gauge_core_update(cores: Sequence[torch.Tensor],
     else:
         gauged_core, factor = proposal, None
 
-    sites = [site]
-    updated_cores = [gauged_core]
-    updated_versions = [versions[site] + 1]
+    replacements = {site: gauged_core}
     if factor is not None:
-        neighbor = _absorb_factor(
+        replacements[receiver] = _absorb_factor(
             factor, cores[receiver], direction)
-        sites.append(receiver)
-        updated_cores.append(neighbor)
-        updated_versions.append(versions[receiver] + 1)
-    return CoreUpdateSet(
-        sites=sites,
-        cores=updated_cores,
-        versions=updated_versions,
-        reason='local_solve')
+    return replacements
 
 
-def _normalize_tr_core_update(update_set: CoreUpdateSet,
+def _normalize_tr_core_update(replacements: Mapping[int, torch.Tensor],
                               cores: Sequence[torch.Tensor],
-                              versions: Sequence[int],
-                              fixed_sites: Sequence[int],
-                              direction: str,
-                              site: int) -> CoreUpdateSet:
-    """Moves a square-root core norm to the next trainable cyclic ``site``."""
-    updates = dict(update_set.updates)
-    current = updates[site][0]
+                              fixed_sites: Sequence[int], direction: str,
+                              site: int) -> Mapping[int, torch.Tensor]:
+    """Moves a square-root norm to the next trainable cyclic core."""
+    current = replacements[site]
     norm = torch.linalg.vector_norm(current)
     if (not torch.isfinite(norm)) or (norm == 0):
-        return update_set
+        return replacements
     scale = norm.sqrt()
-
-    receiver = None
     step = 1 if direction == 'forward' else -1
-    for offset in range(1, len(cores)):
-        candidate = (site + step * offset) % len(cores)
-        if candidate not in fixed_sites:
-            receiver = candidate
-            break
+    receiver = next((candidate for offset in range(1, len(cores))
+                     if (candidate := (site + step * offset) % len(cores))
+                     not in fixed_sites), None)
     if receiver is None:
-        return update_set
-
-    normalized = current / scale.to(current.dtype)
-    receiver_core, receiver_version = updates.get(
-        receiver, (cores[receiver], versions[receiver] + 1))
-    receiver_core = receiver_core * scale.to(receiver_core.dtype)
-    updates[site] = (normalized, updates[site][1])
-    updates[receiver] = (receiver_core, receiver_version)
-    sites = tuple(updates)
-    return CoreUpdateSet(
-        sites=sites,
-        cores=tuple(updates[updated_site][0] for updated_site in sites),
-        versions=tuple(updates[updated_site][1] for updated_site in sites),
-        reason='local_solve_normalization')
+        return replacements
+    updates = dict(replacements)
+    updates[site] = current / scale.to(current.dtype)
+    core = updates.get(receiver, cores[receiver])
+    updates[receiver] = core * scale.to(core.dtype)
+    return updates
 
 
 class _TRALSBackend:  # MARK: _TRALSBackend
@@ -210,7 +171,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
                  n_segments: Optional[int],
                  sampler: Optional[RowSampler] = None,
                  n_samples: Optional[int] = None,
-                 refresh_policy: Optional[SampleRefreshPolicy] = None,
+                 sampling_policy: Optional[SamplingPolicy] = None,
                  generator: Optional[torch.Generator] = None) -> None:
         self.problem = problem
         self.full_target = None if target is None else target.reshape(-1)
@@ -222,14 +183,10 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             cores, n_segments=n_segments, renormalize=renormalize)
         self.sampler = sampler
         self.n_samples = n_samples
-        self.refresh_policy = refresh_policy
+        self.sampling_policy = sampling_policy
         self.generator = generator
         self.sample_batch = None
         self.current_target = self.full_target
-        self._sampling_state = _RowSamplingState(
-            n_rows=prod(self.cache.in_dim),
-            core_versions=self.cache.core_versions,
-            device=self.cache.cores[0].device)
         self._direction = None
 
     @property
@@ -261,20 +218,12 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             self.current_target = self.full_target
             return None, False
 
-        self._sampling_state = replace(
-            self._sampling_state,
-            core_versions=self.cache.core_versions)
-        batch, state, refreshed = self.refresh_policy.sample(
-            sampler=self.sampler,
-            state=self._sampling_state,
-            site=order[0],
-            n_samples=self.n_samples,
-            generator=self.generator,
-            sweep=sweep,
-            current=self.sample_batch,
-            invalidate=lambda old, new: self.cache.invalidate(
-                'sample generation changed'))
-        self._sampling_state = state
+        batch, refreshed = self.sampling_policy.sample(
+            sampler=self.sampler, owner=self.cache, site=order[0],
+            n_samples=self.n_samples, generator=self.generator,
+            sweep=sweep, current=self.sample_batch)
+        if refreshed:
+            self.cache.invalidate('sample generation changed')
         if refreshed:
             if self.problem.observations is not None:
                 self.current_target = self.problem.observations.support_values
@@ -293,85 +242,48 @@ class _TRALSBackend:  # MARK: _TRALSBackend
         self.cache.prepare_sweep(order, samples=batch)
         return batch.generation, refreshed
 
-    def solve_site(self,
-                   site: int,
-                   sweep: int,
-                   return_record: bool) -> Tuple[
-            CoreUpdateSet, Optional[LocalSolveRecord]]:
+    def update_site(self,
+                    site: int,
+                    sweep: int,
+                    return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        local = self.cache.local_environment(site)
-        environment = local.design()
-        target = local.scale_target(self.current_target)
-        if self.sample_batch is not None:
-            sample_weights = self.sample_batch.weights.to(environment.dtype)
-            environment = environment * sample_weights.unsqueeze(1)
-            target = target * sample_weights
-        if (self.problem.observations is not None) and \
-                (self.problem.weights is not None):
-            weights = self.problem.weights.to(environment.dtype)
-            environment = environment * weights.unsqueeze(1)
-            target = target * weights
-        if self.problem.observations is None:
-            ids = self.sample_batch.ids if self.sample_batch is not None else \
-                torch.arange(prod(self.problem.in_dim), device=target.device)
-            indices = _unravel_indices(ids, self.problem.in_dim)
-            weights = self.problem.entry_weights(indices)
-            if weights is not None:
-                weights = weights.to(environment.dtype)
-                environment = environment * weights.unsqueeze(1)
-                target = target * weights
-        regularization_scale = None
-        if (self.solver.l2_reg_mode == 'absolute') and \
-                (self.solver.l2_reg > 0):
-            regularization_scale = (-2 * local.log_scale).exp()
-        sampling_exact = None if self.sample_batch is None else \
-            self.sample_batch.is_exact_for(self.cache.core_versions)
+        environment = self.cache.design(site)
+        indices = (None if (self.sample_batch is None) or
+                   (self.problem.observations is not None) else
+                   _unravel_indices(self.sample_batch.ids,
+                                    self.problem.in_dim))
         proposal, record = _solve_local_proposal(
-            solver=self.solver,
-            environment=environment,
-            target=target,
-            current=self.cache.cores[site],
-            site=site,
-            sweep=sweep,
-            return_record=return_record,
-            regularization_scale=regularization_scale,
-            sampling_exact=sampling_exact,
-            sample_generation=(
-                None if self.sample_batch is None
-                else self.sample_batch.generation))
-        update_set = _tr_gauge_core_update(
+            solver=self.solver, environment=environment,
+            target=self.current_target, current=self.cache.cores[site],
+            site=site, sweep=sweep, return_record=return_record,
+            problem=self.problem, log_scale=self.cache.log_scale,
+            indices=indices,
+            samples=self.sample_batch, core_versions=self.cache.core_versions)
+        replacements = _tr_gauge_core_update(
             cores=self.cache.cores,
-            versions=self.cache.core_versions,
             fixed_sites=self.fixed_sites,
             gauge=self.gauge,
             direction=self._direction,
             site=site,
             proposal=proposal)
         if self.normalize:
-            update_set = _normalize_tr_core_update(
-                update_set=update_set,
+            replacements = _normalize_tr_core_update(
+                replacements=replacements,
                 cores=self.cache.cores,
-                versions=self.cache.core_versions,
                 fixed_sites=self.fixed_sites,
                 direction=self._direction,
                 site=site)
-        return update_set, record
+        self._update(replacements)
+        return record
 
     def skip_site(self, site: int) -> None:
-        """Advances the sweep through a fixed core."""
-        self.cache.local_environment(site)
-        self.cache.commit(CoreUpdateSet((), (), (), reason='fixed_core'))
+        """Advances the cache through one frozen site."""
+        self.cache.design(site)
+        self.cache.update({})
 
-    def commit(self, update_set: CoreUpdateSet) -> None:
-        """
-        Commits all replaced cores and invalidates their cache
-        dependencies.
-        """
-        self.cache.commit(update_set)
-        if self.sampler is not None:
-            for site in update_set.sites:
-                self._sampling_state = self.sampler.update_after_core(
-                    self._sampling_state, site)
+    def _update(self, replacements: Mapping[int, torch.Tensor]) -> None:
+        """Applies one complete local update to its environment owner."""
+        self.cache.update(replacements)
 
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
@@ -384,18 +296,7 @@ class _TRALSBackend:  # MARK: _TRALSBackend
             return problem.objective_error(approximation)
 
         approximation = _contract_standard_tr(self.cache.cores).reshape(-1)
-        residual = approximation - self.full_target
-        target = self.full_target
-        indices = _unravel_indices(torch.arange(target.numel(),
-                                                device=target.device),
-                                    problem.in_dim)
-        weights = problem.entry_weights(indices)
-        if weights is not None:
-            residual = residual * weights
-            target = target * weights
-        absolute = torch.linalg.vector_norm(residual)
-        target_norm = torch.linalg.vector_norm(target)
-        return absolute, _relative_error(absolute, target_norm)
+        return problem._objective_error(approximation, self.full_target)
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -444,12 +345,13 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
             raise ValueError(
                 "`leverage_method` should be 'product' or 'exact'")
         self.leverage_method = leverage_method
-        self._sampling_state = _RowSamplingState(
-            n_rows=prod(core.shape[1] for core in self._cores),
-            core_versions=self._versions,
-            device=self._cores[0].device)
         self._direction = None
         self._generation = None
+
+    @property
+    def core_versions(self) -> Tuple[int, ...]:
+        """Versions read by each proposal at draw time."""
+        return self._versions
 
     @property
     def n_sites(self) -> int:
@@ -478,21 +380,13 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
         self._generation = sweep
         return sweep, True
 
-    def solve_site(self,
-                   site: int,
-                   sweep: int,
-                   return_record: bool) -> Tuple[
-            CoreUpdateSet, Optional[LocalSolveRecord]]:
+    def update_site(self,
+                    site: int,
+                    sweep: int,
+                    return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        state = replace(
-            self._sampling_state,
-            core_versions=self._versions,
-            generation=self._generation)
-        batch = self.sampler.draw(
-            state=state,
-            site=site,
-            n_samples=self.n_samples,
-            generator=self.generator)
+        self.sampler.generation = self._generation
+        batch = self.sampler.draw(self, site, self.n_samples, self.generator)
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
         in_dim = self._cores[site].shape[1]
@@ -506,79 +400,46 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
             raise ValueError(
                 'The tensor source should return only finite values')
 
-        local = DirectTREnvironment(self._cores).local_environment(
+        environment = DirectTREnvironment(self._cores).design(
             site, samples=batch)
-        environment = local.design()
         log_scale = environment.real.new_zeros(())
         if self.renormalize:
             norm = _environment_norm(environment)
             if norm > 0:
                 environment = environment / norm
                 log_scale = norm.log()
-                target = target / norm.to(target.dtype)
-        sample_weights = batch.weights.to(environment.dtype)
-        environment = environment * sample_weights.unsqueeze(1)
-        target = target * sample_weights
-        weights = self.problem.entry_weights(indices)
-        if weights is not None:
-            weights = weights.to(environment.dtype)
-            environment = environment * weights.unsqueeze(1)
-            target = target * weights
-
-        regularization_scale = None
-        if (self.solver.l2_reg_mode == 'absolute') and \
-                (self.solver.l2_reg > 0):
-            regularization_scale = (-2 * log_scale).exp()
-        sampling_exact = batch.is_exact_for(self._versions)
         proposal, record = _solve_local_proposal(
-            solver=self.solver,
-            environment=environment,
-            target=target,
-            current=self._cores[site],
-            site=site,
-            sweep=sweep,
-            return_record=return_record,
-            regularization_scale=regularization_scale,
-            sampling_exact=sampling_exact,
-            sample_generation=batch.generation)
-        update_set = _tr_gauge_core_update(
+            solver=self.solver, environment=environment, target=target,
+            current=self._cores[site], site=site, sweep=sweep,
+            return_record=return_record, problem=self.problem,
+            log_scale=log_scale, indices=indices, samples=batch,
+            core_versions=self._versions)
+        replacements = _tr_gauge_core_update(
             cores=self._cores,
-            versions=self._versions,
             fixed_sites=self.fixed_sites,
             gauge=self.gauge,
             direction=self._direction,
             site=site,
             proposal=proposal)
         if self.normalize:
-            update_set = _normalize_tr_core_update(
-                update_set=update_set,
+            replacements = _normalize_tr_core_update(
+                replacements=replacements,
                 cores=self._cores,
-                versions=self._versions,
                 fixed_sites=self.fixed_sites,
                 direction=self._direction,
                 site=site)
-        return update_set, record
+        self._update(replacements)
+        return record
 
     def skip_site(self, site: int) -> None:
         """Advances the sweep through a fixed core."""
         return None
 
-    def commit(self, update_set: CoreUpdateSet) -> None:
-        """
-        Commits all replaced cores and invalidates their cache
-        dependencies.
-        """
-        cores = list(self._cores)
-        versions = list(self._versions)
-        for site, (core, version) in update_set.updates.items():
-            if version <= versions[site]:
-                raise ValueError('Every updated core version should increase')
-            cores[site] = core
-            versions[site] = version
-        self._cores = TRSegmentEnvironmentCache._validate_cores(cores)
-        self._versions = tuple(versions)
-        self._sampling_state = replace(
-            self._sampling_state, core_versions=self._versions)
+    def _update(self, replacements: Mapping[int, torch.Tensor]) -> None:
+        """Validates and applies the solved core and any gauge receiver."""
+        self._cores, self._versions = _updated_cores(
+            self._cores, self._versions, replacements,
+            TRSegmentEnvironmentCache._validate_cores)
 
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
@@ -634,6 +495,9 @@ class TRALS(TTALS):  # MARK: TRALS
     (2, 3)
     """
 
+    _topology = 'tr'
+    _result_type = TRDecomposition
+
     def _random_cores(self,
                       ranks: Sequence[int],
                       dtype: torch.dtype,
@@ -656,15 +520,15 @@ class TRALS(TTALS):  # MARK: TRALS
             cores.append(core)
         return tuple(cores)
 
-    def _initial_tr_cores(self,
-                          target: torch.Tensor,
-                          initial_cores: Optional[Union[
+    def _initial_cores(self,
+                       target: torch.Tensor,
+                       initial_cores: Optional[Union[
                            TensorFormat1D, Sequence[torch.Tensor]]],
-                          rank: _Rank,
-                          fixed_cores: Optional[
-                              Sequence[Optional[torch.Tensor]]],
-                          generator: Optional[
-                              torch.Generator]) -> Tuple[
+                       rank: _Rank,
+                       fixed_cores: Optional[
+                           Sequence[Optional[torch.Tensor]]],
+                       generator: Optional[
+                           torch.Generator]) -> Tuple[
             Tuple[torch.Tensor, ...],
             Tuple[int, ...]]:
         """Builds and validates initialization plus fixed-site semantics."""
@@ -726,6 +590,28 @@ class TRALS(TTALS):  # MARK: TRALS
             fixed_sites.append(site)
         final_cores = TRSegmentEnvironmentCache._validate_cores(final_cores)
         return final_cores, tuple(fixed_sites)
+
+    def _make_backend(self, problem: ALSProblem,
+                      cores: Sequence[torch.Tensor],
+                      target: Optional[torch.Tensor],
+                      solver: LeastSquaresSolver, gauge: str,
+                      fixed_sites: Sequence[int], renormalize: bool,
+                      row_sampler: Optional[RowSampler],
+                      n_samples: Optional[int],
+                      sampling_policy: SamplingPolicy,
+                      generator: Optional[torch.Generator],
+                      sampler: Optional[SamplingPolicy]) -> ALSBackend:
+        """Builds the topology-specific full-row or leverage backend."""
+        if (sampler is not None) and (sampler.method in (
+                'leverage', 'exact_leverage')):
+            return _TRLeverageALSBackend(
+                problem, cores, solver, gauge, fixed_sites, n_samples,
+                'product' if sampler.method == 'leverage' else 'exact',
+                sampler.uniform_mix, generator, True, renormalize)
+        return _TRALSBackend(
+            problem, cores, target, solver, gauge, fixed_sites,
+            True, renormalize, None, row_sampler, n_samples,
+            sampling_policy, generator)
 
     def fit(self,
             rank: Optional[Union[int, Sequence[int]]] = None,
@@ -797,120 +683,11 @@ class TRALS(TTALS):  # MARK: TRALS
         >>> torch.allclose(result.contract_dense(), tensor)
         True
         """
-        self._validate_initial_format(initial_cores)
-        if not isinstance(gauge, str):
-            raise TypeError('`gauge` should be str type')
-        if gauge not in ('none', 'qr'):
-            raise ValueError("`gauge` should be 'none' or 'qr'")
-        if not isinstance(renormalize, bool):
-            raise TypeError('`renormalize` should be bool type')
-        if not isinstance(collect_metrics, bool):
-            raise TypeError('`collect_metrics` should be bool type')
-        if (generator is not None) and \
-                not isinstance(generator, torch.Generator):
-            raise TypeError('`generator` should be torch.Generator or None')
-        if solver is None:
-            solver = LeastSquaresSolver()
-        elif not isinstance(solver, LeastSquaresSolver):
-            raise TypeError('`solver` should be LeastSquaresSolver type')
-        if convergence is None:
-            convergence = ConvergencePolicy()
-        elif not isinstance(convergence, ConvergencePolicy):
-            raise TypeError('`convergence` should be ConvergencePolicy type')
-        if sampler is not None:
-            if not isinstance(sampler, SamplingPolicy):
-                raise TypeError('`sampler` should be SamplingPolicy or None')
-            sampler.validate('tr')
-            if self._problem.observations is not None:
-                raise ValueError(
-                    '`sampler` cannot replace permanent observations')
-        convergence.validate_objective(sampler is None)
-
-        verbosity = _normalize_verbosity(verbose)
-        collect_metrics = collect_metrics or bool(verbosity)
-        fit_observer = _resolve_observer(
-            verbosity, None) if verbosity else None
-        configurations = None
-        target = None
-        problem = self._problem
-        row_sampler = None
-        n_samples = None if sampler is None else sampler.n_samples
-        refresh_policy = SampleRefreshPolicy(
-            reuse_sweeps=1 if sampler is None else sampler.reuse_sweeps)
-        if problem.observations is not None:
-            sampling = 'observed'
-            row_sampler = ObservedRows(problem.observations)
-            runtime_reference = problem.observations.support_values
-        elif sampler is None:
-            sampling = 'exact'
-            configurations, target = self._exact_target()
-            runtime_reference = target
-        else:
-            sampling = sampler.method
-            problem = replace(problem, sampled=True)
-            runtime_reference = self._runtime_reference()
-            if sampling == 'uniform':
-                row_sampler = UniformRows()
-        if not (runtime_reference.is_floating_point() or
-                runtime_reference.is_complex()):
-            raise TypeError('`source` should have floating or complex values')
-        if (generator is not None) and \
-                (torch.device(generator.device) != runtime_reference.device):
-            raise ValueError(
-                '`generator` and source values should share a device')
-        cores, fixed_sites = self._initial_tr_cores(
-            target=runtime_reference, initial_cores=initial_cores, rank=rank,
-            fixed_cores=fixed_cores, generator=generator)
-        if sampling in ('leverage', 'exact_leverage'):
-            backend = _TRLeverageALSBackend(
-                problem, cores, solver, gauge, fixed_sites, n_samples,
-                'product' if sampling == 'leverage' else 'exact',
-                sampler.uniform_mix, generator, True, renormalize)
-        else:
-            backend = _TRALSBackend(
-                problem, cores, target, solver, gauge, fixed_sites,
-                True, renormalize, None, row_sampler, n_samples,
-                refresh_policy, generator)
-        if fit_observer is not None:
-            fit_observer.emit(DecompositionEvent(
-                name='start', phase='TR-ALS', values={
-                    'sites': len(cores), 'in_dim': self.in_dim,
-                    'sampling': sampling, 'gauge': gauge,
-                    'max_sweeps': convergence.max_sweeps,
-                    'sweep_direction': 'forward',
-                }))
-        fitted = ALSSweepDriver().fit(
-            problem, backend, convergence, observer=fit_observer,
-            collect_metrics=collect_metrics, phase='TR-ALS',
-            sweep_direction='forward')
-        result_cores = tuple(fitted.cores)
-        if self._out_device is not None:
-            result_cores = tuple(core.to(self._out_device)
-                                 for core in result_cores)
-        result = TRDecomposition(
-            cores=result_cores, metrics=fitted.metrics, metadata={
-                'algorithm': 'tr_als',
-                'initialization': (
-                    'random' if initial_cores is None else 'cores'),
-                'gauge': gauge, 'converged': fitted.converged,
-                'keep_best': convergence.keep_best,
-                'stop_reason': fitted.stop_reason, 'n_sweeps': fitted.n_sweeps,
-                'sweep_direction': 'forward', 'fixed_sites': list(fixed_sites),
-                'sampling': sampling, 'n_samples': n_samples,
-                'sampler': None if sampler is None else asdict(sampler),
-                'solver': {'l2_reg': solver.l2_reg,
-                           'l2_reg_mode': solver.l2_reg_mode,
-                           'rcond': solver.rcond,
-                           'column_scaling': solver.column_scaling,
-                           'system_scaling': solver.system_scaling},
-                'exact_configurations': None if configurations is None
-                else configurations.batch_size,
-            })
-        result = _result_from_source(result, self._source)
-        if fit_observer is not None:
-            _report_als_result(result, fit_observer, 'TR-ALS')
-        return result
-
+        return super().fit(
+            rank=rank, initial_cores=initial_cores, fixed_cores=fixed_cores,
+            gauge=gauge, renormalize=renormalize, sampler=sampler,
+            solver=solver, convergence=convergence, generator=generator,
+            collect_metrics=collect_metrics, verbose=verbose)
 
 def tr_als(source: 'SourceLike',
            rank: Optional[Union[int, Sequence[int]]] = None,

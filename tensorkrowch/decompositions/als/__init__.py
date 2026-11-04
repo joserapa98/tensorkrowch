@@ -62,24 +62,26 @@ fits; use the engines for sampler, solver and convergence objects.
 Shared execution and topology-specific contractions:
 
     ALSSweepDriver
-        ├─ backend prepares rows and environments
-        ├─ LeastSquaresSolver ─> solved core ─> optional QR absorption
-        ├─ CoreUpdateSet ─> atomic core and cache update
-        └─ complete-sweep objective ─> ConvergencePolicy
+        +-- backend.prepare_sweep(...) and backend.update_site(...)
+        +-- EnvironmentCache.design(...) -> LeastSquaresSolver
+        +-- EnvironmentCache.update(...) commits atomic replacements
+        +-- complete-sweep objective -> ConvergencePolicy
+        +-- retained final cores, metrics and stopping state
 
     TT backends
-        ├─ TTEnvironmentCache ─> TTLocalEnvironment
-        └─ mixed-canonical site-dependent leverage environments
+        +-- TTEnvironmentCache owns contractions, matrix and removed scale
+        +-- mixed-canonical site-dependent leverage rows
 
     TR backends
-        ├─ TRSegmentEnvironmentCache ─> TRLocalEnvironment
-        └─ direct sampled environments for cyclic leverage
+        +-- TRSegmentEnvironmentCache owns segmented cyclic contractions
+        +-- DirectTREnvironment supplies cyclic leverage matrices
 
-``EnvironmentCache`` and ``RowSampler`` describe low-level contracts.
-``SampleBatch`` retains selected rows and their draw probabilities;
-``SampleRefreshPolicy`` controls reusable generations. ``DirectTREnvironment``
-provides a simple reference contraction. QR factorization is shared through
-private helpers; it introduces no rank truncation.
+``SamplingPolicy`` controls proposal choice and reusable generations.
+``RowSampler`` reads the current core owner when drawing rows; ``SampleBatch``
+retains immutable probabilities and proposal versions. There is no separate
+sampling-state or core-update container. Local numerical responsibilities
+remain in the backend; the driver only schedules complete site updates.
+QR factorization introduces no rank truncation.
 
 ``collect_metrics=True`` records local solves and sweep measurements in the
 result's metrics. ``verbose`` controls console events. Use
@@ -90,20 +92,16 @@ diagnostics.
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
 from tensorkrowch.decompositions.als.driver import ALSSweepDriver
 from tensorkrowch.decompositions.als.environments import (
-    CoreUpdateSet,
     DirectTREnvironment,
     EnvironmentCache,
-    TRLocalEnvironment,
     TRSegmentEnvironmentCache,
     TTEnvironmentCache,
-    TTLocalEnvironment,
 )
 from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.sampling import (ExactRows,
                                                       ObservedRows,
                                                       RowSampler,
                                                       SampleBatch,
-                                                      SampleRefreshPolicy,
                                                       SamplingPolicy,
                                                       TRExactLeverageRows,
                                                       TRProductLeverageRows,
@@ -125,13 +123,9 @@ __all__ = [
     'TTLeverageRows',
     'TRProductLeverageRows',
     'TRExactLeverageRows',
-    'SampleRefreshPolicy',
     'SamplingPolicy',
     'EnvironmentCache',
-    'CoreUpdateSet',
-    'TTLocalEnvironment',
     'TTEnvironmentCache',
-    'TRLocalEnvironment',
     'DirectTREnvironment',
     'TRSegmentEnvironmentCache',
     'ConvergencePolicy',

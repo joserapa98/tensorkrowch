@@ -1,17 +1,14 @@
 """
 This script contains:
 
-    Internal TT-SVD state classes:
-        * _TTSVDErrorState
+    Classes:
         * _TTSVDFitContext
-        * _TTSVDSplit
-
-    Class for TT-SVD decompositions:
         * TTSVD
 
-    TT-SVD function:
+    Functions:
         * tt_svd
         * qtt_svd
+        * vec_to_mps
 """
 
 from contextlib import nullcontext
@@ -51,15 +48,6 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class _TTSVDErrorState:  # MARK: _TTSVDErrorState
-    """Holds error quantities that are only needed for diagnostics."""
-
-    norm: torch.Tensor  # Input norm, optionally resolved by batch
-    log_norm: torch.Tensor  # Stable logarithm of the input norm
-    relative_sq_error: torch.Tensor  # Accumulated squared relative error
-
-
-@dataclass
 class _TTSVDFitContext:  # MARK: _TTSVDFitContext
     """Holds numerical state local to one TT-SVD fit."""
 
@@ -68,17 +56,12 @@ class _TTSVDFitContext:  # MARK: _TTSVDFitContext
     truncation: _TruncationSpec  # Shared truncation criteria for every cut
     renormalize: bool  # Whether residual norms are extracted before SVDs
     log_scale: torch.Tensor  # Accumulated logarithmic residual scale
-    error_state: Optional[_TTSVDErrorState]  # Optional metric state
-
-
-@dataclass
-class _TTSVDSplit:  # MARK: _TTSVDSplit
-    """Contains the outputs and diagnostics of one TT-SVD cut."""
-
-    core: torch.Tensor  # Finalized TT core produced at this cut
-    residual: torch.Tensor  # Tensor passed to the next cut
-    selected_rank: int  # Rank retained at this cut
-    record: Optional[TruncationRecord]  # Optional truncation diagnostics
+    # Input norm used to scale absolute error diagnostics
+    norm: Optional[torch.Tensor] = None
+    # Stable logarithm of the input norm
+    log_norm: Optional[torch.Tensor] = None
+    # Accumulated squared relative truncation error
+    relative_sq_error: Optional[torch.Tensor] = None
 
 
 class TTSVD:  # MARK: TTSVD
@@ -132,7 +115,8 @@ class TTSVD:  # MARK: TTSVD
     def __init__(self,
                  source: 'SourceLike',
                  *,
-                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
+                 out_device: Optional[Union[str, torch.device]] = 'cpu'
+                 ) -> None:
         self._source, tensor, batches = _prepare_svd_source(source)
         self._n_batches = batches
         self._tensor = tensor
@@ -150,7 +134,9 @@ class TTSVD:  # MARK: TTSVD
                     residual: torch.Tensor,
                     site: int,
                     previous_rank: int,
-                    context: _TTSVDFitContext) -> _TTSVDSplit:
+                    context: _TTSVDFitContext) -> Tuple[
+                        torch.Tensor, torch.Tensor,
+                        Optional[TruncationRecord]]:
         """
         Splits one ``site`` and updates its error and normalization state.
         """
@@ -169,7 +155,7 @@ class TTSVD:  # MARK: TTSVD
                 cut_log_scale.detach().cpu().item())
         else:
             truncation_kwargs = context.truncation.as_kwargs()
-        collect_metrics = context.error_state is not None
+        collect_metrics = context.relative_sq_error is not None
         svd_result = truncated_svd(
             tensor=residual,
             return_info=collect_metrics,
@@ -187,19 +173,18 @@ class TTSVD:  # MARK: TTSVD
                 selected_rank)
 
         record = None
-        if context.error_state is not None:
-            error_state = context.error_state
+        if context.relative_sq_error is not None:
             discarded_log_norm = \
                 info.discarded_sq_norm.log() / 2
             if context.renormalize:
                 discarded_log_norm = discarded_log_norm + cut_log_scale
             rel_contribution = ratio_from_log(
-                discarded_log_norm, error_state.log_norm)
+                discarded_log_norm, context.log_norm)
             if not torch.isfinite(rel_contribution).all():
                 raise ValueError(
                     'The relative TT-SVD truncation error should be finite')
-            error_state.relative_sq_error = (
-                error_state.relative_sq_error + rel_contribution.square())
+            context.relative_sq_error = (
+                context.relative_sq_error + rel_contribution.square())
 
             record = TruncationRecord.from_svd_info(
                 info,
@@ -208,14 +193,10 @@ class TTSVD:  # MARK: TTSVD
                     cut_log_scale.expand(context.batch_shape)
                     if self._n_batches and context.renormalize
                     else cut_log_scale if context.renormalize else None),
-                global_norm=error_state.norm)
+                global_norm=context.norm)
         core = self._runtime.finalize(u)
         residual = s.to(vh.dtype).unsqueeze(-1) * vh
-        return _TTSVDSplit(
-            core=core,
-            residual=residual,
-            selected_rank=selected_rank,
-            record=record)
+        return core, residual, record
 
     def _redistribute_scale(self,
                             cores: List[torch.Tensor],
@@ -249,24 +230,22 @@ class TTSVD:  # MARK: TTSVD
         in_dim = tuple(tensor.shape[self._n_batches:])
         n_sites = len(in_dim)
 
-        error_state = None
+        norm = log_norm = relative_sq_error = None
         if collect_metrics:
             input_axes = tuple(range(self._n_batches, tensor.ndim))
             log_norm = log_tensor_norm(tensor, dim=input_axes)
             norm = log_norm.exp()
             if not torch.isfinite(norm).all():
                 raise ValueError('The input tensor norm should be finite')
-            error_state = _TTSVDErrorState(
-                norm=norm,
-                log_norm=log_norm,
-                relative_sq_error=torch.zeros_like(norm))
+            relative_sq_error = torch.zeros_like(norm)
         context = _TTSVDFitContext(
             batch_shape=batch_shape,
             in_dim=in_dim,
             truncation=truncation,
             renormalize=renormalize,
             log_scale=tensor.real.new_zeros(()),
-            error_state=error_state)
+            norm=norm, log_norm=log_norm,
+            relative_sq_error=relative_sq_error)
 
         metrics = DecompositionMetrics()
         cores = []
@@ -279,19 +258,19 @@ class TTSVD:  # MARK: TTSVD
             previous_rank = 1
             for site in range(n_sites - 1):
                 cut_timer_context = (
-                    self._runtime.timer() if collect_metrics else nullcontext())
+                    self._runtime.timer() if collect_metrics
+                    else nullcontext())
                 with cut_timer_context as cut_timer:
-                    split = self._split_site(
+                    core, residual, record = self._split_site(
                         residual=residual,
                         site=site,
                         previous_rank=previous_rank,
                         context=context)
 
-                cores.append(split.core)
-                residual = split.residual
-                previous_rank = split.selected_rank
+                cores.append(core)
+                previous_rank = core.shape[-1]
                 if collect_metrics:
-                    metrics.truncations.append(split.record)
+                    metrics.truncations.append(record)
                     cut_timing = TimingRecord(
                         name='svd_cut',
                         elapsed=cut_timer.elapsed,
@@ -300,21 +279,21 @@ class TTSVD:  # MARK: TTSVD
                 if progress is not None:
                     progress.cut_complete(
                         site=site,
-                        record=split.record,
+                        record=record,
                         elapsed=cut_timer.elapsed)
 
             cores.append(residual)
             cores = self._redistribute_scale(cores, context)
 
-        if error_state is not None:
-            rel_error = error_state.relative_sq_error.sqrt()
-            abs_error = rel_error * error_state.norm
+        if context.relative_sq_error is not None:
+            rel_error = context.relative_sq_error.sqrt()
+            abs_error = rel_error * context.norm
             metrics.errors.append(ErrorRecord(
                 kind='truncation',
                 absolute=abs_error,
                 relative=rel_error,
                 size=n_sites - 1,
-                denominator=error_state.norm))
+                denominator=context.norm))
             metrics.timings.append(TimingRecord(
                 name='fit',
                 elapsed=total_timer.elapsed,
@@ -393,7 +372,8 @@ class TTSVD:  # MARK: TTSVD
 
             .. math::
 
-                \frac{\sum_{i \in \{kept\}}{s_i^2}}{\sum_{i \in \{all\}}{s_i^2}}
+                \frac{\sum_{i \in \{kept\}}{s_i^2}}
+                     {\sum_{i \in \{all\}}{s_i^2}}
                 \ge cum\_percentage
 
         renormalize : bool
@@ -599,8 +579,9 @@ def tt_svd(source: 'SourceLike',
     -------
     TTDecomposition
         Decomposition with cores and metadata. Access ``cores`` for the
-        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
-        for structured information.
+        tensors and
+        :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info` for
+        structured information.
 
     Examples
     --------

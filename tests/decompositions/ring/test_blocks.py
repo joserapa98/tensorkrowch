@@ -1,4 +1,4 @@
-"""Tests for tensor ring block selection, rank estimates and splitting."""
+"""Tests for tensor ring block selection, shared partitions and splitting."""
 
 import pytest
 import torch
@@ -6,118 +6,67 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.ring.blocks import (
-    _BlockSelection, _CentralBlockSelector, _PrescribedCentralBlockSelector,
-    _RingRankEstimator,
+    _select_block, _ring_partition,
 )
 
 
 class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector
 
     def test_grows_bilaterally_from_center(self):
-        selection = _CentralBlockSelector().select(
+        selection = _select_block(
             in_dim := (2, 2, 2, 2, 2),
             rank=2,
             center=2)
 
-        assert isinstance(selection, _BlockSelection)
-        assert selection.sites == (1, 2, 3)
-        assert selection.in_dim == in_dim[1:4]
-        assert selection.growth == ((2, 2), (2, 3), (1, 3))
-        assert selection.input_capacity == 8
-        assert selection.required_input_capacity == 5
-        assert selection.feasible
-        assert selection.boundary is None
+        assert selection['sites'] == (1, 2, 3)
+        assert selection['in_dim'] == in_dim[1:4]
+        assert selection['growth'] == ((2, 2), (2, 3), (1, 3))
+        assert selection['input_capacity'] == 8
+        assert selection['required_input_capacity'] == 5
+        assert selection['feasible']
+        assert selection['boundary'] is None
 
     @pytest.mark.parametrize(
         ('center', 'sites', 'boundary'),
         [(0, (0, 1, 2), 'left'), (4, (2, 3, 4), 'right')])
     def test_selects_blocks_at_both_boundaries(self, center, sites, boundary):
-        selection = _CentralBlockSelector().select(
+        selection = _select_block(
             (2, 2, 2, 2, 2), rank=2, center=center)
 
-        assert selection.sites == sites
-        assert selection.feasible
-        assert selection.boundary == boundary
+        assert selection['sites'] == sites
+        assert selection['feasible']
+        assert selection['boundary'] == boundary
 
     def test_provider_object_and_heterogeneous_right_link_caps(self):
         class Provider:
             in_dim = (2, 3, 2, 4)
 
-        selection = _CentralBlockSelector().select(
+        selection = _select_block(
             Provider(), rank=(2, 3, 4, 5), center=1)
 
-        assert selection.sites == (1, 2, 3)
-        assert selection.left_rank_cap == 2
-        assert selection.right_rank_cap == 5
-        assert selection.boundary == 'right'
+        assert selection['sites'] == (1, 2, 3)
+        assert selection['left_rank_cap'] == 2
+        assert selection['right_rank_cap'] == 5
+        assert selection['boundary'] == 'right'
 
     def test_insufficient_input_capacity_is_a_result_not_an_exception(self):
-        selection = _CentralBlockSelector().select(
+        selection = _select_block(
             (2, 2, 2), rank=10, center=1)
 
-        assert selection.sites == (0, 1, 2)
-        assert not selection.feasible
-        assert selection.reason == 'available_sites_exhausted'
-        assert selection.input_capacity == 8
-        assert selection.required_input_capacity == 101
-        assert selection.boundary == 'both'
+        assert selection['sites'] == (0, 1, 2)
+        assert not selection['feasible']
+        assert selection['reason'] == 'available_sites_exhausted'
+        assert selection['input_capacity'] == 8
+        assert selection['required_input_capacity'] == 101
+        assert selection['boundary'] == 'both'
 
     def test_bounds_limit_growth_and_preserve_global_boundary_semantics(self):
-        selection = _CentralBlockSelector().select(
+        selection = _select_block(
             (2, 2, 2, 2, 2), rank=3, center=1, bounds=(1, 3))
 
-        assert selection.sites == (1, 2, 3)
-        assert not selection.feasible
-        assert selection.boundary is None
-
-    def test_prescribed_selector_is_shared_by_fixed_ring_workflows(self):
-        selection = _PrescribedCentralBlockSelector().select(
-            (2, 3, 4, 5), rank=(2, 3, 4, 5), center=2)
-
-        assert selection.sites == (2,)
-        assert selection.left_rank_cap == 3
-        assert selection.right_rank_cap == 4
-        assert selection.reason == 'prescribed_fixed_rank_center'
-
-
-class TestRingRankEstimator:  # MARK: TestRingRankEstimator
-
-    def test_reproduces_balanced_uncapped_estimate(self):
-        estimate = _RingRankEstimator().estimate(
-            left_dim=12,
-            right_dim=18,
-            auxiliary_rank=6,
-            rank_caps=(10, 10, 10))
-
-        assert estimate.rank == (2, 3, 6)
-        assert estimate.cyclic_rank_estimate == pytest.approx(6.0)
-        assert estimate.feasible
-        assert estimate.limitations == ()
-
-    def test_adapts_adjacent_ranks_to_a_low_cyclic_cap(self):
-        estimate = _RingRankEstimator().estimate(
-            left_dim=12,
-            right_dim=18,
-            auxiliary_rank=6,
-            rank_caps=(10, 10, 3))
-
-        assert estimate.rank == (4, 6, 3)
-        assert estimate.feasible
-
-    def test_reports_each_capacity_blocked_by_caps(self):
-        estimate = _RingRankEstimator().estimate(
-            left_dim=20,
-            right_dim=24,
-            auxiliary_rank=20,
-            rank_caps=(2, 3, 2))
-
-        assert estimate.rank == (2, 3, 2)
-        assert not estimate.feasible
-        assert estimate.limitations == (
-            'left_dim_exceeds_rank_capacity',
-            'right_dim_exceeds_rank_capacity',
-            'auxiliary_rank_exceeds_adjacent_rank_capacity',
-        )
+        assert selection['sites'] == (1, 2, 3)
+        assert not selection['feasible']
+        assert selection['boundary'] is None
 
 
 def _contract_cores(cores):
@@ -221,3 +170,47 @@ class TestSplitBlock:
 
         with pytest.raises(error):
             _split_block(block, dimensions)
+
+
+class TestRingPartition:
+
+    @pytest.mark.parametrize('count', [1, 2, 3, 7])
+    @pytest.mark.parametrize('boundaries', [False, True])
+    def test_prescribed_caps_and_merged_boundaries(self, count, boundaries):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        generator = torch.Generator().manual_seed(96)
+        ring = tk.formats.TR([
+            torch.randn(2, 4, 2, dtype=torch.complex128,
+                        generator=generator) for _ in range(count)])
+        provider = _TTCoreProvider(ring.to_tt())
+        center = count // 2
+        sites, left, right, ranks, info, rtol = _ring_partition(
+            provider, 2, center, boundaries, None)
+        assert center in sites
+        assert sites == tuple(range(sites[0], sites[-1] + 1))
+        assert ranks == (2,) * count
+        assert info is None
+        assert rtol is None
+        assert not set(sites).intersection(left + right)
+        assert not set(left).intersection(right)
+        assert (sites[0] == 0) or (left[0] == 0)
+        assert (sites[-1] == count - 1) or (right[-1] == count - 1)
+        if not boundaries:
+            assert len(left) <= 1
+            assert len(right) <= 1
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_discovers_rank_two_ring_and_numerical_floor(self, dtype):
+        from tensorkrowch.decompositions.ring.tt2tr import _TTCoreProvider
+
+        generator = torch.Generator().manual_seed(96)
+        ring = tk.formats.TR([
+            torch.randn(2, 4, 2, dtype=dtype, generator=generator)
+            for _ in range(7)])
+        sites, left, right, ranks, info, rtol = _ring_partition(
+            _TTCoreProvider(ring.to_tt()), None, 3, True, 1e-12)
+        assert (sites, left, right) == ((2, 3, 4), (0, 1), (5, 6))
+        assert ranks == (2,) * 7
+        assert info['cyclic_rank'] == 2
+        assert rtol >= 1e-12

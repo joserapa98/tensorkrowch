@@ -383,7 +383,7 @@ class TestOpeningAdapters:
 
 
 class TestLegacyFixedGaugeClosure:
-    """Keeps the private solver used by not-yet-reviewed sketching working."""
+    """Checks direct two-fixed-gauge closure for cyclic providers."""
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('orientation', ['right', 'left'])
@@ -399,3 +399,58 @@ class TestLegacyFixedGaugeClosure:
         assert torch.equal(result.left_gauge, left)
         assert torch.equal(result.right_gauge, right)
         torch.testing.assert_close(result.contract_dense(), target)
+
+
+class TestGaugeCoordinateMaps:
+
+    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+    def test_rectangular_maps_transform_external_axes_and_preserve_opening(
+            self, dtype):
+        generator = torch.Generator().manual_seed(707)
+        cores = [torch.randn(*shape, dtype=dtype, generator=generator)
+                 for shape in ((2, 3, 2), (2, 4, 2), (2, 5, 2))]
+        opening = tk.decompositions.LoopOpening(
+            cores[0], [cores[1]], cores[2], (2, 2, 2))
+        original = opening.contract_dense().clone()
+        left = torch.randn(7, 3, dtype=dtype, generator=generator,
+                           requires_grad=True)
+        right = torch.randn(6, 5, dtype=dtype, generator=generator,
+                            requires_grad=True)
+        a, b = opening.transform_gauges(left, right)
+        mapped = tk.decompositions.LoopOpening(
+            a, opening.cores, b, opening.rank).contract_dense()
+        expected = torch.einsum('ma,aib,nb->min', left, original, right)
+        torch.testing.assert_close(mapped, expected)
+        torch.testing.assert_close(opening.contract_dense(), original)
+        assert opening.left_gauge is cores[0]
+        assert opening.right_gauge is cores[2]
+        opening.left_map, opening.right_map = left, right
+        stored = opening.transform_gauges()
+        torch.testing.assert_close(stored[0], a)
+        torch.testing.assert_close(stored[1], b)
+        mapped.abs().square().sum().backward()
+        assert left.grad is not None and torch.isfinite(left.grad).all()
+        assert right.grad is not None and torch.isfinite(right.grad).all()
+
+    def test_complex_maps_promote_real_gauges(self):
+        opening = tk.decompositions.LoopOpening(
+            torch.ones(1, 2, 1), [torch.ones(1, 3, 1)],
+            torch.ones(1, 2, 1), (1, 1, 1))
+        left, right = opening.transform_gauges(
+            1j * torch.eye(2), torch.eye(2))
+        assert left.is_complex()
+        torch.testing.assert_close(left, 1j * opening.left_gauge)
+        torch.testing.assert_close(right, opening.right_gauge)
+
+    @pytest.mark.parametrize('matrix, error', [
+        (torch.ones(2), TypeError), (torch.ones(2, 3), ValueError),
+        ('map', TypeError),
+    ])
+    def test_invalid_maps_leave_original_gauges_unchanged(self, matrix, error):
+        opening = tk.decompositions.LoopOpening(
+            torch.ones(1, 2, 1), [torch.ones(1, 3, 1)],
+            torch.ones(1, 2, 1), (1, 1, 1))
+        before = opening.contract_dense().clone()
+        with pytest.raises(error):
+            opening.transform_gauges(left_map=matrix)
+        torch.testing.assert_close(opening.contract_dense(), before)

@@ -44,6 +44,14 @@ sketch samples. :class:`PhiOperator` gathers the local tensors from these
 values. Phi tensors are materialized for current SVD and ALS workflows; the
 operator also supports lazy selected entries and fibers.
 
+``PhiOperator`` owns both its original query coordinates and prepared
+coefficients. Input fitting and directional truncation update that operator;
+central isometric lifts and diagnostics stay with its coefficients. Raw
+materialization remains a separate cache. ``PhiOperator.from_tensor`` uses
+the same preparation for local tensors obtained by TT-RS contractions.
+``ConfigurationMap`` also owns registration and gather indices, without
+intermediate request or plan classes.
+
 Physical fitting and range projection use separate strategy contracts:
 
     InputFitter                                fitting.py
@@ -62,9 +70,8 @@ pass a projector object to configure randomized compression.
 Projected discrete construction:
 
     TTRS(source, sketch_operator=...).fit(...)
-        +-- SketchOperator.builder(source)
-            +-- SketchSystemBuilder.build(...)
-                +-- CoreDeterminingSystem
+        +-- SketchOperator.build(source, ...)
+            +-- CoreDeterminingSystem
                     +-- local transform, SVDs and linear core solves
 
     SketchOperator                             sketches.py
@@ -129,7 +136,6 @@ from tensorkrowch.decompositions.sketching.sketches import (
     MarginalSketch,
     SampledSketch,
     SketchOperator,
-    SketchSystemBuilder,
     TTStackSketch)
 from tensorkrowch.decompositions.sketching.tr import (TRRSS,
                                                       qtr_rss,
@@ -153,7 +159,6 @@ __all__ = [
     'IdentityRangeProjector',
     'RandomizedRangeProjector',
     'SketchOperator',
-    'SketchSystemBuilder',
     'CoreDeterminingSystem',
     'SampledSketch',
     'MarginalSketch',

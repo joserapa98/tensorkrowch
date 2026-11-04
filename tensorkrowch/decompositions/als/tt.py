@@ -1,14 +1,12 @@
 """
 This script contains:
 
-    Internal classes:
+    Classes:
         * _TTALSBackend
         * _TTLeverageALSBackend
-
-    Public classes:
         * TTALS
 
-    Internal functions:
+    Functions:
         * _standard_tt_cores
         * _result_tt_cores
         * _feasible_tt_rank
@@ -17,14 +15,12 @@ This script contains:
         * _prepare_tt_cores
         * _gauge_core_update
         * _direct_sampled_tt_design
-
-    Public functions:
         * tt_als
 """
 
 from dataclasses import asdict, replace
 from math import prod
-from typing import Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Mapping, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import torch
 
@@ -34,9 +30,10 @@ from tensorkrowch.formats.quantics import _QuanticsVector, _QuanticsMatrix
 from tensorkrowch.decompositions._utils import (_normalize_rank,
                                                 _unravel_indices)
 from tensorkrowch.decompositions.als.convergence import ConvergencePolicy
-from tensorkrowch.decompositions.als.driver import (ALSSweepDriver,
+from tensorkrowch.decompositions.als.driver import (ALSBackend,
+                                                    ALSSweepDriver,
                                                     _report_als_result)
-from tensorkrowch.decompositions.als.environments import (CoreUpdateSet,
+from tensorkrowch.decompositions.als.environments import (_updated_cores,
                                                           TTEnvironmentCache,
                                                           _environment_norm)
 from tensorkrowch.decompositions.als.gauges import (_absorb_factor,
@@ -45,13 +42,11 @@ from tensorkrowch.decompositions.als.problem import ALSProblem
 from tensorkrowch.decompositions.als.sampling import (ObservedRows,
                                                       RowSampler,
                                                       SampleBatch,
-                                                      SampleRefreshPolicy,
                                                       SamplingPolicy,
                                                       TTLeverageRows,
                                                       UniformRows,
-                                                      _RowSamplingState)
+                                                      )
 from tensorkrowch.decompositions.als.solvers import (LeastSquaresSolver,
-                                                     _relative_error,
                                                      _solve_local_proposal)
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
 from tensorkrowch.decompositions.observers import (DecompositionEvent,
@@ -185,12 +180,11 @@ def _prepare_tt_cores(cores: Sequence[torch.Tensor],
 
 
 def _gauge_core_update(cores: Sequence[torch.Tensor],
-                       versions: Sequence[int],
                        fixed_sites: Sequence[int],
                        gauge: str,
                        direction: str,
                        site: int,
-                       proposal: torch.Tensor) -> CoreUpdateSet:
+                       proposal: torch.Tensor) -> Mapping[int, torch.Tensor]:
     """Builds one atomic current-plus-receiver ``gauge`` update."""
     receiver = site + 1 if direction == 'forward' else site - 1
     legal_receiver = (0 <= receiver < len(cores)) and \
@@ -200,20 +194,11 @@ def _gauge_core_update(cores: Sequence[torch.Tensor],
     else:
         gauged_core, factor = proposal, None
 
-    sites = [site]
-    updated_cores = [gauged_core]
-    updated_versions = [versions[site] + 1]
+    replacements = {site: gauged_core}
     if factor is not None:
-        neighbor = _absorb_factor(
+        replacements[receiver] = _absorb_factor(
             factor, cores[receiver], direction)
-        sites.append(receiver)
-        updated_cores.append(neighbor)
-        updated_versions.append(versions[receiver] + 1)
-    return CoreUpdateSet(
-        sites=sites,
-        cores=updated_cores,
-        versions=updated_versions,
-        reason='local_solve')
+    return replacements
 
 
 class _TTALSBackend:  # MARK: _TTALSBackend
@@ -229,7 +214,7 @@ class _TTALSBackend:  # MARK: _TTALSBackend
                  renormalize: bool,
                  sampler: Optional[RowSampler] = None,
                  n_samples: Optional[int] = None,
-                 refresh_policy: Optional[SampleRefreshPolicy] = None,
+                 sampling_policy: Optional[SamplingPolicy] = None,
                  generator: Optional[torch.Generator] = None) -> None:
         self.problem = problem
         self.full_target = None if target is None else target.reshape(-1)
@@ -240,14 +225,10 @@ class _TTALSBackend:  # MARK: _TTALSBackend
             cores, renormalize=renormalize)
         self.sampler = sampler
         self.n_samples = n_samples
-        self.refresh_policy = refresh_policy
+        self.sampling_policy = sampling_policy
         self.generator = generator
         self.sample_batch = None
         self.current_target = self.full_target
-        self._sampling_state = _RowSamplingState(
-            n_rows=prod(self.cache.in_dim),
-            core_versions=self.cache.core_versions,
-            device=self.cache.cores[0].device)
         self._direction = None
 
     @property
@@ -279,20 +260,12 @@ class _TTALSBackend:  # MARK: _TTALSBackend
             self.current_target = self.full_target
             return None, False
 
-        self._sampling_state = replace(
-            self._sampling_state,
-            core_versions=self.cache.core_versions)
-        batch, state, refreshed = self.refresh_policy.sample(
-            sampler=self.sampler,
-            state=self._sampling_state,
-            site=order[0],
-            n_samples=self.n_samples,
-            generator=self.generator,
-            sweep=sweep,
-            current=self.sample_batch,
-            invalidate=lambda old, new: self.cache.invalidate(
-                'sample generation changed'))
-        self._sampling_state = state
+        batch, refreshed = self.sampling_policy.sample(
+            sampler=self.sampler, owner=self.cache, site=order[0],
+            n_samples=self.n_samples, generator=self.generator,
+            sweep=sweep, current=self.sample_batch)
+        if refreshed:
+            self.cache.invalidate('sample generation changed')
         if refreshed:
             if self.problem.observations is not None:
                 self.current_target = self.problem.observations.support_values
@@ -313,82 +286,41 @@ class _TTALSBackend:  # MARK: _TTALSBackend
         self.cache.prepare_sweep(order, samples=batch)
         return batch.generation, refreshed
 
-    def solve_site(self,
-                   site: int,
-                   sweep: int,
-                   return_record: bool) -> Tuple[
-            CoreUpdateSet, Optional[LocalSolveRecord]]:
+    def update_site(self,
+                    site: int,
+                    sweep: int,
+                    return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        local_environment = self.cache.local_environment(site)
-        environment = local_environment.design()
-        target = local_environment.scale_target(self.current_target)
-        if self.sample_batch is not None:
-            sample_weights = self.sample_batch.weights.to(environment.dtype)
-            environment = environment * sample_weights.unsqueeze(1)
-            target = target * sample_weights
-        if (self.problem.observations is not None) and \
-                (self.problem.weights is not None):
-            weights = self.problem.weights.to(environment.dtype)
-            environment = environment * weights.unsqueeze(1)
-            target = target * weights
-        if self.problem.observations is None:
-            ids = self.sample_batch.ids if self.sample_batch is not None else \
-                torch.arange(prod(self.problem.in_dim), device=target.device)
-            indices = _unravel_indices(ids, self.problem.in_dim)
-            weights = self.problem.entry_weights(indices)
-            if weights is not None:
-                weights = weights.to(environment.dtype)
-                environment = environment * weights.unsqueeze(1)
-                target = target * weights
-        regularization_scale = None
-        if (self.solver.l2_reg_mode == 'absolute') and \
-                (self.solver.l2_reg > 0):
-            regularization_scale = (-2 * local_environment.log_scale).exp()
-        current = self.cache.cores[site]
-        sampling_exact = None if self.sample_batch is None else \
-            self.sample_batch.is_exact_for(self.cache.core_versions)
+        environment = self.cache.design(site)
+        indices = (None if (self.sample_batch is None) or
+                   (self.problem.observations is not None) else
+                   _unravel_indices(self.sample_batch.ids,
+                                    self.problem.in_dim))
         proposal, record = _solve_local_proposal(
-            solver=self.solver,
-            environment=environment,
-            target=target,
-            current=current,
-            site=site,
-            sweep=sweep,
-            return_record=return_record,
-            regularization_scale=regularization_scale,
-            sampling_exact=sampling_exact,
-            sample_generation=(
-                None if self.sample_batch is None
-                else self.sample_batch.generation))
-        update_set = _gauge_core_update(
+            solver=self.solver, environment=environment,
+            target=self.current_target, current=self.cache.cores[site],
+            site=site, sweep=sweep, return_record=return_record,
+            problem=self.problem, log_scale=self.cache.log_scale,
+            indices=indices,
+            samples=self.sample_batch, core_versions=self.cache.core_versions)
+        replacements = _gauge_core_update(
             cores=self.cache.cores,
-            versions=self.cache.core_versions,
             fixed_sites=self.fixed_sites,
             gauge=self.gauge,
             direction=self._direction,
             site=site,
             proposal=proposal)
-        return update_set, record
+        self._update(replacements)
+        return record
 
     def skip_site(self, site: int) -> None:
-        """Advances the sweep through a fixed core."""
-        self.cache.local_environment(site)
-        self.commit(CoreUpdateSet(
-            sites=(site,),
-            cores=(self.cache.cores[site],),
-            versions=(self.cache.core_versions[site] + 1,),
-            reason='fixed_core'))
+        """Advances the cache through one frozen site."""
+        self.cache.design(site)
+        self.cache.update({})
 
-    def commit(self, update_set: CoreUpdateSet) -> None:
-        """
-        Commits all replaced cores and invalidates their cache
-        dependencies.
-        """
-        self.cache.commit(update_set)
-        if self.sampler is not None:
-            for site in update_set.sites:
-                self._sampling_state = self.sampler.update_after_core(
-                    self._sampling_state, site)
+    def _update(self, replacements: Mapping[int, torch.Tensor]) -> None:
+        """Applies one complete local update to its environment owner."""
+        self.cache.update(replacements)
 
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
@@ -402,18 +334,7 @@ class _TTALSBackend:  # MARK: _TTALSBackend
             return problem.objective_error(approximation)
 
         approximation = _contract_standard_tt(self.cache.cores).reshape(-1)
-        residual = approximation - self.full_target
-        target = self.full_target
-        indices = _unravel_indices(torch.arange(target.numel(),
-                                                device=target.device),
-                                    problem.in_dim)
-        weights = problem.entry_weights(indices)
-        if weights is not None:
-            residual = residual * weights
-            target = target * weights
-        absolute = torch.linalg.vector_norm(residual)
-        target_norm = torch.linalg.vector_norm(target)
-        return absolute, _relative_error(absolute, target_norm)
+        return problem._objective_error(approximation, self.full_target)
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -485,12 +406,13 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
         self.renormalize = renormalize
         self.sampler = TTLeverageRows(
             lambda: self._cores, uniform_mix=uniform_mix)
-        self._sampling_state = _RowSamplingState(
-            n_rows=prod(core.shape[1] for core in self._cores),
-            core_versions=self._versions,
-            device=self._cores[0].device)
         self._generation = None
         self._direction = None
+
+    @property
+    def core_versions(self) -> Tuple[int, ...]:
+        """Versions read by each proposal at draw time."""
+        return self._versions
 
     @property
     def n_sites(self) -> int:
@@ -523,14 +445,11 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
             versions[site] += 1
             versions[site + receiver_offset] += 1
         self._versions = tuple(versions)
-        self._sampling_state = replace(
-            self._sampling_state, core_versions=self._versions)
 
-    def _site_batch(self, site: int) -> Tuple[SampleBatch, torch.Tensor, bool]:
+    def _site_batch(self, site: int) -> Tuple[SampleBatch, torch.Tensor]:
         """Draws leverage rows from the current mixed-canonical TT."""
-        state = replace(self._sampling_state, core_versions=self._versions,
-                        generation=self._generation)
-        batch = self.sampler.draw(state, site, self.n_samples, self.generator)
+        self.sampler.generation = self._generation
+        batch = self.sampler.draw(self, site, self.n_samples, self.generator)
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
         target = self.problem.evaluate(ConfigurationBatch(indices))
@@ -539,7 +458,7 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
                 '`source` should return one scalar per configuration')
         if not torch.isfinite(target).all():
             raise ValueError('`source` should return only finite values')
-        return batch, target, batch.is_exact_for(self._versions)
+        return batch, target
 
     def prepare_sweep(self,
                       order: Sequence[int],
@@ -552,72 +471,41 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
         self._generation = sweep
         return sweep, True
 
-    def solve_site(self,
-                   site: int,
-                   sweep: int,
-                   return_record: bool) -> Tuple[
-            CoreUpdateSet, Optional[LocalSolveRecord]]:
+    def update_site(self,
+                    site: int,
+                    sweep: int,
+                    return_record: bool) -> Optional[LocalSolveRecord]:
         """Builds one local proposal and its atomic gauge update."""
-        batch, target, sampling_exact = self._site_batch(site)
+        batch, target = self._site_batch(site)
         indices = _unravel_indices(
             batch.ids, tuple(core.shape[1] for core in self._cores))
         environment, log_scale = _direct_sampled_tt_design(
             self._cores, site, indices, self.renormalize)
-        target = target * (-log_scale).exp().to(target.dtype)
-        sample_weights = batch.weights.to(environment.dtype)
-        environment = environment * sample_weights.unsqueeze(1)
-        target = target * sample_weights
-        weights = self.problem.entry_weights(indices)
-        if weights is not None:
-            weights = weights.to(environment.dtype)
-            environment = environment * weights.unsqueeze(1)
-            target = target * weights
-
-        regularization_scale = None
-        if (self.solver.l2_reg_mode == 'absolute') and \
-                (self.solver.l2_reg > 0):
-            regularization_scale = (-2 * log_scale).exp()
         proposal, record = _solve_local_proposal(
-            solver=self.solver,
-            environment=environment,
-            target=target,
-            current=self._cores[site],
-            site=site,
-            sweep=sweep,
-            return_record=return_record,
-            regularization_scale=regularization_scale,
-            sampling_exact=sampling_exact,
-            sample_generation=batch.generation)
-        update_set = _gauge_core_update(
+            solver=self.solver, environment=environment, target=target,
+            current=self._cores[site], site=site, sweep=sweep,
+            return_record=return_record, problem=self.problem,
+            log_scale=log_scale, indices=indices, samples=batch,
+            core_versions=self._versions)
+        replacements = _gauge_core_update(
             cores=self._cores,
-            versions=self._versions,
             fixed_sites=(),
             gauge=self.gauge,
             direction=self._direction,
             site=site,
             proposal=proposal)
-        return update_set, record
+        self._update(replacements)
+        return record
 
     def skip_site(self, site: int) -> None:
         """Advances the sweep through a fixed core."""
         raise RuntimeError('Leverage TT-ALS does not support fixed sites')
 
-    def commit(self, update_set: CoreUpdateSet) -> None:
-        """
-        Commits all replaced cores and invalidates their cache
-        dependencies.
-        """
-        cores = list(self._cores)
-        versions = list(self._versions)
-        for site, (core, version) in update_set.updates.items():
-            if version <= versions[site]:
-                raise ValueError('Every updated core version should increase')
-            cores[site] = core
-            versions[site] = version
-        self._cores = TTEnvironmentCache._validate_cores(cores)
-        self._versions = tuple(versions)
-        self._sampling_state = replace(
-            self._sampling_state, core_versions=self._versions)
+    def _update(self, replacements: Mapping[int, torch.Tensor]) -> None:
+        """Validates and applies the solved core and any gauge receiver."""
+        self._cores, self._versions = _updated_cores(
+            self._cores, self._versions, replacements,
+            TTEnvironmentCache._validate_cores)
 
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
@@ -672,6 +560,9 @@ class TTALS:  # MARK: TTALS
     >>> tuple(result.contract_dense().shape)
     (2, 3)
     """
+
+    _topology = 'tt'
+    _result_type = TTDecomposition
 
     def __init__(self,
                  source: 'SourceLike',
@@ -874,7 +765,7 @@ class TTALS:  # MARK: TTALS
         algebraic_caps = _feasible_tt_rank(self.in_dim, current_ranks)
         if any(current_rank > allowed
                for current_rank, allowed in zip(current_ranks,
-                                                 algebraic_caps)):
+                                                algebraic_caps)):
             raise ValueError('Initial TT ranks are not algebraically feasible')
 
         if any(not torch.isfinite(core).all() for core in cores):
@@ -927,6 +818,32 @@ class TTALS:  # MARK: TTALS
             fixed_sites.append(site)
         final_cores = TTEnvironmentCache._validate_cores(final_cores)
         return final_cores, tuple(fixed_sites)
+
+    def _make_backend(self, problem: ALSProblem,
+                      cores: Sequence[torch.Tensor],
+                      target: Optional[torch.Tensor],
+                      solver: LeastSquaresSolver, gauge: str,
+                      fixed_sites: Sequence[int], renormalize: bool,
+                      row_sampler: Optional[RowSampler],
+                      n_samples: Optional[int],
+                      sampling_policy: SamplingPolicy,
+                      generator: Optional[torch.Generator],
+                      sampler: Optional[SamplingPolicy]) -> ALSBackend:
+        """Builds the topology-specific full-row or leverage backend."""
+        if (sampler is not None) and (sampler.method == 'leverage'):
+            if (gauge != 'qr') or fixed_sites:
+                raise ValueError(
+                    'TT leverage requires `gauge="qr"` without fixed cores')
+            return _TTLeverageALSBackend(
+                problem, cores, solver, gauge, n_samples,
+                sampler.uniform_mix, generator, renormalize)
+        if gauge == 'qr':
+            stop = min(fixed_sites, default=len(cores))
+            cores = _prepare_tt_cores(
+                cores, range(stop - 1, 0, -1), 'reverse')
+        return _TTALSBackend(
+            problem, cores, target, solver, gauge, fixed_sites,
+            renormalize, row_sampler, n_samples, sampling_policy, generator)
 
     def fit(self,
             rank: Optional[Union[int, Sequence[int]]] = None,
@@ -1005,6 +922,8 @@ class TTALS:  # MARK: TTALS
         >>> torch.allclose(result.contract_dense(), tensor)
         True
         """
+        phase = f'{self._topology.upper()}-ALS'
+        direction = 'forward' if self._topology == 'tr' else 'alternating'
         self._validate_initial_format(initial_cores)
         if not isinstance(gauge, str):
             raise TypeError('`gauge` should be str type')
@@ -1028,7 +947,7 @@ class TTALS:  # MARK: TTALS
         if sampler is not None:
             if not isinstance(sampler, SamplingPolicy):
                 raise TypeError('`sampler` should be SamplingPolicy or None')
-            sampler.validate('tt')
+            sampler.validate(self._topology)
             if self._problem.observations is not None:
                 raise ValueError(
                     '`sampler` cannot replace permanent observations')
@@ -1043,7 +962,8 @@ class TTALS:  # MARK: TTALS
         problem = self._problem
         row_sampler = None
         n_samples = None if sampler is None else sampler.n_samples
-        refresh_policy = SampleRefreshPolicy(
+        sampling_policy = SamplingPolicy(
+            n_samples=1 if sampler is None else sampler.n_samples,
             reuse_sweeps=1 if sampler is None else sampler.reuse_sweeps)
         if problem.observations is not None:
             sampling = 'observed'
@@ -1069,46 +989,35 @@ class TTALS:  # MARK: TTALS
         cores, fixed_sites = self._initial_cores(
             target=runtime_reference, initial_cores=initial_cores, rank=rank,
             fixed_cores=fixed_cores, generator=generator)
-        if sampling == 'leverage':
-            if (gauge != 'qr') or fixed_sites:
-                raise ValueError(
-                    'TT leverage requires `gauge="qr"` without fixed cores')
-            backend = _TTLeverageALSBackend(
-                problem, cores, solver, gauge, n_samples,
-                sampler.uniform_mix, generator, renormalize)
-        else:
-            if gauge == 'qr':
-                stop = min(fixed_sites, default=len(cores))
-                cores = _prepare_tt_cores(
-                    cores, range(stop - 1, 0, -1), 'reverse')
-            backend = _TTALSBackend(
-                problem, cores, target, solver, gauge, fixed_sites,
-                renormalize, row_sampler, n_samples, refresh_policy, generator)
+        backend = self._make_backend(
+            problem, cores, target, solver, gauge, fixed_sites, renormalize,
+            row_sampler, n_samples, sampling_policy, generator, sampler)
         if fit_observer is not None:
             fit_observer.emit(DecompositionEvent(
-                name='start', phase='TT-ALS', values={
+                name='start', phase=phase, values={
                     'sites': len(cores), 'in_dim': self.in_dim,
                     'sampling': sampling, 'gauge': gauge,
                     'max_sweeps': convergence.max_sweeps,
-                    'sweep_direction': 'alternating',
+                    'sweep_direction': direction,
                 }))
         fitted = ALSSweepDriver().fit(
             problem, backend, convergence, observer=fit_observer,
-            collect_metrics=collect_metrics, phase='TT-ALS',
-            sweep_direction='alternating')
-        result_cores = _result_tt_cores(fitted.cores)
+            collect_metrics=collect_metrics, phase=phase,
+            sweep_direction=direction)
+        result_cores = (tuple(fitted.cores) if self._topology == 'tr' else
+                        _result_tt_cores(fitted.cores))
         if self._out_device is not None:
             result_cores = tuple(core.to(self._out_device)
                                  for core in result_cores)
-        result = TTDecomposition(
+        result = self._result_type(
             cores=result_cores, metrics=fitted.metrics, metadata={
-                'algorithm': 'tt_als',
+                'algorithm': f'{self._topology}_als',
                 'initialization': (
                     'random' if initial_cores is None else 'cores'),
                 'gauge': gauge, 'converged': fitted.converged,
                 'keep_best': convergence.keep_best,
                 'stop_reason': fitted.stop_reason, 'n_sweeps': fitted.n_sweeps,
-                'sweep_direction': 'alternating',
+                'sweep_direction': direction,
                 'fixed_sites': list(fixed_sites),
                 'sampling': sampling, 'n_samples': n_samples,
                 'sampler': None if sampler is None else asdict(sampler),
@@ -1122,7 +1031,7 @@ class TTALS:  # MARK: TTALS
             })
         result = _result_from_source(result, self._source)
         if fit_observer is not None:
-            _report_als_result(result, fit_observer, 'TT-ALS')
+            _report_als_result(result, fit_observer, phase)
         return result
 
 

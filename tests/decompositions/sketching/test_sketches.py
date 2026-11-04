@@ -4,7 +4,6 @@ import pytest
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.decompositions.sketching.sketches import _prepare_phi
 
 
 def _rank_one_sparse(in_dim=(2, 3, 2), dtype=torch.float64):
@@ -20,135 +19,6 @@ def _rank_one_sparse(in_dim=(2, 3, 2), dtype=torch.float64):
             -1, len(in_dim))
     return tk.decompositions.SparseTensorSource(
         indices, dense.reshape(-1), in_dim), dense
-
-
-class TestPhiPreparation:
-
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    @pytest.mark.parametrize('direction', ['left', 'right'])
-    def test_auxiliary_rank_discovery_respects_caps_and_selected_axis(
-            self, dtype, direction):
-        tensor = torch.ones(4, 2, 4, dtype=dtype)
-        left = direction == 'left'
-        prepared = _prepare_phi(
-            tensor, direction, rank_left=3, rank_right=3,
-            numerical=(left, not left))
-        prescribed = _prepare_phi(
-            tensor, direction, rank_left=3, rank_right=3,
-            numerical=(not left, left))
-        axis = 0 if left else -1
-
-        assert prepared.tensor.shape[axis] == 1
-        assert prescribed.tensor.shape[axis] == 3
-
-        tensor = torch.randn(4, 2, 4, dtype=dtype)
-        capped = _prepare_phi(
-            tensor, direction, rank_left=2, rank_right=2,
-            numerical=(True, True))
-        assert capped.tensor.shape[axis] == 2
-
-    @pytest.mark.parametrize('numerical, shape', [
-        ((True, False), (1, 2, 3)),
-        ((False, True), (2, 2, 1)),
-        ((True, True), (1, 2, 1))])
-    def test_central_auxiliary_rank_discovery_is_axis_specific(
-            self, numerical, shape):
-        tensor = torch.ones(4, 2, 4, dtype=torch.float64)
-        prepared = _prepare_phi(
-            tensor, 'center', rank_left=2, rank_right=3,
-            numerical=numerical)
-
-        assert prepared.tensor.shape == shape
-        approximation = torch.einsum(
-            'ab,bpc,cd->apd', prepared.left, prepared.tensor, prepared.right)
-        torch.testing.assert_close(approximation, tensor)
-
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    @pytest.mark.parametrize('rtol', [None, 1e-22])
-    def test_central_support_selection_preserves_small_singular_values(
-            self, dtype, rtol):
-        factors = [torch.randn(size, 2, dtype=dtype) for size in (6, 2, 6)]
-        tensor = torch.einsum('a,p,b->apb', *(x[:, 0] for x in factors))
-        tensor = tensor + 1e-8 * torch.einsum(
-            'a,p,b->apb', *(x[:, 1] for x in factors))
-        prepared = _prepare_phi(tensor, 'center', rtol=rtol, site=2)
-
-        assert prepared.tensor.shape == (2, 2, 2)
-        approximation = torch.einsum(
-            'ab,bpc,cd->apd', prepared.left, prepared.tensor, prepared.right)
-        torch.testing.assert_close(approximation, tensor,
-                                   rtol=1e-12, atol=1e-13)
-
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    def test_central_factors_restore_full_target(self, dtype):
-        tensor = torch.randn(3, 4, 5, dtype=dtype)
-        prepared = _prepare_phi(tensor, 'center', site=2,
-                                 collect_metrics=True)
-        reconstructed = torch.einsum(
-            'ab,bpc,cd->apd', prepared.left, prepared.tensor, prepared.right)
-
-        torch.testing.assert_close(reconstructed, tensor)
-        torch.testing.assert_close(prepared.tensor.norm(), tensor.norm())
-        torch.testing.assert_close(
-            prepared.left.mH @ prepared.left,
-            torch.eye(prepared.left.shape[-1], dtype=dtype))
-        torch.testing.assert_close(
-            prepared.right @ prepared.right.mH,
-            torch.eye(prepared.right.shape[0], dtype=dtype))
-        assert len(prepared.truncations) == 2
-        assert [record.site for record in prepared.truncations] == [2, 1]
-
-    @pytest.mark.parametrize('direction', ['left', 'right'])
-    @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
-    def test_outward_tensors_retain_singular_values(self, direction, dtype):
-        tensor = torch.randn(3, 4, 5, dtype=dtype)
-        prepared = _prepare_phi(tensor, direction, rank_left=2, rank_right=2)
-        basis = prepared.tensor
-        if direction == 'left':
-            basis = basis.reshape(basis.shape[0], -1).mH
-            matrix = tensor.reshape(tensor.shape[0], -1).mH
-        else:
-            basis = basis.reshape(-1, basis.shape[-1])
-            matrix = tensor.reshape(-1, tensor.shape[-1])
-
-        spectra = torch.linalg.svdvals(matrix)[:2]
-        torch.testing.assert_close(
-            basis.mH @ basis, torch.diag(spectra.square()).to(dtype))
-        assert prepared.left is None
-        assert prepared.right is None
-
-    @pytest.mark.parametrize('direction', ['left', 'right', 'center'])
-    def test_truncated_tensors_preserve_retained_scales(self, direction):
-        tensor = torch.diag(torch.tensor([4., 2., 0.1])).unsqueeze(1)
-        prepared = _prepare_phi(
-            tensor, direction, rank_left=2, rank_right=2)
-        assert prepared.tensor.norm().item() == pytest.approx(20 ** 0.5)
-        if direction == 'center':
-            approximation = torch.einsum(
-                'ab,bpc,cd->apd', prepared.left, prepared.tensor,
-                prepared.right)
-            assert (tensor - approximation).norm().item() == \
-                pytest.approx(0.1)
-
-    def test_randomized_projection_is_optional_and_owns_its_parameters(self):
-        tensor = torch.randn(3, 4, 5, dtype=torch.float64)
-        projector = tk.decompositions.RandomizedRangeProjector(
-            projection_dim=5, projection_oversampling=1, n_power_iter=1)
-        prepared = _prepare_phi(
-            tensor, 'center', projector=projector,
-            generator=torch.Generator().manual_seed(101),
-            collect_metrics=True, site=2)
-        reconstructed = torch.einsum(
-            'ab,bpc,cd->apd', prepared.left, prepared.tensor, prepared.right)
-
-        torch.testing.assert_close(reconstructed, tensor)
-        assert len(prepared.projections) == 2
-
-    def test_raw_boundary_keeps_original_tensor(self):
-        tensor = torch.randn(1, 3, 2)
-        prepared = _prepare_phi(tensor, None)
-        assert prepared.tensor is tensor
-        assert prepared.truncations == ()
 
 
 class TestMarginalSketch:  # MARK: TestMarginalSketch
@@ -183,12 +53,12 @@ class TestMarginalSketch:  # MARK: TestMarginalSketch
         source, _ = _rank_one_sparse()
         with pytest.raises(ValueError, match='factor'):
             tk.decompositions.MarginalSketch(
-                factor=[torch.ones(2)]).builder(source).build()
+                factor=[torch.ones(2)]).build(source)
 
     def test_markov_order_one_builds_neighbor_marginals(self):
         source, dense = _rank_one_sparse()
-        system = tk.decompositions.MarginalSketch().builder(
-            source).build()
+        system = tk.decompositions.MarginalSketch().build(
+            source)
 
         assert system.phi[0].shape == (1, 2, 3)
         assert system.phi[1].shape == (2, 3, 2)
@@ -206,7 +76,7 @@ class TestMarginalSketch:  # MARK: TestMarginalSketch
             torch.tensor([2., 1.]),
         )
         system = tk.decompositions.MarginalSketch(
-            order=1, factor=factor).builder(source).build()
+            order=1, factor=factor).build(source)
         weighted = torch.einsum(
             'ijk,i,j,k->ijk', dense, *factor)
 
@@ -229,12 +99,12 @@ class TestSampledSketch:  # MARK: TestSampledSketch
         for samples in (torch.tensor([[0, 0]]), torch.tensor([[2, 0, 0]])):
             with pytest.raises(ValueError, match='samples'):
                 tk.decompositions.SampledSketch(
-                    samples=samples).builder(source).build()
+                    samples=samples).build(source)
 
     def test_sparse_route_uses_support_without_source_evaluations(self):
         source, dense = _rank_one_sparse()
-        system = tk.decompositions.SampledSketch().builder(source).build(
-            batch_size=5)
+        system = tk.decompositions.SampledSketch().build(
+            source, batch_size=5)
         result = system.solve(rank=1, strict_system=True)
 
         assert source.evaluation_stats.source_calls == 0
@@ -244,8 +114,8 @@ class TestSampledSketch:  # MARK: TestSampledSketch
     def test_sample_cap_preserves_recursive_prefix_dimensions(self):
         source, _ = _rank_one_sparse(in_dim=(2, 2, 2, 2))
         system = tk.decompositions.SampledSketch(
-            sketch_size=2).builder(source).build(
-                generator=torch.Generator().manual_seed(201))
+            sketch_size=2).build(
+                source, generator=torch.Generator().manual_seed(201))
 
         assert all(dimension <= 2
                    for dimension in system.diagnostics['left_dimensions'])
@@ -288,8 +158,8 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
         source, _ = _rank_one_sparse()
         system = tk.decompositions.TTStackSketch(
             tt_rank=tt_rank,
-            stack_size=stack_size).builder(source).build(
-                generator=torch.Generator().manual_seed(202))
+            stack_size=stack_size).build(
+                source, generator=torch.Generator().manual_seed(202))
         expected = tt_rank * stack_size
 
         assert system.diagnostics['sketch_dimension'] == expected
@@ -302,8 +172,8 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
         source, dense = _rank_one_sparse()
         system = tk.decompositions.TTStackSketch(
             tt_rank=2,
-            stack_size=2).builder(source).build(
-                generator=torch.Generator().manual_seed(203))
+            stack_size=2).build(
+                source, generator=torch.Generator().manual_seed(203))
         result = system.solve(rank=1, strict_system=True)
 
         assert torch.allclose(
@@ -315,8 +185,8 @@ class TestTTStackSketch:  # MARK: TestTTStackSketch
         system = tk.decompositions.TTStackSketch(
             tt_rank=2,
             stack_size=1,
-            orthogonal=True).builder(source).build(
-                generator=torch.Generator().manual_seed(204))
+            orthogonal=True).build(
+                source, generator=torch.Generator().manual_seed(204))
 
         assert system.diagnostics['orthogonal']
         assert system.diagnostics['distribution'] == 'orthogonal_variant'
@@ -344,8 +214,8 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
         else:
             operator = tk.decompositions.TTStackSketch(
                 tt_rank=2, stack_size=3)
-        system = operator.builder(source).build(
-            generator=torch.Generator().manual_seed(32))
+        system = operator.build(
+            source, generator=torch.Generator().manual_seed(32))
         for center in sorted(set((0, len(in_dim) // 2, len(in_dim) - 1))):
             for rank in (2, (2,) * (len(in_dim) - 1), None):
                 result = system.solve(rank=rank, center=center)
@@ -362,8 +232,8 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
         dense = dense + torch.einsum(
             'i,jk,l,m->ijklm', h, matrix, h, torch.ones_like(h))
         source = tk.decompositions.DenseTensorSource(dense)
-        system = tk.decompositions.MarginalSketch(order=2).builder(
-            source).build()
+        system = tk.decompositions.MarginalSketch(order=2).build(
+            source)
         result = system.solve(center=0)
 
         assert result.rank[0] == 1
@@ -375,7 +245,7 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
     def test_single_svd_decides_each_cut_and_records_remain_in_site_order(
             self, center):
         source, _ = _rank_one_sparse(in_dim=(2, 3, 2, 3, 2))
-        system = tk.decompositions.MarginalSketch().builder(source).build()
+        system = tk.decompositions.MarginalSketch().build(source)
         events = []
         result = system.solve(rank=1, center=center, collect_metrics=True,
                               _on_core=lambda site, _: events.append(site))
@@ -389,7 +259,7 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
 
     def test_transform_can_promote_real_targets_to_complex(self):
         source, dense = _rank_one_sparse()
-        system = tk.decompositions.MarginalSketch().builder(source).build()
+        system = tk.decompositions.MarginalSketch().build(source)
         calls = []
 
         def transform(phi):
@@ -406,7 +276,7 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
         lambda phi: phi * float('nan'), lambda phi: phi.long()])
     def test_invalid_transform(self, transform):
         source, _ = _rank_one_sparse()
-        system = tk.decompositions.MarginalSketch().builder(source).build()
+        system = tk.decompositions.MarginalSketch().build(source)
         with pytest.raises((TypeError, ValueError), match='transform'):
             system.solve(rank=1, transform=transform)
 
@@ -417,7 +287,7 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
         {'generator': 1}])
     def test_invalid_solve_options(self, options):
         source, _ = _rank_one_sparse()
-        system = tk.decompositions.MarginalSketch().builder(source).build()
+        system = tk.decompositions.MarginalSketch().build(source)
         with pytest.raises((TypeError, ValueError)):
             system.solve(**options)
 
@@ -453,8 +323,8 @@ class TestCoreDeterminingSystem:  # MARK: TestCoreDeterminingSystem
 
     def test_metrics_are_only_collected_when_requested(self):
         source, _ = _rank_one_sparse()
-        system = tk.decompositions.MarginalSketch().builder(
-            source).build()
+        system = tk.decompositions.MarginalSketch().build(
+            source)
         fast = system.solve(rank=1)
         measured = system.solve(rank=1, collect_metrics=True)
 
@@ -491,10 +361,10 @@ class TestStructuredTTBackend:  # MARK: TestStructuredTTBackend
         oracle_source = tk.decompositions.SparseTensorSource(
             indices, dense.reshape(-1), dense.shape)
 
-        structured = operator.builder(tt_source).build(
-            generator=torch.Generator().manual_seed(206))
-        oracle = operator.builder(oracle_source).build(
-            generator=torch.Generator().manual_seed(206))
+        structured = operator.build(
+            tt_source, generator=torch.Generator().manual_seed(206))
+        oracle = operator.build(
+            oracle_source, generator=torch.Generator().manual_seed(206))
 
         assert structured.diagnostics['source_path'] == 'structured_tt'
         assert tt_source.evaluation_stats.requested_points == 0

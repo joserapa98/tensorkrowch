@@ -1,11 +1,7 @@
 """
 This script contains:
 
-    Internal classes:
-        * _RowSamplingState
-        * _TRExactLeverageState
-
-    Public classes:
+    Classes:
         * SamplingPolicy
         * SampleBatch
         * RowSampler
@@ -15,20 +11,18 @@ This script contains:
         * TTLeverageRows
         * TRProductLeverageRows
         * TRExactLeverageRows
-        * SampleRefreshPolicy
 
-    Internal functions:
-        * _validate_draw
+    Functions:
         * _sample_batch
-        * _sampling_cores
         * _region_metrics
         * _sample_region
         * _region_row_probability
+        * _sampling_cores
 """
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from math import isfinite, prod
-from typing import Callable, Optional, Protocol, Sequence, Tuple
+from typing import Any, Callable, Optional, Sequence, Tuple
 
 import torch
 
@@ -74,10 +68,10 @@ class SamplingPolicy:  # MARK: SamplingPolicy
     (64, 1)
     """
 
-    n_samples: int
-    method: str = 'uniform'
-    reuse_sweeps: int = 1
-    uniform_mix: float = 0.0
+    n_samples: int  # Number of configurations drawn per proposal
+    method: str = 'uniform'  # Uniform or topology-specific leverage proposal
+    reuse_sweeps: int = 1  # Directional sweeps sharing one uniform batch
+    uniform_mix: float = 0.0  # Uniform fraction in a leverage proposal
 
     def __post_init__(self) -> None:
         for name in ('n_samples', 'reuse_sweeps'):
@@ -115,6 +109,26 @@ class SamplingPolicy:  # MARK: SamplingPolicy
             raise ValueError("`topology` should be 'tt' or 'tr'")
         if (topology == 'tt') and (self.method == 'exact_leverage'):
             raise ValueError('`method="exact_leverage"` requires TR topology')
+
+    def generation(self, sweep: int) -> int:
+        """Returns the draw generation for a non-negative sweep index."""
+        if isinstance(sweep, bool) or not isinstance(sweep, int) or \
+                (sweep < 0):
+            raise ValueError('`sweep` should be a non-negative integer')
+        return sweep // self.reuse_sweeps
+
+    def sample(self, sampler: 'RowSampler', owner: Any, site: int,
+               n_samples: Optional[int], generator: Optional[torch.Generator],
+               sweep: int, current: Optional['SampleBatch'] = None
+               ) -> Tuple['SampleBatch', bool]:
+        """Reuses a frozen draw or starts the next generation."""
+        generation = self.generation(sweep)
+        if (current is not None) and (
+                (not sampler.refreshable) or
+                (current.generation == generation)):
+            return current, False
+        sampler.generation = generation
+        return sampler.draw(owner, site, n_samples, generator), True
 
 
 @dataclass(frozen=True)
@@ -271,92 +285,45 @@ class SampleBatch:  # MARK: SampleBatch
         return sampled_environment, sampled_target
 
 
-@dataclass(frozen=True)
-class _RowSamplingState:  # MARK: _RowSamplingState
-    """Immutable state passed to row samplers by ALS drivers."""
+class RowSampler:  # MARK: RowSampler
+    """
+    Draws rows using current cores and versions owned by an ALS backend.
 
-    n_rows: int  # Number of possible global rows
-    # Current version of every participating core
-    core_versions: Tuple[int, ...]
-    generation: int = 0  # Sampling generation number
-    # Effective device used for tensor operations
-    device: torch.device = torch.device('cpu')
+    ``draw(owner, site, n_samples, generator)`` reads ``owner.cores`` and
+    ``owner.core_versions``. Draw probabilities and their version snapshot are
+    retained independently in ``SampleBatch``.
+    """
 
-    def __post_init__(self) -> None:
-        if isinstance(self.n_rows, bool) or \
-                (not isinstance(self.n_rows, int)) or (self.n_rows < 1):
-            raise ValueError('`n_rows` should be a positive integer')
-        versions = tuple(self.core_versions)
-        if not versions:
-            raise ValueError(
-                '`core_versions` should contain at least one site')
-        if any(isinstance(version, bool) or
-               (not isinstance(version, int)) or (version < 0)
-               for version in versions):
-            raise ValueError(
-                '`core_versions` should contain non-negative integers')
-        if isinstance(self.generation, bool) or \
-                (not isinstance(self.generation, int)) or \
-                (self.generation < 0):
-            raise ValueError('`generation` should be a non-negative integer')
-        object.__setattr__(self, 'core_versions', versions)
-        object.__setattr__(self, 'device', torch.device(self.device))
+    generation = 0  # Identifier assigned to the next draw
+    proposal_exact = True  # Exact proposal for the declared design
+    refreshable = True  # Permanent observations disable resampling
 
-    def update_core(self, site: int) -> '_RowSamplingState':
-        """Returns state with one incremented core version."""
-        if isinstance(site, bool) or \
-                (not isinstance(site, int)) or \
-                (site < 0) or (site >= len(self.core_versions)):
-            raise ValueError('`site` should identify a core version')
-        versions = list(self.core_versions)
-        versions[site] += 1
-        return replace(self, core_versions=tuple(versions))
+    def _prepare_draw(self, owner: Any, site: int,
+                      n_samples: Optional[int]) -> None:
+        """Validates the draw against its current core owner once."""
+        cores = owner.cores
+        self.core_versions = tuple(owner.core_versions)
+        self.n_rows = prod(core.shape[1] for core in cores)
+        self.device = cores[0].device
+        if len(self.core_versions) != len(cores):
+            raise ValueError('Core versions should match the current cores')
+        if isinstance(site, bool) or not isinstance(site, int) or \
+                (site < 0) or (site >= len(cores)):
+            raise ValueError('`site` should identify a core')
+        if (n_samples is not None) and (
+                isinstance(n_samples, bool) or not isinstance(n_samples, int)
+                or (n_samples < 1)):
+            raise ValueError('`n_samples` should be positive or None')
 
-
-class RowSampler(Protocol):  # MARK: RowSampler
-    """Protocol for selecting and weighting rows of a local ALS design."""
-
-    @property
-    def proposal_exact(self) -> bool:
-        """Whether generated probabilities are exact for their proposal."""
-
-    @property
-    def refreshable(self) -> bool:
-        """Whether a new generation should redraw ids."""
-
-    def draw(self,
-             state: _RowSamplingState,
-             site: int,
-             n_samples: Optional[int],
-             generator: Optional[torch.Generator]) -> SampleBatch:
-        """Draws one immutable sample batch."""
-
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """Updates proposal ``state`` after a core commit."""
-
-
-def _validate_draw(state: _RowSamplingState,
-                   site: int,
-                   n_samples: Optional[int]) -> None:
-    """Validates arguments shared by stateless row samplers."""
-    if not isinstance(state, _RowSamplingState):
-        raise TypeError('`state` should be _RowSamplingState type')
-    if isinstance(site, bool) or \
-            (not isinstance(site, int)) or \
-            (site < 0) or (site >= len(state.core_versions)):
-        raise ValueError('`site` should identify a core version')
-    if n_samples is not None:
-        if isinstance(n_samples, bool) or \
-                (not isinstance(n_samples, int)) or (n_samples < 1):
-            raise ValueError(
-                '`n_samples` should be a positive integer or None')
+    def draw(self, owner: Any, site: int, n_samples: Optional[int],
+             generator: Optional[torch.Generator] = None) -> 'SampleBatch':
+        """Returns one independent draw from the configured proposal."""
+        raise NotImplementedError
 
 
 def _sample_batch(ids: torch.Tensor,
                   probabilities: torch.Tensor,
-                  state: _RowSamplingState,
+                  sampler: RowSampler,
                   site: int,
                   proposal_core_versions: Tuple[int, ...] = (),
                   proposal_exact: bool = True) -> SampleBatch:
@@ -366,20 +333,20 @@ def _sample_batch(ids: torch.Tensor,
         ids=ids,
         probabilities=probabilities,
         weights=weights,
-        generation=state.generation,
+        generation=sampler.generation,
         proposal_core_versions=proposal_core_versions,
         proposal_exact=proposal_exact,
         site=site)
 
 
-class ExactRows:  # MARK: ExactRows
+class ExactRows(RowSampler):  # MARK: ExactRows
     """Deterministic sampler containing every row exactly once."""
 
     proposal_exact = True
     refreshable = False
 
     def draw(self,
-             state: _RowSamplingState,
+             owner: Any,
              site: int,
              n_samples: Optional[int] = None,
              generator: Optional[torch.Generator] = None) -> SampleBatch:
@@ -388,8 +355,8 @@ class ExactRows:  # MARK: ExactRows
 
         Parameters
         ----------
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
+        owner : object
+            Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
@@ -404,30 +371,21 @@ class ExactRows:  # MARK: ExactRows
         SampleBatch
             Selected rows with their original probabilities and weights.
         """
-        _validate_draw(state, site, n_samples)
-        if (n_samples is not None) and (n_samples != state.n_rows):
+        self._prepare_draw(owner, site, n_samples)
+        if (n_samples is not None) and (n_samples != self.n_rows):
             raise ValueError(
                 '`n_samples` should equal all rows for ExactRows')
         ids = torch.arange(
-            state.n_rows, device=state.device, dtype=torch.long)
+            self.n_rows, device=self.device, dtype=torch.long)
         probabilities = torch.full(
-            (state.n_rows,),
-            1 / state.n_rows,
-            device=state.device,
+            (self.n_rows,),
+            1 / self.n_rows,
+            device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(ids, probabilities, state, site)
-
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """
-        Increments the core version; exact rows remain
-        design-independent.
-        """
-        return state.update_core(site)
+        return _sample_batch(ids, probabilities, self, site)
 
 
-class ObservedRows:  # MARK: ObservedRows
+class ObservedRows(RowSampler):  # MARK: ObservedRows
     """
     Deterministic non-refreshable rows from fixed observations.
 
@@ -457,7 +415,7 @@ class ObservedRows:  # MARK: ObservedRows
         self.observations = observations
 
     def draw(self,
-             state: _RowSamplingState,
+             owner: Any,
              site: int,
              n_samples: Optional[int] = None,
              generator: Optional[torch.Generator] = None) -> SampleBatch:
@@ -466,8 +424,8 @@ class ObservedRows:  # MARK: ObservedRows
 
         Parameters
         ----------
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
+        owner : object
+            Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
@@ -482,39 +440,33 @@ class ObservedRows:  # MARK: ObservedRows
         SampleBatch
             Selected rows with their original probabilities and weights.
         """
-        _validate_draw(state, site, n_samples)
+        self._prepare_draw(owner, site, n_samples)
         indices = self.observations.support.values
         n_observations = indices.shape[0]
-        if state.n_rows != prod(self.observations.in_dim):
+        if self.n_rows != prod(self.observations.in_dim):
             raise ValueError(
                 'Sampling state rows should match the observation input shape')
         if (n_samples is not None) and (n_samples != n_observations):
             raise ValueError(
                 '`n_samples` should equal all observations for ObservedRows')
         ids = _ravel_indices(
-            indices, self.observations.in_dim).to(state.device)
+            indices, self.observations.in_dim).to(self.device)
         probabilities = torch.full(
             (n_observations,),
             1 / n_observations,
-            device=state.device,
+            device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(ids, probabilities, state, site)
-
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """Increments the core version without changing observed rows."""
-        return state.update_core(site)
+        return _sample_batch(ids, probabilities, self, site)
 
 
-class UniformRows:  # MARK: UniformRows
+class UniformRows(RowSampler):  # MARK: UniformRows
     """Uniform row sampling with replacement."""
 
     proposal_exact = True
     refreshable = True
 
     def draw(self,
-             state: _RowSamplingState,
+             owner: Any,
              site: int,
              n_samples: Optional[int],
              generator: Optional[torch.Generator] = None) -> SampleBatch:
@@ -523,8 +475,8 @@ class UniformRows:  # MARK: UniformRows
 
         Parameters
         ----------
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
+        owner : object
+            Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
@@ -539,7 +491,7 @@ class UniformRows:  # MARK: UniformRows
         SampleBatch
             Selected rows with their original probabilities and weights.
         """
-        _validate_draw(state, site, n_samples)
+        self._prepare_draw(owner, site, n_samples)
         if n_samples is None:
             raise ValueError('`n_samples` is required for UniformRows')
         if generator is not None:
@@ -547,27 +499,21 @@ class UniformRows:  # MARK: UniformRows
                 raise TypeError(
                     '`generator` should be torch.Generator or None')
             generator_device = torch.device(generator.device)
-            if generator_device.type != state.device.type:
+            if generator_device.type != self.device.type:
                 raise ValueError(
                     '`generator` device should match the sampling state '
                     'device')
         ids = torch.randint(
-            state.n_rows,
+            self.n_rows,
             (n_samples,),
-            device=state.device,
+            device=self.device,
             generator=generator)
         probabilities = torch.full(
             (n_samples,),
-            1 / state.n_rows,
-            device=state.device,
+            1 / self.n_rows,
+            device=self.device,
             dtype=torch.get_default_dtype())
-        return _sample_batch(ids, probabilities, state, site)
-
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """Increments the core version; uniform probabilities remain exact."""
-        return state.update_core(site)
+        return _sample_batch(ids, probabilities, self, site)
 
 
 def _region_metrics(cores: Sequence[torch.Tensor]) -> Sequence[torch.Tensor]:
@@ -666,7 +612,7 @@ def _sampling_cores(cores: Sequence[torch.Tensor],
     return cores
 
 
-class TTLeverageRows:  # MARK: TTLeverageRows
+class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
     """
     Samples TT local-design rows from mixed-canonical leverage scores.
 
@@ -805,7 +751,7 @@ class TTLeverageRows:  # MARK: TTLeverageRows
         return self._probabilities_from_indices(cores, site, indices)
 
     def draw(self,
-             state: _RowSamplingState,
+             owner: Any,
              site: int,
              n_samples: Optional[int],
              generator: Optional[torch.Generator] = None) -> SampleBatch:
@@ -814,8 +760,8 @@ class TTLeverageRows:  # MARK: TTLeverageRows
 
         Parameters
         ----------
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
+        owner : object
+            Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
@@ -830,16 +776,16 @@ class TTLeverageRows:  # MARK: TTLeverageRows
         SampleBatch
             Selected rows with their original probabilities and weights.
         """
-        _validate_draw(state, site, n_samples)
+        self._prepare_draw(owner, site, n_samples)
         if n_samples is None:
             raise ValueError('`n_samples` is required for TTLeverageRows')
         cores = self._current_cores()
-        if len(cores) != len(state.core_versions):
+        if len(cores) != len(self.core_versions):
             raise ValueError('Sampling state should match the current TT')
-        if state.n_rows != prod(core.shape[1] for core in cores):
+        if self.n_rows != prod(core.shape[1] for core in cores):
             raise ValueError(
-                '`state.n_rows` should match the tensor dimensions')
-        if cores[0].device != state.device:
+                '`self.n_rows` should match the tensor dimensions')
+        if cores[0].device != self.device:
             raise ValueError(
                 'Sampling state and TT cores should share a device')
         self._validate_mixed_canonical(cores, site)
@@ -847,7 +793,7 @@ class TTLeverageRows:  # MARK: TTLeverageRows
                 not isinstance(generator, torch.Generator):
             raise TypeError('`generator` should be torch.Generator or None')
         if (generator is not None) and \
-                (torch.device(generator.device).type != state.device.type):
+                (torch.device(generator.device).type != self.device.type):
             raise ValueError(
                 '`generator` device should match the sampling state device')
 
@@ -856,7 +802,7 @@ class TTLeverageRows:  # MARK: TTLeverageRows
         current_ids = torch.randint(
             cores[site].shape[1],
             (n_samples, 1),
-            device=state.device,
+            device=self.device,
             generator=generator)
         right_sampling_cores = self._right_sampling_cores(
             cores[site + 1:])
@@ -864,20 +810,20 @@ class TTLeverageRows:  # MARK: TTLeverageRows
             right_sampling_cores, n_samples, generator)
         right_ids = reversed_right_ids.flip(1)
         leverage_indices = torch.cat(
-            (left_ids.to(state.device), current_ids,
-             right_ids.to(state.device)), dim=1)
+            (left_ids.to(self.device), current_ids,
+             right_ids.to(self.device)), dim=1)
 
         if self.uniform_mix > 0:
             uniform_ids = torch.randint(
-                state.n_rows,
+                self.n_rows,
                 (n_samples,),
-                device=state.device,
+                device=self.device,
                 generator=generator)
             uniform_indices = _unravel_indices(
                 uniform_ids, tuple(core.shape[1] for core in cores))
             use_uniform = torch.rand(
                 n_samples,
-                device=state.device,
+                device=self.device,
                 generator=generator) < self.uniform_mix
             indices = torch.where(
                 use_uniform.unsqueeze(1), uniform_indices, leverage_indices)
@@ -898,19 +844,13 @@ class TTLeverageRows:  # MARK: TTLeverageRows
         return _sample_batch(
             ids=ids,
             probabilities=probabilities,
-            state=state,
+            sampler=self,
             site=site,
-            proposal_core_versions=state.core_versions,
+            proposal_core_versions=self.core_versions,
             proposal_exact=True)
 
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """Invalidates design-dependent probabilities after core changes."""
-        return state.update_core(site)
 
-
-class TRProductLeverageRows:  # MARK: TRProductLeverageRows
+class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
     """
     Samples an approximate product-leverage proposal for TR designs.
 
@@ -1061,7 +1001,7 @@ class TRProductLeverageRows:  # MARK: TRProductLeverageRows
         return self._probabilities_from_indices(cores, site, indices)
 
     def draw(self,
-             state: _RowSamplingState,
+             owner: Any,
              site: int,
              n_samples: Optional[int],
              generator: Optional[torch.Generator] = None) -> SampleBatch:
@@ -1070,8 +1010,8 @@ class TRProductLeverageRows:  # MARK: TRProductLeverageRows
 
         Parameters
         ----------
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
+        owner : object
+            Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
@@ -1086,31 +1026,31 @@ class TRProductLeverageRows:  # MARK: TRProductLeverageRows
         SampleBatch
             Selected rows with their original probabilities and weights.
         """
-        _validate_draw(state, site, n_samples)
+        self._prepare_draw(owner, site, n_samples)
         if n_samples is None:
             raise ValueError(
                 '`n_samples` is required for TRProductLeverageRows')
         cores = self._current_cores()
-        if len(cores) != len(state.core_versions):
+        if len(cores) != len(self.core_versions):
             raise ValueError('Sampling state should match the current TR')
-        if state.n_rows != prod(core.shape[1] for core in cores):
+        if self.n_rows != prod(core.shape[1] for core in cores):
             raise ValueError(
-                '`state.n_rows` should match the tensor dimensions')
-        if cores[0].device != state.device:
+                '`self.n_rows` should match the tensor dimensions')
+        if cores[0].device != self.device:
             raise ValueError(
                 'Sampling state and TR cores should share a device')
         if (generator is not None) and \
                 not isinstance(generator, torch.Generator):
             raise TypeError('`generator` should be torch.Generator or None')
         if (generator is not None) and \
-                (torch.device(generator.device).type != state.device.type):
+                (torch.device(generator.device).type != self.device.type):
             raise ValueError(
                 '`generator` device should match the sampling state device')
 
         marginals = self._site_probabilities(cores, site)
         product_indices = torch.zeros(
             (n_samples, len(cores)),
-            device=state.device,
+            device=self.device,
             dtype=torch.long)
         for current, marginal in enumerate(marginals):
             if current != site:
@@ -1120,11 +1060,11 @@ class TRProductLeverageRows:  # MARK: TRProductLeverageRows
                     replacement=True,
                     generator=generator)
         if self.uniform_mix > 0:
-            environment_rows = state.n_rows // cores[site].shape[1]
+            environment_rows = self.n_rows // cores[site].shape[1]
             uniform_ids = torch.randint(
                 environment_rows,
                 (n_samples,),
-                device=state.device,
+                device=self.device,
                 generator=generator)
             environment_dim = tuple(
                 core.shape[1] for current, core in enumerate(cores)
@@ -1136,7 +1076,7 @@ class TRProductLeverageRows:  # MARK: TRProductLeverageRows
             uniform_indices[:, site + 1:] = uniform_environment[:, site:]
             use_uniform = torch.rand(
                 n_samples,
-                device=state.device,
+                device=self.device,
                 generator=generator) < self.uniform_mix
             indices = torch.where(
                 use_uniform.unsqueeze(1), uniform_indices, product_indices)
@@ -1145,46 +1085,27 @@ class TRProductLeverageRows:  # MARK: TRProductLeverageRows
 
         in_dim = tuple(core.shape[1] for core in cores)
         active_values = torch.arange(
-            in_dim[site], device=state.device, dtype=torch.long)
+            in_dim[site], device=self.device, dtype=torch.long)
         indices = indices.unsqueeze(1).expand(
             n_samples, in_dim[site], len(cores)).clone()
         indices[:, :, site] = active_values.unsqueeze(0)
         indices = indices.reshape(-1, len(cores))
         ids = _ravel_indices(indices, in_dim)
         probabilities = self._mixed_probabilities(
-            marginals, indices, state.n_rows)
+            marginals, indices, self.n_rows)
         if torch.any(probabilities <= 0):
             raise ValueError(
                 'Drawn product-leverage rows should have positive support')
         return _sample_batch(
             ids=ids,
             probabilities=probabilities,
-            state=state,
+            sampler=self,
             site=site,
-            proposal_core_versions=state.core_versions,
+            proposal_core_versions=self.core_versions,
             proposal_exact=False)
 
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """Invalidates the design-dependent product after a core update."""
-        return state.update_core(site)
 
-
-@dataclass(frozen=True)
-class _TRExactLeverageState:  # MARK: _TRExactLeverageState
-    """Contractions defining one exact cyclic leverage distribution."""
-
-    # Site order used by the contraction or construction
-    order: Tuple[int, ...]
-    # Contracted suffix density operators
-    suffix_metrics: Tuple[torch.Tensor, ...]
-    # Small Hermitian pseudoinverse of the implicit design Gram
-    gram_pseudoinverse: torch.Tensor
-    numerical_rank: int  # Numerical rank at the specified tolerance
-
-
-class TRExactLeverageRows:  # MARK: TRExactLeverageRows
+class TRExactLeverageRows(RowSampler):  # MARK: TRExactLeverageRows
     """
     Samples exact leverage rows of a cyclic TR local design.
 
@@ -1276,20 +1197,14 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
         pseudoinverse = inverse @ active_vectors.mH
         return pseudoinverse, numerical_rank
 
-    @classmethod
-    def _exact_state(cls,
-                     cores: Sequence[torch.Tensor],
-                     site: int) -> _TRExactLeverageState:
-        """Creates the double-layer state for one active TR ``site``."""
-        order = (*range(site + 1, len(cores)), *range(site))
-        suffix_metrics = cls._suffix_metrics(cores, order)
-        pseudoinverse, numerical_rank = cls._gram_pseudoinverse(
-            suffix_metrics[0])
-        return _TRExactLeverageState(
-            order=tuple(order),
-            suffix_metrics=suffix_metrics,
-            gram_pseudoinverse=pseudoinverse,
-            numerical_rank=numerical_rank)
+    def _exact_state(self, cores: Sequence[torch.Tensor], site: int
+                     ) -> 'TRExactLeverageRows':
+        """Prepares the double-layer contractions for one active site."""
+        self.order = (*range(site + 1, len(cores)), *range(site))
+        self.suffix_metrics = self._suffix_metrics(cores, self.order)
+        self.gram_pseudoinverse, self.numerical_rank = \
+            self._gram_pseudoinverse(self.suffix_metrics[0])
+        return self
 
     @staticmethod
     def _environment_features(cores: Sequence[torch.Tensor],
@@ -1316,7 +1231,7 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
                                    cores: Sequence[torch.Tensor],
                                    site: int,
                                    indices: torch.Tensor,
-                                   exact_state: _TRExactLeverageState
+                                   exact_state: 'TRExactLeverageRows'
                                    ) -> torch.Tensor:
         """Evaluates normalized exact environment leverage probabilities."""
         features = cls._environment_features(cores, site, indices)
@@ -1389,7 +1304,7 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
         return mixed_environment / in_dim[site]
 
     def draw(self,
-             state: _RowSamplingState,
+             owner: Any,
              site: int,
              n_samples: Optional[int],
              generator: Optional[torch.Generator] = None) -> SampleBatch:
@@ -1398,8 +1313,8 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
 
         Parameters
         ----------
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
+        owner : object
+            Current cores and their versions, supplied by the ALS backend.
         site : int
             Active site whose local system defines the proposal.
         n_samples : int, optional
@@ -1414,24 +1329,24 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
         SampleBatch
             Selected rows with their original probabilities and weights.
         """
-        _validate_draw(state, site, n_samples)
+        self._prepare_draw(owner, site, n_samples)
         if n_samples is None:
             raise ValueError(
                 '`n_samples` is required for TRExactLeverageRows')
         cores = self._current_cores()
-        if len(cores) != len(state.core_versions):
+        if len(cores) != len(self.core_versions):
             raise ValueError('Sampling state should match the current TR')
-        if state.n_rows != prod(core.shape[1] for core in cores):
+        if self.n_rows != prod(core.shape[1] for core in cores):
             raise ValueError(
-                '`state.n_rows` should match the tensor dimensions')
-        if cores[0].device != state.device:
+                '`self.n_rows` should match the tensor dimensions')
+        if cores[0].device != self.device:
             raise ValueError(
                 'Sampling state and TR cores should share a device')
         if (generator is not None) and \
                 not isinstance(generator, torch.Generator):
             raise TypeError('`generator` should be torch.Generator or None')
         if (generator is not None) and \
-                (torch.device(generator.device).type != state.device.type):
+                (torch.device(generator.device).type != self.device.type):
             raise ValueError(
                 '`generator` device should match the sampling state device')
 
@@ -1439,10 +1354,10 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
         right_rank = cores[site].shape[-1]
         left_rank = cores[site].shape[0]
         prefix = torch.eye(
-            right_rank, device=state.device, dtype=cores[0].dtype)
+            right_rank, device=self.device, dtype=cores[0].dtype)
         prefix = prefix.expand(n_samples, -1, -1)
         indices = torch.zeros(
-            (n_samples, len(cores)), device=state.device, dtype=torch.long)
+            (n_samples, len(cores)), device=self.device, dtype=torch.long)
         for position, current in enumerate(exact_state.order):
             core = cores[current]
             candidates = torch.einsum('jrc,cid->jird', prefix, core)
@@ -1462,17 +1377,17 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
                 generator=generator).squeeze(1)
             indices[:, current] = selected
             prefix = candidates[
-                torch.arange(n_samples, device=state.device), selected]
+                torch.arange(n_samples, device=self.device), selected]
 
         if self.uniform_mix > 0:
             uniform_indices = indices.clone()
             for current, dim in enumerate(core.shape[1] for core in cores):
                 if current != site:
                     uniform_indices[:, current] = torch.randint(
-                        dim, (n_samples,), device=state.device,
+                        dim, (n_samples,), device=self.device,
                         generator=generator)
             use_uniform = torch.rand(
-                n_samples, device=state.device,
+                n_samples, device=self.device,
                 generator=generator) < self.uniform_mix
             indices = torch.where(
                 use_uniform.unsqueeze(1), uniform_indices, indices)
@@ -1480,13 +1395,13 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
         environment_probability = self._environment_probabilities(
             cores, site, indices, exact_state)
         in_dim = tuple(core.shape[1] for core in cores)
-        environment_rows = state.n_rows // in_dim[site]
+        environment_rows = self.n_rows // in_dim[site]
         mixed_environment = (
             (1 - self.uniform_mix) * environment_probability +
             self.uniform_mix / environment_rows)
 
         active_values = torch.arange(
-            in_dim[site], device=state.device, dtype=torch.long)
+            in_dim[site], device=self.device, dtype=torch.long)
         indices = indices.unsqueeze(1).expand(
             n_samples, in_dim[site], len(cores)).clone()
         indices[:, :, site] = active_values.unsqueeze(0)
@@ -1500,112 +1415,10 @@ class TRExactLeverageRows:  # MARK: TRExactLeverageRows
         return _sample_batch(
             ids=ids,
             probabilities=probabilities,
-            state=state,
+            sampler=self,
             site=site,
-            proposal_core_versions=state.core_versions,
+            proposal_core_versions=self.core_versions,
             proposal_exact=True)
-
-    def update_after_core(self,
-                          state: _RowSamplingState,
-                          site: int) -> _RowSamplingState:
-        """Invalidates exact design contractions after a core update."""
-        return state.update_core(site)
-
-
-@dataclass(frozen=True)
-class SampleRefreshPolicy:  # MARK: SampleRefreshPolicy
-    """
-    Deterministic generation policy for reusable sampled rows.
-
-    A refresh returns a new immutable batch and invokes ``invalidate`` once.
-    Non-refreshable samplers, especially ``ObservedRows``, keep the original
-    ids and probabilities for the complete fit.
-
-    Parameters
-    ----------
-    reuse_sweeps : int, optional
-        Positive number of directional sweeps sharing one sample generation.
-        Defaults to ``1``.
-    """
-
-    reuse_sweeps: int = 1  # Number of sweeps sharing one frozen generation
-
-    def __post_init__(self) -> None:
-        if isinstance(self.reuse_sweeps, bool) or \
-                (not isinstance(self.reuse_sweeps, int)) or \
-                (self.reuse_sweeps < 1):
-            raise ValueError('`reuse_sweeps` should be a positive integer')
-
-    def generation(self, sweep: int) -> int:
-        """
-        Returns the sample generation for a non-negative ``sweep`` index.
-
-        Parameters
-        ----------
-        sweep : int
-            Directional sweep index.
-        """
-        if isinstance(sweep, bool) or \
-                (not isinstance(sweep, int)) or (sweep < 0):
-            raise ValueError('`sweep` should be a non-negative integer')
-        return sweep // self.reuse_sweeps
-
-    def sample(self,
-               sampler: RowSampler,
-               state: _RowSamplingState,
-               site: int,
-               n_samples: Optional[int],
-               generator: Optional[torch.Generator],
-               sweep: int,
-               current: Optional[SampleBatch] = None,
-               invalidate: Optional[
-                   Callable[[Optional[SampleBatch], SampleBatch], None]] = None
-               ) -> Tuple[
-                        SampleBatch,
-            _RowSamplingState,
-            bool]:
-        """
-        Reuses a batch or draws a new generation and invalidates its cache.
-
-        Parameters
-        ----------
-        sampler : RowSampler
-            Strategy that constructs the next batch when needed.
-        state : _RowSamplingState
-            Current row count, core versions, generation and device.
-        site : int
-            Active site passed to the sampler.
-        n_samples : int or None
-            Number of draws passed to the sampler.
-        generator : torch.Generator or None
-            Generator passed to the sampler.
-        sweep : int
-            Non-negative directional sweep index.
-        current : SampleBatch, optional
-            Existing batch eligible for reuse.
-        invalidate : callable, optional
-            Called as ``invalidate(current, new_batch)`` after a new draw.
-
-        Returns
-        -------
-        tuple
-            Batch, updated state and whether a new generation was drawn.
-        """
-        target_generation = self.generation(sweep)
-        if current is not None:
-            if (not sampler.refreshable) or \
-                    (current.generation == target_generation):
-                return current, state, False
-
-        draw_state = replace(state, generation=target_generation)
-        batch = sampler.draw(
-            draw_state,
-            site=site,
-            n_samples=n_samples,
-            generator=generator)
-        if invalidate is not None:
-            invalidate(current, batch)
-        return batch, draw_state, True
 
 
 __all__ = [
@@ -1618,5 +1431,4 @@ __all__ = [
     'TTLeverageRows',
     'TRProductLeverageRows',
     'TRExactLeverageRows',
-    'SampleRefreshPolicy',
 ]

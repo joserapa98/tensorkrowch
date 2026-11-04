@@ -6,7 +6,7 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.sketching.evaluations import (
-    ConfigurationMap, _EvaluationPlanBuilder, _EvaluationRequest)
+    ConfigurationMap)
 from tensorkrowch.decompositions.sketching.phi import PhiOperator
 from tensorkrowch.decompositions.sketching.specs import _OutputSpec
 
@@ -22,11 +22,10 @@ def _discrete_phi(source, reverse=False):
 
 def _configuration_map(source, *, batch_size=64, transform=None,
                        selection=None):
-    """Plans one two-site Phi and returns its map and handle."""
-    builder = _EvaluationPlanBuilder(source)
-    handle = _discrete_phi(source).collect(builder, selection)
-    return ConfigurationMap(builder.freeze(), batch_size=batch_size,
-                            transform=transform), handle
+    configurations = ConfigurationMap(source, batch_size=batch_size,
+                                      transform=transform)
+    handle = configurations.register(_discrete_phi(source), selection)
+    return configurations, handle
 
 
 class TestEvaluationPlan:  # MARK: TestEvaluationPlan
@@ -40,14 +39,14 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
 
         source = tk.decompositions.CallableTensorSource(
             function, in_dim=(2, 2), dtype=torch.float64)
-        builder = _EvaluationPlanBuilder(source)
+        builder = ConfigurationMap(source)
         first = _discrete_phi(source).collect(builder)
         second = _discrete_phi(source, reverse=True).collect(builder)
-        plan = builder.freeze()
-        configurations = ConfigurationMap(plan)
+        builder.freeze()
+        configurations = builder
         expected = torch.tensor([[0., 10.], [1., 11.]])
 
-        assert plan.stats == tk.decompositions.EvaluationStats(
+        assert configurations.stats == tk.decompositions.EvaluationStats(
             requested_points=8, unique_points=4, cache_hits=4)
         assert torch.equal(configurations._result(first), expected)
         assert torch.equal(configurations._result(second), expected.T)
@@ -75,31 +74,30 @@ class TestEvaluationPlan:  # MARK: TestEvaluationPlan
         assert configurations.stats.batches == 2
         assert configurations.stats.source_calls == 2
 
-    def test_empty_frozen_builder_and_wrong_source_are_rejected(self):
+    def test_empty_frozen_map_and_wrong_source_are_rejected(self):
         source = tk.decompositions.DenseTensorSource(torch.ones(2, 2))
-        builder = _EvaluationPlanBuilder(source)
-        with pytest.raises(ValueError, match='contain a request'):
-            builder.freeze()
-        _discrete_phi(source).collect(builder)
-        plan = builder.freeze()
+        configurations = ConfigurationMap(source)
+        with pytest.raises(ValueError, match='registered Phi'):
+            configurations.freeze()
+        configurations.register(_discrete_phi(source))
+        configurations.freeze()
+        configurations.freeze()
         with pytest.raises(RuntimeError, match='already frozen'):
-            builder.freeze()
-        with pytest.raises(RuntimeError, match='already frozen'):
-            _discrete_phi(source).collect(builder)
+            configurations.register(_discrete_phi(source))
         with pytest.raises(TypeError, match='source'):
-            _EvaluationPlanBuilder(torch.ones(2))
+            ConfigurationMap(torch.ones(2))
+        other = tk.decompositions.DenseTensorSource(torch.ones(2, 2))
         with pytest.raises(ValueError, match='share a source'):
-            _discrete_phi(source).collect(_EvaluationPlanBuilder(
-                tk.decompositions.DenseTensorSource(torch.ones(2, 2))))
-        with pytest.raises(TypeError, match='plan'):
-            ConfigurationMap(source)
-        assert ConfigurationMap(plan)._result(0).shape == (2, 2)
+            ConfigurationMap(other).register(_discrete_phi(source))
+        assert configurations._result(0).shape == (2, 2)
 
-    @pytest.mark.parametrize('shape', [(3,), (-1,), (True,), ('2',)])
-    def test_request_shape_is_validated(self, shape):
-        batch = tk.decompositions.ConfigurationBatch(torch.tensor([[0], [1]]))
-        with pytest.raises(ValueError, match='result_shape'):
-            _EvaluationRequest(batch, shape)
+    @pytest.mark.parametrize('selection', [
+        torch.zeros(1, 3, dtype=torch.long), torch.tensor([[2, 0]]),
+        torch.zeros(1, 2), torch.tensor([[-1, 0]])])
+    def test_registered_selection_is_validated(self, selection):
+        source = tk.decompositions.DenseTensorSource(torch.ones(2, 2))
+        with pytest.raises((TypeError, ValueError)):
+            ConfigurationMap(source).register(_discrete_phi(source), selection)
 
     @pytest.mark.parametrize('handle', [True, '0', -1, 3])
     def test_invalid_handles_are_rejected(self, handle):
@@ -165,11 +163,10 @@ class TestConfigurationMap:  # MARK: TestConfigurationMap
         phi = PhiOperator(source, tuple((site, torch.arange(dim))
                                         for site, dim in enumerate(
                                             (2, 2, 2, 3))), output_spec)
-        builder = _EvaluationPlanBuilder(source)
+        builder = ConfigurationMap(source)
         handle = phi.collect(builder)
-        configurations = ConfigurationMap(builder.freeze(),
-                                          transform=lambda table:
-                                          table.values + 100)
+        configurations = builder
+        configurations._transform = lambda table: table.values + 100
 
         assert configurations.values.shape == (4, 2, 3)
         result = configurations._result(handle)
@@ -189,14 +186,15 @@ class TestConfigurationMap:  # MARK: TestConfigurationMap
 
         source = tk.decompositions.CallableSource(
             function, n_sites=2, dtype=torch.float64)
-        phi = PhiOperator(source, (
-            (0, torch.tensor([1., 2.], dtype=torch.float64)),
-            (1, torch.tensor([[3., 4.]], dtype=torch.float64))),
+        phi = PhiOperator(
+            source, (
+                (0, torch.tensor([1., 2.], dtype=torch.float64)),
+                (1, torch.tensor([[3., 4.]], dtype=torch.float64))),
             _OutputSpec.normalize(torch.ones(1), n_input_sites=2),
             input_kind='features')
-        builder = _EvaluationPlanBuilder(source)
+        builder = ConfigurationMap(source)
         handle = phi.collect(builder)
-        configurations = ConfigurationMap(builder.freeze())
+        configurations = builder
         extra = (torch.tensor([2., 3., 3.], dtype=torch.float64),
                  torch.tensor([[3., 4.], [4., 5.], [4., 5.]],
                               dtype=torch.float64))
@@ -204,7 +202,7 @@ class TestConfigurationMap:  # MARK: TestConfigurationMap
         assert isinstance(configurations.configurations, tuple)
         result = configurations.evaluate(extra)
         assert torch.equal(result, torch.tensor([18., 24., 24.],
-                                               dtype=torch.float64))
+                                                dtype=torch.float64))
         (result.sum() + configurations._result(handle).sum()).backward()
         assert scale.grad.item() == 50
         assert configurations.stats.unique_points == 3

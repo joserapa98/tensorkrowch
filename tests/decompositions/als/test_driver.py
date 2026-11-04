@@ -52,15 +52,15 @@ class _FakeALSBackend:
         self.previous_generation = generation
         return generation, refreshed
 
-    def solve_site(self, site, sweep, return_record):
+    def update_site(self, site, sweep, return_record):
         if self.fail == ('system', sweep, site):
             raise NonFiniteLocalSystemError('forced system failure')
         if self.fail == ('solution', sweep, site):
             raise NonFiniteSolutionError('forced solution failure')
         proposal = self._cores[site] + 1
         version = self.versions[site] + 1
-        update = tk.decompositions.CoreUpdateSet(
-            sites=(site,), cores=(proposal,), versions=(version,))
+        self._cores[site] = proposal
+        self.versions[site] = version
         if return_record:
             record = tk.decompositions.LocalSolveRecord(
                 environment_shape=(4, 1),
@@ -72,15 +72,10 @@ class _FakeALSBackend:
                 sweep=sweep)
         else:
             record = None
-        return update, record
+        return record
 
     def skip_site(self, site):
         self.skipped.append((self.current_sweep, site))
-
-    def commit(self, update_set):
-        for site, (core, version) in update_set.updates.items():
-            self._cores[site] = core
-            self.versions[site] = version
 
     def measure_objective(self, problem):
         self.measure_count += 1
@@ -103,6 +98,7 @@ def _fixed_problem():
 
 
 class TestALSSweepDriver:  # MARK: TestALSSweepDriver
+
     @pytest.mark.parametrize(
         'sweep_direction', [None, 'forward', 'alternating']
     )

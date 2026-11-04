@@ -404,21 +404,72 @@ def test_zero_target_and_zero_system(zero_matrix):
 def test_local_proposal_restores_core_shape_and_sampling_metadata():
     core = torch.zeros(1, 2, 1, dtype=torch.complex128)
     target = torch.tensor([1 + 2j, 3 - 1j], dtype=core.dtype)
+    problem = tk.decompositions.ALSProblem(
+        tk.decompositions.DenseTensorSource(target))
+    samples = tk.decompositions.SampleBatch(
+        ids=torch.arange(2), probabilities=torch.full((2,), .5),
+        weights=torch.ones(2), generation=3, proposal_exact=False)
     actual, record = solver_module._solve_local_proposal(
         tk.decompositions.LeastSquaresSolver(),
         torch.eye(2, dtype=core.dtype), target, core,
         site=0, sweep=2, return_record=True,
-        sampling_exact=False, sample_generation=3)
+        problem=problem, log_scale=torch.tensor(0.), samples=samples)
     torch.testing.assert_close(actual, target.reshape(core.shape))
     torch.testing.assert_close(core, torch.zeros_like(core))
     assert record.sampling_exact is False
     assert record.sample_generation == 3
 
 
-@pytest.mark.parametrize('absolute, target_norm, expected', [
-    (0., 0., 0.), (1., 0., float('inf')), (2., 4., 0.5),
-])
-def test_relative_error_zero_target_policy(absolute, target_norm, expected):
-    actual = solver_module._relative_error(torch.tensor(absolute),
-                                           torch.tensor(target_norm))
-    assert actual.item() == expected
+@pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
+@pytest.mark.parametrize('route', ['full', 'sampled', 'observed'])
+@pytest.mark.parametrize('log_scale', [0., 5.])
+@pytest.mark.parametrize('mode', ['absolute', 'relative'])
+def test_local_system_matches_original_weighted_regularized_loss(
+        dtype, route, log_scale, mode):
+    generator = torch.Generator().manual_seed(319)
+    matrix = torch.randn(6, 2, dtype=dtype, generator=generator)
+    target = torch.randn(2, 3, dtype=dtype, generator=generator)
+    weights = torch.linspace(.5, 2., 6, dtype=torch.float64)
+    source = tk.decompositions.DenseTensorSource(target)
+    samples = None
+    indices = None
+    if route == 'full':
+        mask = torch.tensor([[False, True, True], [True, True, True]])
+        problem = tk.decompositions.ALSProblem(
+            source, weights=weights.reshape(2, 3),
+            mask=tk.decompositions.DenseTensorSource(mask))
+        target = target.reshape(-1)
+        weights = weights * mask.reshape(-1)
+    else:
+        ids = torch.tensor([0, 4, 4, 2] if route == 'sampled' else
+                           [0, 2, 4, 5])
+        indices = torch.stack((ids // 3, ids % 3), dim=1)
+        matrix = matrix[ids]
+        target = target.reshape(-1)[ids]
+        if route == 'observed':
+            observations = tk.decompositions.SparseTensorSource(
+                indices, target, (2, 3))
+            problem = tk.decompositions.ALSProblem(
+                observations=observations, weights=weights[ids])
+            indices = None
+        else:
+            problem = tk.decompositions.ALSProblem(
+                source, weights=weights.reshape(2, 3), sampled=True)
+            probabilities = torch.tensor([.1, .2, .2, .3])
+            samples = tk.decompositions.SampleBatch(
+                ids=ids, probabilities=probabilities,
+                weights=(4 * probabilities).rsqrt(), generation=2)
+        weights = weights[ids]
+    if samples is not None:
+        weights = weights * samples.weights
+    solver = tk.decompositions.LeastSquaresSolver(
+        l2_reg=.03, l2_reg_mode=mode, column_scaling=False,
+        system_scaling=False)
+    expected, _ = solver.solve(matrix * weights[:, None], target * weights)
+    scale = matrix.real.new_tensor(log_scale)
+    actual, _ = solver_module._solve_local_proposal(
+        solver, matrix * (-scale).exp(), target,
+        torch.zeros(1, 2, 1, dtype=dtype), site=0, sweep=0,
+        return_record=False, problem=problem, log_scale=scale,
+        indices=indices, samples=samples)
+    torch.testing.assert_close(actual.reshape(-1), expected)

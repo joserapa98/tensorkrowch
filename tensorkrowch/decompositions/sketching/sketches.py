@@ -2,27 +2,21 @@
 This script contains:
 
     Classes:
-        * _PreparedPhi
         * _SketchWeights
         * SketchOperator
-        * SketchSystemBuilder
         * CoreDeterminingSystem
-        * _SupportSketchSystemBuilder
-        * _SampledStructuredSystemBuilder
-        * _MarginalStructuredSystemBuilder
-        * _TTStackStructuredSystemBuilder
         * SampledSketch
         * MarginalSketch
         * TTStackSketch
 
     Functions:
-        * _prepare_phi
-        * _sampled_blocks
         * _one_hot_ids
         * _selected_ids
         * _sample_states
+        * _sampled_blocks
         * _structured_capability
         * _validate_structured_batch_size
+        * _contract_support
         * _gaussian
         * _left_orthogonal
         * _right_orthogonal
@@ -34,25 +28,22 @@ from typing import (Any,
                     Callable,
                     Mapping,
                     Optional,
-                    Protocol,
                     Sequence,
                     Tuple,
-                    Union,
-                    runtime_checkable)
+                    Union)
 
 import torch
 
-from tensorkrowch.utils import _INTEGER_DTYPES, truncated_svd
+from tensorkrowch.utils import _INTEGER_DTYPES
 
 from tensorkrowch.decompositions._utils import (_normalize_rank,
                                                 _normalize_dims,
                                                 _ravel_indices,
                                                 _unravel_indices)
 from tensorkrowch.decompositions.als.solvers import LeastSquaresSolver
-from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
-                                                 RangeProjectionRecord,
-                                                 TruncationRecord)
+from tensorkrowch.decompositions.metrics import DecompositionMetrics
 from tensorkrowch.decompositions.results import TTDecomposition
+from tensorkrowch.decompositions.sketching.phi import PhiOperator
 from tensorkrowch.decompositions.sketching.projections import RangeProjector
 from tensorkrowch.decompositions.sketching.sources import (SupportTensorSource,
                                                            _iter_support)
@@ -61,102 +52,6 @@ from tensorkrowch.decompositions.sources import (ConfigurationBatch,
 
 
 _Rank = Optional[Union[int, Sequence[int]]]
-
-
-@dataclass(frozen=True)
-class _PreparedPhi:
-    """Truncated Phi with absorbed spectra and central isometric lifts."""
-
-    tensor: torch.Tensor
-    left: Optional[torch.Tensor] = None
-    right: Optional[torch.Tensor] = None
-    truncations: Sequence[TruncationRecord] = ()
-    projections: Sequence[RangeProjectionRecord] = ()
-
-
-def _prepare_phi(tensor: torch.Tensor,
-                 direction: Optional[str],
-                 *,
-                 rank_left: Optional[int] = None,
-                 rank_right: Optional[int] = None,
-                 numerical: Tuple[bool, bool] = (False, False),
-                 cutoff: Optional[float] = None,
-                 atol: Optional[float] = None,
-                 rtol: Optional[float] = None,
-                 cum_percentage: Optional[float] = None,
-                 projector: Optional[RangeProjector] = None,
-                 generator: Optional[torch.Generator] = None,
-                 site: Optional[int] = None,
-                 collect_metrics: bool = False) -> _PreparedPhi:
-    """Truncates outward axes, absorbing spectra into the retained tensor."""
-    if direction is None:
-        return _PreparedPhi(tensor)
-    if direction not in ('left', 'right', 'center'):
-        raise ValueError("`direction` should be 'left', 'right' or 'center'")
-    truncations = []
-    projections = []
-
-    def split(matrix: torch.Tensor,
-              rank: Optional[int],
-              cut: Optional[int],
-              discover: bool = False) -> Tuple[torch.Tensor, ...]:
-        options = {'rank': rank, 'cutoff': cutoff, 'atol': atol,
-                   'rtol': rtol, 'cum_percentage': cum_percentage}
-        # Auxiliary matrix cuts discover numerical rank under their physical
-        # cap even when the user prescribes the paired inter-site bonds.
-        if ((rank is None) or discover) and all(value is None for value in (
-                cutoff, atol, rtol, cum_percentage)):
-            options['rtol'] = (max(matrix.shape) *
-                               torch.finfo(matrix.real.dtype).eps) ** 2
-        projection = None
-        if projector is not None:
-            projection = projector.project(
-                matrix, rank=rank, generator=generator,
-                return_info=collect_metrics)
-            matrix = projection.small_matrix
-            if projection.record is not None:
-                projections.append(projection.record)
-        if collect_metrics:
-            u, s, vh, info = truncated_svd(
-                matrix, return_info=True, **options)
-            if (cut is not None) and (cut >= 0):
-                truncations.append(TruncationRecord.from_svd_info(
-                    info, site=cut))
-        else:
-            u, s, vh = truncated_svd(matrix, **options)
-        if projection is not None:
-            u = projection.lift_left(u)
-        return u, s, vh
-
-    left_size, dimension, right_size = tensor.shape
-    if direction == 'left':
-        u, s, _ = split(
-            tensor.reshape(left_size, -1).mH, rank_left,
-            None if site is None else site - 1, numerical[0])
-        basis = (s.to(u.dtype).unsqueeze(-1) * u.mH).reshape(
-            u.shape[-1], dimension, right_size)
-        return _PreparedPhi(basis, truncations=tuple(truncations),
-                            projections=tuple(projections))
-
-    u, s, vh = split(
-        tensor.reshape(-1, right_size), rank_right, site, numerical[1])
-    basis = (u * s.to(u.dtype)).reshape(
-        left_size, dimension, u.shape[-1])
-    if direction == 'right':
-        return _PreparedPhi(basis, truncations=tuple(truncations),
-                            projections=tuple(projections))
-
-    right = vh
-    # Select both supports in the original Phi metric. Their isometric
-    # lifts leave all retained spectral scales inside the central tensor.
-    _, _, vh = split(
-        tensor.reshape(left_size, -1).mH, rank_left,
-        None if site is None else site - 1, numerical[0])
-    left = vh.mH
-    compact = left.mH @ basis.reshape(left_size, -1)
-    basis = compact.reshape(left.shape[-1], dimension, right.shape[0])
-    return _PreparedPhi(basis, left, right, tuple(truncations),
-                        tuple(projections))
 
 
 def _one_hot_ids(ids: torch.Tensor,
@@ -257,11 +152,17 @@ class _SketchWeights:  # MARK: _SketchWeights
     Evaluated left/right sketches and their corresponding recursive blocks.
     """
 
+    # Left sketch values on the source support at each cut
     left: Sequence[torch.Tensor]
+    # Right sketch values on the source support at each cut
     right: Sequence[torch.Tensor]
+    # Recursive maps extending the left sketches
     left_blocks: Sequence[torch.Tensor]
+    # Recursive maps extending the right sketches
     right_blocks: Sequence[torch.Tensor]
+    # Per-entry scaling applied before support contraction
     value_scale: torch.Tensor
+    # Measurements and metadata of sketch construction
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -282,24 +183,38 @@ class _SketchWeights:  # MARK: _SketchWeights
         object.__setattr__(self, 'diagnostics', dict(self.diagnostics))
 
 
-@runtime_checkable
-class SketchOperator(Protocol):  # MARK: SketchOperator
-    """Protocol for operators that construct a validated TT-RS system."""
+class SketchOperator:  # MARK: SketchOperator
+    """Builds core-determining systems with recursive sketch contractions."""
 
-    def builder(self, source: BaseSource) -> 'SketchSystemBuilder':
-        """Returns the ``source``-bound core-determining-system builder."""
+    # Source capabilities required for direct structured contractions.
+    _structured_methods = ()
 
-
-@runtime_checkable
-class SketchSystemBuilder(Protocol):  # MARK: SketchSystemBuilder
-    """Protocol for constructing local TT-RS equations from one source."""
-
-    def build(self,
-              *,
-              batch_size: Optional[int] = None,
+    def build(self, source: BaseSource, *, batch_size: Optional[int] = None,
               generator: Optional[torch.Generator] = None
               ) -> 'CoreDeterminingSystem':
-        """Builds sketched local tensors and recursive left blocks."""
+        """
+        Contracts a scalar source into Phi tensors and recursive maps.
+
+        Parameters
+        ----------
+        source : BaseSource
+            Finite scalar source; sparse absent entries are known zeros.
+        batch_size : int, optional
+            Maximum source evaluation batch size for support/grid traversal.
+        generator : torch.Generator, optional
+            Generator used by randomized sketch construction.
+        """
+        if not isinstance(source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
+        if tuple(source.out_shape) != ():
+            raise ValueError('TT-RS requires a scalar source')
+        if self._structured_methods and all(
+                _structured_capability(source, name) is not None
+                for name in self._structured_methods):
+            return self._build_structured(
+                source, batch_size=batch_size, generator=generator)
+        return _contract_support(
+            source, self, batch_size=batch_size, generator=generator)
 
 
 @dataclass(frozen=True)
@@ -338,11 +253,15 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
         Additional construction information, copied into the result metadata.
     """
 
+    # One local three-axis tensor per physical site
     phi: Sequence[torch.Tensor]
+    # Recursive maps between adjacent left sketch spaces
     left_blocks: Sequence[torch.Tensor]
+    # Recursive maps between adjacent right sketch spaces
     right_blocks: Sequence[torch.Tensor]
-    in_dim: Sequence[int]
-    operator: str
+    in_dim: Sequence[int]  # Input dimension at each physical site
+    operator: str  # Name of the sketch construction
+    # Construction measurements retained with the result
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -410,7 +329,7 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
         Truncates local ranges and solves outward from ``center``.
 
         Each cut is selected by one local SVD, with both directions treated
-        at the center. Singular values stay outside the retained bases.
+        at the center. Singular values remain in the retained coefficients.
         Least-squares alignment with the recursive sketches then produces
         the TT cores. Ranks are neither padded nor rounded afterward.
 
@@ -509,14 +428,14 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
             direction = 'center' if site == center else \
                 ('left' if site < center else 'right')
             if (site != center) and (site in (0, n_sites - 1)):
-                prepared = _PreparedPhi(tensor)
+                prepared = PhiOperator.from_tensor(tensor)
             else:
-                prepared = _prepare_phi(
-                    tensor, direction,
+                prepared = PhiOperator.from_tensor(tensor).truncate(
+                    direction,
                     rank_left=1 if site == 0 else ranks[site - 1],
                     rank_right=1 if site == n_sites - 1 else ranks[site],
                     site=site, **options)
-            bases.append(prepared.tensor)
+            bases.append(prepared.coefficients)
             metrics.truncations.extend(
                 record for record in prepared.truncations
                 if record.site < n_sites - 1)
@@ -526,8 +445,8 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
 
         # Unused outer factors belong in the center, since no branch restores
         # them when the selected center is an endpoint (including one site).
-        central_core = central.tensor
-        left_lift, right_lift = central.left, central.right
+        central_core = central.coefficients
+        left_lift, right_lift = central.left_lift, central.right_lift
         if center == 0:
             central_core = torch.einsum('ab,bpc->apc', left_lift,
                                         central_core)
@@ -607,114 +526,141 @@ class CoreDeterminingSystem:  # MARK: CoreDeterminingSystem
                       'system': dict(self.diagnostics)})
 
 
-class _SupportSketchSystemBuilder:  # MARK: _SupportSketchSystemBuilder
-    """Contracts finite support, enumerating only non-support sources."""
-
-    def __init__(self, source: BaseSource, operator: SketchOperator) -> None:
-        if not isinstance(source, BaseSource):
-            raise TypeError('`source` should inherit from BaseSource')
-        if tuple(source.out_shape) != ():
-            raise ValueError('TT-RS currently requires a scalar source')
-        self.source = source
-        self.operator = operator
-
-    def build(self,
-              *,
-              batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
-        """Builds all Phi tensors in support-linear memory when possible."""
-        if isinstance(self.source, SupportTensorSource):
-            batches = list(_iter_support(self.source, batch_size=batch_size))
-            if not batches:
-                raise ValueError(
-                    'TT-RS cannot decompose an empty sparse support')
-            indices = torch.cat(
-                [batch.as_tensor() for batch, _ in batches], dim=0)
-            values = torch.cat([value for _, value in batches], dim=0)
-            source_path = 'support'
-        else:
-            axes = [
-                torch.arange(dimension, device=self.source.device)
-                for dimension in self.source.in_dim
-            ]
-            indices = torch.cartesian_prod(*axes).reshape(
-                -1, len(self.source.in_dim))
-            if batch_size is None:
-                batch_size = indices.shape[0]
-            if isinstance(batch_size, bool) or not isinstance(batch_size, int):
-                raise TypeError('`batch_size` should be int type or None')
-            if batch_size < 1:
-                raise ValueError('`batch_size` should be positive')
-            values = []
-            for start in range(0, indices.shape[0], batch_size):
-                values.append(self.source.evaluate(ConfigurationBatch(
-                    indices[start:start + batch_size], kind='indices')))
-            values = torch.cat(values, dim=0)
-            source_path = 'enumerated_grid'
-        nonzero = values != 0
-        indices = indices[nonzero]
-        values = values[nonzero]
-        if not values.numel():
-            raise ValueError('TT-RS cannot decompose an empty sparse support')
-        weights = self.operator._weights(
-            indices,
-            self.source.in_dim,
-            values.dtype,
-            generator)
-        values = values * weights.value_scale.to(values.dtype)
-        phis = []
-        n_sites = len(self.source.in_dim)
-        for site, dimension in enumerate(self.source.in_dim):
-            left = values.new_ones(values.shape[0], 1) if site == 0 \
-                else weights.left[site - 1].to(values.dtype)
-            right = values.new_ones(values.shape[0], 1) \
-                if site == n_sites - 1 \
-                else weights.right[site].to(values.dtype)
-            contributions = values[:, None, None] * \
-                left[:, :, None] * right[:, None, :]
-            phi = values.new_zeros(
-                dimension, left.shape[1], right.shape[1])
-            phi.index_add_(0, indices[:, site], contributions)
-            phis.append(phi.permute(1, 0, 2))
-        return CoreDeterminingSystem(
-            phi=phis,
-            left_blocks=weights.left_blocks,
-            right_blocks=weights.right_blocks,
-            in_dim=self.source.in_dim,
-            operator=type(self.operator).__name__,
-            diagnostics={
-                'support_size': values.shape[0],
-                'source_path': source_path,
-                'left_dimensions': tuple(
-                    item.shape[1] for item in weights.left),
-                'right_dimensions': tuple(item.shape[1]
-                                          for item in weights.right),
-                **weights.diagnostics,
-            })
+def _contract_support(source: BaseSource, operator: SketchOperator,
+                      *,
+                      batch_size: Optional[int] = None,
+                      generator: Optional[torch.Generator] = None
+                      ) -> CoreDeterminingSystem:
+    """Builds all Phi tensors in support-linear memory when possible."""
+    if isinstance(source, SupportTensorSource):
+        batches = list(_iter_support(source, batch_size=batch_size))
+        if not batches:
+            raise ValueError(
+                'TT-RS cannot decompose an empty sparse support')
+        indices = torch.cat(
+            [batch.as_tensor() for batch, _ in batches], dim=0)
+        values = torch.cat([value for _, value in batches], dim=0)
+        source_path = 'support'
+    else:
+        axes = [
+            torch.arange(dimension, device=source.device)
+            for dimension in source.in_dim
+        ]
+        indices = torch.cartesian_prod(*axes).reshape(
+            -1, len(source.in_dim))
+        if batch_size is None:
+            batch_size = indices.shape[0]
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+            raise TypeError('`batch_size` should be int type or None')
+        if batch_size < 1:
+            raise ValueError('`batch_size` should be positive')
+        values = []
+        for start in range(0, indices.shape[0], batch_size):
+            values.append(source.evaluate(ConfigurationBatch(
+                indices[start:start + batch_size], kind='indices')))
+        values = torch.cat(values, dim=0)
+        source_path = 'enumerated_grid'
+    nonzero = values != 0
+    indices = indices[nonzero]
+    values = values[nonzero]
+    if not values.numel():
+        raise ValueError('TT-RS cannot decompose an empty sparse support')
+    weights = operator._weights(
+        indices,
+        source.in_dim,
+        values.dtype,
+        generator)
+    values = values * weights.value_scale.to(values.dtype)
+    phis = []
+    n_sites = len(source.in_dim)
+    for site, dimension in enumerate(source.in_dim):
+        left = values.new_ones(values.shape[0], 1) if site == 0 \
+            else weights.left[site - 1].to(values.dtype)
+        right = values.new_ones(values.shape[0], 1) \
+            if site == n_sites - 1 \
+            else weights.right[site].to(values.dtype)
+        contributions = values[:, None, None] * \
+            left[:, :, None] * right[:, None, :]
+        phi = values.new_zeros(
+            dimension, left.shape[1], right.shape[1])
+        phi.index_add_(0, indices[:, site], contributions)
+        phis.append(phi.permute(1, 0, 2))
+    return CoreDeterminingSystem(
+        phi=phis,
+        left_blocks=weights.left_blocks,
+        right_blocks=weights.right_blocks,
+        in_dim=source.in_dim,
+        operator=type(operator).__name__,
+        diagnostics={
+            'support_size': values.shape[0],
+            'source_path': source_path,
+            'left_dimensions': tuple(
+                item.shape[1] for item in weights.left),
+            'right_dimensions': tuple(item.shape[1]
+                                      for item in weights.right),
+            **weights.diagnostics,
+        })
 
 
-class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
-    """Builds sampled equations from exact TT prefix/suffix kernels."""
+class SampledSketch(SketchOperator):  # MARK: SampledSketch
+    """
+    Recursive one-hot sketches induced by correlated configurations.
+
+    For a sparse source the default configurations are its non-zero support.
+    Prefix and suffix indicators select states from the same reference data.
+    Missing sparse entries contribute their known zero without evaluation.
+
+    Parameters
+    ----------
+    samples : torch.Tensor or None, optional
+        Reference index configurations with shape ``(batch, n_sites)``.
+        ``None`` uses the source support or all states for a format source.
+    sketch_size : int or None, optional
+        Maximum number of distinct prefix and suffix states at each cut.
+        ``None`` retains every reference state.
+
+    Examples
+    --------
+    >>> source = tk.decompositions.DenseTensorSource(torch.ones(2, 3, 2))
+    >>> system = tk.decompositions.SampledSketch().build(source)
+    >>> result = system.solve(rank=1)
+    >>> torch.allclose(result.contract_dense(), torch.ones(2, 3, 2))
+    True
+    """
+
+    _structured_methods = ('left_envs', 'right_envs', 'local_phi')
 
     def __init__(self,
-                 source: BaseSource,
-                 operator: 'SampledSketch') -> None:
-        self.source = source
-        self.operator = operator
+                 samples: Optional[torch.Tensor] = None,
+                 sketch_size: Optional[int] = None) -> None:
+        if (samples is not None) and (
+                not isinstance(samples, torch.Tensor) or (samples.ndim != 2) or
+                (samples.dtype not in _INTEGER_DTYPES)):
+            raise TypeError(
+                '`samples` should be a two-dimensional integer tensor')
+        if (samples is not None) and (min(samples.shape) < 1):
+            raise ValueError('`samples` should contain inputs and rows')
+        if (sketch_size is not None) and (
+                isinstance(sketch_size, bool) or
+                not isinstance(sketch_size, int)):
+            raise TypeError('`sketch_size` should be int type or None')
+        if (sketch_size is not None) and (sketch_size < 1):
+            raise ValueError('`sketch_size` should be positive')
+        self.samples = samples
+        self.sketch_size = sketch_size
 
-    def build(self,
-              *,
-              batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
+    def _build_structured(self, source: BaseSource,
+                          *,
+                          batch_size: Optional[int] = None,
+                          generator: Optional[torch.Generator] = None
+                          ) -> CoreDeterminingSystem:
         _validate_structured_batch_size(batch_size)
-        dimensions = self.source.in_dim
-        device = self.source.device
-        if self.operator.samples is None:
+        dimensions = source.in_dim
+        device = source.device
+        if self.samples is None:
             reference = None
         else:
-            reference = self.operator.samples.to(
+            reference = self.samples.to(
                 device=device, dtype=torch.long)
             if reference.shape[1] != len(dimensions):
                 raise ValueError('`samples` should contain one index per site')
@@ -738,30 +684,30 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
                 suffix_ids = _ravel_indices(
                     reference[:, site + 1:], dimensions[site + 1:])
             states = _sample_states(
-                prefix_ids, self.operator.sketch_size, generator)
+                prefix_ids, self.sketch_size, generator)
             suffix = _sample_states(
-                suffix_ids, self.operator.sketch_size, generator)
+                suffix_ids, self.sketch_size, generator)
             prefix_states.append(states)
             suffix_states.append(suffix)
 
         blocks = _sampled_blocks(
-            prefix_states, dimensions, self.source.dtype, device)
+            prefix_states, dimensions, source.dtype, device)
         right_blocks = _sampled_blocks(
-            suffix_states, dimensions, self.source.dtype, device, right=True)
+            suffix_states, dimensions, source.dtype, device, right=True)
 
         left_kernel = _structured_capability(
-            self.source, 'left_envs')
+            source, 'left_envs')
         right_kernel = _structured_capability(
-            self.source, 'right_envs')
-        phi_kernel = _structured_capability(self.source, 'local_phi')
+            source, 'right_envs')
+        phi_kernel = _structured_capability(source, 'local_phi')
         phis = []
         for site in range(len(dimensions)):
             left = torch.ones(
-                1, 1, dtype=self.source.dtype, device=device) if site == 0 \
+                1, 1, dtype=source.dtype, device=device) if site == 0 \
                 else left_kernel(_unravel_indices(
                     prefix_states[site - 1], dimensions[:site]))
             right = torch.ones(
-                1, 1, dtype=self.source.dtype, device=device) \
+                1, 1, dtype=source.dtype, device=device) \
                 if site == len(dimensions) - 1 else right_kernel(
                     _unravel_indices(
                         suffix_states[site], dimensions[site + 1:]))
@@ -771,7 +717,7 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
             left_blocks=blocks,
             right_blocks=right_blocks,
             in_dim=dimensions,
-            operator=type(self.operator).__name__,
+            operator=type(self).__name__,
             diagnostics={
                 'source_path': 'structured_tt',
                 'structured_kernel': 'sampled_prefix_suffix',
@@ -783,170 +729,6 @@ class _SampledStructuredSystemBuilder:  # MARK: _SampledStructuredSystemBuilder
                 'right_dimensions': tuple(
                     states.numel() for states in suffix_states),
             })
-
-
-class _MarginalStructuredSystemBuilder:  # MARK: marginal structured builder
-    """Builds Markov marginal equations from direct TT contractions."""
-
-    def __init__(self,
-                 source: BaseSource,
-                 operator: 'MarginalSketch') -> None:
-        self.source = source
-        self.operator = operator
-
-    def build(self,
-              *,
-              batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
-        _validate_structured_batch_size(batch_size)
-        del generator
-        dimensions = self.source.in_dim
-        blocks = self.operator._left_blocks(
-            dimensions, self.source.dtype, self.source.device)
-        phi_kernel = _structured_capability(self.source, 'marginal_phi')
-        phis = [
-            phi_kernel(site, self.operator.order, self.operator.factor)
-            for site in range(len(dimensions))
-        ]
-        return CoreDeterminingSystem(
-            phi=phis,
-            left_blocks=blocks,
-            right_blocks=self.operator._right_blocks(
-                dimensions, self.source.dtype, self.source.device),
-            in_dim=dimensions,
-            operator=type(self.operator).__name__,
-            diagnostics={
-                'source_path': 'structured_tt',
-                'structured_kernel': 'markov_marginal',
-                'support_size': None,
-                'marginal_order': self.operator.order,
-                'weighted_marginal': self.operator.factor is not None,
-                'left_dimensions': tuple(
-                    block.shape[0] for block in blocks),
-                'right_dimensions': tuple(
-                    prod(dimensions[site + 1:min(
-                        len(dimensions), site + 1 + self.operator.order)])
-                    for site in range(len(dimensions) - 1)),
-            })
-
-
-class _TTStackStructuredSystemBuilder:  # MARK: _TTStackStructuredSystemBuilder
-    """Builds Gaussian TT-stack equations by double-layer contraction."""
-
-    def __init__(self,
-                 source: BaseSource,
-                 operator: 'TTStackSketch') -> None:
-        self.source = source
-        self.operator = operator
-
-    def build(self,
-              *,
-              batch_size: Optional[int] = None,
-              generator: Optional[torch.Generator] = None
-              ) -> CoreDeterminingSystem:
-        _validate_structured_batch_size(batch_size)
-        components = self.operator._components(
-            self.source.in_dim,
-            self.source.dtype,
-            self.source.device,
-            generator)
-        left_cores, right_cores, blocks, right_blocks = components
-        phi_kernel = _structured_capability(self.source, 'tt_sketch_phis')
-        phis = phi_kernel(
-            left_cores, right_cores,
-            boundary_scale=1 / sqrt(self.operator.stack_size))
-        feature_dim = self.operator.tt_rank * self.operator.stack_size
-        return CoreDeterminingSystem(
-            phi=phis,
-            left_blocks=blocks,
-            right_blocks=right_blocks,
-            in_dim=self.source.in_dim,
-            operator=type(self.operator).__name__,
-            diagnostics={
-                'source_path': 'structured_tt',
-                'structured_kernel': 'tt_stack_double_layer',
-                'support_size': None,
-                'tt_rank': self.operator.tt_rank,
-                'stack_size': self.operator.stack_size,
-                'sketch_dimension': feature_dim,
-                'orthogonal': self.operator.orthogonal,
-                'distribution': (
-                    'orthogonal_variant' if self.operator.orthogonal
-                    else 'gaussian_tt_stack'),
-                'core_determining_gate': (
-                    'recursive_left_and_suffix_right'),
-                'left_dimensions': (feature_dim,) * (
-                    len(self.source.in_dim) - 1),
-                'right_dimensions': (feature_dim,) * (
-                    len(self.source.in_dim) - 1),
-            })
-
-
-class SampledSketch:  # MARK: SampledSketch
-    """
-    Recursive one-hot sketches induced by correlated configurations.
-
-    For a sparse source the default configurations are its non-zero support.
-    Prefix and suffix indicators select states from the same reference data.
-    Missing sparse entries contribute their known zero without evaluation.
-
-    Parameters
-    ----------
-    samples : torch.Tensor or None, optional
-        Reference index configurations with shape ``(batch, n_sites)``.
-        ``None`` uses the source support or all states for a format source.
-    sketch_size : int or None, optional
-        Maximum number of distinct prefix and suffix states at each cut.
-        ``None`` retains every reference state.
-
-    Examples
-    --------
-    >>> source = tk.decompositions.DenseTensorSource(torch.ones(2, 3, 2))
-    >>> system = tk.decompositions.SampledSketch().builder(source).build()
-    >>> result = system.solve(rank=1)
-    >>> torch.allclose(result.contract_dense(), torch.ones(2, 3, 2))
-    True
-    """
-
-    def __init__(self,
-                 samples: Optional[torch.Tensor] = None,
-                 sketch_size: Optional[int] = None) -> None:
-        if (samples is not None) and (
-                not isinstance(samples, torch.Tensor) or (samples.ndim != 2) or
-                (samples.dtype not in _INTEGER_DTYPES)):
-            raise TypeError(
-                '`samples` should be a two-dimensional integer tensor')
-        if (samples is not None) and (min(samples.shape) < 1):
-            raise ValueError('`samples` should contain inputs and rows')
-        if (sketch_size is not None) and (
-                isinstance(sketch_size, bool) or
-                not isinstance(sketch_size, int)):
-            raise TypeError('`sketch_size` should be int type or None')
-        if (sketch_size is not None) and (sketch_size < 1):
-            raise ValueError('`sketch_size` should be positive')
-        self.samples = samples
-        self.sketch_size = sketch_size
-
-    def builder(self, source: BaseSource) -> SketchSystemBuilder:
-        """
-        Binds the sketch to ``source`` and returns its system builder.
-
-        Parameters
-        ----------
-        source : BaseSource
-            Finite scalar source. Format sources use direct contractions;
-            other sources use sparse support or finite-grid evaluation.
-
-        Returns
-        -------
-        SketchSystemBuilder
-            Builder whose ``build`` method constructs local Phi tensors.
-        """
-        if all(_structured_capability(source, name) is not None for name in (
-                'left_envs', 'right_envs', 'local_phi')):
-            return _SampledStructuredSystemBuilder(source, self)
-        return _SupportSketchSystemBuilder(source, self)
 
     def _weights(self,
                  indices: torch.Tensor,
@@ -997,7 +779,7 @@ class SampledSketch:  # MARK: SampledSketch
                 states.numel() for states in prefix_states)})
 
 
-class MarginalSketch:  # MARK: MarginalSketch
+class MarginalSketch(SketchOperator):  # MARK: MarginalSketch
     """
     Marginal sketches that retain a local neighborhood at every cut.
 
@@ -1019,11 +801,13 @@ class MarginalSketch:  # MARK: MarginalSketch
     Examples
     --------
     >>> source = tk.decompositions.DenseTensorSource(torch.ones(2, 3, 2))
-    >>> system = tk.decompositions.MarginalSketch().builder(source).build()
+    >>> system = tk.decompositions.MarginalSketch().build(source)
     >>> result = system.solve(rank=1, center=1)
     >>> torch.allclose(result.contract_dense(), torch.ones(2, 3, 2))
     True
     """
+
+    _structured_methods = ('marginal_phi',)
 
     def __init__(self,
                  order: int = 1,
@@ -1040,24 +824,41 @@ class MarginalSketch:  # MARK: MarginalSketch
         self.order = order
         self.factor = factor
 
-    def builder(self, source: BaseSource) -> SketchSystemBuilder:
-        """
-        Binds the sketch to ``source`` and returns its system builder.
-
-        Parameters
-        ----------
-        source : BaseSource
-            Finite scalar source. Format sources use direct contractions;
-            other sources use sparse support or finite-grid evaluation.
-
-        Returns
-        -------
-        SketchSystemBuilder
-            Builder whose ``build`` method constructs local Phi tensors.
-        """
-        if _structured_capability(source, 'marginal_phi') is not None:
-            return _MarginalStructuredSystemBuilder(source, self)
-        return _SupportSketchSystemBuilder(source, self)
+    def _build_structured(self, source: BaseSource,
+                          *,
+                          batch_size: Optional[int] = None,
+                          generator: Optional[torch.Generator] = None
+                          ) -> CoreDeterminingSystem:
+        _validate_structured_batch_size(batch_size)
+        del generator
+        dimensions = source.in_dim
+        blocks = self._left_blocks(
+            dimensions, source.dtype, source.device)
+        phi_kernel = _structured_capability(source, 'marginal_phi')
+        phis = [
+            phi_kernel(site, self.order, self.factor)
+            for site in range(len(dimensions))
+        ]
+        return CoreDeterminingSystem(
+            phi=phis,
+            left_blocks=blocks,
+            right_blocks=self._right_blocks(
+                dimensions, source.dtype, source.device),
+            in_dim=dimensions,
+            operator=type(self).__name__,
+            diagnostics={
+                'source_path': 'structured_tt',
+                'structured_kernel': 'markov_marginal',
+                'support_size': None,
+                'marginal_order': self.order,
+                'weighted_marginal': self.factor is not None,
+                'left_dimensions': tuple(
+                    block.shape[0] for block in blocks),
+                'right_dimensions': tuple(
+                    prod(dimensions[site + 1:min(
+                        len(dimensions), site + 1 + self.order)])
+                    for site in range(len(dimensions) - 1)),
+            })
 
     def _left_blocks(self,
                      in_dim: Optional[Sequence[int]],
@@ -1188,7 +989,7 @@ def _right_orthogonal(core: torch.Tensor) -> torch.Tensor:
     return matrix.reshape(core.shape)
 
 
-class TTStackSketch:  # MARK: TTStackSketch
+class TTStackSketch(SketchOperator):  # MARK: TTStackSketch
     """
     Stack of Gaussian TT sketches with configurable size and internal rank.
 
@@ -1205,7 +1006,7 @@ class TTStackSketch:  # MARK: TTStackSketch
     Dupuy and Rodrigo Figueroa Justiniano (2026). That paper establishes
     embedding guarantees for the global TTStack map. Using its partial suffix
     contractions inside TT-RS is an additional construction here, so the
-    builder separately verifies the recursive left blocks and right-sketch
+    operator separately verifies the recursive left blocks and right-sketch
     dimensions required by :class:`CoreDeterminingSystem`.
 
     Parameters
@@ -1224,6 +1025,8 @@ class TTStackSketch:  # MARK: TTStackSketch
     6
     """
 
+    _structured_methods = ('tt_sketch_phis',)
+
     def __init__(self,
                  tt_rank: int = 1,
                  stack_size: int = 1,
@@ -1239,24 +1042,47 @@ class TTStackSketch:  # MARK: TTStackSketch
         self.stack_size = stack_size
         self.orthogonal = orthogonal
 
-    def builder(self, source: BaseSource) -> SketchSystemBuilder:
-        """
-        Binds the sketch to ``source`` and returns its system builder.
-
-        Parameters
-        ----------
-        source : BaseSource
-            Finite scalar source. Format sources use direct contractions;
-            other sources use sparse support or finite-grid evaluation.
-
-        Returns
-        -------
-        SketchSystemBuilder
-            Builder whose ``build`` method constructs local Phi tensors.
-        """
-        if _structured_capability(source, 'tt_sketch_phis') is not None:
-            return _TTStackStructuredSystemBuilder(source, self)
-        return _SupportSketchSystemBuilder(source, self)
+    def _build_structured(self, source: BaseSource,
+                          *,
+                          batch_size: Optional[int] = None,
+                          generator: Optional[torch.Generator] = None
+                          ) -> CoreDeterminingSystem:
+        _validate_structured_batch_size(batch_size)
+        components = self._components(
+            source.in_dim,
+            source.dtype,
+            source.device,
+            generator)
+        left_cores, right_cores, blocks, right_blocks = components
+        phi_kernel = _structured_capability(source, 'tt_sketch_phis')
+        phis = phi_kernel(
+            left_cores, right_cores,
+            boundary_scale=1 / sqrt(self.stack_size))
+        feature_dim = self.tt_rank * self.stack_size
+        return CoreDeterminingSystem(
+            phi=phis,
+            left_blocks=blocks,
+            right_blocks=right_blocks,
+            in_dim=source.in_dim,
+            operator=type(self).__name__,
+            diagnostics={
+                'source_path': 'structured_tt',
+                'structured_kernel': 'tt_stack_double_layer',
+                'support_size': None,
+                'tt_rank': self.tt_rank,
+                'stack_size': self.stack_size,
+                'sketch_dimension': feature_dim,
+                'orthogonal': self.orthogonal,
+                'distribution': (
+                    'orthogonal_variant' if self.orthogonal
+                    else 'gaussian_tt_stack'),
+                'core_determining_gate': (
+                    'recursive_left_and_suffix_right'),
+                'left_dimensions': (feature_dim,) * (
+                    len(source.in_dim) - 1),
+                'right_dimensions': (feature_dim,) * (
+                    len(source.in_dim) - 1),
+            })
 
     def _components(self,
                     in_dim: Optional[Sequence[int]],
@@ -1388,7 +1214,6 @@ class TTStackSketch:  # MARK: TTStackSketch
 
 __all__ = [
     'SketchOperator',
-    'SketchSystemBuilder',
     'CoreDeterminingSystem',
     'SampledSketch',
     'MarginalSketch',

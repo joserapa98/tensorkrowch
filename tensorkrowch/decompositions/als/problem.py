@@ -1,21 +1,23 @@
 """
 This script contains:
 
-    Public classes:
+    Classes:
         * ALSProblem
 
-    Internal functions:
+    Functions:
         * _zero_safe_relative_error
 """
 
 from dataclasses import dataclass
+from math import prod
 from typing import Optional, Tuple
 
 import torch
 
 from tensorkrowch.utils import safe_divide
 
-from tensorkrowch.decompositions._utils import _ravel_indices
+from tensorkrowch.decompositions._utils import (_ravel_indices,
+                                                _unravel_indices)
 from tensorkrowch.decompositions.sources import (BaseSource,
                                                  ConfigurationBatch,
                                                  SparseTensorSource)
@@ -73,11 +75,14 @@ class ALSProblem:  # MARK: ALSProblem
     ((2, 3), True)
     """
 
-    source: Optional[BaseSource] = None
+    source: Optional[BaseSource] = None  # Known finite tensor to approximate
+    # Permanent observed entries in support order
     observations: Optional[SparseTensorSource] = None
+    # Multiplicative weights of participating residuals
     weights: Optional[torch.Tensor] = None
+    # Boolean participation mask for a known tensor
     mask: Optional[BaseSource] = None
-    sampled: bool = False
+    sampled: bool = False  # Whether local objectives use renewable samples
 
     def __post_init__(self) -> None:
         if (self.source is None) and (self.observations is None):
@@ -261,7 +266,7 @@ class ALSProblem:  # MARK: ALSProblem
             if configurations is not None:
                 raise ValueError('Observed objectives use their fixed support')
             target = self.observations.support_values
-            weights = self.weights
+            indices = None
         else:
             if configurations is None:
                 raise ValueError(
@@ -269,12 +274,32 @@ class ALSProblem:  # MARK: ALSProblem
             target = self.source.evaluate(configurations)
             indices = _discrete_indices(configurations, self.in_dim,
                                         self.source.device)
-            weights = self.entry_weights(indices)
+        return self._objective_error(approximation, target, indices)
+
+    def _row_weights(self, indices: Optional[torch.Tensor] = None
+                     ) -> Optional[torch.Tensor]:
+        """Returns weights for selected rows or the complete fixed target."""
+        if (self.weights is None) and (self.mask is None):
+            return None
+        if (self.observations is not None) and (indices is None):
+            return self.weights
+        if indices is None:
+            source = self.source
+            ids = torch.arange(prod(self.in_dim), device=source.device)
+            indices = _unravel_indices(ids, self.in_dim)
+        return self.entry_weights(indices)
+
+    def _objective_error(self, approximation: torch.Tensor,
+                         target: torch.Tensor,
+                         indices: Optional[torch.Tensor] = None
+                         ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Measures the objective using target values already evaluated."""
         if approximation.shape != target.shape:
             raise ValueError('`approximation` should match target values')
         if approximation.device != target.device:
             raise ValueError('`approximation` should be on the target device')
         residual = approximation - target
+        weights = self._row_weights(indices)
         if weights is not None:
             residual = residual * weights
             target = target * weights

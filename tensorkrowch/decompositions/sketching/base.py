@@ -32,13 +32,18 @@ from tensorkrowch.decompositions.sources import BaseSource
 class _SketchingFitContext:  # MARK: _SketchingFitContext
     """Stores diagnostics and numerical state for one independent fit."""
 
-    spec: _SketchingFitSpec
-    runtime: _RuntimePolicy
+    spec: _SketchingFitSpec  # Normalized options for this fit
+    runtime: _RuntimePolicy  # Computation, output placement and timing policy
+    # Random choices local to this fit
     generator: Optional[torch.Generator] = None
-    observer: Optional[Any] = None
+    observer: Optional[Any] = None  # Progress and diagnostic event consumer
+    # Collected numerical and timing records
     metrics: DecompositionMetrics = field(default_factory=DecompositionMetrics)
+    # Correlated prefix and suffix sketches
     regions: Dict[str, Any] = field(default_factory=dict)
+    # Resolved cores in physical-site order
     cores: List[torch.Tensor] = field(default_factory=list)
+    # Algorithm-specific numerical state
     state: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -223,11 +228,11 @@ class RecursiveSketching(ABC):  # MARK: RecursiveSketching
                 phi, axis, domain, return_info=context.need_diagnostics)
         if context.collect_metrics and (fitted.record is not None):
             context.metrics.input_fits.append(fitted.record)
-            threshold = torch.finfo(fitted.tensor.real.dtype).eps ** -0.5
+            threshold = torch.finfo(fitted.coefficients.real.dtype).eps ** -0.5
             if fitted.record.condition_number > threshold:
                 context.metrics.warnings.append(
                     f'Input fit at site {site} is ill-conditioned')
-        return fitted.tensor
+        return fitted.coefficients
 
     @abstractmethod
     def fit(self, *args: Any, **kwargs: Any) -> Any:

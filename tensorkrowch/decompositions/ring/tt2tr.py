@@ -1,27 +1,23 @@
 """
 This script contains:
 
-    Internal classes:
+    Classes:
         * _TTCoreProvider
         * _CanonicalTTCoreProvider
         * _VidalCoreProvider
-        * _SelectedBlock
-        * _BlockOpener
-
-    Public classes:
         * TT2TR
 
-    Internal functions:
+    Functions:
         * _as_tt
+        * _schmidt_power
+        * _weight_rows
         * _resolve_recursion
         * _fidelity_error
-
-    Public functions:
         * tt2tr
 """
 
 from dataclasses import dataclass, replace
-from math import prod, sqrt
+from math import sqrt
 from typing import (Any,
                     Mapping,
                     Optional,
@@ -47,20 +43,16 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
                                                    _resolve_observer)
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition)
-from tensorkrowch.decompositions.ring.blocks import (_CentralBlockSelector,
-                                                    _BlockSelection,
-                                                    _split_block,
-                                                    _discovery_partition,
-                                                    _boundary_partition)
+from tensorkrowch.decompositions.ring.blocks import (_ring_partition,
+                                                     _split_block)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
-                                                     BoundaryClosure)
+                                                     )
 from tensorkrowch.decompositions.ring.gauges import (AdjointGaugeRecursion,
                                                      GaugeRecursion,
-                                                     GaugeRecursionStep,
+                                                     GaugeMap,
                                                      OrthGaugeRecursion,
                                                      PinvGaugeRecursion,
-                                                     _ExpandedGaugeRecursion,
-                                                     _schmidt_power)
+                                                     _ExpandedGaugeRecursion)
 from tensorkrowch.decompositions.ring.opening import (BLOSTRLoopOpener,
                                                       LoopOpener,
                                                       resolve_loop_opener)
@@ -140,14 +132,17 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
         shape = list(core.shape)
         shape[axis] = count
         self.cores[site] = torch.cat((core, core.new_zeros(shape)), dim=axis)
-        name = 'left_factors' if direction == 'right' else 'right_factors'
-        factors = getattr(self, name, None)
-        if factors is not None:
-            factors = list(factors)
-            index = site if direction == 'right' else site + 1
-            unit = torch.eye(count, dtype=core.dtype, device=core.device)
-            factors[index] = torch.block_diag(factors[index], unit)
-            setattr(self, name, factors)
+
+    def configure_partition(self, sites: Sequence[int],
+                            left: Sequence[int], right: Sequence[int]) -> None:
+        """Retains the common construction intervals for local targets."""
+        self.central_sites = tuple(sites)
+        self.boundary_sites = (*left, *right)
+
+    def partition(self, rank: Any, center: int, block_boundaries: bool,
+                  rtol: Optional[float]) -> Tuple[Any, ...]:
+        """Measures the shared TT2TR/TR-RSS rank and block partition."""
+        return _ring_partition(self, rank, center, block_boundaries, rtol)
 
     def local_rank(self,
                    sites: Sequence[int],
@@ -180,7 +175,7 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
                        sites: Sequence[int],
                        direction: str,
                        opening: Any,
-                       context: Mapping[str, Any]) -> BoundaryClosure:
+                       context: Mapping[str, Any]) -> Tuple[torch.Tensor, ...]:
         """Absorbs a learned gauge and splits a boundary block sitewise."""
         target = self.local_target(sites, context)
         if direction == 'left':
@@ -209,10 +204,9 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
         records = (() if metrics is None else tuple(
             replace(record, site=sites[0] + record.site)
             for record in metrics.truncations))
-        return BoundaryClosure(
-            sites=sites, direction=direction, cores=cores,
-            diagnostics={'algorithm': 'tt_boundary_absorption',
-                         'truncations': records})
+        if metrics is not None:
+            context['_metrics'].truncations.extend(records)
+        return cores
 
     def finalize_center(self, opening: Any, sites: Sequence[int]) -> Any:
         """Absorbs dummy external gauges when discovery blocks overlap."""
@@ -237,7 +231,7 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
                          opening: Any,
                          local_target: Any,
                          recursion_context: Mapping[str, Any],
-                         direction: str) -> GaugeRecursionStep:
+                         direction: str) -> GaugeMap:
         """Keeps the learned outgoing gauge for direct TT-edge absorption."""
         if direction == 'right':
             gauge = opening.right_gauge
@@ -245,9 +239,9 @@ class _TTCoreProvider:  # MARK: _TTCoreProvider
             gauge = opening.left_gauge
         else:
             raise ValueError("`direction` should be 'left' or 'right'")
-        return GaugeRecursionStep(
-            gauge=gauge,
-            diagnostics={'boundary': True,
+        return GaugeMap(
+            core=gauge, orientation=direction,
+            metadata={'boundary': True,
                          'algorithm': 'absorb_learned_gauge'})
 
 
@@ -278,6 +272,38 @@ class _CanonicalTTCoreProvider(_TTCoreProvider):  # MARK: CanonicalProvider
                 'apb,xb->apx', self.cores[site], factor)
 
 
+def _schmidt_power(spectrum: torch.Tensor, power: float) -> torch.Tensor:
+    """Applies a spectral power on positive support, zeroing inverse zeros."""
+    if power == 0:
+        return torch.ones_like(spectrum)
+    positive = spectrum > 0
+    safe = torch.where(positive, spectrum, torch.ones_like(spectrum))
+    result = torch.where(positive, safe.pow(power), torch.zeros_like(spectrum))
+    if not torch.isfinite(result).all():
+        raise ValueError('Schmidt powers overflow on the retained support')
+    return result
+
+
+def _weight_rows(matrix: torch.Tensor,
+                 basis: torch.Tensor,
+                 factor: torch.Tensor,
+                 direction: str) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Weights the incoming virtual rows by a Schmidt factor."""
+    physical_dim = matrix.shape[0] // factor.shape[1]
+    if direction == 'right':
+        matrix = torch.einsum('xa,apb->xpb', factor, matrix.reshape(
+            factor.shape[1], physical_dim, -1))
+        basis = torch.einsum('xa,apy->xpy', factor, basis.reshape(
+            factor.shape[1], physical_dim, -1))
+    else:
+        matrix = torch.einsum('xb,pba->pxa', factor, matrix.reshape(
+            physical_dim, factor.shape[1], -1))
+        basis = torch.einsum('xb,pby->pxy', factor, basis.reshape(
+            physical_dim, factor.shape[1], -1))
+    return (matrix.reshape(-1, matrix.shape[-1]),
+            basis.reshape(-1, basis.shape[-1]))
+
+
 class _VidalCoreProvider(_TTCoreProvider):  # MARK: _VidalCoreProvider
     """Supplies canonical Vidal cores and their remaining bond factors."""
 
@@ -305,6 +331,46 @@ class _VidalCoreProvider(_TTCoreProvider):  # MARK: _VidalCoreProvider
             self.cores[0].dtype) for s, (left, _) in
             zip(self.spectra, self.powers)), unit)
 
+    def expand_coordinates(self, site: int, count: int,
+                           direction: str) -> None:
+        """Adds zero target rows with unit metric in auxiliary coordinates."""
+        super().expand_coordinates(site, count, direction)
+        if not count:
+            return
+        name = 'left_factors' if direction == 'right' else 'right_factors'
+        factors = list(getattr(self, name))
+        index = site if direction == 'right' else site + 1
+        core = self.cores[site]
+        unit = torch.eye(count, dtype=core.dtype, device=core.device)
+        factors[index] = torch.block_diag(factors[index], unit)
+        setattr(self, name, factors)
+
+    def _transport_matrices(self, matrix: torch.Tensor,
+                            basis: torch.Tensor, sites: Sequence[int],
+                            direction: str
+                            ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Weights incoming rows and removes outgoing absorption powers."""
+        first, last = sites[0], sites[-1]
+        if direction == 'right':
+            factor = self.left_factors[first]
+            spectrum = self.spectra[last]
+            power = -self.powers[last][0]
+        else:
+            factor = self.right_factors[last + 1]
+            spectrum = self.spectra[first - 1]
+            power = -self.powers[first - 1][1]
+        matrix, basis = _weight_rows(matrix, basis, factor, direction)
+        return matrix * _schmidt_power(spectrum, power).unsqueeze(0), basis
+
+    def _transport_coordinates(self, coordinates: torch.Tensor,
+                               sites: Sequence[int], direction: str
+                               ) -> torch.Tensor:
+        """Converts isometric coordinates to the next target's powers."""
+        bond = sites[-1] if direction == 'right' else sites[0] - 1
+        power = self.powers[bond][1 if direction == 'right' else 0] - 1
+        return coordinates * _schmidt_power(
+            self.spectra[bond], power).unsqueeze(1)
+
     def local_target(self,
                      sites: Sequence[int],
                      context: Mapping[str, Any]) -> torch.Tensor:
@@ -324,14 +390,15 @@ class _VidalCoreProvider(_TTCoreProvider):  # MARK: _VidalCoreProvider
                          opening: Any,
                          local_target: Any,
                          recursion_context: Mapping[str, Any],
-                         direction: str) -> GaugeRecursionStep:
+                         direction: str) -> GaugeMap:
         """Includes the remaining Vidal factor in the outgoing gauge."""
         step = super().prepare_boundary(
             opening, local_target, recursion_context, direction)
         sites = recursion_context['from_sites']
         bond = sites[-1] if direction == 'right' else sites[0] - 1
-        gauge = step.gauge * self.bond_factors[bond][None, :, None]
-        return GaugeRecursionStep(gauge=gauge, diagnostics=step.diagnostics)
+        gauge = step.core * self.bond_factors[bond][None, :, None]
+        return GaugeMap(core=gauge, orientation=direction,
+                        metadata=step.metadata)
 
 
 def _resolve_recursion(recursion: Any) -> GaugeRecursion:
@@ -375,55 +442,6 @@ def _fidelity_error(tt: TT,
         relative=relative,
         denominator=target_norm)
     return FidelityRecord(normalized_overlap, error=error)
-
-
-class _SelectedBlock(_CentralBlockSelector):
-    """Passes a precomputed internal partition to the shared driver."""
-
-    def __init__(self, sites: Sequence[int]) -> None:
-        self.sites = tuple(sites)
-
-    def select(self, provider: Any, rank: Any, center: Any = None,
-               *, bounds: Any = None) -> _BlockSelection:
-        return _BlockSelection(
-            sites=self.sites,
-            in_dim=tuple(provider.in_dim[site] for site in self.sites),
-            left_rank_cap=rank[self.sites[0] - 1],
-            right_rank_cap=rank[self.sites[-1]],
-            input_capacity=prod(provider.in_dim[site] for site in self.sites),
-            required_input_capacity=1, feasible=True, reason='tt_partition')
-
-
-class _BlockOpener:
-    """Splits the fitted physical supercore to discover internal ranks."""
-
-    def __init__(self, opener: LoopOpener, rtol: float) -> None:
-        self.opener, self.rtol = opener, rtol
-
-    @property
-    def capabilities(self) -> Any:
-        return self.opener.capabilities
-
-    def open(self, target: torch.Tensor, rank: Sequence[int],
-             **kwargs: Any) -> Any:
-        dimensions = target.shape[1:-1]
-        if len(dimensions) == 1:
-            return self.opener.open(target, rank, **kwargs)
-        context = dict(kwargs.get('context', {}))
-        context['in_dim'] = (target.shape[0], prod(dimensions),
-                             target.shape[-1])
-        options = {**kwargs, 'context': context}
-
-        # The block exterior is known; its internal TR ranks are found by SVD.
-        opening = self.opener.open(
-            target.reshape(target.shape[0], -1, target.shape[-1]),
-            (rank[0], rank[-2], rank[-1]), **options)
-        cores = _split_block(opening.cores[0].reshape(
-            opening.cores[0].shape[0], *dimensions,
-            opening.cores[0].shape[-1]), dimensions, rtol=self.rtol)
-        return replace(opening, cores=cores,
-                       rank=(rank[0], *(core.shape[-1] for core in cores),
-                             rank[-1]))
 
 
 class TT2TR:  # MARK: TT2TR
@@ -585,35 +603,12 @@ class TT2TR:  # MARK: TT2TR
         else:
             provider = _TTCoreProvider(self._tt)
 
-        # Select ranks and blocks without changing the input tensor train.
-        if rank is None:
-            # Discovery removes numerical null directions even at rtol=0.
+        ranks = None if rank is None else _normalize_rank(rank, count)
+        if (rank is None) and isinstance(opener, BLOSTRLoopOpener):
             precision = torch.finfo(provider.cores[0].real.dtype).eps
             size = max(core.numel() for core in provider.cores)
             rtol = max(1e-12 if rtol is None else rtol,
                        (size * precision) ** 2)
-        if (rank is None) and isinstance(opener, BLOSTRLoopOpener):
-            sites, left, right = (center,), (), ()
-            ranks, discovery = None, None
-        elif rank is None:
-            sites, left, right, ranks, discovery = _discovery_partition(
-                provider, center, rtol)
-        else:
-            ranks = _normalize_rank(rank, count)
-            capacity = ranks[center - 1] * ranks[center]
-            if (provider.in_dim[center] <= capacity) and (
-                    0 < center < count - 1):
-                selection = _CentralBlockSelector().select(
-                    provider, ranks, center, bounds=(1, count - 2))
-                sites = tuple(selection.sites)
-            else:
-                sites = (center,)
-            if block_boundaries:
-                sites, left, right = _boundary_partition(provider, sites)
-            else:
-                left = () if sites[0] == 0 else (0,)
-                right = () if sites[-1] == count - 1 else (count - 1,)
-            discovery = None
         if observer is not None:
             observer.emit(DecompositionEvent(
                 name='start', phase='TT to TR',
@@ -621,7 +616,6 @@ class TT2TR:  # MARK: TT2TR
                         'rank': None if ranks is None else list(ranks)}))
         context = {'collect_metrics': collect_metrics or bool(verbosity),
                    '_observer': observer, 'rtol': rtol,
-                   'left_boundary': left, 'right_boundary': right,
                    'rank_caps': None if rank is None else ranks}
 
         # Construct local factors first, then check the complete
@@ -635,18 +629,10 @@ class TT2TR:  # MARK: TT2TR
                 if enrich:
                     strategy = _ExpandedGaugeRecursion(
                         strategy, enrich_rank, enrich_rtol)
-                selected_opener = (_BlockOpener(opener, rtol)
-                                   if rank is None else opener)
-                driver = BidirectionalRingDriver().fit(
-                    provider, ranks, selected_opener, strategy,
-                    block_selector=_SelectedBlock(sites), center=center,
+                result = BidirectionalRingDriver().fit(
+                    provider, ranks, opener, strategy, center=center,
+                    block_boundaries=block_boundaries, rtol=rtol,
                     context=context)
-                result = driver.as_decomposition()
-                metadata = {**result.metadata, 'center_block': sites,
-                            'boundary_blocks': (left, right),
-                            'rank_discovery': discovery}
-                result = TRDecomposition(result.cores, metrics=result.metrics,
-                                         metadata=metadata)
             fidelity = _fidelity_error(self._tt, result)
             if isinstance(opener, BLOSTRLoopOpener):
                 # Contraction-based errors have a square-root precision floor.

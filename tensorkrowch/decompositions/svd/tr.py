@@ -1,19 +1,16 @@
 """
 This script contains:
 
-    Internal TR-SVD rank policy:
-        * _TRRankPolicy
-
-    Class for TR-SVD decompositions:
+    Classes:
         * TRSVD
 
-    TR-SVD function:
+    Functions:
         * tr_svd
         * qtr_svd
 """
 
 from contextlib import nullcontext
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from math import prod
 from typing import List, Optional, Tuple, Union
 
@@ -43,15 +40,6 @@ from tensorkrowch.decompositions.svd._utils import (_SVDProgress,
 
 
 _Rank = Optional[int]
-
-
-@dataclass(frozen=True)
-class _TRRankPolicy:  # MARK: _TRRankPolicy
-    """Stores the shared rank constraints for one TR-SVD fit."""
-
-    mode: str  # Rank discovery or shared-cap policy
-    initial_cap: Optional[int]  # Cap for the initial bipartition rank
-    rank_cap: Optional[int]  # Cap for every final TR link
 
 
 class TRSVD:  # MARK: TRSVD
@@ -118,7 +106,8 @@ class TRSVD:  # MARK: TRSVD
                  source: 'SourceLike',
                  center: Optional[int] = None,
                  *,
-                 out_device: Optional[Union[str, torch.device]] = 'cpu') -> None:
+                 out_device: Optional[Union[str, torch.device]] = 'cpu'
+                 ) -> None:
         self._source, tensor, batches = _prepare_svd_source(source)
         if batches:
             raise ValueError('TR-SVD does not support `n_batches`')
@@ -151,21 +140,6 @@ class TRSVD:  # MARK: TRSVD
     def center(self) -> int:
         """Preferred interior cut used when :meth:`fit` omits ``center``."""
         return self._center
-
-    @staticmethod
-    def _resolve_rank_policy(rank: _Rank) -> _TRRankPolicy:
-        """Builds the TR ``rank`` policy from a validated shared ``rank``."""
-
-        if rank is None:
-            return _TRRankPolicy(
-                mode='discovery',
-                initial_cap=None,
-                rank_cap=None)
-
-        return _TRRankPolicy(
-            mode='shared',
-            initial_cap=rank * rank,
-            rank_cap=rank)
 
     @staticmethod
     def _split_cycle_rank(selected_rank: int,
@@ -263,10 +237,11 @@ class TRSVD:  # MARK: TRSVD
                        progress: Optional[_SVDProgress] = None
                        ) -> TRDecomposition:
         """Runs the cyclic SVD kernel from already validated fit options."""
-        rank_policy = self._resolve_rank_policy(rank=truncation.rank)
+        rank_cap = truncation.rank
+        initial_cap = None if rank_cap is None else rank_cap * rank_cap
         initial_truncation = (
-            truncation if rank_policy.initial_cap == truncation.rank else
-            replace(truncation, rank=rank_policy.initial_cap))
+            truncation if initial_cap == truncation.rank else
+            replace(truncation, rank=initial_cap))
         in_dim = tuple(self._tensor.shape)
 
         total_timer_context = (
@@ -286,7 +261,7 @@ class TRSVD:  # MARK: TRSVD
 
             cycle_rank, center_rank = self._split_cycle_rank(
                 selected_rank=selected_rank,
-                rank_cap=rank_policy.rank_cap)
+                rank_cap=rank_cap)
             initial_capacity = cycle_rank * center_rank
             initial_padding = initial_capacity - selected_rank
 
@@ -404,7 +379,7 @@ class TRSVD:  # MARK: TRSVD
             metadata={
                 'algorithm': 'tr_svd',
                 'center': center,
-                'rank_mode': rank_policy.mode,
+                'rank_mode': 'discovery' if rank_cap is None else 'shared',
                 'renormalize': renormalize,
                 'initial_padding': initial_padding,
             })
@@ -430,11 +405,12 @@ class TRSVD:  # MARK: TRSVD
         TR-SVD truncations are not all orthogonal in one common scale.
 
         If ``rank`` is an integer, it is a shared upper bound for every TR
-        ``rank`` and its square bounds the initial bipartition. Local truncation
-        criteria may therefore select a different effective ``rank`` at each
-        site. With ``None``, ranks are discovered from the selected SVD
-        dimensions. The selected ``rank`` is split with the smallest admissible
-        product and the most balanced pair breaks ties. Any extra capacity
+        ``rank`` and its square bounds the initial bipartition. Local
+        truncation criteria may therefore select a different effective
+        ``rank`` at each site. With ``None``, ranks are discovered from the
+        selected SVD dimensions. The selected ``rank`` is split with the
+        smallest admissible product and the most balanced pair breaks ties.
+        Any extra capacity
         required by the cap is padded only with structural zeros and recorded
         in ``result.metadata``.
 
@@ -446,9 +422,9 @@ class TRSVD:  # MARK: TRSVD
 
         The fixed tensor should have shape ``(d_1, ..., d_n)``, with one input
         dimension per TR site. The returned cores all have shape
-        ``(rank_{k-1}, d_k, rank_k)``, where the left ``rank`` of the first core
-        matches the right ``rank`` of the last core. Consequently, the result
-        always represents a cyclic TR.
+        ``(rank_{k-1}, d_k, rank_k)``, where the left ``rank`` of the first
+        core matches the right ``rank`` of the last core. Consequently, the
+        result always represents a cyclic TR.
 
         Parameters
         ----------
@@ -700,8 +676,9 @@ def tr_svd(source: 'SourceLike',
     -------
     TRDecomposition
         Decomposition with cores and metadata. Access ``cores`` for the
-        tensors and :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info`
-        for structured information.
+        tensors and
+        :meth:`~tensorkrowch.decompositions.TensorDecomposition.as_info` for
+        structured information.
 
     Examples
     --------

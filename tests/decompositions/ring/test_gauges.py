@@ -187,7 +187,7 @@ class TestOrthGaugeRecursion:  # MARK: TestOrthGaugeRecursion
         outgoing_map = tk.decompositions.GaugeMap(
             outgoing, outgoing_orientation)
         fixed_map = tk.decompositions.GaugeMap(
-            step.gauge, fixed_orientation)
+            step.core, fixed_orientation)
 
         assert torch.allclose(
             outgoing_map.matrix.T @ fixed_map.matrix,
@@ -257,7 +257,7 @@ class TestPinvGaugeRecursionLocal:  # MARK: TestPinvGaugeRecursionLocal
 
         step = _recursion().advance_right(
             opening, None, _context(tt_core))
-        actual = step.gauge.permute(1, 0, 2).reshape(4, -1)
+        actual = step.core.permute(1, 0, 2).reshape(4, -1)
 
         assert torch.allclose(actual, expected, rtol=2e-10, atol=2e-10)
         assert torch.allclose(
@@ -281,7 +281,7 @@ class TestPinvGaugeRecursionLocal:  # MARK: TestPinvGaugeRecursionLocal
 
         step = _recursion().advance_left(
             opening, None, _context(tt_core))
-        actual = step.gauge.permute(1, 0, 2).reshape(4, -1)
+        actual = step.core.permute(1, 0, 2).reshape(4, -1)
 
         assert torch.allclose(actual, expected, rtol=2e-10, atol=2e-10)
         assert torch.allclose(
@@ -304,14 +304,14 @@ class TestPinvGaugeRecursionLocal:  # MARK: TestPinvGaugeRecursionLocal
 
         step = _recursion().advance_right(
             opening, None, _context(tt_core))
-        actual = step.gauge.permute(1, 0, 2).reshape(
+        actual = step.core.permute(1, 0, 2).reshape(
             matrix.shape[1], -1)
 
         assert torch.allclose(
             actual, torch.linalg.pinv(matrix) @ basis,
             rtol=2e-10, atol=2e-10)
         assert step.records[0].projective
-        assert step.diagnostics['projection_error'] == pytest.approx(
+        assert step.metadata['projection_error'] == pytest.approx(
             (matrix @ actual - basis).norm().div(basis.norm()).item())
 
     def test_rank_tolerance_reports_ill_conditioned_core(self):
@@ -361,7 +361,7 @@ class TestPinvGaugeRecursionIntegration:
         step = getattr(_recursion(), f'advance_{direction}')(
             opening, None, {'provider': provider, 'from_sites': (2, 3),
                             'to_sites': (4 if direction == 'right' else 1,)})
-        actual = step.gauge.permute(1, 0, 2).reshape(expected.shape)
+        actual = step.core.permute(1, 0, 2).reshape(expected.shape)
         torch.testing.assert_close(actual, expected)
 
     def test_complete_rank_one_chain_preserves_tensor_and_fidelity(self):
@@ -435,7 +435,7 @@ class TestAdjointGaugeRecursion:  # MARK: TestAdjointGaugeRecursion
             opening, None, context)
         assert actual.records[0].shape[0] != actual.records[0].shape[1]
         assert actual.records[0].inverse_method == 'adjoint'
-        torch.testing.assert_close(actual.gauge, expected.gauge)
+        torch.testing.assert_close(actual.core, expected.core)
         assert (actual.records[0].numerical_rank ==
                 expected.records[0].numerical_rank)
 
@@ -493,7 +493,7 @@ class TestAdjointGaugeRecursion:  # MARK: TestAdjointGaugeRecursion
             opening, None, {'provider': provider, 'from_sites': (2,),
                             'to_sites': (3 if direction == 'right' else 1,)})
         assert step.records[0].inverse_method == 'adjoint'
-        assert torch.isfinite(step.gauge).all()
+        assert torch.isfinite(step.core).all()
 
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('direction', ['left', 'right'])
@@ -554,7 +554,7 @@ class TestAdjointGaugeRecursion:  # MARK: TestAdjointGaugeRecursion
             opening, None, {'provider': provider, 'from_sites': sites,
                             'to_sites': (sites[-1] + 1 if direction == 'right'
                                          else sites[0] - 1,)})
-        actual = step.gauge.permute(
+        actual = step.core.permute(
             (1, 0, 2) if direction == 'right' else (1, 2, 0))
         actual = actual.reshape(expected.shape)
         torch.testing.assert_close(actual, expected, rtol=2e-10, atol=2e-10)
@@ -598,7 +598,7 @@ class TestExpandedGaugeRecursion:
         recursion = _ExpandedGaugeRecursion(recursion_type(), None, 1e-12)
         step = getattr(recursion, f'advance_{direction}')(
             opening, None, context)
-        added = step.diagnostics['added']
+        added = step.metadata['added']
         after = provider.cores[destination]
         axis = 0 if direction == 'right' else 2
 
@@ -609,11 +609,11 @@ class TestExpandedGaugeRecursion:
         if recursion_type is not tk.decompositions.AdjointGaugeRecursion:
             torch.testing.assert_close(
                 after.narrow(axis, 0, before.shape[axis]), before)
-        assert step.diagnostics['target_preservation_error'] < 1e-12
-        assert step.diagnostics['residual_after'] < 1e-12
-        assert step.diagnostics['orthogonality_error'] < 1e-12
-        assert step.gauge.shape[1] == after.shape[axis]
-        assert torch.isfinite(step.gauge).all()
+        assert step.metadata['target_preservation_error'] < 1e-12
+        assert step.metadata['residual_after'] < 1e-12
+        assert step.metadata['orthogonality_error'] < 1e-12
+        assert step.core.shape[1] == after.shape[axis]
+        assert torch.isfinite(step.core).all()
 
     @pytest.mark.parametrize('limit', [0, 1])
     @pytest.mark.parametrize('direction', ['left', 'right'])
@@ -640,11 +640,11 @@ class TestExpandedGaugeRecursion:
             opening, None, context)
         step = getattr(_ExpandedGaugeRecursion(base, limit, 1e-12),
                        f'advance_{direction}')(opening, None, context)
-        assert step.diagnostics['added'] == limit
+        assert step.metadata['added'] == limit
         torch.testing.assert_close(
-            step.gauge[:, :expected.gauge.shape[1]], expected.gauge)
+            step.core[:, :expected.core.shape[1]], expected.core)
         if limit == 0:
-            torch.testing.assert_close(step.gauge, expected.gauge)
+            torch.testing.assert_close(step.core, expected.core)
 
     @pytest.mark.parametrize('options, error', [
         ((-1, 1e-12), ValueError),
@@ -662,24 +662,24 @@ class TestExpandedGaugeRecursion:
                 tk.decompositions.PinvGaugeRecursion(), *options)
 
 
-class TestGaugeRecursionStep:
+class TestGaugeTransportMetadata:
 
     def test_minimal_result_copies_containers_and_retains_gauge(self):
         core = torch.ones(1, 1, 1)
         diagnostics = {'source': 2}
-        step = tk.decompositions.GaugeRecursionStep(
-            core, records=[], diagnostics=diagnostics)
-        assert step.gauge is core
+        step = tk.decompositions.GaugeMap(
+            core, 'left', records=[], metadata=diagnostics)
+        assert step.core is core
         assert step.records == ()
         diagnostics['source'] = 3
-        assert step.diagnostics['source'] == 2
+        assert step.metadata['source'] == 2
 
     @pytest.mark.parametrize('gauge, kwargs, error', [
         (None, {}, TypeError),
         (torch.ones(1, 1), {}, ValueError),
         (torch.ones(1, 1, 1), {'records': [None]}, TypeError),
-        (torch.ones(1, 1, 1), {'diagnostics': []}, TypeError),
+        (torch.ones(1, 1, 1), {'metadata': []}, TypeError),
     ])
     def test_invalid_result(self, gauge, kwargs, error):
         with pytest.raises(error):
-            tk.decompositions.GaugeRecursionStep(gauge, **kwargs)
+            tk.decompositions.GaugeMap(gauge, 'left', **kwargs)

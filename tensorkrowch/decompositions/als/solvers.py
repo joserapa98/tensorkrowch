@@ -1,26 +1,27 @@
 """
 This script contains:
 
-    Public classes:
+    Classes:
         * NonFiniteLocalSystemError
         * NonFiniteSolutionError
         * LeastSquaresSolver
 
-    Internal functions:
+    Functions:
         * _column_norms
         * _column_scales
-        * _relative_error
         * _solve_local_proposal
 """
 
 from dataclasses import replace
 from math import isfinite, sqrt
-from typing import Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import torch
 
 from tensorkrowch.utils import safe_divide, scale_tensor, stable_norm
 
+from tensorkrowch.decompositions.als.problem import ALSProblem
+from tensorkrowch.decompositions.als.sampling import SampleBatch
 from tensorkrowch.decompositions.metrics import LocalSolveRecord
 
 
@@ -382,16 +383,6 @@ class LeastSquaresSolver:  # MARK: LeastSquaresSolver
         return returned_solution, record
 
 
-def _relative_error(absolute: torch.Tensor,
-                    target_norm: torch.Tensor) -> torch.Tensor:
-    """Applies the decomposition-wide zero-target relative-error policy."""
-    if target_norm > 0:
-        return absolute / target_norm
-    if absolute == 0:
-        return torch.zeros_like(absolute)
-    return torch.full_like(absolute, torch.inf)
-
-
 def _solve_local_proposal(solver: LeastSquaresSolver,
                           environment: torch.Tensor,
                           target: torch.Tensor,
@@ -399,12 +390,29 @@ def _solve_local_proposal(solver: LeastSquaresSolver,
                           site: int,
                           sweep: int,
                           return_record: bool,
-                          regularization_scale: Optional[torch.Tensor] = None,
-                          sampling_exact: Optional[bool] = None,
-                          sample_generation: Optional[
-                              int] = None) -> Tuple[
+                          *,
+                          problem: ALSProblem,
+                          log_scale: torch.Tensor,
+                          indices: Optional[torch.Tensor] = None,
+                          samples: Optional[SampleBatch] = None,
+                          core_versions: Sequence[int] = ()) -> Tuple[
         torch.Tensor, Optional[LocalSolveRecord]]:
-    """Solves a local system and restores the current core shape."""
+    """Weights and solves one normalized system, restoring the core shape."""
+    target = target * (-log_scale).exp().to(target.dtype)
+    if samples is not None:
+        weights = samples.weights.to(environment.dtype)
+        environment = environment * weights.unsqueeze(1)
+        target = target * weights
+    weights = problem._row_weights(indices)
+    if weights is not None:
+        weights = weights.to(environment.dtype)
+        environment = environment * weights.unsqueeze(1)
+        target = target * weights
+
+    # Preserve the original absolute penalty after normalizing both sides.
+    regularization_scale = None
+    if (solver.l2_reg_mode == 'absolute') and (solver.l2_reg > 0):
+        regularization_scale = (-2 * log_scale).exp()
     solution, record = solver.solve(
         environment,
         target,
@@ -412,9 +420,10 @@ def _solve_local_proposal(solver: LeastSquaresSolver,
         sweep=sweep,
         return_record=return_record,
         regularization_scale=regularization_scale)
-    if (record is not None) and (sampling_exact is not None):
-        record = replace(record, sampling_exact=sampling_exact,
-                         sample_generation=sample_generation)
+    if (record is not None) and (samples is not None):
+        record = replace(record,
+                         sampling_exact=samples.is_exact_for(core_versions),
+                         sample_generation=samples.generation)
     return solution.reshape(current.shape), record
 
 

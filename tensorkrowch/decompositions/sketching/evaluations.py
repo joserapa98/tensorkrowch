@@ -1,31 +1,23 @@
 """
 This script contains:
 
-    Public classes:
+    Classes:
         * ConfigurationMap
 
-    Internal classes:
-        * _EvaluationRequest
-        * _IncidenceMap
-        * _EvaluationPlan
-        * _EvaluationPlanBuilder
-
-    Internal functions:
+    Functions:
         * _input_values
         * _concatenate_configurations
 """
 
-from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 
 from tensorkrowch.decompositions.metrics import EvaluationStats
 from tensorkrowch.decompositions.sketching.regions import (SiteRegion,
-                                                         _SamplePool)
-from tensorkrowch.decompositions.sketching.specs import _OutputSpec
+                                                           _SamplePool)
 from tensorkrowch.decompositions.sources import (BaseSource,
-                                               ConfigurationBatch)
+                                                 ConfigurationBatch)
 
 
 def _input_values(configurations: ConfigurationBatch
@@ -70,123 +62,6 @@ def _concatenate_configurations(batches: Sequence[ConfigurationBatch]
     return ConfigurationBatch(values, kind=first.kind)
 
 
-@dataclass(frozen=True)
-class _EvaluationRequest:  # MARK: _EvaluationRequest
-    """One flattened Phi request before global deduplication."""
-
-    configurations: ConfigurationBatch
-    result_shape: Sequence[int]
-    output_spec: Optional[_OutputSpec] = None
-    output_labels: Optional[torch.Tensor] = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.configurations, ConfigurationBatch):
-            raise TypeError('`configurations` should be ConfigurationBatch')
-        if isinstance(self.result_shape, (str, bytes)) or \
-                not isinstance(self.result_shape, Sequence):
-            raise TypeError('`result_shape` should be a sequence of integers')
-        shape = tuple(self.result_shape)
-        n_results = 1
-        for dim in shape:
-            if isinstance(dim, bool) or not isinstance(dim, int) or (dim < 0):
-                raise ValueError(
-                    '`result_shape` should contain non-negative integers')
-            n_results *= dim
-        if n_results != self.configurations.batch_size:
-            raise ValueError(
-                '`result_shape` should contain one entry per configuration')
-        if (self.output_spec is not None) and \
-                not isinstance(self.output_spec, _OutputSpec):
-            raise TypeError('`output_spec` should be _OutputSpec or None')
-        if (self.output_spec is None) or self.output_spec.scalar:
-            if self.output_labels is not None:
-                raise ValueError(
-                    '`output_labels` requires a tensor-valued output spec')
-        else:
-            labels = self.output_spec._validate_flat_labels(self.output_labels)
-            if labels.shape[0] != self.configurations.batch_size:
-                raise ValueError(
-                    '`output_labels` should match the configuration batch')
-            object.__setattr__(self, 'output_labels', labels)
-        object.__setattr__(self, 'result_shape', shape)
-
-
-@dataclass(frozen=True)
-class _IncidenceMap:  # MARK: _IncidenceMap
-    """Gather indices and output selection for one planned Phi."""
-
-    unique_ids: torch.Tensor
-    result_shape: Tuple[int, ...]
-    output_spec: Optional[_OutputSpec] = None
-    output_labels: Optional[torch.Tensor] = None
-
-
-@dataclass(frozen=True)
-class _EvaluationPlan:  # MARK: _EvaluationPlan
-    """Unique source configurations and the gathers for all planned Phis."""
-
-    source: BaseSource
-    configurations: ConfigurationBatch
-    incidences: Tuple[_IncidenceMap, ...]
-    stats: EvaluationStats
-
-
-class _EvaluationPlanBuilder:  # MARK: _EvaluationPlanBuilder
-    """Collects Phi requests and deduplicates their source configurations."""
-
-    def __init__(self, source: BaseSource) -> None:
-        if not isinstance(source, BaseSource):
-            raise TypeError('`source` should inherit from BaseSource')
-        self.source = source
-        self._requests = []
-        self._frozen = False
-
-    def collect(self, request: _EvaluationRequest) -> int:
-        """Adds a request and returns its stable result handle."""
-        if self._frozen:
-            raise RuntimeError('The evaluation plan is already frozen')
-        if not isinstance(request, _EvaluationRequest):
-            raise TypeError('`request` should be _EvaluationRequest type')
-        if request.configurations.n_inputs != len(self.source.in_sites):
-            raise ValueError(
-                '`configurations` should contain one value per source input')
-        handle = len(self._requests)
-        self._requests.append(request)
-        return handle
-
-    def freeze(self) -> _EvaluationPlan:
-        """Deduplicates the requests and permanently freezes this builder."""
-        if self._frozen:
-            raise RuntimeError('The evaluation plan is already frozen')
-        if not self._requests:
-            raise ValueError('The evaluation plan should contain a request')
-        configurations = _concatenate_configurations(
-            [request.configurations for request in self._requests])
-        pool = _SamplePool(configurations)
-        unique = pool.restrict(SiteRegion(range(configurations.n_inputs)))
-        unique_configurations = configurations.index_select(
-            unique.representative_row_ids)
-
-        incidences = []
-        start = 0
-        for request in self._requests:
-            stop = start + request.configurations.batch_size
-            incidences.append(_IncidenceMap(
-                unique_ids=unique.inverse_ids[start:stop],
-                result_shape=request.result_shape,
-                output_spec=request.output_spec,
-                output_labels=request.output_labels))
-            start = stop
-        stats = EvaluationStats(
-            requested_points=configurations.batch_size,
-            unique_points=unique_configurations.batch_size,
-            cache_hits=(configurations.batch_size -
-                        unique_configurations.batch_size))
-        self._frozen = True
-        return _EvaluationPlan(self.source, unique_configurations,
-                               tuple(incidences), stats)
-
-
 class ConfigurationMap:  # MARK: ConfigurationMap
     """
     Source values shared by all RSS queries and a global transformation.
@@ -219,32 +94,87 @@ class ConfigurationMap:  # MARK: ConfigurationMap
                     configuration_map.evaluate(reflected)) / 2
     """
 
-    def __init__(self, plan: _EvaluationPlan,
-                 batch_size: Optional[int] = 64,
+    def __init__(self, source: BaseSource, batch_size: Optional[int] = 64,
                  transform: Optional[Callable] = None) -> None:
-        if not isinstance(plan, _EvaluationPlan):
-            raise TypeError('`plan` should be _EvaluationPlan type')
+        if not isinstance(source, BaseSource):
+            raise TypeError('`source` should inherit from BaseSource')
         if (batch_size is not None) and (
-                isinstance(batch_size, bool) or
-                not isinstance(batch_size, int)):
-            raise TypeError('`batch_size` should be int type or None')
-        if (batch_size is not None) and (batch_size < 1):
-            raise ValueError('`batch_size` should be positive')
+                isinstance(batch_size, bool) or not isinstance(batch_size, int)
+                or (batch_size < 1)):
+            raise ValueError('`batch_size` should be positive or None')
         if (transform is not None) and not callable(transform):
             raise TypeError('`transform` should be callable or None')
-        self._plan = plan
+        self.source = source
         self._batch_size = batch_size
         self._transform = transform
+        # Requests and gather indices share one frozen configuration table.
+        self._requests = []
+        self._incidences = []
+        self._configurations = None
+
+        # Raw evaluations remain available after the global transformation.
         self._values = None
         self._transformed_values = None
-        self._cache_configurations = plan.configurations
+        self._cache_configurations = None
         self._cache_values = None
-        self._stats = plan.stats
+        self._stats = EvaluationStats()
+
+    def register(self, phi: object,
+                 index_selection: Optional[torch.Tensor] = None) -> int:
+        """
+        Registers one Phi query before evaluation freezes the table.
+
+        Parameters
+        ----------
+        phi : PhiOperator
+            Local operator sharing this map's source.
+        index_selection : torch.Tensor, optional
+            Selected Phi entries; omitted to register the complete tensor.
+        """
+        from tensorkrowch.decompositions.sketching.phi import PhiOperator
+
+        if not isinstance(phi, PhiOperator):
+            raise TypeError('`phi` should be PhiOperator type')
+        if self._configurations is not None:
+            raise RuntimeError('The configuration map is already frozen')
+        if phi.source is not self.source:
+            raise ValueError('The map and Phi should share a source')
+        configurations, shape, labels = phi._request(index_selection)
+        handle = len(self._requests)
+        self._requests.append((configurations, shape, phi.output_spec, labels))
+        return handle
+
+    def freeze(self) -> None:
+        """Deduplicates all registered queries once before evaluation."""
+        if self._configurations is not None:
+            return
+        if not self._requests:
+            raise ValueError('The map should contain a registered Phi')
+        configurations = _concatenate_configurations(
+            [request[0] for request in self._requests])
+        pool = _SamplePool(configurations)
+        unique = pool.restrict(SiteRegion(range(configurations.n_inputs)))
+        self._configurations = configurations.index_select(
+            unique.representative_row_ids)
+        self._cache_configurations = self._configurations
+        offset = 0
+        for batch, shape, output_spec, labels in self._requests:
+            stop = offset + batch.batch_size
+            self._incidences.append((unique.inverse_ids[offset:stop],
+                                     tuple(shape), output_spec, labels))
+            offset = stop
+        self._stats = EvaluationStats(
+            requested_points=configurations.batch_size,
+            unique_points=self._configurations.batch_size,
+            cache_hits=configurations.batch_size -
+            self._configurations.batch_size)
+        self._requests.clear()
 
     @property
     def configurations(self) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
         """Initial packed inputs or one tensor per input, in query order."""
-        return self._plan.configurations.values
+        self.freeze()
+        return self._configurations.values
 
     @property
     def values(self) -> torch.Tensor:
@@ -260,14 +190,14 @@ class ConfigurationMap:  # MARK: ConfigurationMap
                           ) -> torch.Tensor:
         """Evaluates missing points in contiguous batches."""
         batch_size = self._batch_size or configurations.batch_size
-        before = self._plan.source.evaluation_stats
+        before = self.source.evaluation_stats
         chunks = []
         n_calls = 0
         for start in range(0, configurations.batch_size, batch_size):
             ids = torch.arange(start, min(start + batch_size,
                                           configurations.batch_size),
                                device=configurations.device)
-            values = self._plan.source.evaluate(
+            values = self.source.evaluate(
                 configurations.index_select(ids))
             if values.shape[0] != ids.numel():
                 raise ValueError(
@@ -275,7 +205,7 @@ class ConfigurationMap:  # MARK: ConfigurationMap
             chunks.append(values)
             n_calls += 1
         values = torch.cat(chunks, dim=0)
-        delta = self._plan.source.evaluation_stats.delta(before)
+        delta = self.source.evaluation_stats.delta(before)
         # Custom sources may not maintain counters, but each call still counts.
         self._stats = EvaluationStats(
             requested_points=self._stats.requested_points,
@@ -288,8 +218,9 @@ class ConfigurationMap:  # MARK: ConfigurationMap
 
     def evaluate_source(self) -> torch.Tensor:
         """Evaluates and retains the initial raw source table once."""
+        self.freeze()
         if self._values is None:
-            self._values = self._evaluate_batches(self._plan.configurations)
+            self._values = self._evaluate_batches(self._configurations)
             self._cache_values = self._values
         return self._values
 
@@ -316,7 +247,7 @@ class ConfigurationMap:  # MARK: ConfigurationMap
         self.evaluate_source()
         if not isinstance(configurations, ConfigurationBatch):
             configurations = ConfigurationBatch(
-                configurations, kind=self._plan.configurations.kind)
+                configurations, kind=self._configurations.kind)
         combined = _concatenate_configurations(
             (self._cache_configurations, configurations))
         if configurations.batch_size == 0:
@@ -374,17 +305,17 @@ class ConfigurationMap:  # MARK: ConfigurationMap
         return self._transformed_values
 
     def _result(self, handle: int,
-               index_selection: Optional[torch.Tensor] = None) -> torch.Tensor:
+                index_selection: Optional[torch.Tensor] = None
+                ) -> torch.Tensor:
         """Scatters one planned Phi without retaining another tensor cache."""
         if isinstance(handle, bool) or not isinstance(handle, int):
             raise TypeError('`handle` should be int type')
-        if (handle < 0) or (handle >= len(self._plan.incidences)):
+        self.freeze()
+        if (handle < 0) or (handle >= len(self._incidences)):
             raise ValueError('`handle` is outside the evaluation plan')
-        incidence = self._plan.incidences[handle]
+        self.freeze()
+        ids, result_shape, output_spec, labels = self._incidences[handle]
         values = self.prepare_values()
-        ids = incidence.unique_ids
-        labels = incidence.output_labels
-        result_shape = incidence.result_shape
         if index_selection is not None:
             selection = index_selection.to(ids.device).reshape(
                 -1, len(result_shape))
@@ -394,11 +325,11 @@ class ConfigurationMap:  # MARK: ConfigurationMap
                 labels = labels.reshape(result_shape)[indices]
             result_shape = tuple(index_selection.shape[:-1])
         selected = values.index_select(0, ids.to(values.device))
-        if incidence.output_spec is None:
+        if output_spec is None:
             return selected.reshape(
                 (*result_shape, *selected.shape[1:]))
-        selected = incidence.output_spec.validate_values(selected)
-        if incidence.output_spec.scalar:
+        selected = output_spec.validate_values(selected)
+        if output_spec.scalar:
             return selected.reshape(result_shape)
         labels = labels.to(values.device)
         selected = selected.reshape(selected.shape[0], -1).gather(

@@ -4,7 +4,7 @@ import pytest
 import torch
 
 import tensorkrowch as tk
-from tensorkrowch.decompositions.ring.blostr import (tr_blostr,
+from tensorkrowch.decompositions.ring.blostr import (_recover_cores, tr_blostr,
                                                    tr_blostr_svd)
 
 from tests.decompositions.als._oracles import contract_tr_dense
@@ -29,10 +29,11 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
     @pytest.mark.parametrize('function', [tr_blostr, tr_blostr_svd])
     @pytest.mark.parametrize('dtype', [torch.float64, torch.complex128])
     @pytest.mark.parametrize('n_sites', [3, 5])
-    def test_exact_recovery(self, function, dtype, n_sites):
+    @pytest.mark.parametrize('projection', ['slices', 'gaussian'])
+    def test_exact_recovery(self, function, dtype, n_sites, projection):
         tensor = _tensor([2] * n_sites, [4] * n_sites, dtype)
         result = function(
-            tensor, rank=[2] * n_sites, n_attempts=16,
+            tensor, rank=[2] * n_sites, n_attempts=16, projection=projection,
             collect_metrics=True,
             generator=torch.Generator().manual_seed(81))
         assert isinstance(result, tk.decompositions.TRDecomposition)
@@ -75,15 +76,50 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
         assert _error(result, tensor) < 1e-9
 
     @pytest.mark.parametrize('function', [tr_blostr, tr_blostr_svd])
-    def test_injective_matrix_unit_gauges(self, function):
+    @pytest.mark.parametrize('projection', ['slices', 'gaussian'])
+    def test_injective_matrix_unit_gauges(self, function, projection):
         generator = torch.Generator().manual_seed(12)
         tr = tk.formats.TR([
             torch.randn(2, 4, 2, dtype=torch.complex128, generator=generator)
             for _ in range(5)])
         tensor = tr.to_tt().cores[2]
         result = function(
-            tensor, rank=2, generator=torch.Generator().manual_seed(81))
-        assert _error(result, tensor) < 1e-10
+            tensor, rank=2, projection=projection,
+            generator=torch.Generator().manual_seed(81))
+        # Matrix-unit coordinate slices are singular despite injectivity of
+        # the complete unfolding. Only full slice recovery needs them.
+        if (function is tr_blostr) and (projection == 'slices'):
+            assert _error(result, tensor) > .1
+        else:
+            assert _error(result, tensor) < 1e-10
+
+    @pytest.mark.parametrize('projection', ['slices', 'gaussian'])
+    def test_recovery_projection_structure(self, projection, monkeypatch):
+        generator = torch.Generator().manual_seed(303)
+        cores = [torch.randn(2, 4, 2, dtype=torch.complex128,
+                             generator=generator) for _ in range(6)]
+        tensor = contract_tr_dense(cores)
+        randn = torch.randn
+        weights = []
+
+        def draw(*args, **kwargs):
+            weight = randn(*args, **kwargs)
+            weights.append(weight)
+            return weight
+
+        monkeypatch.setattr(torch, 'randn', draw)
+        recovered = _recover_cores(tensor, cores[0], projection, generator)
+        torch.testing.assert_close(contract_tr_dense(recovered), tensor,
+                                   rtol=1e-10, atol=1e-10)
+        if projection == 'slices':
+            assert not weights
+        else:
+            # At the middle step both groups have two physical axes. Dense
+            # weights within either group cannot factor into local vectors.
+            middle = [weight for weight in weights if weight.numel() == 16]
+            assert len(middle) == 2
+            assert all(torch.linalg.matrix_rank(weight.reshape(4, 4)) == 4
+                       for weight in middle)
 
     def test_explicit_slices(self):
         tensor = _tensor([2] * 3, [4] * 3)
@@ -177,8 +213,41 @@ class TestTRBLOSTR:  # MARK: TestTRBLOSTR
 
     def test_full_rejects_nonuniform_profile(self):
         tensor = _tensor([2, 1, 2, 3], [6, 3, 3, 6])
-        with pytest.raises(ValueError, match='uniform'):
-            tr_blostr(tensor, rank=[2, 1, 2, 3])
+        with pytest.warns(UserWarning, match='use BLOSTR-SVD'):
+            with pytest.raises(ValueError, match='uniform'):
+                tr_blostr(tensor, rank=[2, 1, 2, 3])
+
+    def test_full_warns_for_nonuniform_discovered_ranks(self):
+        tensor = _tensor([2, 1, 2, 3], [6, 3, 3, 6])
+        with pytest.warns(UserWarning, match='use BLOSTR-SVD'):
+            with pytest.raises(RuntimeError, match='uniform discovered'):
+                tr_blostr(
+                    tensor, projection='gaussian', n_attempts=1,
+                    generator=torch.Generator().manual_seed(81))
+
+    @pytest.mark.parametrize('dimensions', [(3, 4, 4), (4, 3, 4), (4, 4, 3)])
+    def test_full_warns_for_insufficient_physical_dimension(self, dimensions):
+        tensor = _tensor([2] * 3, dimensions)
+        with pytest.warns(UserWarning, match='Block the TT format'):
+            with pytest.raises(RuntimeError, match=r'at least rank\*\*2'):
+                tr_blostr(tensor, rank=2)
+
+    def test_full_warns_for_discovered_injectivity_failure(self):
+        tensor = _tensor([2] * 3, [4, 3, 4])
+        with pytest.warns(UserWarning, match='Block the TT format'):
+            with pytest.raises(RuntimeError, match=r'at least rank\*\*2'):
+                tr_blostr(
+                    tensor, projection='gaussian', n_attempts=1,
+                    generator=torch.Generator().manual_seed(81))
+
+    def test_hybrid_accepts_noninjective_interior_without_warning(
+            self, recwarn):
+        tensor = _tensor([2] * 3, [4, 3, 4])
+        result = tr_blostr_svd(
+            tensor, rank=2, projection='gaussian',
+            generator=torch.Generator().manual_seed(81))
+        assert _error(result, tensor) < 1e-9
+        assert not recwarn
 
     def test_hybrid_rejects_different_projected_endpoint_ranks(self):
         tensor = torch.randn(6, 3, 3, 6, dtype=torch.complex128)

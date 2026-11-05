@@ -24,6 +24,7 @@ from typing import (Any,
                     Sequence,
                     Tuple,
                     Union)
+from warnings import warn
 
 import torch
 
@@ -44,6 +45,7 @@ from tensorkrowch.decompositions.observers import (DecompositionEvent,
 from tensorkrowch.decompositions.results import (TRDecomposition,
                                                  TTDecomposition)
 from tensorkrowch.decompositions.ring.blocks import (_ring_partition,
+                                                     _spectral_block,
                                                      _split_block)
 from tensorkrowch.decompositions.ring.driver import (BidirectionalRingDriver,
                                                      )
@@ -501,6 +503,14 @@ class TT2TR:  # MARK: TT2TR
         blocks instead optimize their physical cores individually. Discovery
         is a numerical rank heuristic, not unique rank recovery.
 
+        BLOSTR instead selects the shortest interior block containing
+        ``center`` with equal external TT bond dimensions. It uses no
+        physical-capacity criterion; absent a matching pair, it opens the
+        complete chain. The selected opener determines spectral feasibility.
+        Full BLOSTR still requires uniform ranks and injective physical
+        unfoldings; any physical blocking is left to the caller. A multi-site
+        spectral block with slice projections warns to use Gaussian ones.
+
         Parameters
         ----------
         rank : int or sequence of int, optional
@@ -554,6 +564,14 @@ class TT2TR:  # MARK: TT2TR
         -------
         TRDecomposition
             Cores in site order, metrics and construction metadata.
+
+        Warns
+        -----
+        UserWarning
+            Multi-site spectral blocks with slices recommend Gaussian
+            projection. Full BLOSTR also warns before rejecting unequal
+            local TR ranks or insufficient physical dimensions, recommending
+            BLOSTR-SVD or blocking the input TT, respectively.
 
         Examples
         --------
@@ -681,35 +699,21 @@ class TT2TR:  # MARK: TT2TR
                context: Mapping[str, Any]) -> TRDecomposition:
         """Opens the center spectrally and splits the two outward branches."""
         count = len(provider.cores)
-        left = right = center
-
-        # The spectral opening needs compatible external dimensions on both
-        # sides.
-        while True:
-            sites = tuple(range(left, right + 1))
-            target = provider.local_target(sites, context)
-            if rank is None:
-                needed_left = needed_right = 1
-                equal = target.shape[0] == target.shape[-1]
-            else:
-                needed_left = rank[-1] * rank[left - 1]
-                needed_right = rank[-1] * rank[right]
-                equal = rank[left - 1] == rank[right]
-            if equal and (target.shape[0] >= needed_left) and (
-                    target.shape[-1] >= needed_right) and (left > 0) and (
-                    right < count - 1):
-                break
-            if (left == 0) and (right == count - 1):
-                dense = target.squeeze(0).squeeze(-1)
-                result = opener.decompose(dense, rank, context=context)
-                return TRDecomposition(
-                    result.cores, metrics=result.metrics, metadata={
-                        **result.metadata, 'exact': True,
-                        'center_block': tuple(range(count))})
-            if right < count - 1:
-                right += 1
-            elif left > 0:
-                left -= 1
+        sites = _spectral_block(
+            tuple(core.shape[-1] for core in provider.cores[:-1]), center)
+        if (len(sites) > 1) and (
+                opener.fit_options.get('projection', 'slices') == 'slices'):
+            warn("A multi-site spectral block uses projection='slices'; "
+                 "use projection='gaussian' to avoid rank-deficient "
+                 "coordinate projections.", UserWarning, stacklevel=2)
+        left, right = sites[0], sites[-1]
+        target = provider.local_target(sites, context)
+        if (left == 0) and (right == count - 1):
+            dense = target.squeeze(0).squeeze(-1)
+            result = opener.decompose(dense, rank, context=context)
+            return TRDecomposition(
+                result.cores, metrics=result.metrics, metadata={
+                    **result.metadata, 'exact': True, 'center_block': sites})
         local_rank = None if rank is None else (
             rank[left - 1], *(rank[site] for site in sites), rank[-1])
         opening = opener.open(target, local_rank, context={

@@ -19,6 +19,7 @@ This script contains:
 from dataclasses import dataclass
 from math import isfinite, prod
 from typing import Optional, Sequence, Tuple, Union
+from warnings import warn
 
 import torch
 
@@ -255,29 +256,48 @@ def _first_core(tensor: torch.Tensor,
 
 def _recover_cores(tensor: torch.Tensor,
                    first: torch.Tensor,
+                   projection: str,
                    generator: Optional[torch.Generator]
                    ) -> Tuple[torch.Tensor, ...]:
-    """Recovers uniform-rank cores using product Gaussian projections."""
+    """Recovers cores with slices or separate dense past/future projections."""
     rank = first.shape[0]
     device = tensor.device if generator is None else generator.device
-
-    # Generic product projections avoid singular coordinate slices of otherwise
-    # injective physical cores.
-    vectors = [torch.randn(dimension, dtype=tensor.dtype, device=device,
-                           generator=generator).to(tensor.device)
-               for dimension in tensor.shape]
-    vectors = [vector / vector.norm() for vector in vectors]
+    if projection == 'slices':
+        indices = tuple(int(torch.randint(
+            size, (), device=device, generator=generator))
+            for size in tensor.shape)
     cores = [first]
+    prefix = torch.eye(rank, dtype=tensor.dtype, device=tensor.device)
     for site in range(1, tensor.ndim):
-        other_sites = [index for index in range(tensor.ndim)
-                       if index not in (site, site - 1)]
-        matrix = tensor.permute(site, site - 1, *other_sites)
-        for index in reversed(other_sites):
-            matrix = torch.tensordot(matrix, vectors[index], dims=([-1], [0]))
-        product = torch.eye(rank, dtype=tensor.dtype, device=tensor.device)
-        for index in range(site - 1):
-            projected = torch.einsum('aib,i->ab', cores[index], vectors[index])
-            product = product @ projected
+        if projection == 'slices':
+            selection = list(indices)
+            selection[site - 1] = selection[site] = slice(None)
+            matrix = tensor[tuple(selection)].mT
+            if site > 1:
+                prefix = prefix @ cores[-2][:, indices[site - 2], :]
+            product = prefix
+        else:
+            # Keep the known prefix separate from the unknown suffix, but
+            # allow dense correlations between physical axes within each.
+            weights = []
+            for dimensions in (tensor.shape[:site - 1],
+                               tensor.shape[site + 1:]):
+                if dimensions:
+                    weight = torch.randn(
+                        prod(dimensions), dtype=tensor.dtype, device=device,
+                        generator=generator).to(tensor.device)
+                else:
+                    weight = tensor.new_ones(1)
+                weights.append(weight / weight.norm())
+            left, right = weights
+            matrix = torch.einsum(
+                'a,aijb,b->ji', left, tensor.reshape(
+                    left.numel(), tensor.shape[site - 1], tensor.shape[site],
+                    right.numel()), right)
+            if site > 1:
+                prefix = torch.tensordot(prefix, cores[-2], dims=([-1], [0]))
+            product = torch.einsum(
+                'aib,i->ab', prefix.reshape(rank, -1, rank), left)
         previous = torch.einsum('ab,bic->iac', product, cores[-1])
         previous = previous.reshape(-1, rank * rank).mT
         current = (matrix @ torch.linalg.pinv(previous)).reshape(
@@ -313,9 +333,19 @@ def _fit_blostr(tensor: torch.Tensor,
     ranks = None if rank is None else _normalize_rank(rank, tensor.ndim)
     if ranks is not None:
         if (not use_svd) and (len(set(ranks)) != 1):
+            warn('Full BLOSTR does not support different TR ranks; use '
+                 'BLOSTR-SVD instead.', UserWarning, stacklevel=3)
             raise ValueError('Full BLOSTR requires uniform `rank`')
         if use_svd and (ranks[0] != ranks[-2]):
             raise ValueError('BLOSTR-SVD requires `rank[0] == rank[-2]`')
+        if (not use_svd) and (min(tensor.shape) < ranks[0]**2):
+            warn('Full BLOSTR cannot satisfy injectivity: a physical '
+                 'dimension is smaller than the product of its TR ranks. '
+                 'Block the TT format before TT2TR, or group the physical '
+                 'axes of a dense input, to meet this dimension condition.',
+                 UserWarning, stacklevel=3)
+            raise RuntimeError('Full BLOSTR requires every physical '
+                               'dimension to be at least rank**2')
     if projection not in ('slices', 'gaussian'):
         raise ValueError('`projection` should be "slices" or "gaussian"')
     if (slices is not None) and (projection != 'slices'):
@@ -390,13 +420,23 @@ def _fit_blostr(tensor: torch.Tensor,
                         metrics=local_metrics if collect_metrics else None)
                     cores = (first.core, *tail_cores)
                 else:
-                    if min(active.shape) < cyclic * cyclic:
-                        raise ValueError('Full BLOSTR requires every physical '
-                                         'dimension to be at least rank**2')
                     if cyclic != adjacent:
+                        warn('Full BLOSTR does not support different TR '
+                             'ranks; use BLOSTR-SVD instead.', UserWarning,
+                             stacklevel=3)
                         raise ValueError('Full BLOSTR requires uniform '
                                          'discovered ranks')
-                    cores = _recover_cores(active, first.core, generator)
+                    if min(active.shape) < cyclic * cyclic:
+                        warn('Full BLOSTR cannot satisfy injectivity: a '
+                             'physical dimension is smaller than the '
+                             'product of its discovered TR ranks. Block the '
+                             'TT format before TT2TR, or group the physical '
+                             'axes of a dense input, to meet this dimension '
+                             'condition.', UserWarning, stacklevel=3)
+                        raise ValueError('Full BLOSTR requires every physical '
+                                         'dimension to be at least rank**2')
+                    cores = _recover_cores(
+                        active, first.core, projection, generator)
                 candidate = TRDecomposition(cores)
                 approximation = candidate.contract_dense()
                 absolute = torch.linalg.vector_norm(approximation - active)
@@ -464,16 +504,22 @@ def tr_blostr(tensor: torch.Tensor,
     r"""
     Recovers a dense tensor ring using spectral BLOSTR at every site.
 
-    Two pairs of interior slices identify the first core through blockwise
-    simultaneous diagonalization. Product Gaussian projections of all but
-    two physical axes then recover each remaining core by a linear solve.
-    These avoid singular coordinate slices of otherwise injective cores.
-    This is the uniform-rank construction of
-    Algorithm 1 in `A Provably Efficient Method for Tensor Ring Decomposition
-    and Its Applications <https://arxiv.org/abs/2512.01016>`_. It targets exact
-    tensors with injective physical unfoldings at every site and nondegenerate
-    projection ratios. Each physical dimension must therefore be at least the
-    squared TR rank. This differs from :func:`tr_blostr_svd`, which needs
+    Two pairs of interior projections identify the first core through
+    blockwise simultaneous diagonalization. Each remaining core is recovered
+    by a linear solve with its physical axis and the previous one left open.
+    Slice projection uses discrete indices throughout, following Section 3 of
+    `A Provably Efficient Method for Tensor Ring Decomposition and Its
+    Applications <https://arxiv.org/abs/2512.01016>`_. Gaussian projection is
+    an extension: the first step jointly projects all interior axes; later
+    steps use independent dense projections of the known prefix and unknown
+    suffix, preserving separability only between those two groups.
+
+    The full construction targets exact tensors with uniform ranks, injective
+    physical unfoldings at every site and nondegenerate projection ratios.
+    Each physical dimension must therefore be at least the squared TR rank.
+    With slices, the selected recovery environments must also be full rank;
+    injectivity alone does not ensure this. Blocking physical sites, when
+    needed, is left to the caller. :func:`tr_blostr_svd` instead requires
     injectivity only at its two external physical axes. No accuracy guarantee
     is made for approximate inputs or rank-deficient recovery environments.
 
@@ -490,10 +536,11 @@ def tr_blostr(tensor: torch.Tensor,
         Configurations fixing every interior axis for the two spectral ratios.
         With ``None``, configurations are drawn using ``generator``.
     projection : {"slices", "gaussian"}
-        Coordinate slices or contractions against four independent dense
-        Gaussian tensors over all interior axes. The latter can span matrix
-        directions absent from any single coordinate slice. Explicit
-        ``slices`` require ``"slices"``.
+        Coordinate slices or dense Gaussian projections. The first step uses
+        four interior projections. Full BLOSTR then uses discrete indices
+        with ``"slices"``, or independent dense known/unknown contractions
+        with ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs.
+        Explicit ``slices`` require ``"slices"``.
     spectral_atol : float
         Absolute eigenvalue cutoff and relative within-cluster tolerance used
         when discovering balanced spectral multiplicities. A machine-precision
@@ -518,6 +565,14 @@ def tr_blostr(tensor: torch.Tensor,
     TRDecomposition
         Recovered TR cores and construction metadata. Spectral factors use a
         complex dtype even for real input tensors.
+
+    Warns
+    -----
+    UserWarning
+        Different prescribed or discovered TR ranks recommend BLOSTR-SVD.
+        An insufficient physical dimension recommends blocking the input.
+        Both conditions still raise an error; blocking meets a necessary
+        dimension condition, but does not guarantee numerical injectivity.
 
     Examples
     --------
@@ -574,10 +629,11 @@ def tr_blostr_svd(tensor: torch.Tensor,
         Configurations fixing every interior axis for the two spectral ratios.
         With ``None``, configurations are drawn using ``generator``.
     projection : {"slices", "gaussian"}
-        Coordinate slices or contractions against four independent dense
-        Gaussian tensors over all interior axes. The latter can span matrix
-        directions absent from any single coordinate slice. Explicit
-        ``slices`` require ``"slices"``.
+        Coordinate slices or dense Gaussian projections. The first step uses
+        four interior projections. Full BLOSTR then uses discrete indices
+        with ``"slices"``, or independent dense known/unknown contractions
+        with ``"gaussian"``. BLOSTR-SVD instead splits the tail with SVDs.
+        Explicit ``slices`` require ``"slices"``.
     spectral_atol : float
         Absolute eigenvalue cutoff and relative within-cluster tolerance used
         when discovering balanced spectral multiplicities. A machine-precision

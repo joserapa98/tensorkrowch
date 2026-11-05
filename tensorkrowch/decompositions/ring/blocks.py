@@ -3,6 +3,7 @@ This script contains:
 
     Functions:
         * _select_block
+        * _spectral_block
         * _split_block
         * _numerical_rank
         * _boundary_partition
@@ -26,6 +27,33 @@ from tensorkrowch.decompositions.metrics import (DecompositionMetrics,
 
 
 _Rank = Union[int, Sequence[int]]
+
+
+def _spectral_block(tt_rank: Sequence[int], center: int) -> Tuple[int, ...]:
+    """
+    Selects the shortest interior block with equal external TT dimensions.
+
+    ``tt_rank`` contains the internal bonds of an open chain. The block
+    contains ``center``; ties favor a balanced interval, then its leftmost
+    position. Without a matching interior pair, opens the complete chain.
+    """
+    count = len(tt_rank) + 1
+    left_cuts = {}
+    for cut in range(1, center + 1):
+        left_cuts[tt_rank[cut - 1]] = cut
+
+    # For each right cut, the nearest matching left cut gives the shortest
+    # interval. Each cut is visited once; no physical cores are contracted.
+    left, right = 0, count
+    score = (count, count, 0)
+    for cut in range(center + 1, count):
+        start = left_cuts.get(tt_rank[cut - 1])
+        if start is None:
+            continue
+        candidate = (cut - start, abs(2 * center - start - cut + 1), start)
+        if candidate < score:
+            left, right, score = start, cut, candidate
+    return tuple(range(left, right))
 
 
 def _select_block(

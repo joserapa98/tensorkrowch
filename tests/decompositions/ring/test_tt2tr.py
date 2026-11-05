@@ -120,14 +120,25 @@ class TestTT2TR:
     @pytest.mark.parametrize('opener', ['blostr', 'blostr_svd'])
     @pytest.mark.parametrize('rank', [2, None])
     @pytest.mark.parametrize('rtol', [0., 1e-12])
-    def test_exact_spectral_route(self, opener, rank, rtol):
+    def test_exact_spectral_route(self, opener, rank, rtol, recwarn):
         tt = _ring(5).to_tt()
+        # Generic virtual coordinates avoid singular matrix-unit slices.
+        generator = torch.Generator().manual_seed(42)
+        cores = list(tt.cores)
+        for site, size in enumerate(tt.rank):
+            unitary, _ = torch.linalg.qr(torch.randn(
+                size, size, dtype=tt.dtype, generator=generator))
+            cores[site] = cores[site] @ unitary
+            cores[site + 1] = torch.tensordot(
+                unitary.mH, cores[site + 1], dims=([1], [0]))
+        tt = tk.formats.TT(cores)
         result = tk.decompositions.tt2tr(
             tt, rank=rank, loop_opener=opener, rtol=rtol)
         assert result.rank == [2] * 5
         assert result.metadata['exact']
         assert _error(tt, result) < 1e-8
         assert not result.metrics.local_solves
+        assert not recwarn
 
     @pytest.mark.parametrize('length', [3, 5])
     @pytest.mark.parametrize('dtype,expected_dtype,tolerance', [
@@ -141,7 +152,8 @@ class TestTT2TR:
         tt = _ring(length, dtype=dtype).to_tt()
         before = [core.clone() for core in tt.cores]
         pointers = [core.data_ptr() for core in tt.cores]
-        strategy = opener({'generator': torch.Generator().manual_seed(71)})
+        strategy = opener({'projection': 'gaussian',
+                           'generator': torch.Generator().manual_seed(71)})
         result = tk.decompositions.tt2tr(tt, rank=2, loop_opener=strategy)
 
         assert result.dtype == expected_dtype
@@ -153,7 +165,7 @@ class TestTT2TR:
             assert core.dtype == dtype
             torch.testing.assert_close(core, original, rtol=0, atol=0)
 
-    def test_spectral_gaussian_nonuniform_block(self):
+    def test_spectral_gaussian_nonuniform_block(self, recwarn):
         ranks = [2, 1, 2, 1, 2, 1, 2, 2]
         tt = _ring(8, ranks=ranks).to_tt()
         opener = tk.decompositions.BLOSTRSVDLoopOpener({
@@ -165,6 +177,38 @@ class TestTT2TR:
         assert len(result.metadata['center_block']) >= 2
         assert result.rank == ranks
         assert _error(tt, result) < 1e-8
+        assert not recwarn
+
+    @pytest.mark.parametrize('center', [1, 2])
+    def test_spectral_smallest_block_across_rank_bottleneck(self, center):
+        ranks = [3, 2, 3, 3]
+        tt = _ring(4, ranks=ranks, dimension=9).to_tt()
+        opener = tk.decompositions.BLOSTRSVDLoopOpener({
+            'projection': 'gaussian',
+            'generator': torch.Generator().manual_seed(81),
+        })
+        result = tk.decompositions.tt2tr(
+            tt, rank=ranks, center=center, loop_opener=opener)
+        assert tt.rank == [9, 6, 9]
+        assert result.metadata['center_block'] == (1, 2)
+        assert result.rank == ranks
+        assert _error(tt, result) < 1e-10
+
+    def test_spectral_noninjective_site_needs_no_larger_block(self):
+        generator = torch.Generator().manual_seed(304)
+        ring = tk.formats.TR([
+            torch.randn(3, size, 3, dtype=torch.complex128,
+                        generator=generator) for size in (9, 3, 9)])
+        tt = ring.to_tt()
+        opener = tk.decompositions.BLOSTRSVDLoopOpener({
+            'projection': 'gaussian',
+            'generator': torch.Generator().manual_seed(81),
+        })
+        result = tk.decompositions.tt2tr(
+            tt, rank=3, center=1, loop_opener=opener)
+        assert result.metadata['center_block'] == (1,)
+        assert result.rank == [3, 3, 3]
+        assert _error(tt, result) < 1e-10
 
     @pytest.mark.parametrize('center', [0, 4])
     def test_prescribed_boundary_center(self, center):
@@ -263,12 +307,51 @@ class TestTT2TR:
         assert result.metadata['boundary_blocks'] == ((0,), (5,))
         assert _error(tt, result) < 1e-6
 
-    def test_inexact_spectral_discovery_is_rejected(self):
+    def test_spectral_discovery_uses_smallest_compatible_block(self):
+        ranks = [2, 1, 2, 1, 2, 1, 2, 2]
+        tt = _ring(8, ranks=ranks).to_tt()
+        opener = tk.decompositions.BLOSTRSVDLoopOpener({
+            'generator': torch.Generator().manual_seed(71)})
+        with pytest.warns(UserWarning, match="projection='gaussian'"):
+            result = tk.decompositions.tt2tr(tt, center=3, loop_opener=opener)
+        assert result.metadata['center_block'] == (2, 3)
+        assert result.rank == ranks
+        assert _error(tt, result) < 1e-8
+
+    def test_spectral_slices_reject_rank_bottleneck(self):
         tt = _ring(8, ranks=[2, 1, 2, 1, 2, 1, 2, 2]).to_tt()
         opener = tk.decompositions.BLOSTRSVDLoopOpener({
             'generator': torch.Generator().manual_seed(71)})
-        with pytest.raises(RuntimeError, match='BLOSTR'):
-            tk.decompositions.tt2tr(tt, center=3, loop_opener=opener)
+        with pytest.warns(UserWarning, match="projection='gaussian'"):
+            with pytest.raises(RuntimeError, match='BLOSTR'):
+                tk.decompositions.tt2tr(tt, center=4, loop_opener=opener)
+
+    @pytest.mark.parametrize('opener', [
+        tk.decompositions.BLOSTRLoopOpener,
+        tk.decompositions.BLOSTRSVDLoopOpener])
+    def test_multisite_spectral_slices_warn(self, opener):
+        tt = _ring(4, ranks=[3, 2, 3, 3], dimension=9).to_tt()
+        strategy = opener({'n_attempts': 2,
+                           'generator': torch.Generator().manual_seed(81)})
+        with pytest.warns(UserWarning, match="projection='gaussian'"):
+            with pytest.raises(RuntimeError, match='BLOSTR'):
+                tk.decompositions.tt2tr(
+                    tt, rank=3, center=1, loop_opener=strategy)
+
+    def test_full_spectral_nonuniform_ranks_warn(self):
+        tt = _ring(5, ranks=[2, 1, 2, 2, 2]).to_tt()
+        opener = tk.decompositions.BLOSTRLoopOpener({
+            'projection': 'gaussian'})
+        with pytest.warns(UserWarning, match='use BLOSTR-SVD'):
+            with pytest.raises(ValueError, match='uniform'):
+                tk.decompositions.tt2tr(tt, rank=[2, 1, 2, 2, 2],
+                                        loop_opener=opener)
+
+    def test_full_spectral_injectivity_warns_to_block_input(self):
+        tt = _ring(3, dimension=3).to_tt()
+        with pytest.warns(UserWarning, match='Block the TT format'):
+            with pytest.raises(RuntimeError, match=r'at least rank\*\*2'):
+                tk.decompositions.tt2tr(tt, rank=2, loop_opener='blostr')
 
     def test_partition_capacity(self):
         provider = _TTCoreProvider(_ring().to_tt())

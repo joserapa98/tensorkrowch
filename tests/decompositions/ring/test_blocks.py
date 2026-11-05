@@ -6,8 +6,28 @@ import torch
 import tensorkrowch as tk
 
 from tensorkrowch.decompositions.ring.blocks import (
-    _select_block, _ring_partition,
+    _select_block, _ring_partition, _spectral_block,
 )
+
+
+class TestSpectralBlockSelector:  # MARK: TestSpectralBlockSelector
+
+    @pytest.mark.parametrize('ranks,center,sites', [
+        ((), 0, (0,)),
+        ((3,), 0, (0, 1)),
+        ((9, 9, 9, 9), 2, (2,)),
+        ((9, 6, 9), 1, (1, 2)),
+        ((9, 6, 9), 2, (1, 2)),
+        ((9, 6, 4, 6), 2, (2, 3)),
+        ((4, 4, 6, 4, 8), 3, (2, 3)),
+        ((9, 6, 4, 9, 6), 3, (2, 3, 4)),
+        ((9, 6, 9, 6), 2, (1, 2)),
+        ((2, 3, 4, 5), 2, (0, 1, 2, 3, 4)),
+        ((9, 9, 9), 0, (0, 1, 2, 3)),
+        ((9, 9, 9), 3, (0, 1, 2, 3)),
+    ])
+    def test_shortest_matching_tt_bonds(self, ranks, center, sites):
+        assert _spectral_block(ranks, center) == sites
 
 
 class TestCentralBlockSelector:  # MARK: TestCentralBlockSelector

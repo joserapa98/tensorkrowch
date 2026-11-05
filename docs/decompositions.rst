@@ -367,9 +367,10 @@ first obtain that TT using a source and another decomposition:
 
 An integer ``rank`` specifies the local TR ranks; a sequence gives one
 right-link rank per core, with the cyclic rank last. Omitting it requests
-rank discovery. The initial site grows into a block when necessary to expose
-sufficient physical dimensions. ``block_boundaries`` controls automatic end
-blocks; disabling it for optimization requires prescribed ranks.
+rank discovery. With optimization openers, the initial site grows into a
+block when necessary to expose sufficient physical dimensions.
+``block_boundaries`` controls automatic end blocks; disabling it for
+optimization requires prescribed ranks.
 
 ``center`` selects the initial site or the center of the discovery block.
 At block SVD splits, ``rank`` acts as a cap and an optional ``rtol`` can
@@ -449,9 +450,33 @@ selects an exact propagation route: recover the central factors, absorb
 square gauges into neighbors and continue with SVDs. It does not use the
 optimization gauge recursions or enrichment.
 
+The exact route selects the smallest interior block containing ``center``
+whose two external TT bond dimensions agree. It searches both directions
+without a physical-capacity requirement. Equal-size choices favor a balanced
+block, then the leftmost one. If no interior block qualifies, the complete
+chain is opened. This selection does not guarantee recovery by every
+spectral opener: an internal rank bottleneck can require ``blostr_svd``
+with a joint Gaussian projection. Full BLOSTR retains its uniform-rank and
+injectivity requirements; physical blocking to meet them is left to the user.
+With uniform TT bond dimensions the selected central block has one site.
+For either opener, a multi-site spectral block with ``projection='slices'``
+emits a warning recommending ``projection='gaussian'``.
+Full BLOSTR also warns before rejecting unequal local TR ranks, recommending
+BLOSTR-SVD instead. If a physical dimension is smaller than the product of
+its TR ranks, it warns to block the input TT (or group axes of a dense input).
+This dimension condition is necessary for injectivity, but meeting it does
+not guarantee full-rank unfoldings or nonsingular slice environments.
+
 The standalone functions :func:`tr_blostr` and :func:`tr_blostr_svd` instead
 take a dense tensor and return a TR decomposition directly. Their API
 documents rank discovery, slice selection and Gaussian projection options.
+With ``projection='slices'``, full BLOSTR uses discrete configurations in both
+its spectral and subsequent recovery steps. With ``projection='gaussian'``,
+the first step uses dense projections over all interior physical axes. Each
+subsequent step leaves two neighboring physical axes open and independently
+contracts the known prefix and unknown suffix with dense Gaussian tensors.
+Those projections are separable between the two groups, but dense within
+each group. BLOSTR-SVD instead splits the remaining tensor with SVDs.
 The Gaussian projection and first-factor/SVD variant are extensions of the
 basic spectral construction. Arbitrary noisy inputs need not satisfy the
 requirements for exact recovery.

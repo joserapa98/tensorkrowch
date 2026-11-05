@@ -129,6 +129,30 @@ class TestTT2TR:
         assert _error(tt, result) < 1e-8
         assert not result.metrics.local_solves
 
+    @pytest.mark.parametrize('length', [3, 5])
+    @pytest.mark.parametrize('dtype,expected_dtype,tolerance', [
+        (torch.float32, torch.complex64, 1e-3),
+        (torch.float64, torch.complex128, 1e-8)])
+    @pytest.mark.parametrize('opener', [
+        tk.decompositions.BLOSTRLoopOpener,
+        tk.decompositions.BLOSTRSVDLoopOpener])
+    def test_spectral_promotes_real_input(
+            self, length, dtype, expected_dtype, tolerance, opener):
+        tt = _ring(length, dtype=dtype).to_tt()
+        before = [core.clone() for core in tt.cores]
+        pointers = [core.data_ptr() for core in tt.cores]
+        strategy = opener({'generator': torch.Generator().manual_seed(71)})
+        result = tk.decompositions.tt2tr(tt, rank=2, loop_opener=strategy)
+
+        assert result.dtype == expected_dtype
+        assert all(core.dtype == expected_dtype for core in result.cores)
+        assert result.rank == [2] * length
+        assert _error(tt, result) < tolerance
+        assert [core.data_ptr() for core in tt.cores] == pointers
+        for core, original in zip(tt.cores, before):
+            assert core.dtype == dtype
+            torch.testing.assert_close(core, original, rtol=0, atol=0)
+
     def test_spectral_gaussian_nonuniform_block(self):
         ranks = [2, 1, 2, 1, 2, 1, 2, 2]
         tt = _ring(8, ranks=ranks).to_tt()

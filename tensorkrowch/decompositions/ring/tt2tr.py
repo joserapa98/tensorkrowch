@@ -451,7 +451,8 @@ class TT2TR:  # MARK: TT2TR
     Optimization openers use center-out gauge transport with optional residual
     expansion. BLOSTR openers instead recover an exact central opening and
     absorb its gauges outward, splitting with SVDs. Input cores remain
-    unchanged.
+    unchanged. Spectral factors and the working TT cores use a common complex
+    dtype, so BLOSTR conversion returns complex cores even for real inputs.
 
     Parameters
     ----------
@@ -730,15 +731,18 @@ class TT2TR:  # MARK: TT2TR
                 'accuracy; try Gaussian projection or an ALS opener')
 
         # Exact propagation absorbs learned gauges directly, without gauge
-        # duals.
+        # duals. Spectral factors can be complex even for a real input TT.
+        dtype = torch.promote_types(target.dtype, opening.left_gauge.dtype)
+        tt_cores = [core.to(dtype=dtype) for core in provider.cores]
         cores = [None] * count
-        cores[left:right + 1] = opening.cores
-        gauge = opening.right_gauge
+        cores[left:right + 1] = [
+            core.to(dtype=dtype) for core in opening.cores]
+        gauge = opening.right_gauge.to(dtype=dtype)
 
         # Expose one rightward physical core and retain the remaining gauge.
         for site in range(right + 1, count - 1):
             block = torch.tensordot(
-                gauge, provider.cores[site], dims=([1], [0]))
+                gauge, tt_cores[site], dims=([1], [0]))
             block = block.permute(0, 2, 3, 1)
             cap = None if rank is None else (rank[site],)
             core, gauge = _split_block(
@@ -746,13 +750,13 @@ class TT2TR:  # MARK: TT2TR
                 rtol=rtol)
             cores[site] = core
         cores[-1] = torch.einsum(
-            'abg,bi->aig', gauge, provider.cores[-1].squeeze(-1))
-        gauge = opening.left_gauge
+            'abg,bi->aig', gauge, tt_cores[-1].squeeze(-1))
+        gauge = opening.left_gauge.to(dtype=dtype)
 
         # Mirror the split for the left branch while preserving site order.
         for site in range(left - 1, 0, -1):
             block = torch.tensordot(
-                provider.cores[site], gauge, dims=([-1], [1]))
+                tt_cores[site], gauge, dims=([-1], [1]))
             block = block.permute(2, 0, 1, 3)
             cap = None if rank is None else (rank[site - 1],)
             gauge, core = _split_block(
@@ -760,7 +764,7 @@ class TT2TR:  # MARK: TT2TR
                 rtol=rtol)
             cores[site] = core
         cores[0] = torch.einsum(
-            'ia,gab->gib', provider.cores[0].squeeze(0), gauge)
+            'ia,gab->gib', tt_cores[0].squeeze(0), gauge)
         return TRDecomposition(cores, metadata={
             'center_block': sites, 'exact': True,
             'local_opening': dict(opening.diagnostics)})

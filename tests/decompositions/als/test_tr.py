@@ -191,12 +191,12 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             verbose=1,
         )
 
-        assert len(evaluations) == 2
+        assert len(evaluations) == 3  # Fixed evaluation plus training draws
         assert [event.sweep for event in history.events
                 if event.name == 'sample_refresh'] == [0, 2]
         assert [record.sample_generation
                 for record in result.metrics.sweeps] == [0, 0, 1]
-        assert all(record.abs_error is None
+        assert all(record.abs_error is not None
                    for record in result.metrics.sweeps)
 
     def test_completion_measures_only_permanent_observations(self):
@@ -265,8 +265,9 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             collect_metrics=True,
         )
 
-        assert len(evaluations) == 2 * tensor.ndim
-        for site, indices in enumerate(evaluations[:tensor.ndim]):
+        assert len(evaluations) == 1 + 2 * tensor.ndim
+        assert evaluations[0].shape == (tensor.numel(), tensor.ndim)
+        for site, indices in enumerate(evaluations[1:1 + tensor.ndim]):
             fibers = indices.reshape(10, tensor.shape[site], tensor.ndim)
             assert torch.equal(
                 fibers[:, :, site],
@@ -277,7 +278,7 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
         assert all(record.sampling_exact is False
                    for record in result.metrics.local_solves)
         assert result.metadata['sampler']['uniform_mix'] == pytest.approx(0.2)
-        assert all(record.abs_error is None
+        assert all(record.abs_error is not None
                    for record in result.metrics.sweeps)
 
     def test_product_leverage_requires_sitewise_refresh(self):
@@ -317,8 +318,9 @@ class TestTRALSSamplingAndCompletion:  # MARK: TestTRALSSamplingAndCompletion
             collect_metrics=True,
         )
 
-        assert len(evaluations) == tensor.ndim
-        for site, indices in enumerate(evaluations):
+        assert len(evaluations) == 1 + tensor.ndim
+        assert evaluations[0].shape == (tensor.numel(), tensor.ndim)
+        for site, indices in enumerate(evaluations[1:]):
             fibers = indices.reshape(6, tensor.shape[site], tensor.ndim)
             assert torch.equal(
                 fibers[:, :, site],

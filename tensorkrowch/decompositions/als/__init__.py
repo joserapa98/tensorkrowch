@@ -55,9 +55,12 @@ exact cyclic leverage sampling and retains complete active input fibers.
 :class:`LeastSquaresSolver` wraps PyTorch least squares with scaling and
 optional Tikhonov regularization. :class:`ConvergencePolicy` controls the sweep
 budget, ``atol``, ``rtol``, stability and optional best-state retention.
-Error-based stopping requires a fixed comparable objective; renewable sampled
-residuals are local measurements. The functional interfaces expose basic exact
-fits; use the engines for sampler, solver and convergence objects.
+Sampled fits cache separate uniform evaluation entries, fixed throughout
+the run, to measure complete-sweep errors and apply the same stopping rules.
+``ConvergencePolicy.error_samples`` controls this budget; ``None`` requests
+exact evaluation. Local sampled residuals remain distinct measurements.
+The functional interfaces expose basic exact fits; use the engines for
+sampler, solver and convergence objects.
 
 Shared execution and topology-specific contractions:
 
@@ -84,7 +87,9 @@ remain in the backend; the driver only schedules complete site updates.
 QR factorization introduces no rank truncation.
 
 ``collect_metrics=True`` records local solves and sweep measurements in the
-result's metrics. ``verbose`` controls console events. Use
+result's metrics. ``metadata["error_evaluation"]`` identifies estimated errors
+and retains the evaluation size and independent seed. ``verbose`` controls
+console events. Use
 ``result.to_format()`` to retain the approximation without decomposition
 diagnostics.
 """

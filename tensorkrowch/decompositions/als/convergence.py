@@ -17,20 +17,21 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
     """
     Defines ALS stopping rules at complete sweep boundaries.
 
-    Error, stability and best-state policies require a fixed comparable
-    objective: the full tensor for exact ALS or the permanent observed set for
-    completion. Renewable uniform/leverage batches support a sweep budget and
-    an optional ``callback``, because their local residuals are not global
-    validation errors.
+    Exact fits measure the full tensor or permanent observed entries. Sampled
+    fits measure the complete approximation on a separate, fixed uniform set
+    of entries. Error thresholds and best-state retention use this common
+    measure, independently of the rows selected for local solves.
 
     Parameters
     ----------
     max_sweeps : int
         Positive maximum number of directional sweeps. Default is ``10``.
     atol : float, optional
-        Stop when the absolute objective error is at most this value.
+        Stop when the absolute objective error is at most this value. For
+        sampled evaluation, its norm is scaled to the complete tensor size.
     rtol : float, optional
-        Stop when the relative objective error is at most this value.
+        Stop when the relative objective error is at most this value. Sampled
+        evaluation estimates both residual and target norms on the fixed set.
     stagnation_rtol : float, optional
         Maximum relative change between consecutive complete-sweep errors for a
         sweep to count as stable. These tolerances are objective tolerances,
@@ -45,6 +46,12 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
         Called as ``callback(sweep_record, cores)`` after a complete sweep.
         Return ``True`` to stop. Cores are the current state; the callback
         should not mutate them or the backend caches.
+    error_samples : int, optional
+        Number of fixed uniform entries used to measure sampled fits. Default
+        is ``16384``. ``None`` requests exact evaluation; budgets covering the
+        full tensor also use exact evaluation. Full and observed fits always
+        measure their complete objective. This budget is independent of the
+        sampler used for core updates.
 
     Examples
     --------
@@ -60,6 +67,7 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
     patience: Optional[int] = None  # Required consecutive stable sweeps
     keep_best: bool = False  # Whether to restore the best complete-sweep state
     callback: Optional[Callable] = None  # Complete-sweep stopping callback
+    error_samples: Optional[int] = 16384  # Independent evaluation-entry budget
 
     def __post_init__(self) -> None:
         if isinstance(self.max_sweeps, bool) or \
@@ -86,6 +94,13 @@ class ConvergencePolicy:  # MARK: ConvergencePolicy
             raise TypeError('`keep_best` should be bool type')
         if (self.callback is not None) and (not callable(self.callback)):
             raise TypeError('`callback` should be callable or None')
+
+        if self.error_samples is not None:
+            if isinstance(self.error_samples, bool) or \
+                    not isinstance(self.error_samples, int):
+                raise TypeError('`error_samples` should be int type or None')
+            if self.error_samples < 1:
+                raise ValueError('`error_samples` should be positive')
 
     @property
     def requires_fixed_objective(self) -> bool:

@@ -325,7 +325,11 @@ class _TTALSBackend:  # MARK: _TTALSBackend
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
-        """Measures the fixed complete-sweep objective when one exists."""
+        """Measures the complete-sweep objective on its fixed entries."""
+        if problem.sampled:
+            approximation = _evaluate_standard_tt(
+                self.cores, problem._evaluation_indices)
+            return problem.evaluation_error(approximation)
         if problem.observations is not None:
             indices = problem.observations.support.values.to(
                 self.cache.cores[0].device)
@@ -510,9 +514,12 @@ class _TTLeverageALSBackend:  # MARK: _TTLeverageALSBackend
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
-        """Measures the fixed complete-sweep objective when one exists."""
-        raise RuntimeError(
-            'Renewable leverage batches do not define a global objective')
+        """Measures the complete-sweep objective on its fixed entries."""
+        if problem.sampled:
+            approximation = _evaluate_standard_tt(
+                self.cores, problem._evaluation_indices)
+            return problem.evaluation_error(approximation)
+        raise RuntimeError('Leverage sweeps require prepared evaluation')
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -899,7 +906,10 @@ class TTALS:  # MARK: TTALS
             Local solver and its scaling and regularization settings. Defaults
             to an unregularized solver with automatic column scaling.
         convergence : ConvergencePolicy, optional
-            Complete-sweep stopping criteria. Defaults to ten sweeps.
+            Complete-sweep stopping criteria and independent error-evaluation
+            budget. Defaults to ten sweeps. Sampled fits cache fixed uniform
+            evaluation entries and measure the current approximation on them
+            after every sweep.
         generator : torch.Generator, optional
             Generator used by random initialization and row sampling.
             Its device
@@ -951,7 +961,6 @@ class TTALS:  # MARK: TTALS
             if self._problem.observations is not None:
                 raise ValueError(
                     '`sampler` cannot replace permanent observations')
-        convergence.validate_objective(sampler is None)
 
         verbosity = _normalize_verbosity(verbose)
         collect_metrics = collect_metrics or bool(verbosity)
@@ -1003,7 +1012,7 @@ class TTALS:  # MARK: TTALS
         fitted = ALSSweepDriver().fit(
             problem, backend, convergence, observer=fit_observer,
             collect_metrics=collect_metrics, phase=phase,
-            sweep_direction=direction)
+            sweep_direction=direction, generator=generator)
         result_cores = (tuple(fitted.cores) if self._topology == 'tr' else
                         _result_tt_cores(fitted.cores))
         if self._out_device is not None:
@@ -1021,6 +1030,7 @@ class TTALS:  # MARK: TTALS
                 'fixed_sites': list(fixed_sites),
                 'sampling': sampling, 'n_samples': n_samples,
                 'sampler': None if sampler is None else asdict(sampler),
+                'error_evaluation': problem.evaluation_info,
                 'solver': {'l2_reg': solver.l2_reg,
                            'l2_reg_mode': solver.l2_reg_mode,
                            'rcond': solver.rcond,

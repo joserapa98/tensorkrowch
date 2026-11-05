@@ -9,8 +9,8 @@ This script contains:
 """
 
 from dataclasses import dataclass
-from math import prod
-from typing import Optional, Tuple
+from math import prod, sqrt
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 
@@ -44,8 +44,9 @@ class ALSProblem:  # MARK: ALSProblem
 
     Residual weights multiply the differences before their squared norm is
     taken: :math:`\|W(\widehat{T}-T)\|_2^2`. A mask gives zero weight to
-    excluded entries. Sampling is performed by the backend; ``sampled`` only
-    declares whether errors refer to a changing sampled objective.
+    excluded entries. Sampling is performed by the backend. Sampled fits
+    measure complete-sweep errors on a separate, fixed evaluation set whose
+    target values are cached by :meth:`prepare_evaluation`.
 
     Parameters
     ----------
@@ -66,6 +67,7 @@ class ALSProblem:  # MARK: ALSProblem
     sampled : bool
         Whether a backend selects renewable samples from a known source.
         Defaults to ``False``. Observations always define a fixed objective.
+        Sampled fits prepare independent evaluation entries before sweeping.
 
     Examples
     --------
@@ -163,6 +165,13 @@ class ALSProblem:  # MARK: ALSProblem
                     torch.any(self.weights < 0):
                 raise ValueError('`weights` should be finite and non-negative')
 
+        # A fixed evaluation set is independent of renewable training rows.
+        self._evaluation_indices = None
+        self._evaluation_values = None
+        self._evaluation_weights = None
+        self._evaluation_scale = 1.
+        self._evaluation_seed = None
+
     @property
     def in_dim(self) -> Tuple[int, ...]:
         """Dimensions of all represented tensor variables."""
@@ -179,8 +188,116 @@ class ALSProblem:  # MARK: ALSProblem
 
     @property
     def has_fixed_objective(self) -> bool:
-        """Whether complete-sweep errors refer to the same objective."""
-        return not self.sampled
+        """Whether a fixed complete-sweep error measurement is available."""
+        return not self.sampled or (self._evaluation_values is not None)
+
+    def prepare_evaluation(self, n_samples: Optional[int] = 16384,
+                           generator: Optional[torch.Generator] = None
+                           ) -> None:
+        """
+        Caches fixed target entries for complete-sweep error measurements.
+
+        Uniform entries are drawn with replacement using a private CPU random
+        stream. The supplied generator and global random states are unchanged.
+        All entries are used when the budget covers the tensor, or for an
+        observation objective. Residual weights and masks are cached too.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            Number of uniform evaluation entries. Defaults to ``16384``.
+            ``None`` requests exact evaluation of the complete objective.
+        generator : torch.Generator, optional
+            Base seed for the independent evaluation stream. Its initial seed
+            plus one is used; omission uses the global initial seed plus one.
+        """
+        if n_samples is not None:
+            if isinstance(n_samples, bool) or not isinstance(n_samples, int):
+                raise TypeError('`n_samples` should be int type or None')
+            if n_samples < 1:
+                raise ValueError('`n_samples` should be positive')
+        if (generator is not None) and \
+                not isinstance(generator, torch.Generator):
+            raise TypeError('`generator` should be torch.Generator or None')
+
+        seed = None
+        if self.observations is not None:
+            indices = self.observations.support.values
+            target = self.observations.support_values
+            population = indices.shape[0]
+            weights = self.weights
+        else:
+            population = prod(self.in_dim)
+            if (n_samples is None) or (n_samples >= population):
+                indices = _unravel_indices(
+                    torch.arange(population, device=self.source.device),
+                    self.in_dim)
+            else:
+                base_seed = (torch.initial_seed() if generator is None else
+                             generator.initial_seed())
+                seed = (base_seed + 1) % (2 ** 63 - 1)
+                evaluation_generator = torch.Generator().manual_seed(seed)
+                indices = torch.stack([
+                    torch.randint(dim, (n_samples,),
+                                  generator=evaluation_generator)
+                    for dim in self.in_dim], dim=1).to(self.source.device)
+            target = self.evaluate(ConfigurationBatch(indices))
+            weights = self.entry_weights(indices)
+        if target.shape != (indices.shape[0],):
+            raise ValueError('`source` should return one scalar per entry')
+        if not (target.is_floating_point() or target.is_complex()):
+            raise TypeError(
+                '`source` should return floating or complex values')
+        if not torch.isfinite(target).all():
+            raise ValueError('`source` should return only finite values')
+
+        self._evaluation_indices = indices
+        self._evaluation_values = target.detach().clone()
+        self._evaluation_weights = (None if weights is None else
+                                    weights.detach().clone())
+        self._evaluation_scale = sqrt(population / indices.shape[0])
+        self._evaluation_seed = seed
+
+    @property
+    def evaluation_info(self) -> Dict[str, Any]:
+        """Describes the exact or fixed-sample error used by this fit."""
+        population = (prod(self.in_dim) if self.observations is None else
+                      self.observations.support_values.numel())
+        size = (population if self._evaluation_indices is None else
+                self._evaluation_indices.shape[0])
+        return {'estimated': self._evaluation_seed is not None,
+                'n_samples': size, 'population_size': population,
+                'seed': self._evaluation_seed}
+
+    def evaluation_error(self, approximation: torch.Tensor
+                         ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Measures the weighted error on the prepared evaluation entries.
+
+        The absolute norm is scaled to estimate the complete objective norm.
+        The relative norm uses the weighted target norm on the same entries;
+        it is a ratio estimate when the evaluation is sampled.
+
+        Parameters
+        ----------
+        approximation : torch.Tensor
+            Current approximation in ``_evaluation_indices`` order, with one
+            scalar per entry. Original target values are not queried again.
+
+        Returns
+        -------
+        tuple[torch.Tensor, torch.Tensor]
+            Absolute and relative objective errors. Whether these are sampled
+            estimates is recorded in :attr:`evaluation_info`.
+        """
+        if self._evaluation_values is None:
+            raise RuntimeError('Call `prepare_evaluation` before measuring')
+        if not isinstance(approximation, torch.Tensor):
+            raise TypeError('`approximation` should be torch.Tensor type')
+        absolute, relative = self._objective_error(
+            approximation, self._evaluation_values, self._evaluation_indices,
+            weights=self._evaluation_weights)
+        return absolute * self._evaluation_scale, relative
 
     def evaluate(self, configurations: ConfigurationBatch) -> torch.Tensor:
         """
@@ -291,7 +408,8 @@ class ALSProblem:  # MARK: ALSProblem
 
     def _objective_error(self, approximation: torch.Tensor,
                          target: torch.Tensor,
-                         indices: Optional[torch.Tensor] = None
+                         indices: Optional[torch.Tensor] = None,
+                         *, weights: Optional[torch.Tensor] = None
                          ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Measures the objective using target values already evaluated."""
         if approximation.shape != target.shape:
@@ -299,7 +417,8 @@ class ALSProblem:  # MARK: ALSProblem
         if approximation.device != target.device:
             raise ValueError('`approximation` should be on the target device')
         residual = approximation - target
-        weights = self._row_weights(indices)
+        if weights is None:
+            weights = self._row_weights(indices)
         if weights is not None:
             residual = residual * weights
             target = target * weights

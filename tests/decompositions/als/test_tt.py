@@ -307,7 +307,8 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
         torch.testing.assert_close(first.contract_dense(), tensor)
         for a, b in zip(first.cores, second.cores):
             torch.testing.assert_close(a, b)
-        assert all(record.abs_error is None for record in first.metrics.sweeps)
+        assert all(record.abs_error is not None
+                   for record in first.metrics.sweeps)
         assert first.metrics.local_solves
         assert first.metadata['sampler']['method'] == method
 
@@ -326,7 +327,7 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
             convergence=d.ConvergencePolicy(max_sweeps=3),
             collect_metrics=True,
         )
-        assert len(calls) == 2
+        assert len(calls) == 3  # One evaluation set and two training batches
         assert [r.sample_generation for r in result.metrics.sweeps] == [
             0,
             0,
@@ -348,8 +349,9 @@ class TestTTALSSampling:  # MARK: TestTTALSSampling
             convergence=d.ConvergencePolicy(max_sweeps=2),
             collect_metrics=True,
         )
-        assert len(calls) == 6
-        assert all(query.shape == (15, 3) for query in calls)
+        assert len(calls) == 7
+        assert calls[0].shape == (12, 3)
+        assert all(query.shape == (15, 3) for query in calls[1:])
         assert all(r.sampling_exact for r in result.metrics.local_solves)
 
 
@@ -401,10 +403,6 @@ class TestTTALSValidation:  # MARK: TestTTALSValidation
             d.TTALS(torch.ones(2, 3), mask=torch.ones(2, 3))
         with pytest.raises(ValueError, match='dimensions'):
             d.TTALS(torch.ones(2, 3), mask=torch.ones(2, 2, dtype=torch.bool))
-        with pytest.raises(ValueError, match='fixed global objective'):
-            d.TTALS(torch.ones(2, 3)).fit(
-                rank=1, sampler=d.SamplingPolicy(5),
-                convergence=d.ConvergencePolicy(rtol=.1))
         with pytest.raises(ValueError, match='gauge'):
             d.TTALS(torch.ones(2, 3)).fit(
                 rank=1,
@@ -548,3 +546,131 @@ def test_exact_and_leverage_use_shared_qr_preparation(monkeypatch, method):
     if method == 'leverage':
         assert all(record.sampling_exact
                    for record in result.metrics.local_solves)
+
+
+_SAMPLED_ENGINES = [
+    (d.TTALS, 'uniform'), (d.TTALS, 'leverage'),
+    (d.TRALS, 'uniform'), (d.TRALS, 'leverage'),
+    (d.TRALS, 'exact_leverage'),
+]
+
+
+@pytest.mark.parametrize('engine, method', _SAMPLED_ENGINES)
+@pytest.mark.parametrize('criterion', ['atol', 'rtol'])
+def test_sampled_error_thresholds_recover_a_longer_separable_chain(
+        engine, method, criterion):
+    tensor = torch.ones(3, 3, 3, 3, dtype=torch.complex128)
+    for site in range(tensor.ndim):
+        shape = [1] * tensor.ndim
+        shape[site] = 3
+        factor = torch.tensor([1., 2., 3.], dtype=tensor.dtype)
+        tensor = tensor * (factor * (1 + .1j * site)).reshape(shape)
+    result = engine(tensor, out_device=None).fit(
+        rank=1, sampler=d.SamplingPolicy(128, method=method),
+        convergence=d.ConvergencePolicy(max_sweeps=20,
+                                         **{criterion: 1e-8}),
+        generator=torch.Generator().manual_seed(174), collect_metrics=True)
+    assert result.metadata['stop_reason'] == criterion
+    absolute = (result.contract_dense() - tensor).norm()
+    actual = absolute if criterion == 'atol' else absolute / tensor.norm()
+    record = result.metrics.sweeps[-1]
+    measured = record.abs_error if criterion == 'atol' else record.rel_error
+    assert measured <= 1e-8
+    torch.testing.assert_close(actual, measured, rtol=1e-6, atol=1e-12)
+    assert all(record.abs_error is not None
+               for record in result.metrics.sweeps)
+    assert not result.metadata['error_evaluation']['estimated']
+
+
+@pytest.mark.parametrize('engine, method', _SAMPLED_ENGINES)
+@pytest.mark.parametrize('budget', [7, None])
+def test_complete_sweep_errors_match_an_independent_weighted_oracle(
+        engine, method, budget):
+    tensor = torch.arange(1., 25., dtype=torch.float64).reshape(3, 2, 4)
+    tensor = tensor.to(torch.complex128) + .3j * tensor.flip(0)
+    weights = torch.linspace(.2, 2., 24).reshape(tensor.shape).double()
+    mask = weights > .5
+    seed = 175
+    population = tensor.numel()
+    if budget is None:
+        indices = torch.cartesian_prod(*[
+            torch.arange(n) for n in tensor.shape])
+    else:
+        generator = torch.Generator().manual_seed(seed + 1)
+        indices = torch.stack([
+            torch.randint(n, (budget,), generator=generator)
+            for n in tensor.shape], dim=1)
+    selection = tuple(indices.unbind(1))
+    target = tensor[selection]
+    selected_weights = weights[selection] * mask[selection]
+    measured = []
+
+    def callback(record, cores):
+        if engine is d.TTALS:
+            compact = [cores[0].squeeze(0), *cores[1:-1],
+                       cores[-1].squeeze(-1)]
+            actual = tk.formats.TT(compact).contract_dense()
+        else:
+            actual = tk.formats.TR(cores).contract_dense()
+        difference = ((actual[selection] - target) * selected_weights).norm()
+        absolute = difference * (population / indices.shape[0]) ** .5
+        relative = difference / (target * selected_weights).norm()
+        torch.testing.assert_close(record.abs_error, absolute,
+                                   rtol=1e-11, atol=1e-11)
+        torch.testing.assert_close(record.rel_error, relative,
+                                   rtol=1e-11, atol=1e-11)
+        measured.append((float(relative), actual.clone()))
+
+    result = engine(tensor, mask=mask, weights=weights, out_device=None).fit(
+        rank=1, gauge='qr', sampler=d.SamplingPolicy(16, method=method),
+        convergence=d.ConvergencePolicy(
+            max_sweeps=3, error_samples=budget, callback=callback,
+            keep_best=True),
+        generator=torch.Generator().manual_seed(seed), collect_metrics=True)
+    assert len(measured) == 3
+    best = min(measured, key=lambda item: item[0])[1]
+    torch.testing.assert_close(result.contract_dense(), best)
+    assert result.metadata['error_evaluation']['estimated'] == \
+        (budget is not None)
+    assert result.metadata['error_evaluation']['n_samples'] == indices.shape[0]
+
+
+@pytest.mark.parametrize('engine, method', _SAMPLED_ENGINES)
+def test_evaluation_budget_does_not_change_training_random_stream(
+        engine, method):
+    tensor = torch.arange(1., 25., dtype=torch.float64).reshape(3, 2, 4)
+    outputs = []
+    states = []
+    for budget in (3, 11):
+        generator = torch.Generator().manual_seed(176)
+        outputs.append(engine(tensor, out_device=None).fit(
+            rank=2, sampler=d.SamplingPolicy(30, method=method),
+            convergence=d.ConvergencePolicy(max_sweeps=3,
+                                             error_samples=budget),
+            generator=generator))
+        states.append(generator.get_state())
+    assert torch.equal(states[0], states[1])
+    for a, b in zip(outputs[0].cores, outputs[1].cores):
+        torch.testing.assert_close(a, b, rtol=1e-11, atol=1e-11)
+
+
+@pytest.mark.parametrize('engine, method', _SAMPLED_ENGINES)
+def test_minimal_sampled_fit_records_errors_without_collecting_metrics(
+        engine, method):
+    seen = []
+
+    def callback(record, cores):
+        seen.append(record)
+        return True
+
+    target = torch.tensor([1., 2., 3.], dtype=torch.float64)
+    result = engine(target, out_device=None).fit(
+        rank=1, sampler=d.SamplingPolicy(40, method=method),
+        convergence=d.ConvergencePolicy(callback=callback),
+        generator=torch.Generator().manual_seed(177))
+    assert result.metadata['stop_reason'] == 'callback'
+    assert result.metadata['n_sweeps'] == 1
+    assert seen[0].abs_error is not None
+    assert seen[0].rel_error is not None
+    assert not result.metrics.sweeps
+    torch.testing.assert_close(result.contract_dense(), target)

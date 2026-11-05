@@ -114,40 +114,39 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         assert all(record.rel_residual == 100
                    for record in result.metrics.local_solves)
 
-    def test_relative_stability_counts_complete_sweeps(self):
+    @pytest.mark.parametrize('sampled', [False, True])
+    def test_relative_stability_counts_complete_sweeps(self, sampled):
         backend = _FakeALSBackend([1., 0.8, 0.8001, 0.8002])
         policy = tk.decompositions.ConvergencePolicy(
             max_sweeps=10,
             stagnation_rtol=1e-3,
             patience=2)
 
+        problem = _fixed_problem()
+        problem.sampled = sampled
         result = tk.decompositions.ALSSweepDriver().fit(
-            _fixed_problem(), backend, policy, collect_metrics=True)
+            problem, backend, policy, collect_metrics=True)
 
         assert result.stop_reason == 'relative_stability'
         assert result.n_sweeps == 4
         assert result.metrics.sweeps[0].rel_change is None
         assert result.metrics.sweeps[-1].rel_change < 1e-3
 
-    def test_renewable_sampling_rejects_incomparable_error_criteria(self):
+    @pytest.mark.parametrize('criterion', ['atol', 'rtol'])
+    def test_sampled_errors_support_thresholds(self, criterion):
         problem = tk.decompositions.ALSProblem(
             source=tk.decompositions.DenseTensorSource(torch.ones(2, 2)),
             sampled=True)
-        backend = _FakeALSBackend([1., 0.5])
-
-        with pytest.raises(ValueError, match='fixed global objective'):
-            tk.decompositions.ALSSweepDriver().fit(
-                problem,
-                backend,
-                tk.decompositions.ConvergencePolicy(
-                    max_sweeps=2, rtol=0.1))
-
+        backend = _FakeALSBackend([1., 0.05])
+        policy = tk.decompositions.ConvergencePolicy(
+            max_sweeps=5, **{criterion: 0.1})
         result = tk.decompositions.ALSSweepDriver().fit(
-            problem,
-            backend,
-            tk.decompositions.ConvergencePolicy(max_sweeps=2))
-        assert result.stop_reason == 'max_sweeps'
-        assert backend.measure_count == 0
+            problem, backend, policy, collect_metrics=True)
+        assert result.stop_reason == criterion
+        assert result.n_sweeps == 2
+        assert backend.measure_count == 2
+        assert problem.has_fixed_objective
+        assert result.metrics.sweeps[-1].rel_error == pytest.approx(0.05)
 
     def test_completion_is_a_fixed_objective(self):
         observations = tk.decompositions.SparseTensorSource(
@@ -167,13 +166,16 @@ class TestConvergencePolicy:  # MARK: TestConvergencePolicy
         assert result.stop_reason == 'atol'
         assert result.n_sweeps == 2
 
-    def test_best_state_is_restored_only_for_fixed_objectives(self):
+    @pytest.mark.parametrize('sampled', [False, True])
+    def test_best_state_is_restored_for_fixed_evaluations(self, sampled):
         backend = _FakeALSBackend([1., 0.2, 0.5])
         policy = tk.decompositions.ConvergencePolicy(
             max_sweeps=3, keep_best=True)
 
+        problem = _fixed_problem()
+        problem.sampled = sampled
         result = tk.decompositions.ALSSweepDriver().fit(
-            _fixed_problem(), backend, policy, collect_metrics=True)
+            problem, backend, policy, collect_metrics=True)
 
         assert result.stop_reason == 'max_sweeps'
         assert backend.restored is not None
@@ -239,7 +241,7 @@ def test_stability_defaults_to_one_sweep():
     assert policy.stopping_reason(record, 0) == ('relative_stability', 1)
 
 
-def test_callback_stops_sampled_objective_without_measuring_global_error():
+def test_callback_receives_complete_sampled_objective_errors():
     seen = []
 
     def callback(record, cores):
@@ -255,6 +257,7 @@ def test_callback_stops_sampled_objective_without_measuring_global_error():
         collect_metrics=True)
     assert result.stop_reason == 'callback'
     assert result.n_sweeps == 2
-    assert backend.measure_count == 0
+    assert backend.measure_count == 2
     assert [sweep for sweep, _ in seen] == [0, 1]
-    assert all(record.abs_error is None for record in result.metrics.sweeps)
+    assert all(record.abs_error is not None
+               for record in result.metrics.sweeps)

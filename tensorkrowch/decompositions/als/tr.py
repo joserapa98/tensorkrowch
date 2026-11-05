@@ -288,7 +288,11 @@ class _TRALSBackend:  # MARK: _TRALSBackend
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
-        """Measures the fixed complete-sweep objective when one exists."""
+        """Measures the complete-sweep objective on its fixed entries."""
+        if problem.sampled:
+            approximation = _evaluate_standard_tr(
+                self.cores, problem._evaluation_indices)
+            return problem.evaluation_error(approximation)
         if problem.observations is not None:
             indices = problem.observations.support.values.to(
                 self.cache.cores[0].device)
@@ -444,9 +448,12 @@ class _TRLeverageALSBackend:  # MARK: _TRLeverageALSBackend
     def measure_objective(self,
                           problem: ALSProblem) -> Tuple[
             torch.Tensor, torch.Tensor]:
-        """Measures the fixed complete-sweep objective when one exists."""
-        raise RuntimeError(
-            'Renewable leverage batches do not define a global objective')
+        """Measures the complete-sweep objective on its fixed entries."""
+        if problem.sampled:
+            approximation = _evaluate_standard_tr(
+                self.cores, problem._evaluation_indices)
+            return problem.evaluation_error(approximation)
+        raise RuntimeError('Leverage sweeps require prepared evaluation')
 
     def snapshot(self) -> Sequence[torch.Tensor]:
         """Returns the cores forming the current approximation."""
@@ -660,7 +667,10 @@ class TRALS(TTALS):  # MARK: TRALS
             Local solver and its scaling and regularization settings. Defaults
             to an unregularized solver with automatic column scaling.
         convergence : ConvergencePolicy, optional
-            Complete-sweep stopping criteria. Defaults to ten sweeps.
+            Complete-sweep stopping criteria and independent error-evaluation
+            budget. Defaults to ten sweeps. Sampled fits cache fixed uniform
+            evaluation entries and measure the current approximation on them
+            after every sweep.
         generator : torch.Generator, optional
             Generator used by random initialization and row sampling.
             Its device

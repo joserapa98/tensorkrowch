@@ -120,7 +120,8 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
             collect_metrics: bool = False,
             phase: str = 'ALS',
             *,
-            sweep_direction: str = 'forward') -> 'ALSSweepDriver':
+            sweep_direction: str = 'forward',
+            generator: Optional[torch.Generator] = None) -> 'ALSSweepDriver':
         """
         Runs ALS until a normalized stopping reason is reached.
 
@@ -147,6 +148,9 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
         sweep_direction : {``"forward"``, ``"alternating"``}
             Internal traversal selected by the decomposition: alternating
             directions for TT and forward passes for TR.
+        generator : torch.Generator, optional
+            Base seed for the independent evaluation stream in sampled fits.
+            Its state is not advanced.
 
         Returns
         -------
@@ -177,6 +181,8 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                 (backend.n_sites < 1):
             raise ValueError('Backend `n_sites` should be a positive integer')
 
+        if problem.sampled:
+            problem.prepare_evaluation(convergence.error_samples, generator)
         convergence.validate_objective(problem.has_fixed_objective)
         trainable_sites = tuple(backend.trainable_sites)
         if any(isinstance(site, bool) or
@@ -199,7 +205,7 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
 
         fixed_objective = problem.has_fixed_objective
         need_objective = fixed_objective and (
-            collect_metrics or
+            problem.sampled or collect_metrics or
             convergence.requires_fixed_objective or
             (convergence.callback is not None) or
             (observer is not None))
@@ -350,6 +356,8 @@ class ALSSweepDriver:  # MARK: ALSSweepDriver
                     values={
                         'absolute_error': abs_error,
                         'relative_error': rel_error,
+                        'error_estimated': problem.evaluation_info[
+                            'estimated'],
                         'relative_change': rel_change,
                         'sample_generation': generation,
                         'stop_reason': stop_reason,
@@ -386,6 +394,8 @@ def _report_als_result(result: 'TensorDecomposition',
         'n_sweeps': result.metadata['n_sweeps'],
         'converged': result.metadata['converged'],
         'stop_reason': result.metadata['stop_reason'],
+        'error_estimated': result.metadata.get(
+            'error_evaluation', {}).get('estimated', False),
     }
     if result.metrics.sweeps:
         # A restored best state need not be the last recorded sweep

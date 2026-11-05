@@ -75,7 +75,7 @@ class TTSVD:  # MARK: TTSVD
 
     The numerical sweep follows the TT-SVD algorithm introduced by
     I. V. Oseledets in *Tensor-Train Decomposition* (2011), `paper
-    <https://doi.org/10.1137/090752286>`_.
+    <https://doi.org/10.1137/090752286>`__.
 
     ``source`` defines the input's dimensions, evaluation rules and matrix
     grouping. Finite sources include

@@ -618,7 +618,7 @@ class TTLeverageRows(RowSampler):  # MARK: TTLeverageRows
 
     The exact mixed-canonical construction follows *Efficient Leverage Score
     Sampling for Tensor Train Decomposition* (2024), available in this `paper
-    <https://arxiv.org/abs/2406.02749>`_ by Vivek Bharadwaj, Beheshteh T.
+    <https://arxiv.org/abs/2406.02749>`__ by Vivek Bharadwaj, Beheshteh T.
     Rakhshan, Osman Asif Malik and Guillaume Rabusseau.
 
     The current cores are obtained from ``cores`` at every draw. Cores to the
@@ -856,7 +856,7 @@ class TRProductLeverageRows(RowSampler):  # MARK: TRProductLeverageRows
 
     This implements the product proposal from Algorithm 2 of *A Sampling-Based
     Method for Tensor Ring Decomposition* (2021), available in this `paper
-    <https://arxiv.org/abs/2010.08581>`_ by Osman Asif Malik and Stephen
+    <https://arxiv.org/abs/2010.08581>`__ by Osman Asif Malik and Stephen
     Becker. For every core outside the active site, it computes row leverage
     scores of the mode-input unfolding with shape ``(input, left rank * right
     rank)``. Their product bounds the leverage distribution of the complete
@@ -1111,7 +1111,7 @@ class TRExactLeverageRows(RowSampler):  # MARK: TRExactLeverageRows
 
     This specializes Sections 4.1--4.2 and Appendix B.2 of *Sampling-Based
     Decomposition Algorithms for Arbitrary Tensor Networks* (2022), available
-    in this `paper <https://arxiv.org/abs/2210.03828>`_ by Osman Asif Malik,
+    in this `paper <https://arxiv.org/abs/2210.03828>`__ by Osman Asif Malik,
     Vivek Bharadwaj and Riley Murray, to a TR one-site ALS environment. It
     contracts the double-layer Gram matrix, computes its small pseudoinverse
     and draws the joint input configuration sequentially from exact conditional

@@ -6,14 +6,23 @@ Tensor decomposition algorithms and their numerical results.
         * DenseTensorSource, CallableSource, CallableTensorSource
         * SparseTensorSource, FormatSource
         * CallableQuanticsSource
+        * as_tensor_source
 
     Algorithms:
         * TTSVD, TRSVD, TTMSVD, TRMSVD
         * tt_svd, tr_svd, ttm_svd, trm_svd
         * qtt_svd, qtr_svd, qttm_svd, qtrm_svd
         * TTALS, TRALS
+        * tt_als, tr_als
         * TT2TR, tt2tr, tr_blostr, tr_blostr_svd
         * TTRSS, TRRSS, TTRS
+        * tt_rss, tr_rss, tt_rs
+        * qtt_rss, qtr_rss
+
+    Configurable strategies:
+        * ConvergencePolicy, SamplingPolicy, LeastSquaresSolver
+        * LoopOpener, GaugeRecursion
+        * InputFitter, RangeProjector, SketchOperator
 
     Results:
         * TTDecomposition, TRDecomposition

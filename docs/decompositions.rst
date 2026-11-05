@@ -3,535 +3,830 @@ Decompositions
 
 .. currentmodule:: tensorkrowch.decompositions
 
-Formats and fit metadata
---------------------------
-
-Results inherit the numerical representations documented in :doc:`formats`.
-``TTDecomposition`` is a ``TT``, and the TR/TTM/TRM families follow
-the same relationship. Their additional ``metrics`` and ``metadata`` describe
-the original fit. Copying, detaching or moving a result preserves this history;
-editing or rounding its cores does not recompute historical errors. New exact
-algebra returns numerical formats without attaching a fictitious fit history.
-Use ``in_dim`` and ``out_dim`` for dimensions, and ``as_info`` to inspect
-metadata and diagnostics.
-
-Input sources
--------------
-
-Sources inherit :class:`BaseSource`, the common base for finite tensors and
-continuous functions. It provides evaluation statistics and generic
-:meth:`BaseSource.fiber` and :meth:`BaseSource.contract_dense` methods;
-concrete sources implement :meth:`BaseSource.evaluate` and may specialize
-these operations. ``contract_dense`` requires a finite discrete tensor.
-
-``source`` describes the input independently of the decomposition algorithm:
-its dimensions, evaluation rules, matrix grouping and, when applicable,
-Quantics discretization. Finite tensor sources are :class:`DenseTensorSource`,
-:class:`SparseTensorSource`, :class:`FormatSource`,
-:class:`CallableTensorSource` and :class:`CallableQuanticsSource`.
-Continuous functions use :class:`CallableSource`; they require discretization
-before SVD or ALS, whereas RSS can fit them with an embedding.
-
-Matrix inputs use :meth:`DenseTensorSource.matrix`,
-:meth:`SparseTensorSource.matrix`, :meth:`CallableTensorSource.matrix` or
-:meth:`CallableQuanticsSource.matrix`. Continuous matrix functions can use
-:meth:`CallableSource.matrix` with RSS. :class:`FormatSource` obtains matrix
-grouping directly from a matrix format. These objects carry the input details;
-the algorithm controls how to approximate their values.
-
-``DenseTensorSource.matrix`` receives a tensor with explicit input/output axes:
-``ordering="interleaved"`` uses ``(in_0, out_0, in_1, out_1, ...)``, whereas
-the default ``ordering="grouped"`` uses
-``(in_0, in_1, ..., out_0, out_1, ...)``.
-Dimensions are inferred; a two-axis tensor represents one site. To represent
-several sites from an ordinary matrix, reshape its axes before construction.
-Raw tensors passed directly to ``TTMSVD`` or ``TRMSVD``, and to their function
-interfaces, also use grouped ordering. Interleaved input tensors require an
-explicit source with ``ordering="interleaved"``. The legacy
-:func:`mat_to_mpo` retains interleaved inputs.
-
-``SparseTensorSource.matrix`` uses the same ``ordering`` conventions for the
-columns of its entry indices, defaulting to grouped columns. It also requires
-``in_dim`` and ``out_dim``, since sparse entries do not determine full dimensions.
-
-Quantics preparation
---------------------
-
-Quantics discretization belongs to the callable source. Construct a
-:class:`CallableQuanticsSource` with ``base``, ``level`` and ``domain`` (or
-``grid_coordinates``), or supply a prebuilt
-:class:`~tensorkrowch.formats.QuantizedLayout` and
-:class:`~tensorkrowch.formats.CoordinateMap`. Dense tensors and tensor sources
-retain their fixed axes and are never automatically split into digits.
-
-``TTSVD(source)`` and ``TRSVD(source)`` materialize the full digit tensor.
-``TTALS(source)`` and ``TRALS(source)`` query finite entries during fitting.
-``TTRSS(source)`` and ``TRRSS(source)`` use basis embeddings for discrete
-sources, including Quantics. Domain-coordinate samples are converted by the
-source's map and layout; an index ``ConfigurationBatch`` supplies digits
-explicitly. Continuous sources retain user-supplied embeddings.
+Decomposition algorithms approximate tensors and functions as tensor trains
+(TT), tensor rings (TR), or their matrix and Quantics extensions. The usual
+workflow is to describe the input with a **source**, construct a decomposition
+**engine**, and call its **fit** method. Optional strategy objects configure
+steps such as sampling, local optimization and convergence.
 
 .. code-block:: python
 
    import torch
    import tensorkrowch as tk
 
-   source = tk.decompositions.CallableQuanticsSource(
-       lambda coordinates: torch.exp(coordinates.sum(-1)),
-       n_coordinates=2, base=2, level=(3, 4),
-       domain=torch.tensor([[0., 1.], [-1., 1.]]))
-   qtt = tk.decompositions.qtt_svd(source, rank=2)
-   fitted = tk.decompositions.TTALS(source).fit(
-       initial_cores=qtt,
-       convergence=tk.decompositions.ConvergencePolicy(max_sweeps=1))
-   coordinates = torch.tensor([[0., -1.], [0.5, 0.]])
-   values = fitted.evaluate_coordinates(coordinates)
+   d = tk.decompositions
+   source = d.DenseTensorSource(torch.randn(4, 5, 6, 4))
+   engine = d.TTSVD(source)
+   result = engine.fit(rank=4)
+   approximation = result.contract_dense()
 
-For matrix sources, the shared algorithms fuse input/output pairs and return
-the corresponding matrix format. Quantics results retain their maps and
-layouts independently of the source.
+Results are numerical :doc:`formats` with additional fit diagnostics. A TT
+has open boundaries; a TR connects the first and last core with a cyclic
+bond. Both are supported throughout the guide.
 
-Dataset sources use ``from_data``. Discrete empirical masses belong to
-``SparseTensorSource``; continuous values belong to ``CallableSource``;
-``CallableQuanticsSource`` discretizes the dataset first. Callable routes can
-use :func:`gaussian_kernel` or a custom kernel with its own keyword arguments.
+Choosing a method
+-----------------
 
-For ALS, ``mask`` is another boolean source: ``True`` participates and
-``False`` is missing. Without a mask, sparse entries outside the stored
-support are known zeros. A sparse boolean mask coalesces duplicate entries
-with logical OR and can include observed numerical zeros.
+.. list-table::
+   :header-rows: 1
+   :widths: 22 28 25 25
+
+   * - Approach
+     - Input and intended use
+     - Tensor train
+     - Tensor ring
+   * - SVD
+     - A finite tensor that fits in memory; successive matrix factorizations.
+     - :class:`TTSVD`
+     - :class:`TRSVD`
+   * - Alternating least squares
+     - Fit chosen ranks by optimizing cores, using all entries or sampled rows.
+     - :class:`TTALS`
+     - :class:`TRALS`
+   * - Recursive sketching from samples
+     - An evaluable source and configurations defining the region of interest.
+     - :class:`TTRSS`
+     - :class:`TRRSS`
+   * - Recursive sketching with operators
+     - A finite source and selected fibers, marginalizations or TT sketches.
+     - :class:`TTRS`
+     - Apply :class:`TT2TR` to the resulting TT if needed.
+   * - Conversion and spectral recovery
+     - Convert an existing TT, or recover an exact TR by spectral methods.
+     - The TT is the input to conversion.
+     - :class:`TT2TR`, :func:`tr_blostr`, :func:`tr_blostr_svd`
+
+The examples use engine objects. Functions such as :func:`tt_svd`,
+:func:`tr_als` and :func:`tt_rss` provide shorter interfaces for a single fit.
+The :doc:`decompositions_api` lists their complete signatures and all
+configurable components.
+
+Describing the input
+--------------------
+
+A source separates how values are obtained from how they are decomposed.
+Choose one of the following :class:`BaseSource` implementations:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Source
+     - Use it for
+   * - :class:`DenseTensorSource`
+     - A PyTorch tensor with one axis per variable.
+   * - :class:`SparseTensorSource`
+     - Indexed entries of a finite tensor; unstored entries are zero.
+   * - :class:`FormatSource`
+     - An existing tensor format, TT cores, or an MPS/MPO model.
+   * - :class:`CallableTensorSource`
+     - A function of finite discrete indices, with explicit input dimensions.
+   * - :class:`CallableSource`
+     - A function of continuous inputs, for sampled sketching with embeddings.
+   * - :class:`CallableQuanticsSource`
+     - A coordinate function discretized into digit sites on a Quantics grid.
+
+For example, a discrete callable evaluates a batch of index configurations:
+
+.. code-block:: python
+
+   def function(indices):
+       return (indices.to(torch.float64) + 1).prod(dim=1)
+
+   source = d.CallableTensorSource(function, in_dim=(4, 4, 4, 4))
+   engine = d.TTSVD(source)
+   result = engine.fit(rank=2)
+
+Sources expose :meth:`BaseSource.evaluate` for configurations,
+:meth:`BaseSource.fiber` to vary one input, and
+:meth:`BaseSource.contract_dense` to materialize a finite tensor. Configuration
+columns follow ``in_sites``; :class:`ConfigurationBatch` can explicitly group
+index or feature inputs. Vector sources use ``in_sites`` to select evaluated
+variables; unselected axes remain open in the output.
+
+Dense tensors can also be passed directly to engines that accept them.
+:func:`as_tensor_source` provides the corresponding adaptation explicitly.
+SVD materializes even sparse or callable sources; ALS and sampled sketching
+can query their entries without constructing the complete tensor.
+
+Dataset constructors
+^^^^^^^^^^^^^^^^^^^^
+
+Use ``SparseTensorSource.from_data`` for discrete empirical masses.
+``CallableSource.from_data`` describes continuous data, optionally smoothed
+with a kernel. ``CallableTensorSource.from_data`` and
+``CallableQuanticsSource.from_data`` provide the corresponding finite and
+quantized constructions. For example:
+
+.. code-block:: python
+
+   dataset = torch.rand(64, 3)
+   source = d.CallableSource.from_data(
+       dataset, kernel=d.gaussian_kernel, bandwidth=0.2)
+
+:func:`gaussian_kernel` also works independently on query coordinates and
+kernel centers. See each ``from_data`` method for weights and domain options.
 
 SVD decompositions
 ------------------
 
-SVD engines materialize a finite source once at construction and retain its
-prepared tensor for independent calls to ``fit``. Sources own dimensions,
-matrix ordering and evaluation runtime; ``fit`` controls truncation,
-normalization and diagnostics.
-
-SVD accepts the finite sources listed above and tensors directly. The general
-:class:`TTSVD` and :class:`TRSVD` engines also accept non-Quantics TT/TR formats
-and their matrix versions directly. Wrap an :class:`~tensorkrowch.models.MPS`
-in :class:`FormatSource` first. Matrix engines require a source declaring
-paired dimensions, or a tensor with grouped input/output axes; wrap matrix
-formats in ``FormatSource``. All source representations are materialized for
-the numerical SVD, including sparse and callable tensors.
-
-Engine hierarchy and algorithms
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 18 18 44 20
-
-   * - Engine
-     - Inherits from
-     - Numerical workflow
-     - Ordinary result
-   * - :class:`TTSVD`
-     - Independent engine
-     - Successive open-chain SVD cuts through :meth:`TTSVD.fit`.
-     - :class:`TTDecomposition`
-   * - :class:`TTMSVD`
-     - :class:`TTSVD`
-     - Inherited TT-SVD over fused input/output pairs.
-     - :class:`TTMDecomposition`
-   * - :class:`TRSVD`
-     - Independent engine
-     - Interior bipartition followed by two TT-SVD subchains through
-       :meth:`TRSVD.fit`.
-     - :class:`TRDecomposition`
-   * - :class:`TRMSVD`
-     - :class:`TRSVD`
-     - Inherited TR-SVD over fused input/output pairs.
-     - :class:`TRMDecomposition`
-
-:class:`TRSVD` reuses the numerical routines of :class:`TTSVD` through
-composition, rather than inheritance. Its initial SVD splits the tensor at
-``center``; the retained rank is factored into the closing rank and the rank
-crossing that cut. TT-SVD then decomposes each block with those boundary ranks
-preserved. TT-SVD supports leading structural batches; TR-SVD does not.
-
-The matrix engines restrict inputs to matrix sources. The general
-:class:`TTSVD` and :class:`TRSVD` engines also accept those sources and infer
-the matrix result type. Matrix dimensions and ordering belong to the source,
-not to the numerical sweep.
-
-Construction and fitting workflow
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-1. **Describe the input.** Pass a tensor, format or finite source as described
-   above. Plain tensors become :class:`DenseTensorSource` objects. Matrix
-   sources declare paired dimensions through their ``.matrix(...)``
-   constructors or a wrapped matrix format. Coordinate functions use
-   :class:`CallableQuanticsSource`.
-2. **Construct the engine.** ``TTSVD(source)`` or ``TRSVD(source)`` calls the
-   source's ``contract_dense`` method and retains the dense tensor. Matrix
-   input/output pairs are fused into one dimension per site. Quantics sources
-   evaluate their full digit grid; ordinary tensor sources retain their fixed
-   axes without quantization. ``engine.source`` retains the original source.
-3. **Fit the prepared tensor.** :meth:`TTSVD.fit` or :meth:`TRSVD.fit` applies
-   the requested ``rank``, ``cutoff``, ``atol``, ``rtol`` or ``cum_percentage``
-   criteria through :func:`~tensorkrowch.utils.truncated_svd`.
-   ``renormalize`` controls numerical scaling; ``collect_metrics=True``
-   records errors and timings, and ``verbose`` controls progress reporting.
-4. **Restore the representation.** The result reopens paired matrix axes and
-   retains the source's evaluation sites. Quantics inputs also retain their
-   layouts and coordinate maps, producing :class:`QTTDecomposition`,
-   :class:`QTRDecomposition`, :class:`QTTMDecomposition` or
-   :class:`QTRMDecomposition` through the same numerical algorithms.
-
-Repeated fits reuse the prepared tensor with different truncation options:
-
-.. code-block:: python
-
-   source = tk.decompositions.DenseTensorSource(torch.eye(4))
-   engine = tk.decompositions.TTSVD(source)
-   rank_1 = engine.fit(rank=1)
-   rank_2 = engine.fit(rank=2, collect_metrics=True)
-
-Access ``result.cores`` for the tensors or
-:meth:`TensorDecomposition.as_info` for structured information. Use
-:meth:`TensorDecomposition.to_format` to continue with the numerical format
-without fit metadata. The engines share source preparation, stable
-normalization, logarithmic norm calculations, truncation and progress helpers;
-these do not introduce additional public engine classes.
-
-Functional interfaces
-^^^^^^^^^^^^^^^^^^^^^
-
-Each functional interface constructs its engine, performs one ``fit`` and
-returns the decomposition object directly:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 30 40
-
-   * - Function
-     - Engine
-     - Quantics function
-   * - :func:`tt_svd`
-     - :class:`TTSVD`
-     - :func:`qtt_svd`
-   * - :func:`tr_svd`
-     - :class:`TRSVD`
-     - :func:`qtr_svd`
-   * - :func:`ttm_svd`
-     - :class:`TTMSVD`
-     - :func:`qttm_svd`
-   * - :func:`trm_svd`
-     - :class:`TRMSVD`
-     - :func:`qtrm_svd`
-
-The Quantics functions require a :class:`CallableQuanticsSource` of the
-appropriate vector or matrix kind and delegate to the corresponding ordinary
-function. There are no separate Quantics engines or SVD algorithms.
+SVD methods factor a finite tensor into smaller cores. They provide direct
+decompositions without iterative core optimization. The engine materializes
+the source at construction; repeated fits reuse that prepared tensor.
 
 TT-SVD
 ^^^^^^
 
-.. autoclass:: TTSVD
-   :members: fit
+:class:`TTSVD` applies successive truncated SVDs along an open chain, following
+Oseledets' tensor train construction [ttsvd]_.
 
-.. autofunction:: tt_svd
+.. code-block:: python
 
-.. autofunction:: qtt_svd
+   axis = torch.arange(1, 5, dtype=torch.float64)
+   tensor = torch.einsum('i,j,k,l->ijkl', axis, axis, axis, axis) + 1
+   source = d.DenseTensorSource(tensor)
+   engine = d.TTSVD(source)
+   result = engine.fit(rank=2, collect_metrics=True)
+   approximation = result.contract_dense()
 
-TTM-SVD
-^^^^^^^
+``rank`` is an upper bound at each cut. ``cutoff``, ``atol``, ``rtol`` and
+``cum_percentage`` select singular values according to
+:func:`~tensorkrowch.utils.truncated_svd`. In particular, SVD ``rtol`` limits
+the discarded **squared** singular-value mass relative to the total squared
+mass; it is not a relative residual stopping criterion. Multiple criteria
+use the most restrictive retained rank.
 
-.. autoclass:: TTMSVD
-   :members: fit
-
-.. autofunction:: ttm_svd
-
-.. autofunction:: qttm_svd
+TT-SVD accepts a shared integer rank cap. It supports leading structural
+batches declared through ``DenseTensorSource(..., n_batches=...)``.
 
 TR-SVD
 ^^^^^^
 
-.. autoclass:: TRSVD
-   :members: fit
+:class:`TRSVD` constructs a cyclic chain, based on the TR-SVD approach of
+Zhao et al. [trdecomp]_. This implementation starts with an interior
+bipartition and decomposes the two resulting subchains, rather than using
+the original one-direction construction.
 
-.. autofunction:: tr_svd
+.. code-block:: python
 
-.. autofunction:: qtr_svd
+   axis = torch.arange(1, 5, dtype=torch.float64)
+   tensor = torch.einsum('i,j,k,l->ijkl', axis, axis, axis, axis) + 1
+   source = d.DenseTensorSource(tensor)
+   engine = d.TRSVD(source, center=2)
+   result = engine.fit(rank=2, collect_metrics=True)
+   approximation = result.contract_dense()
 
-TRM-SVD
-^^^^^^^
+Here ``center`` specifies the cut between sites ``center - 1`` and ``center``.
+An integer ``rank`` caps every TR bond, including the cyclic bond; its square
+caps the initial matrix rank. The initial retained dimension is factored
+into two TR dimensions. Any structural zero padding needed for that
+factorization is recorded in ``metadata``.
 
-.. autoclass:: TRMSVD
-   :members: fit
+The singular-value criteria are the same as in TT-SVD. TR-SVD does not support
+structural batches, and its local truncation diagnostics are not a global
+reconstruction bound.
 
-.. autofunction:: trm_svd
+Repeated fits and numerical options
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: qtrm_svd
+Both engines allow independent fits with different truncation controls:
 
-Lightweight results
--------------------
+.. code-block:: python
 
-Results add historical diagnostics to their numerical format. Use
-:meth:`TensorDecomposition.to_format` to obtain the corresponding format
-without these diagnostics, retaining its cores, bonds and coordinate maps.
+   source = d.DenseTensorSource(torch.eye(4, dtype=torch.float64))
+   engine = d.TTSVD(source)
+   rank_one = engine.fit(rank=1)
+   rank_two = engine.fit(rank=2)
 
-.. autoclass:: TensorDecomposition
-    :members: as_info, error, to_format
+``renormalize`` controls numerical scaling, and ``out_device`` selects where
+final cores are stored. The exact SVD backend is configured through
+:func:`~tensorkrowch.set_svd_method` or
+:func:`~tensorkrowch.svd_method`. These methods need no extra strategy object
+for ordinary truncation. Matrix engines are :class:`TTMSVD` and
+:class:`TRMSVD`; input preparation is described below.
 
-.. autoclass:: QTTDecomposition
+Alternating least squares
+-------------------------
 
-.. autoclass:: QTRDecomposition
+ALS optimizes one core while holding the others fixed, then visits the next
+site. Use it to fit prescribed ranks, refine an existing approximation, or
+fit selected observations. Unlike a direct SVD, an ALS fit depends on its
+initialization and stopping criteria.
 
-.. autoclass:: QTTMDecomposition
+TT-ALS
+^^^^^^
 
-.. autoclass:: QTRMDecomposition
+:class:`TTALS` uses alternating forward and reverse passes over an open
+chain. This is the one-core alternating linear scheme underlying TT
+optimization [ttals]_; it does not implement two-core MALS rank adaptation.
 
-.. autoclass:: TTDecomposition
-   :members:
+.. code-block:: python
 
-.. autoclass:: TTMDecomposition
-   :members:
+   axis = torch.arange(1, 5, dtype=torch.float64)
+   tensor = torch.einsum('i,j,k,l->ijkl', axis, axis, axis, axis) + 1
+   source = d.DenseTensorSource(tensor)
+   engine = d.TTALS(source)
+   convergence = d.ConvergencePolicy(max_sweeps=30, rtol=1e-8)
+   result = engine.fit(rank=2, convergence=convergence)
 
-.. autoclass:: TRDecomposition
-   :members:
+Without ``initial_cores``, initialization is random. To refine another fit,
+pass its result or cores as ``initial_cores``; an SVD initialization is an
+explicit composition with ``TTSVD``. ``fixed_cores`` freezes selected cores.
+The default ``gauge="qr"`` moves the orthogonality center between updates;
+``gauge="none"`` replaces cores without that QR preparation.
 
-.. autoclass:: TRMDecomposition
-   :members:
+A rank sequence has one entry per open-chain bond, so a four-site TT uses
+three entries. Each directional pass counts as one sweep.
 
-Compatibility with official releases
-------------------------------------
+TR-ALS
+^^^^^^
 
-The historical names below remain available for compatibility and emit a
-deprecation warning. New code should use :func:`tt_svd` and :func:`ttm_svd`.
+:class:`TRALS` optimizes a cyclic chain using forward passes. Its cyclic
+least-squares formulation follows the tensor ring approach [trdecomp]_.
+Initialization, conditioning and convergence can differ from TT-ALS because
+every core participates in a closed loop.
 
-.. autofunction:: vec_to_mps
+.. code-block:: python
 
-.. autofunction:: mat_to_mpo
+   cores = [torch.randn(2, 4, 2, dtype=torch.float64) for _ in range(5)]
+   source = d.FormatSource(tk.formats.TR(cores))
+   engine = d.TRALS(source)
+   convergence = d.ConvergencePolicy(
+       max_sweeps=30, rtol=1e-8, keep_best=True)
+   result = engine.fit(rank=2, convergence=convergence)
 
-Sketching decompositions
-------------------------
+A TR rank sequence has one right-link rank per core. Its last entry is the
+cyclic rank, so a five-site TR uses five entries. QR is a local gauge transfer
+in a ring; it does not make the whole cyclic environment orthonormal.
 
-The class interfaces keep the source, embeddings, domains and output layout
-fixed, and allow several independent ``fit`` calls with different ranks or
-sketch samples. The functional interfaces construct the corresponding class
-and return decomposition results with cores, metadata and optional metrics.
-Use the class for repeated fits and advanced fitting or projection strategies.
+Configuring convergence and local solves
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:class:`TTRSS` and :class:`TRRSS` accept the finite sources listed above,
-tensors, :class:`CallableSource` and raw callables. Wrap formats or MPS models
-in :class:`FormatSource`. Continuous inputs require an embedding; finite
-sources use basis embeddings by default. :class:`TTRS`
-requires finite tensor sources and also adapts tensors, non-Quantics formats
-and MPS models directly. These sketching methods do not support structural
-batches.
+The same objects configure both engines:
 
-Maturity
-^^^^^^^^
+* :class:`ConvergencePolicy` sets the sweep budget, absolute and relative
+  objective-error thresholds, stagnation criteria, and optional retention of
+  the best complete-sweep approximation. A stagnation threshold indicates
+  little change, not necessarily a small reconstruction error.
+* :class:`LeastSquaresSolver` configures the PyTorch least-squares solve,
+  conditioning controls and optional Tikhonov regularization.
+* :class:`SamplingPolicy` replaces complete local systems with sampled rows.
+  The next section lists its sampling choices.
+
+For example, a regularized refinement can reuse a previous result:
+
+.. code-block:: python
+
+   source = d.DenseTensorSource(torch.ones(3, 4, 3, dtype=torch.float64))
+   initial = d.TTSVD(source).fit(rank=2)
+   engine = d.TTALS(source)
+   solver = d.LeastSquaresSolver(l2_reg=1e-10)
+   convergence = d.ConvergencePolicy(
+       max_sweeps=20, stagnation_rtol=1e-8, patience=3, keep_best=True)
+   result = engine.fit(
+       initial_cores=initial, solver=solver, convergence=convergence)
+
+Sampling and partial observations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pass a ``SamplingPolicy`` to ``fit`` when local systems should use a subset
+of rows. The policy selects topology-specific samplers internally:
 
 .. list-table::
    :header-rows: 1
-   :widths: 28 22 50
+   :widths: 24 38 38
 
-   * - Interface
-     - Status
-     - Scope
-   * - :class:`TTRSS`, :func:`tt_rss`
-     - Stable
-     - Sampled recursive sketching for scalar and tensor-valued functions.
-   * - :class:`TTRS`, :func:`tt_rs`
-     - Experimental
-     - Full projection of discrete, sparse, empirical or TT sources.
-   * - :class:`TRRSS`, :func:`tr_rss`
-     - Experimental
-     - Cyclic RSS with automatic blocks and recursive sketch gauges.
-   * - :func:`qtt_rss`, :func:`qtr_rss`
-     - Experimental
-     - Quantized coordinate adapters over TT-RSS and TR-RSS.
+   * - Policy method
+     - TT
+     - TR
+   * - ``"uniform"``
+     - :class:`UniformRows`
+     - :class:`UniformRows`
+   * - ``"leverage"``
+     - :class:`TTLeverageRows`, using mixed-canonical cores [ttleverage]_.
+     - :class:`TRProductLeverageRows`, using a product proposal [trproduct]_.
+   * - ``"exact_leverage"``
+     - Not available.
+     - :class:`TRExactLeverageRows`, using cyclic Gram contractions
+       [trexact]_.
 
-All three algorithms accept ``center`` and scalar or per-bond ``rank``;
-``rank=None`` discovers numerical ranks. Local SVDs absorb singular spectra
-into the retained tensors. TR-RSS accepts a :class:`QRLoopOpener` for local
-balancing and refinement. Sampled algorithms apply one optional
-``transform(configuration_map)`` to the shared query table; TT-RS applies
-``transform(phi)`` independently to each three-axis local tensor.
-``ConfigurationMap.evaluate`` supports cached auxiliary raw-source queries
-without adding sketch samples.
+.. code-block:: python
 
-Sampled recursive sketching
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   source = d.DenseTensorSource(torch.ones(4, 4, 4, 4, dtype=torch.float64))
+   engine = d.TTALS(source)
+   sampler = d.SamplingPolicy(n_samples=64, method='leverage')
+   convergence = d.ConvergencePolicy(
+       max_sweeps=20, rtol=1e-8, error_samples=128)
+   result = engine.fit(
+       rank=2, sampler=sampler, convergence=convergence,
+       collect_metrics=True)
 
-.. autoclass:: TTRSS
-   :members: fit
+Sampled least-squares rows are corrected using their proposal probabilities.
+``reuse_sweeps`` controls reuse of uniform samples; leverage proposals depend
+on the current site and cores. TR leverage methods retain complete active
+physical fibers, so ``n_samples`` counts exterior configurations rather
+than scalar rows.
 
-.. autofunction:: tt_rss
+Stopping errors are measured on a separate fixed uniform evaluation set,
+not on each changing training sample. ``ConvergencePolicy.error_samples``
+sets its budget; ``None`` requests exact evaluation. Estimated measurements
+are identified in ``result.metadata['error_evaluation']``.
 
-.. autoclass:: TRRSS
-   :members: fit
+For missing data, pass a boolean ``mask`` to the engine constructor: true
+entries participate, including observed zeros. ``weights`` separately
+multiplies participating residuals before their squared norm is taken.
+An ordinary sparse source still represents known zeros outside its support;
+it is not automatically a completion dataset. :class:`ALSProblem` describes
+these objective distinctions, and :class:`ObservedRows` exposes permanent
+sparse observations for lower-level use. Neither is required for ordinary
+engine fits.
 
-.. autofunction:: tr_rss
+TT to TR conversion and spectral recovery
+-----------------------------------------
 
-Full-source recursive sketching
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ring module converts an existing TT to a cyclic representation. It also
+provides local loop-opening strategies, reused by TR-RSS. The optimization
+route combines local TR-ALS with recursive gauge transport; the spectral
+route uses BLOSTR [blostr]_. The recursive enrichment and automatic block
+handling are implementation extensions, not guarantees from the BLOSTR paper.
 
-.. autoclass:: TTRS
-   :members: fit
+Converting an existing TT
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autofunction:: tt_rs
+:class:`TT2TR` takes a TT rather than a source. When starting from values,
+first obtain that TT using a source and another decomposition:
 
-.. autoclass:: SampledSketch
-   :members:
+.. code-block:: python
 
-.. autoclass:: MarginalSketch
-   :members:
+   axis = torch.arange(1, 5, dtype=torch.float64)
+   tensor = torch.einsum('i,j,k,l->ijkl', axis, axis, axis, axis) + 1
+   source = d.DenseTensorSource(tensor)
+   initial_tt = d.TTSVD(source).fit(rank=4)
+   converter = d.TT2TR(initial_tt)
+   result = converter.fit(rank=2, collect_metrics=True)
 
-.. autoclass:: TTStackSketch
-   :members:
+An integer ``rank`` specifies the local TR ranks; a sequence gives one
+right-link rank per core, with the cyclic rank last. Omitting it requests
+rank discovery. The initial site grows into a block when necessary to expose
+sufficient physical dimensions. ``block_boundaries`` controls automatic end
+blocks; disabling it for optimization requires prescribed ranks.
 
-Evaluation and local strategies
+``center`` selects the initial site or the center of the discovery block.
+At block SVD splits, ``rank`` acts as a cap and an optional ``rtol`` can
+reduce the returned ranks. This tolerance controls discarded squared
+singular-value mass, not ALS convergence.
+
+Choosing a loop opener
+^^^^^^^^^^^^^^^^^^^^^^
+
+A loop opener factors a local target into TR cores and two external gauges.
+Choose a strategy to control that factorization:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - Object
+     - Role
+   * - :class:`ALSLoopOpener`
+     - Optimize the local factors. Its ``fit_options`` accepts TR-ALS controls
+       such as a solver and convergence policy.
+   * - :class:`QRLoopOpener`
+     - Balance an opening with QR, use another opener, restore the factors
+       and optionally refine in the original target coordinates.
+   * - :class:`BLOSTRLoopOpener`
+     - Recover all local factors using the spectral BLOSTR algorithm.
+   * - :class:`BLOSTRSVDLoopOpener`
+     - Recover the first spectral factor, then split the remainder by SVD.
+   * - :class:`CallableLoopOpener`
+     - Supply a custom implementation of the :class:`LoopOpener` contract.
+
+The strings ``"als"``, ``"blostr"`` and ``"blostr_svd"`` select the
+corresponding built-in strategies with default settings. Use objects when
+their detailed options are needed. :class:`LoopOpening` documents the
+returned local factors; ordinary conversion code need not construct it.
+
+For a conversion with customized local optimization, pass a configured
+opener. This example also balances each target and refines its factors:
+
+.. code-block:: python
+
+   cores = [torch.randn(2, 4, 2, dtype=torch.float64) for _ in range(5)]
+   source = d.FormatSource(tk.formats.TR(cores))
+   initial_tt = d.TTSVD(source).fit(rank=4)
+   convergence = d.ConvergencePolicy(
+       max_sweeps=50, rtol=1e-10, keep_best=True)
+   opener = d.QRLoopOpener(d.ALSLoopOpener({
+       'convergence': convergence,
+   }))
+   converter = d.TT2TR(initial_tt)
+   result = converter.fit(rank=2, loop_opener=opener, enrich=True)
+
+Recursion and enrichment
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Optimization openings are connected using a gauge recursion. The supported
+choices are:
+
+* ``"adjoint"`` / :class:`AdjointGaugeRecursion`: move QR centers, or use
+  the corresponding isometries of a Vidal representation. This is the default.
+* ``"pinv"`` / :class:`PinvGaugeRecursion`: use pseudoinverses of local
+  TT cores or contracted blocks.
+* ``"orth"`` / :class:`OrthGaugeRecursion`: use pseudoinverses of the
+  learned gauges.
+
+A configured :class:`GaugeRecursion` strategy accepts PyTorch pseudoinverse
+keyword arguments. ``enrich=True`` adds orthogonal residual constraints to
+the transported sample space without increasing the requested TR ranks.
+``enrich_rank`` and ``enrich_rtol`` limit those extra coordinates.
+
+Exact spectral recovery
+^^^^^^^^^^^^^^^^^^^^^^^
+
+BLOSTR is intended for exact spectral structure under its dimensional and
+genericity assumptions [blostr]_. Choosing a BLOSTR opener in ``TT2TR``
+selects an exact propagation route: recover the central factors, absorb
+square gauges into neighbors and continue with SVDs. It does not use the
+optimization gauge recursions or enrichment.
+
+The standalone functions :func:`tr_blostr` and :func:`tr_blostr_svd` instead
+take a dense tensor and return a TR decomposition directly. Their API
+documents rank discovery, slice selection and Gaussian projection options.
+The Gaussian projection and first-factor/SVD variant are extensions of the
+basic spectral construction. Arbitrary noisy inputs need not satisfy the
+requirements for exact recovery.
+
+For an exact generic TR input, the first-factor/SVD route can be selected
+explicitly. BLOSTR uses complex spectral factors and automatically promotes
+the working TT cores, so real inputs are accepted and the result is complex.
+The input TT remains unchanged:
+
+.. code-block:: python
+
+   cores = [torch.randn(2, 4, 2, dtype=torch.float64) for _ in range(5)]
+   source = d.FormatSource(tk.formats.TR(cores))
+   initial_tt = d.TTSVD(source).fit(rank=4)
+   opener = d.BLOSTRSVDLoopOpener({
+       'projection': 'gaussian', 'n_attempts': 4,
+   })
+   converter = d.TT2TR(initial_tt)
+   result = converter.fit(rank=2, loop_opener=opener, rtol=1e-8)
+
+Recursive sketching
+-------------------
+
+Sketching builds smaller local tensors from evaluations or contractions,
+then connects their factors. It avoids materializing the complete target.
+TT-RSS and TR-RSS share sampled preparation; TT-RS uses explicitly selected
+contraction operators. These methods do not support structural batches.
+
+TT-RSS: a tensor train from evaluations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:class:`TTRSS` implements Tensor Train Recursive Sketching from Samples
+[ttrss]_. The source must be evaluable at new configurations: supplied
+samples determine the sketches, rather than restricting queries to those
+original points.
+
+.. code-block:: python
+
+   def function(coordinates):
+       return (1 + coordinates).prod(dim=1)
+
+   source = d.CallableSource(function, n_sites=4, dtype=torch.float64)
+   domain = torch.linspace(0, 1, 8, dtype=torch.float64)
+   samples = torch.rand(128, 4, dtype=torch.float64)
+
+   def embedding(values):
+       return torch.stack((torch.ones_like(values), values), dim=-1)
+
+   engine = d.TTRSS(source, embedding=embedding, domain=domain)
+   result = engine.fit(samples, rank=2, center=1, collect_metrics=True)
+   embedded = embedding(samples)
+   values = result.evaluate(embedded)
+
+Continuous inputs need an embedding and a domain on which its coefficients
+can be fitted. A shared embedding/domain applies to every input; sequences
+allow different choices per input. Finite tensor sources use basis embeddings
+by default, so they need neither argument.
+
+``rank`` caps TT bonds; ``None`` discovers numerical ranks. ``center`` is a
+site: local SVDs act on both sides there and on the outgoing side elsewhere.
+Singular spectra remain absorbed in the prepared tensors. ``batch_size``
+limits source-evaluation batches, not the number of sketch samples.
+
+TR-RSS: a tensor ring from evaluations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:class:`TRRSS` uses the same source, samples, embeddings and transformations,
+but constructs a cyclic representation through local loop openings. It is
+an experimental extension combining TT-RSS [ttrss]_ with the ring opening
+machinery described above; it is not the TT algorithm with a final unit-rank
+closing bond.
+
+.. code-block:: python
+
+   cores = [torch.randn(2, 4, 2, dtype=torch.float64) for _ in range(5)]
+   source = d.FormatSource(tk.formats.TR(cores))
+   samples = torch.randint(4, (128, 5))
+   engine = d.TRRSS(source)
+   result = engine.fit(samples, rank=2, collect_metrics=True)
+
+The rank sequence has one right-link rank per final core, with the cyclic
+rank last. Sampled TT-cut caps are formed from products of cyclic and
+internal TR ranks. With no prescribed rank, local SVDs and blocks determine
+the numerical dimensions used for discovery.
+
+``center`` seeds an automatic initial block. End blocks absorb the incoming
+gauges before being split; ``block_boundaries=False`` keeps single-site ends
+when ranks are prescribed. The block and rank conventions follow ``TT2TR``.
+Recursive steps transport gauges through sketch evaluations, retaining the
+inherited sample coordinates. Local ALS stopping criteria belong to the
+opener's convergence policy, while ``fit`` truncation criteria control SVDs.
+Pass a configured ``ALSLoopOpener`` to customize those solves, or wrap it in
+``QRLoopOpener`` for balancing and refinement as in the conversion example.
+
+Choosing fitters and projectors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: ConfigurationMap
-   :members:
+Both sampled engines accept strategy objects in their constructors:
 
-.. autoclass:: PhiOperator
-   :members:
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
 
-.. autoclass:: FixedEmbeddingFitter
-   :members: fit
+   * - Object
+     - When to use it
+   * - :class:`BasisFitter`
+     - Represent a finite physical axis in its discrete basis.
+   * - :class:`FixedEmbeddingFitter`
+     - Fit coefficients in a supplied embedding, with optional solver settings.
+   * - :class:`TrainableEmbeddingFitter`
+     - Optimize a parameterized embedding while fitting physical fibers.
+   * - :class:`IdentityRangeProjector`
+     - Apply the local SVD directly; this is also the default when omitted.
+   * - :class:`RandomizedRangeProjector`
+     - Compress the local SVD input using a configured randomized projection.
 
-.. autoclass:: BasisFitter
-   :members: fit
+Pass a fitter through ``input_fitter`` and a projector through
+``range_projector``. :class:`InputFitter` and :class:`RangeProjector` document
+the extension contracts. ``local_solver`` configures the linear solves used
+to align the TT cores; it is separate from a TR loop opener's ALS solver.
 
-.. autoclass:: TrainableEmbeddingFitter
-   :members: fit
+.. code-block:: python
 
-.. autoclass:: IdentityRangeProjector
-   :members: project
+   source = d.DenseTensorSource(torch.ones(4, 4, 4, 4, dtype=torch.float64))
+   samples = torch.randint(4, (64, 4))
+   projector = d.RandomizedRangeProjector(
+       projection_dim=4, projection_oversampling=2, n_power_iter=1)
+   engine = d.TTRSS(source, range_projector=projector)
+   result = engine.fit(samples, rank=2)
 
-.. autoclass:: RandomizedRangeProjector
-   :members: project
+Transforming evaluations
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-Quantized sketching
-^^^^^^^^^^^^^^^^^^^^
+For TT-RSS and TR-RSS, ``transform`` is one callback on a shared
+:class:`ConfigurationMap`. It receives query configurations and raw source
+values, and returns transformed values of the same shape. Its ``evaluate``
+method queries additional points through the cache without increasing the
+sketch sample set. For example, a reflection average is:
 
-``QuantizedLayout`` describes the digit sites independently of the physical
-coordinate map. ``grouped`` orders all digits of each variable together;
-``interleaved`` groups digits by level. Physical samples remain in the
-original variable coordinates for both layouts.
+.. code-block:: python
 
-.. autoclass:: QuantizedLayout
-   :members:
-   :noindex:
+   def function(coordinates):
+       return (1 + coordinates).prod(dim=1)
 
-.. autoclass:: AffineCoordinateMap
-   :members:
-   :noindex:
+   def transform(configuration_map):
+       reflected = 1 - configuration_map.configurations
+       return (configuration_map.values +
+               configuration_map.evaluate(reflected)) / 2
 
-.. autoclass:: FunctionalCoordinateMap
-   :members:
-   :noindex:
+   source = d.CallableSource(function, n_sites=3, dtype=torch.float64)
+   domain = torch.linspace(0, 1, 8, dtype=torch.float64)
+   samples = torch.rand(64, 3, dtype=torch.float64)
 
-.. autoclass:: ExplicitGridMap
-   :members:
-   :noindex:
+   def embedding(values):
+       return torch.stack((torch.ones_like(values), values), dim=-1)
 
-.. autofunction:: qtt_rss
+   engine = d.TTRSS(
+       source, embedding=embedding, domain=domain, transform=transform)
+   result = engine.fit(samples, rank=2)
 
-.. autofunction:: qtr_rss
+Tensor-valued functions
+^^^^^^^^^^^^^^^^^^^^^^^
 
-Sources
-^^^^^^^
+A callable can return output axes as well as its configuration batch. Declare
+them through the source's ``out_shape`` and select the input variables with
+``in_sites``; ``n_sites`` counts both input and output variables.
+``out_position`` places the output sites in the fitted chain. ``labels``
+optionally selects output components for building the sample sketches.
 
-The source abstraction is shared by SVD, ALS and sketching.
-:class:`TTALS` and :class:`TRALS` accept finite sources, tensors,
-non-Quantics formats and MPS models, adapting the latter inputs automatically.
-They require ``is_discrete_tensor=True`` and do not support structural batches.
-Specialized sparse and format sources evaluate their native representations
-directly instead of building a TensorKrowch graph; ALS and sketching can query
-these values without materializing the complete tensor.
+.. code-block:: python
 
-.. autoclass:: BaseSource
-   :members:
+   def function(coordinates):
+       value = coordinates.sum(dim=1)
+       return torch.stack((value, value.square()), dim=1)
 
-.. autoclass:: DenseTensorSource
-   :members:
+   def embedding(values):
+       return torch.stack((torch.ones_like(values), values,
+                           values.square()), dim=-1)
 
-.. autoclass:: CallableSource
-   :members:
+   source = d.CallableSource(
+       function, n_sites=4, out_shape=(2,), dtype=torch.float64,
+       in_sites=(0, 1, 2))
+   engine = d.TTRSS(
+       source, embedding=embedding,
+       domain=torch.linspace(0, 1, 8, dtype=torch.float64), out_position=1)
+   samples = torch.rand(64, 3, dtype=torch.float64)
+   labels = torch.arange(64).remainder(2)
+   result = engine.fit(samples, labels=labels, rank=4)
 
-.. autoclass:: CallableTensorSource
-   :members:
+TT-RS: explicit contraction sketches
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: CallableQuanticsSource
-   :members: evaluate, fiber, matrix, from_data, contract_dense_grid_axes, contract_dense
+:class:`TTRS` builds local core-determining equations from a finite source
+and a :class:`SketchOperator`, following tensor train sketching [ttrs]_.
+Its finite-source interface also permits exact contractions rather than
+only empirical estimates from observations. Centered construction and the
+available operators extend that basic formulation.
 
-.. autoclass:: SparseTensorSource
-   :members:
+.. code-block:: python
 
-.. autoclass:: FormatSource
-   :members:
+   dataset = torch.randint(4, (128, 4))
+   source = d.SparseTensorSource.from_data(dataset, in_dim=(4, 4, 4, 4))
+   sketch = d.MarginalSketch(order=1)
+   engine = d.TTRS(source, sketch_operator=sketch)
+   result = engine.fit(rank=2, collect_metrics=True)
 
-Examples
+Available contraction strategies are:
+
+* :class:`SampledSketch`: select fibers using supplied or generated indices.
+* :class:`MarginalSketch`: form local marginals, with configurable order and
+  optional per-site factors. This is the default strategy.
+* :class:`TTStackSketch`: contract a stack of TT sketches; its construction is
+  related to randomized TT sketching [ttstack]_.
+
+Here ``transform`` acts separately on each three-axis Phi tensor, returning
+a tensor of the same shape. This allows local smoothing or other user-defined
+operations on the projected tensors. It differs from the shared evaluation
+callback used by RSS. The callback is responsible for preserving whatever
+consistency its application requires.
+
+``center``, SVD truncation and ``range_projector`` work as in the other
+sketching engines. ``strict_system`` enables additional checks on the
+core-determining equations. :class:`PhiOperator` and
+:class:`CoreDeterminingSystem` document lower-level access for custom
+sketches. There is no separate TR-RS wrapper: compose the resulting TT with
+``TT2TR`` when needed.
+
+Matrix and Quantics extensions
+------------------------------
+
+These extensions describe the input and result representation; the numerical
+algorithms and their configurable strategies remain the same.
+
+Matrices
 ^^^^^^^^
 
-Scalar function and repeated TT-RSS fits:
+A matrix source has paired input/output dimensions at every site. Dense,
+sparse and callable sources provide ``.matrix(...)`` constructors;
+``FormatSource`` reads those dimensions from a matrix format.
 
 .. code-block:: python
 
-   domain = torch.linspace(0, 1, 8)
-   samples = torch.rand(256, 4)
-   embedding = lambda x: torch.stack((1 - x, x), dim=-1)
-   function = lambda x: torch.exp(-x.square().sum(dim=1))
+   # Two input axes followed by two output axes.
+   tensor = torch.randn(3, 4, 3, 4, dtype=torch.float64)
+   source = d.DenseTensorSource.matrix(tensor, ordering='grouped')
+   tt_engine = d.TTMSVD(source)
+   tr_engine = d.TRMSVD(source)
+   ttm = tt_engine.fit(rank=4)
+   trm = tr_engine.fit(rank=4)
 
-   decomposer = tk.decompositions.TTRSS(
-       function, embedding=embedding, domain=domain)
-   rank_4 = decomposer.fit(samples, rank=4)
-   rank_8 = decomposer.fit(samples, rank=8)
-   model = tk.models.MPS(tensors=rank_8.cores, parameterized=False)
+``ordering="grouped"`` means ``(in_0, in_1, ..., out_0, out_1, ...)``;
+``"interleaved"`` means ``(in_0, out_0, in_1, out_1, ...)``. An ordinary
+two-axis matrix is one paired site; reshape it first to specify more sites.
+Sparse matrix sources additionally need ``in_dim`` and ``out_dim``.
 
-Tensor-valued output with two output sites:
+General engines such as ``TTALS``, ``TRALS``, ``TTRSS`` and ``TRRSS`` infer
+matrix results from the source. They return :class:`TTMDecomposition` or
+:class:`TRMDecomposition`, with each physical input/output pair restored.
+``TTMSVD`` and ``TRMSVD`` explicitly require matrix inputs. Matrix ``apply``
+and contraction behavior follow the corresponding formats.
 
-.. code-block:: python
+Quantics
+^^^^^^^^
 
-   def tensor_function(x):
-       value = x.sum(dim=1)
-       return torch.stack(
-           (value, value.square(), value.sin(), value.cos()), dim=1
-       ).reshape(-1, 2, 2)
-
-   labels = torch.arange(samples.shape[0]).remainder(4)
-   result = tk.decompositions.TTRSS(
-       tensor_function,
-       embedding=embedding,
-       domain=domain,
-       out_position=(1, 4),
-   ).fit(samples, labels=labels, rank=8)
-
-Sparse and TT-backed sources:
-
-.. code-block:: python
-
-   indices = torch.tensor([[0, 0], [0, 1], [1, 1]])
-   values = torch.tensor([1., 2., 3.])
-   sparse = tk.decompositions.SparseTensorSource(
-       indices, values, in_dim=(2, 2))
-   sparse_result = tk.decompositions.TTRS(sparse).fit(rank=2)
-
-   tt_source = tk.decompositions.FormatSource(sparse_result)
-   projected_again = tk.decompositions.TTRS(tt_source).fit(rank=2)
-
-Quantized RSS for a two-variable physical function:
+Quantics sources discretize coordinate functions into digit sites. Construct
+the source with ``base``, ``level`` and ``domain`` or explicit
+``grid_coordinates``. A preconfigured
+:class:`~tensorkrowch.formats.QuantizedLayout` and
+:class:`~tensorkrowch.formats.CoordinateMap` can express more detailed layouts
+and grids. These digit representations follow the Quantics construction
+[quantics]_.
 
 .. code-block:: python
 
-   grid = torch.linspace(0, 1, 8)
-   samples = torch.cartesian_prod(grid, grid)
-   function = lambda x: (1 + x).prod(dim=1)
+   def function(coordinates):
+       return torch.exp(coordinates.sum(dim=1))
 
-   source = tk.decompositions.CallableQuanticsSource(
-       function,
-       2,
-       base=2,
-       level=3,
-       domain=torch.tensor([0., 1.]),
-   )
-   result = tk.decompositions.qtt_rss(source, samples, rank=4)
+   source = d.CallableQuanticsSource(
+       function, n_coordinates=2, base=2, level=(3, 4),
+       domain=torch.tensor([[0., 1.], [-1., 1.]], dtype=torch.float64),
+       dtype=torch.float64)
+   tt_engine = d.TTSVD(source)
+   tr_engine = d.TRSVD(source)
+   qtt = tt_engine.fit(rank=2)
+   qtr = tr_engine.fit(rank=2)
+   coordinates = torch.tensor([[0., -1.], [0.5, 0.]], dtype=torch.float64)
+   values = qtt.evaluate_coordinates(coordinates)
+
+The results are :class:`QTTDecomposition` or :class:`QTRDecomposition`;
+matrix sources yield :class:`QTTMDecomposition` or
+:class:`QTRMDecomposition`. Results retain their digit layouts and coordinate
+maps. SVD materializes the full digit tensor, while ALS and RSS can query it.
+
+Sampled sketching accepts domain-coordinate samples for Quantics sources.
+An explicit ``ConfigurationBatch(..., kind="indices")`` supplies digit
+indices instead. The layout can group digits by variable or interleave them
+by level. Functions :func:`qtt_svd`, :func:`qtr_svd`, :func:`qttm_svd`,
+:func:`qtrm_svd`, :func:`qtt_rss` and :func:`qtr_rss` are convenient adapters,
+not separate numerical engines. Ordinary dense tensors are not automatically
+quantized.
+
+Results, progress and diagnostics
+---------------------------------
+
+Every decomposition returns a :class:`TensorDecomposition` together with the
+appropriate numerical format interface. Use ``result.cores`` to access its
+cores, ``evaluate`` for selected inputs, and ``contract_dense`` when full
+materialization is affordable. Continuous RSS results are evaluated on
+embedded inputs, as shown above; Quantics results also support coordinate
+evaluation.
+
+``verbose`` controls console progress. ``collect_metrics=True`` retains
+algorithm-specific records in :class:`DecompositionMetrics`: truncations,
+local solves, sweep errors, evaluations and timings. See each ``fit`` method
+for its reporting levels. A small local opening or sampled solve residual
+does not by itself certify a small global reconstruction error.
+
+``result.as_info()`` combines representation information and diagnostics.
+``result.metadata`` records the fit setup. These describe the original fit;
+editing or rounding the result does not recompute historical errors.
+``result.error(...)`` can measure the current approximation on supplied data.
+``result.to_format()`` returns the numerical representation without fit
+diagnostics. Copying, detaching and moving results preserve their history;
+new algebraic operations return ordinary formats.
+
+The legacy :func:`vec_to_mps` and :func:`mat_to_mpo` remain available for
+compatibility and emit deprecation warnings. New code should use the engine
+or functional decomposition interfaces and construct models explicitly.
+
+API reference
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   decompositions_api
+
+References
+----------
+
+.. [ttsvd] I. V. Oseledets. `Tensor-Train Decomposition
+   <https://doi.org/10.1137/090752286>`_ (2011).
+
+.. [trdecomp] Q. Zhao et al. `Tensor Ring Decomposition
+   <https://arxiv.org/abs/1606.05535>`_ (2016).
+
+.. [ttals] S. Holtz, T. Rohwedder and R. Schneider. `The Alternating Linear
+   Scheme for Tensor Optimization in the Tensor Train Format
+   <https://doi.org/10.1137/100818893>`_ (2012).
+
+.. [ttleverage] V. Bharadwaj et al. `Efficient Leverage Score Sampling for
+   Tensor Train Decomposition <https://arxiv.org/abs/2406.02749>`_ (2024).
+
+.. [trproduct] O. A. Malik and S. Becker. `A Sampling-Based Method for Tensor
+   Ring Decomposition <https://arxiv.org/abs/2010.08581>`_ (2021).
+
+.. [trexact] O. A. Malik, V. Bharadwaj and R. Murray. `Sampling-Based
+   Decomposition Algorithms for Arbitrary Tensor Networks
+   <https://arxiv.org/abs/2210.03828>`_ (2022).
+
+.. [blostr] H. Chen, S. Chen and A. R. Zhang. `A Provably Efficient Method
+   for Tensor Ring Decomposition and Its Applications
+   <https://arxiv.org/abs/2512.01016>`_ (2025).
+
+.. [ttrss] J. R. Pareja Monturiol, A. Pozas-Kerstjens and D. Perez-Garcia.
+   `Tensorization of neural networks for improved privacy and interpretability
+   <https://arxiv.org/abs/2501.06300>`_ (2025).
+
+.. [ttrs] Y. Hur et al. `Generative modeling via tensor train sketching
+   <https://arxiv.org/abs/2202.11788>`_ (2023).
+
+.. [ttstack] P. Cazeaux, M.-S. Dupuy and R. Figueroa Justiniano.
+   `Linear-Scaling Tensor Train Sketching <https://arxiv.org/abs/2603.11009>`_
+   (2026).
+
+.. [quantics] B. N. Khoromskij. `O(d log N)-Quantics Approximation of
+   N-d Tensors in High-Dimensional Numerical Modeling
+   <https://doi.org/10.1007/s00365-011-9131-1>`_ (2011).

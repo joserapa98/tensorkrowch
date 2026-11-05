@@ -59,7 +59,7 @@ class TRSVD:  # MARK: TRSVD
     those boundary ranks. No batch dimensions are supported.
 
     This construction is based on TR-SVD by Q. Zhao et al. in *Tensor Ring
-    Decomposition* (2016), `paper <https://arxiv.org/abs/1606.05535>`_. The
+    Decomposition* (2016), `paper <https://arxiv.org/abs/1606.05535>`__. The
     implementation uses an interior bipartition followed by two TT-SVD
     subchains, rather than the one-direction sequence in the original
     algorithm.

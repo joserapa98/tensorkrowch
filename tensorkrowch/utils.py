@@ -852,8 +852,8 @@ def truncated_svd(tensor: Tensor,
     Parameters
     ----------
     tensor : torch.Tensor
-        Tensor to be decomposed, with shape (*, m, n) where * is zero or more
-        batch dimensions.
+        Tensor to be decomposed, with shape ``(*, m, n)`` where ``*`` denotes
+        zero or more batch dimensions.
     rank : int, optional
         Maximum number of singular values to keep.
     cutoff : float, optional

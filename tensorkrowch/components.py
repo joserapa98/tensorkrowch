@@ -1504,12 +1504,22 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         >>> torch.equal(node.tensor, torch.zeros(node.shape))
         True
         
-        >>> node.set_tensor(init_method='randn', mean=1., std=2., device='cuda')
-        >>> torch.equal(node.tensor, torch.zeros(node.shape, device='cuda'))
-        False
-        
-        >>> node.device
-        device(type='cuda', index=0)
+        Initialization on a CUDA device is also supported:
+
+        .. testsetup:: set_tensor_cuda
+
+            node = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
+
+        .. doctest:: set_tensor_cuda
+            :skipif: not torch.cuda.is_available()
+
+            >>> node.set_tensor(init_method='randn', mean=1., std=2.,
+            ...                 device='cuda')
+            >>> torch.equal(node.tensor,
+            ...             torch.zeros(node.shape, device='cuda'))
+            False
+            >>> node.device.type
+            'cuda'
         
         >>> tensor = torch.randn(2, 3)
         >>> node.set_tensor(tensor)
@@ -2226,7 +2236,13 @@ class Node(AbstractNode):  # MARK: Node
         
         To overcome this issue, one should override ``nodeA``:
         
-        >>> nodeA = nodeA.parameterize()
+        .. testsetup:: node_parameterize_override
+
+            nodeA = tk.randn((2, 3))
+
+        .. doctest:: node_parameterize_override
+
+            >>> nodeA = nodeA.parameterize()
         """
         if set_param:
             new_node = ParamNode(shape=self.shape,
@@ -2642,7 +2658,13 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
         
         To overcome this issue, one should override ``paramnodeA``:
         
-        >>> paramnodeA = paramnodeA.parameterize()
+        .. testsetup:: paramnode_parameterize_override
+
+            paramnodeA = tk.randn((2, 3), param_node=True)
+
+        .. doctest:: paramnode_parameterize_override
+
+            >>> paramnodeA = paramnodeA.parameterize(False)
         """
         if not set_param:
             new_node = Node(shape=self.shape,
@@ -4330,11 +4352,19 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         Disconnects node from all its neighbours and removes it from the network.
         To completely get rid of the node, do not forget to delete it:
         
-        >>> del node
+        .. testsetup:: delete_node_reference, replace_node_reference
+
+            node = tk.randn((2, 3))
+
+        .. doctest:: delete_node_reference
+
+            >>> del node
             
         or override it:
         
-        >>> node = node.copy()  # .copy() calls to .delete_node()
+        .. doctest:: replace_node_reference
+
+            >>> node = node.copy()
 
         Parameters
         ----------
@@ -4753,7 +4783,7 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         >>> list(net.data_nodes.keys())
         ['data_0', 'data_1']
         
-        >>> net['data_0']
+        >>> net['data_0']  # doctest: +NORMALIZE_WHITESPACE
         Node(
             name: data_0
             tensor:

@@ -1510,8 +1510,8 @@ def renormalize(
     --------
     >>> nodeA = tk.randn((3, 3))
     >>> renormA = tk.renormalize(nodeA)
-    >>> renormA.norm()
-    tensor(1.)
+    >>> torch.allclose(renormA.norm(), torch.tensor(1.))
+    True
     """
     return renormalize_op(node, p, axis)
 
@@ -1542,8 +1542,8 @@ renormalize_node.__doc__ = \
     --------
     >>> nodeA = tk.randn((3, 3))
     >>> renormA = nodeA.renormalize()
-    >>> renormA.norm()
-    tensor(1.)
+    >>> torch.allclose(renormA.norm(), torch.tensor(1.))
+    True
     """
 
 AbstractNode.renormalize = renormalize_node

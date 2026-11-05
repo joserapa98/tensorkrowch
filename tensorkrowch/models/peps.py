@@ -1156,12 +1156,13 @@ class UPEPS(PEPS):  # MARK: UPEPS
         
     Examples
     --------
-    >>> peps = tk.models.PEPS(n_rows=2,
-    ...                       n_cols=2,
-    ...                       phys_dim=3,
-    ...                       bond_dim=[5, 5])
-    >>> for node in peps.grid_env:
-    ...     assert node.tensor_address() == 'virtual_uniform'
+    >>> peps = tk.models.UPEPS(n_rows=2,
+    ...                        n_cols=2,
+    ...                        phys_dim=3,
+    ...                        bond_dim=[5, 5])
+    >>> for row in peps.grid_env:
+    ...     for node in row:
+    ...         assert node.tensor_address() == 'virtual_uniform'
     ...
     >>> data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size
     >>> result = peps(data)
@@ -1724,11 +1725,12 @@ class ConvUPEPS(AbstractConvClass, UPEPS):  # MARK: ConvUPEPS
         
     Examples
     --------
-    >>> conv_peps = tk.models.ConvPEPS(in_channels=2,
-    ...                                bond_dim=[5, 5],
-    ...                                kernel_size=2)
-    >>> for node in conv_peps.grid_env:
-    ...     assert node.tensor_address() == 'virtual_uniform'
+    >>> conv_peps = tk.models.ConvUPEPS(in_channels=2,
+    ...                                 bond_dim=[5, 5],
+    ...                                 kernel_size=2)
+    >>> for row in conv_peps.grid_env:
+    ...     for node in row:
+    ...         assert node.tensor_address() == 'virtual_uniform'
     ...
     >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
     >>> result = conv_peps(data)
